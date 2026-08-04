@@ -42,7 +42,8 @@ function resolveCatalogLanguages(catalog, voices, preferredLanguage) {
   ].map((value) => String(value || '').toLowerCase()).filter((value) => value && value !== 'multilingual'))];
 }
 
-export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram', initialGoal = '', initialMode = 'external', interactionProfile = null, onSessionCreated = null, onSessionEnded = null }) {
+export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram', initialGoal = '', initialMode = 'external', interactionProfile = null, runtimeAdmin = false, maxDurationSeconds = 180, onSessionCreated = null, onSessionEnded = null }) {
+  const isRuntimeAdmin = runtimeAdmin && interactionProfile === 'runtime_operator';
   const engineWs = wsBase || DG_WS;
   const engineHttp = DG_HTTP;
   const [active, setActive] = useState(false);
@@ -65,9 +66,19 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   // toggle reflects whichever skill is selected for each side.
   const [skillNames, setSkillNames] = useState({ external: null, internal: null });
   const [previewing, setPreviewing] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(maxDurationSeconds);
   const previewAudioRef = useRef(null);
 
   useEffect(() => {
+    if (isRuntimeAdmin) {
+      setCatalogState('ready');
+      setCatalogError('');
+      setVoices([]);
+      setLangs([]);
+      setVoiceId('rex');
+      setLangFilter('en');
+      return undefined;
+    }
     let cancelled = false;
     const want = (language || 'en').split('-')[0].toLowerCase();
     setCatalogState('loading');
@@ -98,7 +109,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         setVoiceId('');
       });
     return () => { cancelled = true; };
-  }, [language, provider]);
+  }, [language, provider, isRuntimeAdmin]);
 
   useEffect(() => {
     if (!active && initialGoal) setGoal(initialGoal);
@@ -106,6 +117,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
 
   // Reflect the org-wide selected skill on each toggle side.
   useEffect(() => {
+    if (isRuntimeAdmin) return undefined;
     apiClient.listTaraSkills()
       .then((d) => {
         const byId = Object.fromEntries((d?.skills || []).map((s) => [s.id, s.name]));
@@ -116,7 +128,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         });
       })
       .catch(() => {});
-  }, [active]);
+  }, [active, isRuntimeAdmin]);
 
   // Grok's voices are 'multilingual' (one voice speaks every supported language),
   // so an exact language match would filter all 26 of them out and leave the
@@ -181,6 +193,19 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     if (sessionId) sessionEndedRef.current?.({ sessionId, reason: reason || 'stop' });
   }, []);
 
+  useEffect(() => {
+    if (!isRuntimeAdmin || !active) return undefined;
+    const deadline = Date.now() + maxDurationSeconds * 1000;
+    const tick = () => {
+      const next = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setRemainingSeconds(next);
+      if (next === 0) stopAll('time-limit');
+    };
+    tick();
+    const timer = window.setInterval(tick, 250);
+    return () => window.clearInterval(timer);
+  }, [active, isRuntimeAdmin, maxDurationSeconds, stopAll]);
+
   // Schedule a raw-PCM (s16le @16k) chunk for gapless playback.
   const playPcm = useCallback((arrayBuf) => {
     const ctx = playCtxRef.current;
@@ -212,10 +237,10 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     // are always consumed together; never combine a Grok UI assumption with a
     // Deepgram session URL.
     const voiceSessionPromise = apiClient.createTaraVoiceSession({
-      provider,
-      language: langFilter || language,
-      mode,
-      voice_id: voiceId || undefined,
+      provider: isRuntimeAdmin ? 'grok' : provider,
+      language: isRuntimeAdmin ? 'en' : langFilter || language,
+      mode: isRuntimeAdmin ? 'internal' : mode,
+      voice_id: isRuntimeAdmin ? 'rex' : voiceId || undefined,
       goal: goal.trim() || undefined,
       interaction_profile: interactionProfile || undefined,
     });
@@ -252,9 +277,9 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         url.searchParams.set('user_id', userId);
         if (orgId) url.searchParams.set('org_id', orgId);
         url.searchParams.set('session_id', session.session_id);
-        url.searchParams.set('language', langFilter || language);
-        url.searchParams.set('mode', mode);
-        if (voiceId) url.searchParams.set('voice_id', voiceId);
+        url.searchParams.set('language', isRuntimeAdmin ? 'en' : langFilter || language);
+        url.searchParams.set('mode', isRuntimeAdmin ? 'internal' : mode);
+        if (isRuntimeAdmin ? 'rex' : voiceId) url.searchParams.set('voice_id', isRuntimeAdmin ? 'rex' : voiceId);
         if (goal.trim()) url.searchParams.set('goal', goal.trim().slice(0, 200));
       }
     } catch (e) {
@@ -326,15 +351,16 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       if (closeEvent.code !== 1000) setError('TARA closed before the voice session became ready. You can adjust the settings and try again.');
       stopAll('closed');
     };
-  }, [userId, orgId, language, langFilter, voiceId, mode, goal, engineWs, playPcm, stopAll, provider]);
+  }, [userId, orgId, language, langFilter, voiceId, mode, goal, engineWs, playPcm, stopAll, provider, isRuntimeAdmin]);
 
   useEffect(() => () => stopAll('unmount'), [stopAll]);
 
   const busy = state === 'connecting';
+  const runtimeTime = `${String(Math.floor(remainingSeconds / 60)).padStart(1, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`;
   return (
-    <div className="rounded-2xl border border-[#e3e0db] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+    <div className={`border border-[#e3e0db] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${isRuntimeAdmin ? 'min-h-[360px] p-5 sm:p-6' : 'rounded-2xl p-6'}`}>
       {/* Mode caption — long strip on top so the user knows what the active mode does */}
-      {!active && (
+      {!isRuntimeAdmin && !active && (
         <div className={`mb-5 flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-[12px] ${
           mode === 'internal' ? 'bg-[#f3ecff] text-[#5b21b6]' : 'bg-[#eef5ff] text-[#1e40af]'}`}>
           <span className={`shrink-0 font-mono uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded ${
@@ -342,9 +368,9 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
           <span className="leading-snug">{MODE_DESC[mode]}</span>
         </div>
       )}
-      <div className="flex items-start gap-5">
+      <div className={`flex ${isRuntimeAdmin ? 'flex-col items-center text-center' : 'items-start gap-5'}`}>
         {/* Exact ElevenLabs orb (Three.js shader) */}
-        <div className="w-28 h-28 shrink-0">
+        <div className={`${isRuntimeAdmin ? 'h-32 w-32' : 'w-28 h-28'} shrink-0`}>
           <Orb
             colors={["#cadcfc", "#6b86b5"]}
             agentState={active ? (state === 'talking' ? 'talking' : (state === 'thinking' || state === 'connecting') ? 'thinking' : 'listening') : null}
@@ -355,15 +381,15 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         </div>
 
         {/* Right column */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-3">
+        <div className={`${isRuntimeAdmin ? 'relative w-full max-w-sm' : 'flex-1 min-w-0'}`}>
+          <div className={`flex items-start gap-3 ${isRuntimeAdmin ? 'justify-center' : 'justify-between'}`}>
             <div>
-              <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] leading-tight">Talk to TARA</h3>
-              <p className="text-[#a3a3a3] text-[12px]">Real-time voice · {provider === 'grok' ? 'Grok Voice' : 'Deepgram Voice Agent'}</p>
+              <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] leading-tight">{isRuntimeAdmin ? 'Runtime · Admin check-in' : 'Talk to TARA'}</h3>
+              <p className="text-[#a3a3a3] text-[12px]">{isRuntimeAdmin ? active ? `${runtimeTime} remaining` : 'A focused three-minute check-in' : `Real-time voice · ${provider === 'grok' ? 'Grok Voice' : 'Deepgram Voice Agent'}`}</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className={`flex items-center gap-2 shrink-0 ${isRuntimeAdmin ? 'absolute bottom-5 left-1/2 -translate-x-1/2' : ''}`}>
               {/* internal = direct HIVEMIND recall (no clinical) · external = full agent */}
-              {!active && (
+              {!isRuntimeAdmin && !active && (
                 <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">
                   {['external', 'internal'].map((m) => (
                     <button key={m} type="button" onClick={() => setMode(m)}
@@ -385,13 +411,13 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
                 : 'bg-[#0a0a0a] text-white hover:bg-[#262626] disabled:opacity-50'}`}
             >
               {busy ? <Loader2 size={14} className="animate-spin" /> : active ? <Square size={14} /> : <Mic size={14} />}
-              {busy ? 'Connecting…' : active ? 'Stop' : 'Start'}
+              {busy ? 'Connecting…' : active ? (isRuntimeAdmin ? 'End early' : 'Stop') : (isRuntimeAdmin ? 'Start check-in' : 'Start')}
             </button>
             </div>
           </div>
 
           {/* Voice config (always visible when idle) */}
-          {!active && (
+          {!isRuntimeAdmin && !active && (
             <div className="mt-4 space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <select value={langFilter} onChange={(e) => setLangFilter(e.target.value)}
@@ -430,6 +456,8 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
               />
             </div>
           )}
+
+          {isRuntimeAdmin ? <p className="mt-3 text-[11px] leading-5 text-[#777168]">Runtime will use this conversation only to understand your current status and priorities. The check-in ends automatically after 3 minutes.</p> : null}
 
           {/* Current turn — user STT + TARA reply */}
           {(transcript || agentTurn) && (
