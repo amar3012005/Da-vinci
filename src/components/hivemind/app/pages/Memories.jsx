@@ -998,6 +998,10 @@ export default function Memories() {
   const [groupByDoc, setGroupByDoc] = useState(false);
   const [topEntities, setTopEntities] = useState([]);
   const [contradictionsCount, setContradictionsCount] = useState(0);
+  // Which backend holds this org's memories ('amr' = its own agent shard, not the central graph).
+  // Read from /memory/stats, which already reports it, so central-graph-only panels can be skipped
+  // instead of firing requests that are guaranteed to 501.
+  const [storageMode, setStorageMode] = useState(null);
   // Org name (normalized) — gates the "Company Info" label so it only shows
   // when a KB/document memory's company intent matches the user's organisation.
   const [orgKey, setOrgKey] = useState('');
@@ -1024,7 +1028,22 @@ export default function Memories() {
         }
         setTopEntities(Array.from(seen.values()).sort((a, b) => b.count - a.count).slice(0, 12));
       } catch { /* noop */ }
+      // DO NOT ASK AN ENDPOINT THAT CANNOT ANSWER. /admin/contradictions reads the CENTRAL graph,
+      // and an org whose memories live on its own .amr agent has no rows there — the server says so
+      // explicitly with 501 {"storage_mode":"amr","supported":false,
+      // "error":"not_supported_for_amr_storage"}, which is the right behaviour (it refuses rather
+      // than reporting a misleading zero). The .catch below already stopped that breaking the page,
+      // but the request still fired on every load and surfaced as a red
+      // "Failed to load resource: 501" in the console for every .amr tenant.
+      // Gate on the storage mode the stats endpoint already publishes, so the call is only made
+      // where it can succeed. Any non-'amr' mode (incl. an older core that omits the field) keeps
+      // the previous behaviour, so nothing that worked before stops working.
       try {
+        const stats = await apiClient.getMemoryStats().catch(() => null);
+        if (cancelled) return;
+        const mode = stats?.storage_mode || null;
+        setStorageMode(mode);
+        if (mode === 'amr') { setContradictionsCount(0); return; }
         const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/contradictions', { params: { limit: 1 } }).catch(() => ({ data: null }));
         if (cancelled) return;
         setContradictionsCount(data?.count || 0);
@@ -1321,6 +1340,18 @@ export default function Memories() {
             );
           })}
         </div>
+
+        {/* Conflict detection is a CENTRAL-GRAPH feature. For an org whose memories live on its own
+            .amr agent there is nothing to read, so say that once, quietly, instead of leaving a
+            silently missing panel that reads as "no conflicts found". */}
+        {storageMode === 'amr' && (
+          <div className="mb-3 rounded-xl border border-[#e5e5e5] bg-[#fafafa] px-4 py-2">
+            <span className="text-[12px] text-[#737373] font-['Space_Grotesk']">
+              {t('memories.conflictsUnavailableAmr',
+                'Conflict detection is not available for this workspace — its memories are stored on its own agent rather than the shared graph.')}
+            </span>
+          </div>
+        )}
 
         {/* Contradiction banner — surfaces conflicting memories */}
         {contradictionsCount > 0 && (
