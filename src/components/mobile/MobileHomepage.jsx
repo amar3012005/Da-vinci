@@ -29,6 +29,17 @@ gsap.registerPlugin(ScrollTrigger);
 const PageContent = () => {
     const { isDark } = useTheme();
     const c = t(isDark);
+    const [isMobile, setIsMobile] = React.useState(() => (
+        typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+    ));
+
+    React.useEffect(() => {
+        const media = window.matchMedia('(max-width: 767px)');
+        const sync = () => setIsMobile(media.matches);
+        sync();
+        media.addEventListener('change', sync);
+        return () => media.removeEventListener('change', sync);
+    }, []);
 
     // Field personalization: popup on first visit drives the adaptive narration.
     const [field, setField] = React.useState(() => {
@@ -77,18 +88,20 @@ const PageContent = () => {
             <MobileNavigation />
             <CinematicMode />
             <MobileHero />
-            <HorizonScene />
-            {/* <FallScene field={field} /> */}
-            <SceneBridge />
-            <LatestUpdates />
-            <SubProducts />
-            <AudienceSection field={field} onChange={() => setPickerOpen(true)} />
+            {!isMobile && <>
+                <HorizonScene />
+                {/* <FallScene field={field} /> */}
+                <SceneBridge />
+                <LatestUpdates />
+                <SubProducts />
+                <AudienceSection field={field} onChange={() => setPickerOpen(true)} />
+            </>}
             <ThesisSection />
-            <MobileAboutSection />
+            {!isMobile && <MobileAboutSection />}
             <SingulanceFooter />
             {/* HIDDEN (re-add on singulancelabs.com): Talk-to-Tara voice widget + orb
             {isIndicDomain ? <TaraVoiceWidgetIndic /> : <TaraVoiceWidget />} */}
-            <FieldPicker open={pickerOpen} onPick={pickField} onClose={() => setPickerOpen(false)} />
+            {!isMobile && <FieldPicker open={pickerOpen} onPick={pickField} onClose={() => setPickerOpen(false)} />}
         </div>
     );
 };
@@ -100,4 +113,3 @@ const MobileHomepage = () => (
 );
 
 export default MobileHomepage;
-
