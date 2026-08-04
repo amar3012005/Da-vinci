@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { AuthorityReviewContent, CallPreview, GmailMessagePreview, PlatformActionPreview } from './RuntimeAuthorityPreview';
+import AaasVoiceWidget from '../../AaasVoiceWidget';
 
 const EXECUTION_TYPES = new Set(['skill_loaded', 'tool_started', 'tool_result', 'schedule_created', 'verification']);
 const EXECUTION_META = {
@@ -309,7 +310,7 @@ export function collectRuntimeArtifacts(queue = [], growthBrief = null) {
   return [...unique.values()];
 }
 
-export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experience, onDecision, onClose }) {
+export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experience, onDecision, onAdminDecision, onClose }) {
   const active = queue.filter((item) => ['RUNNING', 'READY', 'WAITING_FOR_AUTHORITY', 'WAITING_FOR_CONNECTOR', 'MONITORING'].includes(item.status));
   const artifacts = collectRuntimeArtifacts(queue, growthBrief);
   const [artifactsOpen, setArtifactsOpen] = useState(true);
@@ -334,6 +335,7 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
           <ListTodo size={14} className="text-[#262626]" /><span className="flex-1 text-[13px] font-medium text-[#777168]">Runtime Tasks</span><span className="font-mono text-[8px] text-[#9a948b]">{queue.length} · {active.length} active</span><ChevronDown size={14} className={`text-[#777168] transition-transform ${tasksExpanded ? 'rotate-180' : ''}`} />
         </button>
         {tasksExpanded ? <div className="border-t border-[#f0ede8] p-2">
+      {experience?.phase === 'AWAITING_ADMIN_CHECKIN' ? <article className="mb-2 border border-[#d8d3cc] bg-[#fbfaf7] px-3 py-3"><div className="flex items-start gap-2"><span className="mt-0.5 border border-[#d8d3cc] bg-white px-1.5 py-0.5 font-mono text-[7px] uppercase text-[#525252]">Optional</span><div className="min-w-0 flex-1"><div className="text-[11px] font-semibold text-[#262626]">Share your current company context</div><p className="mt-1 text-[10px] leading-4 text-[#777168]">Talk to Runtime before it forms the first operating recommendation, or continue with the evidence already available.</p><div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={() => onAdminDecision?.('talk')} className="inline-flex h-8 items-center gap-1.5 bg-[#171717] px-2.5 text-[9px] font-semibold text-white"><Activity size={12} />Talk to Runtime</button><button type="button" onClick={() => onAdminDecision?.('skipped')} className="h-8 border border-[#d8d3cc] bg-white px-2.5 text-[9px] font-semibold text-[#525252]">Skip for now</button></div></div></div></article> : null}
       {queue.map((item) => {
         const [label, tone] = QUEUE_STATUS[item.status] || QUEUE_STATUS.READY;
         const blocker = queueBlockerSummary(item.blocker || item.blocked_reason);
@@ -551,7 +553,7 @@ export function NarrativeEvent({ item, active }) {
   </div>;
 }
 
-function RuntimeTranscript({ events, state, tasks = [], firstLife = null, experience = null, growthBrief = null, onFirstLifeDecision, liveSequence = null, liveNarration = null, tasksOpen = false, onCloseTasks }) {
+function RuntimeTranscript({ events, state, tasks = [], firstLife = null, experience = null, growthBrief = null, onFirstLifeDecision, onAdminDecision, liveSequence = null, liveNarration = null, tasksOpen = false, onCloseTasks }) {
   const working = isWorking(state);
   const chunks = [];
   for (const item of events) {
@@ -579,7 +581,7 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, experi
         </div> : null}
       </main>
       {tasksOpen ? <button type="button" className="fixed inset-0 z-30 bg-black/30 lg:hidden" aria-label="Close Runtime tasks" onClick={onCloseTasks} /> : null}
-      <aside className={`${tasksOpen ? 'fixed inset-x-3 top-[82px] z-40 block max-h-[calc(100dvh-98px)] overflow-y-auto' : 'hidden'} w-auto lg:sticky lg:top-[78px] lg:z-10 lg:block lg:w-full lg:max-h-none lg:overflow-visible`} aria-label="Agent Runtime inspector"><AgentRuntimeTasksPanel queue={tasks} growthBrief={growthBrief} firstLife={firstLife} experience={experience} onDecision={onFirstLifeDecision} onClose={tasksOpen ? onCloseTasks : null} /></aside>
+      <aside className={`${tasksOpen ? 'fixed inset-x-3 top-[82px] z-40 block max-h-[calc(100dvh-98px)] overflow-y-auto' : 'hidden'} w-auto lg:sticky lg:top-[78px] lg:z-10 lg:block lg:w-full lg:max-h-none lg:overflow-visible`} aria-label="Agent Runtime inspector"><AgentRuntimeTasksPanel queue={tasks} growthBrief={growthBrief} firstLife={firstLife} experience={experience} onDecision={onFirstLifeDecision} onAdminDecision={onAdminDecision} onClose={tasksOpen ? onCloseTasks : null} /></aside>
     </div>
   </div>;
 }
@@ -617,6 +619,8 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   const [dismissedInputRunId, setDismissedInputRunId] = useState(null);
   const [runtimeInputValue, setRuntimeInputValue] = useState('');
   const [runtimeInputBusy, setRuntimeInputBusy] = useState(false);
+  const [adminCheckinOpen, setAdminCheckinOpen] = useState(false);
+  const [adminCheckinBusy, setAdminCheckinBusy] = useState(false);
   const [liveSequence, setLiveSequence] = useState(null);
   const [liveNarration, setLiveNarration] = useState(null);
   const [streamState, setStreamState] = useState('hydrating');
@@ -902,6 +906,17 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
     } finally { setApprovalBusy(''); }
   };
+  const decideAdminCheckin = async (decision, sessionId = null) => {
+    if (adminCheckinBusy) return;
+    if (decision === 'talk') { setAdminCheckinOpen(true); return; }
+    setAdminCheckinBusy(true); setError('');
+    try {
+      await apiClient.decideHqFirstLifeAdminCheckin(decision, sessionId);
+      await load();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError?.message || 'The Runtime check-in could not be saved.');
+    } finally { setAdminCheckinBusy(false); }
+  };
   return <section className="relative -mx-4 -my-4 min-h-full bg-[#fbfaf7]" aria-label="Company HQ runtime">
     <RuntimeMotion />
     <header className="sticky top-0 z-20 border-y border-[#e3e0db] bg-white/95 px-5 py-3 shadow-[0_8px_24px_-22px_rgba(0,0,0,0.45)] backdrop-blur sm:px-8">
@@ -921,7 +936,8 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       </div>
     </header>
     {error ? <div className="border-b border-red-200 bg-red-50 px-8 py-2 text-[10px] text-red-700">{error}</div> : null}
-    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length || liveNarration ? <RuntimeTranscript events={latest} state={runtime.state} tasks={runtimeQueue} firstLife={firstLifePlan} experience={firstLifeExperience} growthBrief={firstLifeExperience?.growth_brief || work.growth_brief || null} onFirstLifeDecision={reviewFirstLife} liveSequence={liveSequence} liveNarration={liveNarration} tasksOpen={tasksOpen} onCloseTasks={() => setTasksOpen(false)} /> : <RuntimePageLoader />}
+    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length || liveNarration ? <RuntimeTranscript events={latest} state={runtime.state} tasks={runtimeQueue} firstLife={firstLifePlan} experience={firstLifeExperience} growthBrief={firstLifeExperience?.growth_brief || work.growth_brief || null} onFirstLifeDecision={reviewFirstLife} onAdminDecision={decideAdminCheckin} liveSequence={liveSequence} liveNarration={liveNarration} tasksOpen={tasksOpen} onCloseTasks={() => setTasksOpen(false)} /> : <RuntimePageLoader />}
+    {adminCheckinOpen ? <div className="fixed inset-0 z-[75] grid place-items-center bg-black/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Talk to Runtime"><div className="relative w-full max-w-xl"><button type="button" onClick={() => setAdminCheckinOpen(false)} aria-label="Close Runtime check-in" title="Close" className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-md bg-white/90 text-[#525252] shadow-sm hover:text-[#171717]"><X size={16} /></button><AaasVoiceWidget userId={runtime?.ownerUserId} orgId={runtime?.orgId} provider="grok" initialMode="internal" initialGoal="Listen to the administrator's current company status, priorities, corrections, and blockers. Do not create operating work from this conversation." onSessionCreated={({ sessionId }) => decideAdminCheckin('started', sessionId)} onSessionEnded={({ sessionId }) => { setAdminCheckinOpen(false); decideAdminCheckin('completed', sessionId); }} /></div></div> : null}
     {instructionsOpen ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Runtime instructions"><form onSubmit={async (event) => { if (await submitInstruction(event)) setInstructionsOpen(false); }} className="w-full max-w-lg rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setInstructionsOpen(false)} aria-label="Close runtime instructions" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#171717]"><SlidersHorizontal size={13} />Runtime instructions</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Set a standing priority</h3></div><div className="p-5"><textarea autoFocus value={instruction} onChange={(event) => setInstruction(event.target.value)} rows={5} placeholder="Focus on getting qualified clients in Hannover..." className="w-full resize-none border border-[#d8d3cc] bg-white p-3 text-[13px] leading-6 outline-none placeholder:text-[#aaa49c] focus:border-[#171717]" />{instructionNotice ? <p className="mt-3 text-[11px] leading-5 text-[#525252]">{instructionNotice}</p> : null}<div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setInstructionsOpen(false)} className="h-9 px-3 text-[11px] font-semibold text-[#525252]">Cancel</button><button type="submit" disabled={!instruction.trim() || instructionBusy} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-35">{instructionBusy ? <ArcSpin size={13} /> : <Send size={13} />}Save instruction</button></div></div></form></div> : null}
     {capabilityRequest && capabilityRequest.id !== dismissedCapabilityRequestId ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={`Connect ${providerLabel(capabilityRequest.provider)}`}><div className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedCapabilityRequestId(capabilityRequest.id)} aria-label="Close connection request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]"><Cable size={13} />Capability required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Connect {providerLabel(capabilityRequest.provider)}</h3><p className="mt-2 text-[13px] leading-6 text-[#625f58]">{publicRuntimeText(capabilityRequest.reason)}</p></div><div className="px-5 py-4"><p className="text-[11px] leading-5 text-[#777168]">I paused this todo without discarding it. I am watching the organization connection state and will continue automatically when access is ready.</p><div className="mt-4 flex justify-end gap-2"><button type="button" onClick={async () => { await apiClient.recheckHqCapabilities(); await load(); }} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252]">Check connection</button><button type="button" onClick={openCapability} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white">Connect {providerLabel(capabilityRequest.provider)}</button></div></div></div></div> : null}
     {playbookInput && playbookInput.run_id !== dismissedInputRunId ? <div className="fixed inset-0 z-[71] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={playbookInput.label}><form onSubmit={provideRuntimeInput} className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedInputRunId(playbookInput.run_id)} aria-label="Close information request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center text-[#777168] hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]">Information required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">{playbookInput.label}</h3><p className="mt-2 text-[12px] leading-5 text-[#777168]">{playbookInput.description}</p></div><div className="p-5"><input autoFocus type={playbookInput.value_type === 'email' ? 'email' : 'tel'} value={runtimeInputValue} onChange={(event) => setRuntimeInputValue(event.target.value)} placeholder={playbookInput.value_type === 'phone' ? '+49...' : 'name@company.com'} className="h-11 w-full border border-[#d8d3cc] bg-white px-3 text-[13px] outline-none focus:border-[#171717]" /><div className="mt-4 flex justify-end"><button type="submit" disabled={!runtimeInputValue.trim() || runtimeInputBusy} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{runtimeInputBusy ? 'Saving...' : 'Continue Runtime'}</button></div></div></form></div> : null}
