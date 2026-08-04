@@ -843,6 +843,7 @@ export default function KnowledgeBase() {
     );
 
     const seenIds = new Set();
+    const byDoc = new Map();   // documentId -> newest qualifying memory
     const docs = [];
     for (const result of settled) {
       if (result.status !== 'fulfilled') continue;
@@ -862,11 +863,30 @@ export default function KnowledgeBase() {
           !!meta.total_chunks;
         const isChunk = tags.some(t => t.startsWith('section:') || t.startsWith('page:') || t.startsWith('chunk:'));
         if (isDoc && !isChunk) {
+          // DEDUPE BY DOCUMENT, NOT BY MEMORY. `seenIds` keys on m.id, but this is a list of
+          // DOCUMENTS — and one document legitimately produces several qualifying memories (a
+          // `document-summary` AND a `schema-record`, plus a fresh summary on every re-ingest).
+          // Verified on live data: memories e659366b, fb2dffc1 and d7115c88 all carry the SAME
+          // metadata.document_id (ed13dc1d…), so that one PDF rendered as three rows. This is the
+          // reported "duplicates even after I deleted them": the list is derived from memories, so a
+          // document lingers while any of its memories survive, and re-uploading multiplies it.
+          // Keep the NEWEST memory per document — it carries the current counts and title.
+          const docKey = meta.document_id
+            || srcMeta.document_id
+            || (tags.find((t) => t.startsWith('source-id:')) || '')
+            || m.id;                       // last resort: behave exactly as before
+          const prev = byDoc.get(docKey);
+          const ts = Date.parse(m.updated_at || m.created_at || 0) || 0;
+          if (prev && prev.__ts >= ts) continue;
           seenIds.add(m.id);
-          docs.push(m);
+          m.__ts = ts;
+          byDoc.set(docKey, m);
         }
       }
     }
+
+    // One row per DOCUMENT, newest first.
+    docs.push(...[...byDoc.values()].sort((a, b) => (b.__ts || 0) - (a.__ts || 0)));
 
     // Last-ditch fallback: if all three queries returned nothing, try semantic search.
     if (docs.length === 0) {
