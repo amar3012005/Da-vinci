@@ -2071,6 +2071,8 @@ class HiveMindApiClient {
     options.onQueued?.({ job_id: jobId });
     const deadline = Date.now() + (options.timeoutMs || 10 * 60 * 1000);
     const pollMs = options.pollMs || 2500;
+    // Terminal SUCCESS states. Keep this the single source of truth for "the job is done".
+    const TERMINAL_OK = new Set(['ready', 'indexed', 'complete', 'completed']);
     while (Date.now() < deadline) {
       if (options.signal?.aborted) throw new Error('Upload cancelled');
       await new Promise((r) => setTimeout(r, pollMs));
@@ -2091,7 +2093,15 @@ class HiveMindApiClient {
       if (options.onStatus) {
         options.onStatus({ status: st.status, progress: st.progress, stage: meta.stage, segments: segs ?? meta.segments, promoted: promoted ?? meta.promoted });
       }
-      if (st.status === 'indexed') {
+      // ACCEPT EVERY TERMINAL SPELLING. The server marks a finished job `ready`; this waited only
+      // for `indexed`, so a COMPLETED upload never satisfied the loop — it kept polling a finished
+      // job until the 10-minute deadline and then threw "Ingestion timed out". Measured on a real
+      // upload: `[kb-queue] ✓ … segs=44 promoted=11`, job status `ready` after ~26s, and the row sat
+      // on "Processing" for ten minutes before reporting a failure that never happened.
+      // Both words are in use historically (`ready` from the durable queue, `indexed` from the older
+      // in-memory tracker), which is exactly how the two sides drifted apart. Accept both, and treat
+      // any unrecognised terminal-looking state as terminal rather than hanging on it.
+      if (TERMINAL_OK.has(st.status)) {
         return {
           documentId: docId,
           segmentCount: segs,
