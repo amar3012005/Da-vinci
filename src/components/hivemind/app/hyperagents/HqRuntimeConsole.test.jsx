@@ -2,6 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AgentRuntimeTasksPanel, projectLifecycleQueueStatus } from './HqRuntimeConsole';
 import { CampaignLaunchPreview, GmailMessagePreview } from './RuntimeAuthorityPreview';
+import RuntimeActionBanner from './RuntimeActionBanner';
 
 test('renders one truthful domain-neutral Agent Runtime task panel', () => {
   const markup = renderToStaticMarkup(<AgentRuntimeTasksPanel firstLife={{
@@ -54,4 +55,20 @@ test('renders persisted email content as a Gmail composer preview', () => {
   expect(markup).toContain('aria-label="Gmail message preview"');
   expect(markup).toContain('lead@example.com');
   expect(markup).toContain('Grounded message body.');
+});
+
+test('renders persisted external actions as one fixed transcript banner with carousel controls', () => {
+  const markup = renderToStaticMarkup(<RuntimeActionBanner markers={[{
+    id: 'launch-1', kind: 'campaign_launch', headline: 'Campaign launch scheduled',
+    note: 'Two verified actions entered the schedule.', occurred_at: '2026-08-04T12:00:00Z',
+    campaign: { name: 'SINGULANCE', actions: [
+      { id: 'x', channel: 'x_organic', payload: { text: 'First post' }, assets: [] },
+      { id: 'linkedin', channel: 'linkedin', payload: { final_copy: 'Second post' }, assets: [] },
+    ] },
+  }]} />);
+  expect(markup).toContain('aria-label="Runtime external action"');
+  expect(markup).toContain('Congratulations! Campaign launch scheduled');
+  expect(markup).toContain('aria-label="X post preview"');
+  expect(markup).toContain('aria-label="Next action"');
+  expect(markup).toContain('1/2');
 });

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { AuthorityReviewContent } from './RuntimeAuthorityPreview';
+import RuntimeActionBanner from './RuntimeActionBanner';
 
 const EXECUTION_TYPES = new Set(['skill_loaded', 'tool_started', 'tool_result', 'schedule_created', 'verification']);
 const EXECUTION_META = {
@@ -427,7 +428,9 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, growth
   const working = isWorking(state);
   const chunks = [];
   for (const item of events) {
-    if (EXECUTION_TYPES.has(item.eventType)) {
+    const activityMarkers = Array.isArray(item?.details?.activity_markers) ? item.details.activity_markers : [];
+    if (activityMarkers.length) chunks.push({ type: 'activity', item, markers: activityMarkers });
+    else if (EXECUTION_TYPES.has(item.eventType)) {
       const last = chunks.at(-1);
       if (last?.type === 'execution') last.items.push(item);
       else chunks.push({ type: 'execution', items: [item] });
@@ -444,7 +447,9 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, growth
     <div className="ml-auto grid w-full max-w-[1420px] items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
       <main className="min-w-0">{chunks.map((chunk) => chunk.type === 'execution'
         ? <ExecutionTrace key={`execution-${chunk.items[0]?.sequence}`} items={chunk.items} />
-        : <NarrativeEvent key={chunk.item.id || chunk.item.sequence} item={chunk.item} active={working && chunk.item.details?.model_streamed !== true && String(chunk.item.sequence) === String(liveSequence || '')} />)}
+        : chunk.type === 'activity'
+          ? <RuntimeActionBanner key={`activity-${chunk.item.id || chunk.item.sequence}`} markers={chunk.markers} />
+          : <NarrativeEvent key={chunk.item.id || chunk.item.sequence} item={chunk.item} active={working && chunk.item.details?.model_streamed !== true && String(chunk.item.sequence) === String(liveSequence || '')} />)}
         <LiveModelNarration stream={liveNarration} />
         {working ? <div className="mt-7 border border-[#e7e4df] bg-white/70 px-4 py-3">
           <RuntimeLoader variant={STATE_GLYPH[state] || 'matrix'} label={(STATE_LABEL[state] || ['Thinking'])[0]} hint={(STATE_LABEL[state] || [null, 'Working through the next bounded action.'])[1]} />
