@@ -12,16 +12,6 @@ import { HIVEMIND_URL } from './hivemindLinks';
 const ease = [0.16, 1, 0.3, 1];
 
 const STORIES = {
-  legal: {
-    label: 'For Legal',
-    headline: 'Run your legal function as an AI firm.',
-    lead: 'Every matter, contract and precedent — remembered, reasoned over, and acted on inside your walls.',
-    lines: [
-      ['HIVEMIND', 'Sovereign memory of every matter, clause, and decision — recalled in sub-50ms, never sent outside.'],
-      ['TARA', 'Fields client and intake calls, qualifies matters, and books counsel — reasoning, not scripts.'],
-      ['HYPERAGENTS', 'A swarm that drafts, redlines, and reviews — flagging risk a regulator would, grounded in your history.'],
-    ],
-  },
   finance: {
     label: 'For Finance',
     headline: 'Run your finance function as an AI desk.',
@@ -75,18 +65,20 @@ const STORIES = {
 };
 
 const DEFAULT = {
-  label: 'For every regulated function',
-  headline: 'Run your institution as an AI company.',
-  lead: 'One sovereign workforce — voice, memory, and a swarm — applied to whatever you run.',
+  label: 'For every organization',
+  headline: 'Run your company with an AI workforce.',
+  lead: 'Your knowledge, decisions, and operations — remembered, reasoned over, and acted on inside your walls.',
   lines: [
-    ['HIVEMIND', 'Sovereign memory of everything your organization knows — sub-50ms, GDPR-native.'],
-    ['TARA', 'A voice agent that reasons in real time across calls, intake, and support.'],
-    ['HYPERAGENTS', 'A swarm of digital employees that watch, decide, and act as one.'],
+    ['HIVEMIND', 'Sovereign memory of every document, decision, and customer context — recalled when work needs it, never sent outside.'],
+    ['TARA', 'Fields calls, qualifies requests, and moves work forward — reasoning, not scripts.'],
+    ['HYPERAGENTS', 'A swarm that researches, creates, reviews, and executes — grounded in your organization\'s history.'],
   ],
 };
 
 const AudienceSection = ({ field, onChange }) => {
-  const s = STORIES[field] || DEFAULT;
+  // Earlier homepage visits persisted `legal` as the default field. Treat it
+  // as the general story so existing visitors no longer receive legal-only copy.
+  const s = field === 'legal' ? DEFAULT : STORIES[field] || DEFAULT;
   return (
     <section className="relative overflow-hidden py-24 md:py-32" style={{ background: '#05070f' }}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_50%_0%,rgba(255,122,47,0.08),transparent_70%)]" />
