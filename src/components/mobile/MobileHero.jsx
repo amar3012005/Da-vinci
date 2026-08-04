@@ -43,8 +43,8 @@ const Viewfinder = () => (
 const scrollNext = () => window.scrollBy({ top: window.innerHeight, behavior: 'smooth' });
 
 const BannerLockup = () => (
-  <div className="w-full max-w-6xl px-5 sm:px-8">
-    <div className="relative flex h-14 items-center justify-center border border-white/60 bg-black/20 px-5 shadow-[0_10px_40px_rgba(0,0,0,0.22)] backdrop-blur-[2px] sm:h-16">
+  <div className="mx-auto w-full max-w-6xl px-5 text-center sm:px-8">
+    <div className="relative mx-auto flex h-14 items-center justify-center border border-white/60 bg-black/20 px-5 shadow-[0_10px_40px_rgba(0,0,0,0.22)] backdrop-blur-[2px] transition-[transform,border-color,background-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-black/35 hover:shadow-[0_16px_46px_rgba(0,0,0,0.34)] sm:h-16">
       <span className="absolute -left-px -top-px h-3 w-3 border-l-2 border-t-2 border-white" />
       <span className="absolute -right-px -top-px h-3 w-3 border-r-2 border-t-2 border-white" />
       <span className="absolute -bottom-px -left-px h-3 w-3 border-b-2 border-l-2 border-white" />
@@ -52,7 +52,7 @@ const BannerLockup = () => (
       <a
         href={HIVEMIND_URL}
         aria-label="Run your AI company. Enter Hivemind."
-        className="font-mono text-[10px] font-semibold uppercase tracking-[0.26em] text-white no-underline transition-opacity duration-300 hover:opacity-70 sm:text-xs sm:tracking-[0.34em]"
+        className="flex h-full w-full cursor-pointer items-center justify-center font-mono text-[10px] font-semibold uppercase tracking-[0.26em] text-white no-underline transition-[letter-spacing,opacity] duration-300 hover:opacity-80 sm:text-xs sm:tracking-[0.34em] sm:hover:tracking-[0.38em]"
       >
         [ Run your AI company ]
       </a>
