@@ -36,7 +36,7 @@ import { PageIndexViewer } from '../PageIndexViewer';
 import { useUploads, setUploads as setGlobalUploads } from '../shared/upload-store';
 import { isPlanLimitError } from '../shared/planLimit';
 import UsageTracker from '../components/UsageTracker';
-import { emitUsageChanged } from '../shared/useUsage';
+import { emitUsageChanged, useUsage } from '../shared/useUsage';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -203,6 +203,54 @@ function getDocHashTag(doc) {
   return hit ? hit.split(':')[1] : null;
 }
 
+// Dependency-free PDF page count — no pdfjs, no worker, no bundle cost.
+// Reads the page tree straight from the bytes: prefers the /Pages root
+// /Count, falls back to counting /Type /Page leaf objects. Returns null when
+// it genuinely cannot tell (object-stream / compressed PDFs) so the caller
+// treats it as "unknown" (→ 1), never as zero. Scan is byte-capped so a huge
+// PDF never janks the main thread.
+async function countPdfPages(file) {
+  try {
+    const SCAN_CAP = 12 * 1024 * 1024; // page tree/catalog is near the head+tail
+    const buf = await file.arrayBuffer();
+    const all = new Uint8Array(buf);
+    let bytes = all;
+    if (all.length > SCAN_CAP) {
+      const head = all.subarray(0, 8 * 1024 * 1024);
+      const tail = all.subarray(all.length - 4 * 1024 * 1024);
+      bytes = new Uint8Array(head.length + tail.length);
+      bytes.set(head, 0); bytes.set(tail, head.length);
+    }
+    // latin1 keeps byte values 1:1 so the raw PDF tokens match.
+    let s = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      s += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    // Prefer the page-tree root: /Type /Pages ... /Count N. The document total
+    // is the largest /Count (the root node aggregates all kids).
+    let max = 0; let m;
+    const countRe = /\/Count\s+(\d+)/g;
+    while ((m = countRe.exec(s))) { const n = Number(m[1]); if (n > max) max = n; }
+    if (max > 0) return max;
+    // Fallback: count leaf page objects (/Type /Page NOT followed by 's').
+    const leaves = (s.match(/\/Type\s*\/Page(?![a-zA-Z])/g) || []).length;
+    return leaves > 0 ? leaves : null;
+  } catch { return null; }
+}
+
+// Plan "pages" an upload will consume, mirroring the backend estimate
+// (upload-service._estimatePages): image → 1, pdf → real page count,
+// every other document → 1 pre-parse (real count settles server-side).
+async function estimateFilePages(file) {
+  const ext = (file?.name?.split('.').pop() || '').toLowerCase();
+  if (IMAGE_EXTS.has(ext) || /^image\//.test(file?.type || '')) return 1;
+  if (ext === 'pdf') { const n = await countPdfPages(file); return n && n > 0 ? n : 1; }
+  return 1;
+}
+
+function pendingFileKey(file) { return `${file.name}::${file.size}`; }
+
 // The evidence API is keyed by a UUID. Filenames are not identities: users can
 // upload the same name again with new content or into a different scope.
 function documentIdFrom(doc) {
@@ -260,6 +308,13 @@ function UploadScopeModal({
   onScopeChange,
   selectedProject,
   onProjectChange,
+  pageCounts = {},
+  onRemoveFile,
+  pagesRemaining = Infinity,
+  pagesUsed = 0,
+  pagesLimit = -1,
+  pagesUnlimited = true,
+  onUpgrade,
   onConfirm,
   onClose,
 }) {
@@ -273,9 +328,23 @@ function UploadScopeModal({
   //                      admins, who see every project); requires picking one
   //   3. organization  — org-wide, visible to ALL members; ADMIN/OWNER ONLY
   //                      (one admin uploads once, whole org gets it)
-  const canUseTeamWorkspace = org?.plan === 'enterprise' || org?.plan === 'team';
+  // Project + org tiers are gated by ROLE, not plan tier — the backend
+  // (authorizeKnowledgeScope) authorizes org-wide on admin/owner and project on
+  // membership, with no plan check. The old `plan === team|enterprise` gate
+  // greyed scopes the server would actually accept, so it's dropped.
   const isOrgAdmin = userRole === 'owner' || userRole === 'admin';
   const requiresProject = selectedScope === 'project';
+
+  // Client-side page estimate for the batch (matches backend _estimatePages).
+  // A file still counting shows "…" and is treated as ≥1 so the gate never
+  // under-counts. This gates PAGE quota only — LLM token usage never blocks uploads.
+  const perFilePages = (file) => {
+    const v = pageCounts[`${file.name}::${file.size}`];
+    return typeof v === 'number' ? Math.max(1, v) : 1;
+  };
+  const anyCounting = files.some((f) => pageCounts[`${f.name}::${f.size}`] === 'counting');
+  const totalPages = files.reduce((s, f) => s + perFilePages(f), 0);
+  const overLimit = !pagesUnlimited && totalPages > pagesRemaining;
 
   return (
     <AnimatePresence>
@@ -291,10 +360,10 @@ function UploadScopeModal({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 8, scale: 0.98 }}
           transition={{ duration: 0.18 }}
-          className="w-full max-w-lg rounded-2xl border border-[#e3e0db] bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.18)]"
+          className="w-full max-w-lg rounded-2xl border border-[#e3e0db] bg-white shadow-[0_20px_60px_rgba(0,0,0,0.18)] flex flex-col max-h-[88vh] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-start justify-between gap-4 mb-5">
+          <div className="flex items-start justify-between gap-4 p-6 pb-4 shrink-0">
             <div>
               <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk']">{t('knowledgebase.scopeModalTitle', 'Save uploaded memories to')}</h3>
               <p className="text-[#525252] text-sm mt-1">
@@ -310,18 +379,60 @@ function UploadScopeModal({
             </button>
           </div>
 
+          {/* Scroll region — the modal is a fixed size, so the batch list + scope
+              tiers scroll INSIDE it. A 25-file batch can no longer push the
+              Upload button off-screen. */}
+          <div className="px-6 overflow-y-auto flex-1 min-h-0">
           <div className="rounded-xl border border-[#ece8de] bg-[#faf9f4] px-4 py-3 mb-5">
-            <p className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2">
-              {t('knowledgebase.uploadBatch', 'Upload batch')}
-            </p>
-            <div className="space-y-1">
-              {files.map((file) => (
-                <div key={`${file.name}-${file.size}`} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="truncate text-[#0a0a0a]">{file.name}</span>
-                  <span className="text-[#a3a3a3] text-[11px] font-mono shrink-0">{formatBytes(file.size)}</span>
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3]">
+                {t('knowledgebase.uploadBatch', 'Upload batch')} · {files.length}
+              </p>
+              <p className="text-[11px] font-mono text-[#a3a3a3]">
+                {anyCounting ? '… pages' : `${totalPages} page${totalPages === 1 ? '' : 's'}`}
+              </p>
             </div>
+            <div className="space-y-1 max-h-[30vh] overflow-y-auto pr-1">
+              {files.map((file) => {
+                const pv = pageCounts[`${file.name}::${file.size}`];
+                const pageLabel = pv === 'counting' || pv === undefined
+                  ? '…'
+                  : `${pv} pg`;
+                return (
+                  <div key={`${file.name}-${file.size}`} className="flex items-center justify-between gap-2 text-sm group">
+                    <span className="truncate text-[#0a0a0a] flex-1 min-w-0">{file.name}</span>
+                    <span className="text-[#a3a3a3] text-[11px] font-mono shrink-0">{pageLabel}</span>
+                    <span className="text-[#a3a3a3] text-[11px] font-mono shrink-0 w-16 text-right">{formatBytes(file.size)}</span>
+                    {onRemoveFile && (
+                      <button
+                        type="button"
+                        onClick={() => onRemoveFile(file)}
+                        title={t('knowledgebase.removeFile', 'Remove from batch')}
+                        className="shrink-0 rounded p-0.5 text-[#c4c0b6] hover:text-[#dc2626] hover:bg-white"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {/* Page quota line — the ONLY gate on an upload. Never LLM tokens. */}
+            {!pagesUnlimited && (
+              <div className={`mt-2 pt-2 border-t border-[#ece8de] flex items-center justify-between text-[11px] font-mono ${overLimit ? 'text-[#dc2626]' : 'text-[#a3a3a3]'}`}>
+                <span>{t('knowledgebase.pagesQuota', 'Pages')}: {totalPages} of {Math.max(0, pagesRemaining)} left{pagesLimit >= 0 ? ` (${pagesUsed}/${pagesLimit} used)` : ''}</span>
+                {overLimit && (
+                  <button type="button" onClick={onUpgrade} className="font-semibold text-[#117dff] hover:text-[#0e6fe0]">
+                    {t('knowledgebase.upgradeForPages', 'Upgrade for more →')}
+                  </button>
+                )}
+              </div>
+            )}
+            {overLimit && (
+              <p className="mt-1.5 text-[11px] text-[#dc2626]">
+                {t('knowledgebase.overLimitHint', 'This batch is over your page limit. Remove a file (✕) or upgrade to continue.')}
+              </p>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -350,15 +461,14 @@ function UploadScopeModal({
                 (org admins see every project; members see only theirs) */}
             <div
               role="button"
-              tabIndex={canUseTeamWorkspace ? 0 : -1}
-              aria-disabled={!canUseTeamWorkspace}
-              onClick={() => canUseTeamWorkspace && onScopeChange('project')}
-              onKeyDown={(e) => { if (canUseTeamWorkspace && (e.key === 'Enter' || e.key === ' ')) onScopeChange('project'); }}
-              className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
+              tabIndex={0}
+              onClick={() => onScopeChange('project')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onScopeChange('project'); }}
+              className={`w-full rounded-xl border px-4 py-3 text-left transition-colors cursor-pointer ${
                 selectedScope === 'project'
                   ? 'border-[#117dff]/30 bg-[#117dff]/8'
                   : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
-              } ${!canUseTeamWorkspace ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              }`}
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
@@ -415,13 +525,13 @@ function UploadScopeModal({
                 visible to every member of the org. */}
             <button
               type="button"
-              disabled={!canUseTeamWorkspace || !isOrgAdmin}
-              onClick={() => canUseTeamWorkspace && isOrgAdmin && onScopeChange('organization')}
+              disabled={!isOrgAdmin}
+              onClick={() => isOrgAdmin && onScopeChange('organization')}
               className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
                 selectedScope === 'organization'
                   ? 'border-[#117dff]/30 bg-[#117dff]/8'
                   : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
-              } ${(!canUseTeamWorkspace || !isOrgAdmin) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              } ${!isOrgAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
@@ -443,7 +553,9 @@ function UploadScopeModal({
             </button>
           </div>
 
-          <div className="flex items-center justify-end gap-3 mt-6">
+          </div>{/* end scroll region */}
+
+          <div className="flex items-center justify-end gap-3 p-6 pt-4 shrink-0 border-t border-[#f0ede6]">
             <button
               type="button"
               onClick={onClose}
@@ -454,11 +566,16 @@ function UploadScopeModal({
             <button
               type="button"
               onClick={onConfirm}
-              disabled={requiresProject && !selectedProject}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e6fe0] disabled:opacity-50"
+              disabled={(requiresProject && !selectedProject) || overLimit}
+              title={overLimit
+                ? t('knowledgebase.overLimitTitle', 'This batch exceeds your page limit — remove files or upgrade.')
+                : (requiresProject && !selectedProject ? t('knowledgebase.pickProjectTitle', 'Pick a project first.') : '')}
+              className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e6fe0] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Upload size={14} />
-              {t('knowledgebase.uploadFiles', 'Upload files')}
+              {overLimit
+                ? t('knowledgebase.overLimit', 'Over page limit')
+                : t('knowledgebase.uploadFilesN', 'Upload {{count}} file{{plural}}', { count: files.length, plural: files.length === 1 ? '' : 's' })}
             </button>
           </div>
         </motion.div>
@@ -798,9 +915,21 @@ export default function KnowledgeBase() {
   const [dragActive, setDragActive] = useState(false);
   const [customTags, setCustomTags] = useState('');
   const [pendingFiles, setPendingFiles] = useState([]);
+  // Client-side page estimate per pending file (key `name::size`). Value:
+  // number = counted, 'counting' = in progress, undefined = not yet started.
+  const [pendingPageCounts, setPendingPageCounts] = useState({});
   const [scopeModalOpen, setScopeModalOpen] = useState(false);
   const [selectedScope, setSelectedScope] = useState('organization'); // org-visible by default; project optional
   const [selectedProject, setSelectedProject] = useState('');
+
+  // Live kbPages quota (used/limit) so the scope modal can gate an upload that
+  // would blow the plan BEFORE any byte leaves the browser. limit === -1 =
+  // unlimited. Usage is the PAGE meter only — LLM token spend never gates uploads.
+  const { usage: planUsage } = useUsage();
+  const kbPagesLimit = typeof planUsage?.kbPages?.limit === 'number' ? planUsage.kbPages.limit : -1;
+  const kbPagesUsed = Number(planUsage?.kbPages?.used) || 0;
+  const kbPagesUnlimited = kbPagesLimit === -1;
+  const kbPagesRemaining = kbPagesUnlimited ? Infinity : Math.max(0, kbPagesLimit - kbPagesUsed);
   const [teamProjects, setTeamProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [projectsError, setProjectsError] = useState(null);
@@ -1238,31 +1367,19 @@ export default function KnowledgeBase() {
         u.id === uploadEntry.id ? { ...u, status: 'uploading', error: undefined } : u
       ));
 
-      // ── Client-side SHA-256 dedup ──
-      // Backend already hashes (16-hex prefix) but doing it client-side
-      // lets us SKIP the upload entirely if we already have a doc with
-      // matching hash in the current list. Saves bandwidth + avoids the
-      // race where backend dedup returns a fresh upload_id that doesn't
-      // match the existing doc-hash row (root cause of duplicate cards).
+      // ── Dedup is DB-authoritative, never browser-cache ──
+      // Duplicate detection lives in the BACKEND: it sha256's the bytes and
+      // checks knowledge_ingest_jobs for this org+scope (upload-job-store
+      // .findDuplicate) → 409 { duplicate:true } handled in the catch below.
+      // We deliberately do NOT short-circuit against the in-browser doc list
+      // (kbMemories): that cache can be stale (a doc deleted server-side still
+      // lingers there), so it produced false "Already in knowledge base"
+      // skips with no re-check. We still compute a client hash ONLY to stamp
+      // the local doc-hash tag for optimistic list convergence — it never
+      // decides dedup.
       let clientHash = null;
       if (file.size <= 25 * 1024 * 1024) {
-        // Cap hashing at 25MB to keep main thread responsive on huge files.
-        // For >25MB we fall back to backend-only dedup.
         clientHash = (await sha256File(file))?.slice(0, 16) || null;
-      }
-      // force = user already approved "upload anyway" on a duplicate → skip the
-      // client-side dedup short-circuit and let the backend re-ingest.
-      if (clientHash && !force) {
-        const existing = (kbMemories || []).find((d) => getDocHashTag(d) === clientHash);
-        if (existing) {
-          setUploads((prev) => prev.map((u) =>
-            u.id === uploadEntry.id
-              ? { ...u, status: 'success', _completedAt: Date.now(), progress: 100, deduped: true,
-                  message: 'Already in knowledge base — skipped re-upload' }
-              : u
-          ));
-          return;
-        }
       }
 
       const tStart = Date.now();
@@ -1584,14 +1701,37 @@ export default function KnowledgeBase() {
   const queueFilesForUpload = useCallback((files) => {
     if (!files?.length) return;
     setPendingFiles(files);
-    // Open on the Project tier for team-capable orgs so the project picker is
-    // visible immediately (the most common shared-upload target). Org-wide is
-    // a separate admin-only tier; personal-only workspaces start on personal.
-    const teamCapable = org?.plan === 'enterprise' || org?.plan === 'team';
-    setSelectedScope(teamCapable ? 'project' : 'personal');
     setSelectedProject('');
+    // Default to org-wide for admins (upload once, whole org sees it); everyone
+    // else starts on their private space. Both project + org tiers remain
+    // selectable in the modal, gated by role exactly as the backend authorizes.
+    const isAdmin = user?.role === 'owner' || user?.role === 'admin';
+    setSelectedScope(isAdmin ? 'organization' : 'personal');
     setScopeModalOpen(true);
-  }, [org?.plan]);
+    // Estimate plan pages per file in the browser (PDF → real count, image /
+    // other → 1) so the modal can show the cost and block an over-limit batch
+    // before uploading. Runs async — the modal renders "…" until each lands.
+    const seed = {};
+    for (const f of files) seed[pendingFileKey(f)] = 'counting';
+    setPendingPageCounts(seed);
+    files.forEach((f) => {
+      estimateFilePages(f)
+        .then((n) => setPendingPageCounts((prev) => ({ ...prev, [pendingFileKey(f)]: n })))
+        .catch(() => setPendingPageCounts((prev) => ({ ...prev, [pendingFileKey(f)]: 1 })));
+    });
+  }, [user?.role]);
+
+  // Drop one file from the pending batch (the modal's per-row ✕). Lets a user
+  // trim an over-limit batch back under quota without cancelling everything.
+  const removePendingFile = useCallback((file) => {
+    const key = pendingFileKey(file);
+    setPendingFiles((prev) => {
+      const next = prev.filter((f) => pendingFileKey(f) !== key);
+      if (next.length === 0) { setScopeModalOpen(false); }
+      return next;
+    });
+    setPendingPageCounts((prev) => { const n = { ...prev }; delete n[key]; return n; });
+  }, []);
 
   // Typed file-based import: set the shared hidden input's accept to the chosen
   // family, then open it. Setting the attr imperatively (not via React state)
@@ -1917,6 +2057,13 @@ export default function KnowledgeBase() {
         onScopeChange={setSelectedScope}
         selectedProject={selectedProject}
         onProjectChange={setSelectedProject}
+        pageCounts={pendingPageCounts}
+        onRemoveFile={removePendingFile}
+        pagesRemaining={kbPagesRemaining}
+        pagesUsed={kbPagesUsed}
+        pagesLimit={kbPagesLimit}
+        pagesUnlimited={kbPagesUnlimited}
+        onUpgrade={() => { try { window.dispatchEvent(new CustomEvent('hm:plan-limit', { detail: { resource: 'kbPages' } })); } catch { /* noop */ } }}
         onConfirm={handleConfirmUploadScope}
         onClose={handleCloseScopeModal}
       />
@@ -1986,8 +2133,14 @@ export default function KnowledgeBase() {
               const failed = uploads.filter((u) => u.status === 'error' || u.status === 'cancelled').length;
               const duplicates = uploads.filter((u) => u.status === 'duplicate').length;
               const inFlight = queued + uploading;
+              // A row is "settled" once it reaches ANY terminal state — not just
+              // success. Counting duplicate/limited/error/cancelled as 0 left the
+              // bar stuck below 100% while the "all complete" banner showed, which
+              // read as a stalled/misleading upload. Terminal = 100% contribution
+              // so the bar hits 100% exactly when nothing is in flight.
+              const isSettled = (u) => ['success', 'duplicate', 'limited', 'error', 'cancelled'].includes(u.status);
               const totalProgress = uploads.length > 0
-                ? Math.round(uploads.reduce((s, u) => s + (u.status === 'success' ? 100 : (u.progress || 0)), 0) / uploads.length)
+                ? Math.round(uploads.reduce((s, u) => s + (isSettled(u) ? 100 : (u.progress || 0)), 0) / uploads.length)
                 : 0;
               return (
                 <div className="flex items-center gap-4 px-4 py-2 rounded-xl bg-[#faf9f4] border border-[#ece8de] text-[11px] font-mono">
