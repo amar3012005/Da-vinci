@@ -18,7 +18,7 @@ const MobileNavigation = () => {
     { label: copy.nav.links.solutions, sectionId: 'solutions' },
     { label: 'Developers', href: hivemindHref('#developers') },
     { label: 'Pricing', href: hivemindHref('#pricing') },
-    { label: 'Docs', href: hivemindHref('/app/connectors') },
+    { label: 'Docs', href: hivemindHref('/docs') },
     { label: './ ' + copy.nav.links.research, href: '/research' },
     { label: './ Benchmark', href: '/benchmark' },
   ];

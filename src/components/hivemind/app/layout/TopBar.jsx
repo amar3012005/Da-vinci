@@ -128,9 +128,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
 
         {/* Docs */}
         <a
-          href="https://docs.hivemind.dev"
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/hivemind/docs"
           className="flex items-center justify-center w-8 h-8 rounded-[6px] hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors"
           title="Documentation"
         >

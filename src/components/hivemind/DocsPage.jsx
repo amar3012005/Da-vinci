@@ -9,7 +9,7 @@ import { MEMORY_TOOLS, WEB_TOOLS, CODING_TOOLS, TEMPORAL_TOOLS } from './app/pag
  * from the in-app catalog. SINGULANCE-branded navbar.
  */
 
-const CORE = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
+const CORE = (process.env.REACT_APP_CORE_API_URL || 'https://core.singulancelabs.com').replace(/\/$/, '');
 const MCP_URL = `${CORE}/api/mcp`;
 
 function CodeBlock({ label, children }) {
@@ -105,6 +105,15 @@ const NAV = [
   { id: 'agent-hermes', label: '— Hermes Agents' },
   { id: 'agent-langchain', label: '— LangChain / custom' },
   { id: 'agent-http', label: '— Any agent (raw HTTP)' },
+  { id: 'ingestion', label: 'Ingestion (uploads)' },
+  { id: 'ingest-file', label: '— Upload a file' },
+  { id: 'ingest-source', label: '— Text / URL / conversation' },
+  { id: 'ingest-status', label: '— Poll status' },
+  { id: 'ingest-types', label: '— Supported types' },
+  { id: 'recall', label: 'Recall & search' },
+  { id: 'recall-recall', label: '— Recall' },
+  { id: 'recall-chat', label: '— Grounded chat' },
+  { id: 'documents', label: 'Documents & memories' },
   { id: 'tools-memory', label: 'Tools · Memory' },
   { id: 'tools-web', label: 'Tools · Web intelligence' },
   { id: 'tools-coding', label: 'Tools · Coding' },
@@ -158,10 +167,12 @@ export default function DocsPage() {
           <Eyebrow>DEVELOPER DOCUMENTATION</Eyebrow>
           <h1 className="text-[34px] leading-[1.08] font-medium font-['Space_Grotesk'] text-[#0a0a0a] tracking-tight">HIVEMIND API & MCP reference</h1>
           <P>
-            HIVEMIND is a sovereign memory engine. This page documents the two integration surfaces:
-            the <strong className="text-[#0a0a0a]">API key</strong> that authenticates every request, and the{' '}
+            HIVEMIND is a sovereign memory engine. Everything runs off one <strong className="text-[#0a0a0a]">workspace API key</strong>.
+            This page covers both integration surfaces: the <strong className="text-[#0a0a0a]">REST API</strong> —
+            ingest documents/text/URLs, then recall or chat over them — and the{' '}
             <strong className="text-[#0a0a0a]">hosted MCP server</strong> that exposes {MEMORY_TOOLS.length + WEB_TOOLS.length + CODING_TOOLS.length + TEMPORAL_TOOLS.length} tools
             to any Model Context Protocol client (Claude Code, Claude.ai, Cursor, custom agents).
+            Ingest is async (POST → <Mono>job_id</Mono> → poll); recall is one hybrid engine across every storage tier.
           </P>
 
           {/* ── Overview ── */}
@@ -350,10 +361,200 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
             </P>
           </section>
 
+          {/* ── REST · Ingestion ── */}
+          <section id="ingestion" className="mt-12">
+            <Eyebrow>05 · REST API — INGESTION</Eyebrow>
+            <H2 id="ingestion">Ingesting content</H2>
+            <P>
+              Send any content to HIVEMIND — documents, images, raw text, conversations — and the engine
+              extracts memories, entities, and relationships automatically. Two front doors, both authenticated
+              with your workspace key: a <strong className="text-[#0a0a0a]">multipart file upload</strong>, and a
+              JSON <strong className="text-[#0a0a0a]">source envelope</strong> for already-extracted text or URLs.
+              Ingestion is <strong className="text-[#0a0a0a]">asynchronous</strong>: the call returns a
+              <Mono>job_id</Mono> in ~80&nbsp;ms; you poll status while the server parses, segments, embeds, and promotes.
+            </P>
+
+            <H3 id="ingest-file">Upload a file</H3>
+            <P><Mono>POST /api/knowledge/upload</Mono> — <Mono>multipart/form-data</Mono>. Add <Mono>?async=true</Mono> (recommended): you get a job id immediately and poll for completion.</P>
+            <CodeBlock label="curl · file upload">{`curl -X POST "${CORE}/api/knowledge/upload?async=true" \\
+  -H "Authorization: Bearer $HIVEMIND_API_KEY" \\
+  -F "file=@document.pdf" \\
+  -F "targetScope=personal" \\
+  -F "tags=research,q3"`}</CodeBlock>
+            <CodeBlock label="202 accepted">{`{
+  "job_id": "294decd2-33f9-4bd3-b3d6-9c85abce5fa6",
+  "status": "queued",
+  "storage_mode": "amr_embedded",
+  "counts": { "pages": null, "segments": null, "candidates": null, "memories": null },
+  "created_at": "2026-08-05T13:14:58Z"
+}`}</CodeBlock>
+            <table className="w-full mt-3 text-[12px]">
+              <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold">Field</th><th className="py-1.5 pr-3 font-semibold w-16">Req.</th><th className="py-1.5 font-semibold">Description</th></tr></thead>
+              <tbody className="divide-y divide-[#eae7e1]">
+                {[
+                  ['file', true, 'The document/image/audio to ingest. 50 MB max (document), 20 MB (image).'],
+                  ['targetScope', false, 'personal | project | team | organization. Org scope requires owner/admin. Default personal.'],
+                  ['projectId', false, 'Required when targetScope=project.'],
+                  ['primaryTeamId', false, 'Required when targetScope=team.'],
+                  ['tags', false, 'Comma-separated tags stamped on every memory from this file.'],
+                  ['force', false, 'Bypass the checksum dedup and re-ingest identical bytes.'],
+                ].map(([n, r, d]) => (
+                  <tr key={n}><td className="py-1.5 pr-3 font-mono text-[#0a0a0a] whitespace-nowrap">{n}</td><td className="py-1.5 pr-3">{r ? <span className="text-[#117dff] font-semibold">yes</span> : <span className="text-[#a3a3a3]">no</span>}</td><td className="py-1.5 text-[#525252]">{d}</td></tr>
+                ))}
+              </tbody>
+            </table>
+
+            <H3 id="ingest-source">Ingest text, a URL, or a conversation</H3>
+            <P><Mono>POST /api/ingest/source</Mono> — a canonical envelope for content you already have as text (or a URL to extract). Pick a <Mono>mode</Mono> for how it&rsquo;s processed.</P>
+            <CodeBlock label="curl · source envelope">{`curl -X POST "${CORE}/api/ingest/source" \\
+  -H "Authorization: Bearer $HIVEMIND_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "source": { "type": "note", "sourceId": "standup-2026-08-05" },
+    "content": "Decided to ship Orion-X on 2 Feb 2028 at 4.2M EUR. Priya Nair owns avionics.",
+    "mode": "document",
+    "scope": "organization",
+    "tags": ["planning","orion-x"]
+  }'`}</CodeBlock>
+            <table className="w-full mt-3 text-[12px]">
+              <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold">Field</th><th className="py-1.5 font-semibold">Description</th></tr></thead>
+              <tbody className="divide-y divide-[#eae7e1]">
+                {[
+                  ['source.type', 'Origin kind — note | kb | url | meeting | chat, etc. Used for provenance.'],
+                  ['source.url', 'Canonical URL when ingesting a link (content is extracted server-side).'],
+                  ['source.sourceId', 'Your stable id for this source — enables dedup + provenance.'],
+                  ['content', 'Already-extracted text. Provide this OR file.buffer.'],
+                  ['mode', 'document (multi-fact distill → many memories + entities + relationships) · atomic (one memory) · evidence (searchable verbatim, no distill — like SuperRAG).'],
+                  ['scope / projectId', 'personal | project | team | organization + the project id when scoped.'],
+                  ['tags', 'Extra tags stamped on the resulting memories.'],
+                ].map(([n, d]) => (
+                  <tr key={n}><td className="py-1.5 pr-3 font-mono text-[#0a0a0a] whitespace-nowrap align-top">{n}</td><td className="py-1.5 text-[#525252]">{d}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <P><strong className="text-[#0a0a0a]">Modes at a glance.</strong> <Mono>document</Mono> = full pipeline (facts + entities + relationships). <Mono>evidence</Mono> = chunk/embed/index only, kept verbatim and searchable but not distilled into memories — the cheaper &ldquo;make it searchable, don&rsquo;t remember it&rdquo; path. <Mono>atomic</Mono> = a single memory through the engine gateway.</P>
+
+            <H3 id="ingest-status">Poll ingestion status</H3>
+            <P><Mono>GET /api/knowledge/status?job_id=&lt;id&gt;</Mono> — poll until <Mono>ready</Mono> or <Mono>failed</Mono>.</P>
+            <CodeBlock label="200 · ready">{`{
+  "status": "ready",
+  "progress": 100,
+  "document_id": "85f0f480-8fb6-4e2e-8d05-2439e52f3b3c",
+  "memory_ids": ["a22f0888-…", "8dfe5b8f-…"],
+  "counts": { "pages": 1, "segments": 1, "candidates": 1, "memories": 5 }
+}`}</CodeBlock>
+            <P>Stages: <Mono>queued → parsing → segmenting → embedding → promoting → ready</Mono> (or <Mono>failed</Mono>). A document that parses but yields zero memories still succeeds as <em>evidence-only</em> — its verbatim segments remain fully searchable.</P>
+
+            <H3 id="ingest-types">Supported types &amp; limits</H3>
+            <table className="w-full mt-3 text-[12px]">
+              <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold">Type</th><th className="py-1.5 pr-3 font-semibold">Formats</th><th className="py-1.5 font-semibold">Processing</th></tr></thead>
+              <tbody className="divide-y divide-[#eae7e1]">
+                {[
+                  ['Documents', 'pdf, docx, doc, xlsx, xls, pptx, ppt, txt, md, csv, tsv, html', 'Text extraction · OCR (vision) for scans · page-aware chunking'],
+                  ['Images', 'png, jpg, jpeg, tiff, webp, gif', 'Vision OCR → one canonical memory'],
+                  ['Audio', 'mp3, wav, m4a, flac, ogg', 'Whisper transcription'],
+                ].map(([t, f, p]) => (
+                  <tr key={t}><td className="py-1.5 pr-3 font-semibold text-[#0a0a0a] whitespace-nowrap align-top">{t}</td><td className="py-1.5 pr-3 font-mono text-[#525252] align-top">{f}</td><td className="py-1.5 text-[#525252]">{p}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <P className="text-[12px]">Limits: document 50&nbsp;MB · image 20&nbsp;MB. Query <Mono>GET /api/knowledge/upload-capabilities</Mono> instead of hardcoding. Duplicate detection is by content checksum (a repeat returns <Mono>409</Mono> with the existing job) — pass <Mono>force</Mono> to re-ingest.</P>
+
+            <H3 id="ingest-pipeline">What happens after 202</H3>
+            <CodeBlock label="pipeline">{`bytes → normalize (docx/html/md → markdown) → parse tier (fast-pdf | vision-OCR | docling | whisper)
+      → segments (heading-path + page) → embeddings (bge-m3, 1024-d)
+      → windowed extract (facts + entities in one call) → curator (dedup/merge) → memories
+      → canonical entities (typed) + typed relationship edges → recallable`}</CodeBlock>
+          </section>
+
+          {/* ── REST · Recall ── */}
+          <section id="recall" className="mt-12">
+            <Eyebrow>06 · REST API — RECALL</Eyebrow>
+            <H2 id="recall">Recall &amp; search</H2>
+            <P>
+              One hybrid engine answers every recall call — dense vector + lexical + entity + temporal + graph
+              lanes, fused and reranked — routed to your workspace&rsquo;s storage engine automatically. The same
+              contract serves hybrid, <Mono>.amr</Mono>, and BYOD tenants; you never pick a backend.
+            </P>
+            <H3 id="recall-recall">Recall</H3>
+            <P><Mono>POST /api/recall</Mono> — grounded retrieval over memories + evidence.</P>
+            <CodeBlock label="curl · recall">{`curl -X POST "${CORE}/api/recall" \\
+  -H "Authorization: Bearer $HIVEMIND_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "query": "when does Orion-X launch and at what price",
+        "mode": "quick", "limit": 5 }'`}</CodeBlock>
+            <CodeBlock label="200 · response (top-level keys)">{`{
+  "memories": [ { "id": "…", "content": "…", "score": 0.82, "scope": "organization" } ],
+  "evidence":  [ { "segmentId": "…", "snippet": "…", "score": 0.79 } ],
+  "search_method": "hybrid", "mode_used": "quick", "timing_ms": 640
+}`}</CodeBlock>
+            <table className="w-full mt-3 text-[12px]">
+              <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold">Field</th><th className="py-1.5 font-semibold">Description</th></tr></thead>
+              <tbody className="divide-y divide-[#eae7e1]">
+                {[
+                  ['query', 'Required. Natural-language query (any language).'],
+                  ['mode', 'quick | deep | insight. quick = low-latency single sweep; insight = synthesis-oriented.'],
+                  ['limit', 'Max memories to return (default 10).'],
+                  ['entities', 'Anchor the entity-hop lane on named entities.'],
+                  ['scope / project_id', 'Narrow to a tier/project — narrows only, never widens.'],
+                  ['valid_at / known_at', 'Bi-temporal snapshot — recall the graph as it was at a point in time.'],
+                ].map(([n, d]) => (
+                  <tr key={n}><td className="py-1.5 pr-3 font-mono text-[#0a0a0a] whitespace-nowrap align-top">{n}</td><td className="py-1.5 text-[#525252]">{d}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <H3 id="recall-chat">Grounded chat</H3>
+            <P><Mono>POST /api/chat</Mono> — the full agent turn: intent → retrieval → grounded answer, with <Mono>sources</Mono>, <Mono>answer_mode</Mono> (counted | temporal | graph | sampled), and <Mono>scopes_found</Mono>. Set <Mono>stream:true</Mono> for SSE. A retrieval timeout is reported honestly (&ldquo;couldn&rsquo;t look&rdquo;), never as &ldquo;nothing found&rdquo;.</P>
+            <H3 id="recall-other">Other search routes</H3>
+            <table className="w-full mt-3 text-[12px]">
+              <tbody className="divide-y divide-[#eae7e1]">
+                {[
+                  ['POST /api/search/quick', 'Low-latency single-lane search.'],
+                  ['POST /api/search/insight', 'Synthesis-oriented recall.'],
+                  ['POST /api/search/panorama', 'Broad multi-lane sweep.'],
+                  ['POST /api/evidence/search', 'Verbatim evidence-segment search (lossless — part numbers, prices, spec values).'],
+                  ['POST /api/evidence/hybrid', 'Memories + evidence in one ranked delivery.'],
+                ].map(([n, d]) => (
+                  <tr key={n}><td className="py-2 pr-4 font-mono text-[#0a0a0a] whitespace-nowrap align-top">{n}</td><td className="py-2 text-[#525252]">{d}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          {/* ── REST · Documents ── */}
+          <section id="documents" className="mt-12">
+            <Eyebrow>07 · REST API — DOCUMENTS &amp; MEMORIES</Eyebrow>
+            <H2 id="documents">Managing what you ingested</H2>
+            <table className="w-full mt-3 text-[12.5px]">
+              <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold">Endpoint</th><th className="py-1.5 font-semibold">Description</th></tr></thead>
+              <tbody className="divide-y divide-[#eae7e1]">
+                {[
+                  ['GET /api/memories', 'List memories — ?limit&offset&scope&project_id&memory_type&tags&is_latest. Returns {memories[], pagination}.'],
+                  ['GET /api/memories/:id', 'Fetch one memory (full fields).'],
+                  ['GET /api/knowledge/document?id=', 'A document + its evidence segments.'],
+                  ['GET /api/documents', 'List ingested documents.'],
+                  ['PATCH /api/memories/:id', 'Update a memory (content/tags/metadata).'],
+                  ['DELETE /api/memories/:id?hard=true', 'Delete a memory (hard=true purges vectors too — GDPR erasure).'],
+                  ['POST /api/memories/bulk-delete-by-tag', 'Delete every memory carrying a tag {tags:[…]}. Sweeps vectors.'],
+                  ['POST | DELETE /api/memories/delete-all', 'Clear the whole workspace — memories AND evidence segments AND documents.'],
+                  ['GET /api/memory/stats', 'Counts + storage_mode (hybrid | amr | byod). Branch on this to skip central-graph-only features.'],
+                ].map(([n, d]) => (
+                  <tr key={n}><td className="py-2 pr-4 font-mono text-[#0a0a0a] whitespace-nowrap align-top">{n}</td><td className="py-2 text-[#525252]">{d}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <P className="text-[12px] mt-3">
+              <strong className="text-[#0a0a0a]">Storage modes.</strong> Every workspace runs one engine, chosen by plan/hosting:
+              <Mono>hybrid</Mono> (central), <Mono>amr</Mono> (embedded sovereign shard), or <Mono>byod</Mono> (your own box). Ingestion + recall
+              are identical across all three; only where the bytes live differs. Central-graph-only admin reads return
+              <Mono>501 not_supported_for_amr_storage</Mono> for agent-backed tenants by design — gate on <Mono>storage_mode</Mono>.
+            </P>
+          </section>
+
           {/* ── Tool reference ── */}
           {groups.map((g, gi) => (
             <section key={g.id} id={g.id} className="mt-12">
-              <Eyebrow>{String(5 + gi).padStart(2, '0')} · TOOL REFERENCE</Eyebrow>
+              <Eyebrow>{String(8 + gi).padStart(2, '0')} · MCP TOOL REFERENCE</Eyebrow>
               <H2 id={g.id}>{g.title} <span className="text-[#a3a3a3] font-mono text-[14px]">[{g.count}]</span></H2>
               <P>{g.blurb}</P>
               <div className="space-y-4 mt-4">
@@ -364,7 +565,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
 
           {/* ── Best practices ── */}
           <section id="best-practices" className="mt-12 mb-20">
-            <Eyebrow>09 · BEST PRACTICES</Eyebrow>
+            <Eyebrow>12 · BEST PRACTICES</Eyebrow>
             <H2 id="best-practices">Best practices</H2>
             <ul className="space-y-2.5 text-[13px] text-[#525252] list-none mt-3">
               {[

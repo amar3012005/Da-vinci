@@ -8,7 +8,7 @@ const navLinks = [
   { label: 'Solutions', href: '#solutions' },
   { label: 'Developers', href: '#developers' },
   { label: 'Pricing', href: '#pricing' },
-  { label: 'Docs', href: '/hivemind/app/connectors' },
+  { label: 'Docs', href: '/hivemind/docs' },
   { label: './ Research', href: '/research' },
   { label: './ Benchmark', href: '/benchmark' },
 ];
