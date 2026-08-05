@@ -1016,38 +1016,39 @@ export default function Memories() {
           setOrgKey(normalizeOrgKey(boot.organization.name));
         }
       } catch { /* noop */ }
-      try {
-        const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/topic-states', { params: { limit: 30 } }).catch(() => ({ data: null }));
-        if (cancelled) return;
-        const seen = new Map();
-        for (const t of (data?.topics || [])) {
-          const e = t.entity;
-          if (!e?.canonicalName) continue;
-          const key = `${e.entityType}:${e.canonicalName.toLowerCase().replace(/\s+/g, '-')}`;
-          if (!seen.has(key)) seen.set(key, { key, type: e.entityType, name: e.canonicalName, count: e.mentionCount || 1 });
-        }
-        setTopEntities(Array.from(seen.values()).sort((a, b) => b.count - a.count).slice(0, 12));
-      } catch { /* noop */ }
-      // DO NOT ASK AN ENDPOINT THAT CANNOT ANSWER. /admin/contradictions reads the CENTRAL graph,
-      // and an org whose memories live on its own .amr agent has no rows there — the server says so
-      // explicitly with 501 {"storage_mode":"amr","supported":false,
-      // "error":"not_supported_for_amr_storage"}, which is the right behaviour (it refuses rather
-      // than reporting a misleading zero). The .catch below already stopped that breaking the page,
-      // but the request still fired on every load and surfaced as a red
-      // "Failed to load resource: 501" in the console for every .amr tenant.
-      // Gate on the storage mode the stats endpoint already publishes, so the call is only made
-      // where it can succeed. Any non-'amr' mode (incl. an older core that omits the field) keeps
-      // the previous behaviour, so nothing that worked before stops working.
-      try {
-        const stats = await apiClient.getMemoryStats().catch(() => null);
-        if (cancelled) return;
-        const mode = stats?.storage_mode || null;
-        setStorageMode(mode);
-        if (mode === 'amr') { setContradictionsCount(0); return; }
-        const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/contradictions', { params: { limit: 1 } }).catch(() => ({ data: null }));
-        if (cancelled) return;
-        setContradictionsCount(data?.count || 0);
-      } catch { /* noop */ }
+      // CENTRAL-GRAPH READS — GATE ON STORAGE MODE. Both /admin/topic-states and
+      // /admin/contradictions read the CENTRAL graph, which is empty for an org whose
+      // memories live on its own .amr agent (or byod) — the server refuses with
+      // 501 not_supported_for_amr_storage rather than a misleading zero. The .catch
+      // stops it breaking the page, but the request still fires and shows a red
+      // "Failed to load resource: 501" every load. Fetch storage_mode ONCE and gate
+      // BOTH calls (the old code gated only contradictions, and only for the exact
+      // string 'amr' — leaving topic-states firing and missing amr_embedded/byod).
+      let _mode = null;
+      try { const stats = await apiClient.getMemoryStats().catch(() => null); _mode = stats?.storage_mode || null; setStorageMode(_mode); } catch { /* noop */ }
+      const _agentBacked = ['amr', 'amr_embedded', 'byod', 'byod_amr'].includes(String(_mode || ''));
+      if (cancelled) return;
+      if (_agentBacked) {
+        setContradictionsCount(0);
+      } else {
+        try {
+          const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/topic-states', { params: { limit: 30 } }).catch(() => ({ data: null }));
+          if (cancelled) return;
+          const seen = new Map();
+          for (const t of (data?.topics || [])) {
+            const e = t.entity;
+            if (!e?.canonicalName) continue;
+            const key = `${e.entityType}:${e.canonicalName.toLowerCase().replace(/\s+/g, '-')}`;
+            if (!seen.has(key)) seen.set(key, { key, type: e.entityType, name: e.canonicalName, count: e.mentionCount || 1 });
+          }
+          setTopEntities(Array.from(seen.values()).sort((a, b) => b.count - a.count).slice(0, 12));
+        } catch { /* noop */ }
+        try {
+          const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/contradictions', { params: { limit: 1 } }).catch(() => ({ data: null }));
+          if (cancelled) return;
+          setContradictionsCount(data?.count || 0);
+        } catch { /* noop */ }
+      }
     })();
     return () => { cancelled = true; };
   }, []);
