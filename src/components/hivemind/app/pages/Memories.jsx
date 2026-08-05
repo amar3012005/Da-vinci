@@ -1003,23 +1003,38 @@ export default function Memories() {
           setOrgKey(normalizeOrgKey(boot.organization.name));
         }
       } catch { /* noop */ }
+      // topic-states + contradictions read the CENTRAL knowledge graph, which is
+      // empty for .amr / byod orgs (their graph lives on the agent). The core
+      // returns 501 not_supported_for_amr_storage for those — a request that can
+      // only ever fail, showing a red 501 in the console + a service-error toast
+      // on every Memories load. Gate both on the tenant's storage_mode so we never
+      // fire a call that 501s. Any non-amr value (incl. an older core that omits
+      // the field) keeps the previous behaviour.
+      let _storageMode = 'hybrid';
       try {
-        const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/topic-states', { params: { limit: 30 } }).catch(() => ({ data: null }));
-        if (cancelled) return;
-        const seen = new Map();
-        for (const t of (data?.topics || [])) {
-          const e = t.entity;
-          if (!e?.canonicalName) continue;
-          const key = `${e.entityType}:${e.canonicalName.toLowerCase().replace(/\s+/g, '-')}`;
-          if (!seen.has(key)) seen.set(key, { key, type: e.entityType, name: e.canonicalName, count: e.mentionCount || 1 });
-        }
-        setTopEntities(Array.from(seen.values()).sort((a, b) => b.count - a.count).slice(0, 12));
-      } catch { /* noop */ }
-      try {
-        const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/contradictions', { params: { limit: 1 } }).catch(() => ({ data: null }));
-        if (cancelled) return;
-        setContradictionsCount(data?.count || 0);
-      } catch { /* noop */ }
+        const { data: _stats } = await apiClient.controlPlane.get('/v1/proxy/memory/stats').catch(() => ({ data: null }));
+        if (_stats?.storage_mode) _storageMode = String(_stats.storage_mode);
+      } catch { /* noop — default hybrid */ }
+      const _centralGraph = _storageMode !== 'amr' && _storageMode !== 'byod' && _storageMode !== 'amr_embedded' && _storageMode !== 'byod_amr';
+      if (_centralGraph) {
+        try {
+          const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/topic-states', { params: { limit: 30 } }).catch(() => ({ data: null }));
+          if (cancelled) return;
+          const seen = new Map();
+          for (const t of (data?.topics || [])) {
+            const e = t.entity;
+            if (!e?.canonicalName) continue;
+            const key = `${e.entityType}:${e.canonicalName.toLowerCase().replace(/\s+/g, '-')}`;
+            if (!seen.has(key)) seen.set(key, { key, type: e.entityType, name: e.canonicalName, count: e.mentionCount || 1 });
+          }
+          setTopEntities(Array.from(seen.values()).sort((a, b) => b.count - a.count).slice(0, 12));
+        } catch { /* noop */ }
+        try {
+          const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/contradictions', { params: { limit: 1 } }).catch(() => ({ data: null }));
+          if (cancelled) return;
+          setContradictionsCount(data?.count || 0);
+        } catch { /* noop */ }
+      }
     })();
     return () => { cancelled = true; };
   }, []);
