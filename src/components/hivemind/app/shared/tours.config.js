@@ -112,3 +112,21 @@ export const TOUR_STEPS = [
     targets: ['/hivemind/app/billing'],
   },
 ];
+
+/**
+ * Personalise step 0 with the user's real name, resolved from the HIVEMIND
+ * profile (a 'static'/'name' fact) or, failing that, the account they signed
+ * up with. OverviewTour calls this for index 0 only — everywhere else this
+ * file stays the single source of truth for copy, per the header above.
+ * Falls back to the generic headline verbatim when no name is known yet
+ * (brand-new account, profile write still in flight, or a private-mode
+ * browser where nothing persisted).
+ */
+export function welcomeStep(name) {
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  if (!trimmed) return TOUR_STEPS[0];
+  // First name only — "Welcome, Amar." reads as a greeting; the full legal
+  // or display name ("Amar Sai Gadde") reads as a form label.
+  const first = trimmed.split(/\s+/)[0];
+  return { ...TOUR_STEPS[0], title: `Welcome, ${first}.` };
+}

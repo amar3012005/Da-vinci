@@ -1193,7 +1193,45 @@ export default function Overview() {
   const memoriesTotal = allStats?.memories ?? memTotalData?.pagination?.total ?? null;
   const relationsTotal = allStats?.relations ?? null;
   const { projects } = useTeamContext() || {};
-  const { org } = useAuth() || {};
+  const { org, user } = useAuth() || {};
+
+  // Welcome-tour personalisation. HIVEMIND's own memory-based profile (a
+  // 'static'/'name' fact — the exact one Profile.jsx reads/writes) is the
+  // primary source, since that is what the rest of the product addresses the
+  // user by; the account they signed up with is the fallback for a genuinely
+  // brand-new org where nothing has been written yet.
+  const { data: nameFactData, loading: nameFactLoading } = useApiQuery(
+    () => apiClient.controlPlane.get('/v1/proxy/profiles', { params: { category: 'static', key: 'name' } })
+      .then((r) => r.data).catch(() => null),
+    []
+  );
+  const nameFromProfile = nameFactData?.facts?.[0]?.value || null;
+  const accountName = user?.display_name || user?.name || (user?.email ? user.email.split('@')[0] : null);
+  const welcomeName = nameFromProfile || accountName || null;
+
+  // Seed the HIVEMIND profile with the account's name the FIRST time we can
+  // see it has none yet — so "the user's name" is answerable the same way
+  // whether it came from onboarding or from a chat "call me X" update. Gated
+  // on nameFactLoading (useApiQuery's `data` starts at null, same as an
+  // errored/empty response, so loading is the only reliable "fetch settled"
+  // signal). Fires once per browser (session flag mirrors the welcome-email
+  // pattern above); upsertFact on the server is idempotent on
+  // (user, org, category, key), so a duplicate call here is harmless, this
+  // just avoids the retry noise.
+  useEffect(() => {
+    if (nameFactLoading || nameFromProfile || !accountName) return;
+    if (typeof window === 'undefined') return;
+    const FLAG = 'hm.profileNameSeeded';
+    try {
+      if (window.sessionStorage.getItem(FLAG)) return;
+      window.sessionStorage.setItem(FLAG, '1');
+    } catch {
+      // sessionStorage blocked — the request below still only fires once per mount
+    }
+    apiClient.controlPlane
+      .post('/v1/proxy/profiles', { category: 'static', key: 'name', value: accountName, confidence: 1.0 })
+      .catch(() => { /* best-effort — the tour still greets from the account name this session */ });
+  }, [nameFactLoading, nameFromProfile, accountName]);
   const { data: membersData } = useApiQuery(
     () => (org?.id ? apiClient.listMembers(org.id).catch(() => null) : Promise.resolve(null)),
     [org?.id]
@@ -1227,7 +1265,7 @@ export default function Overview() {
     <div className="max-w-6xl mx-auto font-['Space_Grotesk'] flex flex-col h-[calc(100vh-104px)] overflow-hidden">
       {/* First-visit guided tour */}
       <AnimatePresence>
-        {tour.open && <OverviewTour onClose={tour.close} />}
+        {tour.open && <OverviewTour onClose={tour.close} userName={welcomeName} />}
       </AnimatePresence>
 
       {/* Status bar — flat white card matching every other page's theme:

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { TOUR_STEPS, TOUR_VERSION } from './tours.config';
+import { TOUR_STEPS, TOUR_VERSION, welcomeStep } from './tours.config';
 
 /**
  * First-run guided tour.
@@ -69,15 +69,25 @@ function Check() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
-      className="mt-[3px] flex-none text-blue-600">
+      className="mt-[3px] flex-none text-[#117dff]">
       <path d="M20 6 9 17l-5-5" />
     </svg>
   );
 }
 
-export default function OverviewTour({ onClose }) {
+/**
+ * @param {string} [userName] - resolved once by Overview.jsx (HIVEMIND profile
+ *   fact, falling back to the signup account) and passed down so this file
+ *   stays a pure renderer with no data-fetching of its own. Personalises step 0
+ *   only; every other stop is unaffected.
+ */
+export default function OverviewTour({ onClose, userName }) {
   const narrow = typeof window !== 'undefined' && window.innerWidth < 1024;
-  const [steps] = useState(() => resolveSteps(narrow));
+  const [steps] = useState(() => {
+    const resolved = resolveSteps(narrow);
+    if (resolved[0]?.eyebrow === 'WELCOME') resolved[0] = welcomeStep(userName);
+    return resolved;
+  });
   const [i, setI] = useState(0);
   const [geom, setGeom] = useState(null);
   const cardRef = useRef(null);
@@ -218,31 +228,30 @@ export default function OverviewTour({ onClose }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.26, ease: [0.2, 0.7, 0.3, 1] }}
-          className="absolute z-[10001] rounded-2xl border border-black/10 px-6 pt-5 pb-4"
+          className="absolute z-[10001] flex flex-col rounded-2xl border border-[#e3e0db] bg-white px-6 pt-5 pb-4 min-h-[300px]"
           style={{
             ...cardStyle,
             width: CARD_W,
-            background: 'rgba(255,255,255,0.87)',
-            boxShadow: '0 1px 2px rgba(10,10,11,0.04), 0 18px 44px rgba(10,10,11,0.14)',
-            backdropFilter: 'blur(26px) saturate(1.6)',
-            WebkitBackdropFilter: 'blur(26px) saturate(1.6)',
+            maxHeight: '70vh',
+            overflowY: 'auto',
+            boxShadow: '0 1px 3px rgba(10,10,11,0.04), 0 20px 60px rgba(10,10,11,0.18)',
           }}
         >
-          <p className="flex items-center gap-2 mb-3 font-mono text-[11px] tracking-[0.18em] text-blue-600">
-            <span className="opacity-50">{'\u27E9'}</span>
+          <p className="flex items-center gap-2 mb-3 font-mono text-[11px] tracking-[0.18em] text-[#117dff]">
+            <span className="text-[#a3a3a3]">{'\u27E9'}</span>
             <span>{step.eyebrow}</span>
-            <span className="text-neutral-400 tracking-[0.14em]">· {String(i + 1).padStart(2, '0')}</span>
+            <span className="text-[#d4d0ca] tracking-[0.14em]">· {String(i + 1).padStart(2, '0')}</span>
           </p>
 
-          <h3 className="text-[26px] leading-[1.08] font-extrabold tracking-[-0.035em] text-neutral-900 mb-2.5">
+          <h3 className="text-[26px] leading-[1.08] font-semibold font-['Space_Grotesk'] tracking-[-0.02em] text-[#0a0a0a] mb-2.5">
             {step.title}
           </h3>
-          <p className="text-[13px] leading-[1.62] text-neutral-600 m-0">{step.body}</p>
+          <p className="text-[13px] leading-[1.62] text-[#525252] m-0">{step.body}</p>
 
           {step.checks && step.checks.length > 0 && (
             <ul className="list-none mt-3.5 mb-0 p-0 flex flex-col gap-[7px]">
               {step.checks.map((c) => (
-                <li key={c} className="flex gap-2.5 text-[12.5px] leading-[1.45] text-neutral-800">
+                <li key={c} className="flex gap-2.5 text-[12.5px] leading-[1.45] text-[#0a0a0a]">
                   <Check />
                   <span>{c}</span>
                 </li>
@@ -250,20 +259,20 @@ export default function OverviewTour({ onClose }) {
             </ul>
           )}
 
-          <div className="flex items-center gap-2 mt-[19px] pt-3.5 border-t border-black/10">
+          <div className="flex items-center gap-2 mt-auto pt-3.5 border-t border-[#eae7e1]">
             <button type="button" onClick={() => go(i + 1)}
-              className="rounded-[9px] px-4 py-2 text-[12.5px] font-semibold tracking-[-0.01em] bg-neutral-900 text-white hover:opacity-90">
+              className="rounded-[6px] px-4 py-2 text-[12.5px] font-semibold tracking-[-0.01em] bg-[#117dff] text-white hover:bg-[#0066e0] transition-colors">
               {i === steps.length - 1 ? 'Finish' : 'Next'}
             </button>
             <button type="button" onClick={() => go(i - 1)} disabled={i === 0}
-              className="rounded-[9px] px-3 py-2 text-[12.5px] border border-black/10 text-neutral-600 disabled:opacity-30">
+              className="rounded-[6px] px-3 py-2 text-[12.5px] border border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca] disabled:opacity-30 transition-colors">
               Back
             </button>
-            <span className="ml-auto font-mono text-[11px] tracking-[0.1em] text-neutral-400 tabular-nums">
+            <span className="ml-auto font-mono text-[11px] tracking-[0.1em] text-[#a3a3a3] tabular-nums">
               {String(i + 1).padStart(2, '0')} / {String(steps.length).padStart(2, '0')}
             </span>
             <button type="button" onClick={onClose}
-              className="text-[12px] text-neutral-400 underline underline-offset-2 p-1">
+              className="text-[12px] text-[#a3a3a3] hover:text-[#0a0a0a] underline underline-offset-2 p-1 transition-colors">
               Skip
             </button>
           </div>
