@@ -49,13 +49,17 @@ const fadeUp = {
 // server wins, so err on the side of ALLOWING here: a false reject is invisible
 // to the user ("unsupported file type" for a workbook SheetJS reads natively),
 // while a false accept just surfaces the server's own clear 415.
-const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx', 'xls',
+const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx',
   // Macro-enabled + OpenDocument siblings: same parsers as their twins
   // (sheet-direct reads xlsm/ods natively), previously rejected client-side.
   'xlsm', 'ods', 'docm', 'odt', 'rtf', 'epub', 'pptm', 'odp',
-  // pptx/ppt are parsed by Docling server-side + listed in the picker accept=
-  // attr; they were missing here, so the client rejected them before upload.
-  'pptx', 'ppt', 'html', 'htm',
+  // pptx/ppt/xls WITHDRAWN, and the old comment here ("parsed by Docling
+  // server-side") is no longer true in practice: they have no seam handler and no
+  // direct tier, so they fall through to Docling, which measured 479s returning
+  // chunks=0 on a real .pptx and a 600s convert timeout on another. The server
+  // now refuses them in KB_EXTENSIONS, so offering them here would invite an
+  // upload that is guaranteed to 415. Restore alongside a working conversion path.
+  'html', 'htm',
   // Images routed to /api/ingest/image (Groq vision pipeline) instead of docling.
   'png', 'jpg', 'jpeg', 'tiff', 'tif', 'webp', 'gif',
   // Audio transcribed server-side via Groq Whisper (server.js docling-adapter).
