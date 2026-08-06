@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { TOUR_STEPS, TOUR_VERSION, welcomeStep } from './tours.config';
@@ -221,7 +222,15 @@ export default function OverviewTour({ onClose, userName }) {
 
   if (!step) return null;
 
-  return (
+  // Portalled to document.body — Overview's own wrapper (max-w-6xl mx-auto
+  // overflow-hidden) or any ancestor between it and <body> only needs ONE
+  // transform/filter/perspective/will-change:transform to turn into a
+  // containing block, and then `position: fixed` centres on THAT ancestor's
+  // box instead of the real viewport — which is exactly what put this card
+  // off-centre in production. A portal renders outside that whole subtree,
+  // so `fixed` always resolves against the true viewport regardless of what
+  // any parent does.
+  return createPortal(
     <div className="fixed inset-0 z-[9998]" role="presentation">
       <style>{`
         :root { --hm-tour-ink:#16171a; --hm-tour-panel:#ffffff; }
@@ -335,6 +344,7 @@ export default function OverviewTour({ onClose, userName }) {
           </div>
         </motion.div>
       </AnimatePresence>
-    </div>
+    </div>,
+    document.body,
   );
 }
