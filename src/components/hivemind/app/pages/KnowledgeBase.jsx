@@ -1705,7 +1705,11 @@ export default function KnowledgeBase() {
     // Default to org-wide for admins (upload once, whole org sees it); everyone
     // else starts on their private space. Both project + org tiers remain
     // selectable in the modal, gated by role exactly as the backend authorizes.
-    const isAdmin = user?.role === 'owner' || user?.role === 'admin';
+    // Role lives on org.role / user.orgRole (see the modal's userRole prop) —
+    // `user.role` alone is always undefined, so admins were silently defaulted
+    // to 'personal' here as well.
+    const effectiveRole = org?.role || user?.orgRole || user?.role;
+    const isAdmin = effectiveRole === 'owner' || effectiveRole === 'admin';
     setSelectedScope(isAdmin ? 'organization' : 'personal');
     setScopeModalOpen(true);
     // Estimate plan pages per file in the browser (PDF → real count, image /
@@ -1719,7 +1723,7 @@ export default function KnowledgeBase() {
         .then((n) => setPendingPageCounts((prev) => ({ ...prev, [pendingFileKey(f)]: n })))
         .catch(() => setPendingPageCounts((prev) => ({ ...prev, [pendingFileKey(f)]: 1 })));
     });
-  }, [user?.role]);
+  }, [org?.role, user?.orgRole, user?.role]);
 
   // Drop one file from the pending batch (the modal's per-row ✕). Lets a user
   // trim an over-limit batch back under quota without cancelling everything.
@@ -2048,7 +2052,12 @@ export default function KnowledgeBase() {
         open={scopeModalOpen}
         files={pendingFiles}
         org={org}
-        userRole={user?.role}
+        // Org membership role is exposed by bootstrap as `org.role` / `user.orgRole`
+        // (control-plane emits `orgRole: membership.role`) — NOT `user.role`, which
+        // is never populated. Reading only `user.role` made isOrgAdmin false for
+        // EVERY user, including owners, so the "Entire organization" tier was
+        // permanently greyed out and unselectable. Same derivation Connectors.jsx uses.
+        userRole={org?.role || user?.orgRole || user?.role}
         projects={teamProjects}
         loadingProjects={loadingProjects}
         projectsError={projectsError}
