@@ -193,9 +193,23 @@ export default function OverviewTour({ onClose, userName }) {
     };
   }, [step, narrow]);
 
-  const cardStyle = (narrow || !geom)
-    ? { left: '50%', top: '50%', transform: 'translate(-50%,-50%)' }
-    : { left: geom.cardLeft, top: geom.cardTop };
+  // Two centring mechanisms existed for the untargeted case (this step, and
+  // any step whose sidebar target isn't in the DOM): CSS `left:50%/top:50%/
+  // transform:translate(-50%,-50%)` on an absolutely-positioned card. That
+  // still landed off-centre in production even after portalling to
+  // document.body, so whatever the actual cause turns out to be, it's cheaper
+  // to stop depending on percentage-of-parent math entirely. Walkthrough.jsx
+  // (a working, already-shipped modal) centres its card with plain flexbox —
+  // `flex items-center justify-center` on the fixed wrapper — which centres
+  // on the PARENT'S ACTUAL RENDERED BOX rather than computing a percentage,
+  // so it can't be thrown off by whatever subtlety broke the transform-based
+  // math here. Matching that proven mechanism: the untargeted card is now a
+  // plain flex child (no position/left/top of its own at all). The
+  // arrow-anchored case (a real sidebar target to point at) still needs an
+  // exact pixel position for the SVG arrow to line up, so that path keeps
+  // absolute + the measured px coordinates — untouched.
+  const anchored = geom && !narrow;
+  const cardStyle = anchored ? { left: geom.cardLeft, top: geom.cardTop } : {};
 
   const paths = [];
   let head = null;
@@ -231,7 +245,7 @@ export default function OverviewTour({ onClose, userName }) {
   // so `fixed` always resolves against the true viewport regardless of what
   // any parent does.
   return createPortal(
-    <div className="fixed inset-0 z-[9998]" role="presentation">
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4" role="presentation">
       <style>{`
         :root { --hm-tour-ink:#16171a; --hm-tour-panel:#ffffff; }
         @media (prefers-color-scheme: dark) {
@@ -274,7 +288,7 @@ export default function OverviewTour({ onClose, userName }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.26, ease: [0.2, 0.7, 0.3, 1] }}
-          className="absolute z-[10001] flex flex-col rounded-[20px] border border-[#e3e0db] bg-white overflow-hidden"
+          className={`${anchored ? 'absolute' : 'relative'} z-[10001] flex flex-col rounded-[20px] border border-[#e3e0db] bg-white overflow-hidden`}
           style={{
             ...cardStyle,
             width: CARD_W,
