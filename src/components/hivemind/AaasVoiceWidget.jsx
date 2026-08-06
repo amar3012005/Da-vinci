@@ -358,7 +358,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const busy = state === 'connecting';
   const runtimeTime = `${String(Math.floor(remainingSeconds / 60)).padStart(1, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`;
   return (
-    <div className={`border border-[#e3e0db] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${isRuntimeAdmin ? 'min-h-[360px] p-5 sm:p-6' : 'rounded-2xl p-6'}`}>
+    <div className={isRuntimeAdmin ? '' : 'rounded-2xl border border-[#e3e0db] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-6'}>
       {/* Mode caption — long strip on top so the user knows what the active mode does */}
       {!isRuntimeAdmin && !active && (
         <div className={`mb-5 flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-[12px] ${
@@ -381,15 +381,61 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         </div>
 
         {/* Right column */}
-        <div className={`${isRuntimeAdmin ? 'relative w-full max-w-sm' : 'flex-1 min-w-0'}`}>
-          <div className={`flex items-start gap-3 ${isRuntimeAdmin ? 'justify-center' : 'justify-between'}`}>
+        {isRuntimeAdmin ? (
+          // Vertical stack, normal flow throughout — no absolute positioning.
+          // The title used to live here too, sitting right above a button that
+          // was pulled out of flow with `absolute bottom-5`, so it landed on
+          // top of the description paragraph below once that paragraph's own
+          // height made the box shorter than the button's fixed offset assumed.
+          // The header now carries the title (mac-window chrome, HqRuntimeConsole),
+          // so this is just: timer/subtitle -> button -> description, stacked.
+          <div className="w-full max-w-sm flex flex-col items-center">
+            <p className="text-[#a3a3a3] text-[12px]">{active ? `${runtimeTime} remaining` : 'A focused three-minute check-in'}</p>
+            <button
+              onClick={active ? () => stopAll('user') : start}
+              disabled={busy}
+              className={`mt-4 flex items-center gap-1.5 px-5 py-2 rounded-xl text-[13px] font-semibold transition-all shrink-0 ${
+                active ? 'bg-[#ef4444] text-white hover:bg-[#dc2626]'
+                : 'bg-[#0a0a0a] text-white hover:bg-[#262626] disabled:opacity-50'}`}
+            >
+              {busy ? <Loader2 size={14} className="animate-spin" /> : active ? <Square size={14} /> : <Mic size={14} />}
+              {busy ? 'Connecting…' : active ? 'End early' : 'Start check-in'}
+            </button>
+            <p className="mt-5 text-[11px] leading-5 text-[#777168]">Runtime will use this conversation only to understand your current status and priorities. The check-in ends automatically after 3 minutes.</p>
+
+            {/* Current turn + error */}
+            {(transcript || agentTurn) && (
+              <div className="mt-4 w-full space-y-2 border-t border-[#f3f1ec] pt-3 text-left">
+                {transcript && (
+                  <div className="flex gap-2">
+                    <span className="text-[10px] font-mono text-[#a3a3a3] uppercase pt-0.5 w-10 shrink-0">You</span>
+                    <p className="text-[12.5px] text-[#0a0a0a] flex-1">{transcript}</p>
+                  </div>
+                )}
+                {agentTurn && (
+                  <div className="flex gap-2">
+                    <span className="text-[10px] font-mono text-[#117dff] uppercase pt-0.5 w-10 shrink-0">TARA</span>
+                    <p className="text-[12.5px] text-[#525252] flex-1">{agentTurn}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            {error && (
+              <div className="mt-3 w-full text-[11px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5 text-left">
+                <AlertTriangle size={11} className="inline mr-1" /> {error}
+              </div>
+            )}
+          </div>
+        ) : (
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] leading-tight">{isRuntimeAdmin ? 'Runtime · Admin check-in' : 'Talk to TARA'}</h3>
-              <p className="text-[#a3a3a3] text-[12px]">{isRuntimeAdmin ? active ? `${runtimeTime} remaining` : 'A focused three-minute check-in' : `Real-time voice · ${provider === 'grok' ? 'Grok Voice' : 'Deepgram Voice Agent'}`}</p>
+              <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] leading-tight">Talk to TARA</h3>
+              <p className="text-[#a3a3a3] text-[12px]">{`Real-time voice · ${provider === 'grok' ? 'Grok Voice' : 'Deepgram Voice Agent'}`}</p>
             </div>
-            <div className={`flex items-center gap-2 shrink-0 ${isRuntimeAdmin ? 'absolute bottom-5 left-1/2 -translate-x-1/2' : ''}`}>
+            <div className="flex items-center gap-2 shrink-0">
               {/* internal = direct HIVEMIND recall (no clinical) · external = full agent */}
-              {!isRuntimeAdmin && !active && (
+              {!active && (
                 <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">
                   {['external', 'internal'].map((m) => (
                     <button key={m} type="button" onClick={() => setMode(m)}
@@ -411,13 +457,13 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
                 : 'bg-[#0a0a0a] text-white hover:bg-[#262626] disabled:opacity-50'}`}
             >
               {busy ? <Loader2 size={14} className="animate-spin" /> : active ? <Square size={14} /> : <Mic size={14} />}
-              {busy ? 'Connecting…' : active ? (isRuntimeAdmin ? 'End early' : 'Stop') : (isRuntimeAdmin ? 'Start check-in' : 'Start')}
+              {busy ? 'Connecting…' : active ? 'Stop' : 'Start'}
             </button>
             </div>
           </div>
 
           {/* Voice config (always visible when idle) */}
-          {!isRuntimeAdmin && !active && (
+          {!active && (
             <div className="mt-4 space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <select value={langFilter} onChange={(e) => setLangFilter(e.target.value)}
@@ -457,8 +503,6 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
             </div>
           )}
 
-          {isRuntimeAdmin ? <p className="mt-3 text-[11px] leading-5 text-[#777168]">Runtime will use this conversation only to understand your current status and priorities. The check-in ends automatically after 3 minutes.</p> : null}
-
           {/* Current turn — user STT + TARA reply */}
           {(transcript || agentTurn) && (
             <div className="mt-4 space-y-2 border-t border-[#f3f1ec] pt-3">
@@ -482,6 +526,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
