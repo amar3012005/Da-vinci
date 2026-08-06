@@ -99,9 +99,32 @@ function relativeTime(dateStr) {
   return `${Math.floor(diffMon / 12)}y ago`;
 }
 
+// Card preview. Two problems with the old version: it cut at a fixed 180 chars
+// MID-WORD ("HyperAgents (Governed Dig"), which reads as data loss rather than a
+// preview, and it gave a document summary — the one memory type written to be read
+// whole, ~1250 chars — the same budget as a one-line fact.
+//
+// The stored content is NOT truncated: a summary is capped server-side at
+// KB_DOC_SUMMARY_MAX_CHARS (1200) and ends on a complete sentence. Only the card
+// was clipping it, and the detail view already shows the full text.
 function truncate(text, maxLen = 180) {
   if (!text) return '';
-  return text.length > maxLen ? text.slice(0, maxLen).trimEnd() + '...' : text;
+  if (text.length <= maxLen) return text;
+  const cut = text.slice(0, maxLen);
+  // Break on the last word boundary so a preview never ends mid-word. Only honour
+  // it if it keeps most of the budget, otherwise a long unbroken token would
+  // collapse the preview to almost nothing.
+  const lastSpace = cut.lastIndexOf(' ');
+  const safe = lastSpace > maxLen * 0.6 ? cut.slice(0, lastSpace) : cut;
+  return safe.trimEnd().replace(/[.,;:—-]+$/, '') + '…';
+}
+
+// A document summary is meant to be read as prose, so give it a longer preview
+// than a single-line fact. Still a preview — the detail view shows all of it.
+function previewFor(memory) {
+  const isSummary = memory?.memory_type === 'summary'
+    || (Array.isArray(memory?.tags) && memory.tags.includes('document-summary'));
+  return truncate(memory?.content, isSummary ? 420 : 180);
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -446,8 +469,8 @@ function MemoryCard({ memory, index, onSelect, isSelected, orgKey }) {
       </div>
 
       {/* Content preview */}
-      <p className="text-[#525252] text-xs leading-relaxed mb-3 line-clamp-3 font-['Space_Grotesk']">
-        {truncate(memory.content)}
+      <p className="text-[#525252] text-xs leading-relaxed mb-3 line-clamp-6 font-['Space_Grotesk']">
+        {previewFor(memory)}
       </p>
 
       {/* Footer: tags + date + importance.
@@ -991,13 +1014,25 @@ export default function Memories() {
   // Project-level tier: which single project to narrow to. '' = all the
   // user's accessible projects. Only applied while tierScope === 'tier:project'.
   const [tierProject, setTierProject] = useState('');
-  const { projects: accessibleProjects } = useTeamContext() || {};
+  // ALL accessible projects, not the team-filtered list. `projects` from the team
+  // context is narrowed to the ACTIVE TEAM, so a project the user belongs to but
+  // which sits outside the selected team simply vanished from this filter — the
+  // scope filter would silently offer fewer projects than the user can actually
+  // read. allProjects is the unfiltered set the same context already exposes.
+  const { allProjects: _allProjects, projects: _teamProjects } = useTeamContext() || {};
+  const accessibleProjects = (_allProjects && _allProjects.length ? _allProjects : _teamProjects) || [];
   const [showFilters, setShowFilters] = useState(false);
   // Phase 2 polish
   const [activeEntity, setActiveEntity] = useState(null);   // tag like "person:alice-wong"
   const [groupByDoc, setGroupByDoc] = useState(false);
   const [topEntities, setTopEntities] = useState([]);
   const [contradictionsCount, setContradictionsCount] = useState(0);
+  // The actual conflicting pairs, not just the count. The banner used to link to
+  // "?tab=contradictions" — a tab id that does NOT exist in TABS (memories /
+  // documents / evidence), so "Review" was a dead link that dropped the user on an
+  // unknown tab. Hold the rows so the banner can expand in place instead.
+  const [contradictionRows, setContradictionRows] = useState([]);
+  const [showContradictions, setShowContradictions] = useState(false);
   // Which backend holds this org's memories ('amr' = its own agent shard, not the central graph).
   // Read from /memory/stats, which already reports it, so central-graph-only panels can be skipped
   // instead of firing requests that are guaranteed to 501.
@@ -1044,9 +1079,12 @@ export default function Memories() {
           setTopEntities(Array.from(seen.values()).sort((a, b) => b.count - a.count).slice(0, 12));
         } catch { /* noop */ }
         try {
-          const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/contradictions', { params: { limit: 1 } }).catch(() => ({ data: null }));
+          // limit:1 was enough for a count, but the banner now shows the pairs.
+          const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/contradictions', { params: { limit: 50 } }).catch(() => ({ data: null }));
           if (cancelled) return;
-          setContradictionsCount(data?.count || 0);
+          const rows = Array.isArray(data?.contradictions) ? data.contradictions : [];
+          setContradictionRows(rows);
+          setContradictionsCount(typeof data?.count === 'number' ? data.count : rows.length);
         } catch { /* noop */ }
       }
     })();
@@ -1356,20 +1394,52 @@ export default function Memories() {
 
         {/* Contradiction banner — surfaces conflicting memories */}
         {contradictionsCount > 0 && (
-          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-[#fecaca] bg-[#fef2f2] px-4 py-2">
+          <>
+          <div className={`flex items-center justify-between gap-3 rounded-xl border border-[#fecaca] bg-[#fef2f2] px-4 py-2 ${showContradictions ? 'mb-0 rounded-b-none' : 'mb-3'}`}>
             <div className="flex items-center gap-2 text-[#dc2626]">
               <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
               <span className="text-sm font-['Space_Grotesk']">
                 <strong>{contradictionsCount}</strong> {t('memories.conflictingMemories', 'conflicting memor{{suffix}} detected', { suffix: contradictionsCount === 1 ? 'y' : 'ies' })}
               </span>
             </div>
-            <a
-              href="/hivemind/app/memories?tab=contradictions"
+            <button
+              type="button"
+              onClick={() => setShowContradictions(v => !v)}
               className="text-[11px] font-mono uppercase tracking-wider text-[#dc2626] hover:underline"
             >
-              Review →
-            </a>
+              {showContradictions ? 'Hide' : 'Review'} {showContradictions ? '▲' : '▼'}
+            </button>
           </div>
+          {showContradictions && (
+            <div className="mb-3 rounded-b-xl border border-t-0 border-[#fecaca] bg-[#fff7f7] divide-y divide-[#fee2e2]">
+              {contradictionRows.length === 0 ? (
+                <p className="px-4 py-3 text-xs text-[#991b1b] font-['Space_Grotesk']">
+                  {t('memories.contradictionsUnavailable', 'The conflicting pairs could not be loaded.')}
+                </p>
+              ) : contradictionRows.map((row) => (
+                <div key={row.id} className="px-4 py-3 grid gap-2 md:grid-cols-2">
+                  {[row.fromMemory, row.toMemory].map((m, i) => (
+                    <button
+                      key={m?.id || i}
+                      type="button"
+                      // The conflicting memory may not be on the currently loaded page, so
+                      // fall back to the row's own copy (the endpoint returns id + content)
+                      // rather than making the click a silent no-op.
+                      onClick={() => setSelectedMemory(allMemories.find(x => x.id === m?.id) || m || null)}
+                      disabled={!m?.id}
+                      className="text-left text-xs leading-relaxed text-[#525252] hover:text-[#171717] disabled:hover:text-[#525252] font-['Space_Grotesk']"
+                    >
+                      <span className="block text-[10px] font-mono uppercase tracking-wider text-[#dc2626] mb-1">
+                        {i === 0 ? 'Claim' : 'Conflicts with'}
+                      </span>
+                      {truncate(m?.content, 220)}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+          </>
         )}
 
         {/* Top-entity chip cloud + group-by toggle */}
