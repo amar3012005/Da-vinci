@@ -2983,11 +2983,20 @@ class HiveMindApiClient {
    * promoted_count }. Fails OPEN: any error resolves to duplicate:false so a
    * pre-check problem can never block a real upload.
    */
-  async precheckUpload(checksum, { scopeKey = null } = {}) {
+  async precheckUpload(checksum, { scopeKey = null, targetScope = null, projectId = null, primaryTeamId = null } = {}) {
     if (!checksum) return { duplicate: false, in_progress: false };
     try {
+      // Duplicates are PER-SCOPE. Without a scope the server matches the checksum
+      // anywhere in the org, so uploading a file to a project was reported as a
+      // duplicate because a copy already sat in My Space — and the client skipped
+      // it before the scope-aware upload was ever attempted. Send the same scope
+      // the upload will use so the pre-flight answers the same question.
       const { data } = await this.core.post('/api/knowledge/upload/precheck', {
-        checksum, ...(scopeKey ? { scope_key: scopeKey } : {}),
+        checksum,
+        ...(scopeKey ? { scope_key: scopeKey } : {}),
+        ...(targetScope ? { target_scope: targetScope } : {}),
+        ...(projectId ? { project_id: projectId } : {}),
+        ...(primaryTeamId ? { primary_team_id: primaryTeamId } : {}),
       });
       return data || { duplicate: false, in_progress: false };
     } catch {

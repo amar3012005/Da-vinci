@@ -1473,7 +1473,12 @@ export default function KnowledgeBase() {
             ? { ...u, stage: 'checking', message: 'Checking if already uploaded…' } : u)));
           const checksum = await apiClient.fileChecksum(file);
           if (checksum) {
-            const pre = await apiClient.precheckUpload(checksum);
+            const pre = await apiClient.precheckUpload(checksum, {
+              // Same scope the upload itself will use, so a file already in My
+              // Space is not reported as a duplicate when sent to a project.
+              targetScope,
+              projectId: targetScope === 'organization' ? null : (project || null),
+            });
             if (pre?.duplicate) {
               setUploads((prev) => prev.map((u) => (u.id === uploadEntry.id ? {
                 ...u,
@@ -1792,10 +1797,26 @@ export default function KnowledgeBase() {
     // (verified on a real upload: tags carried scope-key:org:<orgId>, no project
     // key). The upload route resolves projectId as a UUID — a slug comes back
     // scope_not_found — so the selection carries the id.
-    if (activeProjectId) {
+    // VALIDATE THE ACTIVE PROJECT BEFORE PRE-SELECTING IT.
+    // activeProjectId is restored from localStorage, so it can point at a project
+    // that was archived, deleted, or belongs to an org the user has since switched
+    // away from. Pre-selecting it blindly sent targetScope='project' with an id the
+    // server cannot resolve, and authorizeKnowledgeScope answers 404 scope_not_found
+    // — which the browser surfaces as "Failed to load resource: 404" on the upload.
+    // Observed on a 4.3MB upload that had a stale project selected.
+    //
+    // Only trust it when it is present in the projects actually loaded for this
+    // user+org; otherwise fall through to the role default, which always resolves.
+    const _knownProject = (Array.isArray(teamProjects) ? teamProjects : [])
+      .some((p) => p?.id === activeProjectId);
+    if (activeProjectId && _knownProject) {
       setSelectedScope('project');
       setSelectedProject(activeProjectId);
     } else {
+      if (activeProjectId && !_knownProject) {
+        console.warn('[kb-upload] active project', activeProjectId, 'is not in this org\'s accessible projects — ignoring the stale selection');
+        setSelectedProject('');
+      }
       // No project context. Default to org-wide for admins (upload once, whole org
       // sees it); everyone else starts on their private space. Role lives on
       // org.role / user.orgRole (see the modal's userRole prop) — `user.role`
