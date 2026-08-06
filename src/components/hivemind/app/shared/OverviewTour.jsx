@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import { TOUR_STEPS, TOUR_VERSION, welcomeStep } from './tours.config';
 
 /**
@@ -29,7 +30,11 @@ import { TOUR_STEPS, TOUR_VERSION, welcomeStep } from './tours.config';
  */
 
 const STORAGE_KEY = 'hm.tour.overview';
-const CARD_W = 404;
+// Wider than the old tooltip-card (404) to carry the mac-window chrome
+// (traffic-light dots + centred label + generous body padding) without
+// feeling cramped — matches the width class of the app's other mac-chrome
+// surfaces (Meeting Intelligence, the connectors mockup).
+const CARD_W = 560;
 
 export function useOverviewTour() {
   const [open, setOpen] = useState(false);
@@ -72,6 +77,38 @@ function Check() {
       className="mt-[3px] flex-none text-[#117dff]">
       <path d="M20 6 9 17l-5-5" />
     </svg>
+  );
+}
+
+function ChevronLeft() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 6 9 12l6 6" />
+    </svg>
+  );
+}
+
+function ChevronRight() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+// The three mac-window traffic lights — decorative, matching the chrome the
+// Meeting Intelligence modal and connectors mockup already use elsewhere in
+// the product (WelcomeFlow.jsx SlideVisual terminal frame uses the same hex
+// triplet). Non-interactive: closing is the X button beside the label.
+function TrafficLights() {
+  return (
+    <div className="flex items-center gap-[7px]" aria-hidden="true">
+      <span className="w-[11px] h-[11px] rounded-full bg-[#FF5F57]" />
+      <span className="w-[11px] h-[11px] rounded-full bg-[#FEBC2E]" />
+      <span className="w-[11px] h-[11px] rounded-full bg-[#28C840]" />
+    </div>
   );
 }
 
@@ -228,53 +265,73 @@ export default function OverviewTour({ onClose, userName }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.26, ease: [0.2, 0.7, 0.3, 1] }}
-          className="absolute z-[10001] flex flex-col rounded-2xl border border-[#e3e0db] bg-white px-6 pt-5 pb-4 min-h-[300px]"
+          className="absolute z-[10001] flex flex-col rounded-[20px] border border-[#e3e0db] bg-white overflow-hidden"
           style={{
             ...cardStyle,
             width: CARD_W,
-            maxHeight: '70vh',
-            overflowY: 'auto',
-            boxShadow: '0 1px 3px rgba(10,10,11,0.04), 0 20px 60px rgba(10,10,11,0.18)',
+            maxHeight: '80vh',
+            boxShadow: '0 1px 3px rgba(10,10,11,0.04), 0 24px 64px rgba(10,10,11,0.18)',
           }}
         >
-          <p className="flex items-center gap-2 mb-3 font-mono text-[11px] tracking-[0.18em] text-[#117dff]">
-            <span className="text-[#a3a3a3]">{'\u27E9'}</span>
-            <span>{step.eyebrow}</span>
-            <span className="text-[#d4d0ca] tracking-[0.14em]">· {String(i + 1).padStart(2, '0')}</span>
-          </p>
-
-          <h3 className="text-[26px] leading-[1.08] font-semibold font-['Space_Grotesk'] tracking-[-0.02em] text-[#0a0a0a] mb-2.5">
-            {step.title}
-          </h3>
-          <p className="text-[13px] leading-[1.62] text-[#525252] m-0">{step.body}</p>
-
-          {step.checks && step.checks.length > 0 && (
-            <ul className="list-none mt-3.5 mb-0 p-0 flex flex-col gap-[7px]">
-              {step.checks.map((c) => (
-                <li key={c} className="flex gap-2.5 text-[12.5px] leading-[1.45] text-[#0a0a0a]">
-                  <Check />
-                  <span>{c}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className="flex items-center gap-2 mt-auto pt-3.5 border-t border-[#eae7e1]">
-            <button type="button" onClick={() => go(i + 1)}
-              className="rounded-[6px] px-4 py-2 text-[12.5px] font-semibold tracking-[-0.01em] bg-[#117dff] text-white hover:bg-[#0066e0] transition-colors">
-              {i === steps.length - 1 ? 'Finish' : 'Next'}
-            </button>
-            <button type="button" onClick={() => go(i - 1)} disabled={i === 0}
-              className="rounded-[6px] px-3 py-2 text-[12.5px] border border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca] disabled:opacity-30 transition-colors">
-              Back
-            </button>
-            <span className="ml-auto font-mono text-[11px] tracking-[0.1em] text-[#a3a3a3] tabular-nums">
-              {String(i + 1).padStart(2, '0')} / {String(steps.length).padStart(2, '0')}
+          {/* Mac-window chrome header — traffic lights, centred category label, close */}
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-5 py-4 border-b border-[#e3e0db] bg-white shrink-0">
+            <TrafficLights />
+            <span className="text-center font-mono text-[12px] tracking-[0.24em] uppercase text-[#a3a3a3]">
+              {step.eyebrow} <span className="text-[#d4d0ca]">·</span> GUIDE
             </span>
-            <button type="button" onClick={onClose}
-              className="text-[12px] text-[#a3a3a3] hover:text-[#0a0a0a] underline underline-offset-2 p-1 transition-colors">
-              Skip
+            <button type="button" onClick={onClose} aria-label="Close"
+              className="w-6 h-6 flex items-center justify-center text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors">
+              <X size={15} />
             </button>
+          </div>
+
+          {/* Ivory body — matches the app's card-on-ivory surface pairing */}
+          <div className="flex flex-col flex-1 min-h-[300px] bg-[#faf9f4] px-8 pt-7 pb-6 overflow-y-auto">
+            <h3 className="text-[30px] leading-[1.08] font-semibold font-['Space_Grotesk'] tracking-[-0.02em] text-[#0a0a0a] mb-3">
+              {step.title}
+            </h3>
+
+            {/* Progress — a continuous track scales to any step count (9 here),
+                unlike a fixed 3-segment bar. Fill = (i+1)/total. */}
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="flex-1 h-[3px] rounded-full bg-[#e3e0db] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[#117dff] transition-[width] duration-300 ease-out"
+                  style={{ width: `${((i + 1) / steps.length) * 100}%` }}
+                />
+              </div>
+              <span className="font-mono text-[10.5px] tracking-[0.08em] text-[#a3a3a3] tabular-nums shrink-0">
+                {String(i + 1).padStart(2, '0')} / {String(steps.length).padStart(2, '0')}
+              </span>
+            </div>
+
+            <p className="text-[13.5px] leading-[1.62] text-[#525252] m-0">{step.body}</p>
+
+            {step.checks && step.checks.length > 0 && (
+              <ul className="list-none mt-4 mb-0 p-0 flex flex-col gap-[8px]">
+                {step.checks.map((c) => (
+                  <li key={c} className="flex gap-2.5 text-[12.5px] leading-[1.45] text-[#0a0a0a]">
+                    <Check />
+                    <span>{c}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="flex items-center gap-3 mt-auto pt-6">
+              <button type="button" onClick={() => go(i - 1)} disabled={i === 0}
+                className="flex items-center gap-1 text-[12.5px] font-medium text-[#525252] hover:text-[#0a0a0a] disabled:opacity-30 disabled:hover:text-[#525252] transition-colors">
+                <ChevronLeft /> Back
+              </button>
+              <button type="button" onClick={onClose}
+                className="text-[12px] text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors">
+                Skip
+              </button>
+              <button type="button" onClick={() => go(i + 1)}
+                className="ml-auto flex items-center gap-1.5 rounded-full pl-4 pr-3.5 py-2 text-[12.5px] font-semibold bg-[#0a0a0a] text-white hover:bg-[#262626] transition-colors">
+                {i === steps.length - 1 ? 'Finish' : 'Next'} <ChevronRight />
+              </button>
+            </div>
           </div>
         </motion.div>
       </AnimatePresence>
