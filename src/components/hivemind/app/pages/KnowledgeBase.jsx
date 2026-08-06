@@ -277,6 +277,71 @@ function docProject(doc) {
   return hit ? hit.slice('project:'.length) : null;
 }
 
+// Pipeline stage stack — the four phases a server-side ingest actually passes
+// through, rendered as segments so a long ingest reads as PROGRESS rather than a
+// single bar that looks stuck.
+//
+// `at` is the progress percentage the server reports when that phase COMPLETES.
+// Those numbers are not invented for the UI: they are the exact values
+// document-first-ingestion emits (parsing 10 -> parsed 35 -> embedded 70 ->
+// promoting 80 -> promoted 95 -> indexed 100), so a segment only fills when the
+// backend genuinely finished that phase. If the pipeline's numbers ever change,
+// these must change with them or the bar will lie.
+const INGEST_PHASES = [
+  { key: 'read', label: 'Read', at: 35, hint: 'Reading the document (layout + tables)' },
+  { key: 'index', label: 'Index', at: 70, hint: 'Building the search index' },
+  { key: 'memories', label: 'Memories', at: 95, hint: 'Extracting memories' },
+  { key: 'done', label: 'Done', at: 100, hint: 'Indexed and searchable' },
+];
+
+function IngestStageStack({ progress = 0, failed = false, stageLabel }) {
+  const pct = Math.max(0, Math.min(100, Number(progress) || 0));
+  // The active phase is the first one not yet complete.
+  const activeIdx = INGEST_PHASES.findIndex((p) => pct < p.at);
+  return (
+    <div className="mt-1.5">
+      <div className="flex items-center gap-1" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}
+           aria-label={stageLabel || 'Ingestion progress'}>
+        {INGEST_PHASES.map((p, i) => {
+          const complete = pct >= p.at;
+          const active = !failed && !complete && i === activeIdx;
+          return (
+            <div
+              key={p.key}
+              title={p.hint}
+              className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                failed
+                  ? 'bg-[#fecaca]'
+                  : complete
+                    ? 'bg-[#16a34a]'
+                    : active
+                      ? 'bg-[#117dff] animate-pulse'
+                      : 'bg-[#e3e0db]'
+              }`}
+            />
+          );
+        })}
+      </div>
+      <div className="mt-1 flex justify-between">
+        {INGEST_PHASES.map((p, i) => {
+          const complete = pct >= p.at;
+          const active = !failed && !complete && i === activeIdx;
+          return (
+            <span
+              key={p.key}
+              className={`text-[9px] font-mono uppercase tracking-[0.06em] ${
+                failed ? 'text-[#dc2626]' : complete ? 'text-[#16a34a]' : active ? 'text-[#117dff]' : 'text-[#c4c0b6]'
+              }`}
+            >
+              {p.label}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const TYPE_LABELS = {
   invoice: 'Invoice / Purchase Order',
   contract: 'Contract / Legal',
@@ -1456,6 +1521,11 @@ export default function KnowledgeBase() {
           onStatus: ({ status, progress, stage, segments, promoted } = {}) => {
             const LABEL = {
               queued: 'Queued — waiting for a worker',
+              // The queue reports 'processing' at 5% the moment a worker picks the
+              // job up, before the first parse phase. It was missing here, so that
+              // window fell through to the bare 'Processing' fallback and read as
+              // "no phase reported yet" when the server had in fact started.
+              processing: 'Starting ingest',
               parsing: 'Reading the document (layout + tables)',
               parsed: 'Document read',
               segmenting: 'Splitting into sections',
@@ -2248,6 +2318,18 @@ export default function KnowledgeBase() {
                         <span className="text-[#16a34a] font-normal"> · {u.promoted} memories</span>
                       )}
                     </span>
+                  )}
+                  {/* The pipeline stack. Server-side ingest previously rendered as a
+                      full-width INDETERMINATE pulse plus one line of text, so a 30-134s
+                      ingest gave no sense of how far along it was. `serverProgress` was
+                      already being tracked separately from byte progress (the two must
+                      never share a field — see the ownership note above), it just was
+                      never drawn. Read/Index/Memories/Done fill from the server's own
+                      percentages. */}
+                  {u.status === 'uploading' && u.bytesDone && (
+                    <div className="w-32 shrink-0">
+                      <IngestStageStack progress={u.serverProgress ?? 0} stageLabel={u.stageLabel} />
+                    </div>
                   )}
                   {/* TWO DIFFERENT QUEUES, said differently. `status:'queued'` means this file has
                       not been sent yet (waiting for a client upload slot); the server's own
