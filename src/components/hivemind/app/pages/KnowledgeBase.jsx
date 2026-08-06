@@ -53,12 +53,15 @@ const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx',
   // Macro-enabled + OpenDocument siblings: same parsers as their twins
   // (sheet-direct reads xlsm/ods natively), previously rejected client-side.
   'xlsm', 'ods', 'docm', 'odt', 'rtf', 'epub', 'pptm', 'odp',
-  // pptx/ppt/xls WITHDRAWN, and the old comment here ("parsed by Docling
-  // server-side") is no longer true in practice: they have no seam handler and no
-  // direct tier, so they fall through to Docling, which measured 479s returning
-  // chunks=0 on a real .pptx and a 600s convert timeout on another. The server
-  // now refuses them in KB_EXTENSIONS, so offering them here would invite an
-  // upload that is guaranteed to 415. Restore alongside a working conversion path.
+  // pptx RESTORED 2026-08-06, matching the server's KB_EXTENSIONS. The 479s /
+  // chunks=0 measurement that withdrew it was caused by per-slide vision calls
+  // (picture descriptions); FORMAT_PROFILES now sets pptx pics:false and the same
+  // file re-measured at 12.4s with 100% word recall. Keep this list in step with
+  // KB_EXTENSIONS — a client-side accept the server refuses is a guaranteed 415.
+  'pptx',
+  // ppt/xls stay WITHDRAWN: they are legacy BINARY formats. Docling reads OOXML
+  // natively (python-pptx/docx/openpyxl are in hm-docling) but the binaries need
+  // LibreOffice, and `command -v soffice` in that container returns nothing.
   'html', 'htm',
   // Images routed to /api/ingest/image (Groq vision pipeline) instead of docling.
   'png', 'jpg', 'jpeg', 'tiff', 'tif', 'webp', 'gif',
@@ -2056,7 +2059,7 @@ export default function KnowledgeBase() {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.docx,.pptx,.txt,.md,.csv,.tsv,.xlsx,.xls,.ppt,.html,.htm,.png,.jpg,.jpeg,.tiff,.tif,.webp,.mp3,.wav,.m4a,.ogg,.flac"
+          accept=".pdf,.docx,.pptx,.txt,.md,.csv,.tsv,.xlsx,.html,.htm,.png,.jpg,.jpeg,.tiff,.tif,.webp,.mp3,.wav,.m4a,.ogg,.flac"
           className="hidden"
           onChange={(e) => {
             if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
