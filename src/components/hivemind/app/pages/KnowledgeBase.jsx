@@ -1513,6 +1513,20 @@ export default function KnowledgeBase() {
           : {
               tags: customTags || undefined,
               targetScope,
+              // DOCUMENTS MUST SEND projectId, exactly like the image branch above.
+              // This path only ever sent targetScope + containerTag, and the upload
+              // route does not read containerTag for scope — it reads targetScope
+              // plus projectId/projectIds. So a project-scoped document arrived as
+              // targetScope=project with an empty project list and the server
+              // answered 404 scope_not_found, which is precisely what the new
+              // scope-auth diagnostics logged on a real batch:
+              //   DENY project_scope_without_project_id targetScope=project projectIds=[]
+              // Images succeeded in the same batch because THEY send projectId.
+              //
+              // Before the scope fix this was invisible: every non-personal upload
+              // was forced to targetScope=organization, which needs no project id,
+              // so documents silently landed org-wide instead of failing.
+              projectId: targetScope === 'organization' ? null : (project || null),
               containerTag: targetScope === 'organization' ? (project || undefined) : undefined,
               force, // re-ingest past the same-scope duplicate gate when approved
               signal: uploadEntry.controller.signal,

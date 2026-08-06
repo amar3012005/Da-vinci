@@ -2041,6 +2041,14 @@ class HiveMindApiClient {
     if (options.tags) formData.append('tags', options.tags);
     if (options.containerTag) formData.append('containerTag', options.containerTag);
     if (options.targetScope) formData.append('targetScope', options.targetScope);
+    // The upload route reads targetScope + projectId/projectIds for scope; it does
+    // NOT read containerTag. Without this a project-scoped DOCUMENT arrived as
+    // targetScope=project with an empty project list and was refused 404
+    // scope_not_found — logged verbatim on a real batch as
+    // "DENY project_scope_without_project_id targetScope=project projectIds=[]".
+    // Images already sent it, which is why they succeeded in the same batch.
+    if (options.projectId) formData.append('projectId', options.projectId);
+    if (options.primaryTeamId) formData.append('primaryTeamId', options.primaryTeamId);
     // force=true re-ingests past the same-scope duplicate gate (user approved the
     // "upload anyway" prompt shown on a 409 duplicate_document).
     if (options.force) formData.append('force', 'true');
