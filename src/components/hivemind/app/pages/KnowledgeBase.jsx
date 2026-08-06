@@ -1843,11 +1843,25 @@ export default function KnowledgeBase() {
   }, []);
 
   const handleConfirmUploadScope = useCallback(async () => {
-    // 3-tier mapping → upload params. 'project' and 'organization' both ship
-    // as targetScope='organization' (server derives scope='project' when a
-    // project/containerTag is present, scope='organization' when not).
+    // SEND THE SCOPE THE USER PICKED.
+    // This collapsed 'project' into targetScope='organization' and passed the
+    // project through containerTag, on the belief that the server "derives
+    // scope='project' when a project/containerTag is present". It does not:
+    // /api/knowledge/upload reads targetScope (personal|project|team|
+    // organization) and projectId/projectIds, and containerTag reaches scope
+    // resolution nowhere — on the enterprise route it lands in metadata.project
+    // only. So a project upload was authorised, stored and tagged
+    // scope-key:org:<orgId>, and then never appeared under its project.
+    //
+    // Verified on a real upload: SINGULANCE_Market_Sizing.pdf, picked as
+    // "Project", recorded scope_type=organization in knowledge_ingest_jobs and
+    // tagged scope-key:org:… on the document.
+    //
+    // handleFiles already forwards projectId whenever targetScope is not
+    // 'organization', so passing the real tier is the whole fix.
     const project = selectedScope === 'project' ? (selectedProject || null) : null;
-    const effectiveScope = selectedScope === 'personal' ? 'personal' : 'organization';
+    const effectiveScope = selectedScope === 'project' && project ? 'project'
+      : selectedScope === 'personal' ? 'personal' : 'organization';
     const files = pendingFiles;
     setScopeModalOpen(false);
     setPendingFiles([]);
