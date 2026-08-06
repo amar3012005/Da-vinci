@@ -567,8 +567,13 @@ function UploadScopeModal({
                         className="w-full rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2.5 text-sm text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40"
                       >
                         <option value="">{t('knowledgebase.pickProject', 'Select a project…')}</option>
+                        {/* value MUST be the project UUID. The upload route resolves
+                            projectId as an id and answers `scope_not_found` for a slug,
+                            so every project-scoped upload from this dropdown failed
+                            (verified against the live endpoint: slug -> scope_not_found,
+                            uuid -> queued). The slug stays in the visible label. */}
                         {projects.map((project) => (
-                          <option key={project.id} value={project.slug}>
+                          <option key={project.id} value={project.id}>
                             {project.name} ({project.slug})
                           </option>
                         ))}
@@ -1308,7 +1313,7 @@ export default function KnowledgeBase() {
   // is active. The previous /v1/orgs/:id/projects route stacked extra gates
   // (plan check + getOrgMembership) that intermittently left the picker stuck
   // on "Loading projects...".
-  const { activeTeamId } = useTeamContext() || {};
+  const { activeTeamId, activeProjectId, activeProject } = useTeamContext() || {};
   const fetchProjects = useCallback(async () => {
     if (!org?.id) {
       setTeamProjects([]);
@@ -1775,12 +1780,27 @@ export default function KnowledgeBase() {
     // Default to org-wide for admins (upload once, whole org sees it); everyone
     // else starts on their private space. Both project + org tiers remain
     // selectable in the modal, gated by role exactly as the backend authorizes.
-    // Role lives on org.role / user.orgRole (see the modal's userRole prop) —
-    // `user.role` alone is always undefined, so admins were silently defaulted
-    // to 'personal' here as well.
-    const effectiveRole = org?.role || user?.orgRole || user?.role;
-    const isAdmin = effectiveRole === 'owner' || effectiveRole === 'admin';
-    setSelectedScope(isAdmin ? 'organization' : 'personal');
+    // THE ACTIVE PROJECT WINS. If the workspace switcher has a project selected,
+    // the user is working *inside* that project, and a document they upload there
+    // belongs to it. This was ignored entirely: the scope defaulted by role and
+    // the project was reset to '' on every open, so uploading while inside
+    // SINGULANCE silently landed the file at org scope
+    // (verified on a real upload: tags carried scope-key:org:<orgId>, no project
+    // key). The upload route resolves projectId as a UUID — a slug comes back
+    // scope_not_found — so the selection carries the id.
+    if (activeProjectId) {
+      setSelectedScope('project');
+      setSelectedProject(activeProjectId);
+    } else {
+      // No project context. Default to org-wide for admins (upload once, whole org
+      // sees it); everyone else starts on their private space. Role lives on
+      // org.role / user.orgRole (see the modal's userRole prop) — `user.role`
+      // alone is always undefined, so admins were silently defaulted to
+      // 'personal' here as well.
+      const effectiveRole = org?.role || user?.orgRole || user?.role;
+      const isAdmin = effectiveRole === 'owner' || effectiveRole === 'admin';
+      setSelectedScope(isAdmin ? 'organization' : 'personal');
+    }
     setScopeModalOpen(true);
     // Estimate plan pages per file in the browser (PDF → real count, image /
     // other → 1) so the modal can show the cost and block an over-limit batch
@@ -1793,7 +1813,7 @@ export default function KnowledgeBase() {
         .then((n) => setPendingPageCounts((prev) => ({ ...prev, [pendingFileKey(f)]: n })))
         .catch(() => setPendingPageCounts((prev) => ({ ...prev, [pendingFileKey(f)]: 1 })));
     });
-  }, [org?.role, user?.orgRole, user?.role]);
+  }, [org?.role, user?.orgRole, user?.role, activeProjectId, activeProject, teamProjects]);
 
   // Drop one file from the pending batch (the modal's per-row ✕). Lets a user
   // trim an over-limit batch back under quota without cancelling everything.
