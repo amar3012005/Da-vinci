@@ -1272,6 +1272,21 @@ class HiveMindApiClient {
     return data;
   }
 
+  async listPlatformReferralCampaigns() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/referral-campaigns');
+    return data;
+  }
+
+  async createPlatformReferralCampaign(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/referral-campaigns', payload);
+    return data;
+  }
+
+  async revokePlatformReferralCampaign(id) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/referral-campaigns/${id}/revoke`);
+    return data;
+  }
+
   async listPlatformPilots() {
     const { data } = await this.controlPlane.get('/admin/api/platform/pilots');
     return data;
