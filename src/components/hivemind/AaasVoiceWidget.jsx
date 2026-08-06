@@ -341,14 +341,23 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         case 'transcript': setTranscript(evt.text || ''); setAgentTurn(''); setState('thinking'); break;
         case 'agent_text': setAgentTurn((p) => p + (evt.text || '')); break;
         case 'turn_done': setState('listening'); break;
-        case 'error': setError(evt.error || 'stream error'); break;
+        // Prefer the human-readable message the adapter sends (e.g. "the voice provider
+        // rejected this session (HTTP 403) — the credential is invalid…"). Falling back
+        // to `error` alone showed a bare code like `xai_auth_rejected`.
+        case 'error': setError(evt.message || evt.error || 'stream error'); break;
         default: break;
       }
     };
-    ws.onerror = () => setError('Connection error.');
+    ws.onerror = () => setError((prev) => prev || 'Connection error.');
     ws.onclose = (closeEvent) => {
       if (wsRef.current !== ws) return;
-      if (closeEvent.code !== 1000) setError('TARA closed before the voice session became ready. You can adjust the settings and try again.');
+      // Never overwrite a specific reason we already received. A provider refusal
+      // arrives as an `error` frame immediately before the close, and clobbering it
+      // with the generic text is what made a dead credential look like the popup
+      // silently vanishing for no reason.
+      if (closeEvent.code !== 1000) {
+        setError((prev) => prev || 'TARA closed before the voice session became ready. You can adjust the settings and try again.');
+      }
       stopAll('closed');
     };
   }, [userId, orgId, language, langFilter, voiceId, mode, goal, engineWs, playPcm, stopAll, provider, isRuntimeAdmin]);
