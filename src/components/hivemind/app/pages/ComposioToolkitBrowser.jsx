@@ -5,7 +5,7 @@
 // squared corners, official brand logos. Sits below the existing curated
 // grid + Browser Intelligence card — no duplicate chrome of its own.
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Wrench, Zap, ShieldCheck, Search, Loader2, Plug, Check, Mail } from 'lucide-react';
+import { Wrench, Zap, ShieldCheck, Search, Loader2, Plug, Check, Mail, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
 const AUTH_LABELS = {
@@ -46,15 +46,29 @@ function isSelfServeConnectable(toolkit) {
 
 const REQUEST_ACCESS_EMAIL = 'connectors@singulancelabs.com';
 
-function ToolkitCard({ toolkit, onConnect, connecting, connectResult }) {
+function ToolkitCard({ toolkit, onConnect, onOpenDetail, connecting, connectResult }) {
   const [logoFailed, setLogoFailed] = useState(false);
   const available = isSelfServeConnectable(toolkit);
   const isApiKey = available && !toolkit.authSchemes.includes('OAUTH2') && toolkit.authSchemes.includes('API_KEY');
   const isNoAuth = toolkit.noAuth;
-  const connected = connectResult === 'connected';
+  // Real per-org state from the server (toolkit.connected) OR the optimistic
+  // flip right after a successful redirect-back (connectResult) — either one
+  // means the card should read as connected.
+  const connected = toolkit.connected || connectResult === 'connected';
 
   return (
-    <div className="rounded-md border border-[#e3e0db] bg-white hover:border-[#c4c1bb] transition-colors overflow-hidden flex flex-col">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenDetail(toolkit)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpenDetail(toolkit); }}
+      title={`See all ${toolkit.toolsCount} ${toolkit.name} tools`}
+      className={`rounded-md border overflow-hidden flex flex-col transition-colors cursor-pointer ${
+        connected
+          ? 'border-[#117dff]/30 bg-[#117dff]/[0.07] backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]'
+          : 'border-[#e3e0db] bg-white hover:border-[#c4c1bb]'
+      }`}
+    >
       <div className="p-4 flex-1">
         <div className="w-11 h-11 rounded-md bg-[#faf9f4] border border-[#e3e0db] flex items-center justify-center overflow-hidden mb-3">
           {toolkit.logo && !logoFailed ? (
@@ -91,17 +105,17 @@ function ToolkitCard({ toolkit, onConnect, connecting, connectResult }) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-4 py-2.5 border-t border-[#e3e0db] bg-[#faf9f4]">
+      <div className={`flex items-center justify-between px-4 py-2.5 border-t ${connected ? 'border-[#117dff]/20 bg-[#117dff]/[0.05]' : 'border-[#e3e0db] bg-[#faf9f4]'}`}>
         <span className="text-[9px] font-mono text-[#c4c1bb]">{toolkit.version ? `v${toolkit.version.replace(/^v/, '')}` : ''}</span>
         {connected ? (
-          <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+          <span className="flex items-center gap-1 text-[11px] font-semibold text-[#117dff]">
             <Check size={12} /> Connected
           </span>
         ) : isNoAuth ? (
           <span className="text-[10.5px] text-[#a3a3a3] font-medium">No auth</span>
         ) : available ? (
           <button
-            onClick={() => onConnect(toolkit)}
+            onClick={(e) => { e.stopPropagation(); onConnect(toolkit); }}
             disabled={connecting}
             title={isApiKey ? 'Add API key' : 'Connect'}
             aria-label={isApiKey ? 'Add API key' : 'Connect'}
@@ -113,6 +127,7 @@ function ToolkitCard({ toolkit, onConnect, connecting, connectResult }) {
         ) : (
           <a
             href={`mailto:${REQUEST_ACCESS_EMAIL}?subject=${encodeURIComponent(`Request access — ${toolkit.name} connector`)}&body=${encodeURIComponent(`We'd like ${toolkit.name} (${toolkit.slug}) enabled as a connector. Auth scheme: ${toolkit.authSchemes.join(', ')}.`)}`}
+            onClick={(e) => e.stopPropagation()}
             title="This toolkit needs a custom OAuth app set up first"
             className="flex items-center gap-1.5 rounded-md border border-[#e3e0db] bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#525252] hover:bg-[#f3f1ec] transition-colors"
           >
@@ -124,16 +139,111 @@ function ToolkitCard({ toolkit, onConnect, connecting, connectResult }) {
   );
 }
 
+// Popup showing every tool a toolkit exposes — "what can the agent actually
+// do with this once it's connected", not just the tool COUNT the card shows.
+function ToolkitDetailModal({ toolkit, onClose }) {
+  const [tools, setTools] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setTools(null);
+    setError('');
+    apiClient.getComposioToolkitTools(toolkit.slug)
+      .then((data) => { if (!cancelled) setTools(data.tools || []); })
+      .catch((err) => { if (!cancelled) setError(err?.response?.data?.error || err?.message || 'Failed to load tools'); });
+    return () => { cancelled = true; };
+  }, [toolkit.slug]);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
+      <div
+        className="w-full max-w-lg max-h-[80vh] rounded-md border border-[#e3e0db] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.2)] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#e3e0db] flex-shrink-0">
+          <div className="w-9 h-9 rounded-md bg-[#faf9f4] border border-[#e3e0db] flex items-center justify-center overflow-hidden flex-shrink-0">
+            {toolkit.logo ? <img src={toolkit.logo} alt="" width={22} height={22} /> : <span className="text-[13px] font-bold text-[#a3a3a3]">{toolkit.name.slice(0, 1)}</span>}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{toolkit.name}</h3>
+            <p className="text-[11px] text-[#a3a3a3]">{toolkit.toolsCount} tools{toolkit.triggersCount > 0 ? ` · ${toolkit.triggersCount} triggers` : ''}</p>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-md flex items-center justify-center text-[#a3a3a3] hover:bg-[#f3f1ec] hover:text-[#0a0a0a] flex-shrink-0" aria-label="Close">
+            <X size={15} />
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-4 py-3">
+          {error && <p className="text-[12px] text-red-600">{error}</p>}
+          {!tools && !error && (
+            <div className="flex items-center justify-center py-10 text-[#a3a3a3]"><Loader2 size={18} className="animate-spin" /></div>
+          )}
+          {tools && (
+            <div className="divide-y divide-[#f0eee6]">
+              {tools.map((tool) => (
+                <div key={tool.slug} className="py-2.5">
+                  <p className="text-[12.5px] font-semibold text-[#0a0a0a] capitalize">{tool.name.toLowerCase()}</p>
+                  {tool.description && <p className="text-[11.5px] text-[#737373] mt-0.5 leading-snug">{tool.description}</p>}
+                </div>
+              ))}
+              {tools.length === 0 && <p className="text-[12px] text-[#a3a3a3] py-6 text-center">No tools listed for this toolkit.</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ComposioToolkitBrowser() {
-  const [query, setQuery] = useState('');
+  const [detailToolkit, setDetailToolkit] = useState(null);
+  // Composio's real redirect-back after OAuth completes: it appends
+  // ?status=success|failed&connected_account_id=ca_xxx to whatever
+  // callback_url we passed, on top of our own ?composio_toolkit=<slug>.
+  // Read all three once, synchronously, before first paint — this is what
+  // actually marks a toolkit connected on return, not a guess/poll.
+  const [returnParams] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    const params = new URLSearchParams(window.location.search);
+    const toolkit = params.get('composio_toolkit');
+    if (!toolkit) return null;
+    return { toolkit, status: params.get('status'), connectedAccountId: params.get('connected_account_id') };
+  });
+
+  const [query, setQuery] = useState(() => returnParams?.toolkit || '');
   const [toolkits, setToolkits] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [connectingSlug, setConnectingSlug] = useState(null);
-  const [connectedSlugs, setConnectedSlugs] = useState({});
+  const [connectedSlugs, setConnectedSlugs] = useState(() => (
+    returnParams?.status === 'success' ? { [returnParams.toolkit]: 'connected' } : {}
+  ));
   const debounceRef = useRef(null);
+
+  // Toast the outcome once, then strip our query params so a refresh or
+  // re-share of this URL doesn't replay a stale "connected" state.
+  useEffect(() => {
+    if (!returnParams) return;
+    if (returnParams.status === 'success') {
+      setError('');
+    } else if (returnParams.status === 'failed') {
+      setError(`Connecting ${returnParams.toolkit} failed or was cancelled.`);
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete('composio_toolkit');
+    url.searchParams.delete('status');
+    url.searchParams.delete('connected_account_id');
+    window.history.replaceState({}, '', url.toString());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const load = useCallback(async (search, appendCursor) => {
     setLoading(true);
@@ -169,17 +279,35 @@ export default function ComposioToolkitBrowser() {
         setConnectedSlugs((prev) => ({ ...prev, [toolkit.slug]: 'connected' }));
         return;
       }
+      // Full-page redirect, not a new tab — Composio genuinely redirects the
+      // browser back to callback_url with ?status=success&connected_account_id
+      // appended once OAuth completes, and the mount-effect below reads that
+      // straight off window.location on the next load of this same page.
+      const callbackUrl = `${window.location.origin}${window.location.pathname}?composio_toolkit=${encodeURIComponent(toolkit.slug)}`;
       const { redirect_url } = await apiClient.createComposioConnectLink(toolkit.slug, {
-        composioManagedAuthSchemes: toolkit.composioManagedAuthSchemes,
-        noAuth: toolkit.noAuth,
+        toolkitMeta: {
+          composioManagedAuthSchemes: toolkit.composioManagedAuthSchemes,
+          noAuth: toolkit.noAuth,
+        },
+        callbackUrl,
       });
-      if (redirect_url) window.open(redirect_url, '_blank', 'noopener,noreferrer');
+      if (redirect_url) window.location.href = redirect_url;
     } catch (err) {
       setError(err?.response?.data?.error || err?.message || `Failed to connect ${toolkit.name}`);
     } finally {
       setConnectingSlug(null);
     }
   }, []);
+
+  // Connected apps (real per-org state from the server, or the optimistic
+  // just-connected flip) float to the top of whatever's currently loaded —
+  // a stable sort so the rest of the order (Composio's own relevance/search
+  // ranking) doesn't shuffle every re-render.
+  const sortedToolkits = [...toolkits].sort((a, b) => {
+    const aConnected = a.connected || connectedSlugs[a.slug] === 'connected';
+    const bConnected = b.connected || connectedSlugs[b.slug] === 'connected';
+    return (bConnected ? 1 : 0) - (aConnected ? 1 : 0);
+  });
 
   return (
     <div>
@@ -202,16 +330,21 @@ export default function ComposioToolkitBrowser() {
       {error && <p className="mb-3 text-[12px] text-red-600">{error}</p>}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {toolkits.map((toolkit) => (
+        {sortedToolkits.map((toolkit) => (
           <ToolkitCard
             key={toolkit.slug}
             toolkit={toolkit}
             onConnect={handleConnect}
+            onOpenDetail={setDetailToolkit}
             connecting={connectingSlug === toolkit.slug}
             connectResult={connectedSlugs[toolkit.slug]}
           />
         ))}
       </div>
+
+      {detailToolkit && (
+        <ToolkitDetailModal toolkit={detailToolkit} onClose={() => setDetailToolkit(null)} />
+      )}
 
       {loading && toolkits.length === 0 && (
         <div className="flex items-center justify-center py-10 text-[#a3a3a3]">

@@ -3762,27 +3762,20 @@ export default function Connectors() {
   }, [refetchOAuth]);
 
   // ── Composio Connect (redirect-out OAuth) ─────────────────────────
-  // Composio hosts its own consent page — no popup SDK like Nango's, just
-  // a plain redirect. Opened in a new tab (not full-page navigation) so the
-  // connectors page stays open behind it; once the user completes OAuth,
-  // Composio's redirect target closes the tab and refetchOAuth picks up the
-  // now-ACTIVE connection on its next poll.
+  // Composio hosts its own consent page — no popup SDK like Nango's. A FULL
+  // PAGE redirect (not a new tab) so Composio's own redirect-back — which it
+  // does for real, appending ?status=success&connected_account_id=... to
+  // whatever callback_url we pass — lands back on THIS page in the same tab,
+  // where the mount-time effect below picks it up. A new-tab popup would
+  // strand that redirect in a tab the user has to notice and close manually.
   const handleComposioConnect = useCallback(async (connector) => {
     const toolkitSlug = connector.composioProvider;
     setConnectingProvider(toolkitSlug);
     try {
-      const { redirect_url } = await apiClient.createComposioConnectLink(toolkitSlug);
+      const callbackUrl = `${window.location.origin}${window.location.pathname}?composio_toolkit=${encodeURIComponent(toolkitSlug)}`;
+      const { redirect_url } = await apiClient.createComposioConnectLink(toolkitSlug, { callbackUrl });
       if (!redirect_url) throw new Error('Composio did not return a connect link');
-      window.open(redirect_url, '_blank', 'noopener,noreferrer');
-      setToastMessage({ type: 'success', text: `Complete the ${connector.name} sign-in in the new tab, then come back here.` });
-      // Composio's OAuth dance runs in the other tab; poll a few times so
-      // the card flips to "connected" without the user hitting refresh.
-      let attempts = 0;
-      const poll = setInterval(() => {
-        attempts += 1;
-        if (typeof refetchOAuth === 'function') refetchOAuth();
-        if (attempts >= 10) clearInterval(poll);
-      }, 4000);
+      window.location.href = redirect_url;
     } catch (err) {
       setToastMessage({
         type: 'error',
