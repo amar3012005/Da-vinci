@@ -1852,6 +1852,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Disconnect a Composio toolkit connection for the current org. */
+  async disconnectComposioToolkit(toolkitSlug) {
+    const { data } = await this.controlPlane.post(`/v1/connectors/composio/${encodeURIComponent(toolkitSlug)}/disconnect`, {});
+    return data;
+  }
+
   // ─── Standalone X paid campaigns ─────────────────────────────
   async startXAdsOAuth(kind) {
     const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/oauth/${kind}/start`, {});

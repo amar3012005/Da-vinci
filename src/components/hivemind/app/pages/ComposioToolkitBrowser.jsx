@@ -46,15 +46,24 @@ function isSelfServeConnectable(toolkit) {
 
 const REQUEST_ACCESS_EMAIL = 'connectors@singulancelabs.com';
 
-function ToolkitCard({ toolkit, onConnect, onOpenDetail, connecting, connectResult }) {
+// Slack/Slackbot must connect through HIVEMIND's native OAuth (the Slack
+// tile on the main Connectors page) — Composio's connected_accounts API
+// masks the real bot token, which breaks @mention replies with invalid_auth.
+// Blocked server-side too; this just keeps the card from inviting the click.
+const NATIVE_ONLY_TOOLKITS = new Set(['slack', 'slackbot']);
+
+function ToolkitCard({ toolkit, onConnect, onOpenDetail, onDisconnect, connecting, disconnecting, connectResult }) {
   const [logoFailed, setLogoFailed] = useState(false);
-  const available = isSelfServeConnectable(toolkit);
+  const nativeOnly = NATIVE_ONLY_TOOLKITS.has(toolkit.slug);
+  const available = isSelfServeConnectable(toolkit) && !nativeOnly;
   const isApiKey = available && !toolkit.authSchemes.includes('OAUTH2') && toolkit.authSchemes.includes('API_KEY');
   const isNoAuth = toolkit.noAuth;
   // Real per-org state from the server (toolkit.connected) OR the optimistic
   // flip right after a successful redirect-back (connectResult) — either one
-  // means the card should read as connected.
-  const connected = toolkit.connected || connectResult === 'connected';
+  // means the card should read as connected. An explicit 'disconnected'
+  // override (right after clicking Disconnect) wins over the stale
+  // toolkit.connected from the last fetch.
+  const connected = connectResult === 'disconnected' ? false : (toolkit.connected || connectResult === 'connected');
 
   return (
     <div
@@ -108,8 +117,23 @@ function ToolkitCard({ toolkit, onConnect, onOpenDetail, connecting, connectResu
       <div className={`flex items-center justify-between px-4 py-2.5 border-t ${connected ? 'border-[#117dff]/20 bg-[#117dff]/[0.05]' : 'border-[#e3e0db] bg-[#faf9f4]'}`}>
         <span className="text-[9px] font-mono text-[#c4c1bb]">{toolkit.version ? `v${toolkit.version.replace(/^v/, '')}` : ''}</span>
         {connected ? (
-          <span className="flex items-center gap-1 text-[11px] font-semibold text-[#117dff]">
-            <Check size={12} /> Connected
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-[#117dff]">
+              <Check size={12} /> Connected
+            </span>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDisconnect(toolkit); }}
+              disabled={disconnecting}
+              title="Disconnect"
+              aria-label="Disconnect"
+              className="text-[10.5px] font-medium text-[#dc2626]/70 hover:text-[#dc2626] disabled:opacity-50 transition-colors"
+            >
+              {disconnecting ? <Loader2 size={11} className="animate-spin" /> : 'Disconnect'}
+            </button>
+          </div>
+        ) : nativeOnly ? (
+          <span className="text-[10.5px] text-[#a3a3a3] font-medium" title="Connect Slack from the Slack tile on the main Connectors page">
+            Use Slack tile
           </span>
         ) : isNoAuth ? (
           <span className="text-[10.5px] text-[#a3a3a3] font-medium">No auth</span>
@@ -223,6 +247,7 @@ export default function ComposioToolkitBrowser() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [connectingSlug, setConnectingSlug] = useState(null);
+  const [disconnectingSlug, setDisconnectingSlug] = useState(null);
   const [connectedSlugs, setConnectedSlugs] = useState(() => (
     returnParams?.status === 'success' ? { [returnParams.toolkit]: 'connected' } : {}
   ));
@@ -299,6 +324,19 @@ export default function ComposioToolkitBrowser() {
     }
   }, []);
 
+  const handleDisconnect = useCallback(async (toolkit) => {
+    setDisconnectingSlug(toolkit.slug);
+    try {
+      await apiClient.disconnectComposioToolkit(toolkit.slug);
+      setConnectedSlugs((prev) => ({ ...prev, [toolkit.slug]: 'disconnected' }));
+      setToolkits((prev) => prev.map((t) => (t.slug === toolkit.slug ? { ...t, connected: false } : t)));
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.message || `Failed to disconnect ${toolkit.name}`);
+    } finally {
+      setDisconnectingSlug(null);
+    }
+  }, []);
+
   // Connected apps (real per-org state from the server, or the optimistic
   // just-connected flip) float to the top of whatever's currently loaded —
   // a stable sort so the rest of the order (Composio's own relevance/search
@@ -335,8 +373,10 @@ export default function ComposioToolkitBrowser() {
             key={toolkit.slug}
             toolkit={toolkit}
             onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
             onOpenDetail={setDetailToolkit}
             connecting={connectingSlug === toolkit.slug}
+            disconnecting={disconnectingSlug === toolkit.slug}
             connectResult={connectedSlugs[toolkit.slug]}
           />
         ))}
