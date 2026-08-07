@@ -37,6 +37,7 @@ import {
   Settings as SettingsIcon,
   MapPin,
   Search,
+  Linkedin,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
@@ -46,6 +47,7 @@ import { useTeamContext } from '../shared/team-context';
 import WhatsAppQRModal from './WhatsAppQRModal';
 import { PageWalkthrough, CONNECTORS_STEPS } from '../shared/Walkthrough';
 import UsageTracker from '../components/UsageTracker';
+import ComposioToolkitBrowser from './ComposioToolkitBrowser';
 
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
@@ -406,6 +408,22 @@ const CONNECTORS = [
     color: '#5e6ad2',
     priority: 4,
     nangoProvider: 'linear',
+  },
+  // ── LIVE — Composio ──────────────────────────────────────────────────
+  // Profile + company-page stats + posting via Composio, not Nango — a
+  // different connect flow (redirect-out to Composio's hosted OAuth page,
+  // no @nangohq/frontend popup SDK involved). No feed/employee scraping —
+  // LinkedIn's API exposes no such endpoint, Composio just wraps the API.
+  {
+    id: 'linkedin',
+    name: 'LinkedIn',
+    description: 'Profile, company-page stats, posting and comments',
+    icon: Linkedin,
+    category: 'workspace',
+    status: 'available',
+    color: '#0a66c2',
+    priority: 5,
+    composioProvider: 'linkedin',
   },
 ];
 
@@ -3743,6 +3761,38 @@ export default function Connectors() {
     }
   }, [refetchOAuth]);
 
+  // ── Composio Connect (redirect-out OAuth) ─────────────────────────
+  // Composio hosts its own consent page — no popup SDK like Nango's, just
+  // a plain redirect. Opened in a new tab (not full-page navigation) so the
+  // connectors page stays open behind it; once the user completes OAuth,
+  // Composio's redirect target closes the tab and refetchOAuth picks up the
+  // now-ACTIVE connection on its next poll.
+  const handleComposioConnect = useCallback(async (connector) => {
+    const toolkitSlug = connector.composioProvider;
+    setConnectingProvider(toolkitSlug);
+    try {
+      const { redirect_url } = await apiClient.createComposioConnectLink(toolkitSlug);
+      if (!redirect_url) throw new Error('Composio did not return a connect link');
+      window.open(redirect_url, '_blank', 'noopener,noreferrer');
+      setToastMessage({ type: 'success', text: `Complete the ${connector.name} sign-in in the new tab, then come back here.` });
+      // Composio's OAuth dance runs in the other tab; poll a few times so
+      // the card flips to "connected" without the user hitting refresh.
+      let attempts = 0;
+      const poll = setInterval(() => {
+        attempts += 1;
+        if (typeof refetchOAuth === 'function') refetchOAuth();
+        if (attempts >= 10) clearInterval(poll);
+      }, 4000);
+    } catch (err) {
+      setToastMessage({
+        type: 'error',
+        text: err?.response?.data?.error || err?.message || 'Composio connect failed',
+      });
+    } finally {
+      setConnectingProvider(null);
+    }
+  }, [refetchOAuth]);
+
   const handleOAuthConnect = useCallback(async (provider, opts = {}) => {
     setConnectingProvider(provider);
     try {
@@ -4190,6 +4240,10 @@ export default function Connectors() {
           handleNangoConnect(connector);
           return;
         }
+        if (connector.composioProvider) {
+          handleComposioConnect(connector);
+          return;
+        }
         if (connector.oauthProvider) {
           handleOAuthConnect(connector.oauthProvider, {
             services: connector.googleService,
@@ -4333,6 +4387,11 @@ export default function Connectors() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {filteredConnectors.map(renderConnectorCard)}
       </div>
+
+      {/* Browse Composio's full toolkit catalog — separate from the curated
+          grid above; each card auto-provisions its own auth on first connect
+          rather than needing an ops step per toolkit. */}
+      <ComposioToolkitBrowser />
 
       {/* MCP Endpoints */}
       <div>
