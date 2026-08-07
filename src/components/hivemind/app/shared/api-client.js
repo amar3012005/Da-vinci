@@ -1804,6 +1804,44 @@ class HiveMindApiClient {
     return data;
   }
 
+  /**
+   * Start a Composio managed-auth connect flow for one toolkit (e.g.
+   * 'linkedin'). Redirect-out, not a popup SDK like Nango — Composio hosts
+   * its own OAuth consent page. Returns { redirect_url, connected_account_id,
+   * expires_at }; caller opens redirect_url and polls GET /v1/connectors
+   * (already the existing refetchOAuth) for the account to flip 'connected'.
+   */
+  async createComposioConnectLink(toolkitSlug, toolkitMeta) {
+    const { data } = await this.controlPlane.post(
+      `/v1/connectors/composio/${encodeURIComponent(toolkitSlug)}/connect`,
+      toolkitMeta ? {
+        toolkit_meta: {
+          composio_managed_auth_schemes: toolkitMeta.composioManagedAuthSchemes,
+          no_auth: toolkitMeta.noAuth,
+        },
+      } : {},
+    );
+    return data;
+  }
+
+  /** Connect a plain-API-key Composio toolkit (SerpApi, Firecrawl, ...). */
+  async createComposioApiKeyConnection(toolkitSlug, apiKey) {
+    const { data } = await this.controlPlane.post(
+      `/v1/connectors/composio/${encodeURIComponent(toolkitSlug)}/connect-api-key`,
+      { api_key: apiKey },
+    );
+    return data;
+  }
+
+  /** Browse Composio's full toolkit catalog (~1,100 toolkits), paginated. */
+  async listComposioToolkits({ search = '', cursor = null, limit = 40 } = {}) {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (search) params.set('search', search);
+    if (cursor) params.set('cursor', cursor);
+    const { data } = await this.controlPlane.get(`/v1/connectors/composio/toolkits?${params.toString()}`);
+    return data;
+  }
+
   // ─── Standalone X paid campaigns ─────────────────────────────
   async startXAdsOAuth(kind) {
     const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/oauth/${kind}/start`, {});
