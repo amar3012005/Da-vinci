@@ -46,16 +46,24 @@ function isSelfServeConnectable(toolkit) {
 
 const REQUEST_ACCESS_EMAIL = 'connectors@singulancelabs.com';
 
-// Slack/Slackbot must connect through HIVEMIND's native OAuth (the Slack
-// tile on the main Connectors page) — Composio's connected_accounts API
-// masks the real bot token, which breaks @mention replies with invalid_auth.
-// Blocked server-side too; this just keeps the card from inviting the click.
-const NATIVE_ONLY_TOOLKITS = new Set(['slack', 'slackbot']);
+// Slack connects through HIVEMIND's own native OAuth (real Slack app,
+// real bot token) rather than Composio's connect flow — Composio's
+// connected_accounts API masks the real bot token, which breaks @mention
+// replies with invalid_auth. handleConnect/handleDisconnect below route
+// 'slack' to the native /v1/connectors/slack/* endpoints; this card still
+// renders it as a normal connectable toolkit, just wired differently.
+// 'slackbot' is Composio's separate workspace-wide-read toolkit — redundant
+// once native Slack is connected (oauth.js already requests the full bot
+// scope set, including app_mentions:read), and its Composio connection is
+// the same masked-token dead end, so it's blocked outright, not offered.
+const NATIVE_SLACK_TOOLKIT = 'slack';
+const REDUNDANT_TOOLKITS = new Set(['slackbot']);
 
 function ToolkitCard({ toolkit, onConnect, onOpenDetail, onDisconnect, connecting, disconnecting, connectResult }) {
   const [logoFailed, setLogoFailed] = useState(false);
-  const nativeOnly = NATIVE_ONLY_TOOLKITS.has(toolkit.slug);
-  const available = isSelfServeConnectable(toolkit) && !nativeOnly;
+  const isNativeSlack = toolkit.slug === NATIVE_SLACK_TOOLKIT;
+  const redundant = REDUNDANT_TOOLKITS.has(toolkit.slug);
+  const available = (isSelfServeConnectable(toolkit) || isNativeSlack) && !redundant;
   const isApiKey = available && !toolkit.authSchemes.includes('OAUTH2') && toolkit.authSchemes.includes('API_KEY');
   const isNoAuth = toolkit.noAuth;
   // Real per-org state from the server (toolkit.connected) OR the optimistic
@@ -131,9 +139,9 @@ function ToolkitCard({ toolkit, onConnect, onOpenDetail, onDisconnect, connectin
               {disconnecting ? <Loader2 size={11} className="animate-spin" /> : 'Disconnect'}
             </button>
           </div>
-        ) : nativeOnly ? (
-          <span className="text-[10.5px] text-[#a3a3a3] font-medium" title="Connect Slack from the Slack tile on the main Connectors page">
-            Use Slack tile
+        ) : redundant ? (
+          <span className="text-[10.5px] text-[#a3a3a3] font-medium" title="Covered by the Slack toolkit — connect that instead">
+            Covered by Slack
           </span>
         ) : isNoAuth ? (
           <span className="text-[10.5px] text-[#a3a3a3] font-medium">No auth</span>
@@ -295,6 +303,14 @@ export default function ComposioToolkitBrowser() {
   const handleConnect = useCallback(async (toolkit) => {
     setConnectingSlug(toolkit.slug);
     try {
+      // Slack is native-only — see NATIVE_SLACK_TOOLKIT note above. Same
+      // full-page-redirect pattern as Composio, different origin server.
+      if (toolkit.slug === NATIVE_SLACK_TOOLKIT) {
+        const { auth_url } = await apiClient.startConnectorOAuth('slack', window.location.pathname, { target_scope: 'personal' });
+        if (auth_url) window.location.href = auth_url;
+        else throw new Error('No auth URL returned');
+        return;
+      }
       const isApiKey = !toolkit.authSchemes.includes('OAUTH2') && toolkit.authSchemes.includes('API_KEY');
       if (isApiKey) {
         // eslint-disable-next-line no-alert
@@ -327,7 +343,11 @@ export default function ComposioToolkitBrowser() {
   const handleDisconnect = useCallback(async (toolkit) => {
     setDisconnectingSlug(toolkit.slug);
     try {
-      await apiClient.disconnectComposioToolkit(toolkit.slug);
+      if (toolkit.slug === NATIVE_SLACK_TOOLKIT) {
+        await apiClient.disconnectConnector('slack');
+      } else {
+        await apiClient.disconnectComposioToolkit(toolkit.slug);
+      }
       setConnectedSlugs((prev) => ({ ...prev, [toolkit.slug]: 'disconnected' }));
       setToolkits((prev) => prev.map((t) => (t.slug === toolkit.slug ? { ...t, connected: false } : t)));
     } catch (err) {
