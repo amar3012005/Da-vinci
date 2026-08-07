@@ -40,9 +40,16 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/v1')) return;
 
   // SPA navigations → network-first, offline fallback to the cached shell.
+  // Caddy sends no Cache-Control on index.html, so this fetch() — issued by
+  // the SW itself, independent of whatever cache-bypass flag the user's
+  // reload gesture carried — can otherwise be satisfied straight from the
+  // browser's HTTP cache without ever reaching the server. { cache: 'reload'
+  // } forces a real conditional revalidation every time a page loads, so a
+  // release is visible on the very next navigation, not just after clearing
+  // site data.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'reload' })
         .then((resp) => {
           const copy = resp.clone();
           caches.open(CACHE).then((c) => c.put('/index.html', copy)).catch(() => {});
