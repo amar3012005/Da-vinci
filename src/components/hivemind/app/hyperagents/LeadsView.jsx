@@ -1,21 +1,54 @@
 // "Your Leads" — shared prospect intelligence plus outreach outcomes. Room
 // discoveries appear immediately; campaign/send state enriches the same rows.
-import React, { useCallback, useEffect, useState } from 'react';
+// Card grid: each lead is one box, star-rated by funnel importance, click for
+// the full outreach dashboard (LeadDetailPanel, inside the reused
+// CampaignDashboardModal shell).
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Mail, PhoneCall, Reply, CalendarCheck, RefreshCw, Globe, CheckCheck, Clock,
-  Building2, ListChecks,
+  Mail, PhoneCall, Reply, CalendarCheck, RefreshCw, Globe, Building2, ListChecks, Star,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
+import CampaignDashboardModal from './campaigns/CampaignDashboardModal';
+import LeadDetailPanel from './LeadDetailPanel';
 
-const POTENTIAL = {
-  high: ['High', 'bg-emerald-100 text-emerald-700'],
-  medium: ['Medium', 'bg-amber-100 text-amber-700'],
-  low: ['Low', 'bg-blue-100 text-blue-700'],
-  none: ['—', 'bg-[#f4f2ec] text-[#a3a3a3]'],
+// No numeric "importance" exists server-side (/v1/hyper/leads only returns a
+// 4-bucket `potential`). Derive a 1-5 star score from the same funnel signals
+// the backend already computes potential from — booked > replied > sent >
+// qualified (has a fit reason) > bare discovery. Never 0 — every row here is a
+// real lead, not an empty state.
+export function leadScore(l) {
+  if (l.booked) return 5;
+  if (l.replied) return 4;
+  if (l.sent) return 3;
+  if (l.fit_reason || l.outreach_angle || l.distinctive_signal) return 2;
+  return 1;
+}
+
+export function leadStatus(l) {
+  if (l.booked) return 'booked';
+  if (l.replied) return 'replied';
+  if (l.error) return 'failed';
+  if (l.skipped_reason) return 'skipped';
+  if (l.sent) return 'sent';
+  if (l.state === 'discovered') return 'discovered';
+  return 'queued';
+}
+
+// One solid color per funnel stage — the "multi-color" identity of the board.
+// Deliberately keyed by status (not random per-card) so color carries meaning:
+// glance at the grid and the palette itself tells you where every lead stands.
+export const STATUS_STYLE = {
+  booked:     { label: 'Booked',     chip: 'bg-emerald-500 text-white', bar: 'bg-emerald-500', soft: 'bg-emerald-50 text-emerald-700' },
+  replied:    { label: 'Replied',    chip: 'bg-blue-500 text-white',    bar: 'bg-blue-500',    soft: 'bg-blue-50 text-blue-700' },
+  sent:       { label: 'Sent',       chip: 'bg-amber-500 text-white',   bar: 'bg-amber-500',   soft: 'bg-amber-50 text-amber-700' },
+  discovered: { label: 'Discovered', chip: 'bg-violet-500 text-white', bar: 'bg-violet-500',  soft: 'bg-violet-50 text-violet-700' },
+  queued:     { label: 'Queued',     chip: 'bg-slate-400 text-white',   bar: 'bg-slate-400',   soft: 'bg-slate-50 text-slate-600' },
+  skipped:    { label: 'Skipped',    chip: 'bg-stone-400 text-white',   bar: 'bg-stone-400',   soft: 'bg-stone-50 text-stone-600' },
+  failed:     { label: 'Failed',     chip: 'bg-rose-500 text-white',    bar: 'bg-rose-500',    soft: 'bg-rose-50 text-rose-700' },
 };
 
-function fmt(ts) {
+export function fmt(ts) {
   if (!ts) return '—';
   try {
     const d = new Date(ts);
@@ -23,11 +56,78 @@ function fmt(ts) {
   } catch { return '—'; }
 }
 
+function Stars({ score }) {
+  return (
+    <div className="flex items-center gap-0.5" aria-label={`${score} of 5`}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star key={i} size={12} className={i <= score ? 'fill-amber-400 text-amber-400' : 'text-[#dcd8d0]'} />
+      ))}
+    </div>
+  );
+}
+
+function LeadCard({ lead, onOpen }) {
+  const { t } = useTranslation('dashboard');
+  const score = leadScore(lead);
+  const status = leadStatus(lead);
+  const style = STATUS_STYLE[status];
+  const snippet = lead.fit_reason || lead.distinctive_signal || lead.outreach_angle;
+
+  return (
+    <button
+      onClick={() => onOpen(lead)}
+      className="group text-left rounded-xl border border-[#e3e0db] bg-white overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-[#117dff]/40"
+    >
+      <div className={`h-1.5 ${style.bar}`} />
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate flex items-center gap-1.5">
+              {lead.channel === 'call' ? <PhoneCall size={12} className="text-[#a3a3a3] shrink-0" /> : <Mail size={12} className="text-[#a3a3a3] shrink-0" />}
+              {lead.company}
+            </div>
+            {lead.website && (
+              <a href={lead.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                className="text-[10.5px] font-mono text-[#117dff] hover:underline truncate flex items-center gap-1 mt-0.5">
+                <Globe size={9} /> {lead.website.replace(/^https?:\/\//, '')}
+              </a>
+            )}
+          </div>
+          <span className={`shrink-0 px-2 py-0.5 rounded text-[9.5px] font-mono uppercase tracking-wider ${style.chip}`}>
+            {t(`leads.status.${status}`, style.label)}
+          </span>
+        </div>
+
+        <div className="mt-2.5"><Stars score={score} /></div>
+
+        <div className="mt-2 text-[11px] text-[#525252] font-mono truncate">
+          {lead.email || lead.phone || '—'}
+        </div>
+
+        {snippet && (
+          <p className="mt-2 text-[11px] leading-relaxed text-[#353535] line-clamp-2">{snippet}</p>
+        )}
+
+        <div className="mt-3 flex items-center justify-between text-[9.5px] font-mono text-[#a3a3a3]">
+          <span>{fmt(lead.sent_at || lead.discovered_at)}</span>
+          {(lead.replied || lead.booked) && (
+            <span className="inline-flex items-center gap-1 text-emerald-600">
+              {lead.booked ? <CalendarCheck size={10} /> : <Reply size={10} />}
+              {lead.booked ? t('leads.booked', 'Booked') : t('leads.replied', 'Replied')}
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
 export default function LeadsView() {
   const { t } = useTranslation('dashboard');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
+  const [openLeadId, setOpenLeadId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true); setErr(null);
@@ -39,6 +139,13 @@ export default function LeadsView() {
 
   const leads = data?.leads || [];
   const s = data?.summary || { total: 0, emails_sent: 0, calls: 0, replies: 0, meetings: 0 };
+  // Most important first: score desc, then most recently touched.
+  const sorted = useMemo(() => [...leads].sort((a, b) => {
+    const d = leadScore(b) - leadScore(a);
+    if (d !== 0) return d;
+    return new Date(b.sent_at || b.discovered_at || 0) - new Date(a.sent_at || a.discovered_at || 0);
+  }), [leads]);
+  const openLead = useMemo(() => leads.find((l) => l.id === openLeadId) || null, [leads, openLeadId]);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
@@ -78,88 +185,26 @@ export default function LeadsView() {
         </div>
       </div>
 
-      {/* Board */}
+      {/* Card grid */}
       <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
         {err && <div className="text-[12px] text-red-600 mb-3">{err}</div>}
-        {!loading && leads.length === 0 && (
+        {!loading && sorted.length === 0 && (
           <div className="text-[12.5px] text-[#a3a3a3] py-12 text-center">
             {t('leads.empty', 'No leads yet — ask a Company Room to discover or qualify prospects.')}
           </div>
         )}
-        {leads.length > 0 && (
-          <div className="border border-[#e3e0db] rounded-xl overflow-hidden">
-            <div className="grid grid-cols-[1.6fr_1.4fr_0.8fr_0.8fr_0.9fr_1.1fr] gap-2 px-4 py-2.5 bg-[#faf9f4] border-b border-[#e3e0db] text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
-              <span>{t('leads.company', 'Company')}</span>
-              <span>{t('leads.contact', 'Contact')}</span>
-              <span>{t('leads.sent', 'Sent')}</span>
-              <span>{t('leads.reply', 'Reply')}</span>
-              <span>{t('leads.potential', 'Potential')}</span>
-              <span>{t('leads.sentAt', 'Sent at')}</span>
-            </div>
-            {leads.map((l) => {
-              const [pLabel, pClass] = POTENTIAL[l.potential] || POTENTIAL.none;
-              return (
-                <div key={l.id} className="border-b border-[#eceae4] last:border-0 hover:bg-[#faf9f4]/60">
-                  <div className="grid grid-cols-[1.6fr_1.4fr_0.8fr_0.8fr_0.9fr_1.1fr] gap-2 px-4 pt-3 pb-2 items-center">
-                  <div className="min-w-0">
-                    <div className="text-[12.5px] font-semibold text-[#0a0a0a] truncate flex items-center gap-1.5">
-                      {l.channel === 'call' ? <PhoneCall size={11} className="text-[#a3a3a3] shrink-0" /> : <Mail size={11} className="text-[#a3a3a3] shrink-0" />}
-                      {l.company}
-                    </div>
-                    {l.website && (
-                      <a href={l.website} target="_blank" rel="noreferrer"
-                        className="text-[10.5px] font-mono text-[#117dff] hover:underline truncate flex items-center gap-1">
-                        <Globe size={9} /> {l.website.replace(/^https?:\/\//, '')}
-                      </a>
-                    )}
-                  </div>
-                  <div className="min-w-0 text-[11.5px] text-[#525252] font-mono truncate">
-                    {l.email || l.phone || '—'}
-                    {l.address && <div className="text-[10px] text-[#a3a3a3] truncate">{l.address}</div>}
-                  </div>
-                  <div>
-                    {l.sent
-                      ? <span className="inline-flex items-center gap-1 text-[10.5px] font-mono text-emerald-700"><CheckCheck size={11} /> {t('leads.yes', 'Sent')}</span>
-                      : l.skipped_reason
-                        ? <span className="text-[10.5px] font-mono text-[#a3a3a3]" title={l.skipped_reason}>{t('leads.skipped', 'Skipped')}</span>
-                        : l.error
-                          ? <span className="text-[10.5px] font-mono text-red-500" title={l.error}>{t('leads.failed', 'Failed')}</span>
-                          : l.state === 'discovered'
-                            ? <span className="text-[10.5px] font-mono text-[#525252]">{t('leads.discovered', 'Discovered')}</span>
-                            : <span className="text-[10.5px] font-mono text-[#a3a3a3]">{t('leads.queued', 'Queued')}</span>}
-                  </div>
-                  <div>
-                    {l.replied
-                      ? <span className="inline-flex items-center gap-1 text-[10.5px] font-mono text-emerald-700"><Reply size={11} /> {t('leads.replied', 'Replied')}</span>
-                      : l.booked
-                        ? <span className="inline-flex items-center gap-1 text-[10.5px] font-mono text-emerald-700"><CalendarCheck size={11} /> {t('leads.booked', 'Booked')}</span>
-                        : <span className="text-[10.5px] font-mono text-[#a3a3a3]">—</span>}
-                  </div>
-                  <div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider ${pClass}`}>{pLabel}</span>
-                  </div>
-                  <div className="text-[10.5px] font-mono text-[#525252] flex items-center gap-1">
-                    <Clock size={10} className="text-[#a3a3a3] shrink-0" /> {fmt(l.sent_at || l.discovered_at)}
-                  </div>
-                  </div>
-                  {(l.fit_reason || l.outreach_angle || l.distinctive_signal) && (
-                    <div className="grid sm:grid-cols-2 gap-x-8 gap-y-2 px-4 pb-3 pt-1 text-[11px] leading-relaxed">
-                      <div className="min-w-0">
-                        <span className="font-mono uppercase text-[9.5px] text-[#a3a3a3] mr-2">{t('leads.whyThisLead', 'Why this lead')}</span>
-                        <span className="text-[#353535]">{l.fit_reason || l.distinctive_signal}</span>
-                      </div>
-                      <div className="min-w-0">
-                        <span className="font-mono uppercase text-[9.5px] text-[#a3a3a3] mr-2">{t('leads.bestAngle', 'Best angle')}</span>
-                        <span className="text-[#353535]">{l.outreach_angle || 'Validate the current need before outreach.'}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {sorted.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 pb-4">
+            {sorted.map((l) => <LeadCard key={l.id} lead={l} onOpen={(lead) => setOpenLeadId(lead.id)} />)}
           </div>
         )}
       </div>
+
+      {openLead && (
+        <CampaignDashboardModal campaign={{ name: openLead.company }} loading={false} onClose={() => setOpenLeadId(null)}>
+          <LeadDetailPanel lead={openLead} onClose={() => setOpenLeadId(null)} />
+        </CampaignDashboardModal>
+      )}
     </div>
   );
 }
