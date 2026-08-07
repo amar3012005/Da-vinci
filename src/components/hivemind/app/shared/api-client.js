@@ -1811,15 +1811,19 @@ class HiveMindApiClient {
    * expires_at }; caller opens redirect_url and polls GET /v1/connectors
    * (already the existing refetchOAuth) for the account to flip 'connected'.
    */
-  async createComposioConnectLink(toolkitSlug, toolkitMeta) {
+  async createComposioConnectLink(toolkitSlug, opts = {}) {
+    const { toolkitMeta, callbackUrl } = opts;
     const { data } = await this.controlPlane.post(
       `/v1/connectors/composio/${encodeURIComponent(toolkitSlug)}/connect`,
-      toolkitMeta ? {
-        toolkit_meta: {
-          composio_managed_auth_schemes: toolkitMeta.composioManagedAuthSchemes,
-          no_auth: toolkitMeta.noAuth,
-        },
-      } : {},
+      {
+        ...(toolkitMeta ? {
+          toolkit_meta: {
+            composio_managed_auth_schemes: toolkitMeta.composioManagedAuthSchemes,
+            no_auth: toolkitMeta.noAuth,
+          },
+        } : {}),
+        ...(callbackUrl ? { callback_url: callbackUrl } : {}),
+      },
     );
     return data;
   }
@@ -1839,6 +1843,12 @@ class HiveMindApiClient {
     if (search) params.set('search', search);
     if (cursor) params.set('cursor', cursor);
     const { data } = await this.controlPlane.get(`/v1/connectors/composio/toolkits?${params.toString()}`);
+    return data;
+  }
+
+  /** Full tool list (name + description) for one Composio toolkit. */
+  async getComposioToolkitTools(toolkitSlug) {
+    const { data } = await this.controlPlane.get(`/v1/connectors/composio/toolkits/${encodeURIComponent(toolkitSlug)}/tools`);
     return data;
   }
 
