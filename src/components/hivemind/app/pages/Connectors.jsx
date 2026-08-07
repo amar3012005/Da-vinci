@@ -4355,42 +4355,23 @@ export default function Connectors() {
         </div>
       )}
 
-      {/* Category Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        <button
-          onClick={() => setActiveCategory(null)}
-          className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium font-['Space_Grotesk'] transition-all whitespace-nowrap ${
-            !activeCategory
-              ? 'bg-[#f3f1ec] text-[#0a0a0a] border border-[#d4d0ca]'
-              : 'text-[#525252] hover:text-[#525252] border border-transparent'
-          }`}
-        >
-          {t('connectors.allConnectors', 'All Connectors')}
-        </button>
-        {CONNECTOR_CATEGORIES.map((cat) => (
-          <button
-            key={cat.key}
-            onClick={() => setActiveCategory(cat.key)}
-            className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium font-['Space_Grotesk'] transition-all whitespace-nowrap ${
-              activeCategory === cat.key
-                ? 'bg-[#f3f1ec] text-[#0a0a0a] border border-[#d4d0ca]'
-                : 'text-[#525252] hover:text-[#525252] border border-transparent'
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </div>
+      {/* The old curated grid (category tabs + per-connector Nango/OAuth
+          cards for everything except the pinned AI assistants above) is
+          retired in favor of the Composio toolkit browser below — no more
+          showing the same toolkit twice in two different visual languages.
+          KNOWN GAP this removal introduces: any Nango-connected INGESTION
+          account (Gmail sync, Drive index, Slack history, ...) had its
+          connected/reauth/error status + Disconnect button rendered ONLY
+          in this grid — that management UI is now gone for existing
+          connections, even though the sync itself is untouched and still
+          runs server-side. filteredConnectors/renderConnectorCard/
+          CONNECTOR_CATEGORIES/activeCategory are kept (unused here, still
+          used by the AI-assistants grid above) rather than torn out, so
+          restoring a "manage existing ingestion connectors" view later is
+          a render-only change, not a data-plumbing one. */}
 
-      {/* Connector Grid — 2-col layout w/ themed brand icons. Featured
-          AI assistants render above; this grid is everything else. */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {filteredConnectors.map(renderConnectorCard)}
-      </div>
-
-      {/* Browse Composio's full toolkit catalog — separate from the curated
-          grid above; each card auto-provisions its own auth on first connect
-          rather than needing an ops step per toolkit. */}
+      {/* Browse Composio's full toolkit catalog — every self-serve connector
+          on this page now lives here, one visual language, no duplicates. */}
       <ComposioToolkitBrowser />
 
       {/* MCP Endpoints */}
