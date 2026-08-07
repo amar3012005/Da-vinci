@@ -33,5 +33,17 @@ RUN npm run build
 
 FROM caddy:latest
 COPY --from=build /app/build /srv
-RUN printf ':80 {\n  root * /srv\n  encode gzip\n  @service_worker path /sw.js\n  header @service_worker Cache-Control "no-cache, no-store, must-revalidate"\n  try_files {path} /index.html\n  file_server\n}\n' > /etc/caddy/Caddyfile
+
+# Cache-Control policy, applied in order (later matched header wins):
+#   1. Everything defaults to no-cache — this is what actually served a
+#      stale Connectors page after a real deploy: index.html (served both
+#      directly AND as the SPA fallback for every app route via try_files)
+#      had NO Cache-Control at all, so the browser's heuristic freshness
+#      window let it satisfy even the service worker's own network-first
+#      fetch() straight from HTTP cache, invisible to a user hard-refresh.
+#   2. /static/* is the one deliberate exception: CRA content-hashes those
+#      filenames, so a changed file is a NEW url — safe to cache forever.
+#   3. /sw.js itself stays no-cache (kept explicit, redundant with rule 1,
+#      so this exception can never accidentally regress it back to cached).
+RUN printf ':80 {\n  root * /srv\n  encode gzip\n  header Cache-Control "no-cache, no-store, must-revalidate"\n  @immutable_assets path /static/*\n  header @immutable_assets Cache-Control "public, max-age=31536000, immutable"\n  @service_worker path /sw.js\n  header @service_worker Cache-Control "no-cache, no-store, must-revalidate"\n  try_files {path} /index.html\n  file_server\n}\n' > /etc/caddy/Caddyfile
 EXPOSE 80
