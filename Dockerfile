@@ -34,7 +34,13 @@ RUN npm run build
 FROM caddy:latest
 COPY --from=build /app/build /srv
 
-# Cache-Control policy, applied in order (later matched header wins):
+# Cache-Control policy. The matchers are MUTUALLY EXCLUSIVE on purpose — an earlier
+# version assumed "later matched header wins", which is not how Caddy behaves: it
+# merges every `header` directive into one handler, and a matcher-less `header` beats
+# a matched one for the same field. So the /static/* exception silently never applied
+# and the 857 KB content-hashed bundle was served no-store, re-downloading on every
+# page load. Verified empirically (real container, real curl), not just `caddy validate`.
+# Cache-Control policy:
 #   1. Everything defaults to no-cache — this is what actually served a
 #      stale Connectors page after a real deploy: index.html (served both
 #      directly AND as the SPA fallback for every app route via try_files)
@@ -45,5 +51,5 @@ COPY --from=build /app/build /srv
 #      filenames, so a changed file is a NEW url — safe to cache forever.
 #   3. /sw.js itself stays no-cache (kept explicit, redundant with rule 1,
 #      so this exception can never accidentally regress it back to cached).
-RUN printf ':80 {\n  root * /srv\n  encode gzip\n  header Cache-Control "no-cache, no-store, must-revalidate"\n  @immutable_assets path /static/*\n  header @immutable_assets Cache-Control "public, max-age=31536000, immutable"\n  @service_worker path /sw.js\n  header @service_worker Cache-Control "no-cache, no-store, must-revalidate"\n  try_files {path} /index.html\n  file_server\n}\n' > /etc/caddy/Caddyfile
+RUN printf ':80 {\n  root * /srv\n  encode gzip\n  @immutable_assets path /static/*\n  @volatile not path /static/*\n  header @volatile Cache-Control "no-cache, no-store, must-revalidate"\n  header @immutable_assets Cache-Control "public, max-age=31536000, immutable"\n  @service_worker path /sw.js\n  header @service_worker Cache-Control "no-cache, no-store, must-revalidate"\n  try_files {path} /index.html\n  file_server\n}\n' > /etc/caddy/Caddyfile
 EXPOSE 80
