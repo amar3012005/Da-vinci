@@ -71,7 +71,7 @@ export default function InvitationLanding() {
                 {isEnterprise && <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> {selfHosted ? 'Self-hosted sovereign infrastructure' : 'Singulance-managed infrastructure'}</p>}
                 <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> Setup choices are secured by this invitation</p>
               </div>
-              <button onClick={checkIn} className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-[6px] bg-[#117dff] text-sm font-semibold text-white hover:bg-[#066fe8]">Check in and set up <ArrowRight size={16} /></button>
+              <button onClick={checkIn} className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-[6px] bg-[#117dff] text-sm font-semibold text-white hover:bg-[#066fe8]">Check in to your workspace <ArrowRight size={16} /></button>
               <p className="mt-3 text-center text-[11px] text-[#8b8d94]">The invitation will be retained only for this browser session.</p>
             </>}
           </div>
