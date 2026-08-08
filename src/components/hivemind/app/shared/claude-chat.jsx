@@ -8,9 +8,101 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, ChevronRight, FileText, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
-  AlertTriangle, CheckCircle2, Loader2,
+  AlertTriangle, CheckCircle2, Loader2, ChevronDown, Brain, Sparkles,
 } from 'lucide-react';
 import apiClient from './api-client';
+import { BRAND_LOGOS } from './connectors-catalog';
+
+function connectorKey(event) {
+  const raw = String(event?.tool_groups?.[0] || event?.tool || event?.name || '').toLowerCase();
+  if (raw.includes('gmail')) return 'gmail';
+  if (raw.includes('google') && raw.includes('doc')) return 'google-docs';
+  if (raw.includes('sheet')) return 'google-sheets';
+  if (raw.includes('slack')) return 'slack';
+  if (raw.includes('github')) return 'github';
+  if (raw.includes('linear')) return 'linear';
+  if (raw.includes('notion')) return 'notion';
+  return null;
+}
+
+function reasoningRows(events = [], fallbackSteps = []) {
+  const canonical = events.filter((event) => event?.type === 'orchestration_step');
+  if (canonical.length) {
+    const byStep = new Map();
+    canonical.forEach((event) => byStep.set(event.step_id || event.index, event));
+    return [...byStep.values()].sort((a, b) => Number(a.index) - Number(b.index));
+  }
+  return (fallbackSteps || []).map((step, index) => ({
+    ...step, index, phase: step.status || 'completed', label: step.operation || step.tool || 'Step',
+    detail: step.summary || step.result_summary || '',
+  }));
+}
+
+export function OrchestrationReasoning({ events = [], steps = [], sealed = true }) {
+  const [open, setOpen] = useState(true);
+  const rows = reasoningRows(events, steps);
+  if (!rows.length) return null;
+  return (
+    <div className="max-w-4xl py-2 pr-2">
+      <button type="button" onClick={() => setOpen((value) => !value)}
+        className="inline-flex items-center gap-2 text-left text-[#8b877f] hover:text-[#5f5b54] transition-colors" aria-expanded={open}>
+        {sealed ? <Clock size={15} /> : <Loader2 size={15} className="animate-spin text-[#117dff]" />}
+        <span className="text-[13px] font-medium">Reasoning</span>
+        <ChevronDown size={14} className={`transition-transform ${open ? '' : '-rotate-90'}`} />
+      </button>
+      {open && (
+        <div className="mt-2.5 ml-[7px] border-l border-[#e5dfd6] pl-4 space-y-1.5">
+          {rows.map((row) => {
+            const connector = connectorKey(row);
+            const isNative = String(row.tool || '').startsWith('hivemind_') || (row.tool_groups || []).some((group) => String(group).startsWith('hivemind'));
+            const toolkitSlug = !isNative ? String(row.tool_groups?.[0] || '').trim().toLowerCase() : '';
+            const logo = connector ? BRAND_LOGOS[connector]
+              : toolkitSlug ? `https://logos.composio.dev/api/${encodeURIComponent(toolkitSlug)}` : null;
+            const complete = ['completed', 'draft_created'].includes(row.phase);
+            return (
+              <div key={row.step_id || row.index} className="flex min-w-0 items-start gap-2.5 text-[12px] leading-5">
+                <span className="mt-1 flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                  {logo ? <img src={logo} alt="" className="h-3.5 w-3.5" />
+                    : isNative ? <Brain size={13} className="text-[#117dff]" />
+                      : row.phase === 'started' ? <Loader2 size={12} className="animate-spin text-[#117dff]" />
+                        : <Sparkles size={12} className="text-[#117dff]" />}
+                </span>
+                <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <code className="max-w-full break-all rounded-[4px] bg-[#e8f0ff] px-1.5 py-0.5 font-mono text-[11.5px] text-[#1764d8]">
+                    {row.tool || row.label || row.operation || 'Working'}
+                  </code>
+                  <span className={row.phase === 'needs_input' ? 'text-[#a16207]' : complete ? 'text-[#329044]' : 'text-[#77736c]'}>
+                    → {row.detail || (row.phase === 'started' ? 'Working…' : String(row.phase || '').replace(/_/g, ' '))}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContinuationChoices({ continuation, onContinue }) {
+  const [selected, setSelected] = useState(null);
+  const request = continuation?.requests?.[0];
+  if (!request?.options?.length || !onContinue) return null;
+  return (
+    <div className="mt-3 rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3">
+      <div className="text-[12px] font-medium text-[#5f5b54]">{request.prompt || 'Choose one to continue'}</div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {request.options.map((option) => (
+          <button key={option.id} type="button" disabled={selected != null}
+            onClick={() => { setSelected(option.id); onContinue(continuation, request, option); }}
+            className="rounded-full border border-[#d8d4cc] bg-white px-3 py-1.5 text-[12px] font-medium text-[#30302d] hover:border-[#117dff] hover:text-[#0066e0] disabled:opacity-50">
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ─── Markdown-lite renderer ──────────────────────────────────────────────
 // Same idea as HyperAgents.renderMarkdownLite but extended with:
@@ -331,7 +423,7 @@ export function StepsDisclosure({ steps }) {
 
 // Claude-style assistant turn: NO bubble. Reasoning pill → serif answer on the
 // canvas → Sources pill → copy / retry / thumbs action row.
-export function AiBubble({ msg, onRetry }) {
+export function AiBubble({ msg, onRetry, onContinue }) {
   const [showSources, setShowSources] = useState(false);
   const [copied, setCopied] = useState(false);
   const [vote, setVote] = useState(null);
@@ -345,7 +437,9 @@ export function AiBubble({ msg, onRetry }) {
 
   return (
     <div className="self-start w-full max-w-full">
-      {hasSteps && <StepsDisclosure steps={msg.steps} />}
+      {(msg.orchestration_events?.length || hasSteps) && (
+        <OrchestrationReasoning events={msg.orchestration_events || []} steps={msg.steps || []} sealed />
+      )}
 
       {msg.error && (
         <div className="flex items-center gap-2 text-[#b91c1c] text-[13px] font-medium mb-2">
@@ -382,6 +476,7 @@ export function AiBubble({ msg, onRetry }) {
       )}
 
       <MobileDraftCards draftIds={msg.draft_ids} />
+      <ContinuationChoices continuation={msg.continuation} onContinue={onContinue} />
 
       {hasSources && (
         <div className="mt-3">
@@ -486,6 +581,8 @@ export function _activityLabel(ev) {
   return n ? `running ${n}` : 'working';
 }
 export function Thinking({ events = [] }) {
+  const hasOrchestration = events.some((event) => event?.type === 'orchestration_step');
+  if (hasOrchestration) return <OrchestrationReasoning events={events} sealed={false} />;
   const visible = (events || []).slice(-4);
   return (
     <div className="self-start flex flex-col gap-1.5">
@@ -509,4 +606,3 @@ export function Thinking({ events = [] }) {
     </div>
   );
 }
-
