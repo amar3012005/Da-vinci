@@ -1155,13 +1155,25 @@ function RoomThread({ roomId, onArchived }) {
   const growthBaselineRequested = useMemo(() => new URLSearchParams(location.search).get('growthBaseline') === '1', [location.search]);
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
   // events don't yank them back down while they scroll up to read. Updated on manual scroll.
-  // Normal rooms open on their permanent category workspace. Once the user
-  // sends or scrolls to the discussion, live activity follows the bottom.
-  const pinnedRef = useRef(false);
+  // Rooms open at their latest activity. Live activity keeps following from
+  // there until the user deliberately scrolls up to read older context.
+  const pinnedRef = useRef(true);
   const onThreadScroll = useCallback(() => {
     const el = scrollRef.current;
     if (el) pinnedRef.current = (el.scrollHeight - el.scrollTop - el.clientHeight) < 120;
   }, []);
+
+  // Opening or switching a Room always starts at its latest durable activity.
+  // From there the existing pin detector preserves normal chat behavior: live
+  // events keep following the bottom until the user deliberately scrolls up.
+  useEffect(() => {
+    pinnedRef.current = true;
+    const frame = window.requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [roomId]);
 
   // Projects for the scope badge / changer (room can be moved Org ↔ Project).
   useEffect(() => {
@@ -2137,7 +2149,17 @@ function RoomThread({ roomId, onArchived }) {
       await apiClient.clearHyperRoomTurns(roomId);
       setActiveTurnId(null);
       setLiveLines([]);
-      load();
+      setTurns([]);
+      setWorkPlan([]);
+      setHqActivity([]);
+      workPlanEventRef.current = '';
+      setRoom((current) => current ? {
+        ...current,
+        roomJournal: [],
+        room_journal: [],
+        evo_journal: [],
+      } : current);
+      pinnedRef.current = true;
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     }
@@ -2320,6 +2342,11 @@ function RoomThread({ roomId, onArchived }) {
   const archived = !!room.archivedAt;
   const participantBySlug = Object.fromEntries(participants.map(p => [p.slug, p]));
   const roomDomain = domainRoomDefinition(isCampaignRoom ? 'campaign' : (room.room_tag || room.roomTag || 'general'));
+  const isCompanyIntelligenceRoom = Boolean(room.is_domain_home || room.isDomainHome);
+  const hasClearableHistory = turns.length > 0
+    || workPlan.length > 0
+    || (Array.isArray(room.room_journal) && room.room_journal.length > 0)
+    || (Array.isArray(room.roomJournal) && room.roomJournal.length > 0);
   const isSeoRoom = roomDomain.key === 'seo';
   const RoomDomainIcon = roomDomain.icon;
   const roomDomainLabel = room.is_domain_home && roomDomain.key === 'general' ? 'HQ' : roomDomain.label;
@@ -2701,13 +2728,15 @@ function RoomThread({ roomId, onArchived }) {
             >
               <Zap size={11} /> {fmtTokens} {t('hyperAgents.tok', 'tok')}
             </span>
-            {turns.length > 0 && (
+            {!isCompanyIntelligenceRoom && (
               <button
+                type="button"
                 onClick={handleClearDiscussion}
-                className="p-1.5 text-[#a3a3a3] hover:text-red-600 rounded hover:bg-[#faf9f4]"
+                disabled={!hasClearableHistory}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#e3e0db] bg-white px-2.5 text-[10px] font-semibold text-[#737373] hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
                 title={t('hyperAgents.clearDiscussionTitle', 'Clear discussion — delete all turns + agent activity (keeps the room)')}
               >
-                <Eraser size={13} />
+                <Eraser size={12} /> {t('hyperAgents.clearAll', 'Clear all')}
               </button>
             )}
             {!archived && (

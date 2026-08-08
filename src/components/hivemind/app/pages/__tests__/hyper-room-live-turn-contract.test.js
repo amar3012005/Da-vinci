@@ -55,12 +55,24 @@ describe('HyperAgents live turn adoption', () => {
     expect(source).toContain('function DomainRoomIntro');
     expect(source).toContain('The category workspace is a permanent part of the room.');
     expect(source).toContain('setRoomIntroAcknowledged(true)');
-    expect(source).toContain('const pinnedRef = useRef(false)');
+    expect(source).toContain('const pinnedRef = useRef(true)');
+    expect(source).toContain('if (el) el.scrollTop = el.scrollHeight;');
     expect(source).not.toContain('setShowRoomIntro(!window.localStorage.getItem');
     expect(source).toContain("`hm-room-intro-${room.id}`");
     expect(source).toContain('What this Room already knows');
     expect(source).toContain('Suggested operating path');
     expect(source).toContain('onClick={() => onRun(`${contextPrefix}');
+  });
+
+  it('opens every Room at the latest activity and limits Clear all to work Rooms', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
+    expect(source).toContain('Opening or switching a Room always starts at its latest durable activity.');
+    expect(source).toContain('const isCompanyIntelligenceRoom = Boolean(room.is_domain_home || room.isDomainHome);');
+    expect(source).toContain('{!isCompanyIntelligenceRoom && (');
+    expect(source).toContain("t('hyperAgents.clearAll', 'Clear all')");
+    expect(source).toContain('setWorkPlan([]);');
+    expect(source).toContain('roomJournal: []');
+    expect(source).toContain('room_journal: []');
   });
 
   it('keeps the Campaign Intelligence operating banner as a campaign-only room surface', () => {
