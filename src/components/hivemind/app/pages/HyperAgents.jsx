@@ -1070,6 +1070,7 @@ function RoomThread({ roomId, onArchived }) {
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
   const [workPlan, setWorkPlan] = useState([]);
+  const workPlanEventRef = useRef('');
   const [companyContext, setCompanyContext] = useState(null);
   const [seoJobAudit, setSeoJobAudit] = useState(null);
   const [seoConnection, setSeoConnection] = useState(null);
@@ -1325,6 +1326,18 @@ function RoomThread({ roomId, onArchived }) {
   }, [roomId]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if ((room?.roomMode !== 'work' && room?.room_mode !== 'work') || !liveLines.length) return;
+    const event = [...liveLines].reverse().find((line) => line?.t === 'work_order');
+    if (!event) return;
+    const key = `${event.id || event.order_key || event.step_id || ''}:${event.status || ''}`;
+    if (!key || key === workPlanEventRef.current) return;
+    workPlanEventRef.current = key;
+    apiClient.getHyperRoomWorkPlan(roomId)
+      .then((projection) => setWorkPlan(projection?.steps || []))
+      .catch(() => {});
+  }, [liveLines, room?.roomMode, room?.room_mode, roomId]);
 
   useEffect(() => {
     apiClient.hyperCompany()
