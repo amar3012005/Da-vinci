@@ -488,6 +488,41 @@ export function ChatPanel({ isOpen, onClose }) {
 
   const sendMessage = useCallback(() => sendText(), [sendText]);
 
+  const continueOrchestration = useCallback(async (continuation, request, option) => {
+    if (loading) return;
+    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: option.label }]);
+    setLoading(true);
+    setAgentEvents([]);
+    try {
+      const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
+      const response = await fetch(chatUrl, {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: option.label, stream: true, use_tools: true,
+          continuation_token: continuation.token,
+          continuation_response: {
+            step_index: request.step_index, option_id: option.id,
+            value: option.value, values: option.values,
+          },
+        }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `Resume failed (${response.status})`);
+      const data = (response.headers.get('content-type') || '').includes('text/event-stream')
+        ? (await readChatStream(response, (event) => setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-8)))) || {}
+        : await response.json();
+      setMessages((prev) => [...prev, {
+        id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
+        steps: data.steps || [], draft_ids: data.draft_ids || [], pending_actions: data.pending_actions || [],
+        sources: data.sources || [], continuation: data.continuation || null,
+      }]);
+    } catch (error) {
+      setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', error: true, content: error.message, sources: [] }]);
+    } finally {
+      setAgentEvents([]);
+      setLoading(false);
+    }
+  }, [loading]);
+
   // Regenerate: re-run the user prompt that preceded this assistant answer.
   const retry = useCallback((assistantMsg) => {
     if (loading) return;
@@ -740,7 +775,7 @@ export function ChatPanel({ isOpen, onClose }) {
                     {messages.map((m) =>
                       m.role === 'user'
                         ? <UserBubble key={m.id} content={m.content} />
-                        : <AiBubble key={m.id} msg={m} onRetry={retry} />
+                        : <AiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />
                     )}
                     {loading && <Thinking events={agentEvents} />}
                   </>

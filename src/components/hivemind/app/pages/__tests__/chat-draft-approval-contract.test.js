@@ -14,11 +14,22 @@ test('all chat surfaces retain structured pending actions', () => {
   }
 });
 
-test('shared approval card prints exact email fields and exposes one-click send', () => {
+test('shared inline interaction prints exact fields and exposes governed actions', () => {
   const source = read('shared/claude-chat.jsx');
   expect(source).toContain("['to', 'recipient_email', 'recipient', 'to_email', 'recipients']");
   expect(source).toContain("['subject', 'email_subject', 'title']");
   expect(source).toContain("['body', 'message_body', 'email_body', 'message', 'text', 'content']");
-  expect(source).toContain("presentation.sends ? 'Send email' : 'Approve action'");
+  expect(source).toContain("return 'Approve and continue'");
+  expect(source).toContain("return 'Send email'");
+  expect(source).toContain('Nothing has been executed yet. Review the exact details below');
   expect(source).toContain('pendingActions={msg.pending_actions}');
+});
+
+test('choices, arbitrary fields, and save scope use inline rectangular controls', () => {
+  const shared = read('shared/claude-chat.jsx');
+  const overview = read('pages/Overview.jsx');
+  expect(shared).toContain('const fields = Array.isArray(request?.fields)');
+  expect(shared).toContain("rounded-[4px] border border-[#bdb8b0] bg-transparent");
+  expect(shared).toContain('Choose where to save this memory');
+  expect(overview).toContain("rounded-[4px] border border-[#bdb8b0] bg-transparent");
 });

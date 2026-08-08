@@ -456,7 +456,7 @@ export default function TalkToHiveMobile() {
         body: JSON.stringify({
           message: option.label, stream: true, use_tools: true,
           continuation_token: continuation.token,
-          continuation_response: { step_index: request.step_index, option_id: option.id, value: option.value },
+          continuation_response: { step_index: request.step_index, option_id: option.id, value: option.value, values: option.values },
         }),
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `Resume failed (${response.status})`);

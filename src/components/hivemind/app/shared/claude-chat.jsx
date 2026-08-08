@@ -86,19 +86,50 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true 
 
 function ContinuationChoices({ continuation, onContinue }) {
   const [selected, setSelected] = useState(null);
+  const [values, setValues] = useState({});
   const request = continuation?.requests?.[0];
-  if (!request?.options?.length || !onContinue) return null;
+  const options = Array.isArray(request?.options) ? request.options : [];
+  const fields = Array.isArray(request?.fields) ? request.fields : [];
+  if ((!options.length && !fields.length) || !onContinue) return null;
+  const fieldsComplete = fields.every((field) => !field.required || String(values[field.name] || '').trim());
   return (
-    <div className="mt-3 rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3">
-      <div className="text-[12px] font-medium text-[#5f5b54]">{request.prompt || 'Choose one to continue'}</div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {request.options.map((option) => (
+    <div className="mt-5">
+      <div className="text-[14px] font-semibold text-[#1a1a17]">I need your input to continue</div>
+      <div className="mt-1 text-[13px] leading-relaxed text-[#5f5b54]">{request.prompt || 'Choose one of the options below. I will continue from the paused step without repeating completed work.'}</div>
+      {fields.length > 0 && (
+        <div className="mt-3 space-y-3">
+          {fields.map((field) => (
+            <label key={field.id || field.name} className="block">
+              <span className="text-[12px] font-semibold text-[#1a1a17]">{field.label || field.name}</span>
+              <input
+                type={field.type === 'email' ? 'email' : 'text'}
+                value={values[field.name] || ''}
+                onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
+                disabled={selected != null}
+                className="mt-1 block w-full max-w-xl border-0 border-b border-[#bdb8b0] bg-transparent px-0 py-2 text-[13px] text-[#1a1a17] outline-none focus:border-[#117dff] disabled:opacity-50"
+              />
+            </label>
+          ))}
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {options.map((option) => (
           <button key={option.id} type="button" disabled={selected != null}
             onClick={() => { setSelected(option.id); onContinue(continuation, request, option); }}
-            className="rounded-full border border-[#d8d4cc] bg-white px-3 py-1.5 text-[12px] font-medium text-[#30302d] hover:border-[#117dff] hover:text-[#0066e0] disabled:opacity-50">
+            className="rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] font-medium text-[#30302d] hover:border-[#117dff] hover:text-[#0066e0] disabled:opacity-50">
             {option.label}
           </button>
         ))}
+        {fields.length > 0 && (
+          <button type="button" disabled={selected != null || !fieldsComplete}
+            onClick={() => {
+              setSelected('field-input');
+              onContinue(continuation, request, { id: 'field-input', label: 'Continue', values });
+            }}
+            className="rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#262626] disabled:opacity-40">
+            Continue
+          </button>
+        )}
       </div>
     </div>
   );
@@ -328,7 +359,15 @@ export function draftPresentation(draft) {
   const args = draft?.toolArgs || {};
   const tool = String(draft?.toolName || '').toLowerCase();
   const email = tool.includes('gmail') || tool.includes('email');
-  if (!email) return { kind: 'generic', preview: draft?.preview || JSON.stringify(args, null, 2) };
+  if (!email) return {
+    kind: 'generic',
+    fields: Object.entries(args)
+      .filter(([name]) => name !== '_composio_slug')
+      .map(([name, value]) => ({
+        name: String(name).replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
+        value: typeof value === 'string' ? value : JSON.stringify(value, null, 2),
+      })),
+  };
   return {
     kind: 'email',
     to: firstDraftArg(args, ['to', 'recipient_email', 'recipient', 'to_email', 'recipients']),
@@ -336,6 +375,23 @@ export function draftPresentation(draft) {
     body: firstDraftArg(args, ['body', 'message_body', 'email_body', 'message', 'text', 'content']),
     sends: tool.includes('send'),
   };
+}
+
+function actionHeading(presentation) {
+  if (presentation.kind === 'email' && presentation.sends) return 'Email ready to send';
+  if (presentation.kind === 'email') return 'Email ready for approval';
+  return 'Action ready for your approval';
+}
+
+function actionButtonLabel(presentation) {
+  if (presentation.kind === 'email' && presentation.sends) return 'Send email';
+  return 'Approve and continue';
+}
+
+function actionSuccessLabel(presentation) {
+  if (presentation.kind === 'email' && presentation.sends) return 'Email sent successfully.';
+  if (presentation.kind === 'email') return 'Email draft created successfully.';
+  return 'Action completed successfully.';
 }
 
 // One governed approval card shared by desktop and mobile. The chat response
@@ -371,7 +427,7 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
   };
   if (drafts.length === 0) return null;
   return (
-    <div className="mt-3 space-y-2">
+    <div className="mt-5 space-y-7">
       {drafts.map(d => {
         const presentation = draftPresentation(d);
         const sent = d.status === 'sent';
@@ -379,48 +435,48 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
         const failed = d.status === 'failed';
         const pending = d.status === 'draft';
         const executing = d.status === 'approved';
-        const tone = sent ? 'border-emerald-200 bg-emerald-50' :
-                     cancelled ? 'border-[#e3e0db] bg-[#fafaf6] opacity-70' :
-                     failed ? 'border-red-200 bg-red-50' :
-                     'border-amber-200 bg-amber-50';
         return (
-          <div key={d.id} className={`rounded-xl border ${tone} p-3 text-[12.5px]`}>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#525252]">{d.provider}/{d.toolName}</span>
-              <span className={`text-[9.5px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                sent ? 'bg-emerald-500/15 text-emerald-700' :
-                cancelled ? 'bg-[#a3a3a3]/15 text-[#525252]' :
-                failed ? 'bg-red-500/15 text-red-700' :
-                'bg-amber-500/15 text-amber-700'
-              }`}>{d.status}</span>
-            </div>
+          <section key={d.id} className={`text-[13px] ${cancelled ? 'opacity-60' : ''}`}>
+            <h3 className="text-[15px] font-semibold text-[#1a1a17]">{actionHeading(presentation)}</h3>
+            {pending && <p className="mt-1 text-[12.5px] leading-relaxed text-[#73706a]">Nothing has been executed yet. Review the exact details below, then approve or cancel.</p>}
             {presentation.kind === 'email' ? (
-              <div className="mt-2 overflow-hidden rounded-lg border border-black/10 bg-white/70 text-[#353535]">
-                <div className="border-b border-black/10 px-3 py-2"><span className="mr-2 text-[10px] font-mono uppercase text-[#8a8577]">To</span>{presentation.to || 'Not provided'}</div>
-                <div className="border-b border-black/10 px-3 py-2"><span className="mr-2 text-[10px] font-mono uppercase text-[#8a8577]">Subject</span>{presentation.subject || 'No subject'}</div>
-                <div className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words px-3 py-3 leading-relaxed">{presentation.body || 'No message body provided.'}</div>
+              <div className="mt-4 space-y-3 text-[#353535]">
+                <div><strong className="font-semibold text-[#1a1a17]">To:</strong> <span className="break-all">{presentation.to || 'Not provided'}</span></div>
+                <div><strong className="font-semibold text-[#1a1a17]">Subject:</strong> {presentation.subject || 'No subject'}</div>
+                <div>
+                  <div className="font-semibold text-[#1a1a17]">Message</div>
+                  <div className="mt-1 max-h-96 overflow-y-auto whitespace-pre-wrap break-words text-[13.5px] leading-[1.65]">{presentation.body || 'No message body provided.'}</div>
+                </div>
               </div>
             ) : (
-              <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-black/10 bg-white/70 p-3 text-[11.5px] leading-relaxed">{presentation.preview}</pre>
+              <div className="mt-4 space-y-3 text-[#353535]">
+                {presentation.fields.map((field) => (
+                  <div key={field.name}>
+                    <div className="font-semibold text-[#1a1a17]">{field.name}</div>
+                    <div className="mt-1 max-h-72 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed">{field.value}</div>
+                  </div>
+                ))}
+              </div>
             )}
             {failed && d.errorMsg && (
               <div className="mt-1.5 text-[11.5px] text-red-700">Error: {d.errorMsg}</div>
             )}
             {pending && (
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
                 <button onClick={() => act(d.id, 'approve')} disabled={busy === d.id}
-                  className="flex-1 py-2 rounded-lg text-[12px] font-semibold bg-[#0a0a0a] text-white active:bg-[#262626] disabled:opacity-50">
-                  {busy === d.id ? 'Sending…' : presentation.sends ? 'Send email' : 'Approve action'}
+                  className="rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#262626] disabled:opacity-50">
+                  {busy === d.id ? 'Working…' : actionButtonLabel(presentation)}
                 </button>
                 <button onClick={() => act(d.id, 'cancel')} disabled={busy === d.id}
-                  className="flex-1 py-2 rounded-lg text-[12px] font-medium border border-[#e3e0db] text-[#525252] active:bg-[#f3f1ec] disabled:opacity-50">
+                  className="rounded-[4px] border border-[#bdb8b0] bg-transparent px-4 py-2 text-[12px] font-medium text-[#525252] hover:border-[#77716a] disabled:opacity-50">
                   Cancel
                 </button>
               </div>
             )}
             {executing && <div className="mt-2 text-[11.5px] text-amber-700">Executing the approved action…</div>}
-            {sent && <div className="mt-1 text-[11.5px] text-emerald-700">✓ Sent successfully.</div>}
-          </div>
+            {sent && <div className="mt-2 text-[11.5px] text-emerald-700">✓ {actionSuccessLabel(presentation)}</div>}
+            {cancelled && <div className="mt-2 text-[11.5px] text-[#737373]">Cancelled. Nothing was executed.</div>}
+          </section>
         );
       })}
     </div>
@@ -608,11 +664,12 @@ export function MobileProjectChoice({ choice }) {
     finally { setBusy(false); }
   };
   if (saved) return <div className="mt-2 text-[12px] font-medium text-emerald-700">✓ Saved to {saved}</div>;
-  const btn = 'px-3 py-1.5 text-[12px] rounded-full border border-[#e3e0db] active:border-[#117dff] active:text-[#117dff] disabled:opacity-50';
+  const btn = 'px-3.5 py-2 text-[12px] rounded-[4px] border border-[#bdb8b0] bg-transparent active:border-[#117dff] active:text-[#117dff] disabled:opacity-50';
   return (
-    <div className="mt-2">
-      <div className="text-[12px] text-[#737373] mb-1.5">Save this to:</div>
-      <div className="flex flex-wrap gap-2">
+    <div className="mt-5">
+      <div className="text-[14px] font-semibold text-[#1a1a17]">Choose where to save this memory</div>
+      <div className="mt-1 text-[12.5px] leading-relaxed text-[#737373]">The memory is prepared but has not been saved. Choose its scope to finish.</div>
+      <div className="mt-3 flex flex-wrap gap-2">
         <button type="button" onClick={() => save('Org-wide', { scope: 'organization' })} disabled={busy} className={btn}>🌐 Org-wide</button>
         {projects.map((p) => (
           <button key={p.id} type="button" onClick={() => save(p.name, { project_id: p.id })} disabled={busy} className={btn}>{p.name}</button>

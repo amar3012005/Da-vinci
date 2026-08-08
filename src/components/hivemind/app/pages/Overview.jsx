@@ -951,7 +951,7 @@ function OverviewChat({ inputRef }) {
         body: JSON.stringify({
           message: option.label, stream: true, use_tools: true,
           continuation_token: continuation.token,
-          continuation_response: { step_index: request.step_index, option_id: option.id, value: option.value },
+          continuation_response: { step_index: request.step_index, option_id: option.id, value: option.value, values: option.values },
         }),
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `Resume failed (${response.status})`);
@@ -1019,15 +1019,16 @@ function OverviewChat({ inputRef }) {
             <React.Fragment key={m.id}>
               <ChatBubble msg={m} onContinue={continueOrchestration} />
               {m.projectChoice && !loading && (
-                <div className="mt-2 mb-1 flex flex-col gap-1.5" data-testid="save-scope-chooser">
-                  <p className="text-[11px] text-[#737373] font-['Space_Grotesk']">
+                <div className="mt-5 mb-1 flex flex-col gap-2" data-testid="save-scope-chooser">
+                  <p className="text-[14px] font-semibold text-[#1a1a17]">
                     {t('overview.chat.chooseScope', 'Where should I save this?')}
                   </p>
+                  <p className="text-[12.5px] leading-relaxed text-[#737373]">The memory is prepared but has not been saved. Choose its scope to finish.</p>
                   <div className="flex flex-wrap gap-1.5">
                     <button
                       type="button"
                       onClick={() => sendMessage({ text: m.projectChoice.originalMessage, projectId: null })}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[#e3e0db] bg-white px-3 py-1.5 text-[12px] text-[#0a0a0a] hover:border-[#117dff] hover:bg-[#117dff]/5 transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] text-[#0a0a0a] hover:border-[#117dff] transition-colors"
                     >
                       <Lock size={13} className="text-[#a3a3a3]" />
                       {t('knowledgebase.scopePersonalLabel', 'My Space')}
@@ -1037,7 +1038,7 @@ function OverviewChat({ inputRef }) {
                         key={p.id || p.slug}
                         type="button"
                         onClick={() => sendMessage({ text: m.projectChoice.originalMessage, projectId: p.id || p.slug })}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[#e3e0db] bg-white px-3 py-1.5 text-[12px] text-[#0a0a0a] hover:border-[#117dff] hover:bg-[#117dff]/5 transition-colors"
+                        className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] text-[#0a0a0a] hover:border-[#117dff] transition-colors"
                       >
                         <Building2 size={13} className="text-[#a3a3a3]" />
                         {p.name || p.slug || p.id}
