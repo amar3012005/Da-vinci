@@ -220,11 +220,11 @@ async function readChatStream(response, onEvent) {
   return result;
 }
 
-function ChatBubble({ msg }) {
+function ChatBubble({ msg, onContinue }) {
   // Claude-exact turns (shared/claude-chat): user pill right, assistant is a
   // bubbleless serif answer with reasoning pill + sources + action row.
   if (msg.role === 'user') return <div className="flex justify-end"><UserBubble content={msg.content} /></div>;
-  return <div className="flex flex-col">{<AiBubble msg={msg} />}</div>;
+  return <div className="flex flex-col">{<AiBubble msg={msg} onContinue={onContinue} />}</div>;
 }
 
 // ─── Cognitive band — drifting stream of swarm intelligence ─────
@@ -872,6 +872,7 @@ function OverviewChat({ inputRef }) {
     const wireMessage = trimmed;
 
     try {
+      const streamedEvents = [];
       const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
       const chatRes = await fetch(chatUrl, {
         method: 'POST',
@@ -896,7 +897,9 @@ function OverviewChat({ inputRef }) {
       }
       const chatData = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? await readChatStream(chatRes, (event) => {
-            setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-6));
+            const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
+            streamedEvents.push(next);
+            setAgentEvents([...streamedEvents]);
           })
         : await chatRes.json();
       const content = chatData.response
@@ -915,6 +918,8 @@ function OverviewChat({ inputRef }) {
         sources: Array.isArray(chatData.sources) ? chatData.sources : [],
         steps: Array.isArray(chatData.steps) ? chatData.steps : [],
         gaps: Array.isArray(chatData.gaps) ? chatData.gaps : [],
+        orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
+        continuation: chatData.continuation || null,
         projectChoice,
       }]);
     } catch (err) {
@@ -930,6 +935,38 @@ function OverviewChat({ inputRef }) {
       setLoading(false);
     }
   }, [input, loading, messages, chatScope, i18n.language, t, useTools]);
+
+  const continueOrchestration = useCallback(async (continuation, request, option) => {
+    if (loading) return;
+    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: option.label }]);
+    setLoading(true);
+    const streamedEvents = [];
+    setAgentEvents([]);
+    try {
+      const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
+      const response = await fetch(chatUrl, {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: option.label, stream: true, use_tools: true,
+          continuation_token: continuation.token,
+          continuation_response: { step_index: request.step_index, option_id: option.id, value: option.value },
+        }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `Resume failed (${response.status})`);
+      const data = (await readChatStream(response, (event) => {
+        const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
+        streamedEvents.push(next); setAgentEvents([...streamedEvents]);
+      })) || {};
+      setMessages((prev) => [...prev, {
+        id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
+        steps: data.steps || [], draft_ids: data.draft_ids || [], sources: data.sources || [],
+        orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
+        continuation: data.continuation || null,
+      }]);
+    } catch (error) {
+      setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', error: true, content: error.message }]);
+    } finally { setAgentEvents([]); setLoading(false); }
+  }, [loading]);
 
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -977,7 +1014,7 @@ function OverviewChat({ inputRef }) {
         >
           {messages.map((m) => (
             <React.Fragment key={m.id}>
-              <ChatBubble msg={m} />
+              <ChatBubble msg={m} onContinue={continueOrchestration} />
               {m.projectChoice && !loading && (
                 <div className="mt-2 mb-1 flex flex-col gap-1.5" data-testid="save-scope-chooser">
                   <p className="text-[11px] text-[#737373] font-['Space_Grotesk']">

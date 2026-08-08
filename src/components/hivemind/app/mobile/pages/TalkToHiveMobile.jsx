@@ -376,6 +376,7 @@ export default function TalkToHiveMobile() {
     const wireMessage = trimmed;
 
     try {
+      const streamedEvents = [];
       // Streamed like desktop Overview: SSE frames carry live tool_call /
       // tool_result events → animated activity while the answer is produced.
       setAgentEvents([{ id: `${Date.now()}-plan`, type: 'plan' }]);
@@ -406,7 +407,9 @@ export default function TalkToHiveMobile() {
       }
       const data = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? (await readChatStream(chatRes, (event) => {
-            setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-5));
+            const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
+            streamedEvents.push(next);
+            setAgentEvents([...streamedEvents]);
           })) || {}
         : await chatRes.json();
       const assistantMsg = {
@@ -419,6 +422,8 @@ export default function TalkToHiveMobile() {
         steps: Array.isArray(data.steps) ? data.steps : [],
         draft_ids: Array.isArray(data.draft_ids) ? data.draft_ids : [],
         trace: data.trace || null,
+        orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
+        continuation: data.continuation || null,
         project_choice: data.project_choice || null,
         // Scope provenance — which tier(s) the answer's memories came from
         // (my-space / project:<name> / org-wide). Rendered under the answer.
@@ -435,7 +440,39 @@ export default function TalkToHiveMobile() {
       setLoading(false);
       setAgentEvents([]);
     }
-  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId]);
+  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools]);
+
+  const continueOrchestration = useCallback(async (continuation, request, option) => {
+    if (loading) return;
+    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: option.label }]);
+    setLoading(true);
+    const streamedEvents = [];
+    setAgentEvents([]);
+    try {
+      const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
+      const response = await fetch(chatUrl, {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: option.label, stream: true, use_tools: true,
+          continuation_token: continuation.token,
+          continuation_response: { step_index: request.step_index, option_id: option.id, value: option.value },
+        }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `Resume failed (${response.status})`);
+      const data = (await readChatStream(response, (event) => {
+        const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
+        streamedEvents.push(next); setAgentEvents([...streamedEvents]);
+      })) || {};
+      setMessages((prev) => [...prev, {
+        id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
+        steps: data.steps || [], draft_ids: data.draft_ids || [], sources: data.sources || [],
+        orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
+        continuation: data.continuation || null,
+      }]);
+    } catch (error) {
+      setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', error: true, content: error.message, sources: [] }]);
+    } finally { setAgentEvents([]); setLoading(false); }
+  }, [loading]);
 
   const send = useCallback(() => sendText(), [sendText]);
 
@@ -692,7 +729,7 @@ export default function TalkToHiveMobile() {
           {messages.map((m) =>
             m.role === 'user'
               ? <UserBubble key={m.id} content={m.content} />
-              : <AiBubble key={m.id} msg={m} onRetry={retry} />
+              : <AiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />
           )}
           {loading && <Thinking events={agentEvents} />}
         </div>
