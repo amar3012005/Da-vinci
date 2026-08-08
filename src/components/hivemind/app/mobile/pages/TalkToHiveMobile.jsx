@@ -268,6 +268,7 @@ export default function TalkToHiveMobile() {
   // (org-tier only), 'personal' (only my private memories), or 'project' (one
   // project). Maps to the backend recall scope_filter; 'all' sends no filter.
   const [chatScopeMode, setChatScopeMode] = useState('all');
+  const [useTools, setUseTools] = useState(false);
   const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
   useEffect(() => { setChatScope(activeProjectId || null); }, [activeProjectId]);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
@@ -385,6 +386,7 @@ export default function TalkToHiveMobile() {
           stream: true,
           // Keep mobile on the same grounded tool-routing path as desktop chat.
           router: 'tool',
+          use_tools: useTools,
           // Recall scope from the chat selector: personal | organization (all) | project.
           scope: chatScopeMode,
           ...((chatScopeMode === 'project' && (chatScope || activeProjectId))
@@ -870,6 +872,19 @@ export default function TalkToHiveMobile() {
               </div>
             )}
           </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={useTools}
+            onClick={() => setUseTools((enabled) => !enabled)}
+            className="inline-flex items-center gap-1.5 h-9 px-2 text-[11px] text-[#525252] active:bg-[#f1eee7] rounded-full"
+            title={t('overview.chat.toolsHint', 'Allow connected apps for this message')}
+          >
+            <span className={`relative h-5 w-9 rounded-full transition-colors ${useTools ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${useTools ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+            </span>
+            <span>{t('overview.chat.toolsBeta', 'Beta version')}</span>
+          </button>
           <span className="flex-1" />
           {/* Push-to-talk mic — tap to record, tap to stop & transcribe */}
           <button

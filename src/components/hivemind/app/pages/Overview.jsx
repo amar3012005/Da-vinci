@@ -807,6 +807,7 @@ function OverviewChat({ inputRef }) {
   // switcher, overridable per-conversation from the composer drop-up.
   const [chatScope, setChatScope] = useState(activeProjectId || null);
   const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
+  const [useTools, setUseTools] = useState(false);
   // Follow the global project/team switcher: when the user sets the workspace
   // scope, the chat uses it for every tool (recall + save) without the user
   // having to name the project. The composer drop-up still overrides per
@@ -879,6 +880,7 @@ function OverviewChat({ inputRef }) {
         // The V2 router selects bounded recall and authorized tools per turn.
         // The endpoint and its response contract remain unchanged.
         router: 'tool',
+        use_tools: useTools,
         ...(effProjectId ? { project_id: effProjectId, project_ids: [effProjectId] } : {}),
         }),
       });
@@ -921,7 +923,7 @@ function OverviewChat({ inputRef }) {
       setAgentEvents([]);
       setLoading(false);
     }
-  }, [input, loading, messages, chatScope, i18n.language, t]);
+  }, [input, loading, messages, chatScope, i18n.language, t, useTools]);
 
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1085,6 +1087,20 @@ function OverviewChat({ inputRef }) {
                 )}
               </AnimatePresence>
             </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={useTools}
+              onClick={() => setUseTools((enabled) => !enabled)}
+              className="flex items-center gap-1.5 text-[10px] text-[#525252] hover:text-[#0a0a0a] transition-colors"
+              title={t('overview.chat.toolsHint', 'Allow connected apps for this message')}
+            >
+              <span className={`relative h-5 w-9 rounded-full transition-colors ${useTools ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${useTools ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+              </span>
+              <span>{t('overview.chat.toolsBeta', 'Beta version')}</span>
+            </button>
 
           </div>
           <div className="flex items-center gap-2">
