@@ -1175,6 +1175,30 @@ function RoomThread({ roomId, onArchived }) {
     return () => window.cancelAnimationFrame(frame);
   }, [roomId]);
 
+  // Company Intelligence workspaces can add source panels and status cards
+  // after the turn history has rendered. Follow those progressive DOM updates
+  // too, while preserving the user's position whenever they scroll upward.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || loading) return undefined;
+    let frame = null;
+    const followLatest = () => {
+      if (!pinnedRef.current) return;
+      if (frame != null) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+        frame = null;
+      });
+    };
+    const observer = new MutationObserver(followLatest);
+    observer.observe(el, { childList: true, subtree: true, characterData: true });
+    followLatest();
+    return () => {
+      observer.disconnect();
+      if (frame != null) window.cancelAnimationFrame(frame);
+    };
+  }, [loading, roomId]);
+
   // Projects for the scope badge / changer (room can be moved Org ↔ Project).
   useEffect(() => {
     apiClient.listAccessibleProjects()

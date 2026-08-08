@@ -67,6 +67,8 @@ describe('HyperAgents live turn adoption', () => {
   it('opens every Room at the latest activity and limits Clear all to work Rooms', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
     expect(source).toContain('Opening or switching a Room always starts at its latest durable activity.');
+    expect(source).toContain('const observer = new MutationObserver(followLatest);');
+    expect(source).toContain("observer.observe(el, { childList: true, subtree: true, characterData: true });");
     expect(source).toContain('const isCompanyIntelligenceRoom = Boolean(room.is_domain_home || room.isDomainHome);');
     expect(source).toContain('{!isCompanyIntelligenceRoom && (');
     expect(source).toContain("t('hyperAgents.clearAll', 'Clear all')");
