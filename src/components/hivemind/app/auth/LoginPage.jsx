@@ -136,6 +136,10 @@ export default function LoginPage() {
     return params.get('enterprise_code') || new URLSearchParams(window.location.search).get('enterprise_code') || '';
   });
   const [enterpriseInvitation, setEnterpriseInvitation] = useState(null);
+  // The URL bearer token is removed after preview so it cannot leak through
+  // history, OAuth redirects, or copied links. Keep it only in component
+  // memory until the server exchanges it for a signed signup admission.
+  const [appliedEnterpriseInvitationToken, setAppliedEnterpriseInvitationToken] = useState(null);
   const [loadingEnterpriseInvitation, setLoadingEnterpriseInvitation] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [personalInvitationCode, setPersonalInvitationCode] = useState('');
@@ -185,6 +189,7 @@ export default function LoginPage() {
       .then(({ invitation }) => {
         if (cancelled) return;
         setEnterpriseInvitation(invitation);
+        setAppliedEnterpriseInvitationToken(enterpriseInvitationToken);
         setAccountType('enterprise');
         setHostingChoice(invitation.hosting_mode === 'self_host' ? 'self_hosted' : 'managed');
         setEnterpriseName((value) => value || invitation.workspace_name || invitation.company_name || '');
@@ -234,13 +239,13 @@ export default function LoginPage() {
   const handleCreateAccount = async (provider = 'google') => {
     setCreateError('');
     const accessCode = accountType === 'personal' ? personalInvitationCode.trim() : enterpriseAccessCode.trim();
-    if (!accessCode && !(accountType === 'enterprise' && enterpriseInvitationToken)) {
+    if (!accessCode && !(accountType === 'enterprise' && appliedEnterpriseInvitationToken)) {
       setCreateError(accountType === 'personal' ? 'Enter the invitation code to continue.' : 'Enter the Enterprise access code to continue.');
       return;
     }
     let admission;
     try {
-      admission = await apiClient.requestSignupAdmission({ accountType, invitationCode: accessCode, enterpriseInvitationToken });
+      admission = await apiClient.requestSignupAdmission({ accountType, invitationCode: accessCode, enterpriseInvitationToken: appliedEnterpriseInvitationToken });
     } catch {
       setCreateError('This invitation is unavailable.');
       return;
@@ -281,7 +286,7 @@ export default function LoginPage() {
     }
   };
 
-  const enterpriseAdmissionReady = Boolean(enterpriseInvitationToken || enterpriseAccessCode.trim());
+  const enterpriseAdmissionReady = Boolean(appliedEnterpriseInvitationToken || enterpriseAccessCode.trim());
 
   const resetOnboarding = () => {
     setShowOnboarding(false);
@@ -292,6 +297,8 @@ export default function LoginPage() {
     setEnterpriseName('');
     setHivemindName('');
     setEnterpriseAccessCode('');
+    setAppliedEnterpriseInvitationToken(null);
+    setEnterpriseInvitation(null);
     setPersonalInvitationCode('');
     setCreateError('');
     setReferralCode('');
@@ -705,6 +712,13 @@ export default function LoginPage() {
                           </span>
                         )}
                       </div>
+                      {enterpriseInvitation && (
+                        <div className="rounded-[8px] border border-[#117dff]/25 bg-[#117dff]/[0.05] px-4 py-3">
+                          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">Enterprise invitation applied</p>
+                          <p className="mt-1 text-[13px] font-medium text-[#0a0a0a]">{enterpriseInvitation.company_name} · {enterpriseInvitation.hosting_mode === 'self_host' ? 'Self-hosted infrastructure' : 'Managed infrastructure'}</p>
+                          <p className="mt-1 text-[11px] leading-relaxed text-[#3b6da3]">Your secure invitation has already selected this setup. Complete the details below to create your company AI Operating System.</p>
+                        </div>
+                      )}
                       <div>
                         <label className={LABEL_CLS}>Admin name</label>
                         <input value={userName} onChange={e => setUserName(e.target.value)} placeholder="Amar" className={INPUT_CLS} />
@@ -736,8 +750,8 @@ export default function LoginPage() {
                         </div>
                       ) : (
                         <div className="bg-[#117dff]/[0.04] border border-[#117dff]/15 rounded-[8px] p-4">
-                          <p className="text-[13px] text-[#0a5fcc] font-medium">Partner onboarding terms are applied server-side</p>
-                          <p className="text-[11px] text-[#3b6da3] mt-1">Enter your referral code to review its seats, projects, document and token allowance after sign-in.</p>
+                          <p className="text-[13px] text-[#0a5fcc] font-medium">Your invitation configuration is applied server-side</p>
+                          <p className="text-[11px] text-[#3b6da3] mt-1">HIVEMIND becomes your company AI Operating System: an AI workforce working from your company brain, with your approved onboarding access applied after sign-in.</p>
                         </div>
                       )}
                       <button
