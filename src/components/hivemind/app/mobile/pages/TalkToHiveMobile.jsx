@@ -268,6 +268,13 @@ export default function TalkToHiveMobile() {
   // (org-tier only), 'personal' (only my private memories), or 'project' (one
   // project). Maps to the backend recall scope_filter; 'all' sends no filter.
   const [chatScopeMode, setChatScopeMode] = useState('all');
+  const [useTools, setUseTools] = useState(false);
+  const [toolsNotice, setToolsNotice] = useState(false);
+  const toggleUseTools = () => {
+    setUseTools((enabled) => !enabled);
+    setToolsNotice(true);
+    window.setTimeout(() => setToolsNotice(false), 3500);
+  };
   const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
   useEffect(() => { setChatScope(activeProjectId || null); }, [activeProjectId]);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
@@ -385,6 +392,7 @@ export default function TalkToHiveMobile() {
           stream: true,
           // Keep mobile on the same grounded tool-routing path as desktop chat.
           router: 'tool',
+          use_tools: useTools,
           // Recall scope from the chat selector: personal | organization (all) | project.
           scope: chatScopeMode,
           ...((chatScopeMode === 'project' && (chatScope || activeProjectId))
@@ -869,6 +877,29 @@ export default function TalkToHiveMobile() {
                 )}
               </div>
             )}
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={useTools}
+              onClick={toggleUseTools}
+              className="inline-flex items-center gap-1.5 h-9 px-2 text-[11px] text-[#525252] active:bg-[#f1eee7] rounded-full"
+              title={t('overview.chat.toolsHint', 'Allow connected apps for this message')}
+            >
+              <span className={`relative h-5 w-9 rounded-full transition-colors ${useTools ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${useTools ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+              </span>
+              <span>{t('overview.chat.tools', 'Use tools')}</span>
+            </button>
+            <AnimatePresence>
+              {toolsNotice && (
+                <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="absolute bottom-full left-0 mb-2 z-40 w-64 rounded-[6px] border border-[#e3e0db] bg-white px-2.5 py-2 text-[10px] text-[#525252] shadow-sm">
+                  <span className="mr-1.5 inline-flex rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] text-blue-700">{t('overview.chat.toolsBeta', 'Beta version')}</span>
+                  {t('overview.chat.toolsNotice', 'Allows connected apps for this message; native HIVE-MIND remains available.')}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <span className="flex-1" />
           {/* Push-to-talk mic — tap to record, tap to stop & transcribe */}

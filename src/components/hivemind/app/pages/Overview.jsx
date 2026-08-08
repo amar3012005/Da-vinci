@@ -807,6 +807,13 @@ function OverviewChat({ inputRef }) {
   // switcher, overridable per-conversation from the composer drop-up.
   const [chatScope, setChatScope] = useState(activeProjectId || null);
   const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
+  const [useTools, setUseTools] = useState(false);
+  const [toolsNotice, setToolsNotice] = useState(false);
+  const toggleUseTools = () => {
+    setUseTools((enabled) => !enabled);
+    setToolsNotice(true);
+    window.setTimeout(() => setToolsNotice(false), 3500);
+  };
   // Follow the global project/team switcher: when the user sets the workspace
   // scope, the chat uses it for every tool (recall + save) without the user
   // having to name the project. The composer drop-up still overrides per
@@ -879,6 +886,7 @@ function OverviewChat({ inputRef }) {
         // The V2 router selects bounded recall and authorized tools per turn.
         // The endpoint and its response contract remain unchanged.
         router: 'tool',
+        use_tools: useTools,
         ...(effProjectId ? { project_id: effProjectId, project_ids: [effProjectId] } : {}),
         }),
       });
@@ -921,7 +929,7 @@ function OverviewChat({ inputRef }) {
       setAgentEvents([]);
       setLoading(false);
     }
-  }, [input, loading, messages, chatScope, i18n.language, t]);
+  }, [input, loading, messages, chatScope, i18n.language, t, useTools]);
 
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1081,6 +1089,30 @@ function OverviewChat({ inputRef }) {
                     {(projects || []).length === 0 && (
                       <p className="px-2 py-1.5 text-[11px] text-[#a3a3a3]">{t('overview.scope.noProjects', 'No projects yet')}</p>
                     )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={useTools}
+                onClick={toggleUseTools}
+                className="flex items-center gap-1.5 text-[10px] text-[#525252] hover:text-[#0a0a0a] transition-colors"
+                title={t('overview.chat.toolsHint', 'Allow connected apps for this message')}
+              >
+                <span className={`relative h-5 w-9 rounded-full transition-colors ${useTools ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${useTools ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                </span>
+                <span>{t('overview.chat.tools', 'Use tools')}</span>
+              </button>
+              <AnimatePresence>
+                {toolsNotice && (
+                  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="absolute bottom-full left-0 mb-2 z-40 w-64 rounded-[6px] border border-[#e3e0db] bg-white px-2.5 py-2 text-[10px] text-[#525252] shadow-sm">
+                    <span className="mr-1.5 inline-flex rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] text-blue-700">{t('overview.chat.toolsBeta', 'Beta version')}</span>
+                    {t('overview.chat.toolsNotice', 'Allows connected apps for this message; native HIVE-MIND remains available.')}
                   </motion.div>
                 )}
               </AnimatePresence>

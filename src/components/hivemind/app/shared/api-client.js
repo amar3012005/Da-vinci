@@ -696,6 +696,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getHyperRoomWorkPlan(roomId) {
+    const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/work-plan`);
+    return data;
+  }
+
   async updateHyperRoom(roomId, payload) {
     const { data } = await this.controlPlane.patch(`/v1/hyper-rooms/${roomId}`, payload);
     return data;
