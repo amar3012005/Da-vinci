@@ -170,11 +170,17 @@ class HiveMindApiClient {
     return `${this.controlPlane.defaults.baseURL}/auth/register${qs ? `?${qs}` : ''}`;
   }
 
-  async requestSignupAdmission({ accountType, invitationCode }) {
+  async requestSignupAdmission({ accountType, invitationCode, enterpriseInvitationToken = null }) {
     const { data } = await this.controlPlane.post('/auth/signup-admission', {
       account_type: accountType,
       invitation_code: invitationCode,
+      ...(enterpriseInvitationToken ? { enterprise_invitation_token: enterpriseInvitationToken } : {}),
     });
+    return data;
+  }
+
+  async previewEnterpriseInvitation(token) {
+    const { data } = await this.controlPlane.get('/auth/enterprise-invitations/preview', { params: { token } });
     return data;
   }
 
@@ -1269,6 +1275,26 @@ class HiveMindApiClient {
 
   async revokePlatformPromotion(id) {
     const { data } = await this.controlPlane.post(`/admin/api/platform/promotions/${id}/revoke`);
+    return data;
+  }
+
+  async listPlatformEnterpriseInvitations() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/invitations');
+    return data;
+  }
+
+  async createPlatformEnterpriseInvitation(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/invitations', payload);
+    return data;
+  }
+
+  async getPlatformEnterpriseInvitation(id) {
+    const { data } = await this.controlPlane.get(`/admin/api/platform/invitations/${id}`);
+    return data;
+  }
+
+  async enterpriseInvitationAction(id, action, payload = {}) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/invitations/${id}/${action}`, payload);
     return data;
   }
 

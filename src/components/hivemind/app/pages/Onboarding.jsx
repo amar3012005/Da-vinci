@@ -52,6 +52,7 @@ export default function OnboardingFlow() {
   const [showSelfHost, setShowSelfHost] = useState(false);
   const [referralOffer, setReferralOffer] = useState(null);
   const [referralError, setReferralError] = useState(null);
+  const [enterpriseActivation, setEnterpriseActivation] = useState(null);
   // The hosting + workspace choice was already made ONCE on the login page (saved to localStorage
   // before OAuth). Consume it here and create the org silently — never re-ask. With no saved choice
   // the effect below redirects to /hivemind/login?create=1 (the single create-account UX), so start
@@ -84,11 +85,9 @@ export default function OnboardingFlow() {
       ? (saved.enterprise || saved.hivemind_name || 'My Organization')
       : (saved.name ? `${saved.name}'s Workspace` : (saved.hivemind_name || 'My Workspace'));
     const dep = saved.deployment === 'selfhost' || saved.deployment === 'self_hosted' ? 'selfhost' : 'managed';
-    const accessCode = `${saved.enterprise_access_code || ''}`.trim();
     const signupTicket = `${saved.signup_ticket || ''}`.trim();
-    setEnterpriseAccessCode(accessCode);
     setReferralCode(String(saved.referral_code || '').trim().toUpperCase());
-    if (isEnt && !accessCode) {
+    if (isEnt && !saved.enterprise_invitation) {
       // Account setup belongs on the login surface, never inside /app.
       window.location.replace('/hivemind/login?create=1&onboarding_error=missing_enterprise_code');
       return;
@@ -104,13 +103,18 @@ export default function OnboardingFlow() {
           slug: isEnt ? deriveSlug(saved.hivemind_name || name) : undefined,
           plan: isEnt ? 'enterprise' : 'free',
           deployment: dep,
-          enterprise_access_code: isEnt ? accessCode : undefined,
           signup_ticket: signupTicket,
           referralCode: String(saved.referral_code || '').trim() || undefined,
         });
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
         if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }
+        if (created?.organization?.enterprise_onboarding) {
+          setEnterpriseActivation(created.organization.enterprise_onboarding);
+          setAutoCreating(false);
+          window.setTimeout(() => { window.location.href = '/hivemind/app/overview'; }, 2400);
+          return;
+        }
         window.location.href = '/hivemind/app/overview'; // managed → straight to the dashboard (no re-ask)
       } catch (err) {
         // Keep retries on the login/create-account surface. The saved intent
@@ -172,6 +176,11 @@ export default function OnboardingFlow() {
   };
 
   if (showSelfHost) return <SelfHostSetup onDone={() => { window.location.href = '/hivemind/app/overview'; }} />;
+
+  if (enterpriseActivation) {
+    const endsAt = new Date(enterpriseActivation.ends_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    return <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center px-4"><section className="w-full max-w-md border border-[#b9dbff] bg-white p-7 shadow-sm"><p className="text-xs font-mono uppercase tracking-[0.16em] text-[#117dff]">Enterprise activated</p><h1 className="mt-2 text-2xl font-semibold text-[#161616]">Your workspace is ready</h1><p className="mt-3 text-sm text-[#525252]">{enterpriseActivation.hosting_mode === 'self_host' ? 'Self-hosted infrastructure' : 'Managed infrastructure'}</p><p className="mt-1 text-sm text-[#525252]">Onboarding access until {endsAt}</p><p className="mt-4 text-sm font-medium text-[#117dff]">Unlimited pilot usage</p></section></div>;
+  }
 
   // Auto-creating from the login-page choice — no second prompt.
   if (autoCreating) {

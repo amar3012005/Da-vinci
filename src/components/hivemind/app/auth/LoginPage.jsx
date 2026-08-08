@@ -118,6 +118,10 @@ export default function LoginPage() {
     () => new URLSearchParams(location.search).get('create') === '1',
     [location.search]
   );
+  const enterpriseInvitationToken = useMemo(
+    () => new URLSearchParams(location.search).get('enterprise_invite') || '',
+    [location.search]
+  );
 
   const [showOnboarding, setShowOnboarding] = useState(wantsCreate);
   const [loadArtwork, setLoadArtwork] = useState(false);
@@ -131,6 +135,8 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.hash.slice(1));
     return params.get('enterprise_code') || new URLSearchParams(window.location.search).get('enterprise_code') || '';
   });
+  const [enterpriseInvitation, setEnterpriseInvitation] = useState(null);
+  const [loadingEnterpriseInvitation, setLoadingEnterpriseInvitation] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [personalInvitationCode, setPersonalInvitationCode] = useState('');
   const [createError, setCreateError] = useState('');
@@ -164,9 +170,34 @@ export default function LoginPage() {
     setEnterpriseName(saved.enterprise || '');
     setHivemindName(saved.hivemind_name || '');
     setHostingChoice(saved.deployment === 'selfhost' ? 'self_hosted' : (saved.deployment || 'managed'));
-    setEnterpriseAccessCode(saved.enterprise_access_code || '');
+    setEnterpriseInvitation(saved.enterprise_invitation || null);
     setOnboardingStep(saved.type === 'enterprise' ? 3 : 2);
   }, [wantsCreate]);
+
+  // A secure activation link is the normal B2B path. Validate it once, retain
+  // only its safe public preview in component state, then remove the bearer
+  // token from the address bar before the user starts OAuth.
+  useEffect(() => {
+    if (!wantsCreate || !enterpriseInvitationToken) return;
+    let cancelled = false;
+    setLoadingEnterpriseInvitation(true);
+    apiClient.previewEnterpriseInvitation(enterpriseInvitationToken)
+      .then(({ invitation }) => {
+        if (cancelled) return;
+        setEnterpriseInvitation(invitation);
+        setAccountType('enterprise');
+        setHostingChoice(invitation.hosting_mode === 'self_host' ? 'self_hosted' : 'managed');
+        setEnterpriseName((value) => value || invitation.workspace_name || invitation.company_name || '');
+        setOnboardingStep(3);
+        setShowOnboarding(true);
+        const params = new URLSearchParams(location.search);
+        params.delete('enterprise_invite');
+        window.history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params}` : ''}`);
+      })
+      .catch(() => { if (!cancelled) setCreateError('This invitation is unavailable.'); })
+      .finally(() => { if (!cancelled) setLoadingEnterpriseInvitation(false); });
+    return () => { cancelled = true; };
+  }, [wantsCreate, enterpriseInvitationToken, location.pathname, location.search]);
 
   // Already signed in → go to dashboard (or original deep link, e.g. invite path)
   useEffect(() => {
@@ -203,13 +234,13 @@ export default function LoginPage() {
   const handleCreateAccount = async (provider = 'google') => {
     setCreateError('');
     const accessCode = accountType === 'personal' ? personalInvitationCode.trim() : enterpriseAccessCode.trim();
-    if (!accessCode) {
+    if (!accessCode && !(accountType === 'enterprise' && enterpriseInvitationToken)) {
       setCreateError(accountType === 'personal' ? 'Enter the invitation code to continue.' : 'Enter the Enterprise access code to continue.');
       return;
     }
     let admission;
     try {
-      admission = await apiClient.requestSignupAdmission({ accountType, invitationCode: accessCode });
+      admission = await apiClient.requestSignupAdmission({ accountType, invitationCode: accessCode, enterpriseInvitationToken });
     } catch {
       setCreateError('This invitation is unavailable.');
       return;
@@ -220,8 +251,8 @@ export default function LoginPage() {
       hivemind_name: hivemindName,
       enterprise: enterpriseName || null,
       deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
-      enterprise_access_code: enterpriseAccessCode.trim(),
-      referral_code: referralCode.trim() || null,
+      ...(accountType === 'personal' ? { referral_code: referralCode.trim() || null } : {}),
+      ...(admission.invitation ? { enterprise_invitation: admission.invitation } : {}),
       signup_ticket: admission.signup_ticket,
     };
     // Save onboarding data for post-auth pickup
@@ -249,6 +280,8 @@ export default function LoginPage() {
       window.location.href = apiClient.getGoogleLoginUrl(returnTo, admission.signup_ticket);
     }
   };
+
+  const enterpriseAdmissionReady = Boolean(enterpriseInvitationToken || enterpriseAccessCode.trim());
 
   const resetOnboarding = () => {
     setShowOnboarding(false);
@@ -352,6 +385,12 @@ export default function LoginPage() {
                         <p className="text-[#dc2626] text-xs font-semibold font-['Space_Grotesk']">Control plane unavailable</p>
                         <p className="text-[#dc2626]/60 text-[11px] mt-0.5">Unable to reach the authentication service. Please try again in a moment.</p>
                       </div>
+                      {enterpriseInvitation && (
+                        <div className="border border-[#117dff]/20 bg-[#117dff]/[0.05] rounded-[8px] px-3 py-2.5 text-[12px] text-[#255d9f]">
+                          <strong className="text-[#0a5fcc]">Enterprise invitation confirmed</strong>
+                          <span className="ml-1">{enterpriseInvitation.company_name} · {enterpriseInvitation.hosting_mode === 'self_host' ? 'Self-hosted infrastructure' : 'Managed infrastructure'}</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -678,7 +717,7 @@ export default function LoginPage() {
                         <label className={LABEL_CLS}>Your Enterprise HIVEMIND</label>
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${(enterpriseName || 'company').toLowerCase().replace(/\s+/g, '')}_hivemind`} className={INPUT_CLS} />
                       </div>
-                      <div>
+                      {!enterpriseInvitation && <div>
                         <label className={LABEL_CLS}>Enterprise access code</label>
                         <input
                           value={enterpriseAccessCode}
@@ -688,20 +727,8 @@ export default function LoginPage() {
                           autoComplete="off"
                           className={`${INPUT_CLS} font-mono uppercase`}
                         />
-                        <p className="text-[11px] text-[#a3a3a3] mt-1">This applies the agreed onboarding and runway terms for your workspace.</p>
-                      </div>
-                      <div>
-                        <label className={LABEL_CLS}>Partner referral code <span className="normal-case tracking-normal text-[#a3a3a3]">optional</span></label>
-                        <input
-                          value={referralCode}
-                          onChange={e => setReferralCode(e.target.value.toUpperCase())}
-                          placeholder="e.g. GTM2026"
-                          maxLength={32}
-                          autoComplete="off"
-                          className={`${INPUT_CLS} font-mono uppercase`}
-                        />
-                        <p className="text-[11px] text-[#a3a3a3] mt-1">Partner campaign code — applies the partner's offer to your workspace.</p>
-                      </div>
+                        <p className="text-[11px] text-[#a3a3a3] mt-1">Use the one-time recovery code in your enterprise invitation.</p>
+                      </div>}
                       {hostingChoice === 'self_hosted' ? (
                         <div className="rounded-[8px] p-4 border border-amber-200 bg-gradient-to-br from-amber-50 to-white">
                           <p className="text-[13px] text-amber-800 font-semibold flex items-center gap-1.5"><Crown size={14} className="text-amber-500" /> Sovereign deployment — concierge setup</p>
@@ -715,7 +742,7 @@ export default function LoginPage() {
                       )}
                       <button
                         onClick={() => handleCreateAccount('zitadel')}
-                        disabled={!userName.trim() || !enterpriseName.trim() || !enterpriseAccessCode.trim()}
+                        disabled={loadingEnterpriseInvitation || !userName.trim() || !enterpriseName.trim() || !enterpriseAdmissionReady}
                         className="w-full h-11 rounded-[6px] bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
                       >
                         {hostingChoice === 'self_hosted'
@@ -723,13 +750,13 @@ export default function LoginPage() {
                           : (<><Shield size={14} /> Create with Enterprise SSO (EU)</>)}
                       </button>
                       <div className="flex items-center gap-2">
-                        <ProviderTile label="Create with Google" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAccessCode.trim() && handleCreateAccount('google')}>
+                        <ProviderTile label="Create with Google" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('google')}>
                           <GoogleIcon size={14} /><span className="text-[12px] font-medium">Google</span>
                         </ProviderTile>
-                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAccessCode.trim() && handleCreateAccount('microsoft')}>
+                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('microsoft')}>
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
                         </ProviderTile>
-                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAccessCode.trim() && handleCreateAccount('apple')}>
+                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('apple')}>
                           <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
                         </ProviderTile>
                       </div>
