@@ -170,17 +170,23 @@ class HiveMindApiClient {
     return `${this.controlPlane.defaults.baseURL}/auth/register${qs ? `?${qs}` : ''}`;
   }
 
-  async requestSignupAdmission({ accountType, invitationCode, enterpriseInvitationToken = null }) {
+  async requestSignupAdmission({ accountType, invitationCode, enterpriseInvitationToken = null, personalInvitationToken = null }) {
     const { data } = await this.controlPlane.post('/auth/signup-admission', {
       account_type: accountType,
       invitation_code: invitationCode,
       ...(enterpriseInvitationToken ? { enterprise_invitation_token: enterpriseInvitationToken } : {}),
+      ...(personalInvitationToken ? { personal_invitation_token: personalInvitationToken } : {}),
     });
     return data;
   }
 
   async previewEnterpriseInvitation(token) {
     const { data } = await this.controlPlane.get('/auth/enterprise-invitations/preview', { params: { token } });
+    return data;
+  }
+
+  async previewPersonalInvitation(token) {
+    const { data } = await this.controlPlane.get('/auth/personal-invitations/preview', { params: { token } });
     return data;
   }
 
@@ -1306,6 +1312,11 @@ class HiveMindApiClient {
 
   async createPlatformEnterpriseInvitation(payload) {
     const { data } = await this.controlPlane.post('/admin/api/platform/invitations', payload);
+    return data;
+  }
+
+  async createPlatformPersonalInvitationLink(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/personal-invitation-link', payload);
     return data;
   }
 
