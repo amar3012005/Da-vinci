@@ -2813,10 +2813,11 @@ function RoomThread({ roomId, onArchived }) {
               <div className="divide-y divide-[#f0ede8]">
                 {workPlan.map((step) => (
                   <div key={step.id} className="flex items-start gap-2 px-3 py-2">
-                    <span className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${step.status === 'completed' ? 'bg-emerald-500' : step.status === 'needs_attention' ? 'bg-amber-500' : step.status === 'running' ? 'bg-blue-500' : 'bg-[#aaa59c]'}`} />
+                    <span className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${step.status === 'completed' ? 'bg-emerald-500' : step.status === 'needs_attention' ? 'bg-amber-500' : step.status === 'active' ? 'bg-blue-500' : String(step.status || '').startsWith('waiting_for_') ? 'bg-violet-500' : 'bg-[#aaa59c]'}`} />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[11px] font-medium text-[#292724]">{step.title}</div>
-                      <div className="mt-0.5 text-[9px] text-[#827d74]">{String(step.status || 'queued').replaceAll('_', ' ')}{step.blocker ? ` · ${step.blocker}` : ''}</div>
+                      <div className="mt-0.5 text-[9px] text-[#827d74]">{String(step.status || 'queued').replaceAll('_', ' ')}{step.waiting?.reason ? ` · ${step.waiting.reason}` : step.blocker ? ` · ${step.blocker}` : ''}</div>
+                      {step.handoff?.owner ? <div className="mt-0.5 text-[9px] text-violet-700">Proposed next owner: {step.handoff.owner}</div> : null}
                     </div>
                   </div>
                 ))}
