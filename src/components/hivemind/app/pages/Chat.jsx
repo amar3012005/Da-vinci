@@ -468,6 +468,7 @@ export function ChatPanel({ isOpen, onClose }) {
         usage: data.usage || null,
         steps: Array.isArray(data.steps) ? data.steps : [],
         draft_ids: Array.isArray(data.draft_ids) ? data.draft_ids : [],
+        pending_actions: Array.isArray(data.pending_actions) ? data.pending_actions : [],
         trace: data.trace || null,
         project_choice: data.project_choice || null,
         scopes_found: Array.isArray(data.scopes_found) ? data.scopes_found : [],

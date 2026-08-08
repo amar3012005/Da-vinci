@@ -920,6 +920,8 @@ function OverviewChat({ inputRef }) {
         gaps: Array.isArray(chatData.gaps) ? chatData.gaps : [],
         orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
         continuation: chatData.continuation || null,
+        draft_ids: Array.isArray(chatData.draft_ids) ? chatData.draft_ids : [],
+        pending_actions: Array.isArray(chatData.pending_actions) ? chatData.pending_actions : [],
         projectChoice,
       }]);
     } catch (err) {
@@ -960,6 +962,7 @@ function OverviewChat({ inputRef }) {
       setMessages((prev) => [...prev, {
         id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
         steps: data.steps || [], draft_ids: data.draft_ids || [], sources: data.sources || [],
+        pending_actions: data.pending_actions || [],
         orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
         continuation: data.continuation || null,
       }]);

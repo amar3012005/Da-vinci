@@ -302,23 +302,64 @@ export function UserBubble({ content }) {
   );
 }
 
-// Mobile draft-approval cards. Same backend contract as desktop:
-// fetches pending_writes by id, surfaces Approve/Cancel buttons.
-export function MobileDraftCards({ draftIds }) {
-  const [drafts, setDrafts] = useState([]);
+function pendingActionToDraft(action) {
+  return {
+    id: action?.id,
+    provider: action?.provider,
+    toolName: action?.toolName || action?.tool_name,
+    toolArgs: action?.toolArgs || action?.tool_args || {},
+    status: action?.status || 'draft',
+    preview: action?.preview || null,
+  };
+}
+
+const EMPTY_PENDING_ACTIONS = Object.freeze([]);
+
+function firstDraftArg(args, names) {
+  for (const name of names) {
+    const value = args?.[name];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (Array.isArray(value) && value.length) return value.join(', ');
+  }
+  return '';
+}
+
+export function draftPresentation(draft) {
+  const args = draft?.toolArgs || {};
+  const tool = String(draft?.toolName || '').toLowerCase();
+  const email = tool.includes('gmail') || tool.includes('email');
+  if (!email) return { kind: 'generic', preview: draft?.preview || JSON.stringify(args, null, 2) };
+  return {
+    kind: 'email',
+    to: firstDraftArg(args, ['to', 'recipient_email', 'recipient', 'to_email', 'recipients']),
+    subject: firstDraftArg(args, ['subject', 'email_subject', 'title']),
+    body: firstDraftArg(args, ['body', 'message_body', 'email_body', 'message', 'text', 'content']),
+    sends: tool.includes('send'),
+  };
+}
+
+// One governed approval card shared by desktop and mobile. The chat response
+// supplies exact immutable arguments immediately; the list request refreshes
+// authoritative status when available.
+export function MobileDraftCards({ draftIds, pendingActions }) {
+  const suppliedActions = Array.isArray(pendingActions) ? pendingActions : EMPTY_PENDING_ACTIONS;
+  const [drafts, setDrafts] = useState(() => suppliedActions.map(pendingActionToDraft));
   const [busy, setBusy] = useState(null);
   useEffect(() => {
-    if (!Array.isArray(draftIds) || draftIds.length === 0) return;
+    const ids = Array.isArray(draftIds) && draftIds.length
+      ? draftIds : suppliedActions.map((action) => action.id).filter(Boolean);
+    if (!ids.length) return;
+    setDrafts(suppliedActions.map(pendingActionToDraft));
     let cancelled = false;
     (async () => {
       try {
         const { data } = await apiClient.controlPlane.get('/v1/proxy/pending-writes?limit=10').catch(() => ({ data: null }));
-        const matched = (data?.drafts || []).filter(d => draftIds.includes(d.id));
-        if (!cancelled) setDrafts(matched);
+        const matched = (data?.drafts || []).filter(d => ids.includes(d.id));
+        if (!cancelled && matched.length) setDrafts(matched);
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [draftIds]);
+  }, [draftIds, suppliedActions]);
   const act = async (id, action) => {
     setBusy(id);
     try {
@@ -332,10 +373,12 @@ export function MobileDraftCards({ draftIds }) {
   return (
     <div className="mt-3 space-y-2">
       {drafts.map(d => {
+        const presentation = draftPresentation(d);
         const sent = d.status === 'sent';
         const cancelled = d.status === 'cancelled';
         const failed = d.status === 'failed';
-        const pending = d.status === 'draft' || d.status === 'approved';
+        const pending = d.status === 'draft';
+        const executing = d.status === 'approved';
         const tone = sent ? 'border-emerald-200 bg-emerald-50' :
                      cancelled ? 'border-[#e3e0db] bg-[#fafaf6] opacity-70' :
                      failed ? 'border-red-200 bg-red-50' :
@@ -351,7 +394,15 @@ export function MobileDraftCards({ draftIds }) {
                 'bg-amber-500/15 text-amber-700'
               }`}>{d.status}</span>
             </div>
-            <div className="text-[#525252] leading-snug break-words">{d.preview || JSON.stringify(d.toolArgs)}</div>
+            {presentation.kind === 'email' ? (
+              <div className="mt-2 overflow-hidden rounded-lg border border-black/10 bg-white/70 text-[#353535]">
+                <div className="border-b border-black/10 px-3 py-2"><span className="mr-2 text-[10px] font-mono uppercase text-[#8a8577]">To</span>{presentation.to || 'Not provided'}</div>
+                <div className="border-b border-black/10 px-3 py-2"><span className="mr-2 text-[10px] font-mono uppercase text-[#8a8577]">Subject</span>{presentation.subject || 'No subject'}</div>
+                <div className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words px-3 py-3 leading-relaxed">{presentation.body || 'No message body provided.'}</div>
+              </div>
+            ) : (
+              <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-black/10 bg-white/70 p-3 text-[11.5px] leading-relaxed">{presentation.preview}</pre>
+            )}
             {failed && d.errorMsg && (
               <div className="mt-1.5 text-[11.5px] text-red-700">Error: {d.errorMsg}</div>
             )}
@@ -359,7 +410,7 @@ export function MobileDraftCards({ draftIds }) {
               <div className="mt-2 flex items-center gap-2">
                 <button onClick={() => act(d.id, 'approve')} disabled={busy === d.id}
                   className="flex-1 py-2 rounded-lg text-[12px] font-semibold bg-[#0a0a0a] text-white active:bg-[#262626] disabled:opacity-50">
-                  {busy === d.id ? 'Sending…' : 'Approve & Send'}
+                  {busy === d.id ? 'Sending…' : presentation.sends ? 'Send email' : 'Approve action'}
                 </button>
                 <button onClick={() => act(d.id, 'cancel')} disabled={busy === d.id}
                   className="flex-1 py-2 rounded-lg text-[12px] font-medium border border-[#e3e0db] text-[#525252] active:bg-[#f3f1ec] disabled:opacity-50">
@@ -367,6 +418,7 @@ export function MobileDraftCards({ draftIds }) {
                 </button>
               </div>
             )}
+            {executing && <div className="mt-2 text-[11.5px] text-amber-700">Executing the approved action…</div>}
             {sent && <div className="mt-1 text-[11.5px] text-emerald-700">✓ Sent successfully.</div>}
           </div>
         );
@@ -475,7 +527,7 @@ export function AiBubble({ msg, onRetry, onContinue }) {
         </div>
       )}
 
-      <MobileDraftCards draftIds={msg.draft_ids} />
+      <MobileDraftCards draftIds={msg.draft_ids} pendingActions={msg.pending_actions} />
       <ContinuationChoices continuation={msg.continuation} onContinue={onContinue} />
 
       {hasSources && (
