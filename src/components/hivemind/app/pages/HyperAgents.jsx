@@ -1069,6 +1069,7 @@ function RoomThread({ roomId, onArchived }) {
   const { user, org } = useAuth() || {};
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
+  const [workPlan, setWorkPlan] = useState([]);
   const [companyContext, setCompanyContext] = useState(null);
   const [seoJobAudit, setSeoJobAudit] = useState(null);
   const [seoConnection, setSeoConnection] = useState(null);
@@ -1303,6 +1304,12 @@ function RoomThread({ roomId, onArchived }) {
     try {
       const resp = await apiClient.getHyperRoom(roomId);
       setRoom(resp.room);
+      if (resp.room?.roomMode === 'work' || resp.room?.room_mode === 'work') {
+        const projection = await apiClient.getHyperRoomWorkPlan(roomId);
+        setWorkPlan(projection?.steps || []);
+      } else {
+        setWorkPlan([]);
+      }
       const nextTurns = resp.turns || [];
       setTurns(nextTurns);
       // Task rooms may already be running because the control plane starts
@@ -2783,6 +2790,25 @@ function RoomThread({ roomId, onArchived }) {
                   onOpenRoom={() => a.source_room_id && navigate(`/hivemind/app/employees/rooms/${a.source_room_id}`)} />
               ))}
             </div>
+          )}
+          {!isHqRoom && workPlan.length > 0 && (
+            <section className="border border-[#dedbd6] bg-white" aria-label="Work plan">
+              <div className="flex items-center justify-between border-b border-[#ece9e3] px-3 py-2">
+                <span className="text-[9px] font-mono uppercase tracking-[0.12em] text-[#625f58]">Work plan</span>
+                <span className="text-[9px] text-[#8a867e]">{workPlan.filter((step) => step.status === 'completed').length}/{workPlan.length} complete</span>
+              </div>
+              <div className="divide-y divide-[#f0ede8]">
+                {workPlan.map((step) => (
+                  <div key={step.id} className="flex items-start gap-2 px-3 py-2">
+                    <span className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${step.status === 'completed' ? 'bg-emerald-500' : step.status === 'needs_attention' ? 'bg-amber-500' : step.status === 'running' ? 'bg-blue-500' : 'bg-[#aaa59c]'}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[11px] font-medium text-[#292724]">{step.title}</div>
+                      <div className="mt-0.5 text-[9px] text-[#827d74]">{String(step.status || 'queued').replaceAll('_', ' ')}{step.blocker ? ` · ${step.blocker}` : ''}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
           {!isHqRoom && !showRoomIntro && turns.length === 0 && hqActivity.length === 0 && (
             <div className="text-center text-[12px] text-[#a3a3a3] py-8">
