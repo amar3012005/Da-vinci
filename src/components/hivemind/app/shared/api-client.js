@@ -1319,6 +1319,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  async previewPlatformEmail(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/email/preview', payload);
+    return data;
+  }
+
+  async sendPlatformEmail(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/email/send', payload);
+    return data;
+  }
+
   async listPlatformReferralCampaigns() {
     const { data } = await this.controlPlane.get('/admin/api/platform/referral-campaigns');
     return data;
