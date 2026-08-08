@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, Cloud, Server, Lock, Check, Crown, KeyRound } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
+import { clearInvitationContext, loadInvitationContext, saveInvitationContext } from './invitation-session';
 
 /* ─── Provider icons ───────────────────────────────────────────────────── */
 function GoogleIcon({ size = 18 }) {
@@ -122,6 +123,10 @@ export default function LoginPage() {
     () => new URLSearchParams(location.search).get('enterprise_invite') || '',
     [location.search]
   );
+  const personalInvitationToken = useMemo(
+    () => new URLSearchParams(location.search).get('personal_invite') || '',
+    [location.search]
+  );
 
   const [showOnboarding, setShowOnboarding] = useState(wantsCreate);
   const [loadArtwork, setLoadArtwork] = useState(false);
@@ -140,6 +145,8 @@ export default function LoginPage() {
   // history, OAuth redirects, or copied links. Keep it only in component
   // memory until the server exchanges it for a signed signup admission.
   const [appliedEnterpriseInvitationToken, setAppliedEnterpriseInvitationToken] = useState(null);
+  const [appliedPersonalInvitationToken, setAppliedPersonalInvitationToken] = useState(null);
+  const [invitationLockedKind, setInvitationLockedKind] = useState(null);
   const [loadingEnterpriseInvitation, setLoadingEnterpriseInvitation] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [personalInvitationCode, setPersonalInvitationCode] = useState('');
@@ -178,31 +185,62 @@ export default function LoginPage() {
     setOnboardingStep(saved.type === 'enterprise' ? 3 : 2);
   }, [wantsCreate]);
 
-  // A secure activation link is the normal B2B path. Validate it once, retain
-  // only its safe public preview in component state, then remove the bearer
-  // token from the address bar before the user starts OAuth.
+  // Restore a validated invitation after reloads and between onboarding
+  // steps. Credentials live only in tab-scoped sessionStorage.
   useEffect(() => {
-    if (!wantsCreate || !enterpriseInvitationToken) return;
+    if (!wantsCreate) return;
+    const context = loadInvitationContext();
+    if (!context) return;
+    setShowOnboarding(true);
+    setInvitationLockedKind(context.kind);
+    setAccountType(context.kind);
+    setOnboardingStep(1);
+    if (context.kind === 'enterprise') {
+      setAppliedEnterpriseInvitationToken(context.credential);
+      setEnterpriseInvitation(context.preview || null);
+      setHostingChoice(context.preview?.hosting_mode === 'self_host' ? 'self_hosted' : 'managed');
+      setEnterpriseName((value) => value || context.preview?.workspace_name || context.preview?.company_name || '');
+    } else {
+      setAppliedPersonalInvitationToken(context.credential);
+    }
+  }, [wantsCreate]);
+
+  // Direct links remain compatible with older emails. Validate, move the
+  // credential to tab-scoped storage, and remove it from the address bar.
+  useEffect(() => {
+    const directKind = enterpriseInvitationToken ? 'enterprise' : personalInvitationToken ? 'personal' : null;
+    const directToken = enterpriseInvitationToken || personalInvitationToken;
+    if (!wantsCreate || !directKind || !directToken) return;
     let cancelled = false;
     setLoadingEnterpriseInvitation(true);
-    apiClient.previewEnterpriseInvitation(enterpriseInvitationToken)
+    const previewRequest = directKind === 'enterprise'
+      ? apiClient.previewEnterpriseInvitation(directToken)
+      : apiClient.previewPersonalInvitation(directToken);
+    previewRequest
       .then(({ invitation }) => {
         if (cancelled) return;
-        setEnterpriseInvitation(invitation);
-        setAppliedEnterpriseInvitationToken(enterpriseInvitationToken);
-        setAccountType('enterprise');
-        setHostingChoice(invitation.hosting_mode === 'self_host' ? 'self_hosted' : 'managed');
-        setEnterpriseName((value) => value || invitation.workspace_name || invitation.company_name || '');
-        setOnboardingStep(3);
+        saveInvitationContext({ kind: directKind, credential: directToken, preview: invitation });
+        setInvitationLockedKind(directKind);
+        setAccountType(directKind);
+        setOnboardingStep(1);
         setShowOnboarding(true);
+        if (directKind === 'enterprise') {
+          setEnterpriseInvitation(invitation);
+          setAppliedEnterpriseInvitationToken(directToken);
+          setHostingChoice(invitation.hosting_mode === 'self_host' ? 'self_hosted' : 'managed');
+          setEnterpriseName((value) => value || invitation.workspace_name || invitation.company_name || '');
+        } else {
+          setAppliedPersonalInvitationToken(directToken);
+        }
         const params = new URLSearchParams(location.search);
         params.delete('enterprise_invite');
+        params.delete('personal_invite');
         window.history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params}` : ''}`);
       })
       .catch(() => { if (!cancelled) setCreateError('This invitation is unavailable.'); })
       .finally(() => { if (!cancelled) setLoadingEnterpriseInvitation(false); });
     return () => { cancelled = true; };
-  }, [wantsCreate, enterpriseInvitationToken, location.pathname, location.search]);
+  }, [wantsCreate, enterpriseInvitationToken, personalInvitationToken, location.pathname, location.search]);
 
   // Already signed in → go to dashboard (or original deep link, e.g. invite path)
   useEffect(() => {
@@ -210,6 +248,7 @@ export default function LoginPage() {
       if (wantsCreate && needsOnboarding) return; // org-less new user finishing create-account — stay here
       if (org?.id) {
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
+        clearInvitationContext();
       }
       // CLI flow: jump to the cross-origin control-plane URL so it can
       // mint the API key and 302 to the verified page.
@@ -239,13 +278,19 @@ export default function LoginPage() {
   const handleCreateAccount = async (provider = 'google') => {
     setCreateError('');
     const accessCode = accountType === 'personal' ? personalInvitationCode.trim() : enterpriseAccessCode.trim();
-    if (!accessCode && !(accountType === 'enterprise' && appliedEnterpriseInvitationToken)) {
+    const invitationTokenReady = accountType === 'enterprise' ? appliedEnterpriseInvitationToken : appliedPersonalInvitationToken;
+    if (!accessCode && !invitationTokenReady) {
       setCreateError(accountType === 'personal' ? 'Enter the invitation code to continue.' : 'Enter the Enterprise access code to continue.');
       return;
     }
     let admission;
     try {
-      admission = await apiClient.requestSignupAdmission({ accountType, invitationCode: accessCode, enterpriseInvitationToken: appliedEnterpriseInvitationToken });
+      admission = await apiClient.requestSignupAdmission({
+        accountType,
+        invitationCode: accessCode,
+        enterpriseInvitationToken: appliedEnterpriseInvitationToken,
+        personalInvitationToken: appliedPersonalInvitationToken,
+      });
     } catch {
       setCreateError('This invitation is unavailable.');
       return;
@@ -264,7 +309,6 @@ export default function LoginPage() {
     try {
       localStorage.setItem('hivemind_onboarding', JSON.stringify(onboardingIntent));
     } catch (e) {}
-
     // If the user came via an invite link, send them back there after OAuth so
     // they land on the invite-acceptance screen instead of the personal-org
     // Onboarding flow.
@@ -287,6 +331,7 @@ export default function LoginPage() {
   };
 
   const enterpriseAdmissionReady = Boolean(appliedEnterpriseInvitationToken || enterpriseAccessCode.trim());
+  const personalAdmissionReady = Boolean(appliedPersonalInvitationToken || personalInvitationCode.trim());
 
   const resetOnboarding = () => {
     setShowOnboarding(false);
@@ -298,10 +343,13 @@ export default function LoginPage() {
     setHivemindName('');
     setEnterpriseAccessCode('');
     setAppliedEnterpriseInvitationToken(null);
+    setAppliedPersonalInvitationToken(null);
+    setInvitationLockedKind(null);
     setEnterpriseInvitation(null);
     setPersonalInvitationCode('');
     setCreateError('');
     setReferralCode('');
+    clearInvitationContext();
   };
 
   /* Small square provider button (Microsoft / Apple / SSO) */
@@ -511,12 +559,14 @@ export default function LoginPage() {
                         </div>
                         <h2 className="text-[24px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">How will you use HIVEMIND?</h2>
                         <p className="text-[13px] text-[#737373] mt-1.5">Choose the workspace that fits you. You can grow into Enterprise anytime.</p>
+                        {invitationLockedKind && <p className="mt-3 rounded-[6px] border border-[#117dff]/20 bg-[#117dff]/[0.05] px-3 py-2 text-[11px] text-[#3b6da3]">Your verified invitation has reserved the {invitationLockedKind === 'enterprise' ? 'Enterprise' : 'Personal'} path. The other account type is unavailable for this setup.</p>}
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <button
-                          onClick={() => { setAccountType('personal'); setOnboardingStep(2); }}
-                          className="p-4 rounded-[10px] border border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm transition-all text-left group flex flex-col bg-white"
+                          disabled={invitationLockedKind === 'enterprise'}
+                          onClick={() => { if (invitationLockedKind !== 'enterprise') { setAccountType('personal'); setOnboardingStep(2); } }}
+                          className={`p-4 rounded-[10px] border transition-all text-left group flex flex-col bg-white ${invitationLockedKind === 'enterprise' ? 'cursor-not-allowed border-[#eceae6] opacity-35' : accountType === 'personal' ? 'border-[#117dff] ring-1 ring-[#117dff]/20' : 'border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm'}`}
                         >
                           <div className="w-10 h-10 rounded-[8px] bg-blue-50 border border-blue-100 flex items-center justify-center mb-3">
                             <Brain size={20} className="text-[#117dff]" />
@@ -533,8 +583,9 @@ export default function LoginPage() {
                         </button>
 
                         <button
-                          onClick={() => { setAccountType('enterprise'); setHostingChoice(null); setOnboardingStep(2); }}
-                          className="relative p-4 rounded-[10px] border border-[#e3e0db] hover:border-[#0a0a0a] hover:shadow-sm transition-all text-left group flex flex-col bg-white"
+                          disabled={invitationLockedKind === 'personal'}
+                          onClick={() => { if (invitationLockedKind !== 'personal') { setAccountType('enterprise'); if (!enterpriseInvitation) setHostingChoice(null); setOnboardingStep(2); } }}
+                          className={`relative p-4 rounded-[10px] border transition-all text-left group flex flex-col bg-white ${invitationLockedKind === 'personal' ? 'cursor-not-allowed border-[#eceae6] opacity-35' : accountType === 'enterprise' ? 'border-[#0a0a0a] ring-1 ring-[#0a0a0a]/10' : 'border-[#e3e0db] hover:border-[#0a0a0a] hover:shadow-sm'}`}
                         >
                           <div className="w-10 h-10 rounded-[8px] bg-[#f3f1ec] border border-[#e3e0db] flex items-center justify-center mb-3">
                             <Building2 size={20} className="text-[#0a0a0a]" />
@@ -574,35 +625,36 @@ export default function LoginPage() {
                       <div>
                         <label className={LABEL_CLS}>Invitation code</label>
                         <input
-                          value={personalInvitationCode}
+                          value={appliedPersonalInvitationToken ? 'Secure invitation applied' : personalInvitationCode}
                           onChange={e => setPersonalInvitationCode(e.target.value)}
                           placeholder="Enter your invitation code"
                           maxLength={128}
                           autoComplete="off"
-                          className={`${INPUT_CLS} font-mono`}
+                          readOnly={Boolean(appliedPersonalInvitationToken)}
+                          className={`${INPUT_CLS} font-mono ${appliedPersonalInvitationToken ? 'bg-[#f3f8ff] text-[#117dff]' : ''}`}
                         />
                         <p className="text-[11px] text-[#a3a3a3] mt-1">Personal workspaces are currently available by invitation.</p>
                       </div>
                       {(createError || onboardingError) && <p role="alert" className="text-[12px] text-red-600">{createError || 'Your invitation could not be verified. Please try again.'}</p>}
                       <button
                         onClick={() => handleCreateAccount('google')}
-                        disabled={!userName.trim() || !personalInvitationCode.trim()}
+                        disabled={!userName.trim() || !personalAdmissionReady}
                         className="w-full h-11 rounded-[6px] bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
                       >
                         <span className="w-5 h-5 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={12} /></span>
                         Continue with Google
                       </button>
                       <div className="flex items-center gap-2">
-                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && personalInvitationCode.trim() && handleCreateAccount('microsoft')}>
+                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && personalAdmissionReady && handleCreateAccount('microsoft')}>
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
                         </ProviderTile>
-                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && personalInvitationCode.trim() && handleCreateAccount('apple')}>
+                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && personalAdmissionReady && handleCreateAccount('apple')}>
                           <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
                         </ProviderTile>
                       </div>
                       <button
                         onClick={() => handleCreateAccount('zitadel')}
-                        disabled={!userName.trim() || !personalInvitationCode.trim()}
+                        disabled={!userName.trim() || !personalAdmissionReady}
                         className="w-full h-10 rounded-[6px] bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-medium text-[12px] font-['Space_Grotesk'] transition-all cursor-pointer border border-[#e3e0db] hover:border-[#0a0a0a] flex items-center justify-center gap-2"
                       >
                         <Shield size={13} className="text-[#117dff]" /> Enterprise SSO (EU Sovereign)
@@ -623,9 +675,10 @@ export default function LoginPage() {
 
                       {/* Managed cloud */}
                       <button
-                        onClick={() => { setHostingChoice('managed'); setOnboardingStep(3); }}
+                        disabled={Boolean(enterpriseInvitation && enterpriseInvitation.hosting_mode === 'self_host')}
+                        onClick={() => { if (!enterpriseInvitation || enterpriseInvitation.hosting_mode !== 'self_host') { setHostingChoice('managed'); setOnboardingStep(3); } }}
                         className={`w-full text-left p-4 rounded-[10px] border transition-all group bg-white ${
-                          hostingChoice === 'managed' ? 'border-[#117dff] bg-[#117dff]/[0.03]' : 'border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm'
+                          enterpriseInvitation?.hosting_mode === 'self_host' ? 'cursor-not-allowed border-[#eceae6] opacity-35' : hostingChoice === 'managed' ? 'border-[#117dff] bg-[#117dff]/[0.03]' : 'border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm'
                         }`}
                       >
                         <div className="flex items-start gap-3.5">
@@ -649,9 +702,10 @@ export default function LoginPage() {
 
                       {/* Self-hosted sovereign */}
                       <button
-                        onClick={() => { setHostingChoice('self_hosted'); setOnboardingStep(3); }}
+                        disabled={Boolean(enterpriseInvitation && enterpriseInvitation.hosting_mode !== 'self_host')}
+                        onClick={() => { if (!enterpriseInvitation || enterpriseInvitation.hosting_mode === 'self_host') { setHostingChoice('self_hosted'); setOnboardingStep(3); } }}
                         className={`relative w-full text-left p-4 rounded-[10px] transition-all group overflow-hidden ${
-                          hostingChoice === 'self_hosted' ? 'ring-2 ring-amber-400' : ''
+                          enterpriseInvitation && enterpriseInvitation.hosting_mode !== 'self_host' ? 'cursor-not-allowed opacity-35' : hostingChoice === 'self_hosted' ? 'ring-2 ring-amber-400' : ''
                         }`}
                         style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #18181b 100%)' }}
                       >
