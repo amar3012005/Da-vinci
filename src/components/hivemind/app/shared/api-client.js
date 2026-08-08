@@ -701,6 +701,22 @@ class HiveMindApiClient {
     return data;
   }
 
+  async resumeHyperRoomWorkStep(roomId, workOrderId, resolution) {
+    const { data } = await this.controlPlane.post(
+      `/v1/hyper-rooms/${roomId}/work-plan/${workOrderId}/resume`,
+      { resolution },
+    );
+    return data;
+  }
+
+  async acceptHyperRoomWorkHandoff(roomId, workOrderId) {
+    const { data } = await this.controlPlane.post(
+      `/v1/hyper-rooms/${roomId}/work-plan/${workOrderId}/handoff`,
+      { decision: 'accept' },
+    );
+    return data;
+  }
+
   async updateHyperRoom(roomId, payload) {
     const { data } = await this.controlPlane.patch(`/v1/hyper-rooms/${roomId}`, payload);
     return data;

@@ -1070,6 +1070,8 @@ function RoomThread({ roomId, onArchived }) {
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
   const [workPlan, setWorkPlan] = useState([]);
+  const [workPlanBusy, setWorkPlanBusy] = useState(null);
+  const [workPlanResolution, setWorkPlanResolution] = useState({});
   const workPlanEventRef = useRef('');
   const [companyContext, setCompanyContext] = useState(null);
   const [seoJobAudit, setSeoJobAudit] = useState(null);
@@ -1326,6 +1328,42 @@ function RoomThread({ roomId, onArchived }) {
   }, [roomId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const refreshWorkPlan = useCallback(async () => {
+    const projection = await apiClient.getHyperRoomWorkPlan(roomId);
+    setWorkPlan(projection?.steps || []);
+    return projection;
+  }, [roomId]);
+
+  const resumeWorkStep = useCallback(async (step, resolution) => {
+    if (!step?.id || workPlanBusy) return;
+    setWorkPlanBusy(step.id);
+    setError(null);
+    try {
+      const result = await apiClient.resumeHyperRoomWorkStep(roomId, step.id, resolution);
+      if (result?.turn_id) setActiveTurnId(result.turn_id);
+      setWorkPlanResolution((current) => ({ ...current, [step.id]: '' }));
+      await refreshWorkPlan();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setWorkPlanBusy(null);
+    }
+  }, [refreshWorkPlan, roomId, workPlanBusy]);
+
+  const acceptWorkHandoff = useCallback(async (step) => {
+    if (!step?.id || workPlanBusy) return;
+    setWorkPlanBusy(step.id);
+    setError(null);
+    try {
+      await apiClient.acceptHyperRoomWorkHandoff(roomId, step.id);
+      await refreshWorkPlan();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setWorkPlanBusy(null);
+    }
+  }, [refreshWorkPlan, roomId, workPlanBusy]);
 
   useEffect(() => {
     if ((room?.roomMode !== 'work' && room?.room_mode !== 'work') || !liveLines.length) return;
@@ -2811,16 +2849,56 @@ function RoomThread({ roomId, onArchived }) {
                 <span className="text-[9px] text-[#8a867e]">{workPlan.filter((step) => step.status === 'completed').length}/{workPlan.length} complete</span>
               </div>
               <div className="divide-y divide-[#f0ede8]">
-                {workPlan.map((step) => (
+                {workPlan.map((step) => {
+                  const waitingForInput = step.status === 'waiting_for_input';
+                  const waitingForApproval = step.status === 'waiting_for_approval';
+                  const canHandoff = step.status === 'completed'
+                    && ['runtime', 'hq'].includes(String(step.handoff?.owner || '').toLowerCase())
+                    && step.handoff?.status !== 'accepted';
+                  const resolution = workPlanResolution[step.id] || '';
+                  return (
                   <div key={step.id} className="flex items-start gap-2 px-3 py-2">
                     <span className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${step.status === 'completed' ? 'bg-emerald-500' : step.status === 'needs_attention' ? 'bg-amber-500' : step.status === 'active' ? 'bg-blue-500' : String(step.status || '').startsWith('waiting_for_') ? 'bg-violet-500' : 'bg-[#aaa59c]'}`} />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[11px] font-medium text-[#292724]">{step.title}</div>
                       <div className="mt-0.5 text-[9px] text-[#827d74]">{String(step.status || 'queued').replaceAll('_', ' ')}{step.waiting?.reason ? ` · ${step.waiting.reason}` : step.blocker ? ` · ${step.blocker}` : ''}</div>
-                      {step.handoff?.owner ? <div className="mt-0.5 text-[9px] text-violet-700">Proposed next owner: {step.handoff.owner}</div> : null}
+                      {step.handoff?.owner ? <div className="mt-0.5 text-[9px] text-violet-700">{step.handoff?.status === 'accepted' ? 'Accepted by' : 'Proposed next owner'}: {step.handoff.owner}</div> : null}
+                      {waitingForInput ? (
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <input
+                            value={resolution}
+                            onChange={(event) => setWorkPlanResolution((current) => ({ ...current, [step.id]: event.target.value }))}
+                            placeholder={step.waiting?.prompt || 'Add the missing information'}
+                            className="h-7 min-w-0 flex-1 border border-[#d9d5cf] bg-[#faf9f7] px-2 text-[10px] text-[#292724] outline-none focus:border-violet-400"
+                          />
+                          <button
+                            type="button"
+                            disabled={!resolution.trim() || workPlanBusy === step.id}
+                            onClick={() => resumeWorkStep(step, { value: resolution.trim() })}
+                            className="h-7 bg-[#171717] px-2.5 text-[9px] font-semibold text-white disabled:opacity-40"
+                          >{workPlanBusy === step.id ? 'Continuing...' : 'Continue'}</button>
+                        </div>
+                      ) : null}
+                      {waitingForApproval ? (
+                        <button
+                          type="button"
+                          disabled={workPlanBusy === step.id}
+                          onClick={() => resumeWorkStep(step, { approved: true })}
+                          className="mt-2 inline-flex h-7 items-center gap-1 bg-[#171717] px-2.5 text-[9px] font-semibold text-white disabled:opacity-40"
+                        ><Check size={11} /> {workPlanBusy === step.id ? 'Continuing...' : 'Approve and continue'}</button>
+                      ) : null}
+                      {canHandoff ? (
+                        <button
+                          type="button"
+                          disabled={workPlanBusy === step.id}
+                          onClick={() => acceptWorkHandoff(step)}
+                          className="mt-2 inline-flex h-7 items-center gap-1 border border-violet-300 bg-violet-50 px-2.5 text-[9px] font-semibold text-violet-800 disabled:opacity-40"
+                        ><ArrowRight size={11} /> {workPlanBusy === step.id ? 'Sending...' : 'Send to Runtime'}</button>
+                      ) : null}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
