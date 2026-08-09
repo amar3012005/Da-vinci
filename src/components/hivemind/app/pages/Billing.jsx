@@ -233,23 +233,25 @@ function CommercialJourney({ billing }) {
   const entitlement = billing?.entitlement;
   const invited = entitlement?.source === 'enterprise_invitation';
   if (!invited) return null;
-  const onboarding = entitlement?.phase === 'onboarding';
+  const expiresAt = entitlement?.effective_until ? new Date(entitlement.effective_until) : null;
+  const onboarding = entitlement?.status === 'active'
+    && (!expiresAt || expiresAt.getTime() > Date.now());
   const endsAt = entitlement?.effective_until
     ? new Date(entitlement.effective_until).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
   return (
     <section className="border border-[#bcd5ff] bg-[#f5f9ff] p-5">
       <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">Enterprise commercial journey</p>
-      <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Invitation onboarding, then paid Runway</h2>
-      <p className="mt-1 max-w-3xl text-sm leading-6 text-[#525252]">Your invitation opened the temporary onboarding phase. It is not a recurring subscription. Runway is the paid operating configuration that continues the workspace after onboarding.</p>
+      <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">{onboarding ? 'Onboarding is running. Runway comes next.' : 'Onboarding ended. Configure Runway to continue.'}</h2>
+      <p className="mt-1 max-w-3xl text-sm leading-6 text-[#525252]">Your invitation activates the onboarding phase for its configured duration. Runway is the paid operating phase that follows onboarding and continues the workspace.</p>
       <div className="mt-5 grid gap-px border border-[#d8e5fb] bg-[#d8e5fb] md:grid-cols-2">
         <div className="bg-white p-4">
-          <div className="flex items-center justify-between gap-3"><span className="font-mono text-[10px] font-bold uppercase text-[#117dff]">01 · Onboarding</span><span className={`px-2 py-1 font-mono text-[9px] font-bold uppercase ${onboarding ? 'bg-[#dcfce7] text-[#15803d]' : 'bg-[#f3f1ec] text-[#737373]'}`}>{onboarding ? 'Active' : 'Complete'}</span></div>
+          <div className="flex items-center justify-between gap-3"><span className="font-mono text-[10px] font-bold uppercase text-[#117dff]">01 · Onboarding</span><span className={`px-2 py-1 font-mono text-[9px] font-bold uppercase ${onboarding ? 'bg-[#dcfce7] text-[#15803d]' : 'bg-[#f3f1ec] text-[#737373]'}`}>{onboarding ? 'Running' : 'Ended'}</span></div>
           <p className="mt-3 text-sm font-semibold text-[#0a0a0a]">Invitation access</p>
           <p className="mt-1 text-xs leading-5 text-[#737373]">Temporary company setup and evaluation access{endsAt ? ` through ${endsAt}` : ''}.</p>
         </div>
         <div className="bg-white p-4">
-          <div className="flex items-center justify-between gap-3"><span className="font-mono text-[10px] font-bold uppercase text-[#117dff]">02 · Runway</span><span className={`px-2 py-1 font-mono text-[9px] font-bold uppercase ${onboarding ? 'bg-[#fff7ed] text-[#c2410c]' : 'bg-[#dcfce7] text-[#15803d]'}`}>{onboarding ? 'Configure next' : 'Current'}</span></div>
+          <div className="flex items-center justify-between gap-3"><span className="font-mono text-[10px] font-bold uppercase text-[#117dff]">02 · Runway</span><span className={`px-2 py-1 font-mono text-[9px] font-bold uppercase ${onboarding ? 'bg-[#f3f1ec] text-[#737373]' : 'bg-[#fff7ed] text-[#c2410c]'}`}>{onboarding ? 'Next phase' : 'Action required'}</span></div>
           <p className="mt-3 text-sm font-semibold text-[#0a0a0a]">Paid operating plan</p>
           <p className="mt-1 text-xs leading-5 text-[#737373]">Choose infrastructure, seats, storage, and monthly capacity, then confirm payment.</p>
         </div>
