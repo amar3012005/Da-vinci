@@ -42,7 +42,7 @@ function resolveCatalogLanguages(catalog, voices, preferredLanguage) {
   ].map((value) => String(value || '').toLowerCase()).filter((value) => value && value !== 'multilingual'))];
 }
 
-export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram', initialGoal = '', initialMode = 'external', interactionProfile = null, runtimeAdmin = false, maxDurationSeconds = 180, onSessionCreated = null, onSessionEnded = null }) {
+export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram', initialGoal = '', initialMode = 'external', interactionProfile = null, runtimeAdmin = false, runtimeContextRef = null, maxDurationSeconds = 180, onSessionCreated = null, onSessionEnded = null }) {
   const isRuntimeAdmin = runtimeAdmin && interactionProfile === 'runtime_operator';
   const engineWs = wsBase || DG_WS;
   const engineHttp = DG_HTTP;
@@ -243,6 +243,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       voice_id: isRuntimeAdmin ? 'rex' : voiceId || undefined,
       goal: goal.trim() || undefined,
       interaction_profile: interactionProfile || undefined,
+      runtime_context_ref: isRuntimeAdmin ? runtimeContextRef || undefined : undefined,
     });
     let stream;
     try {
@@ -360,7 +361,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       }
       stopAll('closed');
     };
-  }, [userId, orgId, language, langFilter, voiceId, mode, goal, engineWs, playPcm, stopAll, provider, isRuntimeAdmin]);
+  }, [userId, orgId, language, langFilter, voiceId, mode, goal, engineWs, playPcm, stopAll, provider, isRuntimeAdmin, interactionProfile, runtimeContextRef]);
 
   useEffect(() => () => stopAll('unmount'), [stopAll]);
 
