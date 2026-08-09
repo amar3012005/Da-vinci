@@ -9,7 +9,7 @@ import CreateCampaignWizard from './CreateCampaignWizard';
 import CampaignConnectionsPanel from './CampaignConnectionsPanel';
 import { CHANNEL_NAMES } from './channel-catalog';
 
-const statusTone = { RUNNING: 'text-emerald-700 bg-emerald-50', COMPLETED: 'text-emerald-700 bg-emerald-50', FAILED: 'text-red-700 bg-red-50', NEEDS_INPUT: 'text-amber-800 bg-amber-50' };
+const statusTone = { RUNNING: 'text-emerald-700 bg-emerald-50', COMPLETED: 'text-emerald-700 bg-emerald-50', FAILED: 'text-red-700 bg-red-50', NEEDS_INPUT: 'text-amber-800 bg-amber-50', NEEDS_REPAIR: 'text-amber-800 bg-amber-50' };
 
 function campaignHasPendingAssets(campaign) {
   return (campaign?.actions || []).some((action) => (action.assets || []).some((asset) => ['QUEUED', 'GENERATING'].includes(asset.status)));

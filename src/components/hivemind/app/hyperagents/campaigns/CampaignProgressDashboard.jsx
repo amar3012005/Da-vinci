@@ -3,7 +3,7 @@ import { Activity, ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, Circle, Co
 import { CHANNEL_NAMES } from './channel-catalog';
 import { CampaignAssetImage } from './CampaignCreative';
 
-const STATUS_LABEL = { GENERATING: 'Campaign Intelligence is working', PREPARING_ASSETS: 'Creating campaign visuals', READY_FOR_APPROVAL: 'Ready for review', RUNNING: 'Running', SCHEDULED: 'Scheduled', PAUSED: 'Paused', COMPLETED: 'Completed', NEEDS_INPUT: 'Needs input', FAILED: 'Needs attention' };
+const STATUS_LABEL = { GENERATING: 'Campaign Intelligence is working', PREPARING_ASSETS: 'Creating campaign visuals', READY_FOR_APPROVAL: 'Ready for review', RUNNING: 'Running', SCHEDULED: 'Scheduled', PAUSED: 'Paused', COMPLETED: 'Completed', NEEDS_INPUT: 'Needs input', NEEDS_REPAIR: 'Repairing affected actions', FAILED: 'Needs attention' };
 const TABS = [['posts', 'Posts', Send], ['schedule', 'Schedule', CalendarDays], ['strategy', 'Strategy', Compass], ['reactions', 'Reactions', Activity], ['controls', 'Controls', Settings2]];
 
 export function launchProgress(campaign) {

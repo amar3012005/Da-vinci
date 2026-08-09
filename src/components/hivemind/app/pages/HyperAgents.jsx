@@ -3592,7 +3592,7 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const isCampaignTurn = roomKind === 'campaign'
     || String(taskTag || '').toUpperCase() === 'CAMPAIGN'
     || /^Create a [^\n]+? campaign for this goal:/i.test(turn.userMessage || turn.user_message || '');
-  const campaignBundleLine = [...lines].reverse().find((line) => line.t === 'campaign_bundle' && line.bundle);
+  const campaignBundleLine = [...lines].reverse().find((line) => ['campaign_bundle', 'campaign_bundle_partial'].includes(line.t) && line.bundle);
   const campaignBundle = campaignBundleLine?.bundle || null;
   const campaignInvalid = [...lines].reverse().find((line) => line.t === 'campaign_bundle_invalid');
   if (campaignHandoff || campaignHandoffFailed) {

@@ -51,6 +51,7 @@ function debateItem(line) {
 
 function decisionItem(line) {
   if (line.t === 'campaign_bundle') return 'The final campaign plan passed its readiness checks.';
+  if (line.t === 'campaign_bundle_partial') return 'The campaign dashboard is preserved while affected actions are repaired.';
   if (line.t === 'campaign_bundle_invalid') return 'Governance found unmet campaign requirements. Nothing was approved.';
   if (line.t === 'campaign_tool') return line.status === 'accepted' ? 'The final campaign plan passed its readiness checks.' : 'Governance rejected the incomplete delivery.';
   return safeCampaignRoomText(textFromLine(line));
@@ -71,7 +72,7 @@ export function groupCampaignRoomTranscript(roomTranscript = []) {
         if (content) groups.debate.push({ agent: displayAgent(line.agent), content });
         return;
       }
-      if (['campaign_bundle', 'campaign_bundle_invalid', 'campaign_tool'].includes(line.t)) {
+      if (['campaign_bundle', 'campaign_bundle_partial', 'campaign_bundle_invalid', 'campaign_tool'].includes(line.t)) {
         const content = decisionItem(line);
         if (content && !groups.decisions.some((item) => item.content === content)) groups.decisions.push({ content });
         return;
@@ -97,6 +98,7 @@ function currentStage(campaign, groups) {
   if (campaign.status === 'PAUSED') return 'Campaign is paused';
   if (campaign.status === 'COMPLETED') return 'Campaign completed';
   if (campaign.status === 'NEEDS_INPUT') return 'Waiting for your input';
+  if (campaign.status === 'NEEDS_REPAIR') return 'Repairing affected actions';
   if (campaign.status === 'FAILED') return 'Campaign needs attention';
   return 'Campaign planning';
 }
