@@ -16,8 +16,9 @@ describe('HyperAgents live turn adoption', () => {
     expect(source).toContain("domain.key === 'general' ? 'HQ' : domain.label");
     expect(source).toContain("t('hyperAgents.workRooms', 'Work rooms')");
     expect(source).toContain('const roomAssignments = useMemo');
-    expect(source).toContain('setShowAgentRooms(Boolean(assignedRoomSignature));');
-    expect(source).toContain('? (assignedAgentRooms.length ? assignedAgentRooms : agentHomeRooms)');
+    expect(source).toContain("const visibleStatuses = new Set(['READY', 'RUNNING', 'MONITORING']);");
+    expect(source).toContain('const displayedAgentRooms = assignedAgentRooms;');
+    expect(source).not.toContain('setShowAgentRooms');
     expect(source).toContain('displayedAgentRooms.map');
     expect(source).toContain('CompanyRoomActivityRow');
     expect(source).toContain('workRooms.map');

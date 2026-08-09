@@ -232,7 +232,6 @@ export default function HyperAgents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [showAgentRooms, setShowAgentRooms] = useState(false);
   const [runtimeWork, setRuntimeWork] = useState({ agent_runtime_tasks: [] });
   const [runtimeState, setRuntimeState] = useState(null);
   const domainRoomsEnsuredRef = useRef(false);
@@ -372,7 +371,7 @@ export default function HyperAgents() {
   );
   const roomAssignments = useMemo(() => {
     const assignments = new Map();
-    const visibleStatuses = new Set(['READY', 'RUNNING', 'WAITING_FOR_AUTHORITY', 'WAITING_FOR_CONNECTOR', 'MONITORING', 'NEEDS_ATTENTION', 'BLOCKED']);
+    const visibleStatuses = new Set(['READY', 'RUNNING', 'MONITORING']);
     for (const task of runtimeWork.agent_runtime_tasks || runtimeWork.runtime_queue || []) {
       const owner = String(task?.owner || '').trim().toLowerCase();
       const status = String(task?.status || '').toUpperCase();
@@ -385,16 +384,7 @@ export default function HyperAgents() {
   const assignedAgentRooms = useMemo(() => agentHomeRooms.filter((room) => (
     roomAssignments.has(String(room.room_tag || room.roomTag || '').toLowerCase())
   )), [agentHomeRooms, roomAssignments]);
-  const assignedRoomSignature = useMemo(
-    () => assignedAgentRooms.map((room) => room.id).sort().join(':'),
-    [assignedAgentRooms],
-  );
-  useEffect(() => {
-    setShowAgentRooms(Boolean(assignedRoomSignature));
-  }, [assignedRoomSignature]);
-  const displayedAgentRooms = showAgentRooms
-    ? (assignedAgentRooms.length ? assignedAgentRooms : agentHomeRooms)
-    : [];
+  const displayedAgentRooms = assignedAgentRooms;
   const runtimeWorking = Boolean(runtimeState && !['WAITING', 'SLEEPING', 'PAUSED', 'BLOCKED'].includes(String(runtimeState).toUpperCase()));
   const workRooms = useMemo(() => liveRooms.filter(room => !room.is_domain_home), [liveRooms]);
 
@@ -552,15 +542,13 @@ export default function HyperAgents() {
         <div className="flex-1 min-h-0 overflow-y-auto py-1">
           {agentHomeRooms.length > 0 ? (
             <div className="mt-1 border-y border-[#e3e0db] bg-white/45">
-              <button
-                type="button"
-                onClick={() => setShowAgentRooms((current) => !current)}
-                aria-expanded={showAgentRooms}
-                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[10px] font-semibold text-[#525252] transition-colors hover:bg-white"
+              <div
+                aria-expanded={assignedAgentRooms.length > 0}
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[10px] font-semibold text-[#525252]"
               >
                 <span className="inline-flex items-center gap-1.5"><Users size={11} className="text-[#525252]" />{t('hyperAgents.companyRooms', 'Company rooms')}{assignedAgentRooms.length ? <span className="font-mono text-[8px] text-[#185bcc]">{assignedAgentRooms.length} active</span> : null}</span>
-                <ChevronDown size={13} className={`text-[#737373] transition-transform ${showAgentRooms ? 'rotate-180' : ''}`} />
-              </button>
+                <ChevronDown size={13} className={`text-[#737373] transition-transform ${assignedAgentRooms.length ? 'rotate-180' : ''}`} />
+              </div>
               <AnimatePresence initial={false}>
                 {displayedAgentRooms.length ? <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-[#e3e0db] bg-[#faf9f4] pb-1">
                   <AnimatePresence initial={false}>
