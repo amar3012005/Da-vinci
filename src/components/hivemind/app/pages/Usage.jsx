@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
+import WorkspaceAccessCard from '../shared/WorkspaceAccessCard';
 
 // One screen, whole-platform, high-level usage. Cards = current month (DB-sourced,
 // accurate across replicas). Graphs = per-day series from OrgUsageDaily.
@@ -196,6 +197,7 @@ export default function Usage() {
   const [days, setDays] = useState(30);
 
   const { data, loading, refetch } = useApiQuery(() => apiClient.getUsage().catch(() => null), []);
+  const { data: billing, refetch: refetchBilling } = useApiQuery(() => apiClient.getBillingPlan().catch(() => null), []);
   const { data: daily, refetch: refetchDaily } = useApiQuery(() => apiClient.getDailyUsage(days).catch(() => null), [days]);
 
   const planName = data?.planName || data?.plan || '—';
@@ -236,12 +238,14 @@ export default function Usage() {
                 className={`px-2.5 py-1.5 text-xs font-medium ${days === d ? 'bg-[#117dff] text-white' : 'text-[#525252] hover:bg-[#faf9f4]'}`}>{d}d</button>
             ))}
           </div>
-          <button onClick={() => { refetch(); refetchDaily(); }}
+          <button onClick={() => { refetch(); refetchDaily(); refetchBilling(); }}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#e3e0db] text-xs font-medium text-[#525252] hover:bg-[#faf9f4]">
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
         </div>
       </div>
+
+      <div className="mb-5"><WorkspaceAccessCard billing={billing} compact /></div>
 
       {reminders.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-1">

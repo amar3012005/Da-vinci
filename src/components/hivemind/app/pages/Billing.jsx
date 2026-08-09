@@ -21,6 +21,7 @@ import { useAuth } from '../auth/AuthProvider';
 import RunwayUpgradePanel from '../components/RunwayUpgradePanel';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
+import WorkspaceAccessCard from '../shared/WorkspaceAccessCard';
 
 // ─── Plan Definitions ────────────────────────────────────────────────────────
 
@@ -545,6 +546,7 @@ export default function Billing() {
           {checkoutNotice}
         </div>
       )}
+      <WorkspaceAccessCard billing={billing} />
       {/* Runway upgrade — enterprise orgs configure + self-serve subscribe here
           (shown after the 2-week onboarding; they can also re-configure anytime). */}
       {org?.plan === 'enterprise' && <RunwayUpgradePanel />}

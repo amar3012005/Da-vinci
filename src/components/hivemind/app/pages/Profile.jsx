@@ -41,6 +41,7 @@ import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
+import WorkspaceAccessCard from '../shared/WorkspaceAccessCard';
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
 
@@ -1490,6 +1491,7 @@ export default function Profile() {
   // getProfile() returns { ok, profile: { memory_count, plan, ... }, graph_summary }
   const statsQuery = useApiQuery(() => apiClient.getProfile());
   const { data: statsRaw, loading: statsLoading } = statsQuery;
+  const { data: billing } = useApiQuery(() => apiClient.getBillingPlan().catch(() => null), []);
 
   // Flatten so downstream components can destructure memory_count, plan, etc. directly
   const statsData = statsRaw
@@ -1532,6 +1534,8 @@ export default function Profile() {
           profileFacts={facts}
           onSignOut={logout}
         />
+
+        <WorkspaceAccessCard billing={billing} />
 
         <OrganizationContextCard org={org} user={user} />
 
