@@ -6,7 +6,7 @@ import { CampaignLaunchPreview, GmailMessagePreview } from './RuntimeAuthorityPr
 test('renders one truthful domain-neutral Runtime Tasks panel with the Growth Brief first', () => {
   const markup = renderToStaticMarkup(<AgentRuntimeTasksPanel firstLife={{
     status: 'AWAITING_START',
-  }} growthBrief={{
+  }} experience={{ can_start: true }} growthBrief={{
     current_position: 'Current retained position.',
     primary_constraint: { statement: 'Primary evidenced constraint.' },
     evidence_refs: ['baseline-1'],
@@ -34,6 +34,18 @@ test('renders one truthful domain-neutral Runtime Tasks panel with the Growth Br
   expect(markup).not.toContain('>Ready<');
   expect(markup).not.toMatch(/campaign|outreach|seo/i);
   expect(markup.indexOf('Growth brief')).toBeLessThan(markup.indexOf('Improve the primary customer journey'));
+});
+
+test('hides stale first-life controls once canonical projection cannot start work', () => {
+  const markup = renderToStaticMarkup(<AgentRuntimeTasksPanel
+    firstLife={{ status: 'AWAITING_START' }}
+    experience={{ can_start: false }}
+    growthBrief={null}
+    queue={[{ id: 'done', title: 'Strategy', objective: 'Done', status: 'COMPLETED', recommended: true }]}
+    onDecision={() => {}}
+  />);
+  expect(markup).not.toContain('Start recommended work');
+  expect(markup).not.toContain('Review later');
 });
 
 test('projects unique persisted Runtime artifacts from the brief and task checkpoints', () => {

@@ -315,7 +315,7 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
   const artifacts = collectRuntimeArtifacts(queue, growthBrief);
   const [artifactsOpen, setArtifactsOpen] = useState(true);
   const [tasksExpanded, setTasksExpanded] = useState(true);
-  return <section id="agent-runtime-tasks" role="region" className="relative w-full overflow-hidden rounded-[14px] border border-[#e3e0db] bg-white shadow-[0_14px_36px_-30px_rgba(0,0,0,0.55)]" aria-label="Runtime tasks">
+  return <section id="agent-runtime-tasks" role="region" className="relative w-full overflow-hidden rounded-[14px] border border-[#e3e0db] bg-white shadow-[0_14px_36px_-30px_rgba(0,0,0,0.55)]" aria-label="Artifacts and Runtime tasks">
     {onClose ? <button type="button" onClick={onClose} aria-label="Close Runtime tasks" title="Close" className="absolute right-3 top-3 z-10 grid h-7 w-7 place-items-center rounded-full text-[#8a8577] hover:bg-[#f2f0eb] hover:text-[#171717] lg:hidden"><X size={14} /></button> : null}
     <div className="max-h-[min(72vh,680px)] overflow-y-auto">
       {growthBrief ? <div className="border-b border-[#ece9e4]"><GrowthBrief brief={growthBrief} embedded /></div> : null}
@@ -347,7 +347,7 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
         </div> : null}
       </section>
     </div>
-    {['AWAITING_START', 'REVIEW_LATER'].includes(firstLife?.status) ? <div className={`grid gap-2 border-t border-[#d8d3cc] bg-white p-3 ${firstLife.status === 'AWAITING_START' ? 'grid-cols-2' : 'grid-cols-1'}`}>{firstLife.status === 'AWAITING_START' ? <button type="button" onClick={() => onDecision('review_later')} className="h-9 border border-[#d8d3cc] px-3 text-[10px] font-semibold text-[#525252]">Review later</button> : null}<button type="button" onClick={() => onDecision('start')} disabled={experience && !experience.can_start} className="inline-flex h-9 items-center justify-center gap-2 bg-[#171717] px-3 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"><Play size={12} />Start recommended work</button></div> : null}
+    {experience?.can_start === true ? <div className="grid grid-cols-2 gap-2 border-t border-[#d8d3cc] bg-white p-3"><button type="button" onClick={() => onDecision('review_later')} className="h-9 border border-[#d8d3cc] px-3 text-[10px] font-semibold text-[#525252]">Review later</button><button type="button" onClick={() => onDecision('start')} className="inline-flex h-9 items-center justify-center gap-2 bg-[#171717] px-3 text-[10px] font-semibold text-white"><Play size={12} />Start recommended work</button></div> : null}
   </section>;
 }
 

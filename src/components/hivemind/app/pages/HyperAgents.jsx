@@ -390,9 +390,11 @@ export default function HyperAgents() {
     [assignedAgentRooms],
   );
   useEffect(() => {
-    if (assignedRoomSignature) setShowAgentRooms(true);
+    setShowAgentRooms(Boolean(assignedRoomSignature));
   }, [assignedRoomSignature]);
-  const displayedAgentRooms = showAgentRooms ? agentHomeRooms : [];
+  const displayedAgentRooms = showAgentRooms
+    ? (assignedAgentRooms.length ? assignedAgentRooms : agentHomeRooms)
+    : [];
   const runtimeWorking = Boolean(runtimeState && !['WAITING', 'SLEEPING', 'PAUSED', 'BLOCKED'].includes(String(runtimeState).toUpperCase()));
   const workRooms = useMemo(() => liveRooms.filter(room => !room.is_domain_home), [liveRooms]);
 
