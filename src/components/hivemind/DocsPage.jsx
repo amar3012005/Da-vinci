@@ -380,11 +380,13 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
   -H "Authorization: Bearer $HIVEMIND_API_KEY" \\
   -F "file=@document.pdf" \\
   -F "targetScope=personal" \\
+  -F "ingestMode=both" \\
   -F "tags=research,q3"`}</CodeBlock>
             <CodeBlock label="202 accepted">{`{
   "job_id": "294decd2-33f9-4bd3-b3d6-9c85abce5fa6",
   "status": "queued",
   "storage_mode": "amr_embedded",
+  "ingest_mode": "both",
   "counts": { "pages": null, "segments": null, "candidates": null, "memories": null },
   "created_at": "2026-08-05T13:14:58Z"
 }`}</CodeBlock>
@@ -396,6 +398,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
                   ['targetScope', false, 'personal | project | team | organization. Org scope requires owner/admin. Default personal.'],
                   ['projectId', false, 'Required when targetScope=project.'],
                   ['primaryTeamId', false, 'Required when targetScope=team.'],
+                  ['ingestMode', false, 'both (default) = full memories + evidence · evidence = lexical + semantic evidence only, without memory/entity/relationship generation. Documents and audio only.'],
                   ['tags', false, 'Comma-separated tags stamped on every memory from this file.'],
                   ['force', false, 'Bypass the checksum dedup and re-ingest identical bytes.'],
                 ].map(([n, r, d]) => (
@@ -424,7 +427,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
                   ['source.url', 'Canonical URL when ingesting a link (content is extracted server-side).'],
                   ['source.sourceId', 'Your stable id for this source — enables dedup + provenance.'],
                   ['content', 'Already-extracted text. Provide this OR file.buffer.'],
-                  ['mode', 'document (multi-fact distill → many memories + entities + relationships) · atomic (one memory) · evidence (searchable verbatim, no distill — like SuperRAG).'],
+                  ['mode', 'document (multi-fact distill → many memories + entities + relationships) · atomic (one memory) · legacy evidence (one recall-excluded raw record). For chunked hybrid evidence-only files, use upload ingestMode=evidence.'],
                   ['scope / projectId', 'personal | project | team | organization + the project id when scoped.'],
                   ['tags', 'Extra tags stamped on the resulting memories.'],
                 ].map(([n, d]) => (
@@ -432,7 +435,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
                 ))}
               </tbody>
             </table>
-            <P><strong className="text-[#0a0a0a]">Modes at a glance.</strong> <Mono>document</Mono> = full pipeline (facts + entities + relationships). <Mono>evidence</Mono> = chunk/embed/index only, kept verbatim and searchable but not distilled into memories — the cheaper &ldquo;make it searchable, don&rsquo;t remember it&rdquo; path. <Mono>atomic</Mono> = a single memory through the engine gateway.</P>
+            <P><strong className="text-[#0a0a0a]">Modes at a glance.</strong> <Mono>document</Mono> = full pipeline (facts + entities + relationships). <Mono>atomic</Mono> = a single memory through the engine gateway. Source-envelope <Mono>evidence</Mono> is a legacy one-record mode; it is distinct from file upload <Mono>ingestMode=evidence</Mono>, which creates page-aware hybrid-searchable segments.</P>
 
             <H3 id="ingest-status">Poll ingestion status</H3>
             <P><Mono>GET /api/knowledge/status?job_id=&lt;id&gt;</Mono> — poll until <Mono>ready</Mono> or <Mono>failed</Mono>.</P>
@@ -443,7 +446,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
   "memory_ids": ["a22f0888-…", "8dfe5b8f-…"],
   "counts": { "pages": 1, "segments": 1, "candidates": 1, "memories": 5 }
 }`}</CodeBlock>
-            <P>Stages: <Mono>queued → parsing → segmenting → embedding → promoting → ready</Mono> (or <Mono>failed</Mono>). A document that parses but yields zero memories still succeeds as <em>evidence-only</em> — its verbatim segments remain fully searchable.</P>
+            <P>Stages: <Mono>both</Mono> uses <Mono>queued → parsing → segmenting → embedding → promoting → ready</Mono>. <Mono>evidence</Mono> stops after embedding and becomes ready only after both semantic and lexical evidence lanes are complete.</P>
 
             <H3 id="ingest-types">Supported types &amp; limits</H3>
             <table className="w-full mt-3 text-[12px]">

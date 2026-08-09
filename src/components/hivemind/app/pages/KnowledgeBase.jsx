@@ -69,7 +69,7 @@ const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx',
   // These were in the dropzone accept= attr but missing here, so audio files
   // were rejected client-side before they ever reached the upload pipeline.
   'mp3', 'wav', 'm4a', 'ogg', 'flac'];
-const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
+const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'tiff', 'tif', 'webp', 'gif']);
 const AUDIO_EXTS = new Set(['mp3', 'wav', 'm4a', 'ogg', 'flac']);
 
 // File-based imports — typed entry cards below the upload dropzone. Each card
@@ -380,6 +380,8 @@ function UploadScopeModal({
   onScopeChange,
   selectedProject,
   onProjectChange,
+  selectedIngestMode,
+  onIngestModeChange,
   pageCounts = {},
   onRemoveFile,
   pagesRemaining = Infinity,
@@ -406,6 +408,10 @@ function UploadScopeModal({
   // greyed scopes the server would actually accept, so it's dropped.
   const isOrgAdmin = userRole === 'owner' || userRole === 'admin';
   const requiresProject = selectedScope === 'project';
+  const containsImage = files.some((file) => {
+    const ext = (file?.name?.split('.').pop() || '').toLowerCase();
+    return IMAGE_EXTS.has(ext) || /^image\//.test(file?.type || '');
+  });
 
   // Client-side page estimate for the batch (matches backend _estimatePages).
   // A file still counting shows "…" and is treated as ≥1 so the gate never
@@ -437,7 +443,7 @@ function UploadScopeModal({
         >
           <div className="flex items-start justify-between gap-4 p-6 pb-4 shrink-0">
             <div>
-              <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk']">{t('knowledgebase.scopeModalTitle', 'Save uploaded memories to')}</h3>
+              <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk']">{t('knowledgebase.scopeModalTitle', 'Configure upload')}</h3>
               <p className="text-[#525252] text-sm mt-1">
                 {t('knowledgebase.scopeModalSubtitle', 'Choose where these files should live before upload starts.')}
               </p>
@@ -508,6 +514,38 @@ function UploadScopeModal({
           </div>
 
           <div className="space-y-3">
+            <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
+              <p className="mb-2 text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3]">
+                {t('knowledgebase.processingMode', 'Processing mode')}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onIngestModeChange('both')}
+                  className={`rounded-lg border p-3 text-left transition-colors ${selectedIngestMode === 'both'
+                    ? 'border-[#117dff]/40 bg-[#117dff]/8' : 'border-[#e3e0db] hover:bg-[#faf9f4]'}`}
+                >
+                  <p className="text-xs font-semibold text-[#0a0a0a]">{t('knowledgebase.modeBoth', 'Memories + evidence')}</p>
+                  <p className="mt-1 text-[11px] text-[#737373]">{t('knowledgebase.modeBothDesc', 'Full facts, entities, relationships, and hybrid search.')}</p>
+                </button>
+                <button
+                  type="button"
+                  disabled={containsImage}
+                  onClick={() => !containsImage && onIngestModeChange('evidence')}
+                  className={`rounded-lg border p-3 text-left transition-colors ${selectedIngestMode === 'evidence'
+                    ? 'border-[#117dff]/40 bg-[#117dff]/8' : 'border-[#e3e0db] hover:bg-[#faf9f4]'} ${containsImage ? 'cursor-not-allowed opacity-45' : ''}`}
+                >
+                  <p className="text-xs font-semibold text-[#0a0a0a]">{t('knowledgebase.modeEvidence', 'Evidence only')}</p>
+                  <p className="mt-1 text-[11px] text-[#737373]">{t('knowledgebase.modeEvidenceDesc', 'Hybrid searchable segments; skips AI memory, entity, and relationship generation.')}</p>
+                </button>
+              </div>
+              {containsImage && (
+                <p className="mt-2 text-[11px] text-[#a16207]">
+                  {t('knowledgebase.imageModeNotice', 'Evidence only is unavailable for batches containing images. Images keep their vision-to-memory pipeline.')}
+                </p>
+              )}
+            </div>
+
             {/* Tier 1 — Personal: everyone, private */}
             <button
               type="button"
@@ -997,6 +1035,7 @@ export default function KnowledgeBase() {
   const [pendingPageCounts, setPendingPageCounts] = useState({});
   const [scopeModalOpen, setScopeModalOpen] = useState(false);
   const [selectedScope, setSelectedScope] = useState('organization'); // org-visible by default; project optional
+  const [selectedIngestMode, setSelectedIngestMode] = useState('both');
   const [selectedProject, setSelectedProject] = useState('');
 
   // Live kbPages quota (used/limit) so the scope modal can gate an upload that
@@ -1373,7 +1412,7 @@ export default function KnowledgeBase() {
     return 1; // >30MB → 1 (heavy parse + bandwidth)
   }, []);
 
-  const handleFiles = useCallback(async (files, { targetScope = 'organization', project = null } = {}) => {
+  const handleFiles = useCallback(async (files, { targetScope = 'organization', project = null, ingestMode = 'both' } = {}) => {
     // ── Step 1: validate + queue all entries up-front (optimistic UI) ──
     const validQueue = []; // { uploadEntry, file, controller }
     const nowBase = Date.now();
@@ -1412,6 +1451,7 @@ export default function KnowledgeBase() {
         status: 'queued', // queued | uploading | success | error
         chunks: null,
         progress: 0,
+        ingestMode,
         controller,
       };
       validQueue.push({ uploadEntry, file });
@@ -1532,6 +1572,7 @@ export default function KnowledgeBase() {
               projectId: targetScope === 'organization' ? null : (project || null),
               containerTag: targetScope === 'organization' ? (project || undefined) : undefined,
               force, // re-ingest past the same-scope duplicate gate when approved
+              ingestMode,
               signal: uploadEntry.controller.signal,
             };
         const result = await uploadFn(file, {
@@ -1549,7 +1590,7 @@ export default function KnowledgeBase() {
           // Bytes are in and the server owns the job — free the transfer slot so the next file
           // starts NOW rather than after this document's 30-134s ingest.
           onQueued: () => queueEntry._slotReleased?.(),
-          onStatus: ({ status, progress, stage, segments, promoted } = {}) => {
+          onStatus: ({ status, progress, stage, segments, promoted, evidenceOnly, evidenceOnlyReason } = {}) => {
             const LABEL = {
               queued: 'Queued — waiting for a worker',
               // The queue reports 'processing' at 5% the moment a worker picks the
@@ -1576,6 +1617,8 @@ export default function KnowledgeBase() {
               serverProgress: typeof progress === 'number' ? progress : u.serverProgress,
               segments: segments ?? u.segments,
               promoted: promoted ?? u.promoted,
+              evidenceOnly: evidenceOnly ?? u.evidenceOnly,
+              evidenceOnlyReason: evidenceOnlyReason ?? u.evidenceOnlyReason,
             } : u)));
           },
           onUploadProgress: (e) => {
@@ -1642,7 +1685,7 @@ export default function KnowledgeBase() {
         //   { mode: 'document_first', documentId, segmentCount,
         //     candidateCount, promotedCount, promotedMemoryIds }
         // Legacy shape:  { upload_id, chunks, status: 'processing' }
-        const isPhase1 = result?.mode === 'document_first';
+        const isPhase1 = result?.mode === 'document_first' || result?.segmentCount != null;
         setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
             ? {
@@ -1655,6 +1698,12 @@ export default function KnowledgeBase() {
                 candidateCount: result.candidateCount ?? null,
                 promotedCount: result.promotedCount ?? null,
                 promotedMemoryIds: result.promotedMemoryIds ?? null,
+                ingestMode: result.ingestMode || ingestMode,
+                evidenceOnly: result.evidenceOnly === true || ingestMode === 'evidence',
+                evidenceOnlyReason: result.evidenceOnlyReason || (ingestMode === 'evidence' ? 'user_selected' : null),
+                message: result.evidenceOnly === true || ingestMode === 'evidence'
+                  ? 'Searchable evidence ready'
+                  : undefined,
                 documentId: result.documentId ?? null,
                 uploadId: result.upload_id ?? null,
                 // Enterprise schema extraction (when enterprise=auto|true and
@@ -1675,6 +1724,8 @@ export default function KnowledgeBase() {
             total_chunks: result.segmentCount ?? result.chunks ?? 0,
             filename: result.filename || file.name,
             upload_id: result.upload_id,
+            ingest_mode: result.ingestMode || ingestMode,
+            evidence_only: result.evidenceOnly === true || ingestMode === 'evidence',
           },
           tags: [
             ...(customTags ? customTags.split(',').map((t) => t.trim()) : []),
@@ -1803,6 +1854,7 @@ export default function KnowledgeBase() {
     if (!files?.length) return;
     setPendingFiles(files);
     setSelectedProject('');
+    setSelectedIngestMode('both');
     // Default to org-wide for admins (upload once, whole org sees it); everyone
     // else starts on their private space. Both project + org tiers remain
     // selectable in the modal, gated by role exactly as the backend authorizes.
@@ -1904,7 +1956,7 @@ export default function KnowledgeBase() {
     setScopeModalOpen(false);
     setPendingFiles([]);
 
-    if (smartExtract) {
+    if (smartExtract && selectedIngestMode === 'both') {
       // Enterprise detect flow: process first file through detection.
       // Images bypass detection — they route straight to /api/ingest/image
       // (Groq vision), since the schema-detect path is for tabular docs.
@@ -1924,10 +1976,10 @@ export default function KnowledgeBase() {
         }
       }
       if (imageFiles.length) {
-        handleFiles(imageFiles, { targetScope: effectiveScope, project });
+        handleFiles(imageFiles, { targetScope: effectiveScope, project, ingestMode: 'both' });
       }
       if (audioFiles.length) {
-        handleFiles(audioFiles, { targetScope: effectiveScope, project });
+        handleFiles(audioFiles, { targetScope: effectiveScope, project, ingestMode: selectedIngestMode });
       }
       for (const file of nonMediaFiles) {
         const ext = file.name.split('.').pop()?.toLowerCase();
@@ -1957,15 +2009,16 @@ export default function KnowledgeBase() {
         }
       }
     } else {
-      handleFiles(files, { targetScope: effectiveScope, project });
+      handleFiles(files, { targetScope: effectiveScope, project, ingestMode: selectedIngestMode });
     }
-  }, [handleFiles, pendingFiles, selectedProject, selectedScope, smartExtract, setUploads]);
+  }, [handleFiles, pendingFiles, selectedProject, selectedScope, selectedIngestMode, smartExtract, setUploads]);
 
   const handleCloseScopeModal = useCallback(() => {
     setScopeModalOpen(false);
     setPendingFiles([]);
     setSelectedProject('');
     setSelectedScope('personal');
+    setSelectedIngestMode('both');
   }, []);
 
   const handleDrop = useCallback((e) => {
@@ -2212,6 +2265,11 @@ export default function KnowledgeBase() {
         onScopeChange={setSelectedScope}
         selectedProject={selectedProject}
         onProjectChange={setSelectedProject}
+        selectedIngestMode={selectedIngestMode}
+        onIngestModeChange={(mode) => {
+          setSelectedIngestMode(mode);
+          if (mode === 'evidence') setSmartExtract(false);
+        }}
         pageCounts={pendingPageCounts}
         onRemoveFile={removePendingFile}
         pagesRemaining={kbPagesRemaining}
@@ -2420,7 +2478,11 @@ export default function KnowledgeBase() {
                     <span className="text-[#a3a3a3]">Checking if already uploaded…</span>
                   )}
                   {u.mode === 'document_first' && u.segmentCount != null && (
-                    u.segmentCount > 0 || (u.promotedCount ?? 0) > 0 ? (
+                    u.evidenceOnly ? (
+                      <span className="text-[#16a34a]" title="Semantic and lexical evidence indexing complete; memory generation was intentionally skipped.">
+                        Searchable evidence ready · {u.segmentCount} segments · 0 memories
+                      </span>
+                    ) : u.segmentCount > 0 || (u.promotedCount ?? 0) > 0 ? (
                       <span className="text-[#16a34a]" title="Phase 1 evidence-first ingest">
                         {u.segmentCount} seg · {u.promotedCount ?? 0}/{u.candidateCount ?? 0} promoted
                       </span>

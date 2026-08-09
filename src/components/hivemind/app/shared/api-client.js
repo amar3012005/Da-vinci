@@ -2186,6 +2186,7 @@ class HiveMindApiClient {
     // Images already sent it, which is why they succeeded in the same batch.
     if (options.projectId) formData.append('projectId', options.projectId);
     if (options.primaryTeamId) formData.append('primaryTeamId', options.primaryTeamId);
+    formData.append('ingestMode', options.ingestMode === 'evidence' ? 'evidence' : 'both');
     // force=true re-ingests past the same-scope duplicate gate (user approved the
     // "upload anyway" prompt shown on a 409 duplicate_document).
     if (options.force) formData.append('force', 'true');
@@ -2228,15 +2229,22 @@ class HiveMindApiClient {
         continue; // transient — keep polling
       }
       const meta = st?.metadata || {};
+      const counts = st?.counts || {};
       // Doc fields may arrive nested under `metadata` (in-memory tracker path)
       // or flat at the top level (durable-queue Redis mirror). Read both so a
       // queued upload still resolves a real documentId.
       const docId = meta.document_id ?? st.document_id;
-      const segs = meta.segmentCount ?? st.segmentCount;
-      const promoted = meta.promotedCount ?? st.promotedCount;
-      const candidates = meta.candidateCount ?? st.candidateCount;
+      const segs = meta.segmentCount ?? st.segmentCount ?? counts.segments;
+      const promoted = meta.promotedCount ?? st.promotedCount ?? counts.memories;
+      const candidates = meta.candidateCount ?? st.candidateCount ?? counts.candidates;
       if (options.onStatus) {
-        options.onStatus({ status: st.status, progress: st.progress, stage: meta.stage, segments: segs ?? meta.segments, promoted: promoted ?? meta.promoted });
+        options.onStatus({
+          status: st.status, progress: st.progress, stage: meta.stage ?? st.stage,
+          segments: segs ?? meta.segments, promoted: promoted ?? meta.promoted,
+          ingestMode: st.ingest_mode ?? meta.ingestMode,
+          evidenceOnly: st.evidence_only ?? meta.evidenceOnly,
+          evidenceOnlyReason: st.evidence_only_reason ?? meta.evidenceOnlyReason,
+        });
       }
       // ACCEPT EVERY TERMINAL SPELLING. The server marks a finished job `ready`; this waited only
       // for `indexed`, so a COMPLETED upload never satisfied the loop — it kept polling a finished
@@ -2252,6 +2260,9 @@ class HiveMindApiClient {
           segmentCount: segs,
           candidateCount: candidates,
           promotedCount: promoted,
+          ingestMode: st.ingest_mode ?? options.ingestMode ?? 'both',
+          evidenceOnly: st.evidence_only === true,
+          evidenceOnlyReason: st.evidence_only_reason || null,
           job_id: jobId,
         };
       }
