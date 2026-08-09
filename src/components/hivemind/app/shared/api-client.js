@@ -380,6 +380,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async deferHqCapabilityRequest(requestId) {
+    const { data } = await this.controlPlane.post(`/v1/hq/capability-requests/${encodeURIComponent(requestId)}/defer`, {});
+    return data;
+  }
+
   async getHqResources() {
     const { data } = await this.controlPlane.get('/v1/hq/resources');
     return data;
