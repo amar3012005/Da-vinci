@@ -49,26 +49,26 @@ const ITEMS = [
 const Card = ({ item, onOpen }) => (
   <article
     data-card
-    className="flex w-[88vw] shrink-0 snap-start overflow-hidden rounded-xl border md:w-[900px]"
+    className="flex w-[88vw] shrink-0 snap-start flex-col overflow-hidden rounded-xl border md:w-[900px] md:flex-row"
     style={{ borderColor: BORDER, background: '#fff' }}
   >
     {/* text panel */}
-    <div className="flex w-1/2 flex-col p-8 md:p-10">
+    <div className="flex w-full flex-col p-6 md:w-1/2 md:p-10">
       <div className="flex flex-wrap gap-2">
         {item.tags.map((t) => (
           <span key={t} className="rounded bg-[#f3f2ec] px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-[#737367]">{t}</span>
         ))}
       </div>
-      <h3 className="font-['Space_Grotesk'] mt-6 text-3xl font-semibold tracking-tight" style={{ color: INK }}>{item.title}</h3>
-      <p className="mt-5 text-[15px] leading-relaxed text-[#525252]">{item.desc}</p>
-      <div className="mt-auto pt-8">
+      <h3 className="font-['Space_Grotesk'] mt-5 text-2xl font-semibold tracking-tight md:mt-6 md:text-3xl" style={{ color: INK }}>{item.title}</h3>
+      <p className="mt-4 text-[14px] leading-relaxed text-[#525252] md:mt-5 md:text-[15px]">{item.desc}</p>
+      <div className="mt-6 md:mt-auto md:pt-8">
         <button onClick={() => onOpen(item.href)} className="inline-flex items-center gap-2 rounded-lg bg-black px-5 py-2.5 text-[13px] font-semibold text-white transition-transform hover:scale-[1.02]">
           Learn more <ChevronRight size={15} />
         </button>
       </div>
     </div>
-    {/* art panel */}
-    <button onClick={() => onOpen(item.href)} className="relative w-1/2 overflow-hidden" style={{ background: item.art }} aria-label={item.title}>
+    {/* art panel — fixed height when stacked (mobile), fills the row half on desktop */}
+    <button onClick={() => onOpen(item.href)} className="relative h-40 w-full overflow-hidden md:h-auto md:w-1/2" style={{ background: item.art }} aria-label={item.title}>
       {item.img && <img src={item.img} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-luminosity" />}
       <span className="absolute bottom-5 left-5 font-['Space_Grotesk'] text-2xl font-bold text-white/90">{item.title.split(' ')[0]}</span>
     </button>
