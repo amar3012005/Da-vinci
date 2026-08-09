@@ -234,6 +234,7 @@ export default function HyperAgents() {
   const [showCreate, setShowCreate] = useState(false);
   const [showAgentRooms, setShowAgentRooms] = useState(false);
   const [runtimeWork, setRuntimeWork] = useState({ agent_runtime_tasks: [] });
+  const [runtimeState, setRuntimeState] = useState(null);
   const domainRoomsEnsuredRef = useRef(false);
   // viewMode: 'hero' (company dashboard — /employees/mycompany, the landing)
   // | 'runtime' | 'leads' | 'campaigns' | 'thread' (room chat) | 'roster'.
@@ -309,9 +310,16 @@ export default function HyperAgents() {
 
   useEffect(() => {
     let active = true;
-    apiClient.getHqWork().then((work) => { if (active) setRuntimeWork(work || { agent_runtime_tasks: [] }); }).catch(() => {});
+    Promise.all([apiClient.getHqRuntime(), apiClient.getHqWork()])
+      .then(([state, work]) => {
+        if (!active) return;
+        setRuntimeState(state?.runtime?.state || null);
+        setRuntimeWork(work || { agent_runtime_tasks: [] });
+      }).catch(() => {});
     const synchronize = (event) => {
-      if (active && event.detail?.work) setRuntimeWork(event.detail.work);
+      if (!active) return;
+      if (event.detail?.runtime?.state) setRuntimeState(event.detail.runtime.state);
+      if (event.detail?.work) setRuntimeWork(event.detail.work);
     };
     window.addEventListener('hq-runtime-projection', synchronize);
     return () => {
@@ -377,7 +385,15 @@ export default function HyperAgents() {
   const assignedAgentRooms = useMemo(() => agentHomeRooms.filter((room) => (
     roomAssignments.has(String(room.room_tag || room.roomTag || '').toLowerCase())
   )), [agentHomeRooms, roomAssignments]);
-  const displayedAgentRooms = showAgentRooms ? agentHomeRooms : assignedAgentRooms;
+  const assignedRoomSignature = useMemo(
+    () => assignedAgentRooms.map((room) => room.id).sort().join(':'),
+    [assignedAgentRooms],
+  );
+  useEffect(() => {
+    if (assignedRoomSignature) setShowAgentRooms(true);
+  }, [assignedRoomSignature]);
+  const displayedAgentRooms = showAgentRooms ? agentHomeRooms : [];
+  const runtimeWorking = Boolean(runtimeState && !['WAITING', 'SLEEPING', 'PAUSED', 'BLOCKED'].includes(String(runtimeState).toUpperCase()));
   const workRooms = useMemo(() => liveRooms.filter(room => !room.is_domain_home), [liveRooms]);
 
   // ── First-run gate: Polsia-style company onboarding ────────────────
@@ -503,10 +519,15 @@ export default function HyperAgents() {
           <button
             onClick={() => goMode('runtime', hqRoom?.id || null)}
             disabled={!hqRoom}
-            className={`mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors disabled:opacity-45 ${viewMode === 'runtime' ? 'bg-[#185bcc] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#bcd0ef]'}`}
+            aria-label={`Runtime ${runtimeWorking ? 'working' : String(runtimeState || 'inactive').toLowerCase()}`}
+            className={`relative mt-1.5 flex w-full items-center gap-2 overflow-hidden rounded-lg px-2.5 py-2 text-[12px] font-semibold transition-colors disabled:opacity-45 ${viewMode === 'runtime' || runtimeWorking ? 'border border-[#4f82df] bg-[#173c91] text-white' : 'border border-[#bcd0ef] text-[#0a0a0a] hover:bg-white'}`}
           >
-            <Power size={13} className={viewMode === 'runtime' ? 'text-white' : 'text-[#185bcc]'} />
-            Runtime
+            {runtimeWorking ? <>
+              <motion.span aria-hidden="true" className="absolute -inset-y-6 -left-12 w-28 rotate-12 rounded-full bg-gradient-to-r from-[#17356f] via-[#73a7ff] to-[#2455bd] blur-[7px]" animate={{ x: [-36, 176, -36] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
+              <motion.span aria-hidden="true" className="absolute -inset-y-5 left-16 w-20 -rotate-12 rounded-full bg-gradient-to-r from-transparent via-[#c4d9ff] to-transparent blur-[7px]" animate={{ x: [70, -90, 70] }} transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }} />
+            </> : null}
+            <Power size={13} className={`relative z-10 ${viewMode === 'runtime' || runtimeWorking ? 'text-white' : 'text-[#185bcc]'}`} />
+            <span className="relative z-10">Runtime</span>
           </button>
           {/* YOUR LEADS — outreach progress board (Notion-style). */}
           <button
@@ -532,11 +553,11 @@ export default function HyperAgents() {
               <button
                 type="button"
                 onClick={() => setShowAgentRooms((current) => !current)}
-                aria-expanded={showAgentRooms || assignedAgentRooms.length > 0}
+                aria-expanded={showAgentRooms}
                 className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[10px] font-semibold text-[#525252] transition-colors hover:bg-white"
               >
                 <span className="inline-flex items-center gap-1.5"><Users size={11} className="text-[#525252]" />{t('hyperAgents.companyRooms', 'Company rooms')}{assignedAgentRooms.length ? <span className="font-mono text-[8px] text-[#185bcc]">{assignedAgentRooms.length} active</span> : null}</span>
-                <ChevronDown size={13} className={`text-[#737373] transition-transform ${showAgentRooms || assignedAgentRooms.length ? 'rotate-180' : ''}`} />
+                <ChevronDown size={13} className={`text-[#737373] transition-transform ${showAgentRooms ? 'rotate-180' : ''}`} />
               </button>
               <AnimatePresence initial={false}>
                 {displayedAgentRooms.length ? <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-[#e3e0db] bg-[#faf9f4] pb-1">
