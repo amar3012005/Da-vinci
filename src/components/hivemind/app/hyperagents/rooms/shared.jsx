@@ -1078,7 +1078,7 @@ export function AgentBubble({ agent, content: rawContent, kind, agreement, confi
       className={`flex gap-2 ${indent ? 'ml-6' : ''}`}
     >
       <AgentAvatar agent={agent} size={28} active={kind === 'lead'} />
-      <div className="min-w-0 max-w-[78%]">
+      <div className="min-w-0 max-w-[min(100%,52rem)]">
         <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
           <span className="text-[11px] font-semibold text-[#0a0a0a]">{agent?.name || agent?.slug}</span>
           <span
@@ -1104,7 +1104,7 @@ export function AgentBubble({ agent, content: rawContent, kind, agreement, confi
           {ts ? <span className="text-[9px] font-mono text-[#a3a3a3] ml-auto">{fmtTs(ts)}</span> : null}
         </div>
         <div
-          className="border border-[#e3e0db] rounded-2xl rounded-tl-md px-3.5 py-2.5 text-[13px] text-[#0a0a0a] leading-relaxed break-words overflow-hidden"
+          className="border border-[#e3e0db] rounded-2xl rounded-tl-md px-3.5 py-2.5 text-[13px] text-[#0a0a0a] leading-relaxed break-words overflow-x-auto"
           style={{ background: kind === 'lead' ? '#ffffff' : '#faf9f4' }}
         >
           {isShort
