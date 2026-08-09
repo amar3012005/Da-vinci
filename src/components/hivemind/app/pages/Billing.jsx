@@ -229,13 +229,18 @@ function planFromBackend(raw) {
   };
 }
 
+function hasActiveInvitationOnboarding(billing) {
+  const entitlement = billing?.entitlement;
+  if (entitlement?.source !== 'enterprise_invitation' || entitlement?.status !== 'active') return false;
+  if (!entitlement.effective_until) return true;
+  return new Date(entitlement.effective_until).getTime() > Date.now();
+}
+
 function CommercialJourney({ billing }) {
   const entitlement = billing?.entitlement;
   const invited = entitlement?.source === 'enterprise_invitation';
   if (!invited) return null;
-  const expiresAt = entitlement?.effective_until ? new Date(entitlement.effective_until) : null;
-  const onboarding = entitlement?.status === 'active'
-    && (!expiresAt || expiresAt.getTime() > Date.now());
+  const onboarding = hasActiveInvitationOnboarding(billing);
   const endsAt = entitlement?.effective_until
     ? new Date(entitlement.effective_until).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
@@ -370,6 +375,7 @@ export default function Billing() {
   const currentPlan = billing?.plan?.id || org?.plan || 'free';
   const canManageBilling = Boolean(billing?.can_manage_billing);
   const isEnterpriseWorkspace = billing?.billing_model === 'enterprise_contract' || currentPlan === 'enterprise';
+  const invitationOnboardingActive = hasActiveInvitationOnboarding(billing);
   const dummyCheckoutId = searchParams.get('dummy_checkout');
   const checkoutState = searchParams.get('checkout');
   const planOptions = Array.isArray(billing?.all_plans) && billing.all_plans.length
@@ -552,7 +558,7 @@ export default function Billing() {
       </motion.div>
 
       {/* Enterprise invitation holders configure the paid continuation here. */}
-      {org?.plan === 'enterprise' && <RunwayUpgradePanel />}
+      {org?.plan === 'enterprise' && !invitationOnboardingActive && <RunwayUpgradePanel />}
 
       {/* Invoices */}
       {canManageBilling && (
