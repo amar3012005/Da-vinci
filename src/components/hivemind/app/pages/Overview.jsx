@@ -847,7 +847,10 @@ function OverviewChat({ inputRef }) {
     const effProjectId = opts.projectId !== undefined ? opts.projectId : chatScope;
 
     const userMsg = { id: Date.now(), role: 'user', content: trimmed };
-    const fullHistory = [...messages, userMsg].slice(-10).map((m) => ({ role: m.role, content: m.content }));
+    // The current turn is sent separately as `message`; history contains only
+    // completed prior turns so the planner sees the grounded assistant answer
+    // once instead of seeing the current request twice.
+    const fullHistory = messages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
     // On a scope re-send, don't echo a duplicate user bubble — the original is already shown.
     if (!isResend) setMessages((prev) => [...prev, userMsg]);
     if (!isResend) setInput('');
@@ -1141,13 +1144,14 @@ function OverviewChat({ inputRef }) {
                 role="switch"
                 aria-checked={useTools}
                 onClick={toggleUseTools}
-                className="flex items-center gap-1.5 text-[10px] text-[#525252] hover:text-[#0a0a0a] transition-colors"
+                className={`group inline-flex h-8 items-center gap-2 rounded-full border px-2.5 transition-all ${useTools ? 'border-[#117dff]/30 bg-[#117dff]/[0.08] text-[#075fca]' : 'border-[#e3e0db] bg-white text-[#525252] hover:border-[#d4d0ca] hover:bg-[#faf9f4]'}`}
                 title={t('overview.chat.toolsHint', 'Allow connected apps for this message')}
               >
-                <span className={`relative h-5 w-9 rounded-full transition-colors ${useTools ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
-                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${useTools ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${useTools ? 'bg-[#117dff] text-white' : 'bg-[#f3f1ec] text-[#737373] group-hover:text-[#0a0a0a]'}`}>
+                  <Sparkles size={11} className={useTools ? 'animate-pulse' : ''} />
                 </span>
-                <span>{t('overview.chat.tools', 'Use tools')}</span>
+                <span className="text-[10px] font-semibold tracking-tight">{t('overview.chat.tools', 'Use tools')}</span>
+                <span className={`h-1.5 w-1.5 rounded-full transition-colors ${useTools ? 'bg-[#10b981]' : 'bg-[#d4d0ca]'}`} />
               </button>
               <AnimatePresence>
                 {toolsNotice && (

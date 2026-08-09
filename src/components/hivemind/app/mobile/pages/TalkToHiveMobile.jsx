@@ -351,7 +351,9 @@ export default function TalkToHiveMobile() {
     if (!trimmed || loading) return;
 
     const userMsg = { id: Date.now(), role: 'user', content: trimmed };
-    const fullHistory = [...messages, userMsg].slice(-10).map(m => ({ role: m.role, content: m.content }));
+    // `message` carries the current turn; keep history to completed prior
+    // turns so follow-up tool actions see the preceding grounded answer once.
+    const fullHistory = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
     setMessages((prev) => [...prev, userMsg]);
     if (fromInput) setInput('');
     setLoading(true);
@@ -923,13 +925,14 @@ export default function TalkToHiveMobile() {
               role="switch"
               aria-checked={useTools}
               onClick={toggleUseTools}
-              className="inline-flex items-center gap-1.5 h-9 px-2 text-[11px] text-[#525252] active:bg-[#f1eee7] rounded-full"
+              className={`group inline-flex h-9 items-center gap-2 rounded-full border px-2.5 transition-all active:scale-[0.98] ${useTools ? 'border-[#117dff]/30 bg-[#117dff]/[0.08] text-[#075fca]' : 'border-[#e3e0db] bg-white text-[#525252] active:bg-[#f3f1ec]'}`}
               title={t('overview.chat.toolsHint', 'Allow connected apps for this message')}
             >
-              <span className={`relative h-5 w-9 rounded-full transition-colors ${useTools ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
-                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${useTools ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+              <span className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${useTools ? 'bg-[#117dff] text-white' : 'bg-[#f3f1ec] text-[#737373]'}`}>
+                <Sparkles size={11} className={useTools ? 'animate-pulse' : ''} />
               </span>
-              <span>{t('overview.chat.tools', 'Use tools')}</span>
+              <span className="text-[11px] font-semibold tracking-tight">{t('overview.chat.tools', 'Use tools')}</span>
+              <span className={`h-1.5 w-1.5 rounded-full transition-colors ${useTools ? 'bg-[#10b981]' : 'bg-[#d4d0ca]'}`} />
             </button>
             <AnimatePresence>
               {toolsNotice && (

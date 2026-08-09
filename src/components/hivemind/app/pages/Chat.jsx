@@ -421,7 +421,7 @@ export function ChatPanel({ isOpen, onClose }) {
     if (!trimmed || loading) return;
 
     const userMsg = { id: Date.now(), role: 'user', content: trimmed };
-    const fullHistory = [...messages, userMsg].slice(-10).map(m => ({ role: m.role, content: m.content }));
+    const fullHistory = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
     setMessages((prev) => [...prev, userMsg]);
     if (fromInput) setInput('');
     setLoading(true);
