@@ -770,6 +770,16 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     let active = true;
     const check = async () => {
       try {
+        if (String(request.connector_provider || '').toLowerCase() === 'composio') {
+          await apiClient.recheckHqCapabilities();
+          const workData = await apiClient.getHqWork();
+          const pending = (workData?.capability_requests || []).some((row) => row.id === request.id);
+          if (active && !pending) {
+            capabilityWakeRef.current = request.id;
+            setWork(workData || { todos: [], capability_requests: [] });
+          }
+          return;
+        }
         const data = await apiClient.getConnectorConnectionStatus();
         const rows = data?.connectors || data || [];
         const wanted = String(request.provider || '').toLowerCase();
@@ -900,6 +910,22 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   const openCapability = async () => {
     if (!capabilityRequest?.connectPath) return;
     const provider = String(capabilityRequest.provider || '').toLowerCase();
+    const connectorProvider = String(capabilityRequest.connector_provider || '').toLowerCase();
+    if (connectorProvider === 'composio') {
+      const toolkitSlug = String(capabilityRequest.connector_toolkit || provider).toLowerCase();
+      const authWindow = window.open('', '_blank', 'noopener,noreferrer');
+      try {
+        const callbackUrl = `${window.location.origin}/hivemind/app/connectors?composio_toolkit=${encodeURIComponent(toolkitSlug)}`;
+        const data = await apiClient.createComposioConnectLink(toolkitSlug, { callbackUrl });
+        if (!data?.redirect_url) throw new Error('Composio did not return a connection URL');
+        if (authWindow) authWindow.location.href = data.redirect_url;
+        else window.open(data.redirect_url, '_blank', 'noopener,noreferrer');
+      } catch (requestError) {
+        if (authWindow) authWindow.close();
+        setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+      }
+      return;
+    }
     const platform = { x: 'twitter', linkedin: 'linkedin', instagram: 'instagram', facebook: 'facebook', tiktok: 'tiktok', youtube: 'youtube', pinterest: 'pinterest' }[provider];
     if (!platform) { window.open(capabilityRequest.connectPath, '_blank', 'noopener,noreferrer'); return; }
     const authWindow = window.open('', '_blank', 'noopener,noreferrer');
