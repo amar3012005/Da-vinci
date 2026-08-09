@@ -6,8 +6,8 @@ import { SLIDES, SlideVisual } from '../hivemind/app/shared/WelcomeFlow';
 
 /*
  * WaitlistModal — standalone singulancelabs.com waitlist capture.
- * NOT wired to HIVEMIND. Posts to same-origin /api/waitlist (a tiny relay that
- * writes one row per person into Notion).
+ * Posts to the canonical HIVEMIND access-application intake. The public form
+ * never creates an account or entitlement; an operator reviews it first.
  *
  * Light / day-mode split surface (matches the Cal "Talk to us" modal + the
  * post-login WelcomeSlides blueprint aesthetic):
@@ -132,9 +132,9 @@ export default function WaitlistModal({ open, onClose }) {
     if (!isLast) { setStep((s) => s + 1); return; }
     setState('sending');
     try {
-      const res = await fetch('/api/waitlist', {
+      const res = await fetch('https://api.singulancelabs.com/auth/access-applications', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, source: 'singulancelabs.com/hero' }),
+        body: JSON.stringify({ ...form, account_type: form.use?.toLowerCase(), source: 'singulancelabs.com/hero' }),
       });
       if (!res.ok) throw new Error(`status ${res.status}`);
       setState('done');

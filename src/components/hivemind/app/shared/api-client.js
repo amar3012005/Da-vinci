@@ -1320,6 +1320,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  async listPlatformAccessApplications(params = {}) {
+    const { data } = await this.controlPlane.get('/admin/api/platform/access-applications', { params });
+    return data;
+  }
+
+  async accessApplicationAction(id, action, payload = {}) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/access-applications/${id}/${action}`, payload);
+    return data;
+  }
+
   async getPlatformEnterpriseInvitation(id) {
     const { data } = await this.controlPlane.get(`/admin/api/platform/invitations/${id}`);
     return data;
