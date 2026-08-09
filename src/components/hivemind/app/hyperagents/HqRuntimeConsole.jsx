@@ -330,7 +330,7 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
           {!artifacts.length ? <p className="px-1 pb-1 text-[10px] text-[#9a948b]">Artifacts appear here as Room and provider checkpoints are accepted.</p> : null}
         </div> : null}
       </section>
-      <section aria-label="Runtime tasks">
+      <section aria-label="Runtime task list">
         <button type="button" onClick={() => setTasksExpanded((current) => !current)} className="flex w-full items-center gap-2 px-4 py-3 text-left" aria-expanded={tasksExpanded}>
           <ListTodo size={14} className="text-[#262626]" /><span className="flex-1 text-[13px] font-medium text-[#777168]">Runtime Tasks</span><span className="font-mono text-[8px] text-[#9a948b]">{queue.length} · {active.length} active</span><ChevronDown size={14} className={`text-[#777168] transition-transform ${tasksExpanded ? 'rotate-180' : ''}`} />
         </button>
