@@ -554,7 +554,7 @@ export function NarrativeEvent({ item, active }) {
   </div>;
 }
 
-function RuntimeTranscript({ events, state, tasks = [], campaigns = [], firstLife = null, experience = null, growthBrief = null, onFirstLifeDecision, onAdminDecision, liveSequence = null, liveNarration = null, tasksOpen = false, onCloseTasks }) {
+function RuntimeTranscript({ events, state, tasks = [], campaigns = [], pendingApproval = null, onOpenApproval, firstLife = null, experience = null, growthBrief = null, onFirstLifeDecision, onAdminDecision, liveSequence = null, liveNarration = null, tasksOpen = false, onCloseTasks }) {
   const working = isWorking(state);
   const chunks = [];
   for (const item of events) {
@@ -576,7 +576,12 @@ function RuntimeTranscript({ events, state, tasks = [], campaigns = [], firstLif
       <main className="min-w-0">{chunks.map((chunk) => chunk.type === 'execution'
         ? <ExecutionTrace key={`execution-${chunk.items[0]?.sequence}`} items={chunk.items} />
         : <NarrativeEvent key={chunk.item.id || chunk.item.sequence} item={chunk.item} active={working && chunk.item.details?.model_streamed !== true && String(chunk.item.sequence) === String(liveSequence || '')} />)}
-        {campaigns.map((campaign) => <RuntimeCampaignCanvas key={`${campaign.id}:${campaign.plan_version_id || 'draft'}`} campaign={campaign} />)}
+        {campaigns.filter((campaign) => !pendingApproval?.campaign || campaign.run_id !== pendingApproval.run_id)
+          .map((campaign) => <RuntimeCampaignCanvas key={`${campaign.id}:${campaign.plan_version_id || 'draft'}`} campaign={campaign} />)}
+        {pendingApproval?.campaign ? <section className="sticky bottom-0 z-20 mt-8 border-t border-black/15 bg-[#fbfaf7]/95 pb-3 pt-4 backdrop-blur-xl" data-testid="pending-campaign-authority">
+          <div className="mb-3 flex items-center justify-between gap-4 px-1"><div><div className="font-mono text-[9px] uppercase tracking-[0.16em] text-[#525252]">Campaign ready · approval required</div><p className="mt-1 text-[11px] text-[#777168]">These persisted posts remain here until you choose how Runtime may launch them.</p></div><button type="button" onClick={onOpenApproval} className="shrink-0 bg-[#171717] px-4 py-2 text-[11px] font-semibold text-white">Review and approve</button></div>
+          <RuntimeCampaignCanvas campaign={pendingApproval.campaign} />
+        </section> : null}
         <LiveModelNarration stream={liveNarration} />
         {working ? <div className="mt-7 border border-[#e7e4df] bg-white/70 px-4 py-3">
           <RuntimeLoader variant={STATE_GLYPH[state] || 'matrix'} label={(STATE_LABEL[state] || ['Thinking'])[0]} hint={(STATE_LABEL[state] || [null, 'Working through the next bounded action.'])[1]} />
@@ -1041,7 +1046,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       </div>
     </header>
     {error ? <div className="border-b border-red-200 bg-red-50 px-8 py-2 text-[10px] text-red-700">{error}</div> : null}
-    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length || liveNarration || work.campaign_previews?.length ? <RuntimeTranscript events={latest} state={runtime.state} tasks={runtimeQueue} campaigns={work.campaign_previews || []} firstLife={firstLifePlan} experience={firstLifeExperience} growthBrief={firstLifeExperience?.growth_brief || work.growth_brief || null} onFirstLifeDecision={reviewFirstLife} onAdminDecision={decideAdminCheckin} liveSequence={liveSequence} liveNarration={liveNarration} tasksOpen={tasksOpen} onCloseTasks={() => setTasksOpen(false)} /> : <RuntimePageLoader />}
+    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length || liveNarration || work.campaign_previews?.length ? <RuntimeTranscript events={latest} state={runtime.state} tasks={runtimeQueue} campaigns={work.campaign_previews || []} pendingApproval={playbookApproval} onOpenApproval={() => setDismissedWorkflowApprovalId(null)} firstLife={firstLifePlan} experience={firstLifeExperience} growthBrief={firstLifeExperience?.growth_brief || work.growth_brief || null} onFirstLifeDecision={reviewFirstLife} onAdminDecision={decideAdminCheckin} liveSequence={liveSequence} liveNarration={liveNarration} tasksOpen={tasksOpen} onCloseTasks={() => setTasksOpen(false)} /> : <RuntimePageLoader />}
     {/* Stick-to-bottom sentinel: the IntersectionObserver above follows it while the
         reader is at the end and glides the page down on new content. */}
     <div ref={transcriptBottomRef} aria-hidden="true" className="h-px w-full" />
