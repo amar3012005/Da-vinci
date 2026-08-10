@@ -1,6 +1,31 @@
-import React, { useMemo, useState } from 'react';
-import { Hexagon, KeyRound, Server, Terminal, Shield, BookOpen, ChevronRight, Copy, Check, Zap } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Hexagon, KeyRound, Server, Terminal, Shield, BookOpen, ChevronRight, ChevronDown, Copy, Check, Zap, HardDrive, Github, Star, Rocket, Download } from 'lucide-react';
 import { MEMORY_TOOLS, WEB_TOOLS, CODING_TOOLS, TEMPORAL_TOOLS } from './app/pages/McpServer';
+
+const ICARUS_REPO = 'amar3012005/ICARUS';
+
+function GithubStarBadge() {
+  const [stars, setStars] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(`https://api.github.com/repos/${ICARUS_REPO}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d) setStars(d.stargazers_count); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return (
+    <a href={`https://github.com/${ICARUS_REPO}`} target="_blank" rel="noreferrer"
+      className="inline-flex items-center gap-2 rounded-[8px] border border-[#e3e0db] bg-white px-3 py-1.5 text-[12px] font-medium text-[#0a0a0a] no-underline hover:border-[#c9c5bc]">
+      <Github size={14} />
+      {ICARUS_REPO}
+      <span className="flex items-center gap-1 rounded-[5px] bg-[#f3f1ec] px-1.5 py-0.5 text-[11px] font-mono text-[#525252]">
+        <Star size={11} className="text-[#e0a100]" fill="#e0a100" />
+        {stars === null ? '···' : stars.toLocaleString()}
+      </span>
+    </a>
+  );
+}
 
 /**
  * /hivemind/docs — public technical documentation.
@@ -89,40 +114,336 @@ function ToolCard({ tool }) {
   );
 }
 
-const NAV = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'api-keys', label: 'API key reference' },
-  { id: 'auth-headers', label: '— Auth headers' },
-  { id: 'key-lifecycle', label: '— Lifecycle & scopes' },
-  { id: 'mcp-setup', label: 'MCP server setup' },
-  { id: 'mcp-claude-code', label: '— Claude Code' },
-  { id: 'mcp-claude-ai', label: '— Claude.ai / Desktop' },
-  { id: 'mcp-cursor', label: '— Cursor & JSON clients' },
-  { id: 'mcp-stdio', label: '— stdio bridge' },
-  { id: 'mcp-verify', label: '— Verify the connection' },
-  { id: 'agents', label: 'Agent integrations' },
-  { id: 'agent-openclaw', label: '— OpenClaw' },
-  { id: 'agent-hermes', label: '— Hermes Agents' },
-  { id: 'agent-langchain', label: '— LangChain / custom' },
-  { id: 'agent-http', label: '— Any agent (raw HTTP)' },
-  { id: 'ingestion', label: 'Ingestion (uploads)' },
-  { id: 'ingest-file', label: '— Upload a file' },
-  { id: 'ingest-source', label: '— Text / URL / conversation' },
-  { id: 'ingest-status', label: '— Poll status' },
-  { id: 'ingest-types', label: '— Supported types' },
-  { id: 'recall', label: 'Recall & search' },
-  { id: 'recall-recall', label: '— Recall' },
-  { id: 'recall-chat', label: '— Grounded chat' },
-  { id: 'documents', label: 'Documents & memories' },
-  { id: 'tools-memory', label: 'Tools · Memory' },
-  { id: 'tools-web', label: 'Tools · Web intelligence' },
-  { id: 'tools-coding', label: 'Tools · Coding' },
-  { id: 'tools-temporal', label: 'Tools · Time travel' },
-  { id: 'best-practices', label: 'Best practices' },
+// Composio-style grouped sidebar: named product sections, each collapsible, each a real
+// heading in the page — not a flat anchor dump. Two products, two sidebars — HIVEMIND (the
+// hosted platform) and ICARUS (the open-source self-host engine), switched by the top-nav tab,
+// exactly like Composio's own Docs/Examples/Toolkits/Reference tabs each own their content.
+const HIVEMIND_GROUPS = [
+  {
+    title: 'Get started',
+    items: [
+      { id: 'overview', label: 'Overview' },
+      { id: 'api-keys', label: 'API key reference' },
+      { id: 'auth-headers', label: 'Auth headers' },
+      { id: 'key-lifecycle', label: 'Lifecycle & scopes' },
+    ],
+  },
+  {
+    title: 'MCP server',
+    items: [
+      { id: 'mcp-setup', label: 'Setting up the server' },
+      { id: 'mcp-claude-code', label: 'Claude Code' },
+      { id: 'mcp-claude-ai', label: 'Claude.ai / Desktop' },
+      { id: 'mcp-cursor', label: 'Cursor & JSON clients' },
+      { id: 'mcp-stdio', label: 'stdio bridge' },
+      { id: 'mcp-verify', label: 'Verify the connection' },
+    ],
+  },
+  {
+    title: 'Agent integrations',
+    items: [
+      { id: 'agents', label: 'Overview' },
+      { id: 'agent-openclaw', label: 'OpenClaw' },
+      { id: 'agent-hermes', label: 'Hermes Agents' },
+      { id: 'agent-langchain', label: 'LangChain / custom' },
+      { id: 'agent-http', label: 'Any agent (raw HTTP)' },
+    ],
+  },
+  {
+    title: 'REST API',
+    items: [
+      { id: 'ingestion', label: 'Ingestion (uploads)' },
+      { id: 'ingest-file', label: 'Upload a file' },
+      { id: 'ingest-source', label: 'Text / URL / conversation' },
+      { id: 'ingest-status', label: 'Poll status' },
+      { id: 'ingest-types', label: 'Supported types' },
+      { id: 'recall', label: 'Recall & search' },
+      { id: 'recall-recall', label: 'Recall' },
+      { id: 'recall-chat', label: 'Grounded chat' },
+      { id: 'documents', label: 'Documents & memories' },
+    ],
+  },
+  {
+    title: 'MCP tool reference',
+    items: [
+      { id: 'tools-memory', label: 'Memory' },
+      { id: 'tools-web', label: 'Web intelligence' },
+      { id: 'tools-coding', label: 'Coding' },
+      { id: 'tools-temporal', label: 'Time travel' },
+    ],
+  },
+  {
+    title: 'Reference',
+    items: [{ id: 'best-practices', label: 'Best practices' }],
+  },
 ];
 
+const ICARUS_GROUPS = [
+  {
+    title: 'Get started',
+    items: [
+      { id: 'selfhost-icarus', label: 'The .amr engine' },
+      { id: 'selfhost-install', label: 'Install' },
+      { id: 'selfhost-quickstart', label: 'Quickstart' },
+    ],
+  },
+  {
+    title: 'Guides',
+    items: [
+      { id: 'selfhost-bm25', label: 'Native BM25 search' },
+      { id: 'selfhost-frameworks', label: 'LangChain / LlamaIndex' },
+      { id: 'selfhost-scope', label: 'Engine vs. platform' },
+    ],
+  },
+];
+
+function Sidebar({ groups }) {
+  const [open, setOpen] = useState(() => Object.fromEntries(groups.map((g) => [g.title, true])));
+  useEffect(() => {
+    setOpen(Object.fromEntries(groups.map((g) => [g.title, true])));
+  }, [groups]);
+  return (
+    <div className="sticky top-20 space-y-4">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Documentation</div>
+      {groups.map((g) => (
+        <div key={g.title}>
+          <button
+            onClick={() => setOpen((o) => ({ ...o, [g.title]: !o[g.title] }))}
+            className="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a] uppercase tracking-wide"
+          >
+            {g.title}
+            {open[g.title] ? <ChevronDown size={12} className="text-[#a3a3a3]" /> : <ChevronRight size={12} className="text-[#a3a3a3]" />}
+          </button>
+          {open[g.title] && (
+            <div className="mt-0.5 space-y-0.5">
+              {g.items.map((n) => (
+                <a key={n.id} href={`#${n.id}`}
+                  className="block px-2 py-1 pl-4 rounded-[6px] text-[12px] no-underline text-[#525252] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]">
+                  {n.label}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Framework-selector tabs — Composio's "pick your language" pattern.
+function FrameworkTabs({ tabs }) {
+  const [active, setActive] = useState(0);
+  return (
+    <div className="rounded-[10px] border border-[#e3e0db] bg-white overflow-hidden my-3">
+      <div className="flex items-center gap-1 px-2 pt-2 border-b border-[#e3e0db] bg-[#faf9f4]">
+        {tabs.map((t, i) => (
+          <button
+            key={t.label}
+            onClick={() => setActive(i)}
+            className={`px-3 py-1.5 text-[11px] font-mono rounded-t-[6px] -mb-px border ${i === active ? 'bg-white border-[#e3e0db] border-b-white text-[#0a0a0a] font-semibold' : 'border-transparent text-[#a3a3a3] hover:text-[#525252]'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <CodeBlock label={tabs[active].label}>{tabs[active].code}</CodeBlock>
+    </div>
+  );
+}
+
+// ── ICARUS — self-host product docs (its own top-nav tab, its own landing) ─────────────────
+function IcarusDocs() {
+  return (
+    <>
+      {/* Composio-style product hero: headline, subtitle, three jump cards, GitHub badge */}
+      <Eyebrow>OPEN SOURCE · SELF-HOST</Eyebrow>
+      <h1 className="text-[34px] leading-[1.08] font-medium font-['Space_Grotesk'] text-[#0a0a0a] tracking-tight">Start building with ICARUS.</h1>
+      <P>
+        A memory filesystem for AI agents: one memory-mapped <Mono>.amr</Mono> file per tenant, fusing semantic,
+        entity, bi-temporal, and graph recall in a single read. Apache-2.0, Rust core, Node + Python bindings,
+        drop-in for a Qdrant client — <strong className="text-[#0a0a0a]">run it yourself, on your own box.</strong>
+      </P>
+      <div className="mt-4"><GithubStarBadge /></div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <a href="#selfhost-quickstart" className="flex items-center gap-3 rounded-[10px] border border-[#e3e0db] bg-white p-4 no-underline hover:border-[#117dff] hover:shadow-sm">
+          <Rocket size={18} className="text-[#117dff] shrink-0" />
+          <div>
+            <div className="text-[13px] font-semibold text-[#0a0a0a]">Quickstart</div>
+            <div className="text-[11.5px] text-[#737373]">Node · Python · CLI in 5 lines</div>
+          </div>
+        </a>
+        <a href="#selfhost-install" className="flex items-center gap-3 rounded-[10px] border border-[#e3e0db] bg-white p-4 no-underline hover:border-[#117dff] hover:shadow-sm">
+          <Download size={18} className="text-[#117dff] shrink-0" />
+          <div>
+            <div className="text-[13px] font-semibold text-[#0a0a0a]">Install</div>
+            <div className="text-[11.5px] text-[#737373]">One-liner or build from source</div>
+          </div>
+        </a>
+        <a href={`https://github.com/${ICARUS_REPO}`} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-[10px] border border-[#e3e0db] bg-white p-4 no-underline hover:border-[#117dff] hover:shadow-sm">
+          <Github size={18} className="text-[#117dff] shrink-0" />
+          <div>
+            <div className="text-[13px] font-semibold text-[#0a0a0a]">GitHub</div>
+            <div className="text-[11.5px] text-[#737373]">Source, SPEC.md, THESIS.md, issues</div>
+          </div>
+        </a>
+      </div>
+
+      {/* ── The engine ── */}
+      <section id="selfhost-icarus" className="mt-12">
+        <Eyebrow>01 · OVERVIEW</Eyebrow>
+        <H2 id="selfhost-icarus">ICARUS — the <Mono>.amr</Mono> memory engine</H2>
+        <P>
+          Every storage mode HIVEMIND runs (<Mono>hybrid</Mono>, <Mono>amr</Mono>, <Mono>byod</Mono>) shares one
+          recall contract. <strong className="text-[#0a0a0a]">ICARUS</strong> is the open-source engine behind
+          the <Mono>amr</Mono> mode: a per-tenant memory-mapped file (<Mono>.amr</Mono>) fusing semantic, entity,
+          bi-temporal, and graph recall in one read — no server, no network hop.
+        </P>
+        <table className="w-full mt-3 text-[12.5px]">
+          <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold" /><th className="py-1.5 pr-3 font-semibold">ICARUS</th><th className="py-1.5 font-semibold">Qdrant (REST, same data)</th></tr></thead>
+          <tbody className="divide-y divide-[#eae7e1]">
+            {[
+              ['recall@10 @ 1M vectors', '1.33 ms', '2.06 ms'],
+              ['recall quality (recall@5 vs exact)', '1.00', '1.00'],
+              ['storage per memory', '~600 B', '~4,500 B'],
+              ['vector compression', '32× (PQ)', '4× (int8)'],
+              ['infrastructure', 'one mmap’d file', 'cluster'],
+            ].map(([m, a, b]) => (
+              <tr key={m}><td className="py-1.5 pr-3 text-[#737373] whitespace-nowrap">{m}</td><td className="py-1.5 pr-3 font-mono font-semibold text-[#117dff]">{a}</td><td className="py-1.5 font-mono text-[#525252]">{b}</td></tr>
+            ))}
+          </tbody>
+        </table>
+        <P className="text-[12px]">Repo: <a className="text-[#117dff]" href={`https://github.com/${ICARUS_REPO}`} target="_blank" rel="noreferrer">github.com/{ICARUS_REPO}</a> · format RFC: <Mono>SPEC.md</Mono> · design + benchmarks: <Mono>THESIS.md</Mono>.</P>
+      </section>
+
+      {/* ── Install ── */}
+      <section id="selfhost-install" className="mt-12">
+        <Eyebrow>02 · INSTALL</Eyebrow>
+        <H2 id="selfhost-install">Install</H2>
+        <CodeBlock label="terminal · one-liner">{`curl -fsSL https://raw.githubusercontent.com/${ICARUS_REPO}/main/install.sh | bash`}</CodeBlock>
+        <P>Installs the toolchain if missing, builds the native addon, installs the <Mono>mneme</Mono> CLI to <Mono>~/.mneme</Mono>. Manual build:</P>
+        <CodeBlock label="terminal · manual">{`git clone https://github.com/${ICARUS_REPO}
+cd ICARUS/crate/mneme-node && npm install && npx napi build --release`}</CodeBlock>
+      </section>
+
+      {/* ── Quickstart ── */}
+      <section id="selfhost-quickstart" className="mt-12">
+        <Eyebrow>03 · QUICKSTART</Eyebrow>
+        <H2 id="selfhost-quickstart">Quickstart</H2>
+        <P>One Rust core, two language bindings — same on-disk format, identical behavior. Pick one:</P>
+        <FrameworkTabs tabs={[
+          {
+            label: 'Node',
+            code: `const { MnemeVectorStore } = require('singulance-amr'); // drop-in for QdrantVectorStore
+
+const store = new MnemeVectorStore({ dataRoot: '~/.mneme/data', dim: 1024 });
+await store.upsert('org_acme', [
+  { id: 'm1', vector: embed('user prefers dark mode'), payload: { kind: 'preference' } },
+]);
+const hits = await store.search('org_acme', embed('ui settings'), 5); // [{ id, score, payload }]`,
+          },
+          {
+            label: 'Python',
+            code: `pip install mneme-python
+# then
+from mneme_python import MnemeStore
+
+store = MnemeStore("/path/to/data", "org_acme", dim=1024)
+store.insert("user prefers dark mode", embed("user prefers dark mode"), valid_from=0)
+hits = store.recall(embed("ui settings"), top_k=5)  # [MnemeHit(slot_id, score, text), ...]`,
+          },
+          {
+            label: 'CLI',
+            code: `mneme ingest <dir> --org acme     # extract + embed + store a folder of docs
+mneme recall "your question" --org acme
+mneme compact --org acme
+mneme status`,
+          },
+        ]} />
+      </section>
+
+      {/* ── BM25 ── */}
+      <section id="selfhost-bm25" className="mt-12">
+        <Eyebrow>04 · GUIDES</Eyebrow>
+        <H2 id="selfhost-bm25">Native BM25 lexical search</H2>
+        <P>
+          Real document-frequency/IDF statistics (Okapi BM25), not a substring heuristic. One shared crate
+          (<Mono>mneme-bm25</Mono>) used identically by both bindings — the same corpus and query produce the
+          same score in Node and Python, not just similar ones.
+        </P>
+        <FrameworkTabs tabs={[
+          { label: 'Node', code: `const hits = store.bm25Search('warranty terms', 10);` },
+          { label: 'Python', code: `hits = store.bm25_search("warranty terms", top_k=10)` },
+        ]} />
+        <P className="text-[12px]">Language-neutral tokenization (lowercase, Unicode-alphanumeric split — no stemming, no stopword list). <strong className="text-[#0a0a0a]">Known limitation:</strong> results are not currently layer-filterable (0=memory/1=evidence/2=cognitive).</P>
+      </section>
+
+      {/* ── Frameworks ── */}
+      <section id="selfhost-frameworks" className="mt-12">
+        <Eyebrow>05 · GUIDES</Eyebrow>
+        <H2 id="selfhost-frameworks">LangChain / LlamaIndex</H2>
+        <P>Optional, lazy-imported adapters over the Python binding — neither is a dependency of the core:</P>
+        <CodeBlock label="terminal">{`pip install "mneme-python[langchain]"   # LangChain BaseRetriever
+pip install "mneme-python[llamaindex]"  # LlamaIndex vector store`}</CodeBlock>
+        <FrameworkTabs tabs={[
+          {
+            label: 'LangChain',
+            code: `from mneme_python import MnemeStore
+from mneme_integrations.langchain import MnemeRetriever
+
+store = MnemeStore("/path/to/data", "my-org", dim=1024)
+retriever = MnemeRetriever(store=store, embed_query=my_embedding_fn, top_k=5)
+docs = retriever.invoke("what's our warranty policy?")`,
+          },
+          {
+            label: 'LlamaIndex',
+            code: `from mneme_python import MnemeStore
+from mneme_integrations.llamaindex import MnemeVectorStore
+
+store = MnemeVectorStore(mneme=MnemeStore("/path/to/data", "my-org", dim=1024))
+store.add(nodes)
+result = store.query(VectorStoreQuery(query_embedding=my_vec, similarity_top_k=5))`,
+          },
+        ]} />
+      </section>
+
+      {/* ── Engine vs. platform ── */}
+      <section id="selfhost-scope" className="mt-12 mb-20">
+        <Eyebrow>06 · GUIDES</Eyebrow>
+        <H2 id="selfhost-scope">Engine vs. platform</H2>
+        <P>
+          ICARUS is the storage substrate, not the whole product — it is exactly what <Mono>amr</Mono> mode
+          runs on inside HIVEMIND. The cognition layer on top — <strong className="text-[#0a0a0a]">typed
+          relationship edges, entity co-mention, temporal synthesis, conflict resolution, dreaming/consolidation</strong> —
+          already exists and runs live in HIVEMIND today, on every storage mode, ICARUS included. It is not a
+          gap and not on a roadmap; it is the layer this open-source engine plugs into.
+        </P>
+        <ul className="space-y-2 text-[13px] text-[#525252] list-none">
+          {[
+            ['The open-source engine is', 'a per-org vector + temporal + graph-adjacency storage primitive. Drop-in for the Qdrant layer. Local, mmap’d, no server.'],
+            ['PQC / BYOK', 'not yet in the open-source engine itself — planned, needs its own threat model before shipping there. HIVEMIND’s hosted signing (ML-DSA-65) is separate and already live in production.'],
+          ].map(([tt, dd]) => (
+            <li key={tt} className="flex gap-2.5">
+              <HardDrive size={14} className="text-[#117dff] shrink-0 mt-0.5" />
+              <span><strong className="text-[#0a0a0a]">{tt}.</strong> {dd}</span>
+            </li>
+          ))}
+        </ul>
+        <CodeBlock label="build / test from source">{`cd crate
+cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+
+cd mneme-python
+pip install maturin && maturin develop --release
+pip install -e ".[test]" && pytest tests/ -v`}</CodeBlock>
+      </section>
+    </>
+  );
+}
+
 export default function DocsPage() {
-  const groups = useMemo(() => ([
+  const [product, setProduct] = useState('hivemind'); // 'hivemind' | 'icarus'
+  const toolGroups = useMemo(() => ([
     { id: 'tools-memory', title: 'Memory tools', count: MEMORY_TOOLS.length, tools: MEMORY_TOOLS, blurb: 'The core read/write surface of the memory engine. Every durable fact, decision, and conversation flows through these.' },
     { id: 'tools-web', title: 'Web intelligence tools', count: WEB_TOOLS.length, tools: WEB_TOOLS, blurb: 'Live web search + crawl with an async job model: submit → poll → read results. Quota-metered per workspace.' },
     { id: 'tools-coding', title: 'Coding intelligence tools', count: CODING_TOOLS.length, tools: CODING_TOOLS, blurb: 'Purpose-built for AI coding assistants: version-chained code ingestion, bug recall, decision logging, refactor tracking, test coverage, and "why does this code exist".' },
@@ -131,39 +452,48 @@ export default function DocsPage() {
 
   return (
     <div className="min-h-screen bg-[#faf9f4]">
-      {/* ── SINGULANCE navbar ── */}
-      <header className="sticky top-0 z-30 h-14 bg-[#faf9f4]/90 backdrop-blur-xl border-b border-[#e3e0db] flex items-center justify-between px-5 md:px-8">
-        <div className="flex items-center gap-3 min-w-0">
-          <a href="https://singulancelabs.com" className="text-[12px] font-bold font-['Space_Grotesk'] tracking-[0.22em] text-[#0a0a0a] no-underline">SINGULANCE</a>
-          <span className="text-[#d4d0ca]">/</span>
-          <a href="/hivemind" className="flex items-center gap-1.5 no-underline">
-            <Hexagon size={14} className="text-[#117dff]" />
-            <span className="text-[12px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">HIVEMIND</span>
-          </a>
-          <span className="hidden sm:inline text-[10px] font-mono uppercase tracking-[0.2em] text-[#a3a3a3]">Docs</span>
+      {/* ── SINGULANCE navbar — top-level product tabs, Composio's Docs/Examples/Toolkits pattern ── */}
+      <header className="sticky top-0 z-30 bg-[#faf9f4]/90 backdrop-blur-xl border-b border-[#e3e0db] px-5 md:px-8">
+        <div className="h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <a href="https://singulancelabs.com" className="text-[12px] font-bold font-['Space_Grotesk'] tracking-[0.22em] text-[#0a0a0a] no-underline">SINGULANCE</a>
+            <span className="text-[#d4d0ca]">/</span>
+            <a href="/hivemind" className="flex items-center gap-1.5 no-underline">
+              <Hexagon size={14} className="text-[#117dff]" />
+              <span className="text-[12px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">HIVEMIND</span>
+            </a>
+            <span className="hidden sm:inline text-[10px] font-mono uppercase tracking-[0.2em] text-[#a3a3a3]">Docs</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <a href="/hivemind/login" className="px-3 py-1.5 rounded-[6px] text-[12px] text-[#525252] hover:text-[#0a0a0a] no-underline">Sign in</a>
+            <a href="/hivemind/app/mcp" className="px-3 py-1.5 rounded-[6px] bg-[#117dff] hover:bg-[#0066e0] text-white text-[12px] font-semibold no-underline">Open console</a>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <a href="/hivemind/login" className="px-3 py-1.5 rounded-[6px] text-[12px] text-[#525252] hover:text-[#0a0a0a] no-underline">Sign in</a>
-          <a href="/hivemind/app/mcp" className="px-3 py-1.5 rounded-[6px] bg-[#117dff] hover:bg-[#0066e0] text-white text-[12px] font-semibold no-underline">Open console</a>
+        <div className="flex items-center gap-6 h-10">
+          {[
+            { id: 'hivemind', label: 'HIVEMIND' },
+            { id: 'icarus', label: 'ICARUS · self-host' },
+          ].map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setProduct(t.id)}
+              className={`h-full text-[12.5px] font-medium border-b-2 -mb-px ${product === t.id ? 'border-[#117dff] text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </header>
 
       <div className="max-w-[1200px] mx-auto flex gap-10 px-5 md:px-8 py-10">
         {/* ── TOC ── */}
-        <nav className="hidden lg:block w-56 shrink-0">
-          <div className="sticky top-20 space-y-0.5">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-2">On this page</div>
-            {NAV.map((n) => (
-              <a key={n.id} href={`#${n.id}`}
-                className={`block px-2 py-1 rounded-[6px] text-[12px] no-underline hover:bg-[#f3f1ec] hover:text-[#0a0a0a] ${n.label.startsWith('—') ? 'text-[#a3a3a3] pl-4' : 'text-[#525252] font-medium'}`}>
-                {n.label.replace('— ', '')}
-              </a>
-            ))}
-          </div>
+        <nav className="hidden lg:block w-60 shrink-0">
+          <Sidebar groups={product === 'hivemind' ? HIVEMIND_GROUPS : ICARUS_GROUPS} />
         </nav>
 
         {/* ── Content ── */}
         <main className="flex-1 min-w-0 max-w-[760px]">
+          {product === 'icarus' ? <IcarusDocs /> : <>
           <Eyebrow>DEVELOPER DOCUMENTATION</Eyebrow>
           <h1 className="text-[34px] leading-[1.08] font-medium font-['Space_Grotesk'] text-[#0a0a0a] tracking-tight">HIVEMIND API & MCP reference</h1>
           <P>
@@ -555,7 +885,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
           </section>
 
           {/* ── Tool reference ── */}
-          {groups.map((g, gi) => (
+          {toolGroups.map((g, gi) => (
             <section key={g.id} id={g.id} className="mt-12">
               <Eyebrow>{String(8 + gi).padStart(2, '0')} · MCP TOOL REFERENCE</Eyebrow>
               <H2 id={g.id}>{g.title} <span className="text-[#a3a3a3] font-mono text-[14px]">[{g.count}]</span></H2>
@@ -591,6 +921,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
               <span className="flex items-center gap-1.5"><KeyRound size={11} className="text-[#117dff]/60" /> <ChevronRight size={10} /> /hivemind/app/keys</span>
             </div>
           </section>
+          </>}
         </main>
       </div>
     </div>
