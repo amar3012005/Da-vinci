@@ -13,6 +13,7 @@ import Features from './Features';
 import Developers from './Developers';
 import Pricing from './Pricing';
 import DownloadMacButton from './DownloadMacButton';
+import DownloadAllPlatforms from './DownloadAllPlatforms';
 import ChatDemoCard from './ChatDemoCard';
 import MinimalGraphIcon from './MinimalGraphIcon';
 import CinematicScrollScene from '../../mobile/CinematicScrollScene';
@@ -584,7 +585,7 @@ const FinalCta = () => (
           style={{ background: BLUE }}>
           Get HIVEMIND <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
         </motion.a>
-        <DownloadMacButton />
+        <DownloadAllPlatforms />
         <a href="https://singulancelabs.com/benchmark" className="font-mono text-[12px] uppercase tracking-[0.18em] text-[#6b6b6b] no-underline hover:text-[#0a0a0a]">
           see the benchmark →
         </a>
