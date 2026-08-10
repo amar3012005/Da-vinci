@@ -14,7 +14,7 @@ function selectedAsset(action = {}) {
   const assets = action.assets || [];
   return assets.find((asset) => asset.id === action.payload?.asset_id)
     || assets.find((asset) => ['READY', 'APPROVED'].includes(asset.status))
-    || assets.find((asset) => ['QUEUED', 'GENERATING'].includes(asset.status))
+    || assets.find((asset) => ['QUEUED', 'GENERATING', 'WAITING_QUOTA'].includes(asset.status))
     || null;
 }
 
@@ -30,19 +30,20 @@ function TextCreative({ text, dark = false, className = '' }) {
 }
 
 function GeneratingCreative({ className = '', status = 'GENERATING' }) {
-  return <div className={`relative isolate overflow-hidden bg-[#111318] text-white ${className}`} aria-label="Campaign visual is generating">
+  const waitingForCapacity = status === 'WAITING_QUOTA';
+  return <div className={`relative isolate overflow-hidden bg-[#111318] text-white ${className}`} aria-label={waitingForCapacity ? 'Campaign visual is waiting for capacity' : 'Campaign visual is generating'}>
     <style>{`@keyframes hm-campaign-particle{0%{opacity:.08;transform:translate3d(0,18px,0) scale(.75)}45%{opacity:.85}100%{opacity:.04;transform:translate3d(10px,-34px,0) scale(1.3)}}@keyframes hm-campaign-scan{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}@media(prefers-reduced-motion:reduce){.hm-campaign-particle,.hm-campaign-scan{animation:none!important;opacity:.35!important}}`}</style>
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(61,120,255,0.25),transparent_58%)]" />
     {Array.from({ length: 30 }, (unused, index) => <span key={index} className="hm-campaign-particle absolute h-1 w-1 rounded-full bg-[#76a8ff]" style={{ left: `${8 + ((index * 29) % 86)}%`, top: `${12 + ((index * 37) % 78)}%`, animation: `hm-campaign-particle ${1.8 + (index % 7) * 0.19}s ease-in-out ${(index % 11) * 0.12}s infinite` }} />)}
     <span className="hm-campaign-scan absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent" style={{ animation: 'hm-campaign-scan 2.4s ease-in-out infinite' }} />
-    <div className="relative grid h-full min-h-[180px] place-items-center p-6 text-center"><div><div className="mx-auto h-8 w-8 rounded-full border border-white/25 border-r-[#76a8ff] animate-spin" /><div className="mt-3 font-mono text-[9px] uppercase tracking-[0.18em] text-white/80">{status === 'QUEUED' ? 'Visual queued' : 'Rendering visual'}</div><p className="mt-1 text-[10px] text-white/45">Caption and schedule are already retained.</p></div></div>
+    <div className="relative grid h-full min-h-[180px] place-items-center p-6 text-center"><div><div className={`mx-auto h-8 w-8 rounded-full border border-white/25 border-r-[#76a8ff] ${waitingForCapacity ? '' : 'animate-spin'}`} /><div className="mt-3 font-mono text-[9px] uppercase text-white/80">{waitingForCapacity ? 'Waiting for image capacity' : status === 'QUEUED' ? 'Visual queued' : 'Rendering visual'}</div><p className="mt-1 text-[10px] text-white/45">{waitingForCapacity ? 'The campaign is retained and will resume automatically.' : 'Caption and schedule are already retained.'}</p></div></div>
   </div>;
 }
 
 function Creative({ action, className = '', dark = false }) {
   const asset = selectedAsset(action);
   const text = actionCopy(action);
-  if (asset && ['QUEUED', 'GENERATING'].includes(asset.status)) return <GeneratingCreative className={className} status={asset.status} />;
+  if (asset && ['QUEUED', 'GENERATING', 'WAITING_QUOTA'].includes(asset.status)) return <GeneratingCreative className={className} status={asset.status} />;
   return asset
     ? <CampaignAssetImage asset={asset} alt={asset.metadata?.alt_text || action.payload?.asset_alt_text || ''} className={`w-full object-cover ${className}`} />
     : <TextCreative text={text} dark={dark} className={className} />;
@@ -56,10 +57,10 @@ function Meta({ action, label }) {
 }
 
 export function XPostPreview({ action, accountName }) {
-  return <article className="mx-auto flex h-full w-full max-w-[510px] flex-col overflow-hidden rounded-[8px] border border-[#cfd4d8] bg-white text-[#0f1419] shadow-[0_1px_2px_rgba(15,20,25,0.06)]" aria-label="X post preview">
+  return <article className="mx-auto flex h-full w-full max-w-[510px] flex-col overflow-hidden rounded-[8px] border border-[#d8dde1] bg-white text-[#0f1419] shadow-[0_8px_24px_rgba(15,20,25,0.06)]" aria-label="X post preview">
     <div className="flex min-h-0 flex-1 flex-col p-4">
-      <div className="flex items-start gap-3"><Initials name={accountName} tone="bg-[#0f1419] text-white" /><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-1"><strong className="truncate text-[14px]">{accountName}</strong><span className="shrink-0 text-[12px] text-[#536471]">@company</span></div><p className="mt-2 max-h-[96px] overflow-y-auto whitespace-pre-wrap pr-1 text-[14px] leading-5">{actionCopy(action)}</p></div><MoreHorizontal size={18} className="shrink-0 text-[#536471]" /></div>
-      <Creative action={action} className="mt-3 aspect-video max-h-[270px] shrink-0 rounded-[8px] border border-[#cfd4d8]" />
+      <div className="flex items-start gap-3"><Initials name={accountName} tone="bg-[#0f1419] text-white" /><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-1"><strong className="truncate text-[14px]">{accountName}</strong><span className="shrink-0 text-[12px] text-[#536471]">@company</span></div><p className="mt-2 max-h-[84px] overflow-y-auto whitespace-pre-wrap pr-1 text-[14px] leading-5">{actionCopy(action)}</p></div><MoreHorizontal size={18} className="shrink-0 text-[#536471]" /></div>
+      <Creative action={action} className="mt-3 aspect-video max-h-[230px] min-h-0 shrink-0 rounded-[8px] border border-[#d8dde1]" />
       <div className="mt-auto"><Meta action={action} label="X post" />
       <div className="mt-3 flex items-center justify-between border-t border-[#eff1f2] pt-3 text-[#536471]"><MessageCircle size={18} /><Repeat2 size={18} /><Heart size={18} /><Bookmark size={18} /><Share size={18} /></div></div>
     </div>
@@ -130,12 +131,18 @@ export function RuntimeCampaignCanvas({ campaign }) {
   const visualActions = actions.filter((action) => action.payload?.creative_brief?.required === true || (action.assets || []).length);
   const readyCount = visualActions.filter((action) => ['READY', 'APPROVED'].includes(selectedAsset(action)?.status)).length;
   const pendingCount = visualActions.filter((action) => (action.assets || []).some((asset) => ['QUEUED', 'GENERATING'].includes(asset.status))).length;
+  const capacityCount = visualActions.filter((action) => (action.assets || []).some((asset) => asset.status === 'WAITING_QUOTA')).length;
+  const progressLabel = capacityCount
+    ? `${capacityCount} visual${capacityCount === 1 ? '' : 's'} waiting for image capacity`
+    : pendingCount
+      ? `${pendingCount} visual${pendingCount === 1 ? '' : 's'} rendering`
+      : 'Campaign posts ready';
   const move = (direction) => scrollRef.current?.scrollBy({ left: direction * scrollRef.current.clientWidth, behavior: 'smooth' });
   if (!actions.length) return null;
   return <section className="my-7 border-y border-[#ddd9d2] py-5" aria-label="Campaign posts rendering">
-    <div className="mb-4 flex items-center justify-between gap-4 px-1"><div className="min-w-0"><div className="font-mono text-[8px] uppercase tracking-[0.16em] text-[#777168]">Campaign Intelligence</div><h3 className="mt-1 truncate text-[16px] font-semibold text-[#171717]">{accountName}</h3><div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-[#777168]"><span>{pendingCount ? `${pendingCount} visual${pendingCount === 1 ? '' : 's'} rendering` : 'Campaign posts ready'}</span>{visualActions.length ? <span className="rounded-full bg-[#efede9] px-2 py-0.5 font-mono text-[8px] uppercase text-[#625f58]">{readyCount}/{visualActions.length} ready</span> : null}</div></div><div className="flex shrink-0 gap-2"><button type="button" onClick={() => move(-1)} className="grid h-10 w-10 place-items-center rounded-[6px] border border-[#d8d3cc] bg-white text-[#525252] transition-colors hover:bg-[#f5f3ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315ed0]" aria-label="Previous campaign posts"><ChevronLeft size={18} /></button><button type="button" onClick={() => move(1)} className="grid h-10 w-10 place-items-center rounded-[6px] border border-[#d8d3cc] bg-white text-[#171717] transition-colors hover:bg-[#f5f3ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315ed0]" aria-label="Next campaign posts"><ChevronRight size={18} /></button></div></div>
+    <div className="mb-4 flex items-center justify-between gap-4 px-1"><div className="min-w-0"><div className="font-mono text-[8px] uppercase text-[#777168]">Campaign Intelligence</div><h3 className="mt-1 truncate text-[16px] font-semibold text-[#171717]">{accountName}</h3><div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-[#777168]"><span>{progressLabel}</span>{visualActions.length ? <span className="rounded-full bg-[#efede9] px-2 py-0.5 font-mono text-[8px] uppercase text-[#625f58]">{readyCount}/{visualActions.length} ready</span> : null}</div></div><div className="flex shrink-0 gap-2"><button type="button" onClick={() => move(-1)} className="grid h-9 w-9 place-items-center rounded-[6px] border border-[#d8d3cc] bg-white text-[#525252] transition-colors hover:bg-[#f5f3ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315ed0]" aria-label="Previous campaign posts"><ChevronLeft size={17} /></button><button type="button" onClick={() => move(1)} className="grid h-9 w-9 place-items-center rounded-[6px] border border-[#d8d3cc] bg-white text-[#171717] transition-colors hover:bg-[#f5f3ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315ed0]" aria-label="Next campaign posts"><ChevronRight size={17} /></button></div></div>
     <div ref={scrollRef} className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {actions.map((action) => <div key={action.id} className="h-[560px] w-full shrink-0 snap-start sm:w-[calc(50%-8px)] xl:w-[calc(33.333%-11px)]"><PlatformActionPreview action={action} accountName={accountName} /></div>)}
+      {actions.map((action) => <div key={action.id} className="h-[440px] w-full shrink-0 snap-start sm:w-[calc(50%-8px)] xl:w-[calc(33.333%-11px)]"><PlatformActionPreview action={action} accountName={accountName} /></div>)}
     </div>
   </section>;
 }

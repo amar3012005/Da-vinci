@@ -118,7 +118,22 @@ test('renders queued campaign visuals as a three-up Runtime carousel without hid
   expect(markup).toContain('Persisted caption 1');
   expect(markup).toContain('Rendering visual');
   expect(markup).toContain('xl:w-[calc(33.333%-11px)]');
+  expect(markup).toContain('h-[440px]');
   expect(markup).toContain('aria-label="Next campaign posts"');
+});
+
+test('renders image quota waits as resumable campaign progress', () => {
+  const markup = renderToStaticMarkup(<RuntimeCampaignCanvas campaign={{
+    id: 'campaign-1', name: 'First campaign', actions: [{
+      id: 'post-1', channel: 'x_organic', status: 'READY',
+      payload: { final_copy: 'Persisted campaign caption', creative_brief: { required: true } },
+      assets: [{ id: 'asset-1', status: 'WAITING_QUOTA', metadata: {} }],
+    }],
+  }} />);
+  expect(markup).toContain('waiting for image capacity');
+  expect(markup).toContain('Campaign visual is waiting for capacity');
+  expect(markup).toContain('will resume automatically');
+  expect(markup).not.toContain('Campaign posts ready');
 });
 
 test('renders persisted email content as a Gmail composer preview', () => {
