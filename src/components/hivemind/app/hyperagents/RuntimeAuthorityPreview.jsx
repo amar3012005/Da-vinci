@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import {
-  Bookmark, Check, Heart, Linkedin, Mail, MessageCircle, MoreHorizontal,
-  Phone, Repeat2, Send, Share, ThumbsUp,
+  Bookmark, Check, ChevronLeft, ChevronRight, Heart, Instagram, Linkedin, Mail,
+  MessageCircle, MoreHorizontal, Phone, Repeat2, Send, Share, ThumbsUp,
 } from 'lucide-react';
 import { CampaignAssetImage } from './campaigns/CampaignCreative';
 
@@ -56,29 +56,29 @@ function Meta({ action, label }) {
 }
 
 export function XPostPreview({ action, accountName }) {
-  return <article className="mx-auto w-full max-w-[510px] overflow-hidden rounded-[8px] border border-[#d8d8d8] bg-white text-[#0f1419]" aria-label="X post preview">
-    <div className="p-4">
-      <div className="flex items-start gap-3"><Initials name={accountName} /><div className="min-w-0 flex-1"><div className="flex items-center gap-1"><strong className="truncate text-[13px]">{accountName}</strong><span className="text-[12px] text-[#536471]">@company</span></div><p className="mt-2 whitespace-pre-wrap text-[14px] leading-5">{actionCopy(action)}</p></div><MoreHorizontal size={17} /></div>
-      <Creative action={action} className="mt-3 aspect-video rounded-[8px] border border-[#cfd4d8]" />
-      <Meta action={action} label="X post" />
-      <div className="mt-3 flex items-center justify-between border-t border-[#eff1f2] pt-3 text-[#536471]"><MessageCircle size={17} /><Repeat2 size={17} /><Heart size={17} /><Bookmark size={17} /><Share size={17} /></div>
+  return <article className="mx-auto flex h-full w-full max-w-[510px] flex-col overflow-hidden rounded-[8px] border border-[#cfd4d8] bg-white text-[#0f1419] shadow-[0_1px_2px_rgba(15,20,25,0.06)]" aria-label="X post preview">
+    <div className="flex min-h-0 flex-1 flex-col p-4">
+      <div className="flex items-start gap-3"><Initials name={accountName} tone="bg-[#0f1419] text-white" /><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-1"><strong className="truncate text-[14px]">{accountName}</strong><span className="shrink-0 text-[12px] text-[#536471]">@company</span></div><p className="mt-2 max-h-[96px] overflow-y-auto whitespace-pre-wrap pr-1 text-[14px] leading-5">{actionCopy(action)}</p></div><MoreHorizontal size={18} className="shrink-0 text-[#536471]" /></div>
+      <Creative action={action} className="mt-3 aspect-video max-h-[270px] shrink-0 rounded-[8px] border border-[#cfd4d8]" />
+      <div className="mt-auto"><Meta action={action} label="X post" />
+      <div className="mt-3 flex items-center justify-between border-t border-[#eff1f2] pt-3 text-[#536471]"><MessageCircle size={18} /><Repeat2 size={18} /><Heart size={18} /><Bookmark size={18} /><Share size={18} /></div></div>
     </div>
   </article>;
 }
 
 export function InstagramPostPreview({ action, accountName }) {
-  return <article className="mx-auto w-full max-w-[470px] overflow-hidden rounded-[8px] border border-[#dedede] bg-white text-[#101010]" aria-label="Instagram post preview">
-    <div className="flex items-center gap-3 px-4 py-3"><span className="rounded-full bg-gradient-to-tr from-[#feda75] via-[#d62976] to-[#4f5bd5] p-[2px]"><span className="block rounded-full bg-white p-[2px]"><Initials name={accountName} tone="bg-[#e7e7e7] text-[#222]" /></span></span><strong className="min-w-0 flex-1 truncate text-[13px]">{accountName}</strong><MoreHorizontal size={17} /></div>
-    <Creative action={action} className="aspect-square" dark />
-    <div className="px-4 py-3"><div className="flex items-center gap-4"><Heart size={21} /><MessageCircle size={21} /><Send size={20} /><Bookmark size={20} className="ml-auto" /></div><p className="mt-3 whitespace-pre-wrap text-[13px] leading-5"><strong className="mr-1">{accountName}</strong>{actionCopy(action)}</p><Meta action={action} label="Instagram post" /></div>
+  return <article className="mx-auto flex h-full w-full max-w-[470px] flex-col overflow-hidden rounded-[8px] border border-[#dbdbdb] bg-white text-[#101010] shadow-[0_1px_2px_rgba(0,0,0,0.06)]" aria-label="Instagram post preview">
+    <div className="flex h-[62px] shrink-0 items-center gap-3 px-4"><span className="rounded-full bg-gradient-to-tr from-[#feda75] via-[#d62976] to-[#4f5bd5] p-[2px]"><span className="block rounded-full bg-white p-[2px]"><Initials name={accountName} tone="bg-[#e7e7e7] text-[#222]" /></span></span><strong className="min-w-0 flex-1 truncate text-[13px]">{accountName}</strong><span className="grid h-7 w-7 place-items-center rounded-[6px] bg-[#f4f4f4] text-[#d62976]"><Instagram size={16} /></span><MoreHorizontal size={18} /></div>
+    <Creative action={action} className="aspect-square max-h-[320px] shrink-0 border-y border-[#efefef]" dark />
+    <div className="flex min-h-0 flex-1 flex-col px-4 py-3"><div className="flex shrink-0 items-center gap-4"><Heart size={22} /><MessageCircle size={22} /><Send size={21} /><Bookmark size={21} className="ml-auto" /></div><p className="mt-3 max-h-[76px] overflow-y-auto whitespace-pre-wrap pr-1 text-[13px] leading-5"><strong className="mr-1">{accountName}</strong>{actionCopy(action)}</p><div className="mt-auto"><Meta action={action} label="Instagram post" /></div></div>
   </article>;
 }
 
 export function LinkedInPostPreview({ action, accountName }) {
-  return <article className="mx-auto w-full max-w-[520px] overflow-hidden rounded-[8px] border border-[#d4d8dc] bg-white text-[#191919]" aria-label="LinkedIn post preview">
-    <div className="p-4"><div className="flex items-start gap-3"><span className="grid h-10 w-10 place-items-center bg-[#0a66c2] text-white"><Linkedin size={23} /></span><div className="min-w-0 flex-1"><strong className="block truncate text-[13px]">{accountName}</strong><span className="text-[11px] text-[#666]">Company page · {action.status_label || 'Prepared post'}</span></div><MoreHorizontal size={17} /></div><p className="mt-3 whitespace-pre-wrap text-[13px] leading-5">{actionCopy(action)}</p></div>
-    <Creative action={action} className="aspect-[1.91/1] border-y border-[#e1e4e6]" />
-    <div className="px-4 py-3"><Meta action={action} label="LinkedIn post" /><div className="mt-3 grid grid-cols-4 border-t border-[#e4e6e8] pt-3 text-[#555]"><span className="flex items-center justify-center gap-1 text-[11px]"><ThumbsUp size={16} />Like</span><span className="flex items-center justify-center gap-1 text-[11px]"><MessageCircle size={16} />Comment</span><span className="flex items-center justify-center gap-1 text-[11px]"><Repeat2 size={16} />Repost</span><span className="flex items-center justify-center gap-1 text-[11px]"><Send size={16} />Send</span></div></div>
+  return <article className="mx-auto flex h-full w-full max-w-[520px] flex-col overflow-hidden rounded-[8px] border border-[#d4d8dc] bg-white text-[#191919] shadow-[0_1px_2px_rgba(0,0,0,0.07)]" aria-label="LinkedIn post preview">
+    <div className="shrink-0 p-4"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-[4px] bg-[#0a66c2] text-white"><Linkedin size={24} /></span><div className="min-w-0 flex-1"><strong className="block truncate text-[14px]">{accountName}</strong><span className="text-[11px] text-[#666]">Company page · {action.status_label || 'Prepared post'}</span></div><MoreHorizontal size={18} className="text-[#666]" /></div><p className="mt-3 max-h-[94px] overflow-y-auto whitespace-pre-wrap pr-1 text-[13px] leading-5">{actionCopy(action)}</p></div>
+    <Creative action={action} className="aspect-[1.91/1] max-h-[260px] shrink-0 border-y border-[#e1e4e6]" />
+    <div className="mt-auto shrink-0 px-4 py-3"><Meta action={action} label="LinkedIn post" /><div className="mt-3 grid grid-cols-4 border-t border-[#e4e6e8] pt-3 text-[#555]"><span className="flex items-center justify-center gap-1 text-[11px]"><ThumbsUp size={16} />Like</span><span className="flex items-center justify-center gap-1 text-[11px]"><MessageCircle size={16} />Comment</span><span className="flex items-center justify-center gap-1 text-[11px]"><Repeat2 size={16} />Repost</span><span className="flex items-center justify-center gap-1 text-[11px]"><Send size={16} />Send</span></div></div>
   </article>;
 }
 
@@ -132,10 +132,10 @@ export function RuntimeCampaignCanvas({ campaign }) {
   const pendingCount = visualActions.filter((action) => (action.assets || []).some((asset) => ['QUEUED', 'GENERATING'].includes(asset.status))).length;
   const move = (direction) => scrollRef.current?.scrollBy({ left: direction * scrollRef.current.clientWidth, behavior: 'smooth' });
   if (!actions.length) return null;
-  return <section className="my-7 border-y border-[#e3e0db] py-5" aria-label="Campaign posts rendering">
-    <div className="mb-4 flex items-end justify-between gap-3 px-1"><div><div className="font-mono text-[8px] uppercase tracking-[0.16em] text-[#85817b]">Campaign Intelligence</div><h3 className="mt-1 text-[15px] font-semibold text-[#171717]">{accountName}</h3><p className="mt-1 text-[10px] text-[#777168]">{pendingCount ? `${pendingCount} visual${pendingCount === 1 ? '' : 's'} rendering` : 'Campaign posts ready'}{visualActions.length ? ` · ${readyCount}/${visualActions.length} visuals ready` : ''}</p></div><div className="flex gap-2"><button type="button" onClick={() => move(-1)} className="grid h-9 w-9 place-items-center border border-[#d8d3cc] bg-white text-[#525252]" aria-label="Previous campaign posts">&#8249;</button><button type="button" onClick={() => move(1)} className="grid h-9 w-9 place-items-center border border-[#d8d3cc] bg-white text-[#171717]" aria-label="Next campaign posts">&#8250;</button></div></div>
+  return <section className="my-7 border-y border-[#ddd9d2] py-5" aria-label="Campaign posts rendering">
+    <div className="mb-4 flex items-center justify-between gap-4 px-1"><div className="min-w-0"><div className="font-mono text-[8px] uppercase tracking-[0.16em] text-[#777168]">Campaign Intelligence</div><h3 className="mt-1 truncate text-[16px] font-semibold text-[#171717]">{accountName}</h3><div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-[#777168]"><span>{pendingCount ? `${pendingCount} visual${pendingCount === 1 ? '' : 's'} rendering` : 'Campaign posts ready'}</span>{visualActions.length ? <span className="rounded-full bg-[#efede9] px-2 py-0.5 font-mono text-[8px] uppercase text-[#625f58]">{readyCount}/{visualActions.length} ready</span> : null}</div></div><div className="flex shrink-0 gap-2"><button type="button" onClick={() => move(-1)} className="grid h-10 w-10 place-items-center rounded-[6px] border border-[#d8d3cc] bg-white text-[#525252] transition-colors hover:bg-[#f5f3ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315ed0]" aria-label="Previous campaign posts"><ChevronLeft size={18} /></button><button type="button" onClick={() => move(1)} className="grid h-10 w-10 place-items-center rounded-[6px] border border-[#d8d3cc] bg-white text-[#171717] transition-colors hover:bg-[#f5f3ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315ed0]" aria-label="Next campaign posts"><ChevronRight size={18} /></button></div></div>
     <div ref={scrollRef} className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {actions.map((action) => <div key={action.id} className="w-full shrink-0 snap-start sm:w-[calc(50%-8px)] xl:w-[calc(33.333%-11px)]"><div className="h-[520px] overflow-y-auto overscroll-contain bg-white"><PlatformActionPreview action={action} accountName={accountName} /></div></div>)}
+      {actions.map((action) => <div key={action.id} className="h-[560px] w-full shrink-0 snap-start sm:w-[calc(50%-8px)] xl:w-[calc(33.333%-11px)]"><PlatformActionPreview action={action} accountName={accountName} /></div>)}
     </div>
   </section>;
 }
