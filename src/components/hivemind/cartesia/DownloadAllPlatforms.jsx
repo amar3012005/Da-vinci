@@ -104,7 +104,7 @@ const DownloadAllPlatforms = ({ className = '' }) => {
   }, []);
 
   return (
-    <div className={`flex flex-wrap items-center gap-2.5 ${className}`}>
+    <div className={`flex flex-wrap items-center justify-center gap-2.5 ${className}`}>
       <PlatformButton Icon={AppleIcon} label="Mac" sub={version} url={assets.dmgUrl} loading={loading} dark />
       <PlatformButton Icon={WindowsIcon} label="Windows" sub="unsigned" url={assets.exeUrl} loading={loading} />
       <PlatformButton Icon={AndroidIcon} label="Android" sub="debug APK" url={assets.apkUrl} loading={loading} />
