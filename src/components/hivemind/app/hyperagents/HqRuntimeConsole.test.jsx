@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AgentRuntimeTasksPanel, ExternalActionMarker, GrowthBrief, NarrativeEvent, collectRuntimeArtifacts, mergeRuntimeTaskProjection, projectLifecycleQueueStatus } from './HqRuntimeConsole';
-import { CampaignLaunchPreview, GmailMessagePreview } from './RuntimeAuthorityPreview';
+import { CampaignLaunchPreview, GmailMessagePreview, RuntimeCampaignCanvas } from './RuntimeAuthorityPreview';
 
 test('renders one truthful domain-neutral Runtime Tasks panel with the Growth Brief first', () => {
   const markup = renderToStaticMarkup(<AgentRuntimeTasksPanel firstLife={{
@@ -105,6 +105,20 @@ test('renders persisted campaign actions in platform-native review frames', () =
   expect(markup).toContain('aria-label="Instagram post preview"');
   expect(markup).toContain('aria-label="LinkedIn post preview"');
   expect(markup).toContain('“A truthful text-only post.”');
+});
+
+test('renders queued campaign visuals as a three-up Runtime carousel without hiding retained copy', () => {
+  const actions = ['x_organic', 'instagram', 'linkedin', 'x_organic'].map((channel, index) => ({
+    id: `post-${index}`, channel, status: 'READY', scheduled_at: `2026-08-1${index}T10:00:00Z`,
+    payload: { final_copy: `Persisted caption ${index}` },
+    assets: [{ id: `asset-${index}`, status: index === 0 ? 'READY' : 'GENERATING', content_url: index === 0 ? '/asset.png' : null, metadata: {} }],
+  }));
+  const markup = renderToStaticMarkup(<RuntimeCampaignCanvas campaign={{ id: 'campaign-1', name: 'First campaign', actions }} />);
+  expect(markup).toContain('aria-label="Campaign posts rendering"');
+  expect(markup).toContain('Persisted caption 1');
+  expect(markup).toContain('Rendering visual');
+  expect(markup).toContain('xl:w-[calc(33.333%-11px)]');
+  expect(markup).toContain('aria-label="Next campaign posts"');
 });
 
 test('renders persisted email content as a Gmail composer preview', () => {

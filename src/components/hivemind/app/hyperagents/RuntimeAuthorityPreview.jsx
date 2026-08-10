@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Bookmark, Check, Heart, Linkedin, Mail, MessageCircle, MoreHorizontal,
   Phone, Repeat2, Send, Share, ThumbsUp,
@@ -14,6 +14,7 @@ function selectedAsset(action = {}) {
   const assets = action.assets || [];
   return assets.find((asset) => asset.id === action.payload?.asset_id)
     || assets.find((asset) => ['READY', 'APPROVED'].includes(asset.status))
+    || assets.find((asset) => ['QUEUED', 'GENERATING'].includes(asset.status))
     || null;
 }
 
@@ -28,9 +29,20 @@ function TextCreative({ text, dark = false, className = '' }) {
   </div>;
 }
 
+function GeneratingCreative({ className = '', status = 'GENERATING' }) {
+  return <div className={`relative isolate overflow-hidden bg-[#111318] text-white ${className}`} aria-label="Campaign visual is generating">
+    <style>{`@keyframes hm-campaign-particle{0%{opacity:.08;transform:translate3d(0,18px,0) scale(.75)}45%{opacity:.85}100%{opacity:.04;transform:translate3d(10px,-34px,0) scale(1.3)}}@keyframes hm-campaign-scan{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}@media(prefers-reduced-motion:reduce){.hm-campaign-particle,.hm-campaign-scan{animation:none!important;opacity:.35!important}}`}</style>
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(61,120,255,0.25),transparent_58%)]" />
+    {Array.from({ length: 30 }, (unused, index) => <span key={index} className="hm-campaign-particle absolute h-1 w-1 rounded-full bg-[#76a8ff]" style={{ left: `${8 + ((index * 29) % 86)}%`, top: `${12 + ((index * 37) % 78)}%`, animation: `hm-campaign-particle ${1.8 + (index % 7) * 0.19}s ease-in-out ${(index % 11) * 0.12}s infinite` }} />)}
+    <span className="hm-campaign-scan absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent" style={{ animation: 'hm-campaign-scan 2.4s ease-in-out infinite' }} />
+    <div className="relative grid h-full min-h-[180px] place-items-center p-6 text-center"><div><div className="mx-auto h-8 w-8 rounded-full border border-white/25 border-r-[#76a8ff] animate-spin" /><div className="mt-3 font-mono text-[9px] uppercase tracking-[0.18em] text-white/80">{status === 'QUEUED' ? 'Visual queued' : 'Rendering visual'}</div><p className="mt-1 text-[10px] text-white/45">Caption and schedule are already retained.</p></div></div>
+  </div>;
+}
+
 function Creative({ action, className = '', dark = false }) {
   const asset = selectedAsset(action);
   const text = actionCopy(action);
+  if (asset && ['QUEUED', 'GENERATING'].includes(asset.status)) return <GeneratingCreative className={className} status={asset.status} />;
   return asset
     ? <CampaignAssetImage asset={asset} alt={asset.metadata?.alt_text || action.payload?.asset_alt_text || ''} className={`w-full object-cover ${className}`} />
     : <TextCreative text={text} dark={dark} className={className} />;
@@ -108,6 +120,23 @@ export function CampaignLaunchPreview({ campaign }) {
   return <section aria-label="Campaign launch batch">
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-[#dedbd6] pb-3"><div><div className="font-mono text-[8px] uppercase tracking-[0.15em] text-[#85817b]">Coordinated launch batch</div><h4 className="mt-1 text-[15px] font-semibold text-[#171717]">{accountName}</h4></div><div className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#85817b]">{actions.length} action{actions.length === 1 ? '' : 's'} · {campaign.status}</div></div>
     <div className="space-y-5">{actions.map((action) => <PlatformActionPreview key={action.id} action={action} accountName={accountName} />)}</div>
+  </section>;
+}
+
+export function RuntimeCampaignCanvas({ campaign }) {
+  const scrollRef = useRef(null);
+  const accountName = campaign?.name || 'Company campaign';
+  const actions = campaign?.actions || [];
+  const visualActions = actions.filter((action) => action.payload?.creative_brief?.required === true || (action.assets || []).length);
+  const readyCount = visualActions.filter((action) => ['READY', 'APPROVED'].includes(selectedAsset(action)?.status)).length;
+  const pendingCount = visualActions.filter((action) => (action.assets || []).some((asset) => ['QUEUED', 'GENERATING'].includes(asset.status))).length;
+  const move = (direction) => scrollRef.current?.scrollBy({ left: direction * scrollRef.current.clientWidth, behavior: 'smooth' });
+  if (!actions.length) return null;
+  return <section className="my-7 border-y border-[#e3e0db] py-5" aria-label="Campaign posts rendering">
+    <div className="mb-4 flex items-end justify-between gap-3 px-1"><div><div className="font-mono text-[8px] uppercase tracking-[0.16em] text-[#85817b]">Campaign Intelligence</div><h3 className="mt-1 text-[15px] font-semibold text-[#171717]">{accountName}</h3><p className="mt-1 text-[10px] text-[#777168]">{pendingCount ? `${pendingCount} visual${pendingCount === 1 ? '' : 's'} rendering` : 'Campaign posts ready'}{visualActions.length ? ` · ${readyCount}/${visualActions.length} visuals ready` : ''}</p></div><div className="flex gap-2"><button type="button" onClick={() => move(-1)} className="grid h-9 w-9 place-items-center border border-[#d8d3cc] bg-white text-[#525252]" aria-label="Previous campaign posts">&#8249;</button><button type="button" onClick={() => move(1)} className="grid h-9 w-9 place-items-center border border-[#d8d3cc] bg-white text-[#171717]" aria-label="Next campaign posts">&#8250;</button></div></div>
+    <div ref={scrollRef} className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {actions.map((action) => <div key={action.id} className="w-full shrink-0 snap-start sm:w-[calc(50%-8px)] xl:w-[calc(33.333%-11px)]"><div className="h-[520px] overflow-y-auto overscroll-contain bg-white"><PlatformActionPreview action={action} accountName={accountName} /></div></div>)}
+    </div>
   </section>;
 }
 
