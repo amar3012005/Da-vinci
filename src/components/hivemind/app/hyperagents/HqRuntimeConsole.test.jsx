@@ -116,7 +116,7 @@ test('renders persisted email content as a Gmail composer preview', () => {
   expect(markup).toContain('Grounded message body.');
 });
 
-test('renders provider-confirmed actions inline as one fixed carousel marker', () => {
+test('renders provider-confirmed artifacts directly in a flat transcript carousel', () => {
   const markup = renderToStaticMarkup(<ExternalActionMarker item={{
     id: 'event-1', createdAt: '2026-08-03T10:00:00Z', title: 'Actions launched',
     details: { items: [
@@ -126,9 +126,21 @@ test('renders provider-confirmed actions inline as one fixed carousel marker', (
     ] },
   }} />);
   expect(markup).toContain('data-testid="runtime-external-action-marker"');
-  expect(markup).toContain('3 actions launched');
+  expect(markup).not.toContain('Provider-confirmed action');
+  expect(markup).not.toContain('3 actions launched');
   expect(markup).toContain('lead@example.com');
   expect(markup).toContain('aria-label="TARA call preview"');
   expect(markup).toContain('aria-label="LinkedIn post preview"');
-  expect(markup).toContain('h-[430px]');
+  expect(markup).toContain('h-[390px]');
+  expect(markup).toContain('aria-label="Show next artifact"');
+  expect(markup).not.toContain('Previous launched action');
+  expect(markup).not.toContain('border border-[#171717]');
+});
+
+test('renders persisted email break tags as plain message spacing', () => {
+  const markup = renderToStaticMarkup(<GmailMessagePreview message={{
+    to: 'lead@example.com', subject: 'Hello', body: 'First line.<br/><br/>Second line.',
+  }} />);
+  expect(markup).toContain('First line.\n\nSecond line.');
+  expect(markup).not.toContain('&lt;br');
 });
