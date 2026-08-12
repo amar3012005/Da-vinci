@@ -17,6 +17,7 @@ const MobileMeetingNotes = React.lazy(() => import('./mobile/pages/MobileMeeting
 const MobileConnectors = React.lazy(() => import('./mobile/pages/MobileConnectors'));
 const MobileProjects = React.lazy(() => import('./mobile/pages/MobileProjects'));
 const MobileUsage = React.lazy(() => import('./mobile/pages/MobileUsage'));
+const MobileMemoryGraph = React.lazy(() => import('./mobile/pages/MobileMemoryGraph'));
 const Memories = React.lazy(() => import('./pages/Memories'));
 const MeetingNotes = React.lazy(() => import('./pages/MeetingNotes'));
 const ApiKeys = React.lazy(() => import('./pages/ApiKeys'));
@@ -169,6 +170,14 @@ export default function HiveMindApp() {
           element={
             <ProtectedRoute>
               <PageSuspense><MobileUsage /></PageSuspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="m/graph"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><MobileMemoryGraph /></PageSuspense>
             </ProtectedRoute>
           }
         />
