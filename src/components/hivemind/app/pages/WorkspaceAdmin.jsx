@@ -342,16 +342,21 @@ function InvitesTab({ orgId, orgName }) {
   const [invites, setInvites] = useState([]);
   const [status, setStatus] = useState('all');
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
 
   const fetchList = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const resp = await apiClient.listInvites(orgId, { status });
       setInvites(resp.invites || []);
-    } catch {
-      setInvites([]);
+    } catch (error) {
+      // Keep the last authoritative list visible. Replacing it with an empty
+      // state after a transient proxy error makes an administrator believe that
+      // invitations disappeared.
+      setLoadError(error?.response?.data?.error || 'Could not refresh invitations.');
     } finally {
       setLoading(false);
     }
@@ -394,6 +399,13 @@ function InvitesTab({ orgId, orgName }) {
           </button>
         </div>
       </div>
+
+      {loadError && (
+        <div role="alert" className="flex items-center justify-between gap-3 border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900 rounded-[6px]">
+          <span>{loadError}</span>
+          <button onClick={fetchList} className="shrink-0 font-medium underline underline-offset-2">Retry</button>
+        </div>
+      )}
 
       <div className="bg-white border border-[#e3e0db] rounded-[10px] overflow-hidden">
         <table className="w-full text-[12px]">
@@ -440,7 +452,7 @@ function InvitesTab({ orgId, orgName }) {
                 <td className="px-3 py-2"><StatusPill status={inv.status} /></td>
                 <td className="px-3 py-2 text-[10px] text-[#a3a3a3] font-mono">
                   {inv.send_count > 1 ? `${inv.send_count}× ` : ''}
-                  {(inv.last_sent_at || inv.created_at) && new Date(inv.last_sent_at || inv.created_at).toLocaleDateString()}
+                  {inv.last_sent_at ? new Date(inv.last_sent_at).toLocaleDateString() : 'Not sent'}
                 </td>
                 <td className="px-3 py-2 text-[10px] text-[#a3a3a3] font-mono">
                   {inv.status === 'accepted' && inv.used_at && new Date(inv.used_at).toLocaleString()}

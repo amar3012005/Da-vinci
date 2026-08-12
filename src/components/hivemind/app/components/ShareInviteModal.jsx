@@ -45,6 +45,7 @@ export default function ShareInviteModal({
   const [invites, setInvites] = useState([]);
   const [loadingList, setLoadingList] = useState(false);
   const [busyById, setBusyById] = useState({});
+  const [deliveryNotice, setDeliveryNotice] = useState(null);
 
   // Depend on the PRIMITIVE project id, never the array prop: `defaultProjectIds`
   // defaults to `[]`, which is a fresh identity on every parent render. With the
@@ -133,6 +134,7 @@ export default function ShareInviteModal({
     if (!orgId) return;
     setCreating(true);
     setCreateError(null);
+    setDeliveryNotice(null);
     setNewInvite(null);
     try {
       const payload = {
@@ -164,11 +166,19 @@ export default function ShareInviteModal({
 
   async function handleResend(inv) {
     setBusyById(b => ({ ...b, [inv.id]: 'resend' }));
+    setCreateError(null);
+    setDeliveryNotice(null);
     try {
-      await apiClient.resendInvite(orgId, inv.id);
+      const response = await apiClient.resendInvite(orgId, inv.id);
+      const dispatch = response.email_dispatch;
+      if (dispatch?.ok) {
+        setDeliveryNotice(`Invitation email accepted by ${dispatch.provider || 'the delivery provider'}.`);
+      } else {
+        setCreateError(`The invitation is still active, but email delivery failed: ${dispatch?.error || 'please retry'}.`);
+      }
       await fetchInvites();
     } catch (err) {
-      alert(err.response?.data?.error || err.message);
+      setCreateError(err.response?.data?.error || err.message);
     } finally {
       setBusyById(b => ({ ...b, [inv.id]: null }));
     }
@@ -245,6 +255,7 @@ export default function ShareInviteModal({
                 {email ? 'Send invite' : 'Create link'}
               </button>
             </div>
+            {deliveryNotice && <p role="status" className="mb-3 text-[11px] text-emerald-700">{deliveryNotice}</p>}
 
             {(defaultProjectIds.length > 0 || defaultTeamIds.length > 0) && (
               <div className="flex flex-wrap items-center gap-1.5 mb-3 text-[11px] text-[#525252]">
