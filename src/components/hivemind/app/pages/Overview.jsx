@@ -901,12 +901,7 @@ function OverviewChat({ inputRef }) {
       }
       const chatData = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? await readChatStream(chatRes, (event) => {
-            if (event.type === 'answer_started') {
-              setMessages((prev) => prev.some((item) => item.id === streamingId)
-                ? prev
-                : [...prev, { id: streamingId, role: 'assistant', content: '', streaming: true }]);
-              return;
-            }
+            if (event.type === 'answer_started') return;
             if (event.type === 'answer_delta' && event.validated === true) {
               setMessages((prev) => {
                 const found = prev.some((item) => item.id === streamingId);
@@ -919,7 +914,7 @@ function OverviewChat({ inputRef }) {
               return;
             }
             if (event.type === 'answer_reset') {
-              setMessages((prev) => prev.map((item) => item.id === streamingId ? { ...item, content: '' } : item));
+              setMessages((prev) => prev.filter((item) => item.id !== streamingId));
               return;
             }
             const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
@@ -1077,7 +1072,7 @@ function OverviewChat({ inputRef }) {
               )}
             </React.Fragment>
           ))}
-          {loading && <Thinking events={agentEvents} />}
+          {loading && !messages.some((item) => item.streaming) && <Thinking events={agentEvents} />}
         </div>
       )}
 

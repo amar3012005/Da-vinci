@@ -23,6 +23,7 @@ import {
   FolderKanban,
   Users,
   Upload,
+  Clock,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
@@ -456,12 +457,7 @@ export function ChatPanel({ isOpen, onClose }) {
       }
       const data = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? (await readChatStream(chatRes, (event) => {
-            if (event.type === 'answer_started') {
-              setMessages((prev) => prev.some((item) => item.id === streamingId)
-                ? prev
-                : [...prev, { id: streamingId, role: 'assistant', content: '', streaming: true }]);
-              return;
-            }
+            if (event.type === 'answer_started') return;
             if (event.type === 'answer_delta' && event.validated === true) {
               setMessages((prev) => {
                 const found = prev.some((item) => item.id === streamingId);
@@ -474,7 +470,7 @@ export function ChatPanel({ isOpen, onClose }) {
               return;
             }
             if (event.type === 'answer_reset') {
-              setMessages((prev) => prev.map((item) => item.id === streamingId ? { ...item, content: '' } : item));
+              setMessages((prev) => prev.filter((item) => item.id !== streamingId));
               return;
             }
             setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-5));
@@ -801,7 +797,7 @@ export function ChatPanel({ isOpen, onClose }) {
                         ? <UserBubble key={m.id} content={m.content} />
                         : <AiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />
                     )}
-                    {loading && <Thinking events={agentEvents} />}
+                    {loading && !messages.some((item) => item.streaming) && <Thinking events={agentEvents} />}
                   </>
                 )}
                 <div ref={bottomRef} />
@@ -973,7 +969,7 @@ export function ChatPanel({ isOpen, onClose }) {
                     className="w-9 h-9 rounded-full bg-[#1a1a17] text-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform disabled:opacity-100"
                     aria-label={input.trim() ? 'Send' : 'Voice'}
                   >
-                    {loading ? <Loader2 size={15} className="animate-spin" /> : input.trim() ? <Send size={15} /> : <AudioLines size={16} />}
+                    {loading ? <Clock size={15} /> : input.trim() ? <Send size={15} /> : <AudioLines size={16} />}
                   </button>
                 </div>
               </div>

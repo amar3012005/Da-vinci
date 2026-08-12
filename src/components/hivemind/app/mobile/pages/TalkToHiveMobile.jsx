@@ -410,12 +410,7 @@ export default function TalkToHiveMobile() {
       }
       const data = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? (await readChatStream(chatRes, (event) => {
-            if (event.type === 'answer_started') {
-              setMessages((prev) => prev.some((item) => item.id === streamingId)
-                ? prev
-                : [...prev, { id: streamingId, role: 'assistant', content: '', streaming: true }]);
-              return;
-            }
+            if (event.type === 'answer_started') return;
             if (event.type === 'answer_delta' && event.validated === true) {
               setMessages((prev) => {
                 const found = prev.some((item) => item.id === streamingId);
@@ -428,7 +423,7 @@ export default function TalkToHiveMobile() {
               return;
             }
             if (event.type === 'answer_reset') {
-              setMessages((prev) => prev.map((item) => item.id === streamingId ? { ...item, content: '' } : item));
+              setMessages((prev) => prev.filter((item) => item.id !== streamingId));
               return;
             }
             const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
@@ -759,7 +754,7 @@ export default function TalkToHiveMobile() {
               ? <UserBubble key={m.id} content={m.content} />
               : <AiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />
           )}
-          {loading && <Thinking events={agentEvents} />}
+          {loading && !messages.some((item) => item.streaming) && <Thinking events={agentEvents} />}
         </div>
       </div>
 
@@ -992,7 +987,7 @@ export default function TalkToHiveMobile() {
             className="w-10 h-10 rounded-full bg-[#1a1a17] text-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform disabled:opacity-100"
             aria-label={input.trim() ? 'Send' : 'Voice'}
           >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : input.trim() ? <Send size={16} /> : <AudioLines size={17} />}
+            {loading ? <Clock size={16} /> : input.trim() ? <Send size={16} /> : <AudioLines size={17} />}
           </button>
           </div>
         </div>
