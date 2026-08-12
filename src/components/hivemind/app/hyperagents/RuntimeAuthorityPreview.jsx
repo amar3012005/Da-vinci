@@ -74,7 +74,9 @@ export function GmailMessagePreview({ message, action, statusLabel = 'Preview on
   const payload = action?.payload || {};
   const to = message?.to || payload.to || '';
   const subject = message?.subject || payload.subject || '';
-  const body = message?.body || actionCopy(action);
+  const body = String(message?.body || actionCopy(action))
+    .replace(/<br\s*\/?\s*>/gi, '\n')
+    .replace(/&nbsp;/gi, ' ');
   return <article className="mx-auto w-full max-w-[620px] overflow-hidden rounded-[8px] border border-[#d7dbe3] bg-white shadow-sm" aria-label="Gmail message preview">
     <div className="flex items-center gap-2 bg-[#f2f6fc] px-4 py-3 text-[#1f1f1f]"><Mail size={16} className="text-[#d93025]" /><strong className="text-[13px]">New message</strong><span className="ml-auto text-[18px] leading-none text-[#5f6368]">&minus;</span></div>
     <div className="divide-y divide-[#eceff3] px-4"><div className="flex min-h-10 items-center gap-3 text-[12px]"><span className="text-[#5f6368]">To</span><span className="min-w-0 truncate text-[#202124]">{to}</span></div><div className="flex min-h-10 items-center gap-3 text-[12px]"><span className="text-[#5f6368]">Subject</span><span className="min-w-0 truncate font-medium text-[#202124]">{subject}</span></div></div>

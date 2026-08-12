@@ -360,6 +360,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async startHqOutreachCalls(runId) {
+    const { data } = await this.controlPlane.post(`/v1/hq/outreach/runs/${encodeURIComponent(runId)}/calls`, {});
+    return data;
+  }
+
   async getHqPlaybookSnapshot(runId) {
     const { data } = await this.controlPlane.get(`/v1/hq/playbooks/runs/${encodeURIComponent(runId)}/snapshot`);
     return data;
@@ -377,6 +382,11 @@ class HiveMindApiClient {
 
   async recheckHqCapabilities() {
     const { data } = await this.controlPlane.post('/v1/hq/capabilities/recheck', {});
+    return data;
+  }
+
+  async deferHqCapabilityRequest(requestId) {
+    const { data } = await this.controlPlane.post(`/v1/hq/capability-requests/${encodeURIComponent(requestId)}/defer`, {});
     return data;
   }
 

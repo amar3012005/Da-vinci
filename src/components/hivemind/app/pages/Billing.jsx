@@ -13,7 +13,6 @@ import {
   Clock,
   HardDrive,
   Headphones,
-  Mic,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -21,7 +20,6 @@ import { useAuth } from '../auth/AuthProvider';
 import RunwayUpgradePanel from '../components/RunwayUpgradePanel';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
-import WorkspaceAccessCard from '../shared/WorkspaceAccessCard';
 
 // ─── Plan Definitions ────────────────────────────────────────────────────────
 
@@ -231,46 +229,32 @@ function planFromBackend(raw) {
   };
 }
 
-// ─── Usage Meter ─────────────────────────────────────────────────────────────
-
-function UsageMeter({ label, used, limit, icon: Icon }) {
-  const { t } = useTranslation('dashboard');
-  const isUnlimited = limit == null || limit === -1;
-  const pct = isUnlimited ? 0 : Math.min((used / limit) * 100, 100);
-  const isNearLimit = pct > 80;
-
+function CommercialJourney({ billing }) {
+  const entitlement = billing?.entitlement;
+  const invited = entitlement?.source === 'enterprise_invitation';
+  if (!invited) return null;
+  const onboarding = entitlement?.phase === 'onboarding';
+  const endsAt = entitlement?.effective_until
+    ? new Date(entitlement.effective_until).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+    : null;
   return (
-    <div className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Icon size={14} className="text-[#a3a3a3]" />
-          <span className="text-[#525252] text-[11px] font-['Space_Grotesk'] uppercase tracking-wider">
-            {label}
-          </span>
+    <section className="border border-[#bcd5ff] bg-[#f5f9ff] p-5">
+      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">Enterprise commercial journey</p>
+      <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Invitation onboarding, then paid Runway</h2>
+      <p className="mt-1 max-w-3xl text-sm leading-6 text-[#525252]">Your invitation opened the temporary onboarding phase. It is not a recurring subscription. Runway is the paid operating configuration that continues the workspace after onboarding.</p>
+      <div className="mt-5 grid gap-px border border-[#d8e5fb] bg-[#d8e5fb] md:grid-cols-2">
+        <div className="bg-white p-4">
+          <div className="flex items-center justify-between gap-3"><span className="font-mono text-[10px] font-bold uppercase text-[#117dff]">01 · Onboarding</span><span className={`px-2 py-1 font-mono text-[9px] font-bold uppercase ${onboarding ? 'bg-[#dcfce7] text-[#15803d]' : 'bg-[#f3f1ec] text-[#737373]'}`}>{onboarding ? 'Active' : 'Complete'}</span></div>
+          <p className="mt-3 text-sm font-semibold text-[#0a0a0a]">Invitation access</p>
+          <p className="mt-1 text-xs leading-5 text-[#737373]">Temporary company setup and evaluation access{endsAt ? ` through ${endsAt}` : ''}.</p>
         </div>
-        <span className="text-[#0a0a0a] text-sm font-mono font-semibold">
-          {used?.toLocaleString() || 0}
-          <span className="text-[#d4d0ca]">
-            {isUnlimited ? ` / ${t('billing.unlimited', 'Unlimited')}` : ` / ${limit?.toLocaleString()}`}
-          </span>
-        </span>
+        <div className="bg-white p-4">
+          <div className="flex items-center justify-between gap-3"><span className="font-mono text-[10px] font-bold uppercase text-[#117dff]">02 · Runway</span><span className={`px-2 py-1 font-mono text-[9px] font-bold uppercase ${onboarding ? 'bg-[#fff7ed] text-[#c2410c]' : 'bg-[#dcfce7] text-[#15803d]'}`}>{onboarding ? 'Configure next' : 'Current'}</span></div>
+          <p className="mt-3 text-sm font-semibold text-[#0a0a0a]">Paid operating plan</p>
+          <p className="mt-1 text-xs leading-5 text-[#737373]">Choose infrastructure, seats, storage, and monthly capacity, then confirm payment.</p>
+        </div>
       </div>
-      <div className="w-full h-1.5 rounded-full bg-[#e3e0db] overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: isUnlimited ? '0%' : `${pct}%` }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          className={`h-full rounded-full ${
-            isNearLimit ? 'bg-amber-400' : 'bg-[#117dff]'
-          }`}
-        />
-      </div>
-      {isNearLimit && (
-        <p className="text-amber-400/70 text-[10px] font-['Space_Grotesk'] mt-1.5">
-          {pct >= 100 ? t('billing.limitReached', 'Limit reached \u2014 upgrade to continue') : t('billing.approachingLimit', 'Approaching limit')}
-        </p>
-      )}
-    </div>
+    </section>
   );
 }
 
@@ -369,24 +353,10 @@ export default function Billing() {
   const [checkoutNotice, setCheckoutNotice] = useState('');
   const [billingError, setBillingError] = useState('');
 
-  const { data: profile } = useApiQuery(
-    () => apiClient.getProfile().catch(() => null),
-    [],
-  );
-
-  const { data: connectors } = useApiQuery(
-    () => apiClient.getConnectorStatus().catch(() => null),
-    [],
-  );
-
   // Pulls from control-plane /v1/billing/plan — single source of truth for
-  // plan + usage + Stripe subscription state.
+  // Server-authoritative plan, entitlement, and Stripe subscription state.
   const { data: billing, refetch: refetchBilling } = useApiQuery(
     () => apiClient.getBillingPlan().catch(() => null),
-    [],
-  );
-  const { data: usageSummary, refetch: refetchUsage } = useApiQuery(
-    () => apiClient.getUsage().catch(() => null),
     [],
   );
   const { data: invoiceList, refetch: refetchInvoices } = useApiQuery(
@@ -394,43 +364,15 @@ export default function Billing() {
     [],
   );
 
-  const usage = usageSummary || billing?.usage_summary || (billing
-    ? {
-        plan: billing.plan?.id,
-        tokens:        { used: billing.usage?.tokensProcessed || 0 },
-        memories:      { used: billing.usage?.memoriesIngested || 0 },
-        deepResearch:  { used: billing.usage?.deepResearchJobs || 0 },
-        webIntel:      { used: billing.usage?.webIntelJobs || 0 },
-        searches:      { used: billing.usage?.searchQueries || 0 },
-        graphQueries:  { used: billing.usage?.graphQueries || 0 },
-      }
-    : null);
-
   const subscription = billing?.subscription || {};
-  const currentPlan = billing?.plan?.id || profile?.plan || org?.plan || 'free';
+  const currentPlan = billing?.plan?.id || org?.plan || 'free';
   const canManageBilling = Boolean(billing?.can_manage_billing);
   const isEnterpriseWorkspace = billing?.billing_model === 'enterprise_contract' || currentPlan === 'enterprise';
-  const enterpriseEngagement = billing?.enterprise_engagement || null;
   const dummyCheckoutId = searchParams.get('dummy_checkout');
   const checkoutState = searchParams.get('checkout');
   const planOptions = Array.isArray(billing?.all_plans) && billing.all_plans.length
     ? billing.all_plans.map(planFromBackend)
     : PLANS.filter((plan) => plan.id !== 'enterprise');
-
-  const activeConnections = Array.isArray(connectors?.connectors)
-    ? connectors.connectors.filter(c => c.status === 'connected' || c.status === 'healthy').length
-    : (connectors?.activeCount || 0);
-
-  // Use usage API data if available, fallback to profile data
-  const tokensUsed = usage?.tokens?.used ?? profile?.tokens_used ?? 0;
-  const memoriesUsed = usage?.memories?.used ?? 0;
-  const deepResearchUsed = usage?.deepResearch?.used ?? 0;
-  const webIntelUsed = usage?.webIntel?.used ?? 0;
-  const searchesUsed = usage?.searches?.used ?? profile?.searches_this_month ?? 0;
-  const kbPagesUsed = usage?.kbPages?.used ?? 0;
-  const graphQueriesUsed = usage?.graphQueries?.used ?? 0;
-  const taraSecondsUsed = usage?.taraSeconds?.used ?? 0;
-  const hyperAgentRunsUsed = usage?.hyperAgentRuns?.used ?? 0;
 
   const currentPlanDef = billing?.plan
     ? planFromBackend(billing.plan)
@@ -443,7 +385,7 @@ export default function Billing() {
       try {
         const result = await apiClient.reconcileBillingCheckout();
         if (cancelled) return;
-        await Promise.all([refetchBilling(), refetchUsage(), refetchInvoices()]);
+        await Promise.all([refetchBilling(), refetchInvoices()]);
         setCheckoutNotice(result?.reconciled
           ? `Payment confirmed. Your ${String(result.plan || '').toUpperCase()} plan is active.`
           : 'Payment received. Your subscription is still being confirmed.');
@@ -455,7 +397,7 @@ export default function Billing() {
     };
     reconcile();
     return () => { cancelled = true; };
-  }, [checkoutState, refetchBilling, refetchInvoices, refetchUsage, setSearchParams]);
+  }, [checkoutState, refetchBilling, refetchInvoices, setSearchParams]);
 
   const handleUpgrade = async (planId) => {
     if (!canManageBilling) { setBillingError('Only an organization owner or admin can change the subscription.'); return; }
@@ -473,19 +415,6 @@ export default function Billing() {
       const msg = e?.response?.data?.error || e.message || 'Upgrade failed.';
       setBillingError(`Upgrade failed: ${msg}`);
     } finally {
-      setUpgrading(false);
-    }
-  };
-
-  const handleEnterpriseCheckout = async () => {
-    if (!canManageBilling) { setBillingError('Only an organization owner or admin can change the subscription.'); return; }
-    setUpgrading(true);
-    try {
-      const res = await apiClient.createEnterpriseCheckout();
-      if (!res?.checkout_url) throw new Error('Enterprise checkout is unavailable.');
-      window.location.href = res.checkout_url;
-    } catch (error) {
-      setBillingError(error?.response?.data?.error || error.message || 'Enterprise checkout failed.');
       setUpgrading(false);
     }
   };
@@ -516,6 +445,11 @@ export default function Billing() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      <header>
+        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">Workspace commercial settings</p>
+        <h1 className="mt-1 text-2xl font-bold text-[#0a0a0a]">Billing and plans</h1>
+        <p className="mt-1 text-sm text-[#525252]">Manage onboarding, Runway, subscriptions, payment methods, invoices, and plan changes. Consumption and allowances live on the Usage page.</p>
+      </header>
       {billingError && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
           <span>{billingError}</span><button type="button" onClick={() => setBillingError('')} className="text-xs font-semibold">Dismiss</button>
@@ -523,7 +457,7 @@ export default function Billing() {
       )}
       {billing && !canManageBilling && (
         <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
-          You can view your workspace plan and shared allowance. Contact an organization owner or admin for invoices, payment details, or subscription changes.
+          You can view the workspace plan and billing state. Contact an organization owner or admin for invoices, payment details, or subscription changes.
         </div>
       )}
       {dummyCheckoutId && (
@@ -546,10 +480,7 @@ export default function Billing() {
           {checkoutNotice}
         </div>
       )}
-      <WorkspaceAccessCard billing={billing} />
-      {/* Runway upgrade — enterprise orgs configure + self-serve subscribe here
-          (shown after the 2-week onboarding; they can also re-configure anytime). */}
-      {org?.plan === 'enterprise' && <RunwayUpgradePanel />}
+      <CommercialJourney billing={billing} />
       {/* Current Plan Overview */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -611,79 +542,18 @@ export default function Billing() {
           </div>
         </div>
 
-        {/* Usage Meters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          <UsageMeter
-            label={t('billing.tokensThisMonth', 'Tokens This Month')}
-            used={tokensUsed}
-            limit={currentPlanDef?.limits.tokens}
-            icon={Brain}
-          />
-          <UsageMeter
-            label={t('billing.tokensToday', 'Tokens Today')}
-            used={usage?.daily?.tokens?.used || 0}
-            limit={usage?.daily?.tokens?.limit}
-            icon={Brain}
-          />
-          <UsageMeter
-            label={t('billing.memories', 'Memories')}
-            used={memoriesUsed}
-            limit={currentPlanDef?.limits.memories}
-            icon={HardDrive}
-          />
-          <UsageMeter
-            label={t('billing.deepResearch', 'Deep Research')}
-            used={deepResearchUsed}
-            limit={currentPlanDef?.limits.deepResearch}
-            icon={Zap}
-          />
-          <UsageMeter
-            label={t('billing.webIntelDaily', 'Web Intel (Daily)')}
-            used={webIntelUsed}
-            limit={currentPlanDef?.limits.webIntel}
-            icon={Sparkles}
-          />
-          <UsageMeter
-            label={t('billing.searchesThisMonth', 'Searches This Month')}
-            used={searchesUsed}
-            limit={currentPlanDef?.limits.searches}
-            icon={Zap}
-          />
-          <UsageMeter
-            label={t('billing.kbPages', 'KB Pages This Month')}
-            used={kbPagesUsed}
-            limit={currentPlanDef?.limits.kbPages}
-            icon={HardDrive}
-          />
-          <UsageMeter
-            label={t('billing.graphQueries', 'Graph Queries')}
-            used={graphQueriesUsed}
-            limit={currentPlanDef?.limits.searches}
-            icon={Brain}
-          />
-          <UsageMeter
-            label={t('billing.connections', 'Connections')}
-            used={activeConnections}
-            limit={currentPlanDef?.limits.connections}
-            icon={Cable}
-          />
-          <UsageMeter
-            label="TARA Talk Time (seconds)"
-            used={taraSecondsUsed}
-            limit={currentPlanDef?.limits.taraSeconds}
-            icon={Mic}
-          />
-          <UsageMeter
-            label="HyperAgents Runs"
-            used={hyperAgentRunsUsed}
-            limit={currentPlanDef?.limits.hyperAgentRuns}
-            icon={Zap}
-          />
+        <div className="grid gap-px border border-[#e3e0db] bg-[#e3e0db] sm:grid-cols-3">
+          <div className="bg-[#faf9f4] p-3"><p className="font-mono text-[9px] uppercase text-[#a3a3a3]">Billing status</p><p className="mt-1 text-sm font-semibold capitalize text-[#202020]">{subscription.status || (billing?.entitlement ? 'Entitlement active' : 'No subscription')}</p></div>
+          <div className="bg-[#faf9f4] p-3"><p className="font-mono text-[9px] uppercase text-[#a3a3a3]">Renewal</p><p className="mt-1 text-sm font-semibold text-[#202020]">{subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : 'Not scheduled'}</p></div>
+          <div className="bg-[#faf9f4] p-3"><p className="font-mono text-[9px] uppercase text-[#a3a3a3]">Payment management</p><p className="mt-1 text-sm font-semibold text-[#202020]">{canManageBilling ? 'Owner / admin access' : 'Contact workspace owner'}</p></div>
         </div>
       </motion.div>
 
+      {/* Enterprise invitation holders configure the paid continuation here. */}
+      {org?.plan === 'enterprise' && <RunwayUpgradePanel />}
+
       {/* Invoices */}
-      {canManageBilling && invoiceList?.invoices?.length > 0 && (
+      {canManageBilling && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -700,7 +570,7 @@ export default function Billing() {
               {t('billing.downloadCsv', 'Download CSV')}
             </a>
           </div>
-          <div className="overflow-x-auto">
+          {invoiceList?.invoices?.length ? <div className="overflow-x-auto">
             <table className="w-full text-[12px] font-['Space_Grotesk']">
               <thead>
                 <tr className="text-left text-[#a3a3a3] border-b border-[#eae7e1]">
@@ -741,42 +611,11 @@ export default function Billing() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </div> : <div className="border-t border-[#eae7e1] py-8 text-center"><p className="text-sm font-medium text-[#525252]">No invoices yet</p><p className="mt-1 text-xs text-[#a3a3a3]">Invoices will appear here after the first completed payment.</p></div>}
         </motion.div>
       )}
 
-      {isEnterpriseWorkspace ? (
-        <motion.section
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-[#117dff]/20 bg-[#117dff]/[0.04] p-6"
-        >
-          <div className="flex items-start gap-3">
-            <Shield size={20} className="mt-0.5 text-[#117dff]" />
-            <div>
-              <h3 className="font-['Space_Grotesk'] text-base font-semibold text-[#0a0a0a]">
-                Enterprise {enterpriseEngagement?.phase === 'onboarding' ? 'onboarding' : 'runway'}
-              </h3>
-              <p className="mt-1 text-[13px] leading-relaxed text-[#525252] font-['Space_Grotesk']">
-                Your {enterpriseEngagement?.hosting_mode === 'self_host' ? 'self-hosted' : 'managed'} enterprise agreement is administered outside self-serve billing. Usage remains visible above; plan, seats, and commercial changes are handled through your account team.
-              </p>
-              {enterpriseEngagement?.phase === 'onboarding' && enterpriseEngagement?.onboarding_ends_at && (
-                <p className="mt-3 text-[12px] font-medium text-[#117dff] font-['Space_Grotesk']">
-                  Onboarding access ends {new Date(enterpriseEngagement.onboarding_ends_at).toLocaleDateString()}.
-                </p>
-              )}
-              {enterpriseEngagement?.commercial_terms && <p className="mt-2 text-sm text-[#313131]">
-                {enterpriseEngagement.phase === 'onboarding'
-                  ? `Onboarding: €${(enterpriseEngagement.commercial_terms.onboarding_price_cents / 100).toLocaleString()}`
-                  : `Runway: €${(enterpriseEngagement.commercial_terms.runway_monthly_cents / 100).toLocaleString()}/month`}
-              </p>}
-              {enterpriseEngagement?.billing_action && <button disabled={upgrading} onClick={handleEnterpriseCheckout} className="mt-4 rounded-lg bg-[#117dff] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-                {upgrading ? 'Opening checkout…' : enterpriseEngagement.phase === 'onboarding' ? 'Pay onboarding' : 'Start runway subscription'}
-              </button>}
-            </div>
-          </div>
-        </motion.section>
-      ) : (
+      {!isEnterpriseWorkspace && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {planOptions.map((plan) => (
             <PlanCard
@@ -797,16 +636,16 @@ export default function Billing() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
-              q: t('billing.faq1q', 'What are tokens?'),
-              a: t('billing.faq1a', 'Tokens are units of text processed by HIVEMIND. Every piece of information ingested, stored, or retrieved consumes tokens from your monthly quota.'),
+              q: 'Is invitation onboarding a subscription?',
+              a: 'No. An enterprise invitation starts temporary onboarding access. A recurring subscription begins only after an owner accepts a Runway configuration and completes checkout.',
             },
             {
               q: t('billing.faq2q', 'Can I switch plans anytime?'),
               a: t('billing.faq2a', 'Yes. Upgrades take effect immediately. Downgrades apply at the end of your billing cycle.'),
             },
             {
-              q: t('billing.faq3q', 'What happens when I hit my limit?'),
-              a: t('billing.faq3a', 'New ingestion will be paused until the next billing cycle. Existing data remains accessible. Upgrade or wait for your quota to reset.'),
+              q: 'Where can I see consumption and limits?',
+              a: 'The Usage page is the single place for usage, remaining allowances, and reset dates. Billing contains only commercial and payment information.',
             },
             {
               q: t('billing.faq4q', 'Do you offer refunds?'),

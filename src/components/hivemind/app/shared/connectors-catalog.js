@@ -352,6 +352,14 @@ export const BRAND_LOGOS = {
   github:          'https://cdn.simpleicons.org/github/181717',
   linear:          'https://cdn.simpleicons.org/linear',
   salesforce:      'https://api.iconify.design/logos/salesforce.svg',
+  x:               'https://cdn.simpleicons.org/x/000000',
+  twitter:         'https://cdn.simpleicons.org/x/000000',
+  linkedin:        'https://cdn.simpleicons.org/linkedin',
+  instagram:       'https://cdn.simpleicons.org/instagram',
+  facebook:        'https://cdn.simpleicons.org/facebook',
+  tiktok:          'https://cdn.simpleicons.org/tiktok',
+  youtube:         'https://cdn.simpleicons.org/youtube',
+  pinterest:       'https://cdn.simpleicons.org/pinterest',
 };
 
 export const CONNECTOR_CATEGORIES = [

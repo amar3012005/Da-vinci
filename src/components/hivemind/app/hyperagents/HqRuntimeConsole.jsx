@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity, AlertTriangle, ArrowRight, ArrowUpRight, Check, Clock3, Cable, Send,
-  Moon, Pause, Play, Power, RefreshCw, ShieldCheck, Sparkles,
+  Moon, Pause, Play, Power, RefreshCw, ShieldCheck, Sparkles, PhoneCall,
   TerminalSquare, Wrench, X, SlidersHorizontal, ListTodo, RotateCcw,
-  ChevronDown, ChevronLeft, ChevronRight, FileText,
+  ChevronDown, ChevronRight, FileText,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
-import { AuthorityReviewContent, CallPreview, GmailMessagePreview, PlatformActionPreview } from './RuntimeAuthorityPreview';
+import { AuthorityReviewContent, CallPreview, CampaignLaunchPreview, GmailMessagePreview, PlatformActionPreview } from './RuntimeAuthorityPreview';
+import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 
 const EXECUTION_TYPES = new Set(['skill_loaded', 'tool_started', 'tool_result', 'schedule_created', 'verification']);
@@ -315,7 +316,7 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
   const artifacts = collectRuntimeArtifacts(queue, growthBrief);
   const [artifactsOpen, setArtifactsOpen] = useState(true);
   const [tasksExpanded, setTasksExpanded] = useState(true);
-  return <section id="agent-runtime-tasks" role="region" className="relative w-full overflow-hidden rounded-[14px] border border-[#e3e0db] bg-white shadow-[0_14px_36px_-30px_rgba(0,0,0,0.55)]" aria-label="Runtime tasks">
+  return <section id="agent-runtime-tasks" className="relative w-full overflow-hidden rounded-[14px] border border-[#e3e0db] bg-white shadow-[0_14px_36px_-30px_rgba(0,0,0,0.55)]" aria-label="Artifacts and Runtime tasks">
     {onClose ? <button type="button" onClick={onClose} aria-label="Close Runtime tasks" title="Close" className="absolute right-3 top-3 z-10 grid h-7 w-7 place-items-center rounded-full text-[#8a8577] hover:bg-[#f2f0eb] hover:text-[#171717] lg:hidden"><X size={14} /></button> : null}
     <div className="max-h-[min(72vh,680px)] overflow-y-auto">
       {growthBrief ? <div className="border-b border-[#ece9e4]"><GrowthBrief brief={growthBrief} embedded /></div> : null}
@@ -507,17 +508,12 @@ export function ExternalActionMarker({ item }) {
     railRef.current?.children?.[index]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
   };
   if (!actions.length) return null;
-  return <section className="my-7 h-[430px] max-w-4xl overflow-hidden border border-[#171717] bg-white shadow-[0_18px_44px_-34px_rgba(0,0,0,0.8)]" aria-label="Runtime external action marker" data-testid="runtime-external-action-marker">
-    <header className="flex h-[86px] items-start gap-3 border-b border-[#dedbd6] bg-[#171717] px-4 py-3 text-white sm:px-5">
-      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center border border-white/30"><Check size={15} /></span>
-      <div className="min-w-0 flex-1"><div className="font-mono text-[8px] uppercase tracking-[0.18em] text-white/60">Provider-confirmed action</div><h3 className="mt-1 truncate text-[15px] font-semibold">{actions.length === 1 ? actions[0].headline || item.title : `${actions.length} actions launched`}</h3><p className="mt-1 truncate text-[10px] text-white/65">{actions.length === 1 ? actions[0].note || item.summary : 'Slide through the exact actions retained at this checkpoint.'}</p></div>
-      <time className="shrink-0 font-mono text-[8px] text-white/50">{fmtTime(item.createdAt)}</time>
-    </header>
-    <div className="relative h-[344px] bg-[#f5f3ef]">
+  return <section className="relative my-7 h-[390px] max-w-4xl overflow-hidden bg-transparent" aria-label="Runtime external action marker" data-testid="runtime-external-action-marker">
+    <div className="relative h-full">
       <div ref={railRef} onScroll={(event) => { const width = event.currentTarget.clientWidth; if (width) setActiveIndex(Math.round(event.currentTarget.scrollLeft / width)); }} className="flex h-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {actions.map((action) => <div key={action.id} className="h-full w-full shrink-0 snap-start overflow-y-auto px-5 py-4 sm:px-10"><ExternalActionSlide item={action} /></div>)}
+        {actions.map((action) => <div key={action.id} className="h-full w-full shrink-0 snap-start overflow-y-auto pb-12 pr-1"><ExternalActionSlide item={action} /></div>)}
       </div>
-      {actions.length > 1 ? <><button type="button" onClick={() => move(activeIndex - 1)} disabled={activeIndex === 0} className="absolute left-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center border border-[#d8d3cc] bg-white text-[#171717] shadow-sm disabled:opacity-25" aria-label="Previous launched action"><ChevronLeft size={15} /></button><button type="button" onClick={() => move(activeIndex + 1)} disabled={activeIndex === actions.length - 1} className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center border border-[#d8d3cc] bg-white text-[#171717] shadow-sm disabled:opacity-25" aria-label="Next launched action"><ChevronRight size={15} /></button><div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5" aria-label={`${activeIndex + 1} of ${actions.length}`}>{actions.map((action, index) => <button key={action.id} type="button" onClick={() => move(index)} aria-label={`Show action ${index + 1}`} className={`h-1.5 w-5 ${index === activeIndex ? 'bg-[#171717]' : 'bg-[#c9c4bb]'}`} />)}</div></> : null}
+      {actions.length > 1 ? <button type="button" onClick={() => move(activeIndex === actions.length - 1 ? 0 : activeIndex + 1)} className="absolute bottom-1 right-1 grid h-10 w-10 place-items-center rounded-full bg-[#171717] text-white shadow-sm transition-transform duration-150 active:scale-95 motion-reduce:transition-none" aria-label={activeIndex === actions.length - 1 ? 'Show first artifact' : 'Show next artifact'} title={activeIndex === actions.length - 1 ? 'First artifact' : 'Next artifact'}><ChevronRight size={18} /></button> : null}
     </div>
   </section>;
 }
@@ -616,6 +612,8 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   const [instructionNotice, setInstructionNotice] = useState('');
   const [approvalBusy, setApprovalBusy] = useState('');
   const [dismissedWorkflowApprovalId, setDismissedWorkflowApprovalId] = useState(null);
+  const [dismissedCallProposalId, setDismissedCallProposalId] = useState(null);
+  const [callProposalBusy, setCallProposalBusy] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
   const [dismissedCapabilityRequestId, setDismissedCapabilityRequestId] = useState(null);
   const [dismissedInputRunId, setDismissedInputRunId] = useState(null);
@@ -769,6 +767,16 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     let active = true;
     const check = async () => {
       try {
+        if (String(request.connector_provider || '').toLowerCase() === 'composio') {
+          await apiClient.recheckHqCapabilities();
+          const workData = await apiClient.getHqWork();
+          const pending = (workData?.capability_requests || []).some((row) => row.id === request.id);
+          if (active && !pending) {
+            capabilityWakeRef.current = request.id;
+            setWork(workData || { todos: [], capability_requests: [] });
+          }
+          return;
+        }
         const data = await apiClient.getConnectorConnectionStatus();
         const rows = data?.connectors || data || [];
         const wanted = String(request.provider || '').toLowerCase();
@@ -840,7 +848,8 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   // reconciles stale requests; this filter prevents a legacy row from leaking
   // an implementation vendor while that reconciliation is in flight.
   const capabilityRequest = (work.capability_requests || []).find((request) => (
-    !INTERNAL_CAPABILITIES.has(String(request?.provider || '').toLowerCase())
+    request?.deferred !== true
+    && !INTERNAL_CAPABILITIES.has(String(request?.provider || '').toLowerCase())
   ));
   const lifecycleQueue = (work.playbook_snapshots || []).filter((snapshot) => !['COMPLETED', 'TERMINATED'].includes(snapshot.status)).map((snapshot) => ({
     id: `playbook:${snapshot.execution_id}`,
@@ -898,18 +907,50 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   const openCapability = async () => {
     if (!capabilityRequest?.connectPath) return;
     const provider = String(capabilityRequest.provider || '').toLowerCase();
+    const connectorProvider = String(capabilityRequest.connector_provider || '').toLowerCase();
+    if (connectorProvider === 'composio') {
+      const toolkitSlug = String(capabilityRequest.connector_toolkit || provider).toLowerCase();
+      const authWindow = window.open('', '_blank', 'noopener,noreferrer');
+      try {
+        const callbackUrl = `${window.location.origin}/hivemind/app/connectors?composio_toolkit=${encodeURIComponent(toolkitSlug)}`;
+        const data = await apiClient.createComposioConnectLink(toolkitSlug, { callbackUrl });
+        if (!data?.redirect_url) throw new Error('Composio did not return a connection URL');
+        if (authWindow) authWindow.location.href = data.redirect_url;
+        else window.open(data.redirect_url, '_blank', 'noopener,noreferrer');
+      } catch (requestError) {
+        if (authWindow) authWindow.close();
+        setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+      }
+      return;
+    }
     const platform = { x: 'twitter', linkedin: 'linkedin', instagram: 'instagram', facebook: 'facebook', tiktok: 'tiktok', youtube: 'youtube', pinterest: 'pinterest' }[provider];
     if (!platform) { window.open(capabilityRequest.connectPath, '_blank', 'noopener,noreferrer'); return; }
+    const authWindow = window.open('', '_blank', 'noopener,noreferrer');
     try {
       const data = await apiClient.startCampaignConnection(platform, `${window.location.pathname}${window.location.search}`, 'organic');
-      if (data.connected) { await apiClient.recheckHqCapabilities(); await load(); return; }
-      window.location.assign(data.authorization_url);
+      if (data.connected) { if (authWindow) authWindow.close(); await apiClient.recheckHqCapabilities(); await load(); return; }
+      if (!data.authorization_url) throw new Error('Connection provider did not return an authorization URL');
+      if (authWindow) authWindow.location.href = data.authorization_url;
+      else window.open(data.authorization_url, '_blank', 'noopener,noreferrer');
     } catch (requestError) {
+      if (authWindow) authWindow.close();
       setError(requestError?.response?.data?.message || requestError.message);
     }
   };
+  const deferCapability = async () => {
+    if (!capabilityRequest?.id) return;
+    setBusy('defer-capability'); setError('');
+    try {
+      await apiClient.deferHqCapabilityRequest(capabilityRequest.id);
+      setDismissedCapabilityRequestId(capabilityRequest.id);
+      await load();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.message || requestError.message);
+    } finally { setBusy(''); }
+  };
   const playbookApproval = (work.playbook_approvals || [])[0] || null;
   const playbookInput = (work.playbook_inputs || [])[0] || null;
+  const callProposal = (work.outreach_call_proposals || [])[0] || null;
   const approvalNoun = playbookApproval?.campaign
     ? 'campaign launch'
     : (playbookApproval?.calls || []).length
@@ -929,6 +970,17 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     } catch (requestError) {
       setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
     } finally { setApprovalBusy(''); }
+  };
+  const startOutreachCalls = async () => {
+    if (!callProposal?.source_run_id || callProposalBusy) return;
+    setCallProposalBusy(true); setError('');
+    try {
+      await apiClient.startHqOutreachCalls(callProposal.source_run_id);
+      setDismissedCallProposalId(callProposal.id);
+      await load();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+    } finally { setCallProposalBusy(false); }
   };
   const provideRuntimeInput = async (event) => {
     event.preventDefault();
@@ -991,8 +1043,9 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     <div ref={transcriptBottomRef} aria-hidden="true" className="h-px w-full" />
     {adminCheckinOpen ? <div className="fixed inset-0 z-[75] grid place-items-center bg-[#121412]/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Talk to Runtime"><div className="flex flex-col w-full max-w-xl rounded-[20px] border border-[#e3e0db] bg-white overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(10,10,11,0.04), 0 24px 64px rgba(10,10,11,0.18)' }}>{/* Mac-window chrome header — matches the Overview welcome-tour shell */}<div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-5 py-4 border-b border-[#e3e0db] bg-white shrink-0"><div className="flex items-center gap-[7px]" aria-hidden="true"><span className="w-[11px] h-[11px] rounded-full bg-[#FF5F57]" /><span className="w-[11px] h-[11px] rounded-full bg-[#FEBC2E]" /><span className="w-[11px] h-[11px] rounded-full bg-[#28C840]" /></div><span className="text-center font-mono text-[12px] tracking-[0.24em] uppercase text-[#a3a3a3]">RUNTIME <span className="text-[#d4d0ca]">·</span> ADMIN CHECK-IN</span><button type="button" onClick={() => { setAdminCheckinOpen(false); decideAdminCheckin('skipped'); }} className="h-7 rounded-md border border-[#e3e0db] bg-white px-3 text-[11px] font-semibold text-[#525252] hover:text-[#0a0a0a] hover:border-[#d4d0ca] transition-colors" title="Skip the check-in — Runtime plans from the evidence it already has">Skip</button></div><div className="bg-[#faf9f4] px-6 py-7"><AaasVoiceWidget userId={runtime?.ownerUserId} orgId={runtime?.orgId} provider="grok" initialMode="internal" interactionProfile="runtime_operator" runtimeAdmin runtimeContextRef={firstLifeExperience?.admin_checkin?.run_id || null} maxDurationSeconds={180} initialGoal="Review the baseline evidence with the administrator, capture corrections, current priorities, and active blockers, then return the verified context to Runtime planning." onSessionCreated={({ sessionId }) => decideAdminCheckin('started', sessionId)} onSessionEnded={({ sessionId }) => { setAdminCheckinOpen(false); decideAdminCheckin('completed', sessionId); }} /><div className="mt-5 flex items-center justify-between gap-3 border-t border-[#e3e0db] pt-4"><span className="text-[11px] leading-4 text-[#777168]">Talk for about three minutes, or skip — Runtime plans either way.</span><button type="button" onClick={() => { setAdminCheckinOpen(false); decideAdminCheckin('skipped'); }} className="h-9 shrink-0 rounded-md border border-[#d8d3cc] bg-white px-4 text-[12px] font-semibold text-[#525252] transition-colors hover:border-[#a3a3a3] hover:text-[#171717]">Skip for now</button></div></div></div></div> : null}
     {instructionsOpen ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Runtime instructions"><form onSubmit={async (event) => { if (await submitInstruction(event)) setInstructionsOpen(false); }} className="w-full max-w-lg rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setInstructionsOpen(false)} aria-label="Close runtime instructions" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#171717]"><SlidersHorizontal size={13} />Runtime instructions</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Set a standing priority</h3></div><div className="p-5"><textarea autoFocus value={instruction} onChange={(event) => setInstruction(event.target.value)} rows={5} placeholder="Focus on getting qualified clients in Hannover..." className="w-full resize-none border border-[#d8d3cc] bg-white p-3 text-[13px] leading-6 outline-none placeholder:text-[#aaa49c] focus:border-[#171717]" />{instructionNotice ? <p className="mt-3 text-[11px] leading-5 text-[#525252]">{instructionNotice}</p> : null}<div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setInstructionsOpen(false)} className="h-9 px-3 text-[11px] font-semibold text-[#525252]">Cancel</button><button type="submit" disabled={!instruction.trim() || instructionBusy} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-35">{instructionBusy ? <ArcSpin size={13} /> : <Send size={13} />}Save instruction</button></div></div></form></div> : null}
-    {capabilityRequest && capabilityRequest.id !== dismissedCapabilityRequestId ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={`Connect ${providerLabel(capabilityRequest.provider)}`}><div className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedCapabilityRequestId(capabilityRequest.id)} aria-label="Close connection request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]"><Cable size={13} />Capability required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Connect {providerLabel(capabilityRequest.provider)}</h3><p className="mt-2 text-[13px] leading-6 text-[#625f58]">{publicRuntimeText(capabilityRequest.reason)}</p></div><div className="px-5 py-4"><p className="text-[11px] leading-5 text-[#777168]">I paused this todo without discarding it. I am watching the organization connection state and will continue automatically when access is ready.</p><div className="mt-4 flex justify-end gap-2"><button type="button" onClick={async () => { await apiClient.recheckHqCapabilities(); await load(); }} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252]">Check connection</button><button type="button" onClick={openCapability} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white">Connect {providerLabel(capabilityRequest.provider)}</button></div></div></div></div> : null}
+    {capabilityRequest && capabilityRequest.id !== dismissedCapabilityRequestId ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label={`Connect ${providerLabel(capabilityRequest.provider)}`}><div className="flex h-[min(760px,calc(100dvh-24px))] w-[min(900px,calc(100vw-24px))] flex-col overflow-hidden rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative shrink-0 border-b border-[#e3e0db] bg-white px-5 py-4"><button type="button" onClick={() => setDismissedCapabilityRequestId(capabilityRequest.id)} aria-label="Close connection request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]">{BRAND_LOGOS[String(capabilityRequest.provider || '').toLowerCase()] ? <img src={BRAND_LOGOS[String(capabilityRequest.provider || '').toLowerCase()]} alt="" className="h-5 w-5 object-contain" /> : <Cable size={15} />}{capabilityRequest.campaign ? 'Campaign prepared' : capabilityRequest.prepared_batch ? 'Outreach prepared' : 'Capability required'}</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Connect {providerLabel(capabilityRequest.provider)} to {capabilityRequest.campaign ? 'publish' : capabilityRequest.prepared_batch ? 'continue outreach' : 'continue'}</h3><p className="mt-2 text-[12px] leading-5 text-[#625f58]">{publicRuntimeText(capabilityRequest.reason)}</p></div><div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7">{capabilityRequest.campaign ? <CampaignLaunchPreview campaign={capabilityRequest.campaign} /> : capabilityRequest.prepared_batch ? <AuthorityReviewContent approval={capabilityRequest.prepared_batch} /> : <p className="text-[11px] leading-5 text-[#777168]">The prepared work is retained and will continue from this checkpoint after connection.</p>}</div><div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[#e3e0db] bg-white px-5 py-4"><span className="mr-auto max-w-md text-[10px] leading-4 text-[#777168]">Prepared artifacts remain attached to this lifecycle. Connecting resumes the same run without rediscovery.</span><button type="button" onClick={deferCapability} disabled={busy === 'defer-capability'} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252] disabled:opacity-40">{busy === 'defer-capability' ? 'Saving...' : 'Skip for now'}</button><button type="button" onClick={async () => { await apiClient.recheckHqCapabilities(); await load(); }} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252]">Check connection</button><button type="button" onClick={openCapability} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white">Connect {providerLabel(capabilityRequest.provider)}</button></div></div></div> : null}
     {playbookInput && playbookInput.run_id !== dismissedInputRunId ? <div className="fixed inset-0 z-[71] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={playbookInput.label}><form onSubmit={provideRuntimeInput} className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedInputRunId(playbookInput.run_id)} aria-label="Close information request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center text-[#777168] hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]">Information required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">{playbookInput.label}</h3><p className="mt-2 text-[12px] leading-5 text-[#777168]">{playbookInput.description}</p></div><div className="p-5"><input autoFocus type={playbookInput.value_type === 'email' ? 'email' : 'tel'} value={runtimeInputValue} onChange={(event) => setRuntimeInputValue(event.target.value)} placeholder={playbookInput.value_type === 'phone' ? '+49...' : 'name@company.com'} className="h-11 w-full border border-[#d8d3cc] bg-white px-3 text-[13px] outline-none focus:border-[#171717]" /><div className="mt-4 flex justify-end"><button type="submit" disabled={!runtimeInputValue.trim() || runtimeInputBusy} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{runtimeInputBusy ? 'Saving...' : 'Continue Runtime'}</button></div></div></form></div> : null}
+    {!playbookApproval && !capabilityRequest && !playbookInput && callProposal && callProposal.id !== dismissedCallProposalId ? <div className="fixed inset-0 z-[72] grid place-items-center bg-black/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Start TARA outreach calls"><div className="flex h-[min(680px,calc(100dvh-24px))] w-[min(820px,calc(100vw-24px))] flex-col overflow-hidden rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-[0_30px_90px_rgba(0,0,0,0.28)]"><div className="relative shrink-0 border-b border-[#e3e0db] bg-white px-5 py-4 sm:px-6"><button type="button" onClick={() => setDismissedCallProposalId(callProposal.id)} aria-label="Close TARA outreach proposal" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]"><PhoneCall size={14} />Outreach calls ready</div><h3 className="mt-3 pr-9 text-[21px] font-semibold text-[#171717]">Start TARA outreach calls</h3><p className="mt-2 max-w-2xl text-[12px] leading-5 text-[#777168]">{callProposal.summary}</p></div><div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7"><div className="space-y-4">{callProposal.targets.map((target, index) => <CallPreview key={`${target.value}-${index}`} call={{ prospect: target.label, phone: target.value, goal: target.goal, strategy: target.personal_notes }} statusLabel="Ready" />)}</div></div><div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[#e3e0db] bg-white px-5 py-4 sm:px-6"><span className="mr-auto max-w-lg text-[10px] leading-4 text-[#777168]">Runtime prepares one exact call at a time, waits for its result, and gives the transcript back to Outreach before moving to the next lead.</span><button type="button" onClick={() => setDismissedCallProposalId(callProposal.id)} className="h-9 rounded-md border border-[#d8d3cc] px-4 text-[11px] font-semibold text-[#525252]">Later</button><button type="button" onClick={startOutreachCalls} disabled={callProposalBusy} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{callProposalBusy ? <ArcSpin size={13} /> : <PhoneCall size={13} />}Start calls</button></div></div></div> : null}
     {playbookApproval && playbookApproval.run_id !== dismissedWorkflowApprovalId ? <div className="fixed inset-0 z-[72] grid place-items-center bg-black/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label={`Choose ${approvalNoun} policy`}>
       <div className="flex h-[min(720px,calc(100dvh-24px))] w-[min(900px,calc(100vw-24px))] flex-col overflow-hidden rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-[0_30px_90px_rgba(0,0,0,0.28)]">
         <div className="relative shrink-0 border-b border-[#e3e0db] bg-white px-5 pb-4 pt-3 sm:px-6">
