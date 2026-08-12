@@ -77,6 +77,15 @@ export default function ShareInviteModal({
     if (open) fetchInvites();
   }, [open, fetchInvites]);
 
+  // Delivery completion is asynchronous so the invite request cannot be held
+  // open by an external provider. Refresh the authoritative row once after the
+  // bounded handoff window; manual refresh remains available for later retries.
+  useEffect(() => {
+    if (!newInvite?.email_dispatch?.pending) return undefined;
+    const timer = window.setTimeout(() => { fetchInvites(); }, 22_000);
+    return () => window.clearTimeout(timer);
+  }, [newInvite?.email_dispatch?.pending, fetchInvites]);
+
   // Build a shareable URL + prefilled message.
   const inviteUrl = newInvite?.join_url || newInvite?.full_url || '';
   const orgLabel = contextLabel || 'our HIVEMIND';
@@ -171,7 +180,9 @@ export default function ShareInviteModal({
     try {
       const response = await apiClient.resendInvite(orgId, inv.id);
       const dispatch = response.email_dispatch;
-      if (dispatch?.ok) {
+      if (dispatch?.pending) {
+        setDeliveryNotice('Invitation delivery is being confirmed. This invite remains active while Cloudflare processes it.');
+      } else if (dispatch?.ok) {
         setDeliveryNotice(`Invitation email accepted by ${dispatch.provider || 'the delivery provider'}.`);
       } else {
         setCreateError(`The invitation is still active, but email delivery failed: ${dispatch?.error || 'please retry'}.`);
@@ -300,8 +311,10 @@ export default function ShareInviteModal({
                 </div>
 
                 {newInvite.email_dispatch && (
-                  <div className={`text-[10px] font-mono ${newInvite.email_dispatch.ok ? 'text-emerald-700' : 'text-amber-700'}`}>
-                    {newInvite.email_dispatch.ok
+                  <div className={`text-[10px] font-mono ${newInvite.email_dispatch.ok ? 'text-emerald-700' : newInvite.email_dispatch.pending ? 'text-blue-700' : 'text-amber-700'}`}>
+                    {newInvite.email_dispatch.pending
+                      ? 'Email delivery is being confirmed. The invite is active and can still be copied below.'
+                      : newInvite.email_dispatch.ok
                       ? `✓ Email sent via ${newInvite.email_dispatch.provider}`
                       : newInvite.email_dispatch.attempted
                         ? `Email dispatch failed: ${newInvite.email_dispatch.error || 'no provider configured'}`
