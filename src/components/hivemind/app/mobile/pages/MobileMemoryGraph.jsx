@@ -41,6 +41,18 @@ const SCOPE_OPTIONS = [
 const THEME_KEY = 'hm-graph-theme-v2'; // shared with desktop graph — one preference, either surface
 const DIM_KEY = 'hm-m-graph-dim-v1';
 
+// MemoryGraph3D has no defensive fallbacks for these (unlike
+// MemoryGraph2DCanvas, which does `new Set([...(highlightNodes || [])])`)
+// — the desktop page always supplies real values for every one of these,
+// so leaving any of them undefined crashes deep inside three-forcegraph
+// with a minified "undefined is not an object (evaluating 'b.length')".
+// Module-level constants so the reference stays stable across renders
+// (the 3D component's internal effects key off these by identity).
+const EMPTY_SET = new Set();
+const EMPTY_OBJ = {};
+const EMPTY_ARR = [];
+const NOOP = () => {};
+
 function useContainerSize() {
   const ref = useRef(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -317,17 +329,31 @@ export default function MobileMemoryGraph() {
             <MemoryGraph3D
               graphData={graphData}
               selectedNode={selectedNode}
+              highlightNodes={EMPTY_SET}
+              filteredNodes={EMPTY_SET}
+              layerFilter="all"
+              clusterFilter={null}
+              scope={scope}
+              userColorMap={EMPTY_OBJ}
+              clusterCentroids={EMPTY_OBJ}
+              clusters={EMPTY_ARR}
               onNodeClick={handleNodeClick}
+              onNodeHover={NOOP}
+              onBackgroundClick={() => setSelectedNode(null)}
+              onViewStateChange={NOOP}
               width={size.width}
               height={size.height}
               theme={theme === 'night' ? 'atlas' : 'day'}
-              scope={scope}
             />
           ) : (
             <MemoryGraph2DCanvas
               graphData={graphData}
               selectedNode={selectedNode}
+              highlightNodes={EMPTY_SET}
+              filteredNodes={EMPTY_SET}
               onNodeClick={handleNodeClick}
+              onNodeHover={NOOP}
+              onBackgroundClick={() => setSelectedNode(null)}
               width={size.width}
               height={size.height}
               backgroundColor={bgColor}
