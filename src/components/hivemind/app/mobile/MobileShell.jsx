@@ -35,7 +35,7 @@ const NAV = [
   { to: '/hivemind/m/profile', label: 'Profile', icon: UserCircle2 },
 ];
 
-export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false }) {
+export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false, showBareLogo = true }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, org, logout } = useAuth() || {};
@@ -88,12 +88,14 @@ export default function MobileShell({ children, rightAction = null, title = null
           >
             <AlignLeft size={22} strokeWidth={2} />
           </button>
-          <div
-            className="absolute left-1/2 -translate-x-1/2 z-40 w-9 h-9 rounded-full grid place-items-center bg-[#faf9f4]/85 backdrop-blur-sm"
-            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 6px)' }}
-          >
-            <SingulanceMark size={18} />
-          </div>
+          {showBareLogo && (
+            <div
+              className="absolute left-1/2 -translate-x-1/2 z-40 w-9 h-9 rounded-full grid place-items-center bg-[#faf9f4]/85 backdrop-blur-sm"
+              style={{ top: 'calc(env(safe-area-inset-top, 0px) + 6px)' }}
+            >
+              <SingulanceMark size={18} />
+            </div>
+          )}
         </>
       ) : (
         <header className="h-14 px-2.5 flex items-center justify-between flex-shrink-0">

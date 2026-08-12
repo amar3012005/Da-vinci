@@ -759,7 +759,7 @@ export default function TalkToHiveMobile() {
     </>
   );
   return (
-    <MobileShell noScroll bareHeader extraDrawerActions={chatDrawerActions}>
+    <MobileShell noScroll bareHeader showBareLogo={messages.length > 0} extraDrawerActions={chatDrawerActions}>
       {/* Floating top-right cluster — language + model (drop-downs). The chosen
           model drives the /chat synthesis; language sets the reply language. */}
       <div className="absolute right-2.5 z-40 flex items-center gap-1.5"
