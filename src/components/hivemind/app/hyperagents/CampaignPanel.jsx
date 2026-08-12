@@ -7,10 +7,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Loader2, Mail, PhoneCall, Play, Square, CheckCheck, X, ChevronDown, Pencil,
-  Headphones,
+  Headphones, Send,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
+import { useTypewriter } from './elements/LiveActionCards';
 
 const EMAIL_PACE_MS = 8500; // FE pacing (BE enforces 8s — stay just above)
 // tara-deepgram base (same residency-correct derivation as TaraConfig).
@@ -107,6 +108,104 @@ function Bar({ done, failed, total }) {
     <div className="h-1.5 w-full rounded-full bg-[#eceae4] overflow-hidden flex">
       <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pDone}%` }} />
       <div className="h-full bg-red-400 transition-all" style={{ width: `${pFail}%` }} />
+    </div>
+  );
+}
+
+// The one-at-a-time "hero" card — only the target currently being written/sent
+// or dialed is shown full-size (subject/body typed out live for email; a
+// ringing/in-call view for a call), matching the room's own live-typing
+// compose card. The rest of the queue stays a compact strip so the popup
+// never shows more than one in-flight draft or call at once.
+function ActiveTargetCard({ channel, target }) {
+  const p = target?.payload || {};
+  const body = channel === 'email' ? (p.body || '') : '';
+  const st = target?.state;
+  const isWriting = channel === 'email' && !!body && st !== 'sent';
+  const { shown, done } = useTypewriter(body, { start: isWriting });
+  if (!target) return null;
+
+  if (channel === 'email') {
+    const label = {
+      selected: 'Queued', generating: 'Generating draft…', ready: 'Ready',
+      sending: done ? 'Sending…' : 'Writing…', sent: 'Sent', failed: 'Failed',
+    }[st] || st;
+    return (
+      <div className="rounded-xl overflow-hidden border border-[#d4d4d4] shadow-lg bg-white">
+        <div className="flex items-center justify-between bg-[#404040] px-3 py-2">
+          <span className="text-[12px] text-white font-medium flex items-center gap-2 truncate">
+            <Mail size={13} className="shrink-0" /> {target.company}
+          </span>
+          <span className="text-[9px] font-mono uppercase tracking-wider text-[#d4d4d4] shrink-0">{label}</span>
+        </div>
+        <div className="px-3 text-[12px]">
+          <div className="flex gap-2 border-b border-[#eee] py-1.5">
+            <span className="text-[#a3a3a3] w-12 shrink-0">To</span>
+            <span className="text-[#0a0a0a] truncate">{target.email || '—'}</span>
+          </div>
+          <div className="flex gap-2 border-b border-[#eee] py-1.5">
+            <span className="text-[#a3a3a3] w-12 shrink-0">Subject</span>
+            <span className="text-[#0a0a0a] font-medium truncate">{p.subject || '…'}</span>
+          </div>
+          <div className="py-3 min-h-[100px] max-h-[300px] overflow-y-auto leading-relaxed text-[13px] text-[#1f1f1f]">
+            {!body ? (
+              <span className="inline-flex items-center gap-1.5 text-[#a3a3a3] text-[11px]">
+                <Loader2 size={11} className="animate-spin" /> waiting for the draft…
+              </span>
+            ) : done || st === 'sent' ? (
+              <div className="whitespace-pre-wrap">{body}</div>
+            ) : (
+              <div className="whitespace-pre-wrap">{shown}
+                <span className="inline-block w-[7px] h-[14px] bg-[#1a73e8] align-text-bottom animate-pulse ml-0.5" />
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 border-t border-[#eee] bg-[#fafafa]">
+          {st === 'sent' ? (
+            <span className="text-[11px] font-medium flex items-center gap-1 text-emerald-700"><CheckCheck size={12} /> Sent</span>
+          ) : st === 'failed' ? (
+            <span className="text-[11px] font-medium text-red-600 truncate">{target.resultRef?.error || 'Failed'}</span>
+          ) : (
+            <span className="text-[11px] text-[#525252] flex items-center gap-1.5">
+              <Send size={11} /> Sends automatically once written
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Call channel — a ringing/in-call hero card, one dial at a time.
+  const chip = {
+    selected: 'Dialing next…', ready: 'Dialing next…', dialing: 'Ringing…',
+    in_call: 'Call in progress', analyzing: 'Analysing…', analyzed: 'Analysed',
+    failed: 'Call failed',
+  }[st] || st;
+  const live = ['dialing', 'in_call'].includes(st);
+  return (
+    <div className="rounded-2xl bg-[#111] text-white shadow-2xl px-5 pt-6 pb-5 text-center">
+      <div className="relative mx-auto w-16 h-16 mb-3">
+        {live && (
+          <>
+            <span className="absolute inset-0 rounded-full bg-emerald-500/30 animate-ping" />
+            <span className="absolute -inset-2 rounded-full bg-emerald-500/15 animate-ping [animation-delay:300ms]" />
+          </>
+        )}
+        <span className="relative flex items-center justify-center w-16 h-16 rounded-full bg-emerald-600">
+          <PhoneCall size={24} className={live ? 'animate-pulse' : ''} />
+        </span>
+      </div>
+      <div className="text-[14px] font-medium truncate">{target.company}</div>
+      <div className="text-[12px] font-mono text-[#a3a3a3] mt-0.5">{target.phone}</div>
+      <div className={`text-[11px] mt-2 ${st === 'failed' ? 'text-red-400' : 'text-emerald-400'}`}>
+        {live ? <span className="animate-pulse">{chip}</span> : chip}
+      </div>
+      {target.resultRef?.sessionId && ['dialing', 'in_call', 'analyzing'].includes(st) && (
+        <div className="mt-3 flex justify-center">
+          <LiveListen sessionId={target.resultRef.sessionId} provider={target.resultRef.provider} />
+        </div>
+      )}
     </div>
   );
 }
@@ -279,6 +378,7 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
   const [campaign, setCampaign] = useState(null);
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
   const runningRef = useRef(false);
   const campaignRef = useRef(null);
   campaignRef.current = campaign;
@@ -421,73 +521,105 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
     }
   }, [refresh]);
 
-  if (err && !campaign) {
-    return (
-      <div className="mt-2 pl-2 flex items-center gap-2 text-[11px] text-red-600">
-        <X size={12} /> {err}
-        <button onClick={onClose} className="ml-auto text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={12} /></button>
-      </div>
-    );
-  }
-  if (!campaign) {
-    return (
-      <div className="mt-2 pl-2 flex items-center gap-2 text-[11px] text-[#525252]">
-        <Loader2 size={12} className="animate-spin" /> Preparing campaign ({eligibleCount} prospects)…
-      </div>
-    );
-  }
+  // Closing mid-run stops the batch first — never leaves an orphaned runner
+  // behind a closed popup.
+  const handleClose = useCallback(() => {
+    if (runningRef.current) stop();
+    onClose && onClose();
+  }, [stop, onClose]);
 
-  const targets = campaign.targets || [];
+  const targets = campaign?.targets || [];
   const inRun = targets.filter(t => t.state !== 'deselected');
   const done = targets.filter(t => t.state === 'sent' || t.state === 'analyzed' || t.state === 'browser').length;
   const failed = targets.filter(t => t.state === 'failed').length;
-  const running = runningRef.current || busy || campaign.status === 'running';
-  const finished = campaign.status === 'done' || (!running && done + failed >= inRun.length && inRun.length > 0);
+  const running = runningRef.current || busy || campaign?.status === 'running';
+  const finished = !!campaign && (campaign.status === 'done' || (!running && done + failed >= inRun.length && inRun.length > 0));
+  // The single target on stage right now: whatever is actively being written/
+  // sent/dialed, else the next one up next. Everything else stays behind the
+  // "Show full queue" toggle — only one draft/call is ever on screen at once.
+  const activeTarget = targets.find(t => ['generating', 'sending', 'dialing', 'in_call', 'analyzing'].includes(t.state))
+    || targets.find(t => ['selected', 'ready'].includes(t.state));
 
   return (
-    <div className="mt-2 pl-2">
-      <div className="rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3">
-        <div className="flex items-center gap-2">
-          {campaign.channel === 'email'
-            ? <Mail size={13} className="text-[#117dff]" />
-            : <PhoneCall size={13} className="text-[#117dff]" />}
+    <div className="fixed inset-0 z-[60] bg-[#1a1814]/45 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={handleClose}>
+      <div className="w-full max-w-[420px] rounded-2xl border border-[#e3e0db] bg-[#faf9f4] shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e3e0db] bg-white">
+          {campaign?.channel === 'call'
+            ? <PhoneCall size={13} className="text-[#117dff]" />
+            : <Mail size={13} className="text-[#117dff]" />}
           <span className="text-[11px] font-mono uppercase tracking-wider text-[#0a0a0a] font-semibold">
-            {campaign.channel === 'email' ? 'Email campaign' : 'Call campaign'}
+            {campaign?.channel === 'call' ? 'TARA call outreach' : 'Email outreach'}
           </span>
-          {campaign.senderEmail && (
+          {campaign?.senderEmail && (
             <span className="text-[10px] font-mono text-[#a3a3a3] truncate">from {campaign.senderEmail}</span>
           )}
-          <span className="ml-auto text-[11px] font-mono text-[#525252]">
-            {done}/{inRun.length}{failed ? ` · ${failed} failed` : ''}
-          </span>
-          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]" title="Close"><X size={13} /></button>
-        </div>
-        <div className="mt-2"><Bar done={done} failed={failed} total={inRun.length || 1} /></div>
-        <div className="mt-2 flex items-center gap-2">
-          {!running && !finished && (
-            <button onClick={run}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wider bg-[#117dff] text-white hover:bg-[#0e6be0]">
-              <Play size={11} /> {campaign.status === 'paused' || done > 0 ? 'Resume' : 'Start'}
-            </button>
-          )}
-          {running && (
-            <button onClick={stop}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wider border border-red-300 text-red-600 hover:bg-red-50">
-              <Square size={11} /> Stop
-            </button>
-          )}
-          {finished && (
-            <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-mono uppercase tracking-wider">
-              <CheckCheck size={12} /> {campaign.channel === 'email' ? `${done} emails sent` : `${done} calls analyzed`}
+          {campaign && (
+            <span className="ml-auto text-[11px] font-mono text-[#525252]">
+              {done}/{inRun.length}{failed ? ` · ${failed} failed` : ''}
             </span>
           )}
-          {err && <span className="text-[10px] text-red-600 truncate">{err}</span>}
+          <button onClick={handleClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]" title="Close"><X size={15} /></button>
         </div>
-        <div className="mt-2 flex flex-col gap-1.5 max-h-80 overflow-y-auto">
-          {targets.map(t => (
-            <TargetRow key={t.id} c={campaign} target={t} onPatch={patchTarget} disabled={false}
-              post={postCall[t.resultRef?.sessionId]} />
-          ))}
+
+        <div className="p-4">
+          {err && !campaign && (
+            <div className="flex items-center gap-2 text-[11px] text-red-600">{err}</div>
+          )}
+          {!campaign && !err && (
+            <div className="flex items-center gap-2 text-[11px] text-[#525252]">
+              <Loader2 size={12} className="animate-spin" /> Preparing outreach ({eligibleCount} prospects)…
+            </div>
+          )}
+          {campaign && (
+            <>
+              <Bar done={done} failed={failed} total={inRun.length || 1} />
+              <div className="mt-3 flex items-center gap-2">
+                {!running && !finished && (
+                  <button onClick={run}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wider bg-[#117dff] text-white hover:bg-[#0e6be0]">
+                    <Play size={11} /> {campaign.status === 'paused' || done > 0
+                      ? 'Resume'
+                      : (campaign.channel === 'call' ? `Start TARA outreach (${inRun.length})` : `Start email outreach (${inRun.length})`)}
+                  </button>
+                )}
+                {running && (
+                  <button onClick={stop}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wider border border-red-300 text-red-600 hover:bg-red-50">
+                    <Square size={11} /> Stop
+                  </button>
+                )}
+                {finished && (
+                  <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-mono uppercase tracking-wider">
+                    <CheckCheck size={12} /> {campaign.channel === 'email' ? `${done} emails sent` : `${done} calls analyzed`}
+                  </span>
+                )}
+                {err && <span className="text-[10px] text-red-600 truncate">{err}</span>}
+              </div>
+
+              {/* One draft / one call on stage at a time. */}
+              {(running || activeTarget) && !finished && (
+                <div className="mt-3">
+                  <ActiveTargetCard channel={campaign.channel} target={activeTarget} />
+                </div>
+              )}
+
+              <button type="button" onClick={() => setShowQueue(v => !v)}
+                className="mt-3 flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] hover:text-[#525252]">
+                <ChevronDown size={11} className={`transition-transform ${showQueue ? 'rotate-180' : ''}`} />
+                {showQueue ? 'Hide full queue' : `Show full queue (${inRun.length})`}
+              </button>
+              {showQueue && (
+                <div className="mt-2 flex flex-col gap-1.5 max-h-72 overflow-y-auto">
+                  {targets.map(t => (
+                    <TargetRow key={t.id} c={campaign} target={t} onPatch={patchTarget} disabled={false}
+                      post={postCall[t.resultRef?.sessionId]} />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
