@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
+import SingulanceMark from '../shared/SingulanceMark';
 import OnboardingTerminal from './OnboardingTerminal';
 import AgentAvatar from './AgentAvatar';
 import WebsitePreview from './WebsitePreview';
@@ -36,15 +37,28 @@ function panelsLitBy(lines) {
   };
 }
 
-function Panel({ icon: Icon, title, lit, children, className = '' }) {
+// `lit` = this section is being worked on (log-line heuristic) — dims the
+// panel in/out for liveliness. `complete` = the actual data has landed —
+// gates the green checkmark, so a panel never reads as "done" (checkmark)
+// while its content is still an empty placeholder dash. Without this split,
+// `lit` alone drove both, and a panel could show a checkmark next to "—"
+// the moment its log line appeared but before the real profile/mission
+// data existed — the "looks odd, half-done" bug.
+function Panel({ icon: Icon, title, lit, complete = lit, children, className = '' }) {
   return (
     <div className={`bg-white border rounded-lg p-3 overflow-hidden transition-all duration-500 ${lit ? 'border-[#e3e0db] opacity-100' : 'border-[#efece6] opacity-45'} ${className}`}>
       <div className="flex items-center gap-2 mb-2">
         <Icon size={13} className={lit ? 'text-[#117dff]' : 'text-[#c9c4bc]'} />
         <span className="text-[11px] font-semibold uppercase tracking-wide text-[#a3a3a3] font-['Space_Grotesk']">{title}</span>
-        {lit && <CheckCircle2 size={12} className="text-[#16a34a] ml-auto" />}
+        {complete && <CheckCircle2 size={12} className="text-[#16a34a] ml-auto" />}
       </div>
-      {lit ? children : <div className="space-y-1.5"><div className="h-2.5 bg-[#f2efe9] rounded w-3/4 animate-pulse" /><div className="h-2.5 bg-[#f2efe9] rounded w-1/2 animate-pulse" /></div>}
+      {!lit ? (
+        <div className="space-y-1.5"><div className="h-2.5 bg-[#f2efe9] rounded w-3/4 animate-pulse" /><div className="h-2.5 bg-[#f2efe9] rounded w-1/2 animate-pulse" /></div>
+      ) : !complete ? (
+        <p className="text-[11.5px] text-[#a3a3a3] italic flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#117dff] animate-pulse" /> Still gathering…
+        </p>
+      ) : children}
     </div>
   );
 }
@@ -147,6 +161,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           <div className="flex items-center gap-2 text-[11px] font-mono text-[#a3a3a3] mb-3">
             <span className="text-violet-500">〉</span> HYPERAGENTS <span className="text-[#d4d0ca]">· ONBOARDING</span>
           </div>
+          <SingulanceMark size={30} className="mb-3" />
           <h1 className="text-[32px] leading-tight font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
             {t('hyperOnboarding.headline', 'Run your company with AI')}
           </h1>
@@ -203,12 +218,15 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
       {/* ── Dashboard ── */}
       <div className="flex-1 min-w-0 overflow-y-auto lg:overflow-hidden pr-1">
         <div className="flex items-center justify-between mb-2.5">
-          <div>
-            <div className="flex items-center gap-2 text-[11px] font-mono text-[#a3a3a3]">
-              <span className="text-violet-500">〉</span> HYPERAGENTS · {done ? 'READY' : 'BUILDING'}
+          <div className="flex items-start gap-2.5">
+            <SingulanceMark size={26} className="mt-0.5 flex-shrink-0" />
+            <div>
+              <div className="flex items-center gap-2 text-[11px] font-mono text-[#a3a3a3]">
+                <span className="text-violet-500">〉</span> HYPERAGENTS · {done ? 'READY' : 'BUILDING'}
+              </div>
+              <h1 className="text-[24px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-0.5">{companyName}</h1>
+              {p.tagline ? <p className="text-[12.5px] text-[#525252]">{p.tagline}</p> : null}
             </div>
-            <h1 className="text-[24px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-0.5">{companyName}</h1>
-            {p.tagline ? <p className="text-[12.5px] text-[#525252]">{p.tagline}</p> : null}
           </div>
           <div className={`flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-lg ${done ? 'bg-[#16a34a]/10 text-[#16a34a]' : 'bg-violet-500/10 text-violet-700'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-[#16a34a]' : 'bg-violet-500 animate-pulse'}`} />
@@ -233,7 +251,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             />
           </div>
 
-          <Panel icon={Building2} title={t('hyperOnboarding.company', 'Company')} lit={lit.company} className="h-[122px]">
+          <Panel icon={Building2} title={t('hyperOnboarding.company', 'Company')} lit={lit.company} complete={Boolean(p.what_it_does) || done} className="h-[122px]">
             <p className="text-[12px] text-[#0a0a0a] leading-snug line-clamp-2">{p.what_it_does || '—'}</p>
             {p.location ? <p className="text-[11px] text-[#525252] mt-1 truncate"><span className="text-[#a3a3a3]">HQ:</span> {p.location}</p> : null}
             {p.icp ? <p className="text-[11px] text-[#525252] mt-1 line-clamp-1"><span className="text-[#a3a3a3]">ICP:</span> {p.icp}</p> : null}
@@ -248,11 +266,11 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             ) : null}
           </Panel>
 
-          <Panel icon={Target} title={t('hyperOnboarding.mission', 'Mission')} lit={lit.mission} className="h-[122px]">
+          <Panel icon={Target} title={t('hyperOnboarding.mission', 'Mission')} lit={lit.mission} complete={Boolean(result?.mission) || done} className="h-[122px]">
             <p className="text-[12px] text-[#0a0a0a] leading-snug line-clamp-4">{result?.mission || '—'}</p>
           </Panel>
 
-          <Panel icon={Users} title={t('hyperOnboarding.team', 'Your team')} lit={lit.team} className="h-[116px]">
+          <Panel icon={Users} title={t('hyperOnboarding.team', 'Your team')} lit={lit.team} complete={(result?.team || []).length > 0 || done} className="h-[116px]">
             <div className="flex flex-wrap gap-1.5">
               {(result?.team || []).map((m, i) => (
                 <motion.span
@@ -269,7 +287,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             </div>
           </Panel>
 
-          <Panel icon={ListChecks} title={t('hyperOnboarding.firstTasks', 'First tasks')} lit={lit.tasks} className="h-[122px]">
+          <Panel icon={ListChecks} title={t('hyperOnboarding.firstTasks', 'First tasks')} lit={lit.tasks} complete={(result?.tasks || []).length > 0 || done} className="h-[122px]">
             <ul className="grid grid-cols-3 gap-1">
               {(result?.tasks || []).map((task, i) => (
                 <li key={task.id || i} title={typeof task === 'object' ? task.detail : ''} className="h-6 min-w-0 border border-[#ece9e3] rounded-md px-1.5 text-[9.5px] text-[#0a0a0a] flex items-center gap-1">

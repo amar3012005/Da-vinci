@@ -18,7 +18,6 @@ import {
   Building2,
   Lock,
   Boxes,
-  Hexagon,
   AudioLines,
   FolderKanban,
   Users,
@@ -26,6 +25,7 @@ import {
   Clock,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import SingulanceMark from '../shared/SingulanceMark';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
 import useDictation from '../shared/useDictation';
 import { useTeamContext } from '../shared/team-context';
@@ -281,7 +281,7 @@ function EmptyState({ setInput, textareaRef, userName }) {
 
   return (
     <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col items-center justify-center min-h-[46vh] gap-4 px-2 text-center">
-      <Hexagon size={34} className="text-[#117dff]" strokeWidth={1.6} />
+      <SingulanceMark size={40} />
       <div className="text-[32px] leading-tight text-[#1a1a17]" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
         {heroLine}
       </div>
