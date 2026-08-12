@@ -1,9 +1,12 @@
 // Mobile AI Meeting Notes — same structure as desktop MeetingNotes.jsx
-// (stat row, Record/Past meetings/Obligations tabs, record panel) instead
-// of the old editorial-hero layout, minus desktop's outer BRAIN/OS/VOICE
-// app nav (MobileShell's own hamburger replaces it) and minus the
-// "Meeting flow" 4-step explainer panel. Stat cards are shrunk to fit a
-// single row of 5 instead of desktop's 2-per-row-on-mobile grid.
+// (stat row, Record/Past meetings/Obligations tabs, MeetingCard grid,
+// delete flow, obligation register) instead of the old editorial-hero
+// layout, minus desktop's outer BRAIN/OS/VOICE app nav (MobileShell's own
+// hamburger replaces it) and minus the "Meeting flow" 4-step explainer
+// panel. Stat cards are shrunk to fit a single row of 5. Start-meeting
+// requires <QuickRecorderProvider> in the route tree (HiveMindApp.jsx) —
+// without it useQuickRecorder() falls back to a no-op stub and the button
+// looks frozen.
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,10 +19,12 @@ import {
   History,
   Lightbulb,
   ListChecks,
+  Loader2,
   Mic,
   NotebookPen,
   Quote,
   Sparkles,
+  Trash2,
   Users,
   X,
 } from 'lucide-react';
@@ -28,14 +33,18 @@ import { useQuickRecorder } from '../../shared/QuickRecorderProvider';
 import MobileShell from '../MobileShell';
 import MeetingIntelligencePanel from '../../components/MeetingIntelligencePanel';
 import MeetingNotesIcon from '../../shared/MeetingNotesIcon';
+import EntityText from '../../shared/EntityText';
 
-function when(iso) {
-  if (!iso) return 'Recent';
-  return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-}
-
-function compactSummary(meeting) {
-  return meeting.summary || meeting.notes || meeting.transcript?.slice?.(0, 120) || 'Transcript, decisions, and action items are saved here.';
+function fmtAt(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const now = new Date();
+  const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const yest = new Date(now); yest.setDate(now.getDate() - 1);
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  if (sameDay(d, now)) return `@Today ${time}`;
+  if (sameDay(d, yest)) return `@Yesterday ${time}`;
+  return `@${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${time}`;
 }
 
 // Same StatCard as desktop, shrunk so all five fit one row on a phone
@@ -47,6 +56,50 @@ function StatCard({ icon: Icon, value, label, color = '#0a0a0a' }) {
       <div className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] tabular-nums leading-none mt-1">{value}</div>
       <div className="text-[6.5px] leading-tight text-[#a3a3a3] uppercase tracking-tight mt-1 line-clamp-2">{label}</div>
     </div>
+  );
+}
+
+// Exact port of desktop's MeetingCard — emoji tile, prominent @date·time,
+// blue ruler strip, micro-stats, delete button — single column on mobile.
+function MeetingCard({ m, onOpen, onDelete }) {
+  const actions = Array.isArray(m.action_items) ? m.action_items.length : 0;
+  const keyPts = Array.isArray(m.key_points) ? m.key_points.length : 0;
+  const quests = Array.isArray(m.questions) ? m.questions.length : 0;
+  const time = new Date(m.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+  const atLabel = fmtAt(m.created_at);
+  const [atDay, ...atRest] = atLabel.split(' ');
+  return (
+    <motion.button whileTap={{ scale: 0.98 }} onClick={() => onOpen(m)}
+      className="w-full text-left bg-white border border-[#e3e0db] rounded-[12px] p-3 active:border-[#0a0a0a] transition-all relative">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-7 h-7 rounded-[8px] bg-blue-50 border border-blue-100 grid place-items-center flex-shrink-0"><MeetingNotesIcon size={14} className="text-[#117dff]" /></span>
+          <span className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate">{m.title || 'Meeting'}</span>
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button type="button" onClick={(e) => onDelete(m, e)} className="text-[#a3a3a3] p-0.5 rounded" aria-label="Delete meeting">
+            <Trash2 size={13} />
+          </button>
+          <ArrowUpRight size={12} className="text-[#a3a3a3]" />
+        </div>
+      </div>
+      <div className="mt-2 font-['Space_Grotesk'] leading-none">
+        <span className="text-[16px] font-semibold text-[#525252]">{atDay}</span>
+        <span className="text-[16px] font-semibold text-[#b9b5ae] ml-1.5 tabular-nums">{atRest.join(' ')}</span>
+      </div>
+      <div className="mt-2.5 rounded-[8px] bg-blue-50 border border-blue-100 px-2.5 py-1.5 flex items-center font-['Space_Grotesk']">
+        <span className="text-[11px] font-semibold text-blue-700 tabular-nums">{time}</span>
+        <span className="flex-1 mx-2.5 h-[8px]" style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgba(17,125,255,.35) 0 1.5px, transparent 1.5px 7px)' }} />
+        <span className="text-[10px] font-semibold text-blue-700 uppercase">{m.language || '—'}</span>
+      </div>
+      <p className="text-[11px] text-[#737373] mt-2 leading-snug line-clamp-2">{m.summary || '—'}</p>
+      <div className="mt-2.5 pt-2 border-t border-[#eae7e1] flex items-center gap-3 text-[10.5px] text-[#737373]">
+        <span className="inline-flex items-center gap-1"><ListChecks size={11} className="text-[#10b981]" /> {actions}</span>
+        <span className="inline-flex items-center gap-1"><Sparkles size={11} className="text-[#117dff]" /> {keyPts}</span>
+        <span className="inline-flex items-center gap-1"><HelpCircle size={11} className="text-[#0891b2]" /> {quests}</span>
+        {m.multi_speaker ? <span className="inline-flex items-center gap-1"><Users size={11} className="text-[#f59e0b]" /> {m.speaker_count || 2}</span> : null}
+      </div>
+    </motion.button>
   );
 }
 
@@ -193,21 +246,23 @@ export default function MobileMeetingNotes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [obligations, setObligations] = useState({ obligations: [], counts: {} });
+  const [orgEntities, setOrgEntities] = useState([]);
+
+  const loadMeetings = async () => {
+    setLoading(true);
+    try {
+      const { data } = await apiClient.core.get('/api/meetings?limit=50');
+      setMeetings((data?.meetings || []).filter(Boolean));
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message || 'Could not load meeting notes.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { loadMeetings(); }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const { data } = await apiClient.core.get('/api/meetings?limit=50');
-        if (!cancelled) setMeetings((data?.meetings || []).filter(Boolean));
-      } catch (err) {
-        if (!cancelled) setError(err?.response?.data?.detail || err.message || 'Could not load meeting notes.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    apiClient.core.get('/api/meetings/entities').then(({ data }) => setOrgEntities(data?.entities || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -223,6 +278,47 @@ export default function MobileMeetingNotes() {
       const { data } = await apiClient.core.get(`/api/meetings/${meeting.id}`);
       if (data?.meeting) setSelected({ ...meeting, ...data.meeting });
     } catch {}
+  };
+
+  // ── Delete flow — same preview/scope/hard-delete semantics as desktop ──
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deletePreview, setDeletePreview] = useState(null);
+  const [deleteScope, setDeleteScope] = useState('both');
+  const [deleteHard, setDeleteHard] = useState(false);
+  const [deleteErr, setDeleteErr] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const openDeleteModal = async (m, e) => {
+    e.stopPropagation();
+    setDeleteTarget(m);
+    setDeletePreview(null);
+    setDeleteScope('both');
+    setDeleteHard(false);
+    setDeleteErr(null);
+    try {
+      const { data } = await apiClient.core.get(`/api/meetings/${m.id}/delete-preview`);
+      setDeletePreview(data);
+    } catch (err) {
+      setDeletePreview({ can_delete: false, ingested: false, memory_count: 0, memories: [], _err: err?.response?.data?.error || err.message });
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteErr(null);
+    try {
+      await apiClient.core.delete(`/api/meetings/${deleteTarget.id}?scope=${deleteScope}&hard=${deleteHard}`);
+      const wasSelected = selected?.id === deleteTarget.id;
+      setDeleteTarget(null);
+      setDeletePreview(null);
+      if (wasSelected) setSelected(null);
+      loadMeetings();
+    } catch (err) {
+      setDeleteErr(err?.response?.data?.error || err.message || 'Delete failed.');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const stats = useMemo(() => {
@@ -283,6 +379,11 @@ export default function MobileMeetingNotes() {
                 An interrupted meeting is ready to resume. Open the recorder to continue or finish it.
               </div>
             )}
+            {!qrec.supported && (
+              <div className="mt-3 rounded-[8px] border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+                Recording isn't supported in this browser/device.
+              </div>
+            )}
             <button
               onClick={() => qrec.openConfig()}
               disabled={!qrec.supported}
@@ -304,20 +405,8 @@ export default function MobileMeetingNotes() {
                 <button onClick={() => setTab('record')} className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px]"><Mic size={13} /> Record your first meeting</button>
               </div>
             )}
-            <div className="space-y-1.5">
-              {meetings.map((meeting) => (
-                <button
-                  key={meeting.id}
-                  onClick={() => openMeeting(meeting)}
-                  className="w-full rounded-[12px] border border-[#e3e0db] bg-white p-3 text-left active:bg-[#faf9f4]"
-                >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <div className="text-[13.5px] font-semibold leading-snug line-clamp-1 flex-1 min-w-0">{meeting.title || meeting.name || 'Untitled meeting'}</div>
-                    <div className="text-[10px] font-mono uppercase tracking-wide text-[#a3a3a3] flex-shrink-0">{when(meeting.created_at || meeting.started_at)}</div>
-                  </div>
-                  <div className="mt-1 text-[11.5px] leading-snug text-[#8b857d] line-clamp-2">{compactSummary(meeting)}</div>
-                </button>
-              ))}
+            <div className="grid grid-cols-1 gap-2.5">
+              {meetings.map((m) => <MeetingCard key={m.id} m={m} onOpen={openMeeting} onDelete={openDeleteModal} />)}
             </div>
           </div>
         )}
@@ -340,7 +429,8 @@ export default function MobileMeetingNotes() {
                 {obligations.obligations.map((o, i) => (
                   <div key={i} className="flex items-center gap-2 p-2.5 rounded-[10px] border border-[#e3e0db] bg-white">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${o.status === 'overdue' ? 'bg-[#dc2626]' : o.status === 'done' ? 'bg-[#16a34a]' : 'bg-[#117dff]'}`} title={o.status} />
-                    <span className="flex-1 text-[12.5px] text-[#0a0a0a] leading-snug min-w-0">{o.task}</span>
+                    <span className="flex-1 text-[12.5px] text-[#0a0a0a] leading-snug min-w-0"><EntityText text={o.task} entities={orgEntities} /></span>
+                    {o.owner && <span className="text-[10px] px-1.5 py-0.5 rounded-[4px] bg-[#faf9f4] border border-[#e3e0db] text-[#525252] shrink-0">{o.owner}</span>}
                     {o.due && <span className={`text-[10.5px] font-mono shrink-0 ${o.status === 'overdue' ? 'text-[#dc2626]' : 'text-[#a3a3a3]'}`}>{o.due}</span>}
                     <button
                       onClick={() => { const mm = meetings.find((x) => x.id === o.source_meeting_id); setTab('past'); if (mm) openMeeting(mm); }}
@@ -356,6 +446,114 @@ export default function MobileMeetingNotes() {
         )}
       </div>
 
+      {/* ───────── DELETE MEETING BOTTOM SHEET — same fields/logic as desktop ───────── */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div className="fixed inset-0 z-[60] bg-[#0a0a0a]/25 flex items-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { if (!deleting) { setDeleteTarget(null); setDeletePreview(null); } }}>
+            <motion.section
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 360, damping: 34 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-h-[86vh] overflow-y-auto bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
+            >
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-[10px] bg-red-50 border border-red-200 grid place-items-center flex-shrink-0">
+                    <Trash2 size={15} className="text-[#ef4444]" />
+                  </span>
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight">Delete meeting</h3>
+                    <p className="text-[12px] text-[#737373] mt-0.5 leading-tight truncate max-w-[240px]">{deleteTarget.title || 'Meeting'}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => { setDeleteTarget(null); setDeletePreview(null); }} disabled={deleting} className="w-9 h-9 rounded-full grid place-items-center bg-[#f3f1ec] flex-shrink-0 disabled:opacity-50" aria-label="Close">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="rounded-[10px] bg-[#faf9f4] border border-[#e3e0db] p-4 mb-4 min-h-[80px] flex flex-col justify-center">
+                {deletePreview === null ? (
+                  <div className="flex items-center gap-2 text-[12px] text-[#737373]">
+                    <Loader2 size={14} className="animate-spin text-[#117dff]" /> Loading preview…
+                  </div>
+                ) : deletePreview.can_delete === false ? (
+                  <div className="flex items-start gap-2 text-[12px] text-[#ef4444]">
+                    <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" /> Only the meeting owner can delete this.
+                  </div>
+                ) : deletePreview.ingested ? (
+                  <div>
+                    <p className="text-[12px] text-[#525252] mb-2">
+                      This meeting saved <span className="font-semibold text-[#0a0a0a]">{deletePreview.memory_count}</span> {deletePreview.memory_count === 1 ? 'memory' : 'memories'} to HIVEMIND:
+                    </p>
+                    <ul className="space-y-1">
+                      {(deletePreview.memories || []).slice(0, 8).map((mem) => (
+                        <li key={mem.id} className="text-[11px] text-[#737373] flex items-start gap-1.5">
+                          <span className="text-[#117dff] mt-0.5 flex-shrink-0">·</span>
+                          <span className="line-clamp-1">{mem.title}</span>
+                        </li>
+                      ))}
+                      {(deletePreview.memories || []).length > 8 && (
+                        <li className="text-[11px] text-[#a3a3a3]">+{deletePreview.memories.length - 8} more</li>
+                      )}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-[#737373]">This meeting was not saved to HIVEMIND.</p>
+                )}
+              </div>
+
+              {deletePreview && deletePreview.can_delete !== false && (
+                <div className="space-y-3 mb-4">
+                  <div className="space-y-2">
+                    {deletePreview.ingested && (
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input type="radio" name="deleteScope" value="memories" checked={deleteScope === 'memories'} onChange={() => setDeleteScope('memories')} className="mt-0.5 accent-[#117dff]" />
+                        <span className="text-[12px] text-[#525252] leading-snug">
+                          Remove from HIVEMIND memories only <span className="text-[#a3a3a3]">(keep the meeting in Past meetings)</span>
+                        </span>
+                      </label>
+                    )}
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input type="radio" name="deleteScope" value="both" checked={deleteScope === 'both'} onChange={() => setDeleteScope('both')} className="mt-0.5 accent-[#117dff]" />
+                      <span className="text-[12px] text-[#525252] leading-snug">
+                        Delete the meeting <span className="font-medium text-[#0a0a0a]">AND</span> its HIVEMIND memories
+                      </span>
+                    </label>
+                  </div>
+
+                  <label className="flex items-start gap-2.5 cursor-pointer mt-1">
+                    <input type="checkbox" checked={deleteHard} onChange={(e) => setDeleteHard(e.target.checked)} className="mt-0.5 accent-[#ef4444]" />
+                    <span className="text-[12px] text-[#b45309] font-medium leading-snug">Hard delete — permanent, cannot be undone</span>
+                  </label>
+                  {deleteHard && (
+                    <p className="text-[11px] text-[#ef4444] bg-red-50 border border-red-200 rounded-[6px] px-2.5 py-1.5 flex items-start gap-1.5">
+                      <AlertTriangle size={11} className="mt-0.5 flex-shrink-0" /> This permanently erases the data; it cannot be recovered.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {deleteErr && (
+                <p className="text-[11px] text-[#ef4444] bg-red-50 border border-red-200 rounded-[6px] px-2.5 py-1.5 mb-3 flex items-start gap-1.5">
+                  <AlertTriangle size={11} className="mt-0.5 flex-shrink-0" /> {deleteErr}
+                </p>
+              )}
+
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => { setDeleteTarget(null); setDeletePreview(null); }} disabled={deleting} className="flex-1 h-11 rounded-full text-[13px] font-medium text-[#525252] border border-[#e3e0db] disabled:opacity-50">
+                  Cancel
+                </button>
+                <button type="button" onClick={confirmDelete} disabled={deleting || !deletePreview || deletePreview.can_delete === false} className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-full bg-[#ef4444] text-white text-[13px] font-semibold disabled:opacity-50">
+                  {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} {deleteHard ? 'Permanently delete' : 'Delete'}
+                </button>
+              </div>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {selected && (
           <motion.div className="fixed inset-0 z-50 bg-[#0a0a0a]/25 flex items-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelected(null)}>
@@ -370,7 +568,7 @@ export default function MobileMeetingNotes() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[18px] font-bold leading-tight">{selected.title || selected.name || 'Untitled meeting'}</div>
-                  <div className="mt-1 text-[11px] text-[#a3a3a3]">{when(selected.created_at || selected.started_at)}</div>
+                  <div className="mt-1 text-[11px] text-[#a3a3a3]">{fmtAt(selected.created_at || selected.started_at)}</div>
                 </div>
                 <button onClick={() => setSelected(null)} className="w-9 h-9 rounded-full grid place-items-center bg-[#f3f1ec]"><X size={16} /></button>
               </div>

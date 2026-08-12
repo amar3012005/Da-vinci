@@ -222,7 +222,12 @@ export default function MobileConnectors() {
 
   return (
     <MobileShell title="Connectors" rightAction={liveCount}>
-      <div className="px-3 pt-3 pb-2">
+      <div className="px-4 pt-2 pb-1">
+        <h1 className="text-[21px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Connectors</h1>
+        <p className="mt-1 text-[12px] leading-relaxed text-[#737373]">Connect your apps to let HIVEMIND preserve context and also perform automations.</p>
+      </div>
+
+      <div className="px-3 pt-2 pb-2">
         <label className="flex items-center gap-2 h-11 px-3 rounded-[18px] bg-white border border-[#ece9e2] focus-within:border-[#9fc7ff]">
           <Search size={16} className="text-[#a3a3a3]" />
           <input

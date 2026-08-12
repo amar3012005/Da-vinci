@@ -7,6 +7,7 @@ import InvitationLanding from './auth/InvitationLanding';
 import CliVerified from './auth/CliVerified';
 import AppShell from './layout/AppShell';
 import { QuickRecorderProvider } from './shared/QuickRecorderProvider';
+import { TeamProvider } from './shared/team-context';
 
 // Pages (lazy loaded for code splitting)
 const Overview = React.lazy(() => import('./pages/Overview'));
@@ -145,7 +146,7 @@ export default function HiveMindApp() {
           path="m/meeting-notes"
           element={
             <ProtectedRoute>
-              <PageSuspense><MobileMeetingNotes /></PageSuspense>
+              <QuickRecorderProvider><PageSuspense><MobileMeetingNotes /></PageSuspense></QuickRecorderProvider>
             </ProtectedRoute>
           }
         />
@@ -161,7 +162,7 @@ export default function HiveMindApp() {
           path="m/projects"
           element={
             <ProtectedRoute>
-              <PageSuspense><MobileProjects /></PageSuspense>
+              <TeamProvider><PageSuspense><MobileProjects /></PageSuspense></TeamProvider>
             </ProtectedRoute>
           }
         />
