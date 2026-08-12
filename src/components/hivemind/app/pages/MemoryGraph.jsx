@@ -184,7 +184,7 @@ function getNodeTimestamp(node) {
   return null;
 }
 
-function normalizeGraphPayload(nodesInput = [], edgesInput = []) {
+export function normalizeGraphPayload(nodesInput = [], edgesInput = []) {
   const nodes = nodesInput.map((n) => ({
     ...n,
     val: Math.max(2, (n.importanceScore || 0.5) * 8 + (n.recallCount || 0) * 0.5),

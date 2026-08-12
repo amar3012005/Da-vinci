@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  AlignLeft, MessageCircle, Brain, Mic2, Plug, Folder, Gauge,
+  AlignLeft, MessageCircle, Brain, Mic2, Plug, Folder, Gauge, Network,
   X, LogOut, Hexagon, ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
@@ -24,6 +24,7 @@ const SPLASH_FLAG = 'hm_m_splashed';
 const NAV = [
   { to: '/hivemind/m/chat', label: 'Chat', icon: MessageCircle },
   { to: '/hivemind/m/memories', label: 'Memories', icon: Brain },
+  { to: '/hivemind/m/graph', label: 'Memory Graph', icon: Network },
   { to: '/hivemind/m/meeting-notes', label: 'Meeting Notes', icon: Mic2 },
   { to: '/hivemind/m/connectors', label: 'Connectors', icon: Plug },
   { to: '/hivemind/m/projects', label: 'Projects', icon: Folder },
