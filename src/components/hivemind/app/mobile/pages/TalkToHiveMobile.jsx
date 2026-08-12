@@ -36,7 +36,6 @@ import {
   Users,
   Lock,
   AudioLines,
-  Hexagon,
   Clock,
   Boxes,
   Building2,
@@ -47,6 +46,7 @@ import {
 import { UserBubble, AiBubble, Thinking } from '../../shared/claude-chat';
 import apiClient from '../../shared/api-client';
 import MobileShell from '../MobileShell';
+import SingulanceMark from '../../shared/SingulanceMark';
 import useDictation from '../../shared/useDictation';
 import { useTeamContext } from '../../shared/team-context';
 import { MeetingNotesPromo } from '../../shared/QuickRecorderProvider';
@@ -827,7 +827,7 @@ export default function TalkToHiveMobile() {
           {messages.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center text-center gap-4 min-h-[46vh]">
               {/* Claude-style centered greeting: accent mark + large serif name line */}
-              <Hexagon size={34} className="text-[#117dff]" strokeWidth={1.6} />
+              <SingulanceMark size={40} />
               <div className="text-[32px] leading-tight text-[#1a1a17]" style={{ fontFamily: 'Georgia, \'Times New Roman\', serif' }}>
                 {(() => { const h = new Date().getHours(); const g = h < 12 ? t('overview.morning', 'Good morning') : h < 18 ? t('overview.afternoon', 'Good afternoon') : t('overview.evening', 'Good evening'); const n = (user?.name || user?.email || '').split(/[\s@]/)[0]; return n ? `${g}, ${n.charAt(0).toUpperCase()}${n.slice(1)}` : g; })()}
               </div>
