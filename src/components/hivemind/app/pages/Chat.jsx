@@ -473,6 +473,10 @@ export function ChatPanel({ isOpen, onClose }) {
               });
               return;
             }
+            if (event.type === 'answer_reset') {
+              setMessages((prev) => prev.map((item) => item.id === streamingId ? { ...item, content: '' } : item));
+              return;
+            }
             setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-5));
           })) || {}
         : await chatRes.json();

@@ -918,6 +918,10 @@ function OverviewChat({ inputRef }) {
               });
               return;
             }
+            if (event.type === 'answer_reset') {
+              setMessages((prev) => prev.map((item) => item.id === streamingId ? { ...item, content: '' } : item));
+              return;
+            }
             const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
             streamedEvents.push(next);
             setAgentEvents([...streamedEvents]);
