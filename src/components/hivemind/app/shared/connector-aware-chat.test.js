@@ -1,4 +1,4 @@
-import { buildToolkitSuggestions, composeToolkitPrompt, findMentionedToolkits, removeToolkitMentions } from './connector-aware-chat';
+import { buildToolkitSuggestions, composeToolkitPrompt, findMentionedToolkits, removeToolkitMentions, resolvePromptToolkits } from './connector-aware-chat';
 
 const catalog = [
   { slug: 'gmail', name: 'Gmail', connected: true, toolsCount: 12 },
@@ -19,4 +19,9 @@ test('renders detected names as chips while preserving a planner-ready prompt', 
 test('prefers connected toolkit suggestions and falls back to available catalog', () => {
   expect(buildToolkitSuggestions(catalog)[0].toolkit.slug).toBe('gmail');
   expect(buildToolkitSuggestions(catalog.map((t) => ({ ...t, connected: false })))).toHaveLength(2);
+});
+
+test('send-time resolution recovers app mentions typed before catalog loading', () => {
+  expect(resolvePromptToolkits('Find my latest Gmail message', [], catalog).map((toolkit) => toolkit.slug)).toEqual(['gmail']);
+  expect(resolvePromptToolkits('Create a summary', [catalog[1]], catalog).map((toolkit) => toolkit.slug)).toEqual(['google_docs']);
 });

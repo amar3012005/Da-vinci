@@ -57,6 +57,7 @@ import {
   composeToolkitPrompt,
   findMentionedToolkits,
   removeToolkitMentions,
+  resolvePromptToolkits,
   savePendingConnectorPrompt,
   takePendingConnectorPrompt,
 } from '../../shared/connector-aware-chat';
@@ -293,15 +294,19 @@ export default function TalkToHiveMobile() {
   const scrollerRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const toolkitCatalogPromiseRef = useRef(null);
 
   const loadToolkitCatalog = useCallback(async () => {
-    try {
-      const data = await apiClient.listComposioToolkits({ catalog: true, limit: 100 });
-      setToolkits(data.toolkits || []);
-      return data.toolkits || [];
-    } catch {
-      return [];
-    }
+    if (toolkitCatalogPromiseRef.current) return toolkitCatalogPromiseRef.current;
+    toolkitCatalogPromiseRef.current = apiClient.listComposioToolkits({ catalog: true, limit: 100 })
+      .then((data) => {
+        const catalog = data.toolkits || [];
+        setToolkits(catalog);
+        return catalog;
+      })
+      .catch(() => [])
+      .finally(() => { toolkitCatalogPromiseRef.current = null; });
+    return toolkitCatalogPromiseRef.current;
   }, []);
 
   useEffect(() => {
@@ -324,6 +329,19 @@ export default function TalkToHiveMobile() {
     });
     return () => { cancelled = true; };
   }, [loadToolkitCatalog]);
+
+  // A user can begin typing before the cold catalog request completes. Re-run
+  // mention resolution when it arrives so the chip and connection gate do not
+  // depend on network timing.
+  useEffect(() => {
+    if (!input || !toolkits.length) return;
+    const resolved = resolvePromptToolkits(input, selectedToolkits, toolkits);
+    if (resolved.length === selectedToolkits.length) return;
+    const newlyMentioned = resolved.filter((toolkit) => !selectedToolkits.some((selected) => selected.slug === toolkit.slug));
+    setSelectedToolkits(resolved);
+    setInput((current) => removeToolkitMentions(current, newlyMentioned).slice(0, MAX_CHARS));
+    setUseTools(true);
+  }, [input, selectedToolkits, toolkits]);
 
   const suggestions = useMemo(() => buildToolkitSuggestions(toolkits, 4), [toolkits]);
 
@@ -429,7 +447,9 @@ export default function TalkToHiveMobile() {
   const sendText = useCallback(async (overrideText) => {
     const fromInput = overrideText == null;
     const displayText = (fromInput ? input : overrideText).trim();
-    const activeToolkits = fromInput ? selectedToolkits : findMentionedToolkits(displayText, toolkits);
+    if (!displayText || loading) return;
+    const catalog = toolkits.length ? toolkits : await loadToolkitCatalog();
+    const activeToolkits = resolvePromptToolkits(displayText, fromInput ? selectedToolkits : [], catalog);
     const disconnected = activeToolkits.find((toolkit) => !toolkit.connected);
     if (disconnected) {
       setConnectToolkit(disconnected);
@@ -437,7 +457,7 @@ export default function TalkToHiveMobile() {
       return;
     }
     const trimmed = composeToolkitPrompt(displayText, activeToolkits);
-    if (!trimmed || loading) return;
+    if (!trimmed) return;
 
     const userMsg = { id: Date.now(), role: 'user', content: composeToolkitPrompt(displayText, activeToolkits) };
     const streamingId = `answer-${userMsg.id}`;
@@ -541,7 +561,7 @@ export default function TalkToHiveMobile() {
       setLoading(false);
       setAgentEvents([]);
     }
-  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools, selectedToolkits, toolkits]);
+  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools, selectedToolkits, toolkits, loadToolkitCatalog]);
 
   const continueOrchestration = useCallback(async (continuation, request, option) => {
     if (loading) return;

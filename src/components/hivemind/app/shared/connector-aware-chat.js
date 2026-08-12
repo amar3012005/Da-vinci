@@ -17,6 +17,14 @@ export function findMentionedToolkits(text, toolkits) {
   }));
 }
 
+export function resolvePromptToolkits(text, selectedToolkits, catalog) {
+  const bySlug = new Map();
+  [...(selectedToolkits || []), ...findMentionedToolkits(text, catalog)].forEach((toolkit) => {
+    if (toolkit?.slug) bySlug.set(toolkit.slug, toolkit);
+  });
+  return [...bySlug.values()];
+}
+
 export function removeToolkitMentions(text, toolkits) {
   let result = String(text || '');
   (toolkits || []).flatMap(toolkitAliases).sort((a, b) => b.length - a.length).forEach((alias) => {
