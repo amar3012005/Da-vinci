@@ -847,6 +847,7 @@ function OverviewChat({ inputRef }) {
     const effProjectId = opts.projectId !== undefined ? opts.projectId : chatScope;
 
     const userMsg = { id: Date.now(), role: 'user', content: trimmed };
+    const streamingId = `answer-${userMsg.id}`;
     // The current turn is sent separately as `message`; history contains only
     // completed prior turns so the planner sees the grounded assistant answer
     // once instead of seeing the current request twice.
@@ -900,6 +901,23 @@ function OverviewChat({ inputRef }) {
       }
       const chatData = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? await readChatStream(chatRes, (event) => {
+            if (event.type === 'answer_started') {
+              setMessages((prev) => prev.some((item) => item.id === streamingId)
+                ? prev
+                : [...prev, { id: streamingId, role: 'assistant', content: '', streaming: true }]);
+              return;
+            }
+            if (event.type === 'answer_delta' && event.validated === true) {
+              setMessages((prev) => {
+                const found = prev.some((item) => item.id === streamingId);
+                return found
+                  ? prev.map((item) => item.id === streamingId
+                    ? { ...item, content: `${item.content || ''}${event.delta || ''}` }
+                    : item)
+                  : [...prev, { id: streamingId, role: 'assistant', content: event.delta || '', streaming: true }];
+              });
+              return;
+            }
             const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
             streamedEvents.push(next);
             setAgentEvents([...streamedEvents]);
@@ -914,7 +932,7 @@ function OverviewChat({ inputRef }) {
       const projectChoice = (Array.isArray(pcProjects) && pcProjects.length)
         ? { projects: pcProjects, originalMessage: trimmed }
         : null;
-      setMessages((prev) => [...prev, {
+      const completedMessage = {
         id: Date.now() + 1,
         role: 'assistant',
         content,
@@ -926,7 +944,10 @@ function OverviewChat({ inputRef }) {
         draft_ids: Array.isArray(chatData.draft_ids) ? chatData.draft_ids : [],
         pending_actions: Array.isArray(chatData.pending_actions) ? chatData.pending_actions : [],
         projectChoice,
-      }]);
+      };
+      setMessages((prev) => prev.some((item) => item.id === streamingId)
+        ? prev.map((item) => item.id === streamingId ? completedMessage : item)
+        : [...prev, completedMessage]);
     } catch (err) {
       setMessages((prev) => [...prev, {
         id: Date.now() + 1,

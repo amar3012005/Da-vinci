@@ -351,6 +351,7 @@ export default function TalkToHiveMobile() {
     if (!trimmed || loading) return;
 
     const userMsg = { id: Date.now(), role: 'user', content: trimmed };
+    const streamingId = `answer-${userMsg.id}`;
     // `message` carries the current turn; keep history to completed prior
     // turns so follow-up tool actions see the preceding grounded answer once.
     const fullHistory = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
@@ -409,6 +410,23 @@ export default function TalkToHiveMobile() {
       }
       const data = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? (await readChatStream(chatRes, (event) => {
+            if (event.type === 'answer_started') {
+              setMessages((prev) => prev.some((item) => item.id === streamingId)
+                ? prev
+                : [...prev, { id: streamingId, role: 'assistant', content: '', streaming: true }]);
+              return;
+            }
+            if (event.type === 'answer_delta' && event.validated === true) {
+              setMessages((prev) => {
+                const found = prev.some((item) => item.id === streamingId);
+                return found
+                  ? prev.map((item) => item.id === streamingId
+                    ? { ...item, content: `${item.content || ''}${event.delta || ''}` }
+                    : item)
+                  : [...prev, { id: streamingId, role: 'assistant', content: event.delta || '', streaming: true }];
+              });
+              return;
+            }
             const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
             streamedEvents.push(next);
             setAgentEvents([...streamedEvents]);
@@ -432,7 +450,9 @@ export default function TalkToHiveMobile() {
         // (my-space / project:<name> / org-wide). Rendered under the answer.
         scopes_found: Array.isArray(data.scopes_found) ? data.scopes_found : [],
       };
-      setMessages((prev) => [...prev, assistantMsg]);
+      setMessages((prev) => prev.some((item) => item.id === streamingId)
+        ? prev.map((item) => item.id === streamingId ? assistantMsg : item)
+        : [...prev, assistantMsg]);
     } catch (err) {
       const errMsg = err?.response?.data?.detail || err?.message || 'Something went wrong.';
       setMessages((prev) => [
