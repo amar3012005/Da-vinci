@@ -14,31 +14,23 @@
  * viewports <= 768px — see HiveMindApp.jsx).
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import {
   Send,
   Loader2,
   Trash2,
   ChevronDown,
   Sparkles,
-  AlertTriangle,
-  FileText,
   Plus,
-  Paperclip,
   CheckCircle2,
   FileWarning,
   X,
   Download,
   Mic,
   Square,
-  NotebookPen,
   Cable,
-  MessageCircle,
-  Settings,
-  ArrowUpRight,
   Upload,
   FolderKanban,
   Users,
@@ -46,19 +38,13 @@ import {
   AudioLines,
   Hexagon,
   Clock,
-  ChevronRight,
-  Copy,
-  Check,
-  RotateCcw,
-  ThumbsUp,
-  ThumbsDown,
   Boxes,
   Building2,
   Globe,
 } from 'lucide-react';
 // Chat turn presentation lives in shared/claude-chat (one source of truth for
 // mobile + desktop Overview + sidebar).
-import { renderMarkdownMobile, UserBubble, AiBubble, Thinking } from '../../shared/claude-chat';
+import { UserBubble, AiBubble, Thinking } from '../../shared/claude-chat';
 import apiClient from '../../shared/api-client';
 import MobileShell from '../MobileShell';
 import useDictation from '../../shared/useDictation';
@@ -66,9 +52,20 @@ import { useTeamContext } from '../../shared/team-context';
 import { MeetingNotesPromo } from '../../shared/QuickRecorderProvider';
 import PwaInstall from '../../shared/PwaInstall';
 import { useAuth } from '../../auth/AuthProvider';
+import {
+  buildToolkitSuggestions,
+  composeToolkitPrompt,
+  findMentionedToolkits,
+  removeToolkitMentions,
+  savePendingConnectorPrompt,
+  takePendingConnectorPrompt,
+} from '../../shared/connector-aware-chat';
 
 const MAX_CHARS = 2000;
 const MAX_PERSIST = 200;
+// Keep the recorder implementation mounted and routable, but disable its
+// slide-in chat promotion until the product is ready to expose it again.
+const SHOW_MEETING_NOTES_PROMO = false;
 
 const LANG_OPTIONS = [
   { c: 'en', n: 'English' }, { c: 'de', n: 'Deutsch' },
@@ -269,6 +266,11 @@ export default function TalkToHiveMobile() {
   // project). Maps to the backend recall scope_filter; 'all' sends no filter.
   const [chatScopeMode, setChatScopeMode] = useState('all');
   const [useTools, setUseTools] = useState(false);
+  const [toolkits, setToolkits] = useState([]);
+  const [selectedToolkits, setSelectedToolkits] = useState([]);
+  const [connectToolkit, setConnectToolkit] = useState(null);
+  const [connectingToolkit, setConnectingToolkit] = useState(false);
+  const [connectorError, setConnectorError] = useState('');
   const [toolsNotice, setToolsNotice] = useState(false);
   const toggleUseTools = () => {
     setUseTools((enabled) => !enabled);
@@ -291,6 +293,85 @@ export default function TalkToHiveMobile() {
   const scrollerRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  const loadToolkitCatalog = useCallback(async () => {
+    try {
+      const data = await apiClient.listComposioToolkits({ catalog: true, limit: 100 });
+      setToolkits(data.toolkits || []);
+      return data.toolkits || [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadToolkitCatalog().then((catalog) => {
+      if (cancelled) return;
+      const pending = takePendingConnectorPrompt();
+      if (pending?.prompt) {
+        const mentioned = findMentionedToolkits(pending.prompt, catalog);
+        setInput(removeToolkitMentions(pending.prompt.replace(/^Use\s+/i, ''), mentioned).replace(/^\.\s*/, '').slice(0, MAX_CHARS));
+        setSelectedToolkits(mentioned);
+        setUseTools(true);
+        requestAnimationFrame(() => inputRef.current?.focus());
+      }
+      try {
+        const url = new URL(window.location.href);
+        ['composio_toolkit', 'connected_account_id', 'connector_return', 'status'].forEach((key) => url.searchParams.delete(key));
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      } catch { /* malformed URL is non-fatal */ }
+    });
+    return () => { cancelled = true; };
+  }, [loadToolkitCatalog]);
+
+  const suggestions = useMemo(() => buildToolkitSuggestions(toolkits, 4), [toolkits]);
+
+  const absorbToolkitMentions = useCallback((nextText) => {
+    const newlyMentioned = findMentionedToolkits(nextText, toolkits)
+      .filter((toolkit) => !selectedToolkits.some((selected) => selected.slug === toolkit.slug));
+    if (!newlyMentioned.length) {
+      setInput(nextText.slice(0, MAX_CHARS));
+      return;
+    }
+    const merged = [...selectedToolkits, ...newlyMentioned];
+    setSelectedToolkits(merged);
+    setInput(removeToolkitMentions(nextText, newlyMentioned).slice(0, MAX_CHARS));
+    setUseTools(true);
+  }, [selectedToolkits, toolkits]);
+
+  const removeSelectedToolkit = useCallback((slug) => {
+    setSelectedToolkits((current) => current.filter((toolkit) => toolkit.slug !== slug));
+  }, []);
+
+  const beginToolkitConnect = useCallback(async () => {
+    if (!connectToolkit || connectingToolkit) return;
+    setConnectingToolkit(true);
+    setConnectorError('');
+    const prompt = composeToolkitPrompt(input, selectedToolkits.length ? selectedToolkits : [connectToolkit]);
+    savePendingConnectorPrompt({ prompt, toolkit: connectToolkit.slug, savedAt: Date.now() });
+    try {
+      if (connectToolkit.slug === 'slack') {
+        const { auth_url: authUrl } = await apiClient.startConnectorOAuth('slack', '/hivemind/m/chat?connector_return=slack', { target_scope: 'personal' });
+        if (!authUrl) throw new Error('No authorization URL returned');
+        window.location.href = authUrl;
+        return;
+      }
+      const callbackUrl = `${window.location.origin}/hivemind/m/chat?composio_toolkit=${encodeURIComponent(connectToolkit.slug)}`;
+      const { redirect_url: redirectUrl } = await apiClient.createComposioConnectLink(connectToolkit.slug, {
+        toolkitMeta: {
+          composioManagedAuthSchemes: connectToolkit.composioManagedAuthSchemes,
+          noAuth: connectToolkit.noAuth,
+        },
+        callbackUrl,
+      });
+      if (!redirectUrl) throw new Error('This app needs a different connection method');
+      window.location.href = redirectUrl;
+    } catch (err) {
+      setConnectorError(err?.response?.data?.error || err?.message || `Could not connect ${connectToolkit.name}`);
+      setConnectingToolkit(false);
+    }
+  }, [connectToolkit, connectingToolkit, input, selectedToolkits]);
 
   const fetchProjects = useCallback(async () => {
     if (!org?.id) {
@@ -347,16 +428,24 @@ export default function TalkToHiveMobile() {
 
   const sendText = useCallback(async (overrideText) => {
     const fromInput = overrideText == null;
-    const trimmed = (fromInput ? input : overrideText).trim();
+    const displayText = (fromInput ? input : overrideText).trim();
+    const activeToolkits = fromInput ? selectedToolkits : findMentionedToolkits(displayText, toolkits);
+    const disconnected = activeToolkits.find((toolkit) => !toolkit.connected);
+    if (disconnected) {
+      setConnectToolkit(disconnected);
+      setConnectorError('');
+      return;
+    }
+    const trimmed = composeToolkitPrompt(displayText, activeToolkits);
     if (!trimmed || loading) return;
 
-    const userMsg = { id: Date.now(), role: 'user', content: trimmed };
+    const userMsg = { id: Date.now(), role: 'user', content: composeToolkitPrompt(displayText, activeToolkits) };
     const streamingId = `answer-${userMsg.id}`;
     // `message` carries the current turn; keep history to completed prior
     // turns so follow-up tool actions see the preceding grounded answer once.
     const fullHistory = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
     setMessages((prev) => [...prev, userMsg]);
-    if (fromInput) setInput('');
+    if (fromInput) { setInput(''); setSelectedToolkits([]); }
     setLoading(true);
 
     // Belt-and-braces language enforcement (mirror Chat.jsx + extension).
@@ -364,16 +453,6 @@ export default function TalkToHiveMobile() {
     // the LLM can't silently drift back to English. UI history keeps the
     // clean user text; only the LLM sees the wrapped variant.
     const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
-    const LANG_FULL = {
-      en: 'English', de: 'German', es: 'Spanish', fr: 'French', it: 'Italian',
-      pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', cs: 'Czech', sv: 'Swedish',
-      no: 'Norwegian', fi: 'Finnish', el: 'Greek', hu: 'Hungarian', ro: 'Romanian',
-      sl: 'Slovenian', ar: 'Arabic', he: 'Hebrew', tr: 'Turkish', ru: 'Russian',
-      uk: 'Ukrainian', hi: 'Hindi', bn: 'Bengali', ta: 'Tamil', te: 'Telugu',
-      ja: 'Japanese', ko: 'Korean', zh: 'Chinese', vi: 'Vietnamese', th: 'Thai',
-      id: 'Indonesian', ms: 'Malay', sk: 'Slovak',
-    };
-    const langName = LANG_FULL[lang2] || 'English';
     // Language is a first-class /chat param (backend enforces it in the answer
     // prompt). The old [STRICT LANGUAGE] prefix poisoned recall embeddings.
     const wireMessage = trimmed;
@@ -462,7 +541,7 @@ export default function TalkToHiveMobile() {
       setLoading(false);
       setAgentEvents([]);
     }
-  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools]);
+  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools, selectedToolkits, toolkits]);
 
   const continueOrchestration = useCallback(async (continuation, request, option) => {
     if (loading) return;
@@ -637,9 +716,10 @@ export default function TalkToHiveMobile() {
   }, []);
 
   const clearChat = () => {
-    if (!messages.length) return;
-    if (typeof window !== 'undefined' && !window.confirm('Clear all messages?')) return;
     setMessages([]);
+    setInput('');
+    setSelectedToolkits([]);
+    setAgentEvents([]);
     try { localStorage.removeItem(storageKey()); } catch {}
   };
 
@@ -647,7 +727,7 @@ export default function TalkToHiveMobile() {
 
   const chatDrawerActions = (
     <>
-      <button onClick={() => setMessages([])} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] font-semibold bg-[#0a0a0a] text-white mb-2">
+      <button onClick={clearChat} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] font-semibold bg-[#0a0a0a] text-white mb-2">
         <Plus size={16} /> New chat
       </button>
       <button onClick={() => window.dispatchEvent(new Event('hive:install'))} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] text-[#3d3d3a] active:bg-[#f1eee7]">
@@ -715,7 +795,7 @@ export default function TalkToHiveMobile() {
         </div>
       </div>
       {/* New-feature promo — top-right below the header; hides while recording */}
-      <MeetingNotesPromo mobile />
+      {SHOW_MEETING_NOTES_PROMO && <MeetingNotesPromo mobile />}
 
       {/* ── Messages ───────────────────────────────── */}
       <div
@@ -732,17 +812,24 @@ export default function TalkToHiveMobile() {
                 {(() => { const h = new Date().getHours(); const g = h < 12 ? t('overview.morning', 'Good morning') : h < 18 ? t('overview.afternoon', 'Good afternoon') : t('overview.evening', 'Good evening'); const n = (user?.name || user?.email || '').split(/[\s@]/)[0]; return n ? `${g}, ${n.charAt(0).toUpperCase()}${n.slice(1)}` : g; })()}
               </div>
               <div className="flex flex-col gap-2 mt-4 w-full">
-                {[
-                  t('overview.examples.recent', 'What have I been working on lately?'),
-                  t('overview.examples.decisions', 'Summarize my recent decisions'),
-                  t('overview.examples.prefs', 'What are my key preferences?'),
-                ].map((p) => (
+                {(suggestions.length ? suggestions : [
+                  { prompt: t('overview.examples.recent', 'What have I been working on lately?') },
+                  { prompt: t('overview.examples.decisions', 'Summarize my recent decisions') },
+                  { prompt: t('overview.examples.prefs', 'What are my key preferences?') },
+                ]).map(({ prompt: p, toolkit }) => (
                   <button
                     key={p}
-                    onClick={() => { setInput(p); requestAnimationFrame(() => inputRef.current?.focus()); }}
-                    className="text-left px-4 py-2.5 rounded-full border border-[#ece9e2] text-[13px] text-[#525252] active:bg-[#f1eee7] bg-transparent"
+                    onClick={() => {
+                      if (toolkit && !toolkit.connected) { setConnectToolkit(toolkit); setInput(p); setSelectedToolkits([toolkit]); return; }
+                      setInput(toolkit ? removeToolkitMentions(p, [toolkit]) : p);
+                      setSelectedToolkits(toolkit ? [toolkit] : []);
+                      if (toolkit) setUseTools(true);
+                      requestAnimationFrame(() => inputRef.current?.focus());
+                    }}
+                    className="flex items-center gap-2 text-left px-4 py-2.5 rounded-full border border-[#ece9e2] text-[13px] text-[#525252] active:bg-[#f1eee7] bg-transparent"
                   >
-                    {p}
+                    {toolkit?.logo && <img src={toolkit.logo} alt="" className="h-4 w-4 object-contain" />}
+                    <span>{p}</span>
                   </button>
                 ))}
               </div>
@@ -846,6 +933,11 @@ export default function TalkToHiveMobile() {
 
       {/* ── Composer ───────────────────────────────── */}
       <div className="flex-shrink-0 px-1.5 pt-2 bg-[#faf9f4]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
+        <div className="flex justify-end px-3 pb-1.5">
+          <button type="button" onClick={clearChat} className="text-[11px] font-medium text-[#737373] active:text-[#0a0a0a]">
+            Clear session
+          </button>
+        </div>
         {/* Claude-style floating input card: text row on top, action row below */}
         <div className="bg-white border border-[#e8e5de] rounded-[28px] shadow-[0_2px_14px_rgba(0,0,0,0.06)] px-4 pt-3 pb-2.5 focus-within:border-[#d5d1c8]">
           <input
@@ -861,10 +953,20 @@ export default function TalkToHiveMobile() {
             accept="*/*"
           />
 
+          {selectedToolkits.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {selectedToolkits.map((toolkit) => (
+                <button key={toolkit.slug} type="button" onClick={() => removeSelectedToolkit(toolkit.slug)} className="inline-flex items-center gap-1.5 rounded-full border border-[#e3e0db] bg-[#faf9f4] px-2 py-1 text-[11px] font-semibold text-[#525252]">
+                  {toolkit.logo ? <img src={toolkit.logo} alt="" className="h-3.5 w-3.5 object-contain" /> : <Cable size={12} className="text-[#117dff]" />}
+                  {toolkit.name}<X size={10} className="text-[#a3a3a3]" />
+                </button>
+              ))}
+            </div>
+          )}
           <textarea
             ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value.slice(0, MAX_CHARS))}
+            onChange={(e) => absorbToolkitMentions(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -1009,6 +1111,30 @@ export default function TalkToHiveMobile() {
         onConfirm={handleConfirmScope}
         onClose={handleCloseScope}
       />
+      <AnimatePresence>
+        {connectToolkit && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] flex items-end bg-black/30 px-3 pb-3" onClick={() => setConnectToolkit(null)}>
+            <motion.div initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }} className="w-full rounded-[22px] border border-[#e3e0db] bg-white p-4" onClick={(event) => event.stopPropagation()}>
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-[10px] border border-[#e3e0db] bg-[#faf9f4]">
+                  {connectToolkit.logo ? <img src={connectToolkit.logo} alt="" className="h-6 w-6 object-contain" /> : <Cable size={17} className="text-[#117dff]" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Connect to {connectToolkit.name}</h3>
+                  <p className="mt-0.5 text-[12px] text-[#737373]">Connect {connectToolkit.name} to use it. You’ll return here with this prompt ready to run.</p>
+                </div>
+              </div>
+              {connectorError && <p className="mt-3 text-[12px] text-red-600">{connectorError}</p>}
+              <div className="mt-4 flex gap-2">
+                <button type="button" onClick={() => setConnectToolkit(null)} className="h-10 flex-1 rounded-[8px] border border-[#e3e0db] text-[12px] font-semibold text-[#525252]">Not now</button>
+                <button type="button" onClick={beginToolkitConnect} disabled={connectingToolkit} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-[8px] bg-[#117dff] text-[12px] font-semibold text-white disabled:opacity-60">
+                  {connectingToolkit ? <Loader2 size={14} className="animate-spin" /> : <Cable size={14} />} Connect
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </MobileShell>
   );
 }
