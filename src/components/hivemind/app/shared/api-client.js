@@ -1926,10 +1926,11 @@ class HiveMindApiClient {
   }
 
   /** Browse Composio's full toolkit catalog (~1,100 toolkits), paginated. */
-  async listComposioToolkits({ search = '', cursor = null, limit = 40 } = {}) {
+  async listComposioToolkits({ search = '', cursor = null, limit = 40, catalog = false } = {}) {
     const params = new URLSearchParams({ limit: String(limit) });
     if (search) params.set('search', search);
     if (cursor) params.set('cursor', cursor);
+    if (catalog) params.set('catalog', 'all');
     const { data } = await this.controlPlane.get(`/v1/connectors/composio/toolkits?${params.toString()}`);
     return data;
   }
