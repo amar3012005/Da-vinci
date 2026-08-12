@@ -4139,13 +4139,13 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
             {nEmail > 0 && (
               <button onClick={() => setCampaignChannel('email')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wider bg-[#117dff] text-white hover:bg-[#0e6be0]">
-                <Send size={11} /> {t('hyperAgents.sendOutreachEmails', 'Send outreach emails ({{n}})', { n: nEmail })}
+                <Send size={11} /> {t('hyperAgents.startEmailOutreach', 'Start email outreach ({{n}})', { n: nEmail })}
               </button>
             )}
             {nCall > 0 && (
               <button onClick={() => setCampaignChannel('call')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wider border border-[#117dff] text-[#117dff] hover:bg-blue-50">
-                <PhoneCall size={11} /> {t('hyperAgents.startOutreachCalls', 'Start outreach calls ({{n}})', { n: nCall })}
+                <PhoneCall size={11} /> {t('hyperAgents.startTaraOutreach', 'Start TARA outreach ({{n}})', { n: nCall })}
               </button>
             )}
           </div>
@@ -4235,31 +4235,53 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         </div>
       )}
 
-      {/* Phase 4/7 — write-approval cards. Side-effectful writes (send email,
-          create/append doc, CRM/PR) are held until the user approves here. */}
+      {/* Outbound email approval → a popup, never inline below the report: a
+          Gmail-style compose card in a modal, agent visibly typing the draft,
+          X to close, one click (or tap) to send. Only one shown at a time —
+          the next queued email approval takes the popup once this one resolves. */}
+      {(() => {
+        if (archived) return null;
+        const emailApprovals = approvalRequests.filter((a) => a.body_md);
+        const current = emailApprovals.find((a) => !resolutionById[a.approval_id]);
+        if (!current) return null;
+        const resolved = resolutionById[current.approval_id];
+        const busyHere = approveBusy === current.approval_id;
+        return (
+          <div className="fixed inset-0 z-[60] bg-[#1a1814]/45 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="w-full max-w-[560px]">
+              <div className="flex justify-end mb-1.5">
+                <button type="button"
+                  onClick={() => onApprove && onApprove(current.approval_id, 'deny')}
+                  className="w-8 h-8 rounded-full flex items-center justify-center bg-black/30 text-white/90 hover:bg-black/50"
+                  title={t('hyperAgents.close', 'Close')}>
+                  <X size={15} />
+                </button>
+              </div>
+              <EmailComposeCard
+                approval={current}
+                fromName={roomAgentName}
+                resolved={resolved}
+                busy={busyHere}
+                autoSend={autoSendOn}
+                onToggleAutoSend={toggleAutoSend}
+                onSend={() => onApprove && onApprove(current.approval_id, 'approve')}
+                onDeny={() => onApprove && onApprove(current.approval_id, 'deny')}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Phase 4/7 — non-email write-approval cards (doc/CRM/PR etc.). Side-
+          effectful writes are held until the user approves here. */}
       {approvalRequests.length > 0 && (
         <div className="space-y-1.5">
           {approvalRequests.map((a, i) => {
             const resolved = resolutionById[a.approval_id];
             const busyHere = approveBusy === a.approval_id;
             const artifactUrl = resolved?.result?.result?.url || resolved?.result?.url;
-            // Outbound email → the cinematic Gmail-style compose card: the agent
-            // visibly types the draft, the user sends with one click (or the
-            // room's auto-send automation fires once typing completes).
-            if (a.body_md && !archived) {
-              return (
-                <EmailComposeCard key={a.approval_id || i}
-                  approval={a}
-                  fromName={roomAgentName}
-                  resolved={resolved}
-                  busy={busyHere}
-                  autoSend={autoSendOn}
-                  onToggleAutoSend={toggleAutoSend}
-                  onSend={() => onApprove && onApprove(a.approval_id, 'approve')}
-                  onDeny={() => onApprove && onApprove(a.approval_id, 'deny')}
-                />
-              );
-            }
+            // Email approvals render as the popup above — skip here.
+            if (a.body_md && !archived) return null;
             return (
               <div key={a.approval_id || i} className="rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2">
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
