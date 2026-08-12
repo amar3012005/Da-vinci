@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, ChevronRight, FileText, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
-  AlertTriangle, CheckCircle2, Loader2, ChevronDown, Brain, Sparkles,
+  AlertTriangle, Loader2, ChevronDown, Brain, Sparkles,
 } from 'lucide-react';
 import apiClient from './api-client';
 import { BRAND_LOGOS } from './connectors-catalog';
@@ -38,8 +38,8 @@ function reasoningRows(events = [], fallbackSteps = []) {
   }));
 }
 
-export function OrchestrationReasoning({ events = [], steps = [], sealed = true }) {
-  const [open, setOpen] = useState(true);
+export function OrchestrationReasoning({ events = [], steps = [], sealed = true, label = 'Reasoning', defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
   const rows = reasoningRows(events, steps);
   if (!rows.length) return null;
   return (
@@ -47,7 +47,7 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true 
       <button type="button" onClick={() => setOpen((value) => !value)}
         className="inline-flex items-center gap-2 text-left text-[#8b877f] hover:text-[#5f5b54] transition-colors" aria-expanded={open}>
         {sealed ? <Clock size={15} /> : <Loader2 size={15} className="animate-spin text-[#117dff]" />}
-        <span className="text-[13px] font-medium">Reasoning</span>
+        <span className="text-[13px] font-medium">{label}</span>
         <ChevronDown size={14} className={`transition-transform ${open ? '' : '-rotate-90'}`} />
       </button>
       {open && (
@@ -689,29 +689,51 @@ export function _activityLabel(ev) {
   if (ev?.type === 'tool_result') return n ? `${n} — done` : 'step done';
   return n ? `running ${n}` : 'working';
 }
+
+const PATIENCE_COPY = [
+  'Understanding what you need',
+  'Searching across your memory',
+  'Ranking the strongest context',
+  'Checking details and sources',
+  'Preparing a grounded answer',
+];
+
+function liveStatus(events, elapsedStep) {
+  const event = [...(events || [])].reverse().find((item) => item?.type !== 'plan');
+  const type = event?.type;
+  const tool = String(event?.tool || event?.name || event?.label || '').replace(/^composio_/, '').replace(/^hivemind_/, '').replace(/_/g, ' ').trim();
+  if (type === 'intent_decided' || type === 'turn_accepted') return 'Understanding what you need';
+  if (type === 'retrieval_planned' || type === 'tool_selected') return 'Choosing the best sources';
+  if (type === 'tool_started' || type === 'tool_call') {
+    return /recall|memory|at|diff/i.test(tool) ? 'Searching across your memory' : `Checking ${tool || 'your connected tools'}`;
+  }
+  if (type === 'tool_completed' || type === 'tool_result') return 'Reviewing what I found';
+  if (type === 'coverage_assessed') return 'Checking coverage and missing details';
+  if (type === 'recall_window_revealed') return 'Ranking the strongest evidence';
+  if (type === 'answer_started' || type === 'answer_delta') return 'Writing your grounded answer';
+  if (type === 'answer_validated') return 'Verifying the answer and citations';
+  return PATIENCE_COPY[elapsedStep % PATIENCE_COPY.length];
+}
+
 export function Thinking({ events = [] }) {
+  const [elapsedStep, setElapsedStep] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setElapsedStep((value) => value + 1), 3200);
+    return () => window.clearInterval(timer);
+  }, []);
+  const status = liveStatus(events, elapsedStep);
   const hasOrchestration = events.some((event) => event?.type === 'orchestration_step');
-  if (hasOrchestration) return <OrchestrationReasoning events={events} sealed={false} />;
-  const visible = (events || []).slice(-4);
+  if (hasOrchestration) {
+    return <OrchestrationReasoning events={events} sealed={false} label={status} defaultOpen={false} />;
+  }
   return (
-    <div className="self-start flex flex-col gap-1.5">
-      <div className="flex items-center gap-1.5 text-[#8a8577]">
-        <Clock size={14} className="animate-pulse" />
-        <span className="text-[14px]">Thinking…</span>
-      </div>
-      {visible.map((ev) => {
-        const complete = ev?.type === 'tool_result';
-        return (
-          <motion.div key={ev?.id || `${ev?.type}-${ev?.name}`}
-            initial={{ opacity: 0, x: -6 }} animate={{ opacity: complete ? 0.55 : 1, x: 0 }}
-            className="flex items-center gap-2 pl-5 text-[12px] text-[#6b6b66]">
-            {complete
-              ? <CheckCircle2 size={12} className="text-[#16a34a]" />
-              : <Loader2 size={12} className="animate-spin text-[#117dff]" />}
-            <span className="font-mono text-[11px]">{_activityLabel(ev)}</span>
-          </motion.div>
-        );
-      })}
-    </div>
+    <motion.div key={status} initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }}
+      className="self-start inline-flex items-center gap-2 text-[#737373]">
+      <span className="relative flex h-3 w-3 items-center justify-center" aria-hidden="true">
+        <span className="absolute h-3 w-3 rounded-full bg-[#117dff]/15 animate-ping" />
+        <span className="relative h-1.5 w-1.5 rounded-full bg-[#117dff]" />
+      </span>
+      <span className="text-[13px]">{status}<span className="text-[#a3a3a3]">…</span></span>
+    </motion.div>
   );
 }
