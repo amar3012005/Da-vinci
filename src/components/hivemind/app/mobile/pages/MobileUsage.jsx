@@ -222,8 +222,6 @@ export default function MobileUsage() {
           </button>
         </div>
 
-        <div className="mb-4"><WorkspaceAccessCard billing={billing} compact /></div>
-
         {reminders.length > 0 && (
           <div className="mb-4 rounded-[12px] border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-1">
             {reminders.map((reminder) => (
@@ -235,17 +233,7 @@ export default function MobileUsage() {
           </div>
         )}
 
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-[12.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Today's plan limits</h2>
-            <span className="text-[9.5px] text-[#999]">Resets daily</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {DAILY_METRICS.map((metric) => <DailyBudget key={metric.key} metric={metric} data={data?.daily?.[metric.key]} />)}
-          </div>
-        </div>
-
-        {/* Hero graph */}
+        {/* Hero graph — LLM token usage (or whichever metric is selected) up top */}
         <section className="mb-5 border-y border-[#e6e3dd] py-4">
           <div className="flex items-center gap-2 mb-1">
             <heroMetric.icon size={15} style={{ color: heroMetric.accent }} />
@@ -267,6 +255,17 @@ export default function MobileUsage() {
           <BarChart values={seriesByKey[metricKey] || []} days={axis} accent={heroMetric.accent} />
         </section>
 
+        {/* Per-day plan-limit boxes — right below the hero graph */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-[12.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Today's plan limits</h2>
+            <span className="text-[9.5px] text-[#999]">Resets daily</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {DAILY_METRICS.map((metric) => <DailyBudget key={metric.key} metric={metric} data={data?.daily?.[metric.key]} />)}
+          </div>
+        </div>
+
         {/* Metric cards */}
         <div className="grid grid-cols-2 gap-2">
           {METRICS.map((m) => (
@@ -275,9 +274,15 @@ export default function MobileUsage() {
           ))}
         </div>
 
-        <div className="flex items-start gap-1.5 text-[9.5px] text-[#aaa] mt-5">
+        <div className="flex items-start gap-1.5 text-[9.5px] text-[#aaa] mt-5 mb-5">
           <Info size={11} className="mt-px shrink-0" />
           <span>High-level usage. Tokens are metered at chat + TARA + HyperAgents background LLM ({data?.tokensScope || 'chat+tara+hyperagents'}); embeddings, vision &amp; ingest are not yet in the token count.</span>
+        </div>
+
+        {/* Current workspace access — bottom-most */}
+        <div>
+          <h2 className="text-[12.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mb-2">Current workspace access</h2>
+          <WorkspaceAccessCard billing={billing} compact />
         </div>
       </div>
     </MobileShell>

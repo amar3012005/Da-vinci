@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   AlignLeft, MessageCircle, Brain, Mic2, Plug, Folder, Gauge, Network,
+  CreditCard, UserCircle2,
   X, LogOut, Hexagon, ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
@@ -29,6 +30,8 @@ const NAV = [
   { to: '/hivemind/m/connectors', label: 'Connectors', icon: Plug },
   { to: '/hivemind/m/projects', label: 'Projects', icon: Folder },
   { to: '/hivemind/m/usage', label: 'Usage', icon: Gauge },
+  { to: '/hivemind/m/billing', label: 'Billing', icon: CreditCard },
+  { to: '/hivemind/m/profile', label: 'Profile', icon: UserCircle2 },
 ];
 
 export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false }) {
