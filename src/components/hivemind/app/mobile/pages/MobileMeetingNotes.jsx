@@ -2,13 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
+  AlertTriangle,
+  ArrowUpRight,
   ChevronLeft,
   Clock3,
   FolderKanban,
+  HelpCircle,
   History,
+  Lightbulb,
   Mic,
   Monitor,
   NotebookPen,
+  Quote,
   Sparkles,
   Users,
   X,
@@ -16,6 +21,7 @@ import {
 import apiClient from '../../shared/api-client';
 import { useQuickRecorder } from '../../shared/QuickRecorderProvider';
 import MobileShell from '../MobileShell';
+import MeetingIntelligencePanel from '../../components/MeetingIntelligencePanel';
 
 function when(iso) {
   if (!iso) return 'Recent';
@@ -24,6 +30,143 @@ function when(iso) {
 
 function compactSummary(meeting) {
   return meeting.summary || meeting.notes || meeting.transcript?.slice?.(0, 120) || 'Transcript, decisions, and action items are saved here.';
+}
+
+function Section({ icon: Icon, title, accent = '#117dff', children }) {
+  return (
+    <div className="mt-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#737373] flex items-center gap-1.5">
+        <Icon size={13} style={{ color: accent }} /> {title}
+      </div>
+      <div className="mt-2">{children}</div>
+    </div>
+  );
+}
+
+// Same structured breakdown as desktop MeetingNotes.jsx's Summary sub-tab —
+// action items/decisions/key points/questions/quotes/risks/next steps/topics
+// — reading the exact same `insights`/top-level fields that openMeeting()
+// already fetches from /api/meetings/:id, just rendered here instead of a
+// flat summary string. Intelligence panel is the same shared component
+// desktop uses, dropped in as-is.
+function MeetingDetailBody({ meeting: m }) {
+  const insx = m.insights || {};
+  const actionItems = Array.isArray(m.action_items) && m.action_items.length ? m.action_items : (insx.action_items || []);
+  const decisions = Array.isArray(m.decisions) && m.decisions.length ? m.decisions : (insx.decisions || []);
+  const keyPoints = Array.isArray(m.key_points) && m.key_points.length ? m.key_points : (insx.key_points || []);
+  const questions = insx.questions || [];
+  const quotes = insx.quotes || [];
+  const risks = Array.isArray(insx.risks) ? insx.risks : [];
+  const nextSteps = Array.isArray(insx.next_steps) ? insx.next_steps : [];
+  const topics = insx.topics || [];
+  const summary = m.summary || insx.summary || m.notes;
+
+  return (
+    <div className="pb-2">
+      {(m.intelligence || m.intelligence_status) && (
+        <div className="mt-4">
+          <MeetingIntelligencePanel
+            intelligence={m.intelligence}
+            status={m.intelligence_status}
+            onOpenMemory={(id) => id && window.open(`/hivemind/app/memories?focus=${id}`, '_self')}
+          />
+        </div>
+      )}
+
+      <Section icon={NotebookPen} title="Summary">
+        <p className="text-[14px] leading-relaxed whitespace-pre-wrap">{summary || 'No generated summary yet.'}</p>
+      </Section>
+
+      {actionItems.length > 0 && (
+        <Section icon={Sparkles} title="Action Items">
+          <ul className="space-y-2">
+            {actionItems.map((a, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-[13px] text-[#0a0a0a]">
+                <span className="mt-0.5 w-4 h-4 rounded-[5px] border border-[#cbd5e1] flex-shrink-0" />
+                <span>{a.task || a}{a.owner && <span className="text-[#a3a3a3]"> · @{a.owner}</span>}{a.due && <span className="text-[#a3a3a3]"> · {a.due}</span>}</span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {decisions.length > 0 && (
+        <Section icon={Lightbulb} title="Decisions" accent="#f59e0b">
+          <ul className="space-y-1.5 text-[13px] text-[#525252]">
+            {decisions.map((d, i) => <li key={i} className="flex gap-2"><span className="text-[#f59e0b]">·</span>{d}</li>)}
+          </ul>
+        </Section>
+      )}
+
+      {keyPoints.length > 0 && (
+        <Section icon={Sparkles} title="Key Points">
+          <ul className="space-y-1.5 text-[13px] text-[#525252]">
+            {keyPoints.map((k, i) => <li key={i} className="flex gap-2"><span className="text-[#117dff]">·</span>{k}</li>)}
+          </ul>
+        </Section>
+      )}
+
+      {questions.length > 0 && (
+        <Section icon={HelpCircle} title="Open Questions" accent="#0891b2">
+          <ul className="space-y-1.5 text-[13px] text-[#525252]">
+            {questions.map((q, i) => <li key={i} className="flex gap-2"><span className="text-[#0891b2]">?</span>{q}</li>)}
+          </ul>
+        </Section>
+      )}
+
+      {quotes.length > 0 && (
+        <Section icon={Quote} title="Notable Quotes">
+          <ul className="space-y-2 text-[13px] text-[#525252]">
+            {quotes.map((q, i) => (
+              <li key={i} className="border-l-2 border-[#117dff]/40 pl-3 italic">
+                "{q.quote || q}"{q.speaker && <span className="not-italic text-[#a3a3a3]"> — {q.speaker}</span>}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {risks.length > 0 && (
+        <Section icon={AlertTriangle} title="Risks & Red Flags" accent="#ef4444">
+          <ul className="space-y-1.5 text-[13px] text-[#525252]">
+            {risks.map((r, i) => <li key={i} className="flex gap-2"><AlertTriangle size={13} className="text-[#ef4444] mt-0.5 flex-shrink-0" />{r}</li>)}
+          </ul>
+        </Section>
+      )}
+
+      {nextSteps.length > 0 && (
+        <Section icon={ArrowUpRight} title="Next Steps" accent="#10b981">
+          <ul className="space-y-1.5 text-[13px] text-[#525252]">
+            {nextSteps.map((n, i) => <li key={i} className="flex gap-2"><span className="text-[#10b981]">→</span>{n}</li>)}
+          </ul>
+        </Section>
+      )}
+
+      {topics.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {topics.map((tp, i) => (
+            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] text-blue-700">#{tp}</span>
+          ))}
+        </div>
+      )}
+
+      {Array.isArray(m.segments) && m.segments.length > 0 ? (
+        <Section icon={Users} title="Transcript">
+          <div className="space-y-2 max-h-[380px] overflow-y-auto">
+            {m.segments.map((s, i) => (
+              <div key={i} className="text-[12.5px] leading-relaxed">
+                <span className="font-semibold text-[#117dff]">{s.speaker || 'Speaker'}:</span> <span className="text-[#525252]">{s.text}</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+      ) : m.transcript ? (
+        <Section icon={Users} title="Transcript">
+          <p className="text-[12.5px] leading-relaxed whitespace-pre-wrap text-[#525252]">{m.transcript}</p>
+        </Section>
+      ) : null}
+    </div>
+  );
 }
 
 export default function MobileMeetingNotes() {
@@ -198,7 +341,7 @@ export default function MobileMeetingNotes() {
               exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 360, damping: 34 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-h-[82vh] overflow-y-auto bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
+              className="w-full max-h-[86vh] overflow-y-auto bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -207,9 +350,8 @@ export default function MobileMeetingNotes() {
                 </div>
                 <button onClick={() => setSelected(null)} className="w-9 h-9 rounded-full grid place-items-center bg-[#f3f1ec]"><X size={16} /></button>
               </div>
-              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#737373] flex items-center gap-1.5"><NotebookPen size={13} /> Summary</div>
-              <p className="mt-2 text-[14px] leading-relaxed whitespace-pre-wrap">{selected.summary || selected.insights?.summary || selected.notes || 'No generated summary yet.'}</p>
-              {selected.transcript && <p className="mt-4 text-[12.5px] leading-relaxed whitespace-pre-wrap text-[#525252]">{selected.transcript}</p>}
+
+              <MeetingDetailBody meeting={selected} />
             </motion.section>
           </motion.div>
         )}

@@ -20,6 +20,7 @@ import {
 import apiClient from '../../shared/api-client';
 import MobileShell from '../MobileShell';
 import { CONNECTOR_CATALOG, BRAND_LOGOS } from '../../shared/connectors-catalog';
+import ComposioToolkitBrowser from '../../pages/ComposioToolkitBrowser';
 
 const CATEGORIES = [
   { key: 'all', label: 'All' },
@@ -309,6 +310,14 @@ export default function MobileConnectors() {
               </motion.div>
             );
           })}
+        </div>
+
+        {/* Full Composio catalog (~1,100 toolkits) — same browse/connect/oauth
+            component as desktop Connectors.jsx, reused as-is so behavior
+            (search, connect redirect, disconnect, tool-detail popup) stays
+            identical; only the surrounding chrome here is mobile. */}
+        <div className="mt-6 pt-5 border-t border-[#eceae3]">
+          <ComposioToolkitBrowser />
         </div>
       </div>
     </MobileShell>
