@@ -421,6 +421,7 @@ export function ChatPanel({ isOpen, onClose }) {
     if (!trimmed || loading) return;
 
     const userMsg = { id: Date.now(), role: 'user', content: trimmed };
+    const streamingId = `answer-${userMsg.id}`;
     const fullHistory = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
     setMessages((prev) => [...prev, userMsg]);
     if (fromInput) setInput('');
@@ -455,6 +456,23 @@ export function ChatPanel({ isOpen, onClose }) {
       }
       const data = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? (await readChatStream(chatRes, (event) => {
+            if (event.type === 'answer_started') {
+              setMessages((prev) => prev.some((item) => item.id === streamingId)
+                ? prev
+                : [...prev, { id: streamingId, role: 'assistant', content: '', streaming: true }]);
+              return;
+            }
+            if (event.type === 'answer_delta' && event.validated === true) {
+              setMessages((prev) => {
+                const found = prev.some((item) => item.id === streamingId);
+                return found
+                  ? prev.map((item) => item.id === streamingId
+                    ? { ...item, content: `${item.content || ''}${event.delta || ''}` }
+                    : item)
+                  : [...prev, { id: streamingId, role: 'assistant', content: event.delta || '', streaming: true }];
+              });
+              return;
+            }
             setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-5));
           })) || {}
         : await chatRes.json();
@@ -473,7 +491,9 @@ export function ChatPanel({ isOpen, onClose }) {
         project_choice: data.project_choice || null,
         scopes_found: Array.isArray(data.scopes_found) ? data.scopes_found : [],
       };
-      setMessages((prev) => [...prev, assistantMsg]);
+      setMessages((prev) => prev.some((item) => item.id === streamingId)
+        ? prev.map((item) => item.id === streamingId ? assistantMsg : item)
+        : [...prev, assistantMsg]);
     } catch (err) {
       const errMsg = err?.response?.data?.detail || err?.message || 'Something went wrong.';
       setMessages((prev) => [
