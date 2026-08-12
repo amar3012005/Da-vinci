@@ -38,6 +38,55 @@ function reasoningRows(events = [], fallbackSteps = []) {
   }));
 }
 
+function normalizedArguments(value) {
+  if (!value) return '';
+  if (typeof value === 'string') {
+    try { return JSON.stringify(JSON.parse(value)); } catch { return value.trim(); }
+  }
+  try { return JSON.stringify(value); } catch { return String(value); }
+}
+
+export function liveReasoningRows(events = []) {
+  const rows = new Map();
+  for (const event of events || []) {
+    const type = event?.type;
+    if (type === 'orchestration_step') {
+      const key = `step:${event.step_id ?? event.index}`;
+      rows.set(key, event);
+      continue;
+    }
+    const tool = event?.tool || event?.name;
+    if (tool && ['tool_selected', 'tool_started', 'tool_call', 'tool_completed', 'tool_result'].includes(type)) {
+      const args = normalizedArguments(event?.arguments);
+      const existingKey = [...rows.keys()].reverse().find((key) => key.startsWith(`tool:${tool}:`));
+      const key = args ? `tool:${tool}:${args.slice(0, 180)}` : (existingKey || `tool:${tool}:default`);
+      const previous = rows.get(key) || {};
+      const completed = type === 'tool_completed' || type === 'tool_result';
+      rows.set(key, {
+        ...previous,
+        ...event,
+        tool,
+        phase: completed ? 'completed' : 'started',
+        detail: completed
+          ? (event?.result_summary || event?.detail || 'Completed')
+          : (event?.detail || 'Working…'),
+      });
+      continue;
+    }
+    if (type === 'recall_window_revealed') {
+      const from = Number(event.from_rank) || 1;
+      const to = Number(event.to_rank) || from;
+      rows.set(`hop:${event.recall_id || 'recall'}:${from}:${to}`, {
+        ...event,
+        tool: from === 1 ? 'evidence_rank' : 'next_evidence_hop',
+        phase: 'completed',
+        detail: `Ranks ${from}–${to} of ${event.candidate_count || to}`,
+      });
+    }
+  }
+  return [...rows.values()];
+}
+
 export function OrchestrationReasoning({ events = [], steps = [], sealed = true, label = 'Reasoning', defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
   const rows = reasoningRows(events, steps);
@@ -691,49 +740,45 @@ export function _activityLabel(ev) {
 }
 
 const PATIENCE_COPY = [
-  'Understanding what you need',
-  'Searching across your memory',
-  'Ranking the strongest context',
-  'Checking details and sources',
-  'Preparing a grounded answer',
+  'I’m tracing this through what we know',
+  'I’m connecting the strongest pieces',
+  'I’m checking the details before I answer',
+  'I’m making sure the evidence tells one coherent story',
+  'I’m turning what I found into a useful answer',
 ];
-
-function liveStatus(events, elapsedStep) {
-  const event = [...(events || [])].reverse().find((item) => item?.type !== 'plan');
-  const type = event?.type;
-  const tool = String(event?.tool || event?.name || event?.label || '').replace(/^composio_/, '').replace(/^hivemind_/, '').replace(/_/g, ' ').trim();
-  if (type === 'intent_decided' || type === 'turn_accepted') return 'Understanding what you need';
-  if (type === 'retrieval_planned' || type === 'tool_selected') return 'Choosing the best sources';
-  if (type === 'tool_started' || type === 'tool_call') {
-    return /recall|memory|at|diff/i.test(tool) ? 'Searching across your memory' : `Checking ${tool || 'your connected tools'}`;
-  }
-  if (type === 'tool_completed' || type === 'tool_result') return 'Reviewing what I found';
-  if (type === 'coverage_assessed') return 'Checking coverage and missing details';
-  if (type === 'recall_window_revealed') return 'Ranking the strongest evidence';
-  if (type === 'answer_started' || type === 'answer_delta') return 'Writing your grounded answer';
-  if (type === 'answer_validated') return 'Verifying the answer and citations';
-  return PATIENCE_COPY[elapsedStep % PATIENCE_COPY.length];
-}
 
 export function Thinking({ events = [] }) {
   const [elapsedStep, setElapsedStep] = useState(0);
+  const [typed, setTyped] = useState('');
   useEffect(() => {
     const timer = window.setInterval(() => setElapsedStep((value) => value + 1), 3200);
     return () => window.clearInterval(timer);
   }, []);
-  const status = liveStatus(events, elapsedStep);
-  const hasOrchestration = events.some((event) => event?.type === 'orchestration_step');
-  if (hasOrchestration) {
-    return <OrchestrationReasoning events={events} sealed={false} label={status} defaultOpen={false} />;
-  }
+  const rows = liveReasoningRows(events);
+  const thought = PATIENCE_COPY[elapsedStep % PATIENCE_COPY.length];
+  useEffect(() => {
+    setTyped('');
+    let index = 0;
+    const timer = window.setInterval(() => {
+      index += 1;
+      setTyped(thought.slice(0, index));
+      if (index >= thought.length) window.clearInterval(timer);
+    }, 24);
+    return () => window.clearInterval(timer);
+  }, [thought]);
   return (
-    <motion.div key={status} initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }}
-      className="self-start inline-flex items-center gap-2 text-[#737373]">
-      <span className="relative flex h-3 w-3 items-center justify-center" aria-hidden="true">
-        <span className="absolute h-3 w-3 rounded-full bg-[#117dff]/15 animate-ping" />
-        <span className="relative h-1.5 w-1.5 rounded-full bg-[#117dff]" />
-      </span>
-      <span className="text-[13px]">{status}<span className="text-[#a3a3a3]">…</span></span>
-    </motion.div>
+    <div className="self-start w-full max-w-4xl">
+      {rows.length > 0
+        ? <OrchestrationReasoning events={rows.map((row, index) => ({ ...row, type: 'orchestration_step', step_id: row.step_id || `live-${index}`, index }))}
+            sealed={false} label="Reasoning" defaultOpen />
+        : <div className="inline-flex items-center gap-2 text-[#8b877f]">
+            <Loader2 size={15} className="animate-spin text-[#117dff]" />
+            <span className="text-[13px] font-medium">Reasoning</span>
+          </div>}
+      <motion.div key={thought} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        className="ml-6 mt-1 min-h-[20px] text-[12.5px] italic text-[#737373]" aria-live="polite">
+        {typed}<span className="ml-0.5 inline-block h-3.5 w-px translate-y-0.5 bg-[#a3a3a3] animate-pulse" />
+      </motion.div>
+    </div>
   );
 }
