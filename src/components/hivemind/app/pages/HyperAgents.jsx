@@ -1799,10 +1799,21 @@ function RoomThread({ roomId, onArchived }) {
   // One-shot seal latch per live turn: SSE and the fallback poll BOTH detect the
   // seal (they race) — without the latch load() fired twice back-to-back.
   const sealedRef = useRef(false);
+  // The client-generated tempId is set as activeTurnId the INSTANT the optimistic
+  // bubble is appended, before the POST that creates the turn has even reached
+  // the server. If the SSE/poll effect below opens against that id immediately,
+  // the fallback poll's very first GET 404s (server doesn't know the id yet),
+  // and its 404 handler's load({quiet:true}) overwrites `turns` wholesale with
+  // the server's turn-less list — wiping the optimistic bubble a beat before the
+  // POST response would have swapped in the real id. Confirmed live 2026-08-13:
+  // a sent message vanished instantly, reappearing only after a manual refresh
+  // once the server had actually persisted the turn. This ref tracks which id is
+  // still unconfirmed so the effect can wait for the real one.
+  const pendingTurnIdRef = useRef(null);
 
   // SSE subscription while a turn is live
   useEffect(() => {
-    if (!activeTurnId) return;
+    if (!activeTurnId || activeTurnId === pendingTurnIdRef.current) return;
     sealedRef.current = false;
     const url = apiClient.hyperTurnStreamUrl(roomId, activeTurnId);
     let es;
@@ -2137,6 +2148,7 @@ function RoomThread({ roomId, onArchived }) {
       ...prev,
       { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: echo, status: 'live', lines: [], createdAt: new Date().toISOString() },
     ]);
+    pendingTurnIdRef.current = tempId;  // SSE/poll effect waits for this to clear
     setActiveTurnId(tempId);
     try {
       const idempo = `${roomId}:${Date.now()}:${msg.length}`;
@@ -2146,12 +2158,16 @@ function RoomThread({ roomId, onArchived }) {
         turn_id: tempId,
         language: i18n?.language,  // run-wide output language from the navbar toggle
       });
-      // Swap the temp turn for the real id, then start streaming/polling.
+      // Swap the temp turn for the real id, then start streaming/polling — the
+      // server has now actually persisted the turn, so it's safe for the SSE/
+      // poll effect to open against it.
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(null);
       setSubmitting(false);
     }
@@ -2229,6 +2245,7 @@ function RoomThread({ roomId, onArchived }) {
       ...prev,
       { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
     ]);
+    pendingTurnIdRef.current = tempId;  // SSE/poll effect waits for this to clear
     setActiveTurnId(tempId);
     try {
       const idempo = `${roomId}:${Date.now()}:${msg.length}`;
@@ -2237,10 +2254,12 @@ function RoomThread({ roomId, onArchived }) {
         // self-evolve signal: a rerun = the prior answer was rejected → the employees learn from it
         user_signal: 'the user reran this turn — the previous answer was rejected as wrong or stale' });
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(null);
       setSubmitting(false);
     }
@@ -2266,16 +2285,19 @@ function RoomThread({ roomId, onArchived }) {
       ...prev,
       { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
     ]);
+    pendingTurnIdRef.current = tempId;  // SSE/poll effect waits for this to clear
     setActiveTurnId(tempId);
     try {
       const resp = await apiClient.postHyperTurn(roomId, {
         user_message: msg, idempotency_key: `${roomId}:next:${Date.now()}`, turn_id: tempId,
         language: i18n?.language });
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(null);
       setSubmitting(false);
     }
