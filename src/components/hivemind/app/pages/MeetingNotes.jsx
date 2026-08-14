@@ -37,6 +37,56 @@ function pickRecorderMime() {
   return ''; // let the browser choose its own default
 }
 
+// The browser cache is a recovery buffer, never the source of truth. A blob is
+// kept here only until its transcript has been acknowledged by the server. If a
+// tab closes while the STT provider or network is unavailable, the segment can
+// be retried instead of being silently discarded with the in-memory recorder.
+const MEETING_OUTBOX_DB = 'hivemind-meeting-outbox-v1';
+const MEETING_OUTBOX_STORE = 'segments';
+function meetingOutboxKey(sessionId, idx) { return `${sessionId}:${idx}`; }
+function openMeetingOutbox() {
+  if (typeof indexedDB === 'undefined') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const request = indexedDB.open(MEETING_OUTBOX_DB, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(MEETING_OUTBOX_STORE)) db.createObjectStore(MEETING_OUTBOX_STORE, { keyPath: 'key' });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(null);
+  });
+}
+async function cacheMeetingSegment(segment) {
+  const db = await openMeetingOutbox();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    const tx = db.transaction(MEETING_OUTBOX_STORE, 'readwrite');
+    tx.objectStore(MEETING_OUTBOX_STORE).put({ ...segment, key: meetingOutboxKey(segment.sessionId, segment.idx), cachedAt: Date.now() });
+    tx.oncomplete = () => { db.close(); resolve(true); };
+    tx.onerror = () => { db.close(); resolve(false); };
+  });
+}
+async function removeCachedMeetingSegment(sessionId, idx) {
+  const db = await openMeetingOutbox();
+  if (!db) return;
+  await new Promise((resolve) => {
+    const tx = db.transaction(MEETING_OUTBOX_STORE, 'readwrite');
+    tx.objectStore(MEETING_OUTBOX_STORE).delete(meetingOutboxKey(sessionId, idx));
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); resolve(); };
+  });
+}
+async function listCachedMeetingSegments() {
+  const db = await openMeetingOutbox();
+  if (!db) return [];
+  return new Promise((resolve) => {
+    const tx = db.transaction(MEETING_OUTBOX_STORE, 'readonly');
+    const request = tx.objectStore(MEETING_OUTBOX_STORE).getAll();
+    request.onsuccess = () => { db.close(); resolve(Array.isArray(request.result) ? request.result : []); };
+    request.onerror = () => { db.close(); resolve([]); };
+  });
+}
+
 // Tab-audio capture needs getDisplayMedia — absent on iOS Safari and audio-less
 // on desktop Safari. Hide the "tab + mic" source there so users aren't offered
 // a mode that can't work; mic-only still records fine everywhere.
@@ -426,10 +476,15 @@ export default function MeetingNotes() {
   const segPromisesRef = useRef([]);   // in-flight transcription promises
   const segTextsRef = useRef({});      // idx -> transcript text (ordered at stop)
   const segSegsRef = useRef({});       // idx -> speakerSegments
+  const segFailuresRef = useRef({});   // idx -> last durable failure (never converted to empty text)
   const languageRef = useRef(null);    // first detected language wins
   const finalizingRef = useRef(false); // true once Stop pressed — stops rotation
+  const durationSecRef = useRef(0);
+  const recordingStartedAtRef = useRef(null);
+  const currentSegmentStartMsRef = useRef(0);
   const [segDone, setSegDone] = useState(0);
   const [segTotal, setSegTotal] = useState(0);
+  const [recoverableSessions, setRecoverableSessions] = useState([]);
 
   const loadMeetings = useCallback(async () => {
     try {
@@ -439,6 +494,20 @@ export default function MeetingNotes() {
     } catch { /* non-fatal */ }
   }, []);
   useEffect(() => { loadMeetings(); }, [loadMeetings]);
+
+  const refreshRecoverableSessions = useCallback(async () => {
+    const pending = await listCachedMeetingSegments();
+    const grouped = new Map();
+    for (const segment of pending) {
+      if (!segment?.sessionId || !Number.isInteger(segment.idx) || !segment.blob) continue;
+      const existing = grouped.get(segment.sessionId) || { sessionId: segment.sessionId, count: 0, cachedAt: 0 };
+      existing.count += 1;
+      existing.cachedAt = Math.max(existing.cachedAt, Number(segment.cachedAt) || 0);
+      grouped.set(segment.sessionId, existing);
+    }
+    setRecoverableSessions([...grouped.values()].sort((a, b) => b.cachedAt - a.cachedAt));
+  }, []);
+  useEffect(() => { refreshRecoverableSessions(); }, [refreshRecoverableSessions]);
 
   // Load org members and projects for meeting setup (best-effort, non-fatal)
   useEffect(() => {
@@ -515,38 +584,59 @@ export default function MeetingNotes() {
       notes: notes || null,
       participants,
       session_id: sessionIdRef.current || undefined, // P1: link durable segments to this row
+      expected_segment_count: segIdxRef.current,
+      duration_sec: durationSecRef.current,
       scope,
       project_id: scope === 'project' ? scopeProjectId : null,
     }, { timeout: 60000 }); // override the 15s core default — large transcript+insights payloads
     return data;
   }, [notes, participants, scope, scopeProjectId]);
 
-  // Transcribe ONE segment in the background (fired the instant a segment
-  // closes). Failures are swallowed per-segment so one bad 10-min chunk never
-  // loses the whole meeting — the rest still stitch.
-  const transcribeSegment = useCallback((idx, blob) => {
+  // Transcribe ONE segment in the background. Keep its audio in IndexedDB until
+  // the transcript write acknowledges it; retry boundedly, then surface an
+  // explicit incomplete-session error rather than stitching an empty gap.
+  const transcribeSegment = useCallback(async (idx, blob, timing = {}) => {
     setSegTotal((n) => Math.max(n, idx + 1));
     const participantNames = participants.map((p) => p.name).filter(Boolean).join(', ');
     const promptHint = [notes, participantNames ? `Participants: ${participantNames}` : ''].filter(Boolean).join(' — ').slice(0, 800);
-    const p = apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}&prompt=${encodeURIComponent(promptHint)}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 })
-      .then((tr) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) throw new Error('Recording session was not initialized.');
+    let lastError = null;
+    try {
+      const cached = await cacheMeetingSegment({ sessionId, idx, blob, timing, contentType: blob.type || 'audio/webm' });
+      if (!cached) throw new Error('This browser could not protect the recording segment for retry. It will not be finalized silently.');
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const tr = await apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}&prompt=${encodeURIComponent(promptHint)}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 });
         const segText = tr.data?.transcript || '';
+          if (!segText.trim()) throw new Error('No speech detected in this recording segment.');
         segTextsRef.current[idx] = segText;
         if (tr.data?.speakerSegments?.length) segSegsRef.current[idx] = tr.data.speakerSegments;
         if (tr.data?.language && !languageRef.current) languageRef.current = tr.data.language;
-        // P1: persist this segment server-side the instant it transcribes, so a
-        // tab crash mid-meeting doesn't lose it. Best-effort; remote orgs no-op.
-        if (sessionIdRef.current && segText.trim()) {
-          apiClient.core.post('/api/meetings/segments', {
-            session_id: sessionIdRef.current, idx, text: segText,
+          // The server acknowledgement is the durability boundary. Do not
+          // remove the cached audio or count this segment as done before it.
+          await apiClient.core.post('/api/meetings/segments', {
+            session_id: sessionId, idx, text: segText,
             speakers: tr.data?.speakerSegments || null,
-          }).catch(() => {});
+            start_ms: Number.isFinite(timing.startMs) ? timing.startMs : null,
+            end_ms: Number.isFinite(timing.endMs) ? timing.endMs : null,
+          }, { timeout: 60000 });
+          await removeCachedMeetingSegment(sessionId, idx);
+          refreshRecoverableSessions();
+          delete segFailuresRef.current[idx];
+          return;
+        } catch (e) {
+          lastError = e;
+          if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
         }
-      })
-      .catch(() => { if (segTextsRef.current[idx] === undefined) segTextsRef.current[idx] = ''; })
-      .finally(() => setSegDone((n) => n + 1));
-    segPromisesRef.current.push(p);
-  }, [multiSpeaker, notes, participants]);
+      }
+      const message = lastError?.response?.data?.error || lastError?.message || 'Segment transcription failed.';
+      segFailuresRef.current[idx] = message;
+      throw new Error(message);
+    } finally {
+      setSegDone((n) => n + 1);
+    }
+  }, [multiSpeaker, notes, participants, refreshRecoverableSessions]);
 
   // Roll one segment recorder on the live stream. On stop it ships the segment
   // for transcription and (unless we're finalizing) immediately starts the next
@@ -554,6 +644,8 @@ export default function MeetingNotes() {
   const startSegmentRecorder = useCallback(() => {
     const stream = streamRef.current; if (!stream) return;
     const mime = pickRecorderMime();
+    const startMs = Math.max(0, Date.now() - (recordingStartedAtRef.current || Date.now()));
+    currentSegmentStartMsRef.current = startMs;
     segChunksRef.current = [];
     // Empty mime → omit the option so the UA picks its own supported default.
     const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); recRef.current = rec;
@@ -561,7 +653,11 @@ export default function MeetingNotes() {
     rec.onstop = () => {
       const idx = segIdxRef.current++;
       const blob = new Blob(segChunksRef.current, { type: rec.mimeType || mime || 'audio/webm' });
-      if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
+      if (blob.size > 1024) {
+        const p = transcribeSegment(idx, blob, { startMs, endMs: Math.max(startMs, Date.now() - (recordingStartedAtRef.current || Date.now())) });
+        segPromisesRef.current.push(p);
+        p.catch(() => {});
+      } else segIdxRef.current--;
       if (!finalizingRef.current) startSegmentRecorder(); // roll the next segment instantly
     };
     rec.start(1000);
@@ -571,7 +667,13 @@ export default function MeetingNotes() {
   const finalize = useCallback(async () => {
     setError(null); setStatus('transcribing');
     try {
-      await Promise.allSettled(segPromisesRef.current);
+      const outcomes = await Promise.allSettled(segPromisesRef.current);
+      const failed = outcomes.map((outcome, idx) => outcome.status === 'rejected' ? idx : null).filter((idx) => idx !== null);
+      if (failed.length || Object.keys(segFailuresRef.current).length) {
+        setStatus('error');
+        setError(`${failed.length || Object.keys(segFailuresRef.current).length} recording segment${(failed.length || Object.keys(segFailuresRef.current).length) === 1 ? '' : 's'} could not be transcribed and remains cached for retry. This meeting was not finalized.`);
+        return;
+      }
       const idxs = Object.keys(segTextsRef.current).map(Number).sort((a, b) => a - b);
       const text = idxs.map((i) => segTextsRef.current[i]).filter(Boolean).join('\n').trim();
       const segs = idxs.flatMap((i) => segSegsRef.current[i] || []); // NOTE: speaker labels are per-segment (not globally reconciled yet)
@@ -587,17 +689,70 @@ export default function MeetingNotes() {
         const row = await persistRow({ insights: insights || {}, transcript: text, segments: segs.length ? segs : null, language: lang });
         if (row?.id) setMeetingId(row.id);
         loadMeetings();
-      } catch { /* non-fatal — recording is still usable / re-savable */ }
+      } catch (e) {
+        setStatus('error');
+        setError(`Transcript is protected, but the meeting report was not saved yet: ${e.response?.data?.error || e.message || 'save failed'}. Retry Save to HIVEMIND.`);
+      }
     } catch (e) { setStatus('error'); setError(e.response?.data?.error || e.message || 'Processing failed.'); }
   }, [notes, participants, persistRow, loadMeetings]);
+
+  // Recovery works from the server-acknowledged transcript plus only the audio
+  // blobs that still need work. It does not depend on the original tab staying
+  // alive, and it never invents missing transcript text.
+  const resumeCachedSession = useCallback(async (sessionId) => {
+    setError(null); setStatus('transcribing'); setTranscript(''); setInsights(null); setMeetingId(null);
+    const pending = (await listCachedMeetingSegments()).filter((segment) => segment.sessionId === sessionId).sort((a, b) => a.idx - b.idx);
+    if (!pending.length) { await refreshRecoverableSessions(); setStatus('idle'); return; }
+    sessionIdRef.current = sessionId;
+    segPromisesRef.current = [];
+    segTextsRef.current = {}; segSegsRef.current = {}; segFailuresRef.current = {};
+    const attempts = pending.map((segment) => {
+      const p = transcribeSegment(segment.idx, segment.blob, segment.timing || {});
+      segPromisesRef.current.push(p); p.catch(() => {});
+      return p;
+    });
+    const results = await Promise.allSettled(attempts);
+    if (results.some((result) => result.status === 'rejected')) {
+      setStatus('error');
+      setError('Some saved audio segments still need retry. The cached audio has been kept.');
+      await refreshRecoverableSessions();
+      return;
+    }
+    try {
+      const { data } = await apiClient.core.get(`/api/meetings/session/${sessionId}/segments`, { timeout: 60000 });
+      for (const segment of (data?.segments || [])) {
+        if (segment?.text) segTextsRef.current[segment.idx] = segment.text;
+        if (segment?.speakers?.length) segSegsRef.current[segment.idx] = segment.speakers;
+      }
+      const indexes = Object.keys(segTextsRef.current).map(Number);
+      segIdxRef.current = indexes.length ? Math.max(...indexes) + 1 : 0;
+      await refreshRecoverableSessions();
+      await finalize();
+    } catch (e) {
+      setStatus('error');
+      setError(`Saved segments were recovered, but finalization needs retry: ${e.response?.data?.error || e.message || 'recovery failed'}`);
+    }
+  }, [finalize, refreshRecoverableSessions, transcribeSegment]);
 
   const start = useCallback(async () => {
     setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null); setMeetingId(null);
     // reset segmented-capture state
     segIdxRef.current = 0; segChunksRef.current = []; segPromisesRef.current = [];
-    segTextsRef.current = {}; segSegsRef.current = {}; languageRef.current = null;
-    // P1: mint a session id so each segment is durably persisted under it.
-    sessionIdRef.current = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : null;
+    segTextsRef.current = {}; segSegsRef.current = {}; segFailuresRef.current = {}; languageRef.current = null;
+    durationSecRef.current = 0; recordingStartedAtRef.current = Date.now();
+    // The server owns the session before the browser requests microphone access.
+    // This records consent and gives every retry a tenant-scoped durable target.
+    try {
+      const { data } = await apiClient.core.post('/api/meetings/sessions', {
+        consent: true,
+        expected_segment_ms: SEGMENT_MS,
+      }, { timeout: 30000 });
+      if (!data?.session_id) throw new Error(data?.error || 'Could not create the meeting session.');
+      sessionIdRef.current = data.session_id;
+    } catch (e) {
+      setError(e.response?.data?.error || e.message || 'Could not create a durable meeting session.');
+      return;
+    }
     finalizingRef.current = false; setSegDone(0); setSegTotal(0);
 
     // Best-effort invite for external participants — do not await, never block recording
@@ -655,7 +810,10 @@ export default function MeetingNotes() {
     segTimerRef.current = setInterval(() => {
       if (recRef.current && recRef.current.state === 'recording') recRef.current.stop();
     }, SEGMENT_MS);
-    timerRef.current = setInterval(() => setElapsed((x) => x + 1), 1000);
+    timerRef.current = setInterval(() => {
+      durationSecRef.current += 1;
+      setElapsed(durationSecRef.current);
+    }, 1000);
   }, [cleanup, startSegmentRecorder, captureMode, SEGMENT_MS, participants, notes]);
 
   const stop = useCallback(() => {
@@ -667,7 +825,14 @@ export default function MeetingNotes() {
       rec.onstop = () => { // final (possibly partial) segment → ship, tear down, stitch
         const idx = segIdxRef.current++;
         const blob = new Blob(segChunksRef.current, { type: rec.mimeType || 'audio/webm' });
-        if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
+        if (blob.size > 1024) {
+          const p = transcribeSegment(idx, blob, {
+            startMs: currentSegmentStartMsRef.current,
+            endMs: Math.max(0, Date.now() - (recordingStartedAtRef.current || Date.now())),
+          });
+          segPromisesRef.current.push(p);
+          p.catch(() => {});
+        } else segIdxRef.current--;
         cleanup(); finalize();
       };
       rec.stop();
@@ -763,6 +928,23 @@ export default function MeetingNotes() {
           <ClockChip />
         </div>
       </div>
+
+      {recoverableSessions.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-[10px] p-3 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-start gap-2 text-[12px] text-amber-900">
+            <AlertTriangle size={15} className="mt-0.5 shrink-0 text-[#f59e0b]" />
+            <span>{recoverableSessions.length} interrupted recording session{recoverableSessions.length === 1 ? '' : 's'} has protected audio waiting for retry.</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {recoverableSessions.map((session) => (
+              <button key={session.sessionId} onClick={() => resumeCachedSession(session.sessionId)} disabled={recording || busy}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-[#0a0a0a] text-white text-[11px] font-medium hover:bg-[#262626] disabled:opacity-50">
+                <History size={12} /> Recover {session.count} segment{session.count === 1 ? '' : 's'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* stat row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
