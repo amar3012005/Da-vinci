@@ -626,9 +626,32 @@ export default function MeetingNotes() {
           const qs = new URLSearchParams();
           if (Number.isFinite(timing.startMs)) qs.set('start_ms', String(timing.startMs));
           if (Number.isFinite(timing.endMs)) qs.set('end_ms', String(timing.endMs));
-          await apiClient.core.post(`/api/meetings/sessions/${sessionId}/audio/${idx}?${qs.toString()}`, blob, {
-            headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 60000,
-          });
+          try {
+            await apiClient.core.post(`/api/meetings/sessions/${sessionId}/audio/${idx}?${qs.toString()}`, blob, {
+              headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 60000,
+            });
+          } catch (uploadError) {
+            // AMR/BYOD deliberately does not fall back to central storage. Its
+            // agent-side raw-audio queue is a separate residency contract; keep
+            // the prior tenant-local transcript path working until that agent
+            // endpoint lands, rather than silently routing bytes through us.
+            if (uploadError?.response?.status !== 501) throw uploadError;
+            const tr = await apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}`, blob, {
+              headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000,
+            });
+            const text = String(tr.data?.transcript || '').trim();
+            if (!text) throw new Error('No speech detected in this recording segment.');
+            await apiClient.core.post('/api/meetings/segments', {
+              session_id: sessionId, idx, text, speakers: tr.data?.speakerSegments || null,
+              start_ms: Number.isFinite(timing.startMs) ? timing.startMs : null,
+              end_ms: Number.isFinite(timing.endMs) ? timing.endMs : null,
+            }, { timeout: 60000 });
+            segTextsRef.current[idx] = text;
+            if (tr.data?.speakerSegments?.length) segSegsRef.current[idx] = tr.data.speakerSegments;
+            await removeCachedMeetingSegment(sessionId, idx);
+            delete segFailuresRef.current[idx];
+            return;
+          }
           await removeCachedMeetingSegment(sessionId, idx);
           // Poll the authoritative transcript row. A reload is safe: the audio
           // job remains server-owned and session recovery rehydrates this row.
@@ -658,7 +681,7 @@ export default function MeetingNotes() {
     } finally {
       setSegDone((n) => n + 1);
     }
-  }, [refreshRecoverableSessions]);
+  }, [multiSpeaker, refreshRecoverableSessions]);
 
   // Roll one segment recorder on the live stream. On stop it ships the segment
   // for transcription and (unless we're finalizing) immediately starts the next
