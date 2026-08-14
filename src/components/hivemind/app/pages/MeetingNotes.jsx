@@ -660,8 +660,15 @@ export default function MeetingNotes() {
             const { data } = await apiClient.core.get(`/api/meetings/session/${sessionId}/segments`, { timeout: 30000 });
             transcriptSegment = (data?.segments || []).find((segment) => Number(segment.idx) === idx && String(segment.text || '').trim());
             if (transcriptSegment) break;
-            const status = await apiClient.core.get(`/api/meetings/sessions/${sessionId}`, { timeout: 30000 });
-            if (Number(status.data?.segments?.audio_errors || 0) > 0) throw new Error('Server transcription failed after its retry budget. Your original audio remains retained for support/recovery.');
+            try {
+              const status = await apiClient.core.get(`/api/meetings/sessions/${sessionId}`, { timeout: 30000 });
+              if (Number(status.data?.segments?.audio_errors || 0) > 0) throw new Error('Server transcription failed after its retry budget. Your original audio remains retained for support/recovery.');
+            } catch (statusError) {
+              // Older AMR agents expose transcript recovery but not the new
+              // lifecycle status projection. Keep polling their tenant-local
+              // segment list; once upgraded they provide the same error counts.
+              if (statusError?.response?.status !== 501) throw statusError;
+            }
             await new Promise((resolve) => setTimeout(resolve, 2000));
           }
           if (!transcriptSegment) throw new Error('Server transcription is still running. The recording is protected; reopen this meeting to resume.');
