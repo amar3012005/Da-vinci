@@ -4,55 +4,70 @@ import { useNavigate } from 'react-router-dom';
 import { Check, ArrowRight } from 'lucide-react';
 
 /**
- * Pricing — the real SINGULANCE / HIVEMIND pricing page: 4 tiers
- * (Free / Pro / Scale / Enterprise) with monthly/annual toggle, plus the
- * "Sovereign scope estimator" for Managed vs Self-Hosted deployment cost.
+ * Pricing — the SINGULANCE / HIVEMIND product ladder: persistent memory,
+ * autonomous work, voice execution, and sovereign institutional deployment.
  */
 
 const BLUE = '#117dff';
 const ease = [0.16, 1, 0.3, 1];
+// Keep the estimator implementation available for a later governed launch,
+// but do not publish provisional custom pricing to customers yet.
+const SHOW_SCOPE_ESTIMATOR = false;
 
 const StripedSeparator = () => (
   <div className="h-6 sm:h-8" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #efece5 0, #efece5 1px, transparent 1px, transparent 8px)' }} />
 );
 
-const TIERS = [
+const SELF_SERVE_TIERS = [
   {
-    id: 'free', name: 'Free', tag: 'Try HIVEMIND with real documents',
+    id: 'free', name: 'Free', product: 'BRAIN', tag: 'Build a Brain that remembers your work.',
     monthly: 0, annual: 0, cta: 'Start free', pop: false,
-    pages: '100', seats: '1 user seat',
+    pages: '100',
     features: [
-      'PDF, DOCX, XLSX', 'Semantic search', '7-day retention',
-      'PQC encryption (NIST)', 'Community support',
+      'Grounded recall from your own sources', 'PDF, DOCX, XLSX ingestion',
+      'Up to 3 connected sources', 'Personal history preview', 'Community support',
     ],
   },
   {
-    id: 'pro', name: 'Pro', tag: 'Teams building on institutional memory',
-    monthly: 79, annual: 948, annualSave: 240, cta: 'Get Pro', pop: false,
-    pages: '1,000', seats: '5 user seats',
+    id: 'plus', name: 'Plus', product: 'BRAIN+', tag: 'Keep your work history permanently.',
+    monthly: 39, annual: 390, annualSave: 78, cta: 'Get Plus', pop: false,
+    pages: '1,000',
     features: [
-      'All file types', 'Bi-temporal queries', '90-day retention',
-      'Email support', 'Sentinel Agent access',
+      'Everything in Free', 'Permanent personal history',
+      'More source types and connectors', 'Deeper recall across your own work',
+      'No per-query credits',
     ],
   },
   {
-    id: 'scale', name: 'Scale', tag: 'Mid-size regulated organisations',
-    monthly: 239, annual: 2868, annualSave: 720, cta: 'Get Scale', pop: true,
-    pages: '10,000', seats: '25 user seats',
+    id: 'pro', name: 'Pro', product: 'BRAIN + HyperAgents', tag: 'Give your Brain work to carry out.',
+    monthly: 79, annual: 790, annualSave: 158, cta: 'Get Pro', pop: true,
+    pages: 'Higher capacity',
     features: [
-      'All file types + OCR', 'Bi-temporal + point-in-time', 'Unlimited retention',
-      'Priority support (48h SLA)', 'DORA Art. 28 + AVV + C6', 'TARA Voice AI included',
+      'Everything in Plus', 'Included HyperAgent runs each month',
+      'Deep Research and Web Intelligence allowance',
+      'Connected-app actions with your approval',
+      'Optional HyperAgent Packs when included runs are used',
     ],
   },
   {
-    id: 'enterprise', name: 'Enterprise', tag: 'Banks, insurers, public sector',
-    monthly: null, annual: null, cta: 'Talk to us', pop: false,
-    pages: 'Unlimited', seats: 'Managed or Self-Hosted',
+    id: 'scale', name: 'Scale', product: 'BRAIN + HyperAgents + TARA', tag: 'Operate with a small AI team.',
+    monthly: 239, annual: 2390, annualSave: 478, cta: 'Get Scale', pop: false,
+    pages: '10,000', circle: 'Up to 3 trusted collaborators',
     features: [
-      'Dedicated infrastructure', 'Named CSM · 4h SLA', 'DORA compliance report',
-      'Pilot to prod < 90 days', 'Two deployment modes',
+      'Everything in Pro', 'Larger HyperAgent allowance',
+      'TARA voice agent with included talk time',
+      'Up to 3 trusted collaborators', 'Priority support',
+      'Optional HyperAgent and TARA Talk Packs',
     ],
   },
+];
+
+const ENTERPRISE_FEATURES = [
+  'Sovereign institutional BRAIN',
+  'Governed HyperAgents and TARA',
+  'Dedicated, managed, or self-hosted deployment',
+  'Organisation-wide identity, audit, and policy controls',
+  'Contracted security, support, and service levels',
 ];
 
 const fmtEUR = (n) => `€${n.toLocaleString('en-US')}`;
@@ -76,6 +91,9 @@ const PricingCard = ({ tier, annual, index }) => {
           Most popular
         </span>
       )}
+      <p className="mt-4 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: BLUE }}>
+        {tier.product}
+      </p>
       <p className="font-['Space_Grotesk'] text-lg font-semibold text-[#0a0a0a]">{tier.name}</p>
       <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#6b6b6b]">{tier.tag}</p>
 
@@ -95,15 +113,15 @@ const PricingCard = ({ tier, annual, index }) => {
         </p>
       )}
 
-      <div className="mt-5 grid grid-cols-2 gap-2 border-t border-[#efece5] pt-4 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a39e92]">
+      <div className={`mt-5 grid gap-2 border-t border-[#efece5] pt-4 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a39e92] ${tier.circle ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <div>
           <p className="text-[#0a0a0a]">{tier.pages}</p>
-          <p className="mt-0.5">pages included</p>
+          <p className="mt-0.5">{tier.pages === 'Higher capacity' ? 'memory capacity' : 'pages included'}</p>
         </div>
-        <div>
-          <p className="text-[#0a0a0a]">{tier.seats}</p>
-          <p className="mt-0.5">seats</p>
-        </div>
+        {tier.circle && <div>
+          <p className="text-[#0a0a0a]">Private Circle</p>
+          <p className="mt-0.5 normal-case tracking-normal">{tier.circle}</p>
+        </div>}
       </div>
 
       <ul className="mt-5 flex-1 space-y-2.5">
@@ -122,6 +140,49 @@ const PricingCard = ({ tier, annual, index }) => {
       >
         {tier.cta}
       </motion.button>
+    </motion.div>
+  );
+};
+
+const EnterpriseSection = () => {
+  const navigate = useNavigate();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.65, ease }}
+      className="mt-16 border-t border-[#e3e0db] pt-16"
+    >
+      <div className="overflow-hidden rounded-2xl border border-[#d9e8ff] bg-[linear-gradient(135deg,#ffffff_0%,#f3f8ff_100%)] p-7 sm:p-9 lg:p-11">
+        <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: BLUE }}>For organisations</p>
+            <h3 className="mt-3 max-w-xl font-['Space_Grotesk'] text-3xl font-bold tracking-tight text-[#0a0a0a] sm:text-4xl">
+              Bring a proven Brain into your organisation securely.
+            </h3>
+            <p className="mt-4 max-w-xl text-[14px] leading-7 text-[#5f625f]">
+              Enterprise turns successful individual adoption into an institution-wide AI operating layer—with the governance, deployment, and contractual controls your organisation requires.
+            </p>
+            <motion.button
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              onClick={() => navigate('/hivemind/login')}
+              className="mt-7 inline-flex items-center gap-2 rounded-full px-6 py-3 text-[12px] font-semibold uppercase tracking-[0.1em] text-white"
+              style={{ background: BLUE }}
+            >
+              Bring HIVEMIND to my organisation <ArrowRight size={13} />
+            </motion.button>
+          </div>
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            {ENTERPRISE_FEATURES.map((feature) => (
+              <li key={feature} className="flex items-start gap-3 rounded-lg border border-white/80 bg-white/75 px-4 py-3 text-[13px] text-[#343836]">
+                <Check size={14} className="mt-0.5 shrink-0" style={{ color: BLUE }} />
+                {feature}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </motion.div>
   );
 };
@@ -262,10 +323,10 @@ const Pricing = () => {
             <div className="text-center">
               <p className="font-mono text-[11px] uppercase tracking-[0.3em]" style={{ color: BLUE }}>⟩ pricing</p>
               <h2 className="mx-auto mt-4 max-w-2xl font-['Space_Grotesk'] text-3xl font-bold tracking-tight text-[#0a0a0a] sm:text-4xl md:text-5xl">
-                Sovereign memory.<br />Honest pricing.
+                Start with memory.<br />Grow into an AI workforce.
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-[14px] leading-relaxed text-[#6b6b6b]">
-                Priced by pages understood, not by seats or model training on your documents.
+                Your BRAIN remains yours. Upgrade when you want more capacity, autonomous work, voice, or institutional control.
               </p>
 
               <div className="mt-8 inline-flex items-center gap-3 rounded-full border border-[#e7e4dd] bg-white p-1">
@@ -278,28 +339,27 @@ const Pricing = () => {
                         transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
                     )}
                     <span className="relative">{label}</span>
-                    {val && <span className="relative rounded-full bg-[#0fa36b]/15 px-1.5 py-0.5 text-[9px] text-[#0fa36b]">SAVE 20%</span>}
+                    {val && <span className="relative rounded-full bg-[#0fa36b]/15 px-1.5 py-0.5 text-[9px] text-[#0fa36b]">TWO MONTHS FREE · SAVE 17%</span>}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-              {TIERS.map((tier, i) => <PricingCard key={tier.id} tier={tier} annual={annual} index={i} />)}
+            <div className="mt-14 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {SELF_SERVE_TIERS.map((tier, i) => <PricingCard key={tier.id} tier={tier} annual={annual} index={i} />)}
             </div>
 
             <p className="mt-6 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-[#a39e92]">
-              page = A4/Letter equivalent · scanned docs count once via OCR · +€0.005/page above plan limit (Pro &amp; Scale)
+              Your Brain remains accessible. Included agent and voice capacity resets monthly. Extra capacity is opt-in—never a surprise invoice.
             </p>
 
-            <div className="mt-16">
-              <ScopeEstimator />
-            </div>
+            {SHOW_SCOPE_ESTIMATOR && (
+              <div className="mt-16">
+                <ScopeEstimator />
+              </div>
+            )}
 
-            <p className="mt-8 flex items-center justify-center gap-2 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[#6b6b6b]">
-              Sovereign pilots: 60-day proof-of-value · from €2,500/mo · Hetzner DE or your infra · exit criteria included
-              <ArrowRight size={12} style={{ color: BLUE }} />
-            </p>
+            <EnterpriseSection />
           </div>
         </section>
       </div>
