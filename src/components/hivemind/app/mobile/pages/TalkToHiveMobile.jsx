@@ -14,7 +14,7 @@
  * viewports <= 768px — see HiveMindApp.jsx).
  */
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -253,6 +253,10 @@ export default function TalkToHiveMobile() {
   const userRole = user?.role || user?.org_role || user?.membership_role || 'member';
   const [messages, setMessages] = useState(() => loadMsgs());
   const [input, setInput] = useState('');
+  // Keep the native text input lane synchronous and tiny. Connector mention
+  // recognition scans a dynamic catalog and must never run in the keyboard's
+  // onChange event; defer it until React has painted the typed character.
+  const deferredInput = useDeferredValue(input);
   const [loading, setLoading] = useState(false);
   const [agentEvents, setAgentEvents] = useState([]); // live tool_call/tool_result stream
   const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
@@ -334,29 +338,20 @@ export default function TalkToHiveMobile() {
   // mention resolution when it arrives so the chip and connection gate do not
   // depend on network timing.
   useEffect(() => {
-    if (!input || !toolkits.length) return;
-    const resolved = resolvePromptToolkits(input, selectedToolkits, toolkits);
+    if (!deferredInput || !toolkits.length || deferredInput !== input) return;
+    const resolved = resolvePromptToolkits(deferredInput, selectedToolkits, toolkits);
     if (resolved.length === selectedToolkits.length) return;
     const newlyMentioned = resolved.filter((toolkit) => !selectedToolkits.some((selected) => selected.slug === toolkit.slug));
     setSelectedToolkits(resolved);
     setInput((current) => removeToolkitMentions(current, newlyMentioned).slice(0, MAX_CHARS));
     setUseTools(true);
-  }, [input, selectedToolkits, toolkits]);
+  }, [deferredInput, input, selectedToolkits, toolkits]);
 
   const suggestions = useMemo(() => buildToolkitSuggestions(toolkits, 4), [toolkits]);
 
   const absorbToolkitMentions = useCallback((nextText) => {
-    const newlyMentioned = findMentionedToolkits(nextText, toolkits)
-      .filter((toolkit) => !selectedToolkits.some((selected) => selected.slug === toolkit.slug));
-    if (!newlyMentioned.length) {
-      setInput(nextText.slice(0, MAX_CHARS));
-      return;
-    }
-    const merged = [...selectedToolkits, ...newlyMentioned];
-    setSelectedToolkits(merged);
-    setInput(removeToolkitMentions(nextText, newlyMentioned).slice(0, MAX_CHARS));
-    setUseTools(true);
-  }, [selectedToolkits, toolkits]);
+    setInput(nextText.slice(0, MAX_CHARS));
+  }, []);
 
   const removeSelectedToolkit = useCallback((slug) => {
     setSelectedToolkits((current) => current.filter((toolkit) => toolkit.slug !== slug));
@@ -440,8 +435,11 @@ export default function TalkToHiveMobile() {
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    const frame = requestAnimationFrame(() => {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    });
+    return () => cancelAnimationFrame(frame);
   }, [input]);
 
   const sendText = useCallback(async (overrideText) => {
