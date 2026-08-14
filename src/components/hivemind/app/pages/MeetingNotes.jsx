@@ -505,6 +505,20 @@ export default function MeetingNotes() {
       existing.cachedAt = Math.max(existing.cachedAt, Number(segment.cachedAt) || 0);
       grouped.set(segment.sessionId, existing);
     }
+    // Once a chunk has crossed the server durability boundary it intentionally
+    // disappears from IndexedDB. Include unfinished server sessions too, so a
+    // browser restart can continue polling/finalizing instead of hiding them.
+    try {
+      const { data } = await apiClient.core.get('/api/meetings/sessions', { timeout: 30000 });
+      for (const session of (data?.sessions || [])) {
+        if (!session?.id) continue;
+        const existing = grouped.get(session.id) || { sessionId: session.id, count: 0, cachedAt: 0 };
+        existing.count = Math.max(existing.count, Number(session.audio_count || 0));
+        existing.cachedAt = Math.max(existing.cachedAt, new Date(session.updated_at || 0).getTime() || 0);
+        existing.server = session;
+        grouped.set(session.id, existing);
+      }
+    } catch { /* remote agents retain their own lifecycle until their parity route ships */ }
     setRecoverableSessions([...grouped.values()].sort((a, b) => b.cachedAt - a.cachedAt));
   }, []);
   useEffect(() => { refreshRecoverableSessions(); }, [refreshRecoverableSessions]);
@@ -597,8 +611,6 @@ export default function MeetingNotes() {
   // explicit incomplete-session error rather than stitching an empty gap.
   const transcribeSegment = useCallback(async (idx, blob, timing = {}) => {
     setSegTotal((n) => Math.max(n, idx + 1));
-    const participantNames = participants.map((p) => p.name).filter(Boolean).join(', ');
-    const promptHint = [notes, participantNames ? `Participants: ${participantNames}` : ''].filter(Boolean).join(' — ').slice(0, 800);
     const sessionId = sessionIdRef.current;
     if (!sessionId) throw new Error('Recording session was not initialized.');
     let lastError = null;
@@ -607,21 +619,31 @@ export default function MeetingNotes() {
       if (!cached) throw new Error('This browser could not protect the recording segment for retry. It will not be finalized silently.');
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
-          const tr = await apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}&prompt=${encodeURIComponent(promptHint)}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 });
-        const segText = tr.data?.transcript || '';
-          if (!segText.trim()) throw new Error('No speech detected in this recording segment.');
-        segTextsRef.current[idx] = segText;
-        if (tr.data?.speakerSegments?.length) segSegsRef.current[idx] = tr.data.speakerSegments;
-        if (tr.data?.language && !languageRef.current) languageRef.current = tr.data.language;
-          // The server acknowledgement is the durability boundary. Do not
-          // remove the cached audio or count this segment as done before it.
-          await apiClient.core.post('/api/meetings/segments', {
-            session_id: sessionId, idx, text: segText,
-            speakers: tr.data?.speakerSegments || null,
-            start_ms: Number.isFinite(timing.startMs) ? timing.startMs : null,
-            end_ms: Number.isFinite(timing.endMs) ? timing.endMs : null,
-          }, { timeout: 60000 });
+          // Server acknowledgement now means raw bytes AND retry metadata are
+          // durable. The browser cache can go away only after this succeeds;
+          // Whisper runs behind the durable worker and is no longer a tab-bound
+          // 5-minute request.
+          const qs = new URLSearchParams();
+          if (Number.isFinite(timing.startMs)) qs.set('start_ms', String(timing.startMs));
+          if (Number.isFinite(timing.endMs)) qs.set('end_ms', String(timing.endMs));
+          await apiClient.core.post(`/api/meetings/sessions/${sessionId}/audio/${idx}?${qs.toString()}`, blob, {
+            headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 60000,
+          });
           await removeCachedMeetingSegment(sessionId, idx);
+          // Poll the authoritative transcript row. A reload is safe: the audio
+          // job remains server-owned and session recovery rehydrates this row.
+          let transcriptSegment = null;
+          for (let poll = 0; poll < 75; poll += 1) {
+            const { data } = await apiClient.core.get(`/api/meetings/session/${sessionId}/segments`, { timeout: 30000 });
+            transcriptSegment = (data?.segments || []).find((segment) => Number(segment.idx) === idx && String(segment.text || '').trim());
+            if (transcriptSegment) break;
+            const status = await apiClient.core.get(`/api/meetings/sessions/${sessionId}`, { timeout: 30000 });
+            if (Number(status.data?.segments?.audio_errors || 0) > 0) throw new Error('Server transcription failed after its retry budget. Your original audio remains retained for support/recovery.');
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
+          if (!transcriptSegment) throw new Error('Server transcription is still running. The recording is protected; reopen this meeting to resume.');
+          segTextsRef.current[idx] = transcriptSegment.text;
+          if (transcriptSegment.speakers?.length) segSegsRef.current[idx] = transcriptSegment.speakers;
           refreshRecoverableSessions();
           delete segFailuresRef.current[idx];
           return;
@@ -636,7 +658,7 @@ export default function MeetingNotes() {
     } finally {
       setSegDone((n) => n + 1);
     }
-  }, [multiSpeaker, notes, participants, refreshRecoverableSessions]);
+  }, [refreshRecoverableSessions]);
 
   // Roll one segment recorder on the live stream. On stop it ships the segment
   // for transcription and (unless we're finalizing) immediately starts the next
@@ -702,7 +724,6 @@ export default function MeetingNotes() {
   const resumeCachedSession = useCallback(async (sessionId) => {
     setError(null); setStatus('transcribing'); setTranscript(''); setInsights(null); setMeetingId(null);
     const pending = (await listCachedMeetingSegments()).filter((segment) => segment.sessionId === sessionId).sort((a, b) => a.idx - b.idx);
-    if (!pending.length) { await refreshRecoverableSessions(); setStatus('idle'); return; }
     sessionIdRef.current = sessionId;
     segPromisesRef.current = [];
     segTextsRef.current = {}; segSegsRef.current = {}; segFailuresRef.current = {};
@@ -719,6 +740,23 @@ export default function MeetingNotes() {
       return;
     }
     try {
+      // If the previous browser had already handed chunks to the server, wait
+      // for its durable queue rather than asking the user to find/re-record
+      // audio that is already safe. Bounded polling keeps a stuck provider
+      // visible and leaves the session recoverable on the next visit.
+      let sessionStatus = null;
+      for (let poll = 0; poll < 75; poll += 1) {
+        const { data } = await apiClient.core.get(`/api/meetings/sessions/${sessionId}`, { timeout: 30000 });
+        sessionStatus = data;
+        const uploaded = Number(data?.segments?.audio_uploaded || 0);
+        const transcribed = Number(data?.segments?.audio_transcribed || 0);
+        if (uploaded === transcribed && Number(data?.segments?.audio_errors || 0) === 0) break;
+        if (Number(data?.segments?.audio_errors || 0) > 0) throw new Error('A server transcription job exhausted its retries. The original audio is retained for recovery.');
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      if (Number(sessionStatus?.segments?.audio_uploaded || 0) !== Number(sessionStatus?.segments?.audio_transcribed || 0)) {
+        throw new Error('Server transcription is still processing. This session remains protected; try Recover again shortly.');
+      }
       const { data } = await apiClient.core.get(`/api/meetings/session/${sessionId}/segments`, { timeout: 60000 });
       for (const segment of (data?.segments || [])) {
         if (segment?.text) segTextsRef.current[segment.idx] = segment.text;
