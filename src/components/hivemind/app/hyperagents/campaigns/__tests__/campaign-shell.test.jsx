@@ -127,4 +127,61 @@ describe('campaign dashboard shell', () => {
     expect(markup).not.toContain('Campaign Board');
     expect(markup).not.toContain('Recent progress');
   });
+
+  // Regression: the multi-visual gallery (3-per-row) was dropped from the
+  // click-through path when CampaignDetail.jsx (which had it) was replaced by
+  // CampaignProgressDashboard in the 2026-07-27 "permanent intelligence room"
+  // refactor, and never wired back in anywhere — a single post at a time
+  // (prev/next) was all that remained. Restored as PostsGallery.
+  test('shows all post visuals at once in a gallery when there is more than one post, not just a single-post pager', () => {
+    const campaign = {
+      id: 'campaign-42', roomId: 'room-fixed', name: 'Founder awareness', goal: 'Make the category legible',
+      status: 'READY_FOR_APPROVAL', requestedChannels: ['x_organic'],
+      actions: [
+        {
+          id: 'action-1', channel: 'x_organic', status: 'READY', scheduledAt: null,
+          payload: { title: 'Opening post', text: 'A final campaign post.' },
+          assets: [{ id: 'asset-1', status: 'READY', content_url: '/a1.png' }],
+          rationale: 'Open the sequence with the category promise.', successMetric: 'Qualified engagement',
+        },
+        {
+          id: 'action-2', channel: 'x_organic', status: 'READY', scheduledAt: null,
+          payload: { title: 'Second post', text: 'Another final campaign post.' },
+          assets: [{ id: 'asset-2', status: 'READY', content_url: '/a2.png' }],
+          rationale: 'Follow up with proof.', successMetric: 'Qualified engagement',
+        },
+        {
+          id: 'action-3', channel: 'x_organic', status: 'GENERATING', scheduledAt: null,
+          payload: { title: 'Third post', text: 'A third campaign post.', creative_brief: { required: true } },
+          assets: [{ id: 'asset-3', status: 'GENERATING' }],
+          rationale: 'Close with a call to action.', successMetric: 'Qualified engagement',
+        },
+      ],
+      planVersions: [], metricSnapshots: [],
+      readiness: { decision: 'blocked', checks: [{ id: 'provider', label: 'X connected', status: 'blocked', detail: 'Connect X', recovery: 'Open connectors' }] },
+      events: [{ id: 'ready', eventType: 'campaign_plan_ready', createdAt: '2026-07-26T17:56:32Z' }],
+    };
+    const markup = renderToStaticMarkup(<CampaignProgressDashboard campaign={campaign} loading={false} onClose={jest.fn()} onOpenRoom={jest.fn()} onLaunch={jest.fn()} busy={false} executionEnabled={false} />);
+    expect(markup).toContain('listbox');
+    expect(markup).toContain('1. X Organic Posts');
+    expect(markup).toContain('2. X Organic Posts');
+    expect(markup).toContain('3. X Organic Posts');
+  });
+
+  test('does not render the gallery for a single-post campaign — nothing to compare', () => {
+    const campaign = {
+      id: 'campaign-42', roomId: 'room-fixed', name: 'Founder awareness', goal: 'Make the category legible',
+      status: 'READY_FOR_APPROVAL', requestedChannels: ['x_organic'],
+      actions: [{
+        id: 'action-1', channel: 'x_organic', status: 'READY', scheduledAt: null,
+        payload: { title: 'Opening post', text: 'A final campaign post.' }, assets: [],
+        rationale: 'Open the sequence with the category promise.', successMetric: 'Qualified engagement',
+      }],
+      planVersions: [], metricSnapshots: [],
+      readiness: { decision: 'blocked', checks: [] },
+      events: [],
+    };
+    const markup = renderToStaticMarkup(<CampaignProgressDashboard campaign={campaign} loading={false} onClose={jest.fn()} onOpenRoom={jest.fn()} onLaunch={jest.fn()} busy={false} executionEnabled={false} />);
+    expect(markup).not.toContain('listbox');
+  });
 });
