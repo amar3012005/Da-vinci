@@ -48,6 +48,30 @@ function visualStatus(action) {
   return 'Visual pending';
 }
 
+function PostsGallery({ actions, activeIndex, onSelect }) {
+  // Restores the multi-visual gallery view: every post's creative shown at
+  // once (3-per-row, matching the density the room used to render while
+  // images were generating), each clickable to focus the detail panel below.
+  // Previously this lived only in the now-orphaned CampaignDetail.jsx, which
+  // was dropped from the click-through path by the 2026-07-27 "permanent
+  // intelligence room" refactor and never wired back in anywhere.
+  if (actions.length < 2) return null;
+  return <div className="mt-4 grid grid-cols-3 gap-2.5 sm:grid-cols-3 md:grid-cols-3" role="listbox" aria-label="All campaign posts">
+    {actions.map((item, itemIndex) => {
+      const itemAsset = selectedAsset(item);
+      const itemVisual = visualStatus(item);
+      const active = itemIndex === activeIndex;
+      return <button key={item.id} type="button" role="option" aria-selected={active} onClick={() => onSelect(itemIndex)}
+        className={`group relative overflow-hidden rounded-md border text-left transition-colors ${active ? 'border-[#256d5b] ring-1 ring-[#256d5b]' : 'border-[#d8d3cc] hover:border-[#aaa49c]'}`}>
+        {itemAsset ? <CampaignAssetImage asset={itemAsset} alt={itemAsset.metadata?.alt_text || item.payload?.asset_alt_text || ''} className="aspect-square w-full object-cover" />
+          : itemVisual ? <div className="grid aspect-square place-items-center bg-[#f2f0eb]"><Loader2 size={14} className="animate-spin text-[#285fc0]" /></div>
+          : <div className="grid aspect-square place-items-center bg-[#f2f0eb] text-[#9a948d]"><Send size={14} /></div>}
+        <span className="absolute inset-x-0 bottom-0 truncate bg-black/55 px-1.5 py-1 text-[8.5px] font-semibold text-white">{itemIndex + 1}. {CHANNEL_NAMES[item.channel] || item.channel}</span>
+      </button>;
+    })}
+  </div>;
+}
+
 function PostsView({ actions }) {
   const [index, setIndex] = useState(0);
   const action = actions[Math.min(index, Math.max(actions.length - 1, 0))];
@@ -57,6 +81,7 @@ function PostsView({ actions }) {
   const copy = action.payload?.text || action.payload?.final_copy || action.payload?.body || action.payload?.opening || '';
   return <div>
     <div className="flex items-end justify-between gap-4"><div><h2 className="text-[15px] font-semibold">Final campaign posts</h2><p className="mt-1 text-[10px] text-[#817b74]">Exact creative and live execution state from the accepted contract.</p></div><span className="font-mono text-[9px] uppercase text-[#817b74]">{index + 1} of {actions.length}</span></div>
+    <PostsGallery actions={actions} activeIndex={index} onSelect={setIndex} />
     <div className="mt-4 grid overflow-hidden rounded-md border border-[#d8d3cc] bg-white lg:grid-cols-[1fr_270px]">
       <article className="min-w-0 p-5 lg:border-r lg:border-[#e3dfd8]">
         <div className="flex items-center justify-between text-[9px] font-mono uppercase text-[#817b74]"><span>{CHANNEL_NAMES[action.channel] || action.channel}</span><span>{Array.from(copy).length}{action.channel === 'x_organic' ? '/280' : ''}</span></div>
