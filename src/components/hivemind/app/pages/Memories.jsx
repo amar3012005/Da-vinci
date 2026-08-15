@@ -28,6 +28,7 @@ import { useApiQuery, useDebounce } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
 import { filterUserVisibleMemories } from '../shared/memory-filters';
 import UsageTracker from '../components/UsageTracker';
+import { buildMemoryListParams } from './memory-list-params';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1473,27 +1474,9 @@ function MemoriesTab({
   }, [showDreams]);
 
   const listParams = useMemo(
-    () => ({
-      limit: PAGE_SIZE,
-      offset: 0,
-      ...(activeType ? { memory_type: activeType } : {}),
-      ...(activeTag || activeEntity
-        ? { tags: [activeTag, activeEntity].filter(Boolean).join(',') }
-        : {}),
-      // Tri-state: showSuperseded=true → only superseded; false → include
-      // BOTH latest + superseded (server tri-state). Superseded rows render
-      // with a "Superseded" badge + Updates-target link so the timeline is
-      // visible inline instead of hidden.
-      is_latest: showSuperseded ? 'false' : 'all',
-      ...(hideNoise ? { hide_noise: 'true' } : {}),
-      // “All memory” means all accessible memory. A globally selected project
-      // is navigation context, not an implicit data filter; otherwise personal
-      // uploads (projectId=null) disappear while Graph still shows them.
-      // Narrow only after the user explicitly chooses Project-level.
-      ...(tierScope === 'tier:project'
-        ? { project_id: tierProject || activeProjectId || undefined }
-        : {}),
-      ...(tierScope && tierScope !== 'visible' ? { scope: tierScope } : {}),
+    () => buildMemoryListParams({
+      activeType, activeTag, activeEntity, showSuperseded, hideNoise,
+      activeProjectId, tierScope, tierProject, pageSize: PAGE_SIZE,
     }),
     [activeType, activeTag, activeEntity, showSuperseded, hideNoise, activeProjectId, tierScope, tierProject],
   );
