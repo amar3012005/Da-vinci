@@ -225,19 +225,20 @@ async function readChatStream(response, onEvent) {
   let buffer = '';
   let result = null;
   const consume = (frame) => {
-    const data = frame.split('\n').filter((line) => line.startsWith('data:'))
+    // Control-plane proxies may use CRLF while the Core emits LF SSE frames.
+    const data = frame.split(/\r?\n/).filter((line) => line.startsWith('data:'))
       .map((line) => line.slice(5).trim()).join('\n');
     if (!data) return;
     try {
       const event = JSON.parse(data);
-      if (event.type === 'done') result = event;
+      if (event.type === 'done' || event.type === 'error') result = event;
       else onEvent(event);
     } catch { /* malformed intermediary frame */ }
   };
   while (true) {
     const { done, value } = await reader.read();
     buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
-    const frames = buffer.split('\n\n');
+    const frames = buffer.split(/\r?\n\r?\n/);
     buffer = frames.pop() || '';
     frames.forEach(consume);
     if (done) break;
@@ -412,8 +413,14 @@ export default function TalkToHiveMobile() {
             const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
             streamedEvents.push(next);
             setAgentEvents([...streamedEvents]);
-          })) || {}
+          }))
         : await chatRes.json();
+      if (!data) {
+        throw new Error('The chat stream ended before a final response. Please try again.');
+      }
+      if (data.type === 'error' || data.error) {
+        throw new Error(data.error || 'The chat request could not be completed. Please try again.');
+      }
       const assistantMsg = {
         id: Date.now() + 1,
         role: 'assistant',
