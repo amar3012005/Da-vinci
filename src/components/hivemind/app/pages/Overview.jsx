@@ -30,7 +30,6 @@ import {
 import apiClient from '../shared/api-client';
 import { userScopedKey } from '../shared/user-storage';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
-import MarkdownMessage from '../shared/MarkdownMessage';
 import { useApiQuery } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
@@ -97,97 +96,6 @@ function loadStoredChat() {
   } catch {
     return [];
   }
-}
-
-const AGENT_TOOL_LABELS = {
-  hivemind_recall: 'Searching memory',
-  hivemind_traverse_graph: 'Following relationships',
-  hivemind_at: 'Checking timeline',
-  hivemind_diff: 'Comparing versions',
-  hivemind_web_search: 'Researching the web',
-  hivemind_web_crawl: 'Researching the web',
-  reset_equipped_tools: 'Preparing connected tools',
-};
-
-function activityLabel(event) {
-  if (event?.type === 'tool_call' || event?.type === 'tool_result') return AGENT_TOOL_LABELS[event.name] || 'Using workspace tools';
-  if (event?.type === 'reflect' || event?.type === 'reflect_low_confidence') return 'Checking evidence coverage';
-  if (event?.type === 'plan' || event?.type === 'plan_done') return 'Planning context';
-  return 'Preparing your answer';
-}
-
-function AgentActivity({ events = [] }) {
-  const visible = events.slice(-4);
-  return (
-    <div className="flex justify-start">
-      <div className="min-w-[220px] bg-white border border-[#dbeafe] rounded-2xl rounded-bl-md px-4 py-3 shadow-[0_4px_18px_rgba(17,125,255,0.06)]">
-        <div className="flex items-center gap-2 text-[11px] font-semibold text-[#0a0a0a]">
-          <motion.span
-            className="w-5 h-5 rounded-full bg-[#117dff]/10 flex items-center justify-center"
-            animate={{ scale: [1, 1.12, 1], opacity: [0.65, 1, 0.65] }}
-            transition={{ duration: 1.3, repeat: Infinity }}
-          >
-            <Sparkles size={11} className="text-[#117dff]" />
-          </motion.span>
-          HIVEMIND is working
-        </div>
-        <div className="mt-2 space-y-1.5">
-          {visible.map((event, index) => {
-            const complete = event?.type === 'tool_result';
-            return (
-              <motion.div
-                key={event?.id || `${event?.type}-${event?.name}-${index}`}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: complete ? 0.65 : 1, y: 0 }}
-                className="flex items-center gap-2 text-[11px] text-[#525252]"
-              >
-                {complete
-                  ? <CheckCircle2 size={12} className="text-[#16a34a]" />
-                  : <Loader2 size={12} className="animate-spin text-[#117dff]" />}
-                <span>{activityLabel(event)}</span>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function sourceLabel(source) {
-  return String(source?.title || source?.document_title || source?.filename || source?.name || 'Workspace source');
-}
-
-function AgentContext({ sources, steps, gaps }) {
-  const sourceItems = Array.isArray(sources) ? sources.slice(0, 4) : [];
-  const toolItems = Array.isArray(steps)
-    ? [...new Set(steps.map((step) => activityLabel({ type: 'tool_call', name: step?.tool })).filter(Boolean))]
-    : [];
-
-  if (!sourceItems.length && !toolItems.length && !gaps?.length) return null;
-
-  return (
-    <div className="mt-3 pt-2.5 border-t border-[#efede8] text-[10px] text-[#737373]">
-      {sourceItems.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {sourceItems.map((source, index) => (
-            <span key={source?.id || `${sourceLabel(source)}-${index}`} className="max-w-full inline-flex items-center gap-1 rounded-full border border-[#e3e0db] bg-[#faf9f4] px-2 py-1 font-medium text-[#525252]">
-              <FileText size={10} className="shrink-0 text-[#117dff]" />
-              <span className="max-w-[180px] truncate">{sourceLabel(source)}</span>
-            </span>
-          ))}
-        </div>
-      )}
-      {(toolItems.length > 0 || gaps?.length > 0) && (
-        <details className="mt-2 group">
-          <summary className="cursor-pointer select-none font-medium text-[#737373] marker:text-[#a3a3a3] hover:text-[#0a0a0a]">
-            {toolItems.length ? `${toolItems.join(' · ')} used` : 'Coverage details'}
-          </summary>
-          {gaps?.length > 0 && <p className="mt-1 text-[#a16207]">{gaps[0]}</p>}
-        </details>
-      )}
-    </div>
-  );
 }
 
 async function readChatStream(response, onEvent) {
@@ -849,6 +757,7 @@ function OverviewChat({ inputRef }) {
     const effProjectId = opts.projectId !== undefined ? opts.projectId : chatScope;
 
     const userMsg = { id: Date.now(), role: 'user', content: trimmed };
+    const streamingId = `answer-${userMsg.id}`;
     // The current turn is sent separately as `message`; history contains only
     // completed prior turns so the planner sees the grounded assistant answer
     // once instead of seeing the current request twice.
@@ -861,17 +770,7 @@ function OverviewChat({ inputRef }) {
 
     // Response language follows the NAVBAR language toggle — identical
     // behavior + directive map to the Talk-to-HIVE slide panel (Chat.jsx).
-    const LANG_FULL = {
-      en: 'English', de: 'German', es: 'Spanish', fr: 'French', it: 'Italian',
-      pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', cs: 'Czech', sv: 'Swedish',
-      no: 'Norwegian', fi: 'Finnish', el: 'Greek', hu: 'Hungarian', ro: 'Romanian',
-      sl: 'Slovenian', ar: 'Arabic', he: 'Hebrew', tr: 'Turkish', ru: 'Russian',
-      uk: 'Ukrainian', hi: 'Hindi', bn: 'Bengali', ta: 'Tamil', te: 'Telugu',
-      ja: 'Japanese', ko: 'Korean', zh: 'Chinese', vi: 'Vietnamese', th: 'Thai',
-      id: 'Indonesian', ms: 'Malay', sk: 'Slovak',
-    };
     const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
-    const langName = LANG_FULL[lang2] || 'English';
     // Language is a first-class /chat param (backend enforces it in the answer
     // prompt). The old [STRICT LANGUAGE] prefix poisoned recall embeddings.
     const wireMessage = trimmed;
@@ -902,6 +801,22 @@ function OverviewChat({ inputRef }) {
       }
       const chatData = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? await readChatStream(chatRes, (event) => {
+            if (event.type === 'answer_started') return;
+            if (event.type === 'answer_delta' && event.validated === true) {
+              setMessages((prev) => {
+                const found = prev.some((item) => item.id === streamingId);
+                return found
+                  ? prev.map((item) => item.id === streamingId
+                    ? { ...item, content: `${item.content || ''}${event.delta || ''}` }
+                    : item)
+                  : [...prev, { id: streamingId, role: 'assistant', content: event.delta || '', streaming: true }];
+              });
+              return;
+            }
+            if (event.type === 'answer_reset') {
+              setMessages((prev) => prev.filter((item) => item.id !== streamingId));
+              return;
+            }
             const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
             streamedEvents.push(next);
             setAgentEvents([...streamedEvents]);
@@ -922,7 +837,7 @@ function OverviewChat({ inputRef }) {
       const projectChoice = (Array.isArray(pcProjects) && pcProjects.length)
         ? { projects: pcProjects, originalMessage: trimmed }
         : null;
-      setMessages((prev) => [...prev, {
+      const completedMessage = {
         id: Date.now() + 1,
         role: 'assistant',
         content,
@@ -934,7 +849,10 @@ function OverviewChat({ inputRef }) {
         draft_ids: Array.isArray(chatData.draft_ids) ? chatData.draft_ids : [],
         pending_actions: Array.isArray(chatData.pending_actions) ? chatData.pending_actions : [],
         projectChoice,
-      }]);
+      };
+      setMessages((prev) => prev.some((item) => item.id === streamingId)
+        ? prev.map((item) => item.id === streamingId ? completedMessage : item)
+        : [...prev, completedMessage]);
     } catch (err) {
       setMessages((prev) => [...prev, {
         id: Date.now() + 1,
@@ -1060,7 +978,7 @@ function OverviewChat({ inputRef }) {
               )}
             </React.Fragment>
           ))}
-          {loading && <Thinking events={agentEvents} />}
+          {loading && !messages.some((item) => item.streaming) && <Thinking events={agentEvents} />}
         </div>
       )}
 

@@ -16,7 +16,7 @@ import { renderMarkdownLite } from '../rooms/shared';
  * while TARA dials a real number through Telnyx.
  */
 
-function useTypewriter(text, { cps = 220, start = true } = {}) {
+export function useTypewriter(text, { cps = 220, start = true } = {}) {
   const [n, setN] = useState(0);
   const doneRef = useRef(false);
   useEffect(() => { setN(0); doneRef.current = false; }, [text]);

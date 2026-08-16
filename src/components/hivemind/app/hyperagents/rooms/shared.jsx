@@ -6,14 +6,14 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, Sparkles, Send, Users, Hash, X, Archive, Globe, FolderOpen, ChevronDown,
-  AlertTriangle, Loader2, Trash2, Eraser, RotateCcw,
+  Sparkles, Send, Users, Hash, X, Globe, ChevronDown,
+  AlertTriangle, Loader2,
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
-  Clock, LayoutGrid, Zap, CheckCheck,
-  Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
-  UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
-  ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, Pencil, PhoneCall,
-  User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket, MapPin, Mail,
+  Clock, Zap, CheckCheck,
+  Swords, Gavel, Scale, ClipboardCheck, ListChecks, Search, Layers,
+  UserPlus, ExternalLink, Brain, Tag, FileText, Boxes,
+  ArrowRight, ArrowUpRight, Target, Pencil, PhoneCall,
+  Gauge, Building2, Rocket, MapPin, Mail,
 } from 'lucide-react';
 import apiClient from '../../shared/api-client';
 import { BRAND_LOGOS } from '../../shared/connectors-catalog';

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import SingulanceMark from '../shared/SingulanceMark';
 import {
   LayoutDashboard,
   Brain,
@@ -12,7 +13,6 @@ import {
   FlaskConical,
   Settings,
   LogOut,
-  Hexagon,
   CreditCard,
   ChevronLeft,
   ChevronRight,
@@ -192,7 +192,7 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
       <div className="h-14 flex items-center justify-between px-4 border-b border-[#e3e0db]">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-[#117dff]/10 flex items-center justify-center flex-shrink-0">
-            <Hexagon size={16} className="text-[#117dff]" />
+            <SingulanceMark size={18} />
           </div>
           {!collapsed && (
             <motion.div

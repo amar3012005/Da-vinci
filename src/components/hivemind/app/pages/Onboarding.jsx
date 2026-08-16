@@ -51,7 +51,7 @@ export default function OnboardingFlow() {
   const [referralCode, setReferralCode] = useState('');
   const [showSelfHost, setShowSelfHost] = useState(false);
   const [referralOffer, setReferralOffer] = useState(null);
-  const [referralError, setReferralError] = useState(null);
+  const [, setReferralError] = useState(null);
   const [enterpriseActivation, setEnterpriseActivation] = useState(null);
   // The hosting + workspace choice was already made ONCE on the login page (saved to localStorage
   // before OAuth). Consume it here and create the org silently — never re-ask. With no saved choice

@@ -5,6 +5,6 @@
  * so report pages and the room thread compose them instead of inlining raw
  * markdown. Add new report artifacts here, not in HyperAgents.jsx.
  */
-export { EmailComposeCard, CallRingingCard } from './LiveActionCards';
+export { EmailComposeCard, CallRingingCard, useTypewriter } from './LiveActionCards';
 export { EmailBlock, parseEmailMarkdown } from './EmailBlock';
 export { default as GmailConnectGate } from './GmailConnectGate';

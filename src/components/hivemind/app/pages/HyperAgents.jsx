@@ -22,13 +22,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive, Globe, FolderOpen, ChevronDown,
   AlertTriangle, CheckCircle2, Loader2, Trash2, Eraser, RotateCcw,
-  Network, Shield, Crown, Lightbulb, MessageCircle, Check,
+  Network, Shield, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
-  UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
-  ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, Pencil, PhoneCall,
+  UserPlus, LogOut, ExternalLink, Brain, FileText, Boxes, Paperclip,
+  ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
-  MapPin, Mail, Copy, Download, Power,
+  Copy, Download, Power,
   ContactRound,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -55,8 +55,8 @@ import AaasVoiceWidget from '../../AaasVoiceWidget';
 import { reportViewFor } from '../hyperagents/rooms';
 import {
   FinalReportCard, SwarmRounds, ArtifactPreviewModal, AgentBubble, DeepSimulationPanel,
-  EvidenceChip, EvidenceModal, MermaidDiagram, renderMarkdownLite, sanitizeMermaid, coerceLine,
-  LANE_META, AGREEMENT_META,
+  EvidenceModal, renderMarkdownLite,
+  LANE_META,
   fmtTs, eventDisplayTs, getPersonaContract, contractSnippet,
   SwarmSpinningUp, SimTheater, HqReportBubble, ProspectStack, ToolTimeline,
   relTime, hyperEventKey,
@@ -1078,11 +1078,11 @@ function RoomThread({ roomId, onArchived }) {
   const [seoConnection, setSeoConnection] = useState(null);
   const [growthBaseline, setGrowthBaseline] = useState(null);
   const [growthOperatingState, setGrowthOperatingState] = useState(null);
-  const [growthPlans, setGrowthPlans] = useState([]);
-  const [growthBaselineHistory, setGrowthBaselineHistory] = useState([]);
+  const [, setGrowthPlans] = useState([]);
+  const [, setGrowthBaselineHistory] = useState([]);
   const [growthBaselineRunning, setGrowthBaselineRunning] = useState(false);
-  const [growthBaselineEvents, setGrowthBaselineEvents] = useState([]);
-  const [growthBaselineError, setGrowthBaselineError] = useState('');
+  const [, setGrowthBaselineEvents] = useState([]);
+  const [, setGrowthBaselineError] = useState('');
   const growthBaselineStartedRef = useRef(false);
   const [showRoomIntro, setShowRoomIntro] = useState(true);
   const [roomIntroAcknowledged, setRoomIntroAcknowledged] = useState(false);
@@ -1302,11 +1302,6 @@ function RoomThread({ roomId, onArchived }) {
       setGrowthBaselineRunning(false);
     }
   }, [growthBaselineRunning, isHqRoom]);
-
-  const selectGrowthBaseline = useCallback((resourceId) => {
-    const selected = growthBaselineHistory.find((entry) => entry.id === resourceId);
-    if (selected?.payload) setGrowthBaseline(selected.payload);
-  }, [growthBaselineHistory]);
 
   useEffect(() => {
     if (!isHqRoom || !growthBaselineRequested || growthBaselineStartedRef.current) return;
@@ -1799,10 +1794,21 @@ function RoomThread({ roomId, onArchived }) {
   // One-shot seal latch per live turn: SSE and the fallback poll BOTH detect the
   // seal (they race) — without the latch load() fired twice back-to-back.
   const sealedRef = useRef(false);
+  // The client-generated tempId is set as activeTurnId the INSTANT the optimistic
+  // bubble is appended, before the POST that creates the turn has even reached
+  // the server. If the SSE/poll effect below opens against that id immediately,
+  // the fallback poll's very first GET 404s (server doesn't know the id yet),
+  // and its 404 handler's load({quiet:true}) overwrites `turns` wholesale with
+  // the server's turn-less list — wiping the optimistic bubble a beat before the
+  // POST response would have swapped in the real id. Confirmed live 2026-08-13:
+  // a sent message vanished instantly, reappearing only after a manual refresh
+  // once the server had actually persisted the turn. This ref tracks which id is
+  // still unconfirmed so the effect can wait for the real one.
+  const pendingTurnIdRef = useRef(null);
 
   // SSE subscription while a turn is live
   useEffect(() => {
-    if (!activeTurnId) return;
+    if (!activeTurnId || activeTurnId === pendingTurnIdRef.current) return;
     sealedRef.current = false;
     const url = apiClient.hyperTurnStreamUrl(roomId, activeTurnId);
     let es;
@@ -2137,6 +2143,7 @@ function RoomThread({ roomId, onArchived }) {
       ...prev,
       { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: echo, status: 'live', lines: [], createdAt: new Date().toISOString() },
     ]);
+    pendingTurnIdRef.current = tempId;  // SSE/poll effect waits for this to clear
     setActiveTurnId(tempId);
     try {
       const idempo = `${roomId}:${Date.now()}:${msg.length}`;
@@ -2146,12 +2153,16 @@ function RoomThread({ roomId, onArchived }) {
         turn_id: tempId,
         language: i18n?.language,  // run-wide output language from the navbar toggle
       });
-      // Swap the temp turn for the real id, then start streaming/polling.
+      // Swap the temp turn for the real id, then start streaming/polling — the
+      // server has now actually persisted the turn, so it's safe for the SSE/
+      // poll effect to open against it.
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(null);
       setSubmitting(false);
     }
@@ -2210,7 +2221,7 @@ function RoomThread({ roomId, onArchived }) {
 
   // Update & rerun — drop the stale turn, then re-ask the same question so the
   // team answers again (now with the current time-context). One click redo.
-  async function handleRerunTurn(turn) {
+  const handleRerunTurn = useCallback(async (turn) => {
     const msg = (turn.userMessage || turn.user_message || '').trim();
     if (!msg || submitting) return;
     if (!room?.goal?.trim()) {
@@ -2229,6 +2240,7 @@ function RoomThread({ roomId, onArchived }) {
       ...prev,
       { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
     ]);
+    pendingTurnIdRef.current = tempId;  // SSE/poll effect waits for this to clear
     setActiveTurnId(tempId);
     try {
       const idempo = `${roomId}:${Date.now()}:${msg.length}`;
@@ -2237,14 +2249,16 @@ function RoomThread({ roomId, onArchived }) {
         // self-evolve signal: a rerun = the prior answer was rejected → the employees learn from it
         user_signal: 'the user reran this turn — the previous answer was rejected as wrong or stale' });
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(null);
       setSubmitting(false);
     }
-  }
+  }, [submitting, room?.goal, t, roomId, i18n?.language]);
 
   // OAuth can finish while the original turn is still synthesizing. Wait for its
   // seal, then replace only that turn and continue with Gmail now available.
@@ -2253,7 +2267,7 @@ function RoomThread({ roomId, onArchived }) {
     const turn = turns.find((item) => item.id === gmailResumeTurnId);
     setGmailResumeTurnId(null);
     if (turn) handleRerunTurn(turn);
-  }, [activeTurnId, gmailConnected, gmailResumeTurnId, submitting, turns]);
+  }, [activeTurnId, gmailConnected, gmailResumeTurnId, submitting, turns, handleRerunTurn]);
 
   // One-click follow-up: a suggested next task becomes a NEW auto-run turn in
   // this room (keeps the journal/context; no dashboard round-trip).
@@ -2266,16 +2280,19 @@ function RoomThread({ roomId, onArchived }) {
       ...prev,
       { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
     ]);
+    pendingTurnIdRef.current = tempId;  // SSE/poll effect waits for this to clear
     setActiveTurnId(tempId);
     try {
       const resp = await apiClient.postHyperTurn(roomId, {
         user_message: msg, idempotency_key: `${roomId}:next:${Date.now()}`, turn_id: tempId,
         language: i18n?.language });
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
+      pendingTurnIdRef.current = null;
       setActiveTurnId(null);
       setSubmitting(false);
     }
@@ -4139,13 +4156,13 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
             {nEmail > 0 && (
               <button onClick={() => setCampaignChannel('email')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wider bg-[#117dff] text-white hover:bg-[#0e6be0]">
-                <Send size={11} /> {t('hyperAgents.sendOutreachEmails', 'Send outreach emails ({{n}})', { n: nEmail })}
+                <Send size={11} /> {t('hyperAgents.startEmailOutreach', 'Start email outreach ({{n}})', { n: nEmail })}
               </button>
             )}
             {nCall > 0 && (
               <button onClick={() => setCampaignChannel('call')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wider border border-[#117dff] text-[#117dff] hover:bg-blue-50">
-                <PhoneCall size={11} /> {t('hyperAgents.startOutreachCalls', 'Start outreach calls ({{n}})', { n: nCall })}
+                <PhoneCall size={11} /> {t('hyperAgents.startTaraOutreach', 'Start TARA outreach ({{n}})', { n: nCall })}
               </button>
             )}
           </div>
@@ -4235,31 +4252,53 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         </div>
       )}
 
-      {/* Phase 4/7 — write-approval cards. Side-effectful writes (send email,
-          create/append doc, CRM/PR) are held until the user approves here. */}
+      {/* Outbound email approval → a popup, never inline below the report: a
+          Gmail-style compose card in a modal, agent visibly typing the draft,
+          X to close, one click (or tap) to send. Only one shown at a time —
+          the next queued email approval takes the popup once this one resolves. */}
+      {(() => {
+        if (archived) return null;
+        const emailApprovals = approvalRequests.filter((a) => a.body_md);
+        const current = emailApprovals.find((a) => !resolutionById[a.approval_id]);
+        if (!current) return null;
+        const resolved = resolutionById[current.approval_id];
+        const busyHere = approveBusy === current.approval_id;
+        return (
+          <div className="fixed inset-0 z-[60] bg-[#1a1814]/45 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="w-full max-w-[560px]">
+              <div className="flex justify-end mb-1.5">
+                <button type="button"
+                  onClick={() => onApprove && onApprove(current.approval_id, 'deny')}
+                  className="w-8 h-8 rounded-full flex items-center justify-center bg-black/30 text-white/90 hover:bg-black/50"
+                  title={t('hyperAgents.close', 'Close')}>
+                  <X size={15} />
+                </button>
+              </div>
+              <EmailComposeCard
+                approval={current}
+                fromName={roomAgentName}
+                resolved={resolved}
+                busy={busyHere}
+                autoSend={autoSendOn}
+                onToggleAutoSend={toggleAutoSend}
+                onSend={() => onApprove && onApprove(current.approval_id, 'approve')}
+                onDeny={() => onApprove && onApprove(current.approval_id, 'deny')}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Phase 4/7 — non-email write-approval cards (doc/CRM/PR etc.). Side-
+          effectful writes are held until the user approves here. */}
       {approvalRequests.length > 0 && (
         <div className="space-y-1.5">
           {approvalRequests.map((a, i) => {
             const resolved = resolutionById[a.approval_id];
             const busyHere = approveBusy === a.approval_id;
             const artifactUrl = resolved?.result?.result?.url || resolved?.result?.url;
-            // Outbound email → the cinematic Gmail-style compose card: the agent
-            // visibly types the draft, the user sends with one click (or the
-            // room's auto-send automation fires once typing completes).
-            if (a.body_md && !archived) {
-              return (
-                <EmailComposeCard key={a.approval_id || i}
-                  approval={a}
-                  fromName={roomAgentName}
-                  resolved={resolved}
-                  busy={busyHere}
-                  autoSend={autoSendOn}
-                  onToggleAutoSend={toggleAutoSend}
-                  onSend={() => onApprove && onApprove(a.approval_id, 'approve')}
-                  onDeny={() => onApprove && onApprove(a.approval_id, 'deny')}
-                />
-              );
-            }
+            // Email approvals render as the popup above — skip here.
+            if (a.body_md && !archived) return null;
             return (
               <div key={a.approval_id || i} className="rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2">
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
