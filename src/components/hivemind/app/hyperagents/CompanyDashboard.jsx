@@ -22,6 +22,20 @@ import WebsitePreview from './WebsitePreview';
  *   col 3 — Documents (memories filed) + research highlights + agents
  */
 
+// Same class of drift found and fixed in the sibling HqRuntimeConsole.jsx:
+// two catch blocks each hand-copied this extraction with subtly different
+// optional-chaining. One helper, one behavior.
+export const extractErrorMessage = (err, fallback) => err?.response?.data?.error
+  || err?.message || fallback;
+
+// The same spinner markup (only size/color literals differ) was copy-pasted
+// at two call sites in this file. NOT extracted app-wide (this exact markup
+// repeats in 12+ other files too) — that's a real, larger follow-up, out of
+// scope for this file's cleanup pass.
+export const Spinner = ({ size = 'w-4 h-4', colorClass = 'border-[#117dff]' }) => (
+  <span className={`block ${size} border-2 ${colorClass} border-t-transparent rounded-full animate-spin`} />
+);
+
 const TAG_STYLES = {
   RESEARCH: 'bg-[#117dff]/10 text-[#117dff]',
   FEATURE: 'bg-orange-500/10 text-orange-600',
@@ -110,7 +124,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
       } catch { /* storage can be unavailable */ }
       window.location.href = '/hivemind/app/employees?onboard=1';
     } catch (error) {
-      setRuntimeError(error?.response?.data?.error || error.message || 'Company reset did not complete. Nothing new was started.');
+      setRuntimeError(extractErrorMessage(error, 'Company reset did not complete. Nothing new was started.'));
       setResetting(false);
     }
   };
@@ -242,7 +256,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
       setRuntimeInvite(null);
       onOpenRuntime?.(result);
     } catch (error) {
-      setRuntimeError(error?.response?.data?.error || error?.message || 'Runtime could not be started.');
+      setRuntimeError(extractErrorMessage(error, 'Runtime could not be started.'));
     } finally { setRuntimeLaunching(false); }
   };
 
@@ -395,7 +409,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
                     </div>
                     <span className="shrink-0 mt-0.5">
                       {openingTask === task.id
-                        ? <span className="block w-4 h-4 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
+                        ? <Spinner />
                         : taskActive
                           ? <MessageSquare size={14} className="text-[#117dff]" />
                           : <ArrowUpRight size={14} className="text-[#a3a3a3] group-hover:text-[#0a0a0a]" />}
@@ -502,7 +516,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
               </button>
               <button onClick={doRerun} disabled={resetting}
                 className="flex items-center gap-2 text-[12.5px] font-semibold text-white bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 px-3.5 py-2 rounded-lg">
-                {resetting ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+                {resetting ? <Spinner size="w-3.5 h-3.5" colorClass="border-white" /> : null}
                 {t('hyperDash.rerunConfirm', 'Clear & start fresh')}
               </button>
             </div>
