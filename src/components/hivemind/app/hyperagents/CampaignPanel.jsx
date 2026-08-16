@@ -12,6 +12,17 @@ import {
 import apiClient from '../shared/api-client';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 
+// Same class of drift found and fixed in HqRuntimeConsole.jsx and
+// CompanyDashboard.jsx: this exact error-extraction expression was
+// hand-copied across 4 catch blocks in this file. One helper, one behavior.
+export const extractErr = (e) => e?.response?.data?.error || e.message;
+
+// The same Loader2+animate-spin markup was copy-pasted at 3 call sites,
+// differing only in size/className. One component, used by all three.
+export const Spinner = ({ size = 10, className = 'animate-spin' }) => (
+  <Loader2 size={size} className={className} />
+);
+
 const EMAIL_PACE_MS = 8500; // FE pacing (BE enforces 8s — stay just above)
 // tara-deepgram base (same residency-correct derivation as TaraConfig).
 const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
@@ -111,7 +122,7 @@ function Bar({ done, failed, total }) {
   );
 }
 
-function TargetRow({ c, target, onPatch, disabled, post }) {
+function TargetRow({ c, target, onPatch, post }) {
   const [open, setOpen] = useState(false);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [draft, setDraft] = useState(null);
@@ -138,7 +149,7 @@ function TargetRow({ c, target, onPatch, disabled, post }) {
     <div className={`rounded-lg border px-3 py-2 ${['sent', 'analyzed'].includes(st) ? 'border-emerald-200 bg-emerald-50/40'
       : st === 'failed' ? 'border-red-200 bg-red-50/40' : 'border-[#e3e0db] bg-white'} ${!sel ? 'opacity-50' : ''}`}>
       <div className="flex items-center gap-2">
-        <input type="checkbox" checked={sel} disabled={immutable || disabled}
+        <input type="checkbox" checked={sel} disabled={immutable}
           onChange={() => onPatch(target.id, { selected: !sel })}
           className="accent-[#117dff] shrink-0" />
         <span className="text-[12px] font-semibold text-[#0a0a0a] truncate">{target.company}</span>
@@ -146,7 +157,7 @@ function TargetRow({ c, target, onPatch, disabled, post }) {
           {c.channel === 'email' ? target.email : target.phone}
         </span>
         <span className={`ml-auto px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider shrink-0 ${chip[1]}`}>
-          {['sending', 'dialing', 'analyzing'].includes(st) && <Loader2 size={9} className="inline animate-spin mr-1" />}{chip[0]}
+          {['sending', 'dialing', 'analyzing'].includes(st) && <Spinner size={9} className="inline animate-spin mr-1" />}{chip[0]}
         </span>
         {(p.subject || p.goal) && (
           <button onClick={() => { setOpen(o => !o); setDraft(null); }}
@@ -197,7 +208,7 @@ function TargetRow({ c, target, onPatch, disabled, post }) {
         <div className="mt-1.5 rounded-md bg-[#faf9f6] border border-[#eceae4] px-2 py-1.5">
           {post.post_call === 'processing' ? (
             <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
-              <Loader2 size={10} className="animate-spin" /> Analysing call…
+              <Spinner size={10} /> Analysing call…
             </span>
           ) : (
             <div className="space-y-1">
@@ -350,7 +361,7 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
         const { campaign: c, error } = await apiClient.createOutreachCampaign(roomId, channel, turnId);
         if (!dead) (error ? setErr(error) : setCampaign(c));
       } catch (e) {
-        if (!dead) setErr(e?.response?.data?.error || e.message);
+        if (!dead) setErr(extractErr(e));
       }
     })();
     return () => { dead = true; runningRef.current = false; };
@@ -362,7 +373,7 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
     try {
       await apiClient.patchOutreachTarget(c.id, targetId, patch);
       await refresh(c.id);
-    } catch (e) { setErr(e?.response?.data?.error || e.message); }
+    } catch (e) { setErr(extractErr(e)); }
   }, [refresh]);
 
   // The one-by-one runner. Generates then executes each selected target in
@@ -373,7 +384,7 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
     if (!c0 || runningRef.current) return;
     setBusy(true); setErr(null);
     try { await apiClient.controlOutreachCampaign(c0.id, 'start'); } catch (e) {
-      setErr(e?.response?.data?.error || e.message); setBusy(false); return;
+      setErr(extractErr(e)); setBusy(false); return;
     }
     runningRef.current = true;
     let c = await refresh(c0.id);
@@ -395,7 +406,7 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
           if (c.channel === 'email') await new Promise(ok => { setTimeout(ok, EMAIL_PACE_MS); });
         }
       } catch (e) {
-        const msg = e?.response?.data?.error || e.message;
+        const msg = extractErr(e);
         if (e?.response?.status === 429) { // pacing — wait and retry same target
           await new Promise(ok => { setTimeout(ok, 4000); });
         } else if (msg === 'gmail-reauth') {
@@ -432,7 +443,7 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
   if (!campaign) {
     return (
       <div className="mt-2 pl-2 flex items-center gap-2 text-[11px] text-[#525252]">
-        <Loader2 size={12} className="animate-spin" /> Preparing campaign ({eligibleCount} prospects)…
+        <Spinner size={12} /> Preparing campaign ({eligibleCount} prospects)…
       </div>
     );
   }
@@ -485,7 +496,7 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
         </div>
         <div className="mt-2 flex flex-col gap-1.5 max-h-80 overflow-y-auto">
           {targets.map(t => (
-            <TargetRow key={t.id} c={campaign} target={t} onPatch={patchTarget} disabled={false}
+            <TargetRow key={t.id} c={campaign} target={t} onPatch={patchTarget}
               post={postCall[t.resultRef?.sessionId]} />
           ))}
         </div>
