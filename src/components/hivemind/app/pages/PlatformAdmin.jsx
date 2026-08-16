@@ -368,7 +368,7 @@ function CommercialManager() {
   };
   useEffect(() => {
     loadPlan(selectedPlanId);
-  }, []);
+  }, [selectedPlanId]);
   const savePlan = async (action) => {
     setSavingPlan(true);
     setError("");

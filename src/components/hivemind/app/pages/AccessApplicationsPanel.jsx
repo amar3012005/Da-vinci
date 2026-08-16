@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Eye, Loader2, Mail, Trash2, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
@@ -14,13 +14,13 @@ export default function AccessApplicationsPanel({ onChanged }) {
   const [configuring, setConfiguring] = useState(null);
   const [config, setConfig] = useState({ company_name: '', workspace_name: '', account_type: 'enterprise_managed', storage_mode: 'hybrid', onboarding_days: 14, invitation_expires_at: '', welcome_message: '', private_notes: '' });
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const data = await apiClient.listPlatformAccessApplications({ account_type: kind });
       setItems((data.applications || []).filter((item) => item.status !== 'discarded'));
     } catch (err) { setError(err.response?.data?.error || err.message); }
-  };
-  useEffect(() => { load(); }, [kind]);
+  }, [kind]);
+  useEffect(() => { load(); }, [load]);
 
   const run = async (item, action, payload = {}) => {
     setBusy(`${item.id}:${action}`); setError('');

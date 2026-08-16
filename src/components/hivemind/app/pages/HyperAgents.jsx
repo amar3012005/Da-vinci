@@ -22,13 +22,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive, Globe, FolderOpen, ChevronDown,
   AlertTriangle, CheckCircle2, Loader2, Trash2, Eraser, RotateCcw,
-  Network, Shield, Crown, Lightbulb, MessageCircle, Check,
+  Network, Shield, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
-  UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
-  ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, Pencil, PhoneCall,
+  UserPlus, LogOut, ExternalLink, Brain, FileText, Boxes, Paperclip,
+  ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
-  MapPin, Mail, Copy, Download, Power,
+  Copy, Download, Power,
   ContactRound,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -55,8 +55,8 @@ import AaasVoiceWidget from '../../AaasVoiceWidget';
 import { reportViewFor } from '../hyperagents/rooms';
 import {
   FinalReportCard, SwarmRounds, ArtifactPreviewModal, AgentBubble, DeepSimulationPanel,
-  EvidenceChip, EvidenceModal, MermaidDiagram, renderMarkdownLite, sanitizeMermaid, coerceLine,
-  LANE_META, AGREEMENT_META,
+  EvidenceModal, renderMarkdownLite,
+  LANE_META,
   fmtTs, eventDisplayTs, getPersonaContract, contractSnippet,
   SwarmSpinningUp, SimTheater, HqReportBubble, ProspectStack, ToolTimeline,
   relTime, hyperEventKey,
@@ -1078,11 +1078,11 @@ function RoomThread({ roomId, onArchived }) {
   const [seoConnection, setSeoConnection] = useState(null);
   const [growthBaseline, setGrowthBaseline] = useState(null);
   const [growthOperatingState, setGrowthOperatingState] = useState(null);
-  const [growthPlans, setGrowthPlans] = useState([]);
-  const [growthBaselineHistory, setGrowthBaselineHistory] = useState([]);
+  const [, setGrowthPlans] = useState([]);
+  const [, setGrowthBaselineHistory] = useState([]);
   const [growthBaselineRunning, setGrowthBaselineRunning] = useState(false);
-  const [growthBaselineEvents, setGrowthBaselineEvents] = useState([]);
-  const [growthBaselineError, setGrowthBaselineError] = useState('');
+  const [, setGrowthBaselineEvents] = useState([]);
+  const [, setGrowthBaselineError] = useState('');
   const growthBaselineStartedRef = useRef(false);
   const [showRoomIntro, setShowRoomIntro] = useState(true);
   const [roomIntroAcknowledged, setRoomIntroAcknowledged] = useState(false);
@@ -1302,11 +1302,6 @@ function RoomThread({ roomId, onArchived }) {
       setGrowthBaselineRunning(false);
     }
   }, [growthBaselineRunning, isHqRoom]);
-
-  const selectGrowthBaseline = useCallback((resourceId) => {
-    const selected = growthBaselineHistory.find((entry) => entry.id === resourceId);
-    if (selected?.payload) setGrowthBaseline(selected.payload);
-  }, [growthBaselineHistory]);
 
   useEffect(() => {
     if (!isHqRoom || !growthBaselineRequested || growthBaselineStartedRef.current) return;
@@ -2226,7 +2221,7 @@ function RoomThread({ roomId, onArchived }) {
 
   // Update & rerun — drop the stale turn, then re-ask the same question so the
   // team answers again (now with the current time-context). One click redo.
-  async function handleRerunTurn(turn) {
+  const handleRerunTurn = useCallback(async (turn) => {
     const msg = (turn.userMessage || turn.user_message || '').trim();
     if (!msg || submitting) return;
     if (!room?.goal?.trim()) {
@@ -2263,7 +2258,7 @@ function RoomThread({ roomId, onArchived }) {
       setActiveTurnId(null);
       setSubmitting(false);
     }
-  }
+  }, [submitting, room?.goal, t, roomId, i18n?.language]);
 
   // OAuth can finish while the original turn is still synthesizing. Wait for its
   // seal, then replace only that turn and continue with Gmail now available.
@@ -2272,7 +2267,7 @@ function RoomThread({ roomId, onArchived }) {
     const turn = turns.find((item) => item.id === gmailResumeTurnId);
     setGmailResumeTurnId(null);
     if (turn) handleRerunTurn(turn);
-  }, [activeTurnId, gmailConnected, gmailResumeTurnId, submitting, turns]);
+  }, [activeTurnId, gmailConnected, gmailResumeTurnId, submitting, turns, handleRerunTurn]);
 
   // One-click follow-up: a suggested next task becomes a NEW auto-run turn in
   // this room (keeps the journal/context; no dashboard round-trip).

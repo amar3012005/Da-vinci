@@ -7,7 +7,6 @@ import {
   ChevronDown,
   Loader2,
   Trash2,
-  Paperclip,
   X,
   CheckCircle2,
   Mic,
@@ -319,7 +318,7 @@ function EmptyState({ setInput, textareaRef, userName }) {
 // ─── Chat Panel (slide-out) ───────────────────────────────────────────────────
 
 export function ChatPanel({ isOpen, onClose }) {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const { activeProjectId, activeTeamId, activeProject, projects: ctxProjects } = useTeamContext() || {};
   const { org, user } = useAuth() || {};
   const userRole = user?.role || user?.org_role || user?.membership_role || 'member';

@@ -188,7 +188,7 @@ export default function MobileMemories() {
       }
     }, 220);
     return () => { cancelled = true; clearTimeout(id); };
-  }, [query, type]);
+  }, [query, type, user?.id, org?.id]);
 
   // Page in the remaining memories as the sentinel enters the viewport.
   const loadMore = useCallback(async () => {

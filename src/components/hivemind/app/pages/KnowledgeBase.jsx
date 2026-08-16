@@ -1359,7 +1359,7 @@ export default function KnowledgeBase() {
   // is active. The previous /v1/orgs/:id/projects route stacked extra gates
   // (plan check + getOrgMembership) that intermittently left the picker stuck
   // on "Loading projects...".
-  const { activeTeamId, activeProjectId, activeProject } = useTeamContext() || {};
+  const { activeTeamId, activeProjectId } = useTeamContext() || {};
   const fetchProjects = useCallback(async () => {
     if (!org?.id) {
       setTeamProjects([]);
@@ -1825,7 +1825,7 @@ export default function KnowledgeBase() {
     await Promise.all(workers);
     // Byte transfers are done; wait for the server-side ingests we started before reporting done.
     await Promise.all(inFlight);
-  }, [customTags, refetchKb, pickConcurrency, kbMemories, setUploads]);
+  }, [customTags, refetchKb, pickConcurrency, setUploads]);
 
   // Cancel a queued/uploading entry
   const handleCancelUpload = useCallback((entryId) => {
@@ -1907,7 +1907,7 @@ export default function KnowledgeBase() {
         .then((n) => setPendingPageCounts((prev) => ({ ...prev, [pendingFileKey(f)]: n })))
         .catch(() => setPendingPageCounts((prev) => ({ ...prev, [pendingFileKey(f)]: 1 })));
     });
-  }, [org?.role, user?.orgRole, user?.role, activeProjectId, activeProject, teamProjects]);
+  }, [org?.role, user?.orgRole, user?.role, activeProjectId, teamProjects]);
 
   // Drop one file from the pending batch (the modal's per-row ✕). Lets a user
   // trim an over-limit batch back under quota without cancelling everything.
