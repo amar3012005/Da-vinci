@@ -238,6 +238,62 @@ function CapacityPanel({ metrics }) {
   );
 }
 
+const usdFromMicros = (value) => (Number(value || 0) / 1_000_000).toLocaleString(undefined, { style: "currency", currency: "USD", minimumFractionDigits: 4, maximumFractionDigits: 4 });
+
+function ModelGovernancePanel() {
+  const [models, setModels] = useState(null);
+  const [costs, setCosts] = useState(null);
+  const [drafts, setDrafts] = useState({});
+  const [price, setPrice] = useState({ model: "", provider: "*", input: "", output: "", cache: "" });
+  const [message, setMessage] = useState("");
+  const load = async () => {
+    const [nextModels, nextCosts] = await Promise.all([apiClient.getPlatformModels(), apiClient.getPlatformAiCosts()]);
+    setModels(nextModels); setCosts(nextCosts);
+    setDrafts(Object.fromEntries((nextModels.policies || []).map((p) => [p.use_case, { primary_model: p.primary_model, secondary_model: p.secondary_model || "" }])));
+  };
+  useEffect(() => { load().catch((error) => setMessage(error.response?.data?.error || error.message)); }, []);
+  const save = async (useCase) => {
+    setMessage("Saving model route…");
+    try { await apiClient.updatePlatformModel({ use_case: useCase, ...drafts[useCase] }); await load(); setMessage(`${useCase} updated and live.`); }
+    catch (error) { setMessage(error.response?.data?.error || error.message); }
+  };
+  const savePrice = async () => {
+    setMessage("Saving effective price…");
+    try {
+      await apiClient.updatePlatformModelPrice({ model: price.model, provider: price.provider || "*",
+        input_micros_per_million: price.input || 0, output_micros_per_million: price.output || 0,
+        cache_read_micros_per_million: price.cache || 0 });
+      setPrice({ model: "", provider: "*", input: "", output: "", cache: "" }); await load(); setMessage("Price version saved.");
+    } catch (error) { setMessage(error.response?.data?.error || error.message); }
+  };
+  if (!models || !costs) return <section className="mb-6 rounded-2xl border bg-white p-5 text-sm text-[#737373]">Loading model governance…</section>;
+  return (
+    <section className="mb-6 rounded-2xl border border-[#cbd5e1] bg-white p-5">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div><p className="text-xs font-bold tracking-[0.2em] text-[#117dff]">MODEL</p><h2 className="text-lg font-semibold">Inference policy and user cost</h2>
+          <p className="text-xs text-[#737373]">Admin routes apply without a deploy. Cloudflare AI Gateway remains the transport boundary.</p></div>
+        <div className="text-right"><p className="text-xs text-[#737373]">Cumulative platform spend</p><p className="text-2xl font-bold">{usdFromMicros(costs.total_cost_micros)}</p><p className="text-[11px] text-[#737373]">Unattributed system work: {usdFromMicros(costs.unattributed_cost_micros)} · {costs.unattributed_calls || 0} calls</p></div>
+      </div>
+      <div className="space-y-2">
+        {(models.policies || []).map((policy) => <div key={policy.use_case} className="grid gap-2 rounded-xl border bg-[#fafafa] p-3 md:grid-cols-[180px_1fr_1fr_auto] md:items-center">
+          <div><p className="text-sm font-semibold">{policy.use_case.replaceAll('_',' ')}</p><p className="text-[11px] text-[#737373]">{policy.source} · rev {policy.revision}</p></div>
+          <input aria-label={`${policy.use_case} primary model`} className="rounded-lg border px-3 py-2 text-sm" value={drafts[policy.use_case]?.primary_model || ""} onChange={(e) => setDrafts((d) => ({...d,[policy.use_case]:{...d[policy.use_case],primary_model:e.target.value}}))} />
+          <input aria-label={`${policy.use_case} secondary model`} className="rounded-lg border px-3 py-2 text-sm" value={drafts[policy.use_case]?.secondary_model || ""} placeholder="Secondary fallback" onChange={(e) => setDrafts((d) => ({...d,[policy.use_case]:{...d[policy.use_case],secondary_model:e.target.value}}))} />
+          <button onClick={() => save(policy.use_case)} className="rounded-lg bg-[#111827] px-3 py-2 text-sm text-white">Save</button>
+        </div>)}
+      </div>
+      <div className="mt-5 rounded-xl border p-3"><p className="mb-2 text-sm font-semibold">Effective model prices · USD micros per 1M tokens</p>
+        <div className="grid gap-2 md:grid-cols-6"><input className="rounded-lg border px-3 py-2 text-sm" placeholder="provider/model" value={price.model} onChange={(e)=>setPrice((p)=>({...p,model:e.target.value}))}/><input className="rounded-lg border px-3 py-2 text-sm" placeholder="Provider or *" value={price.provider} onChange={(e)=>setPrice((p)=>({...p,provider:e.target.value}))}/><input className="rounded-lg border px-3 py-2 text-sm" placeholder="Input" inputMode="numeric" value={price.input} onChange={(e)=>setPrice((p)=>({...p,input:e.target.value}))}/><input className="rounded-lg border px-3 py-2 text-sm" placeholder="Output" inputMode="numeric" value={price.output} onChange={(e)=>setPrice((p)=>({...p,output:e.target.value}))}/><input className="rounded-lg border px-3 py-2 text-sm" placeholder="Cache read" inputMode="numeric" value={price.cache} onChange={(e)=>setPrice((p)=>({...p,cache:e.target.value}))}/><button onClick={savePrice} className="rounded-lg border border-[#111827] px-3 py-2 text-sm">Add price</button></div>
+        <div className="mt-2 flex flex-wrap gap-2">{(models.prices||[]).map((row)=><button key={row.id} onClick={()=>setPrice({model:row.model,provider:row.provider,input:row.input_micros_per_million,output:row.output_micros_per_million,cache:row.cache_read_micros_per_million})} className="rounded-full bg-[#f5f4f0] px-3 py-1 text-xs">{row.model} · {row.provider}</button>)}</div>
+      </div>
+      {message && <p className="mt-3 text-xs text-[#525252]">{message}</p>}
+      <div className="mt-6 overflow-auto rounded-xl border"><table className="w-full text-sm"><thead><tr className="bg-[#faf9f4] text-left"><th className="p-3">User</th><th>Calls</th><th>Input</th><th>Output</th><th>Cached</th><th>Cumulative cost</th><th>Last call</th></tr></thead>
+        <tbody>{(costs.users || []).map((user) => <tr key={user.id} className="border-t"><td className="p-3"><div>{user.display_name || 'Unnamed'}</div><div className="text-xs text-[#737373]">{user.email}</div></td><td>{user.calls}</td><td>{Number(user.prompt_tokens||0).toLocaleString()}</td><td>{Number(user.completion_tokens||0).toLocaleString()}</td><td>{Number(user.cached_prompt_tokens||0).toLocaleString()}</td><td className="font-semibold">{usdFromMicros(user.total_cost_micros)}</td><td>{when(user.last_call_at)}</td></tr>)}</tbody></table></div>
+      <p className="mt-3 text-xs text-[#737373]">Unpriced calls remain visible with zero estimated cost until a model/provider price is entered. Historical events keep their original pricing snapshot.</p>
+    </section>
+  );
+}
+
 function CommercialManager() {
   const [tab, setTab] = useState("plans");
   const [plans, setPlans] = useState([]);
@@ -1966,6 +2022,7 @@ export default function PlatformAdmin() {
           </button>
         </div>
       </div>
+      <ModelGovernancePanel />
       <CommercialManager />
       <SecurityChecklist />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
