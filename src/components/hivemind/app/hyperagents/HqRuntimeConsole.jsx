@@ -89,12 +89,22 @@ function RuntimeLoader({ variant = 'matrix', label, hint, size = 22, className =
 }
 
 const STATE_GLYPH = { OBSERVING: 'graph', DIAGNOSING: 'matrix', REVIEWING: 'arc', DELEGATING: 'matrix' };
+// One fallback tuple for any state this map doesn't (yet) name — read from
+// here everywhere, so the header and the inline loader never show two
+// different guesses for the same unmapped state.
+const STATE_LABEL_DEFAULT = ['HQ is thinking aloud', 'Working through the next bounded action.'];
 const STATE_LABEL = {
   OBSERVING: ['Reading company state', 'Loading retained evidence before choosing work.'],
   DIAGNOSING: ['Thinking', 'Choosing the highest-leverage evidenced constraint.'],
   DELEGATING: ['Delegating', 'Handing a bounded Work Order to a specialist room.'],
   REVIEWING: ['Analysing result', 'Comparing returned evidence with the decision rule.'],
 };
+// Every catch handler in this file extracted the backend's error message with
+// a slightly different, hand-copied expression — some dropped `.error`, some
+// dropped the fallback string entirely. One helper, used everywhere, so a
+// backend error message is never silently swallowed by an inconsistent catch.
+const extractErrorMessage = (err, fallback) => err?.response?.data?.message
+  || err?.response?.data?.error || err?.message || fallback;
 const fmtTime = (value) => value ? new Date(value).toLocaleTimeString([], {
   hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 2,
 }) : '';
@@ -382,7 +392,6 @@ export function HqRuntimeRail({ baselineReady }) {
   const outboundPermission = authorityPreference('outbound_messages');
   const outboundCallPermission = authorityPreference('outbound_calls');
   const outboundCampaignPermission = authorityPreference('outbound_campaigns');
-  const adminCallPermission = 'manual';
   const updateOutboundPermission = async (policyKey, currentPreference, preference) => {
     if (permissionBusy || preference === currentPreference) return;
     setPermissionBusy(`${policyKey}:${preference}`); setPermissionError('');
@@ -390,7 +399,7 @@ export function HqRuntimeRail({ baselineReady }) {
       const response = await apiClient.updateHqAuthorityPolicy({ [policyKey]: preference });
       setRuntime(response?.runtime || runtime);
     } catch (requestError) {
-      setPermissionError(requestError?.response?.data?.error || requestError?.message || 'Permission could not be updated.');
+      setPermissionError(extractErrorMessage(requestError, 'Permission could not be updated.'));
     } finally { setPermissionBusy(''); }
   };
   const restart = async () => {
@@ -412,7 +421,10 @@ export function HqRuntimeRail({ baselineReady }) {
           ['outbound_messages', 'Outbound email', outboundPermission],
           ['outbound_calls', 'TARA calls', outboundCallPermission],
           ['outbound_campaigns', 'Campaign launches', outboundCampaignPermission],
-          ['admin_calls', 'Administrator calls', adminCallPermission],
+          // Always manual — the render below never actually reads this third
+          // value for admin_calls, it hardcodes 'Manual review is always
+          // required'. Kept as a literal, not a variable, so that's honest.
+          ['admin_calls', 'Administrator calls', 'manual'],
         ].map(([policyKey, label, currentPreference]) => <div key={policyKey} className="mt-3 flex items-center justify-between gap-3"><div><div className="text-[10px] font-semibold text-[#262626]">{label}</div><div className="mt-0.5 text-[9px] text-[#8a8577]">{policyKey === 'admin_calls' ? 'Manual review is always required' : currentPreference === 'unconfigured' ? 'Chosen at the first exact gate' : 'Organization policy'}</div></div>{policyKey === 'admin_calls' ? <span className="border border-[#d8d3cc] bg-[#171717] px-2 py-1 font-mono text-[8px] uppercase text-white">Manual</span> : currentPreference === 'unconfigured' ? <span className="border border-[#d8d3cc] bg-white px-2 py-1 font-mono text-[8px] uppercase text-[#8a8577]">Not configured</span> : <div className="inline-flex border border-[#d8d3cc] bg-white p-0.5">{['manual', 'auto'].map((preference) => { const busyKey = `${policyKey}:${preference}`; return <button key={preference} type="button" onClick={() => updateOutboundPermission(policyKey, currentPreference, preference)} disabled={Boolean(permissionBusy)} aria-pressed={currentPreference === preference} className={`h-7 px-2.5 font-mono text-[8px] uppercase tracking-[0.08em] transition-colors disabled:opacity-40 ${currentPreference === preference ? 'bg-[#171717] text-white' : 'text-[#777168] hover:text-[#171717]'}`}>{permissionBusy === busyKey ? 'Saving' : preference}</button>; })}</div>}</div>)}
         <div className="mt-3 space-y-2 border-t border-[#ebe8e3] pt-3">{[
           ['Internal work', runtime?.authorityPolicy?.internal_autonomy === false ? 'Restricted' : 'Allowed'],
@@ -561,12 +573,12 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, experi
       else chunks.push({ type: 'execution', items: [item] });
     } else chunks.push({ type: 'narrative', item });
   }
-  const [glyphLabel] = STATE_LABEL[state] || [];
+  const [glyphLabel, glyphHint] = STATE_LABEL[state] || STATE_LABEL_DEFAULT;
   return <div className="relative w-full px-5 py-8 sm:px-8 sm:py-10">
     <div className="mb-7 border-b border-[#e7e4df] pb-5">
       <div className="flex items-center gap-2.5 pt-2 text-[14px] font-medium text-[#777168]">
         {working ? <DotMatrix size={16} columns={5} rows={4} /> : <Clock3 size={15} />}
-        {working ? glyphLabel || 'HQ is thinking aloud' : 'HQ is thinking aloud'}
+        {working ? glyphLabel : STATE_LABEL_DEFAULT[0]}
       </div>
     </div>
     <div className="ml-auto grid w-full max-w-[1420px] items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -575,7 +587,7 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, experi
         : <NarrativeEvent key={chunk.item.id || chunk.item.sequence} item={chunk.item} active={working && chunk.item.details?.model_streamed !== true && String(chunk.item.sequence) === String(liveSequence || '')} />)}
         <LiveModelNarration stream={liveNarration} />
         {working ? <div className="mt-7 border border-[#e7e4df] bg-white/70 px-4 py-3">
-          <RuntimeLoader variant={STATE_GLYPH[state] || 'matrix'} label={(STATE_LABEL[state] || ['Thinking'])[0]} hint={(STATE_LABEL[state] || [null, 'Working through the next bounded action.'])[1]} />
+          <RuntimeLoader variant={STATE_GLYPH[state] || 'matrix'} label={glyphLabel} hint={glyphHint} />
         </div> : null}
       </main>
       {tasksOpen ? <button type="button" className="fixed inset-0 z-30 bg-black/30 lg:hidden" aria-label="Close Runtime tasks" onClick={onCloseTasks} /> : null}
@@ -815,7 +827,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
         return;
       }
       setRuntime(response?.runtime || runtime); await load();
-    } catch (requestError) { setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message); } finally { setBusy(''); }
+    } catch (requestError) { setError(extractErrorMessage(requestError)); } finally { setBusy(''); }
   };
   const latest = useMemo(() => events.slice(-120), [events]);
   // Follow-the-stream: watch a sentinel at the end of the transcript. While it is on
@@ -900,7 +912,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       setInstruction(''); setInstructionNotice('HQ accepted the instruction and updated its queue.');
       return true;
     }
-    catch (requestError) { setError(requestError?.response?.data?.message || requestError.message); }
+    catch (requestError) { setError(extractErrorMessage(requestError)); }
     finally { setInstructionBusy(false); }
     return false;
   };
@@ -919,7 +931,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
         else window.open(data.redirect_url, '_blank', 'noopener,noreferrer');
       } catch (requestError) {
         if (authWindow) authWindow.close();
-        setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+        setError(extractErrorMessage(requestError));
       }
       return;
     }
@@ -934,7 +946,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       else window.open(data.authorization_url, '_blank', 'noopener,noreferrer');
     } catch (requestError) {
       if (authWindow) authWindow.close();
-      setError(requestError?.response?.data?.message || requestError.message);
+      setError(extractErrorMessage(requestError));
     }
   };
   const deferCapability = async () => {
@@ -945,7 +957,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       setDismissedCapabilityRequestId(capabilityRequest.id);
       await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError.message);
+      setError(extractErrorMessage(requestError));
     } finally { setBusy(''); }
   };
   const playbookApproval = (work.playbook_approvals || [])[0] || null;
@@ -968,7 +980,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       });
       await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+      setError(extractErrorMessage(requestError));
     } finally { setApprovalBusy(''); }
   };
   const startOutreachCalls = async () => {
@@ -979,7 +991,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       setDismissedCallProposalId(callProposal.id);
       await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+      setError(extractErrorMessage(requestError));
     } finally { setCallProposalBusy(false); }
   };
   const provideRuntimeInput = async (event) => {
@@ -990,7 +1002,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       await apiClient.provideHqPlaybookInput(playbookInput.run_id, playbookInput.input_key, runtimeInputValue.trim());
       setRuntimeInputValue(''); setDismissedInputRunId(null); await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || requestError?.message || 'The requested information could not be saved.');
+      setError(extractErrorMessage(requestError, 'The requested information could not be saved.'));
     } finally { setRuntimeInputBusy(false); }
   };
   const reviewFirstLife = async (decision) => {
@@ -1004,7 +1016,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       }
       await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+      setError(extractErrorMessage(requestError));
     } finally { setApprovalBusy(''); }
   };
   const decideAdminCheckin = async (decision, sessionId = null) => {
@@ -1015,7 +1027,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       await apiClient.decideHqFirstLifeAdminCheckin(decision, sessionId);
       await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError?.message || 'The Runtime check-in could not be saved.');
+      setError(extractErrorMessage(requestError, 'The Runtime check-in could not be saved.'));
     } finally { setAdminCheckinBusy(false); }
   };
   return <section className="relative -mx-4 -my-4 min-h-full bg-[#fbfaf7]" aria-label="Company HQ runtime">
