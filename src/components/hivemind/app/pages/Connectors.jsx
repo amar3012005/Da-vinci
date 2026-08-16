@@ -3784,7 +3784,7 @@ export default function Connectors() {
     } finally {
       setConnectingProvider(null);
     }
-  }, [refetchOAuth]);
+  }, []);
 
   const handleOAuthConnect = useCallback(async (provider, opts = {}) => {
     setConnectingProvider(provider);
@@ -4167,13 +4167,6 @@ export default function Connectors() {
   const featuredConnectors = sortConnectors(
     mergedConnectors.filter(c => FEATURED_IDS.has(c.id))
   );
-  const filteredConnectors = sortConnectors(
-    (activeCategory
-      ? mergedConnectors.filter((c) => c.category === activeCategory)
-      : mergedConnectors
-    ).filter(c => !FEATURED_IDS.has(c.id))
-  );
-
   const renderConnectorCard = (connector) => (
     <ConnectorCard
       key={connector.id}

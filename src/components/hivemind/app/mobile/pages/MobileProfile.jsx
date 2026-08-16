@@ -11,7 +11,7 @@ import {
   AlertTriangle, Brain, Building2, Check, ChevronDown, Cloud,
   Download, ExternalLink, Globe, Link as LinkIcon, LogOut, MapPin,
   Pencil, Plus, RefreshCw, Save, Server, Settings2, Shield, Sparkles,
-  Target, Trash2, User, X,
+  Target, Trash2, User,
 } from 'lucide-react';
 import apiClient from '../../shared/api-client';
 import { useApiQuery } from '../../shared/hooks';
