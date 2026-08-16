@@ -278,7 +278,32 @@ export function QuickRecorderProvider({ children }) {
     rec.start(1000);
   }, [readRecovery, transcribeSegment, writeRecovery]);
 
-  // Stop → stitch → analyze → save the meeting ROW (Past meetings) — NO ingest.
+  const awaitDurableFinalization = useCallback(async () => {
+    const sid = sessionIdRef.current;
+    if (!sid) throw new Error('The durable meeting session is missing.');
+    const cfg = cfgRef.current;
+    await apiClient.core.post(`/api/meetings/sessions/${sid}/finalize`, {
+      notes: cfg.notes || null,
+      participants: cfg.participants.map((name) => ({ type: 'external', name })),
+      language: langRef.current,
+      expected_segment_count: segIdxRef.current,
+      duration_sec: elapsed,
+      scope: cfg.scope,
+      project_id: cfg.scope === 'project' ? cfg.projectId : null,
+    }, { timeout: 30000 });
+    for (let poll = 0; poll < 120; poll += 1) {
+      const { data } = await apiClient.core.get(`/api/meetings/sessions/${sid}`, { timeout: 30000 });
+      if (data?.session?.status === 'ready' && data.session.finalized_meeting_id) {
+        const detail = await apiClient.core.get(`/api/meetings/${data.session.finalized_meeting_id}`, { timeout: 30000 });
+        return detail.data?.meeting || { id: data.session.finalized_meeting_id };
+      }
+      if (data?.session?.status === 'failed') throw new Error(data.session.failure_detail || 'Meeting analysis exhausted its retry budget.');
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    throw new Error('Meeting analysis is still running safely on the server. You can return later.');
+  }, [elapsed]);
+
+  // Stop → stitch → hand off durable analysis/save — NO ingest.
   // The user decides in the results popup via "Save to HIVEMIND memory".
   const finalize = useCallback(async () => {
     setError(null); setStatus('transcribing'); setCollapsed(false);
@@ -297,25 +322,9 @@ export function QuickRecorderProvider({ children }) {
       if (!text) { setStatus('error'); setError('No speech detected.'); return; }
       setTranscript(text);
       setStatus('analyzing');
-      let ins = null;
-      try {
-        const r = await apiClient.core.post('/api/meetings/insights', {
-          transcript: text, notes: cfg.notes || undefined, participants: cfg.participants,
-        }, { timeout: 240000 });
-        ins = r.data?.insights || null;
-      } catch { /* insights optional */ }
-      setInsights(ins);
-      const row = await apiClient.core.post('/api/meetings', {
-        title: ins?.title || `Meeting ${new Date().toLocaleString()}`,
-        transcript: text, insights: ins || {}, language: langRef.current,
-        notes: cfg.notes || null,
-        participants: cfg.participants.map((n) => ({ type: 'external', name: n })),
-        scope: cfg.scope, project_id: cfg.scope === 'project' ? cfg.projectId : null,
-        session_id: sessionIdRef.current || undefined,
-        duration_sec: elapsed,
-        consent: true,
-      }, { timeout: 60000 });
-      const savedMeetingId = row.data?.id || null;
+      const meeting = await awaitDurableFinalization();
+      const savedMeetingId = meeting?.id || null;
+      setInsights(meeting?.insights || null);
       setMeetingId(savedMeetingId);
       emitUsageChanged();
       if (savedMeetingId && cfg.autoSave !== false) {
@@ -335,7 +344,7 @@ export function QuickRecorderProvider({ children }) {
     } catch (e) {
       setStatus('error'); setError(e?.response?.data?.error || e?.message || 'Processing failed.');
     }
-  }, [elapsed, flushPendingSegments, readRecovery, writeRecovery]);
+  }, [awaitDurableFinalization, elapsed, flushPendingSegments, readRecovery, writeRecovery]);
 
   const retryMeetingSave = useCallback(async () => {
     const text = transcript.trim();
@@ -343,17 +352,9 @@ export function QuickRecorderProvider({ children }) {
     const cfg = cfgRef.current;
     setError(null); setStatus('analyzing');
     try {
-      const row = await apiClient.core.post('/api/meetings', {
-        title: insights?.title || `Meeting ${new Date().toLocaleString()}`,
-        transcript: text, insights: insights || {}, language: langRef.current,
-        notes: cfg.notes || null,
-        participants: cfg.participants.map((n) => ({ type: 'external', name: n })),
-        scope: cfg.scope, project_id: cfg.scope === 'project' ? cfg.projectId : null,
-        session_id: sessionIdRef.current || undefined,
-        duration_sec: elapsed,
-        consent: true,
-      }, { timeout: 60000 });
-      const savedMeetingId = row.data?.id || null;
+      const meeting = await awaitDurableFinalization();
+      const savedMeetingId = meeting?.id || null;
+      setInsights(meeting?.insights || insights || null);
       setMeetingId(savedMeetingId);
       emitUsageChanged();
       if (savedMeetingId && cfg.autoSave !== false) {
@@ -371,7 +372,7 @@ export function QuickRecorderProvider({ children }) {
     } catch (e) {
       setStatus('error'); setError(e?.response?.data?.error || e?.message || 'Meeting save failed. Your transcript is still recoverable.');
     }
-  }, [elapsed, insights, transcript, writeRecovery]);
+  }, [awaitDurableFinalization, insights, transcript, writeRecovery]);
 
   const openConfig = useCallback(() => {
     if (!SUPPORTED) { setError('Recording not supported on this device.'); setStatus('error'); return; }
@@ -568,10 +569,18 @@ export function QuickRecorderProvider({ children }) {
         const restored = Object.keys(segTextsRef.current).map(Number).sort((a, b) => a - b)
           .map((idx) => segTextsRef.current[idx]).filter(Boolean).join('\n').trim();
         setTranscript(restored);
-        setStatus('error');
-        setError(restored
-          ? 'Meeting processing was interrupted before it was saved. Retry the save to keep this meeting.'
-          : 'Meeting processing was interrupted before any transcript could be recovered.');
+        setStatus('analyzing');
+        try {
+          const meeting = await awaitDurableFinalization();
+          setMeetingId(meeting?.id || null);
+          setInsights(meeting?.insights || null);
+          setStatus('done');
+          writeRecovery(null);
+          idbClear(s.sessionId);
+        } catch (recoveryError) {
+          setStatus('error');
+          setError(recoveryError?.message || 'Server-owned meeting analysis is still recoverable and will retry automatically.');
+        }
         return;
       }
       // 2) the interrupted segment's raw audio lives in IndexedDB — rescue it
@@ -601,7 +610,7 @@ export function QuickRecorderProvider({ children }) {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [org?.id, readRecovery, user?.id, writeRecovery]);
+  }, [awaitDurableFinalization, org?.id, readRecovery, user?.id, writeRecovery]);
 
   const saveToHivemind = useCallback(async () => {
     if (!meetingId || ingesting || ingested) return;

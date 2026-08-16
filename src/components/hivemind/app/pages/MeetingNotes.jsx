@@ -485,6 +485,7 @@ export default function MeetingNotes() {
   const [segDone, setSegDone] = useState(0);
   const [segTotal, setSegTotal] = useState(0);
   const [recoverableSessions, setRecoverableSessions] = useState([]);
+  const automaticRecoveryAttemptsRef = useRef(new Set());
 
   const loadMeetings = useCallback(async () => {
     try {
@@ -502,6 +503,7 @@ export default function MeetingNotes() {
       if (!segment?.sessionId || !Number.isInteger(segment.idx) || !segment.blob) continue;
       const existing = grouped.get(segment.sessionId) || { sessionId: segment.sessionId, count: 0, cachedAt: 0 };
       existing.count += 1;
+      existing.cachedCount = (existing.cachedCount || 0) + 1;
       existing.cachedAt = Math.max(existing.cachedAt, Number(segment.cachedAt) || 0);
       grouped.set(segment.sessionId, existing);
     }
@@ -733,20 +735,36 @@ export default function MeetingNotes() {
       setTranscript(text); setSpeakerSegments(segs.length ? segs : null); setLanguage(lang);
       if (!text) { setStatus('error'); setError('No speech detected.'); return; }
       setStatus('analyzing');
-      const input = segs.length ? segs.map((s) => `${s.speaker}: ${s.text}`).join('\n') : text;
-      const ins = await apiClient.core.post('/api/meetings/insights', { transcript: input, notes, participants: participants.map((p) => p.name) }, { timeout: 240000 });
-      const insights = ins.data?.insights || null;
-      setInsights(insights); setStatus('done');
-      try {
-        const row = await persistRow({ insights: insights || {}, transcript: text, segments: segs.length ? segs : null, language: lang });
-        if (row?.id) setMeetingId(row.id);
-        loadMeetings();
-      } catch (e) {
-        setStatus('error');
-        setError(`Transcript is protected, but the meeting report was not saved yet: ${e.response?.data?.error || e.message || 'save failed'}. Retry Save to HIVEMIND.`);
+      const sessionId = sessionIdRef.current;
+      if (!sessionId) throw new Error('The durable meeting session is missing.');
+      await apiClient.core.post(`/api/meetings/sessions/${sessionId}/finalize`, {
+        notes: notes || null,
+        participants,
+        language: lang,
+        segments: segs.length ? segs : null,
+        speaker_count: segs.length ? new Set(segs.map((segment) => segment.speaker)).size : null,
+        expected_segment_count: segIdxRef.current,
+        duration_sec: durationSecRef.current,
+        scope,
+        project_id: scope === 'project' ? scopeProjectId : null,
+      }, { timeout: 30000 });
+      let completed = null;
+      for (let poll = 0; poll < 120; poll += 1) {
+        const { data } = await apiClient.core.get(`/api/meetings/sessions/${sessionId}`, { timeout: 30000 });
+        const session = data?.session;
+        if (session?.status === 'ready' && session.finalized_meeting_id) { completed = session; break; }
+        if (session?.status === 'failed') throw new Error(session.failure_detail || 'Meeting analysis exhausted its retry budget.');
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
+      if (!completed) throw new Error('Meeting analysis is still running safely on the server. You can close this page and return later.');
+      const { data } = await apiClient.core.get(`/api/meetings/${completed.finalized_meeting_id}`, { timeout: 30000 });
+      setInsights(data?.meeting?.insights || null);
+      setMeetingId(completed.finalized_meeting_id);
+      setStatus('done');
+      await loadMeetings();
+      await refreshRecoverableSessions();
     } catch (e) { setStatus('error'); setError(e.response?.data?.error || e.message || 'Processing failed.'); }
-  }, [notes, participants, persistRow, loadMeetings]);
+  }, [notes, participants, scope, scopeProjectId, loadMeetings, refreshRecoverableSessions]);
 
   // Recovery works from the server-acknowledged transcript plus only the audio
   // blobs that still need work. It does not depend on the original tab staying
@@ -801,6 +819,22 @@ export default function MeetingNotes() {
       setError(`Saved segments were recovered, but finalization needs retry: ${e.response?.data?.error || e.message || 'recovery failed'}`);
     }
   }, [finalize, refreshRecoverableSessions, transcribeSegment]);
+
+  // Re-enter server-owned transcription/finalization automatically after a
+  // reload. Recording-only sessions with no durable audio are intentionally
+  // left visible for manual review; queued analysis and cached audio are safe
+  // to resume without microphone access or another consent interaction.
+  useEffect(() => {
+    if (recording || ['transcribing', 'analyzing'].includes(status)) return;
+    const candidate = recoverableSessions.find((session) => {
+      if (automaticRecoveryAttemptsRef.current.has(session.sessionId)) return false;
+      if (session.cachedCount > 0) return true;
+      return ['queued', 'analyzing', 'error'].includes(session.server?.status);
+    });
+    if (!candidate) return;
+    automaticRecoveryAttemptsRef.current.add(candidate.sessionId);
+    void resumeCachedSession(candidate.sessionId);
+  }, [recording, recoverableSessions, resumeCachedSession, status]);
 
   const start = useCallback(async () => {
     setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null); setMeetingId(null);
