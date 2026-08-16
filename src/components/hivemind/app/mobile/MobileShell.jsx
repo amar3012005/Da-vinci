@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   AlignLeft, MessageCircle, Brain, Mic2, Plug, Folder, Gauge, Network,
-  X, LogOut, Hexagon, ChevronRight,
+  CreditCard, UserCircle2,
+  X, LogOut, ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import SingulanceSplash from './SingulanceSplash';
+import SingulanceMark from '../shared/SingulanceMark';
 
 const SPLASH_FLAG = 'hm_m_splashed';
 
@@ -29,9 +31,11 @@ const NAV = [
   { to: '/hivemind/m/connectors', label: 'Connectors', icon: Plug },
   { to: '/hivemind/m/projects', label: 'Projects', icon: Folder },
   { to: '/hivemind/m/usage', label: 'Usage', icon: Gauge },
+  { to: '/hivemind/m/billing', label: 'Billing', icon: CreditCard },
+  { to: '/hivemind/m/profile', label: 'Profile', icon: UserCircle2 },
 ];
 
-export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false }) {
+export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false, showBareLogo = true }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, org, logout } = useAuth() || {};
@@ -75,14 +79,24 @@ export default function MobileShell({ children, rightAction = null, title = null
       {/* ── Top chrome: full bar by default, or a floating standalone hamburger
              (bareHeader) — the page owns its own top-right controls then. ── */}
       {bareHeader ? (
-        <button
-          onClick={() => setDrawer(true)}
-          className="absolute left-2.5 z-40 w-11 h-11 rounded-full grid place-items-center bg-[#faf9f4]/85 backdrop-blur-sm active:bg-[#ece9e2]"
-          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 6px)' }}
-          aria-label="Menu"
-        >
-          <AlignLeft size={22} strokeWidth={2} />
-        </button>
+        <>
+          <button
+            onClick={() => setDrawer(true)}
+            className="absolute left-2.5 z-40 w-11 h-11 rounded-full grid place-items-center bg-[#faf9f4]/85 backdrop-blur-sm active:bg-[#ece9e2]"
+            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 6px)' }}
+            aria-label="Menu"
+          >
+            <AlignLeft size={22} strokeWidth={2} />
+          </button>
+          {showBareLogo && (
+            <div
+              className="absolute left-1/2 -translate-x-1/2 z-40 w-9 h-9 rounded-full grid place-items-center bg-[#faf9f4]/85 backdrop-blur-sm"
+              style={{ top: 'calc(env(safe-area-inset-top, 0px) + 6px)' }}
+            >
+              <SingulanceMark size={18} />
+            </div>
+          )}
+        </>
       ) : (
         <header className="h-14 px-2.5 flex items-center justify-between flex-shrink-0">
           <button
@@ -128,7 +142,7 @@ export default function MobileShell({ children, rightAction = null, title = null
           >
             <div className="h-14 px-4 flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
-                <Hexagon size={16} className="text-[#117dff] flex-shrink-0" />
+                <SingulanceMark size={18} className="flex-shrink-0" />
                 <span className="text-[14px] font-semibold font-['Space_Grotesk'] truncate">HIVEMIND</span>
               </div>
               <button onClick={() => setDrawer(false)} className="w-10 h-10 rounded-full grid place-items-center active:bg-[#ece9e2]" aria-label="Close menu">

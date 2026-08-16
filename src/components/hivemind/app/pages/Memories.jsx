@@ -28,6 +28,7 @@ import { useApiQuery, useDebounce } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
 import { filterUserVisibleMemories } from '../shared/memory-filters';
 import UsageTracker from '../components/UsageTracker';
+import { buildMemoryListParams } from './memory-list-params';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -984,10 +985,6 @@ function EmptyState({ hasFilters }) {
 
 export default function Memories() {
   const { t } = useTranslation('dashboard');
-  // Project scope from TeamSwitcher — pages without project filter previously
-  // showed org-wide rows even when a project was selected. activeProjectId is
-  // included in listParams so backend recall returns only project-scoped rows.
-  const { activeProjectId } = useTeamContext() || {};
   // Tab state
   const [activeTab, setActiveTab] = useState('memories');
 
@@ -1102,168 +1099,6 @@ export default function Memories() {
 
   const debouncedQuery = useDebounce(searchQuery, 350);
 
-  // ─── Data fetching ──────────────────────────────────────────────
-
-  const isSearching = debouncedQuery.trim().length > 0;
-
-  const listParams = useMemo(
-    () => ({
-      limit: PAGE_SIZE,
-      offset: 0,
-      ...(activeType ? { memory_type: activeType } : {}),
-      ...(activeTag || activeEntity
-        ? { tags: [activeTag, activeEntity].filter(Boolean).join(',') }
-        : {}),
-      // Tri-state: showSuperseded=true → only superseded; false → include
-      // BOTH latest + superseded (server tri-state). Superseded rows render
-      // with a "Superseded" badge + Updates-target link so the timeline is
-      // visible inline instead of hidden.
-      is_latest: showSuperseded ? 'false' : 'all',
-      ...(hideNoise ? { hide_noise: 'true' } : {}),
-      // Project-level tier with a picked project narrows to it (takes
-      // precedence over the TeamSwitcher project filter).
-      ...((tierScope === 'tier:project' && tierProject)
-        ? { project_id: tierProject }
-        : (activeProjectId ? { project_id: activeProjectId } : {})),
-      ...(tierScope !== 'visible' ? { scope: tierScope } : {}),
-    }),
-    [activeType, activeTag, activeEntity, showSuperseded, hideNoise, activeProjectId, tierScope, tierProject],
-  );
-
-  // List-mode fetch
-  const {
-    data: listData,
-    loading: listLoading,
-    error: listError,
-    refetch: refetchList,
-  } = useApiQuery(
-    () => apiClient.listMemories(listParams),
-    [listParams],
-  );
-
-  // Search-mode fetch
-  const {
-    data: searchData,
-    loading: searchLoading,
-    error: searchError,
-  } = useApiQuery(
-    () => (isSearching ? apiClient.quickSearch(debouncedQuery) : Promise.resolve(null)),
-    [debouncedQuery, isSearching],
-  );
-
-  // Resolve which dataset to show
-  const resolvedList = useMemo(() => {
-    if (isSearching) {
-      const results = searchData?.results || searchData?.memories || searchData || [];
-      return filterUserVisibleMemories(Array.isArray(results) ? results : []);
-    }
-    const base = listData?.memories || listData?.results || listData || [];
-    const arr = Array.isArray(base) ? base : [];
-    // Merge for "load more"
-    let result;
-    if (allMemories.length > 0 && offset > 0) {
-      const ids = new Set(allMemories.map((m) => m.id));
-      const merged = [...allMemories];
-      arr.forEach((m) => {
-        if (!ids.has(m.id)) merged.push(m);
-      });
-      result = merged;
-    } else {
-      result = arr;
-    }
-    // Apply client-side cognitive-role filter when active.
-    if (activeCognitiveRole) {
-      result = result.filter((m) => m.cognitive_layer_role === activeCognitiveRole);
-    }
-    return filterUserVisibleMemories(result);
-  }, [isSearching, searchData, listData, allMemories, offset, activeCognitiveRole]);
-
-  // Total count from API pagination (server-side truth), not client array length
-  // eslint-disable-next-line no-unused-vars
-  const totalCount = useMemo(() => {
-    if (isSearching) return null;
-    return listData?.pagination?.total ?? listData?.total ?? null;
-  }, [isSearching, listData]);
-
-  // Sync hasMore from initial API response
-  useEffect(() => {
-    if (listData && !isSearching && offset === 0) {
-      if (listData.pagination?.has_more === false) setHasMore(false);
-    }
-  }, [listData, isSearching, offset]);
-  // eslint-disable-next-line no-unused-vars
-  // eslint-disable-next-line no-unused-vars
-
-  // eslint-disable-next-line no-unused-vars
-  const loading = isSearching ? searchLoading : listLoading;
-  // eslint-disable-next-line no-unused-vars
-  const error = isSearching ? searchError : listError;
-
-  // Collect all unique tags for the filter bar
-  // eslint-disable-next-line no-unused-vars
-  const availableTags = useMemo(() => {
-    const tags = new Set();
-    resolvedList.forEach((m) => (m.tags || []).forEach((t) => tags.add(t)));
-    return Array.from(tags).sort();
-  // eslint-disable-next-line no-unused-vars
-  }, [resolvedList]);
-  // eslint-disable-next-line no-unused-vars
-  const visibleMemoryCount = resolvedList.length;
-
-  // ─── Handlers ───────────────────────────────────────────────────
-
-  // eslint-disable-next-line no-unused-vars
-  const handleLoadMore = async () => {
-    const nextOffset = offset + PAGE_SIZE;
-    try {
-      const data = await apiClient.listMemories({ ...listParams, offset: nextOffset, limit: PAGE_SIZE });
-      const arr = data?.memories || data?.results || data || [];
-      const items = Array.isArray(arr) ? arr : [];
-      if (items.length < PAGE_SIZE) setHasMore(false);
-      setAllMemories((prev) => {
-        const ids = new Set(prev.map((m) => m.id));
-        const merged = [...prev];
-        items.forEach((m) => {
-          if (!ids.has(m.id)) merged.push(m);
-        });
-        return merged;
-      });
-      setOffset(nextOffset);
-  // eslint-disable-next-line no-unused-vars
-    } catch {
-      // silently fail
-    }
-  };
-
-  // eslint-disable-next-line no-unused-vars
-  const handleSelectMemory = useCallback(
-    async (memory) => {
-      if (selectedMemory?.id === memory.id) {
-        setSelectedMemory(null);
-        return;
-      }
-      // Fetch full detail
-      try {
-        const full = await apiClient.getMemory(memory.id);
-        setSelectedMemory(full?.memory || full);
-      } catch {
-  // eslint-disable-next-line no-unused-vars
-        setSelectedMemory(memory);
-      }
-    },
-    [selectedMemory],
-  );
-
-  // eslint-disable-next-line no-unused-vars
-  const handleDeleteMemory = useCallback(
-    (id) => {
-      setSelectedMemory(null);
-      setAllMemories((prev) => prev.filter((m) => m.id !== id));
-      refetchList();
-    },
-    [refetchList],
-  );
-
   const clearFilters = () => {
     setActiveType(null);
     setActiveTag(null);
@@ -1273,7 +1108,7 @@ export default function Memories() {
     setHasMore(true);
   };
 
-  const hasFilters = isSearching || activeType || activeTag;
+  const hasFilters = searchQuery.trim().length > 0 || activeType || activeTag;
 
   // ─── Render ─────────────────────────────────────────────────────
 
@@ -1639,26 +1474,9 @@ function MemoriesTab({
   }, [showDreams]);
 
   const listParams = useMemo(
-    () => ({
-      limit: PAGE_SIZE,
-      offset: 0,
-      ...(activeType ? { memory_type: activeType } : {}),
-      ...(activeTag || activeEntity
-        ? { tags: [activeTag, activeEntity].filter(Boolean).join(',') }
-        : {}),
-      // Tri-state: showSuperseded=true → only superseded; false → include
-      // BOTH latest + superseded (server tri-state). Superseded rows render
-      // with a "Superseded" badge + Updates-target link so the timeline is
-      // visible inline instead of hidden.
-      is_latest: showSuperseded ? 'false' : 'all',
-      ...(hideNoise ? { hide_noise: 'true' } : {}),
-      // Project scope from TeamSwitcher — when active, backend filters to
-      // memories whose projectId matches OR whose legacy project string matches.
-      // Project-level tier with a picked project takes precedence.
-      ...((tierScope === 'tier:project' && tierProject)
-        ? { project_id: tierProject }
-        : (activeProjectId ? { project_id: activeProjectId } : {})),
-      ...(tierScope && tierScope !== 'visible' ? { scope: tierScope } : {}),
+    () => buildMemoryListParams({
+      activeType, activeTag, activeEntity, showSuperseded, hideNoise,
+      activeProjectId, tierScope, tierProject, pageSize: PAGE_SIZE,
     }),
     [activeType, activeTag, activeEntity, showSuperseded, hideNoise, activeProjectId, tierScope, tierProject],
   );

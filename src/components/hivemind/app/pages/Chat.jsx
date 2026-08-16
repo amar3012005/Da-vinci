@@ -7,7 +7,6 @@ import {
   ChevronDown,
   Loader2,
   Trash2,
-  Paperclip,
   X,
   CheckCircle2,
   Mic,
@@ -18,13 +17,14 @@ import {
   Building2,
   Lock,
   Boxes,
-  Hexagon,
   AudioLines,
   FolderKanban,
   Users,
   Upload,
+  Clock,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import SingulanceMark from '../shared/SingulanceMark';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
 import useDictation from '../shared/useDictation';
 import { useTeamContext } from '../shared/team-context';
@@ -280,7 +280,7 @@ function EmptyState({ setInput, textareaRef, userName }) {
 
   return (
     <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col items-center justify-center min-h-[46vh] gap-4 px-2 text-center">
-      <Hexagon size={34} className="text-[#117dff]" strokeWidth={1.6} />
+      <SingulanceMark size={40} />
       <div className="text-[32px] leading-tight text-[#1a1a17]" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
         {heroLine}
       </div>
@@ -318,7 +318,7 @@ function EmptyState({ setInput, textareaRef, userName }) {
 // ─── Chat Panel (slide-out) ───────────────────────────────────────────────────
 
 export function ChatPanel({ isOpen, onClose }) {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const { activeProjectId, activeTeamId, activeProject, projects: ctxProjects } = useTeamContext() || {};
   const { org, user } = useAuth() || {};
   const userRole = user?.role || user?.org_role || user?.membership_role || 'member';
@@ -421,6 +421,7 @@ export function ChatPanel({ isOpen, onClose }) {
     if (!trimmed || loading) return;
 
     const userMsg = { id: Date.now(), role: 'user', content: trimmed };
+    const streamingId = `answer-${userMsg.id}`;
     const fullHistory = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
     setMessages((prev) => [...prev, userMsg]);
     if (fromInput) setInput('');
@@ -455,6 +456,22 @@ export function ChatPanel({ isOpen, onClose }) {
       }
       const data = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? (await readChatStream(chatRes, (event) => {
+            if (event.type === 'answer_started') return;
+            if (event.type === 'answer_delta' && event.validated === true) {
+              setMessages((prev) => {
+                const found = prev.some((item) => item.id === streamingId);
+                return found
+                  ? prev.map((item) => item.id === streamingId
+                    ? { ...item, content: `${item.content || ''}${event.delta || ''}` }
+                    : item)
+                  : [...prev, { id: streamingId, role: 'assistant', content: event.delta || '', streaming: true }];
+              });
+              return;
+            }
+            if (event.type === 'answer_reset') {
+              setMessages((prev) => prev.filter((item) => item.id !== streamingId));
+              return;
+            }
             setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-5));
           })) || {}
         : await chatRes.json();
@@ -473,7 +490,9 @@ export function ChatPanel({ isOpen, onClose }) {
         project_choice: data.project_choice || null,
         scopes_found: Array.isArray(data.scopes_found) ? data.scopes_found : [],
       };
-      setMessages((prev) => [...prev, assistantMsg]);
+      setMessages((prev) => prev.some((item) => item.id === streamingId)
+        ? prev.map((item) => item.id === streamingId ? assistantMsg : item)
+        : [...prev, assistantMsg]);
     } catch (err) {
       const errMsg = err?.response?.data?.detail || err?.message || 'Something went wrong.';
       setMessages((prev) => [
@@ -777,7 +796,7 @@ export function ChatPanel({ isOpen, onClose }) {
                         ? <UserBubble key={m.id} content={m.content} />
                         : <AiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />
                     )}
-                    {loading && <Thinking events={agentEvents} />}
+                    {loading && !messages.some((item) => item.streaming) && <Thinking events={agentEvents} />}
                   </>
                 )}
                 <div ref={bottomRef} />
@@ -949,7 +968,7 @@ export function ChatPanel({ isOpen, onClose }) {
                     className="w-9 h-9 rounded-full bg-[#1a1a17] text-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform disabled:opacity-100"
                     aria-label={input.trim() ? 'Send' : 'Voice'}
                   >
-                    {loading ? <Loader2 size={15} className="animate-spin" /> : input.trim() ? <Send size={15} /> : <AudioLines size={16} />}
+                    {loading ? <Clock size={15} /> : input.trim() ? <Send size={15} /> : <AudioLines size={16} />}
                   </button>
                 </div>
               </div>

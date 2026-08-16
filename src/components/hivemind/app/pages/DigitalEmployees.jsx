@@ -1278,10 +1278,6 @@ function deriveProfile(employee) {
   };
 }
 
-function initialsOf(name) {
-  return String(name || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
-}
-
 function qualColor(pct) {
   if (pct > 0.85) return '#16a34a';
   if (pct > 0.65) return '#f59e0b';

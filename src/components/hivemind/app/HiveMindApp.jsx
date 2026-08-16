@@ -7,6 +7,7 @@ import InvitationLanding from './auth/InvitationLanding';
 import CliVerified from './auth/CliVerified';
 import AppShell from './layout/AppShell';
 import { QuickRecorderProvider } from './shared/QuickRecorderProvider';
+import { TeamProvider } from './shared/team-context';
 
 // Pages (lazy loaded for code splitting)
 const Overview = React.lazy(() => import('./pages/Overview'));
@@ -17,6 +18,8 @@ const MobileMeetingNotes = React.lazy(() => import('./mobile/pages/MobileMeeting
 const MobileConnectors = React.lazy(() => import('./mobile/pages/MobileConnectors'));
 const MobileProjects = React.lazy(() => import('./mobile/pages/MobileProjects'));
 const MobileUsage = React.lazy(() => import('./mobile/pages/MobileUsage'));
+const MobileBilling = React.lazy(() => import('./mobile/pages/MobileBilling'));
+const MobileProfile = React.lazy(() => import('./mobile/pages/MobileProfile'));
 const MobileMemoryGraph = React.lazy(() => import('./mobile/pages/MobileMemoryGraph'));
 const Memories = React.lazy(() => import('./pages/Memories'));
 const MeetingNotes = React.lazy(() => import('./pages/MeetingNotes'));
@@ -145,7 +148,7 @@ export default function HiveMindApp() {
           path="m/meeting-notes"
           element={
             <ProtectedRoute>
-              <PageSuspense><MobileMeetingNotes /></PageSuspense>
+              <QuickRecorderProvider><PageSuspense><MobileMeetingNotes /></PageSuspense></QuickRecorderProvider>
             </ProtectedRoute>
           }
         />
@@ -161,7 +164,7 @@ export default function HiveMindApp() {
           path="m/projects"
           element={
             <ProtectedRoute>
-              <PageSuspense><MobileProjects /></PageSuspense>
+              <TeamProvider><PageSuspense><MobileProjects /></PageSuspense></TeamProvider>
             </ProtectedRoute>
           }
         />
@@ -178,6 +181,22 @@ export default function HiveMindApp() {
           element={
             <ProtectedRoute>
               <PageSuspense><MobileMemoryGraph /></PageSuspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="m/billing"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><MobileBilling /></PageSuspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="m/profile"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><MobileProfile /></PageSuspense>
             </ProtectedRoute>
           }
         />

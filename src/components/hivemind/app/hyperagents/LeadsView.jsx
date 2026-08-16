@@ -137,7 +137,7 @@ export default function LeadsView() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const leads = data?.leads || [];
+  const leads = useMemo(() => data?.leads || [], [data?.leads]);
   const s = data?.summary || { total: 0, emails_sent: 0, calls: 0, replies: 0, meetings: 0 };
   // Most important first: score desc, then most recently touched.
   const sorted = useMemo(() => [...leads].sort((a, b) => {
