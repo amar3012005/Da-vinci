@@ -825,7 +825,7 @@ export default function MeetingNotes() {
   // left visible for manual review; queued analysis and cached audio are safe
   // to resume without microphone access or another consent interaction.
   useEffect(() => {
-    if (recording || ['transcribing', 'analyzing'].includes(status)) return;
+    if (status === 'recording' || ['transcribing', 'analyzing'].includes(status)) return;
     const candidate = recoverableSessions.find((session) => {
       if (automaticRecoveryAttemptsRef.current.has(session.sessionId)) return false;
       if (session.cachedCount > 0) return true;
@@ -834,7 +834,7 @@ export default function MeetingNotes() {
     if (!candidate) return;
     automaticRecoveryAttemptsRef.current.add(candidate.sessionId);
     void resumeCachedSession(candidate.sessionId);
-  }, [recording, recoverableSessions, resumeCachedSession, status]);
+  }, [recoverableSessions, resumeCachedSession, status]);
 
   const start = useCallback(async () => {
     setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null); setMeetingId(null);
