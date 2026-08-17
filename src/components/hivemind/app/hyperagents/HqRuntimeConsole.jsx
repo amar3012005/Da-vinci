@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { AuthorityReviewContent, CallPreview, CampaignLaunchPreview, GmailMessagePreview, PlatformActionPreview } from './RuntimeAuthorityPreview';
+import { CampaignAssetImage } from './campaigns/CampaignCreative';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 
@@ -530,6 +531,35 @@ export function ExternalActionMarker({ item }) {
   </section>;
 }
 
+// The Runtime terminal used to show generated campaign visuals inline as
+// they finished, 3-at-a-time (user-reported regression). The backend event
+// (core/src/campaigns/runtime-bridge.js) already carries campaign_id +
+// asset_id in details — it never carried a fetchable image URL, and this
+// renderer never special-cased the event type at all, so it silently fell
+// through to plain text. Reuses the existing CampaignAssetImage component
+// and apiClient.getCampaign (same fetch path CampaignsView/CampaignPanel
+// already use) rather than hand-rolling a second image-fetch path.
+function CampaignVisualMarker({ item }) {
+  const [asset, setAsset] = useState(null);
+  const campaignId = item.details?.campaign_id;
+  const assetId = item.details?.asset_id;
+  useEffect(() => {
+    let active = true;
+    if (!campaignId || !assetId) return undefined;
+    apiClient.getCampaign(campaignId).then((data) => {
+      if (!active) return;
+      const found = (data?.campaign?.actions || []).flatMap((action) => action.assets || []).find((a) => a.id === assetId);
+      if (found) setAsset(found);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [campaignId, assetId]);
+  return <div className="my-5 max-w-4xl">
+    <div className="mb-1.5 flex items-center gap-2 text-[12px] text-[#8a8577]"><Activity size={13} /><span>{item.title}</span><time className="ml-auto font-mono text-[8px] text-[#aaa49c]">{fmtTime(item.createdAt)}</time></div>
+    <p className="text-[15px] leading-7 text-[#45423d]">{item.summary}</p>
+    {asset ? <CampaignAssetImage asset={asset} alt="Campaign visual" className="mt-3 aspect-video w-full max-w-sm rounded-md border border-[#e7e4df] object-cover" /> : null}
+  </div>;
+}
+
 export function NarrativeEvent({ item, active }) {
   const wake = item.eventType === 'wake';
   const sleep = item.eventType === 'sleep';
@@ -537,6 +567,7 @@ export function NarrativeEvent({ item, active }) {
   const verdict = ['decision', 'work_order_created', 'blocked'].includes(item.eventType);
   const Icon = wake ? Power : sleep ? Moon : blocked ? AlertTriangle : item.eventType === 'work_order_created' ? TerminalSquare : Activity;
   if (item.eventType === 'external_action_committed') return <ExternalActionMarker item={item} />;
+  if (item.eventType === 'campaign_artifact_progress' && item.details?.type === 'campaign.asset_ready') return <CampaignVisualMarker item={item} />;
   if (item.eventType === 'baseline_observation') {
     const status = String(item.details?.status || item.summary || 'limited').replaceAll('_', ' ');
     const facts = item.details?.facts && typeof item.details.facts === 'object' ? item.details.facts : {};
