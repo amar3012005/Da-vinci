@@ -144,3 +144,30 @@ test('renders persisted email break tags as plain message spacing', () => {
   expect(markup).toContain('First line.\n\nSecond line.');
   expect(markup).not.toContain('&lt;br');
 });
+
+// Regression (2026-08-17, user-reported): the Runtime terminal used to show
+// generated campaign visuals inline as they finished — this had silently
+// stopped, because NarrativeEvent never special-cased the backend's
+// campaign_artifact_progress event at all and fell through to plain text.
+test('NarrativeEvent renders a campaign visual marker for a campaign.asset_ready event, not just plain text', () => {
+  const markup = renderToStaticMarkup(<NarrativeEvent item={{
+    id: 'evt-1', sequence: 1, eventType: 'campaign_artifact_progress',
+    title: 'A campaign visual is ready',
+    summary: 'Runtime refreshed the persisted post frame with its generated visual.',
+    details: { campaign_id: 'campaign-1', asset_id: 'asset-1', type: 'campaign.asset_ready' },
+    createdAt: '2026-08-17T11:41:03.890Z',
+  }} active={false} />);
+  expect(markup).toContain('A campaign visual is ready');
+  expect(markup).toContain('Runtime refreshed the persisted post frame with its generated visual.');
+});
+
+test('NarrativeEvent does not special-case a campaign event that has no asset yet (visuals still rendering)', () => {
+  const markup = renderToStaticMarkup(<NarrativeEvent item={{
+    id: 'evt-2', sequence: 2, eventType: 'campaign_artifact_progress',
+    title: 'Campaign posts are rendering',
+    summary: 'The campaign contract is ready and its post visuals are being generated.',
+    details: { campaign_id: 'campaign-1', type: 'campaign.rendering' },
+    createdAt: '2026-08-17T11:40:30.410Z',
+  }} active={false} />);
+  expect(markup).toContain('Campaign posts are rendering');
+});
