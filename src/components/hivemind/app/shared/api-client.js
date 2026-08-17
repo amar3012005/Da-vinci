@@ -1288,6 +1288,26 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getPlatformModels() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/models');
+    return data;
+  }
+
+  async updatePlatformModel(payload) {
+    const { data } = await this.controlPlane.put('/admin/api/platform/models', payload);
+    return data;
+  }
+
+  async updatePlatformModelPrice(payload) {
+    const { data } = await this.controlPlane.put('/admin/api/platform/model-prices', payload);
+    return data;
+  }
+
+  async getPlatformAiCosts({ q = '', limit = 200 } = {}) {
+    const { data } = await this.controlPlane.get('/admin/api/platform/ai-costs', { params: { q, limit } });
+    return data;
+  }
+
   async listPlatformPlans({ planId } = {}) {
     const { data } = await this.controlPlane.get('/admin/api/platform/plans', {
       params: planId ? { plan_id: planId } : undefined,
