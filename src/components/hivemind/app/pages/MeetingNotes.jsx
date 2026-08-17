@@ -596,8 +596,20 @@ export default function MeetingNotes() {
     // reset segmented-capture state
     segIdxRef.current = 0; segChunksRef.current = []; segPromisesRef.current = [];
     segTextsRef.current = {}; segSegsRef.current = {}; languageRef.current = null;
-    // P1: mint a session id so each segment is durably persisted under it.
-    sessionIdRef.current = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : null;
+    // Admit the recording before opening the microphone. This records consent
+    // and creates the durable parent in managed or Memory Box storage, so an
+    // interrupted tab can be finalized from its acknowledged transcripts.
+    try {
+      const admission = await apiClient.core.post('/api/meetings/sessions', {
+        consent: true,
+        expected_segment_ms: SEGMENT_MS,
+      });
+      sessionIdRef.current = admission.data?.session_id || null;
+      if (!sessionIdRef.current) throw new Error('meeting session was not created');
+    } catch (e) {
+      setError(e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Could not start a durable meeting session.');
+      return;
+    }
     finalizingRef.current = false; setSegDone(0); setSegTotal(0);
 
     // Best-effort invite for external participants — do not await, never block recording
