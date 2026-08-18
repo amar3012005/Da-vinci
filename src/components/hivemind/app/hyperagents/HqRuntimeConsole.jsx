@@ -609,6 +609,37 @@ function WorkArtifactReadyMarker({ item }) {
   </div>;
 }
 
+// A Room checkpoint accepted a genuinely presentable output (e.g. a finished
+// research_decision — see ROOM_ARTIFACT_POPUP_KEYS in scheduler.js). Unlike
+// WorkArtifactReadyMarker (which gets real urls inline from the event),
+// this event only carries {id, key} — fetches full content via the same
+// GET /v1/hq/artifacts/:id the Artifacts panel uses, on mount.
+function RoomArtifactReadyMarker({ item }) {
+  const [popupOpen, setPopupOpen] = useState(true);
+  const [preview, setPreview] = useState({ loading: true, content: null });
+  const artifacts = Array.isArray(item.details?.artifacts) ? item.details.artifacts : [];
+  const first = artifacts[0];
+  useEffect(() => {
+    let active = true;
+    if (!first?.id) { setPreview({ loading: false, content: 'No content available.' }); return undefined; }
+    apiClient.getRuntimeArtifact(first.id).then((data) => {
+      if (active) setPreview({ loading: false, content: data?.content || 'No content available.' });
+    }).catch(() => { if (active) setPreview({ loading: false, content: 'Could not load this artifact.' }); });
+    return () => { active = false; };
+  }, [first?.id]);
+  return <div className="my-5 max-w-4xl">
+    <div className="mb-1.5 flex items-center gap-2 text-[12px] text-[#8a8577]"><FileText size={13} /><span>{item.title}</span><time className="ml-auto font-mono text-[8px] text-[#aaa49c]">{fmtTime(item.createdAt)}</time></div>
+    <p className="text-[15px] leading-7 text-[#45423d]">{item.summary}</p>
+    <button type="button" onClick={() => setPopupOpen(true)} className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-[#171717] underline decoration-[#d8d3cc] underline-offset-2 hover:decoration-[#171717]"><FileText size={12} />View research output</button>
+    <RuntimeArtifactPopup
+      open={popupOpen} onClose={() => setPopupOpen(false)} kind="text"
+      title="Research output ready" subline={item.summary}
+      loading={preview.loading} textContent={preview.content}
+      downloadFilename={`${first?.key || 'research-output'}.json`}
+    />
+  </div>;
+}
+
 export function NarrativeEvent({ item, active }) {
   const wake = item.eventType === 'wake';
   const sleep = item.eventType === 'sleep';
@@ -618,6 +649,7 @@ export function NarrativeEvent({ item, active }) {
   if (item.eventType === 'external_action_committed') return <ExternalActionMarker item={item} />;
   if (item.eventType === 'campaign_artifact_progress' && item.details?.type === 'campaign.asset_ready') return <CampaignVisualMarker item={item} />;
   if (item.eventType === 'work_order_completed' && item.details?.type === 'work.artifact_ready') return <WorkArtifactReadyMarker item={item} />;
+  if (item.eventType === 'tool_result' && item.details?.type === 'room.artifact_ready') return <RoomArtifactReadyMarker item={item} />;
   if (item.eventType === 'baseline_observation') {
     const status = String(item.details?.status || item.summary || 'limited').replaceAll('_', ' ');
     const facts = item.details?.facts && typeof item.details.facts === 'object' ? item.details.facts : {};
@@ -648,7 +680,12 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, experi
   const working = isWorking(state);
   const chunks = [];
   for (const item of events) {
-    if (EXECUTION_TYPES.has(item.eventType)) {
+    // A Room checkpoint's "accepted" event is normally a compact trace bubble
+    // (EXECUTION_TYPES) — but when it produced a genuinely presentable
+    // artifact (details.type === 'room.artifact_ready', e.g. a finished
+    // research_decision), it needs its own full marker + popup, not to be
+    // buried inside the collapsed execution trace.
+    if (EXECUTION_TYPES.has(item.eventType) && item.details?.type !== 'room.artifact_ready') {
       const last = chunks.at(-1);
       if (last?.type === 'execution') last.items.push(item);
       else chunks.push({ type: 'execution', items: [item] });
