@@ -3,7 +3,7 @@ import {
   Activity, AlertTriangle, ArrowRight, ArrowUpRight, Check, Clock3, Cable, Send,
   Moon, Pause, Play, Power, RefreshCw, ShieldCheck, Sparkles, PhoneCall,
   TerminalSquare, Wrench, X, SlidersHorizontal, ListTodo, RotateCcw,
-  ChevronDown, ChevronRight, FileText,
+  ChevronDown, ChevronRight, FileText, Mic, MessageSquare, PhoneOff, Loader2,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { AuthorityReviewContent, CallPreview, CampaignLaunchPreview, GmailMessagePreview, PlatformActionPreview } from './RuntimeAuthorityPreview';
@@ -30,13 +30,95 @@ const RUNTIME_MOTION = `
 @keyframes hm-rt-spin { to { transform:rotate(360deg); } }
 @keyframes hm-rt-sweep { 0% { transform:translateX(-130%); } 100% { transform:translateX(360%); } }
 @keyframes hm-rt-breathe { 0%,100% { opacity:.35; transform:scale(.82); } 50% { opacity:1; transform:scale(1); } }
+@keyframes hm-rt-ring-pulse { 0% { transform:scale(1); opacity:.55; } 100% { transform:scale(1.9); opacity:0; } }
+@keyframes hm-rt-vibrate { 0%,100% { transform:translateX(0) rotate(0); } 20% { transform:translateX(-1.5px) rotate(-0.3deg); } 40% { transform:translateX(1.5px) rotate(0.3deg); } 60% { transform:translateX(-1px) rotate(-0.2deg); } 80% { transform:translateX(1px) rotate(0.2deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .hm-rt-cell, .hm-rt-edge, .hm-rt-ring, .hm-rt-sweep, .hm-rt-dot { animation: none !important; opacity:.7 !important; }
+  .hm-rt-cell, .hm-rt-edge, .hm-rt-ring, .hm-rt-sweep, .hm-rt-dot, .hm-rt-ring-pulse, .hm-rt-vibrate { animation: none !important; opacity:.7 !important; }
 }
 `;
 
 function RuntimeMotion() {
   return <style>{RUNTIME_MOTION}</style>;
+}
+
+// Same outbound-calling infra OutboundPanel (TaraConfig.jsx) already uses for
+// prospects — /v1/tara/outbound has no prospect/campaign-specific gating
+// (confirmed by recon: no DNC/consent/allowlist checks beyond the E.164
+// format itself), so reusing it here for "call the admin back for their
+// check-in" needs no new backend route. Never surface the underlying
+// provider name in UI copy — a prior incident (.claude/decision-docs/
+// mistakes.md: "We Asked Users To Connect Internal Or White-Label
+// Providers") is explicit that internal/white-label vendor identity (the
+// call is actually placed via Zernio, a Telnyx reseller) must stay behind
+// the capability boundary — the user only ever sees "call my mobile".
+const TARA_DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${(process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '')}/voice2`).replace(/\/$/, '');
+const CHECKIN_GOAL = 'This is Runtime\'s scheduled admin check-in call. Ask about current status and priorities, capture any corrections to the retained plan, note active blockers, and keep it to about three minutes.';
+
+function MobileCheckinCall({ orgName, onStarted, onEnded }) {
+  const [phone, setPhone] = useState('');
+  const [callState, setCallState] = useState(null); // null | 'dialing' | 'connected' | 'ended' | 'error'
+  const [callLegId, setCallLegId] = useState(null);
+  const [error, setError] = useState(null);
+  const pollRef = useRef(null);
+  const phoneValid = /^\+[1-9]\d{7,14}$/.test(phone.trim());
+
+  const stopPoll = useCallback(() => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } }, []);
+  useEffect(() => stopPoll, [stopPoll]);
+  useEffect(() => {
+    if (!callLegId || !callState || callState === 'ended' || callState === 'error') return undefined;
+    stopPoll();
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(`${TARA_DG_HTTP}/calls/outbound/${callLegId}/status`);
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d.status === 'connected' && callState !== 'connected') onStarted?.(callLegId);
+        setCallState(d.status);
+        if (d.status === 'ended' || d.status === 'error') { stopPoll(); onEnded?.(callLegId); }
+      } catch { /* network hiccup — next poll tries again */ }
+    }, 2000);
+    return stopPoll;
+  }, [callLegId, callState, stopPoll, onStarted, onEnded]);
+
+  const call = async () => {
+    if (!phoneValid) return;
+    setError(null);
+    setCallState('dialing');
+    try {
+      const result = await apiClient.startTaraOutbound({ to: phone.trim(), company: orgName || undefined, goal: CHECKIN_GOAL });
+      setCallLegId(result.call_leg_id);
+    } catch (e) {
+      setCallState('error');
+      setError(e?.response?.data?.error || e?.message || 'Could not place the call.');
+    }
+  };
+  const hangup = async () => {
+    if (callLegId) { try { await apiClient.hangupTaraOutbound(callLegId); } catch { /* already ended */ } }
+    setCallState('ended');
+    stopPoll();
+    onEnded?.(callLegId);
+  };
+
+  if (!callState) return <div className="flex w-full max-w-sm flex-col items-center gap-3">
+    <input
+      type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+49 157 7292 5738"
+      className="h-11 w-full rounded-xl border border-[#d8d3cc] bg-white px-3.5 text-center text-[14px] text-[#171717] focus:border-[#171717] focus:outline-none"
+    />
+    <button type="button" onClick={call} disabled={!phoneValid} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0a0a0a] text-[13px] font-semibold text-white transition-colors hover:bg-[#262626] disabled:cursor-not-allowed disabled:opacity-40">
+      <PhoneCall size={14} />Call this number
+    </button>
+    <p className="text-center text-[11px] leading-4 text-[#777168]">E.164 format, e.g. +4915772925738. Runtime calls you back within a few seconds.</p>
+  </div>;
+
+  return <div className="flex w-full max-w-sm flex-col items-center gap-3">
+    <p className="text-[13px] font-medium text-[#171717]">
+      {callState === 'dialing' ? 'Calling…' : callState === 'connected' ? 'On the call' : callState === 'error' ? 'Call failed' : 'Call ended'}
+    </p>
+    {error ? <p className="text-center text-[11px] text-[#b3261e]">{error}</p> : null}
+    {callState === 'dialing' || callState === 'connected'
+      ? <button type="button" onClick={hangup} className="flex h-10 items-center gap-2 rounded-xl bg-[#ef4444] px-5 text-[13px] font-semibold text-white hover:bg-[#dc2626]"><PhoneOff size={14} />End call</button>
+      : <button type="button" onClick={() => { setCallState(null); setCallLegId(null); setError(null); }} className="h-9 rounded-lg border border-[#d8d3cc] px-4 text-[12px] font-semibold text-[#525252] hover:text-[#171717]">Try again</button>}
+  </div>;
 }
 
 /* Dot-matrix: denser and brighter toward the base, so the field reads as
@@ -772,6 +854,12 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   const [runtimeInputBusy, setRuntimeInputBusy] = useState(false);
   const [adminCheckinOpen, setAdminCheckinOpen] = useState(false);
   const [adminCheckinBusy, setAdminCheckinBusy] = useState(false);
+  // 'choose' (ringing, pick how to answer) -> 'web' (existing in-browser
+  // voice widget) -> 'mobile' (real outbound call to a number you enter,
+  // via the existing TARA/Zernio outbound-calling infra — the same path
+  // OutboundPanel uses for prospects, just with a check-in script instead).
+  const [checkinMode, setCheckinMode] = useState('choose');
+  useEffect(() => { if (adminCheckinOpen) setCheckinMode('choose'); }, [adminCheckinOpen]);
   // The TARA admin check-in pops as a modal the instant it is offered — no "start call"
   // button to hunt for on the task bar. The user just clicks Start inside the call popup
   // (or Skip). Track that we auto-opened this exact offer so closing it doesn't re-pop.
@@ -1192,7 +1280,48 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     {/* Stick-to-bottom sentinel: the IntersectionObserver above follows it while the
         reader is at the end and glides the page down on new content. */}
     <div ref={transcriptBottomRef} aria-hidden="true" className="h-px w-full" />
-    {adminCheckinOpen ? <div className="fixed inset-0 z-[75] grid place-items-center bg-[#121412]/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Talk to Runtime"><div className="flex flex-col w-full max-w-xl rounded-[20px] border border-[#e3e0db] bg-white overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(10,10,11,0.04), 0 24px 64px rgba(10,10,11,0.18)' }}>{/* Mac-window chrome header — matches the Overview welcome-tour shell */}<div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-5 py-4 border-b border-[#e3e0db] bg-white shrink-0"><div className="flex items-center gap-[7px]" aria-hidden="true"><span className="w-[11px] h-[11px] rounded-full bg-[#FF5F57]" /><span className="w-[11px] h-[11px] rounded-full bg-[#FEBC2E]" /><span className="w-[11px] h-[11px] rounded-full bg-[#28C840]" /></div><span className="text-center font-mono text-[12px] tracking-[0.24em] uppercase text-[#a3a3a3]">RUNTIME <span className="text-[#d4d0ca]">·</span> ADMIN CHECK-IN</span><button type="button" onClick={() => { setAdminCheckinOpen(false); decideAdminCheckin('skipped'); }} className="h-7 rounded-md border border-[#e3e0db] bg-white px-3 text-[11px] font-semibold text-[#525252] hover:text-[#0a0a0a] hover:border-[#d4d0ca] transition-colors" title="Skip the check-in — Runtime plans from the evidence it already has">Skip</button></div><div className="bg-[#faf9f4] px-6 py-7"><AaasVoiceWidget userId={runtime?.ownerUserId} orgId={runtime?.orgId} provider="grok" initialMode="internal" interactionProfile="runtime_operator" runtimeAdmin runtimeContextRef={firstLifeExperience?.admin_checkin?.run_id || null} maxDurationSeconds={180} initialGoal="Review the baseline evidence with the administrator, capture corrections, current priorities, and active blockers, then return the verified context to Runtime planning." onSessionCreated={({ sessionId }) => decideAdminCheckin('started', sessionId)} onSessionEnded={({ sessionId }) => { setAdminCheckinOpen(false); decideAdminCheckin('completed', sessionId); }} /><div className="mt-5 flex items-center justify-between gap-3 border-t border-[#e3e0db] pt-4"><span className="text-[11px] leading-4 text-[#777168]">Talk for about three minutes, or skip — Runtime plans either way.</span><button type="button" onClick={() => { setAdminCheckinOpen(false); decideAdminCheckin('skipped'); }} className="h-9 shrink-0 rounded-md border border-[#d8d3cc] bg-white px-4 text-[12px] font-semibold text-[#525252] transition-colors hover:border-[#a3a3a3] hover:text-[#171717]">Skip for now</button></div></div></div></div> : null}
+    {adminCheckinOpen ? <div className="fixed inset-0 z-[75] grid place-items-center bg-[#121412]/55 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Runtime is calling">
+      <div className={`flex w-full max-w-sm flex-col items-center overflow-hidden rounded-[24px] border border-[#e3e0db] bg-white px-7 py-8 text-center ${checkinMode === 'choose' ? 'hm-rt-vibrate' : ''}`} style={{ boxShadow: '0 1px 3px rgba(10,10,11,0.04), 0 24px 64px rgba(10,10,11,0.22)', animation: checkinMode === 'choose' ? 'hm-rt-vibrate 3.6s ease-in-out infinite' : undefined }}>
+        <button type="button" onClick={() => { setAdminCheckinOpen(false); decideAdminCheckin('skipped'); }} aria-label="Skip" title="Skip — Runtime plans from the evidence it already has" className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full text-[#a3a3a3] hover:bg-[#faf9f4] hover:text-[#0a0a0a]"><X size={16} /></button>
+
+        {checkinMode === 'choose' ? <>
+          <div className="relative mb-5 grid h-20 w-20 place-items-center">
+            <span className="absolute inset-0 rounded-full bg-[#171717]/10" style={{ animation: 'hm-rt-ring-pulse 1.8s ease-out infinite' }} />
+            <span className="absolute inset-0 rounded-full bg-[#171717]/10" style={{ animation: 'hm-rt-ring-pulse 1.8s ease-out 0.5s infinite' }} />
+            <span className="relative grid h-16 w-16 place-items-center rounded-full bg-[#171717] text-white"><PhoneCall size={26} /></span>
+          </div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a3a3a3]">Runtime is calling</p>
+          <h3 className="mt-2 text-[20px] font-semibold text-[#171717]">A focused three-minute check-in</h3>
+          <p className="mt-2 text-[12px] leading-5 text-[#777168]">Review current status and priorities. Answer however's easiest — Runtime plans either way.</p>
+          <div className="mt-6 flex w-full flex-col gap-2">
+            <button type="button" onClick={() => setCheckinMode('web')} className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#0a0a0a] text-[13px] font-semibold text-white transition-colors hover:bg-[#262626]"><Mic size={15} />Answer on web</button>
+            <button type="button" onClick={() => setCheckinMode('mobile')} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-[#d8d3cc] text-[13px] font-semibold text-[#171717] transition-colors hover:border-[#171717]"><PhoneCall size={15} />Call my mobile</button>
+            <button type="button" disabled title="Text check-ins aren't available yet" className="flex h-11 cursor-not-allowed items-center justify-center gap-2 rounded-xl text-[13px] font-semibold text-[#c7c2b8]"><MessageSquare size={15} />Text me instead <span className="font-mono text-[9px] uppercase tracking-[0.1em]">· soon</span></button>
+          </div>
+          <button type="button" onClick={() => { setAdminCheckinOpen(false); decideAdminCheckin('skipped'); }} className="mt-4 text-[12px] font-medium text-[#a3a3a3] hover:text-[#525252]">Skip for now</button>
+        </> : null}
+
+        {checkinMode === 'web' ? <div className="w-full">
+          <button type="button" onClick={() => setCheckinMode('choose')} className="mb-4 flex items-center gap-1 text-[11px] font-medium text-[#a3a3a3] hover:text-[#525252]">&larr; Back</button>
+          <AaasVoiceWidget
+            userId={runtime?.ownerUserId} orgId={runtime?.orgId} provider="grok" initialMode="internal"
+            interactionProfile="runtime_operator" runtimeAdmin runtimeContextRef={firstLifeExperience?.admin_checkin?.run_id || null}
+            maxDurationSeconds={180} initialGoal={CHECKIN_GOAL}
+            onSessionCreated={({ sessionId }) => decideAdminCheckin('started', sessionId)}
+            onSessionEnded={({ sessionId }) => { setAdminCheckinOpen(false); decideAdminCheckin('completed', sessionId); }}
+          />
+        </div> : null}
+
+        {checkinMode === 'mobile' ? <div className="w-full">
+          <button type="button" onClick={() => setCheckinMode('choose')} className="mb-4 flex items-center gap-1 text-[11px] font-medium text-[#a3a3a3] hover:text-[#525252]">&larr; Back</button>
+          <MobileCheckinCall
+            orgName={runtime?.orgName}
+            onStarted={(callLegId) => decideAdminCheckin('started', callLegId)}
+            onEnded={(callLegId) => { setAdminCheckinOpen(false); decideAdminCheckin('completed', callLegId); }}
+          />
+        </div> : null}
+      </div>
+    </div> : null}
     {instructionsOpen ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Runtime instructions"><form onSubmit={async (event) => { if (await submitInstruction(event)) setInstructionsOpen(false); }} className="w-full max-w-lg rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setInstructionsOpen(false)} aria-label="Close runtime instructions" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#171717]"><SlidersHorizontal size={13} />Runtime instructions</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Set a standing priority</h3></div><div className="p-5"><textarea autoFocus value={instruction} onChange={(event) => setInstruction(event.target.value)} rows={5} placeholder="Focus on getting qualified clients in Hannover..." className="w-full resize-none border border-[#d8d3cc] bg-white p-3 text-[13px] leading-6 outline-none placeholder:text-[#aaa49c] focus:border-[#171717]" />{instructionNotice ? <p className="mt-3 text-[11px] leading-5 text-[#525252]">{instructionNotice}</p> : null}<div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setInstructionsOpen(false)} className="h-9 px-3 text-[11px] font-semibold text-[#525252]">Cancel</button><button type="submit" disabled={!instruction.trim() || instructionBusy} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-35">{instructionBusy ? <ArcSpin size={13} /> : <Send size={13} />}Save instruction</button></div></div></form></div> : null}
     {capabilityRequest && capabilityRequest.id !== dismissedCapabilityRequestId ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label={`Connect ${providerLabel(capabilityRequest.provider)}`}><div className="flex h-[min(760px,calc(100dvh-24px))] w-[min(900px,calc(100vw-24px))] flex-col overflow-hidden rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative shrink-0 border-b border-[#e3e0db] bg-white px-5 py-4"><button type="button" onClick={() => setDismissedCapabilityRequestId(capabilityRequest.id)} aria-label="Close connection request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]">{BRAND_LOGOS[String(capabilityRequest.provider || '').toLowerCase()] ? <img src={BRAND_LOGOS[String(capabilityRequest.provider || '').toLowerCase()]} alt="" className="h-5 w-5 object-contain" /> : <Cable size={15} />}{capabilityRequest.campaign ? 'Campaign prepared' : capabilityRequest.prepared_batch ? 'Outreach prepared' : 'Capability required'}</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Connect {providerLabel(capabilityRequest.provider)} to {capabilityRequest.campaign ? 'publish' : capabilityRequest.prepared_batch ? 'continue outreach' : 'continue'}</h3><p className="mt-2 text-[12px] leading-5 text-[#625f58]">{publicRuntimeText(capabilityRequest.reason)}</p></div><div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7">{capabilityRequest.campaign ? <CampaignLaunchPreview campaign={capabilityRequest.campaign} /> : capabilityRequest.prepared_batch ? <AuthorityReviewContent approval={capabilityRequest.prepared_batch} /> : <p className="text-[11px] leading-5 text-[#777168]">The prepared work is retained and will continue from this checkpoint after connection.</p>}</div><div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[#e3e0db] bg-white px-5 py-4"><span className="mr-auto max-w-md text-[10px] leading-4 text-[#777168]">Prepared artifacts remain attached to this lifecycle. Connecting resumes the same run without rediscovery.</span><button type="button" onClick={deferCapability} disabled={busy === 'defer-capability'} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252] disabled:opacity-40">{busy === 'defer-capability' ? 'Saving...' : 'Skip for now'}</button><button type="button" onClick={async () => { await apiClient.recheckHqCapabilities(); await load(); }} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252]">Check connection</button><button type="button" onClick={openCapability} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white">Connect {providerLabel(capabilityRequest.provider)}</button></div></div></div> : null}
     {playbookInput && playbookInput.run_id !== dismissedInputRunId ? <div className="fixed inset-0 z-[71] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={playbookInput.label}><form onSubmit={provideRuntimeInput} className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedInputRunId(playbookInput.run_id)} aria-label="Close information request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center text-[#777168] hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]">Information required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">{playbookInput.label}</h3><p className="mt-2 text-[12px] leading-5 text-[#777168]">{playbookInput.description}</p></div><div className="p-5"><input autoFocus type={playbookInput.value_type === 'email' ? 'email' : 'tel'} value={runtimeInputValue} onChange={(event) => setRuntimeInputValue(event.target.value)} placeholder={playbookInput.value_type === 'phone' ? '+49...' : 'name@company.com'} className="h-11 w-full border border-[#d8d3cc] bg-white px-3 text-[13px] outline-none focus:border-[#171717]" /><div className="mt-4 flex justify-end"><button type="submit" disabled={!runtimeInputValue.trim() || runtimeInputBusy} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{runtimeInputBusy ? 'Saving...' : 'Continue Runtime'}</button></div></div></form></div> : null}
