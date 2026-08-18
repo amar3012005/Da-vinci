@@ -4,6 +4,7 @@ import { AuthProvider } from './auth/AuthProvider';
 import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './auth/LoginPage';
 import InvitationLanding from './auth/InvitationLanding';
+import RuntimeApprovalPage from './auth/RuntimeApprovalPage';
 import CliVerified from './auth/CliVerified';
 import AppShell from './layout/AppShell';
 import { QuickRecorderProvider } from './shared/QuickRecorderProvider';
@@ -123,6 +124,7 @@ export default function HiveMindApp() {
       <Routes>
         <Route path="login" element={<LoginPage />} />
         <Route path="invite" element={<InvitationLanding />} />
+        <Route path="approve/:token" element={<RuntimeApprovalPage />} />
         {/* Public developer docs — no auth */}
         <Route path="docs" element={<PageSuspense><DocsPage /></PageSuspense>} />
         <Route path="cli-verified" element={<CliVerified />} />

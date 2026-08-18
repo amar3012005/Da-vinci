@@ -190,6 +190,18 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Preview a Runtime one-click approval link — read-only, no session required. */
+  async previewRuntimeApproval(token) {
+    const { data } = await this.controlPlane.get(`/v1/hq/approvals/${encodeURIComponent(token)}`);
+    return data;
+  }
+
+  /** Approve a Runtime one-click approval link — the only mutating call, no session required. */
+  async approveRuntimeApproval(token) {
+    const { data } = await this.controlPlane.post(`/v1/hq/approvals/${encodeURIComponent(token)}/approve`);
+    return data;
+  }
+
   /**
    * Bootstrap response shape from control plane:
    * {
@@ -2120,6 +2132,11 @@ class HiveMindApiClient {
 
   async getCampaign(id) {
     const { data } = await this.controlPlane.get(`/v1/campaigns/${id}`);
+    return data;
+  }
+
+  async getRuntimeArtifact(id) {
+    const { data } = await this.controlPlane.get(`/v1/hq/artifacts/${encodeURIComponent(id)}`);
     return data;
   }
 

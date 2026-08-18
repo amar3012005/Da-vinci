@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { AuthorityReviewContent, CallPreview, CampaignLaunchPreview, GmailMessagePreview, PlatformActionPreview } from './RuntimeAuthorityPreview';
+import { CampaignAssetImage } from './campaigns/CampaignCreative';
+import RuntimeArtifactPopup from './RuntimeArtifactPopup';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 
@@ -89,12 +91,22 @@ function RuntimeLoader({ variant = 'matrix', label, hint, size = 22, className =
 }
 
 const STATE_GLYPH = { OBSERVING: 'graph', DIAGNOSING: 'matrix', REVIEWING: 'arc', DELEGATING: 'matrix' };
+// One fallback tuple for any state this map doesn't (yet) name — read from
+// here everywhere, so the header and the inline loader never show two
+// different guesses for the same unmapped state.
+const STATE_LABEL_DEFAULT = ['HQ is thinking aloud', 'Working through the next bounded action.'];
 const STATE_LABEL = {
   OBSERVING: ['Reading company state', 'Loading retained evidence before choosing work.'],
   DIAGNOSING: ['Thinking', 'Choosing the highest-leverage evidenced constraint.'],
   DELEGATING: ['Delegating', 'Handing a bounded Work Order to a specialist room.'],
   REVIEWING: ['Analysing result', 'Comparing returned evidence with the decision rule.'],
 };
+// Every catch handler in this file extracted the backend's error message with
+// a slightly different, hand-copied expression — some dropped `.error`, some
+// dropped the fallback string entirely. One helper, used everywhere, so a
+// backend error message is never silently swallowed by an inconsistent catch.
+const extractErrorMessage = (err, fallback) => err?.response?.data?.message
+  || err?.response?.data?.error || err?.message || fallback;
 const fmtTime = (value) => value ? new Date(value).toLocaleTimeString([], {
   hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 2,
 }) : '';
@@ -316,6 +328,16 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
   const artifacts = collectRuntimeArtifacts(queue, growthBrief);
   const [artifactsOpen, setArtifactsOpen] = useState(true);
   const [tasksExpanded, setTasksExpanded] = useState(true);
+  const [artifactPreview, setArtifactPreview] = useState(null); // { loading, title, content } | null
+  const openArtifactPreview = useCallback(async (artifact) => {
+    setArtifactPreview({ loading: true, title: artifactLabel(artifact.key), content: null });
+    try {
+      const data = await apiClient.getRuntimeArtifact(artifact.id);
+      setArtifactPreview({ loading: false, title: data?.title ? String(data.title).replace(/^./, (c) => c.toUpperCase()) : artifactLabel(artifact.key), content: data?.content || 'No content available.' });
+    } catch {
+      setArtifactPreview({ loading: false, title: artifactLabel(artifact.key), content: 'Could not load this artifact.' });
+    }
+  }, []);
   return <section id="agent-runtime-tasks" className="relative w-full overflow-hidden rounded-[14px] border border-[#e3e0db] bg-white shadow-[0_14px_36px_-30px_rgba(0,0,0,0.55)]" aria-label="Artifacts and Runtime tasks">
     {onClose ? <button type="button" onClick={onClose} aria-label="Close Runtime tasks" title="Close" className="absolute right-3 top-3 z-10 grid h-7 w-7 place-items-center rounded-full text-[#8a8577] hover:bg-[#f2f0eb] hover:text-[#171717] lg:hidden"><X size={14} /></button> : null}
     <div className="max-h-[min(72vh,680px)] overflow-y-auto">
@@ -327,7 +349,7 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
           <ChevronDown size={14} className={`text-[#777168] transition-transform ${artifactsOpen ? 'rotate-180' : ''}`} />
         </button>
         {artifactsOpen ? <div className="space-y-1 px-4 pb-3">
-          {artifacts.slice(0, 6).map((artifact) => <div key={artifact.id} className="flex items-center gap-2 rounded-[6px] px-1 py-1.5"><FileText size={13} className="shrink-0 text-[#262626]" /><span className="min-w-0 flex-1 truncate text-[11px] text-[#393733]">{artifactLabel(artifact.key)}</span><span className="font-mono text-[7px] uppercase text-[#9a948b]">{artifact.status || ''}</span></div>)}
+          {artifacts.slice(0, 6).map((artifact) => <button type="button" key={artifact.id} onClick={() => openArtifactPreview(artifact)} className="flex w-full items-center gap-2 rounded-[6px] px-1 py-1.5 text-left hover:bg-[#f5f3ee]"><FileText size={13} className="shrink-0 text-[#262626]" /><span className="min-w-0 flex-1 truncate text-[11px] text-[#393733]">{artifactLabel(artifact.key)}</span><span className="font-mono text-[7px] uppercase text-[#9a948b]">{artifact.status || ''}</span></button>)}
           {!artifacts.length ? <p className="px-1 pb-1 text-[10px] text-[#9a948b]">Artifacts appear here as Room and provider checkpoints are accepted.</p> : null}
         </div> : null}
       </section>
@@ -349,6 +371,11 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
       </section>
     </div>
     {['AWAITING_START', 'REVIEW_LATER'].includes(firstLife?.status) ? <div className={`grid gap-2 border-t border-[#d8d3cc] bg-white p-3 ${firstLife.status === 'AWAITING_START' ? 'grid-cols-2' : 'grid-cols-1'}`}>{firstLife.status === 'AWAITING_START' ? <button type="button" onClick={() => onDecision('review_later')} className="h-9 border border-[#d8d3cc] px-3 text-[10px] font-semibold text-[#525252]">Review later</button> : null}<button type="button" onClick={() => onDecision('start')} disabled={experience && !experience.can_start} className="inline-flex h-9 items-center justify-center gap-2 bg-[#171717] px-3 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"><Play size={12} />Start recommended work</button></div> : null}
+    <RuntimeArtifactPopup
+      open={Boolean(artifactPreview)} onClose={() => setArtifactPreview(null)} kind="text"
+      title={artifactPreview?.title} loading={Boolean(artifactPreview?.loading)}
+      textContent={artifactPreview?.content} downloadFilename={`${(artifactPreview?.title || 'artifact').replaceAll(' ', '-')}.json`}
+    />
   </section>;
 }
 
@@ -382,7 +409,6 @@ export function HqRuntimeRail({ baselineReady }) {
   const outboundPermission = authorityPreference('outbound_messages');
   const outboundCallPermission = authorityPreference('outbound_calls');
   const outboundCampaignPermission = authorityPreference('outbound_campaigns');
-  const adminCallPermission = 'manual';
   const updateOutboundPermission = async (policyKey, currentPreference, preference) => {
     if (permissionBusy || preference === currentPreference) return;
     setPermissionBusy(`${policyKey}:${preference}`); setPermissionError('');
@@ -390,7 +416,7 @@ export function HqRuntimeRail({ baselineReady }) {
       const response = await apiClient.updateHqAuthorityPolicy({ [policyKey]: preference });
       setRuntime(response?.runtime || runtime);
     } catch (requestError) {
-      setPermissionError(requestError?.response?.data?.error || requestError?.message || 'Permission could not be updated.');
+      setPermissionError(extractErrorMessage(requestError, 'Permission could not be updated.'));
     } finally { setPermissionBusy(''); }
   };
   const restart = async () => {
@@ -412,7 +438,10 @@ export function HqRuntimeRail({ baselineReady }) {
           ['outbound_messages', 'Outbound email', outboundPermission],
           ['outbound_calls', 'TARA calls', outboundCallPermission],
           ['outbound_campaigns', 'Campaign launches', outboundCampaignPermission],
-          ['admin_calls', 'Administrator calls', adminCallPermission],
+          // Always manual — the render below never actually reads this third
+          // value for admin_calls, it hardcodes 'Manual review is always
+          // required'. Kept as a literal, not a variable, so that's honest.
+          ['admin_calls', 'Administrator calls', 'manual'],
         ].map(([policyKey, label, currentPreference]) => <div key={policyKey} className="mt-3 flex items-center justify-between gap-3"><div><div className="text-[10px] font-semibold text-[#262626]">{label}</div><div className="mt-0.5 text-[9px] text-[#8a8577]">{policyKey === 'admin_calls' ? 'Manual review is always required' : currentPreference === 'unconfigured' ? 'Chosen at the first exact gate' : 'Organization policy'}</div></div>{policyKey === 'admin_calls' ? <span className="border border-[#d8d3cc] bg-[#171717] px-2 py-1 font-mono text-[8px] uppercase text-white">Manual</span> : currentPreference === 'unconfigured' ? <span className="border border-[#d8d3cc] bg-white px-2 py-1 font-mono text-[8px] uppercase text-[#8a8577]">Not configured</span> : <div className="inline-flex border border-[#d8d3cc] bg-white p-0.5">{['manual', 'auto'].map((preference) => { const busyKey = `${policyKey}:${preference}`; return <button key={preference} type="button" onClick={() => updateOutboundPermission(policyKey, currentPreference, preference)} disabled={Boolean(permissionBusy)} aria-pressed={currentPreference === preference} className={`h-7 px-2.5 font-mono text-[8px] uppercase tracking-[0.08em] transition-colors disabled:opacity-40 ${currentPreference === preference ? 'bg-[#171717] text-white' : 'text-[#777168] hover:text-[#171717]'}`}>{permissionBusy === busyKey ? 'Saving' : preference}</button>; })}</div>}</div>)}
         <div className="mt-3 space-y-2 border-t border-[#ebe8e3] pt-3">{[
           ['Internal work', runtime?.authorityPolicy?.internal_autonomy === false ? 'Restricted' : 'Allowed'],
@@ -518,6 +547,68 @@ export function ExternalActionMarker({ item }) {
   </section>;
 }
 
+// The Runtime terminal used to show generated campaign visuals inline as
+// they finished, 3-at-a-time (user-reported regression). The backend event
+// (core/src/campaigns/runtime-bridge.js) already carries campaign_id +
+// asset_id in details — it never carried a fetchable image URL, and this
+// renderer never special-cased the event type at all, so it silently fell
+// through to plain text. Reuses the existing CampaignAssetImage component
+// and apiClient.getCampaign (same fetch path CampaignsView/CampaignPanel
+// already use) rather than hand-rolling a second image-fetch path.
+function CampaignVisualMarker({ item }) {
+  const [asset, setAsset] = useState(null);
+  // Auto-opens once, the first time THIS event's asset resolves (mounts once
+  // per unique event id — see NarrativeEvent's list key — so it never
+  // re-pops on a later poll of the same event). Dismissible; the inline
+  // thumbnail below still stays in the feed either way.
+  const [popupOpen, setPopupOpen] = useState(false);
+  const campaignId = item.details?.campaign_id;
+  const assetId = item.details?.asset_id;
+  useEffect(() => {
+    let active = true;
+    if (!campaignId || !assetId) return undefined;
+    apiClient.getCampaign(campaignId).then((data) => {
+      if (!active) return;
+      const found = (data?.campaign?.actions || []).flatMap((action) => action.assets || []).find((a) => a.id === assetId);
+      if (found) { setAsset(found); setPopupOpen(true); }
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [campaignId, assetId]);
+  return <div className="my-5 max-w-4xl">
+    <div className="mb-1.5 flex items-center gap-2 text-[12px] text-[#8a8577]"><Activity size={13} /><span>{item.title}</span><time className="ml-auto font-mono text-[8px] text-[#aaa49c]">{fmtTime(item.createdAt)}</time></div>
+    <p className="text-[15px] leading-7 text-[#45423d]">{item.summary}</p>
+    {asset ? <button type="button" onClick={() => setPopupOpen(true)} className="mt-3 block"><CampaignAssetImage asset={asset} alt="Campaign visual" className="aspect-video w-full max-w-sm rounded-md border border-[#e7e4df] object-cover" /></button> : null}
+    {asset ? <RuntimeArtifactPopup
+      open={popupOpen} onClose={() => setPopupOpen(false)} kind="image"
+      title="Campaign visual ready" subline={item.summary}
+      imageUrl={asset.content_url} downloadUrl={asset.content_url} shareUrl={asset.content_url}
+    /> : null}
+  </div>;
+}
+
+// Mirrors CampaignVisualMarker's "auto-pop once, stay in the feed after" — a
+// Room/specialist result that produced a real document/report (see the
+// `readyArtifacts`/`type: 'work.artifact_ready'` addition in
+// work-dispatcher.js). Links are real (verdict.artifacts url/title), so this
+// needs no extra fetch — unlike the Artifacts panel's click-to-preview,
+// which DOES need one for rows that only carry an id.
+function WorkArtifactReadyMarker({ item }) {
+  const [popupOpen, setPopupOpen] = useState(true);
+  const artifacts = Array.isArray(item.details?.artifacts) ? item.details.artifacts : [];
+  const first = artifacts[0] || {};
+  return <div className="my-5 max-w-4xl">
+    <div className="mb-1.5 flex items-center gap-2 text-[12px] text-[#8a8577]"><FileText size={13} /><span>{item.title}</span><time className="ml-auto font-mono text-[8px] text-[#aaa49c]">{fmtTime(item.createdAt)}</time></div>
+    <p className="text-[15px] leading-7 text-[#45423d]">{item.summary}</p>
+    <button type="button" onClick={() => setPopupOpen(true)} className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-[#171717] underline decoration-[#d8d3cc] underline-offset-2 hover:decoration-[#171717]"><FileText size={12} />{artifacts.length > 1 ? `View ${artifacts.length} artifacts` : 'View artifact'}</button>
+    <RuntimeArtifactPopup
+      open={popupOpen} onClose={() => setPopupOpen(false)} kind="text"
+      title={first.title || 'Document ready'} subline={item.summary}
+      textContent={artifacts.map((a) => `${a.title || 'Untitled'}${a.url ? `\n${a.url}` : ''}`).join('\n\n')}
+      downloadUrl={first.url} shareUrl={first.url}
+    />
+  </div>;
+}
+
 export function NarrativeEvent({ item, active }) {
   const wake = item.eventType === 'wake';
   const sleep = item.eventType === 'sleep';
@@ -525,6 +616,8 @@ export function NarrativeEvent({ item, active }) {
   const verdict = ['decision', 'work_order_created', 'blocked'].includes(item.eventType);
   const Icon = wake ? Power : sleep ? Moon : blocked ? AlertTriangle : item.eventType === 'work_order_created' ? TerminalSquare : Activity;
   if (item.eventType === 'external_action_committed') return <ExternalActionMarker item={item} />;
+  if (item.eventType === 'campaign_artifact_progress' && item.details?.type === 'campaign.asset_ready') return <CampaignVisualMarker item={item} />;
+  if (item.eventType === 'work_order_completed' && item.details?.type === 'work.artifact_ready') return <WorkArtifactReadyMarker item={item} />;
   if (item.eventType === 'baseline_observation') {
     const status = String(item.details?.status || item.summary || 'limited').replaceAll('_', ' ');
     const facts = item.details?.facts && typeof item.details.facts === 'object' ? item.details.facts : {};
@@ -561,12 +654,12 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, experi
       else chunks.push({ type: 'execution', items: [item] });
     } else chunks.push({ type: 'narrative', item });
   }
-  const [glyphLabel] = STATE_LABEL[state] || [];
+  const [glyphLabel, glyphHint] = STATE_LABEL[state] || STATE_LABEL_DEFAULT;
   return <div className="relative w-full px-5 py-8 sm:px-8 sm:py-10">
     <div className="mb-7 border-b border-[#e7e4df] pb-5">
       <div className="flex items-center gap-2.5 pt-2 text-[14px] font-medium text-[#777168]">
         {working ? <DotMatrix size={16} columns={5} rows={4} /> : <Clock3 size={15} />}
-        {working ? glyphLabel || 'HQ is thinking aloud' : 'HQ is thinking aloud'}
+        {working ? glyphLabel : STATE_LABEL_DEFAULT[0]}
       </div>
     </div>
     <div className="ml-auto grid w-full max-w-[1420px] items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -575,7 +668,7 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, experi
         : <NarrativeEvent key={chunk.item.id || chunk.item.sequence} item={chunk.item} active={working && chunk.item.details?.model_streamed !== true && String(chunk.item.sequence) === String(liveSequence || '')} />)}
         <LiveModelNarration stream={liveNarration} />
         {working ? <div className="mt-7 border border-[#e7e4df] bg-white/70 px-4 py-3">
-          <RuntimeLoader variant={STATE_GLYPH[state] || 'matrix'} label={(STATE_LABEL[state] || ['Thinking'])[0]} hint={(STATE_LABEL[state] || [null, 'Working through the next bounded action.'])[1]} />
+          <RuntimeLoader variant={STATE_GLYPH[state] || 'matrix'} label={glyphLabel} hint={glyphHint} />
         </div> : null}
       </main>
       {tasksOpen ? <button type="button" className="fixed inset-0 z-30 bg-black/30 lg:hidden" aria-label="Close Runtime tasks" onClick={onCloseTasks} /> : null}
@@ -815,7 +908,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
         return;
       }
       setRuntime(response?.runtime || runtime); await load();
-    } catch (requestError) { setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message); } finally { setBusy(''); }
+    } catch (requestError) { setError(extractErrorMessage(requestError)); } finally { setBusy(''); }
   };
   const latest = useMemo(() => events.slice(-120), [events]);
   // Follow-the-stream: watch a sentinel at the end of the transcript. While it is on
@@ -900,7 +993,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       setInstruction(''); setInstructionNotice('HQ accepted the instruction and updated its queue.');
       return true;
     }
-    catch (requestError) { setError(requestError?.response?.data?.message || requestError.message); }
+    catch (requestError) { setError(extractErrorMessage(requestError)); }
     finally { setInstructionBusy(false); }
     return false;
   };
@@ -919,7 +1012,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
         else window.open(data.redirect_url, '_blank', 'noopener,noreferrer');
       } catch (requestError) {
         if (authWindow) authWindow.close();
-        setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+        setError(extractErrorMessage(requestError));
       }
       return;
     }
@@ -934,7 +1027,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       else window.open(data.authorization_url, '_blank', 'noopener,noreferrer');
     } catch (requestError) {
       if (authWindow) authWindow.close();
-      setError(requestError?.response?.data?.message || requestError.message);
+      setError(extractErrorMessage(requestError));
     }
   };
   const deferCapability = async () => {
@@ -945,7 +1038,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       setDismissedCapabilityRequestId(capabilityRequest.id);
       await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError.message);
+      setError(extractErrorMessage(requestError));
     } finally { setBusy(''); }
   };
   const playbookApproval = (work.playbook_approvals || [])[0] || null;
@@ -968,7 +1061,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       });
       await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+      setError(extractErrorMessage(requestError));
     } finally { setApprovalBusy(''); }
   };
   const startOutreachCalls = async () => {
@@ -979,7 +1072,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       setDismissedCallProposalId(callProposal.id);
       await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+      setError(extractErrorMessage(requestError));
     } finally { setCallProposalBusy(false); }
   };
   const provideRuntimeInput = async (event) => {
@@ -990,7 +1083,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       await apiClient.provideHqPlaybookInput(playbookInput.run_id, playbookInput.input_key, runtimeInputValue.trim());
       setRuntimeInputValue(''); setDismissedInputRunId(null); await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || requestError?.message || 'The requested information could not be saved.');
+      setError(extractErrorMessage(requestError, 'The requested information could not be saved.'));
     } finally { setRuntimeInputBusy(false); }
   };
   const reviewFirstLife = async (decision) => {
@@ -1004,7 +1097,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       }
       await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+      setError(extractErrorMessage(requestError));
     } finally { setApprovalBusy(''); }
   };
   const decideAdminCheckin = async (decision, sessionId = null) => {
@@ -1015,7 +1108,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       await apiClient.decideHqFirstLifeAdminCheckin(decision, sessionId);
       await load();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError?.message || 'The Runtime check-in could not be saved.');
+      setError(extractErrorMessage(requestError, 'The Runtime check-in could not be saved.'));
     } finally { setAdminCheckinBusy(false); }
   };
   return <section className="relative -mx-4 -my-4 min-h-full bg-[#fbfaf7]" aria-label="Company HQ runtime">
