@@ -14,7 +14,7 @@ import { X, Download, Share2, FileText, Image as ImageIcon, Check } from 'lucide
  */
 export default function RuntimeArtifactPopup({
   open, onClose, kind = 'text', title, subline, imageUrl, textContent,
-  downloadUrl, downloadFilename, shareUrl, shareText, loading = false,
+  downloadUrl, downloadFilename, shareUrl, shareText, loading = false, children,
 }) {
   const [copied, setCopied] = useState(false);
   if (!open) return null;
@@ -46,8 +46,9 @@ export default function RuntimeArtifactPopup({
       </div>
       <div className="max-h-[52vh] overflow-y-auto px-5 py-4">
         {loading ? <p className="py-8 text-center text-[12px] text-[#a3a3a3]">Loading…</p>
-          : kind === 'image' && imageUrl ? <img src={imageUrl} alt={title || 'Runtime artifact'} className="w-full rounded-md border border-[#e7e4df] object-cover" />
-            : <pre className="whitespace-pre-wrap break-words rounded-md border border-[#e7e4df] bg-white px-3 py-2.5 font-mono text-[11px] leading-5 text-[#292824]">{textContent || 'No preview available.'}</pre>}
+          : children ? children
+            : kind === 'image' && imageUrl ? <img src={imageUrl} alt={title || 'Runtime artifact'} className="w-full rounded-md border border-[#e7e4df] object-cover" />
+              : <pre className="whitespace-pre-wrap break-words rounded-md border border-[#e7e4df] bg-white px-3 py-2.5 font-mono text-[11px] leading-5 text-[#292824]">{textContent || 'No preview available.'}</pre>}
       </div>
       <div className="flex items-center justify-between gap-2 border-t border-[#e3e0db] px-5 py-3.5">
         <button type="button" onClick={share} className="inline-flex h-9 items-center gap-2 px-3 text-[11px] font-semibold text-[#525252] hover:text-[#171717]">
