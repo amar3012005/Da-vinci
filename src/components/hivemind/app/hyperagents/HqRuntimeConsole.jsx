@@ -1290,7 +1290,35 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     {/* Stick-to-bottom sentinel: the IntersectionObserver above follows it while the
         reader is at the end and glides the page down on new content. */}
     <div ref={transcriptBottomRef} aria-hidden="true" className="h-px w-full" />
-    {adminCheckinOpen ? <div className="fixed inset-0 z-[75] grid place-items-center bg-[#121412]/55 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Runtime is calling">
+    {adminCheckinOpen && checkinMode === 'web' ? <div className="fixed inset-0 z-[75] grid place-items-center bg-[#121412]/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Talk to Runtime">
+      <div className="flex flex-col w-full max-w-xl rounded-[20px] border border-[#e3e0db] bg-white overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(10,10,11,0.04), 0 24px 64px rgba(10,10,11,0.18)' }}>
+        {/* Mac-window chrome header — matches the Overview welcome-tour shell. Exact
+            pre-ringing-redesign markup, kept unchanged for the web-call step: same
+            theme, same 3-minute AaasVoiceWidget restriction, same Runtime persona. */}
+        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-5 py-4 border-b border-[#e3e0db] bg-white shrink-0">
+          <div className="flex items-center gap-[7px]" aria-hidden="true">
+            <span className="w-[11px] h-[11px] rounded-full bg-[#FF5F57]" /><span className="w-[11px] h-[11px] rounded-full bg-[#FEBC2E]" /><span className="w-[11px] h-[11px] rounded-full bg-[#28C840]" />
+          </div>
+          <span className="text-center font-mono text-[12px] tracking-[0.24em] uppercase text-[#a3a3a3]">RUNTIME <span className="text-[#d4d0ca]">·</span> ADMIN CHECK-IN</span>
+          <button type="button" onClick={() => { setAdminCheckinOpen(false); decideAdminCheckin('skipped'); }} className="h-7 rounded-md border border-[#e3e0db] bg-white px-3 text-[11px] font-semibold text-[#525252] hover:text-[#0a0a0a] hover:border-[#d4d0ca] transition-colors" title="Skip the check-in — Runtime plans from the evidence it already has">Skip</button>
+        </div>
+        <div className="bg-[#faf9f4] px-6 py-7">
+          <AaasVoiceWidget
+            userId={runtime?.ownerUserId} orgId={runtime?.orgId} provider="grok" initialMode="internal"
+            interactionProfile="runtime_operator" runtimeAdmin runtimeContextRef={firstLifeExperience?.admin_checkin?.run_id || null}
+            maxDurationSeconds={180} initialGoal={CHECKIN_GOAL}
+            onSessionCreated={({ sessionId }) => decideAdminCheckin('started', sessionId)}
+            onSessionEnded={({ sessionId }) => { setAdminCheckinOpen(false); decideAdminCheckin('completed', sessionId); }}
+          />
+          <div className="mt-5 flex items-center justify-between gap-3 border-t border-[#e3e0db] pt-4">
+            <span className="text-[11px] leading-4 text-[#777168]">Talk for about three minutes, or skip — Runtime plans either way.</span>
+            <button type="button" onClick={() => { setAdminCheckinOpen(false); decideAdminCheckin('skipped'); }} className="h-9 shrink-0 rounded-md border border-[#d8d3cc] bg-white px-4 text-[12px] font-semibold text-[#525252] transition-colors hover:border-[#a3a3a3] hover:text-[#171717]">Skip for now</button>
+          </div>
+        </div>
+      </div>
+    </div> : null}
+
+    {adminCheckinOpen && checkinMode !== 'web' ? <div className="fixed inset-0 z-[75] grid place-items-center bg-[#121412]/55 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Runtime is calling">
       <div className={`flex w-full max-w-sm flex-col items-center overflow-hidden rounded-[24px] border border-[#e3e0db] bg-white px-7 py-8 text-center ${checkinMode === 'choose' ? 'hm-rt-vibrate' : ''}`} style={{ boxShadow: '0 1px 3px rgba(10,10,11,0.04), 0 24px 64px rgba(10,10,11,0.22)', animation: checkinMode === 'choose' ? 'hm-rt-vibrate 3.6s ease-in-out infinite' : undefined }}>
         <button type="button" onClick={() => { setAdminCheckinOpen(false); decideAdminCheckin('skipped'); }} aria-label="Skip" title="Skip — Runtime plans from the evidence it already has" className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full text-[#a3a3a3] hover:bg-[#faf9f4] hover:text-[#0a0a0a]"><X size={16} /></button>
 
@@ -1311,23 +1339,12 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
           <button type="button" onClick={() => { setAdminCheckinOpen(false); decideAdminCheckin('skipped'); }} className="mt-4 text-[12px] font-medium text-[#a3a3a3] hover:text-[#525252]">Skip for now</button>
         </> : null}
 
-        {checkinMode === 'web' ? <div className="w-full">
-          <button type="button" onClick={() => setCheckinMode('choose')} className="mb-4 flex items-center gap-1 text-[11px] font-medium text-[#a3a3a3] hover:text-[#525252]">&larr; Back</button>
-          <AaasVoiceWidget
-            userId={runtime?.ownerUserId} orgId={runtime?.orgId} provider="grok" initialMode="internal"
-            interactionProfile="runtime_operator" runtimeAdmin runtimeContextRef={firstLifeExperience?.admin_checkin?.run_id || null}
-            maxDurationSeconds={180} initialGoal={CHECKIN_GOAL}
-            onSessionCreated={({ sessionId }) => decideAdminCheckin('started', sessionId)}
-            onSessionEnded={({ sessionId }) => { setAdminCheckinOpen(false); decideAdminCheckin('completed', sessionId); }}
-          />
-        </div> : null}
-
         {checkinMode === 'mobile' ? <div className="w-full">
           <button type="button" onClick={() => setCheckinMode('choose')} className="mb-4 flex items-center gap-1 text-[11px] font-medium text-[#a3a3a3] hover:text-[#525252]">&larr; Back</button>
           <MobileCheckinCall
             orgName={runtime?.orgName}
-            onStarted={(callLegId) => decideAdminCheckin('started', callLegId)}
-            onEnded={(callLegId) => { setAdminCheckinOpen(false); decideAdminCheckin('completed', callLegId); }}
+            onStarted={(sessionId) => decideAdminCheckin('started', sessionId)}
+            onEnded={(sessionId) => { setAdminCheckinOpen(false); decideAdminCheckin('completed', sessionId); }}
           />
         </div> : null}
       </div>
