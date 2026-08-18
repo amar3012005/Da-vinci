@@ -9,6 +9,7 @@ import apiClient from '../shared/api-client';
 import { AuthorityReviewContent, CallPreview, CampaignLaunchPreview, GmailMessagePreview, PlatformActionPreview } from './RuntimeAuthorityPreview';
 import { CampaignAssetImage } from './campaigns/CampaignCreative';
 import RuntimeArtifactPopup from './RuntimeArtifactPopup';
+import { renderArtifactMarkdown } from './artifact-markdown';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 
@@ -328,14 +329,21 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
   const artifacts = collectRuntimeArtifacts(queue, growthBrief);
   const [artifactsOpen, setArtifactsOpen] = useState(true);
   const [tasksExpanded, setTasksExpanded] = useState(true);
-  const [artifactPreview, setArtifactPreview] = useState(null); // { loading, title, content } | null
+  const [artifactPreview, setArtifactPreview] = useState(null); // { loading, title, key, markdown, content } | null
   const openArtifactPreview = useCallback(async (artifact) => {
-    setArtifactPreview({ loading: true, title: artifactLabel(artifact.key), content: null });
+    setArtifactPreview({ loading: true, title: artifactLabel(artifact.key), key: artifact.key, markdown: null, content: null });
     try {
       const data = await apiClient.getRuntimeArtifact(artifact.id);
-      setArtifactPreview({ loading: false, title: data?.title ? String(data.title).replace(/^./, (c) => c.toUpperCase()) : artifactLabel(artifact.key), content: data?.content || 'No content available.' });
+      const key = data?.key || artifact.key;
+      setArtifactPreview({
+        loading: false,
+        title: data?.title ? String(data.title).replace(/^./, (c) => c.toUpperCase()) : artifactLabel(artifact.key),
+        key,
+        markdown: data?.data ? renderArtifactMarkdown(key, data.data) : null,
+        content: data?.content || 'No content available.',
+      });
     } catch {
-      setArtifactPreview({ loading: false, title: artifactLabel(artifact.key), content: 'Could not load this artifact.' });
+      setArtifactPreview({ loading: false, title: artifactLabel(artifact.key), key: artifact.key, markdown: null, content: 'Could not load this artifact.' });
     }
   }, []);
   return <section id="agent-runtime-tasks" className="relative w-full overflow-hidden rounded-[14px] border border-[#e3e0db] bg-white shadow-[0_14px_36px_-30px_rgba(0,0,0,0.55)]" aria-label="Artifacts and Runtime tasks">
@@ -374,7 +382,8 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
     <RuntimeArtifactPopup
       open={Boolean(artifactPreview)} onClose={() => setArtifactPreview(null)} kind="text"
       title={artifactPreview?.title} loading={Boolean(artifactPreview?.loading)}
-      textContent={artifactPreview?.content} downloadFilename={`${(artifactPreview?.title || 'artifact').replaceAll(' ', '-')}.json`}
+      markdown={artifactPreview?.markdown} textContent={artifactPreview?.content}
+      downloadFilename={`${(artifactPreview?.title || 'artifact').replaceAll(' ', '-')}.json`}
     />
   </section>;
 }
@@ -613,41 +622,6 @@ function WorkArtifactReadyMarker({ item }) {
   </div>;
 }
 
-// Structured render for a `research_decision` artifact (schema:
-// core/src/runtime-playbooks/artifact-schema.js — decision, evidence[{claim,
-// source_ref, confidence}], unknowns[]). Confirmed against a real production
-// row 2026-08-18 — there is no separate "recommendation"/"open_gaps" field,
-// only these three; this renders exactly what's actually there rather than
-// guessing at fields that don't exist.
-function ResearchDecisionContent({ data }) {
-  const evidence = Array.isArray(data?.evidence) ? data.evidence : [];
-  const unknowns = Array.isArray(data?.unknowns) ? data.unknowns : [];
-  return <div className="space-y-4">
-    <div>
-      <div className="mb-1 font-mono text-[9px] uppercase tracking-[0.12em] text-[#8a8577]">Decision</div>
-      <p className="text-[13px] leading-6 text-[#292824]">{data?.decision || 'No decision recorded.'}</p>
-    </div>
-    {evidence.length ? <div>
-      <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-[#8a8577]">Evidence</div>
-      <ul className="space-y-2.5">
-        {evidence.map((row, index) => <li key={index} className="border-l-2 border-[#e7e4df] pl-3 text-[12.5px] leading-5 text-[#45423d]">
-          <span>{row?.claim}</span>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 font-mono text-[10px] text-[#a3a3a3]">
-            {row?.confidence ? <span className="text-[#c99a2e]">{row.confidence}</span> : null}
-            {row?.source_ref ? <span>source: {row.source_ref}</span> : null}
-          </div>
-        </li>)}
-      </ul>
-    </div> : null}
-    {unknowns.length ? <div>
-      <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-[#8a8577]">Unknowns</div>
-      <ul className="list-disc space-y-1 pl-4 text-[12.5px] leading-5 text-[#45423d]">
-        {unknowns.map((row, index) => <li key={index}>{row}</li>)}
-      </ul>
-    </div> : null}
-  </div>;
-}
-
 // A Room checkpoint accepted a genuinely presentable output (e.g. a finished
 // research_decision — see ROOM_ARTIFACT_POPUP_KEYS in scheduler.js). Unlike
 // WorkArtifactReadyMarker (which gets real urls inline from the event),
@@ -673,7 +647,7 @@ function RoomArtifactReadyMarker({ item }) {
     }).catch(() => { if (active) setPreview({ loading: false, data: null, content: 'Could not load this artifact.' }); });
     return () => { active = false; };
   }, [first?.id]);
-  const structured = first?.key === 'research_decision' && preview.data;
+  const markdown = preview.data ? renderArtifactMarkdown(first?.key, preview.data) : null;
   return <div className="my-5 max-w-4xl">
     <div className="mb-1.5 flex items-center gap-2 text-[12px] text-[#8a8577]"><FileText size={13} /><span>{item.title}</span><time className="ml-auto font-mono text-[8px] text-[#aaa49c]">{fmtTime(item.createdAt)}</time></div>
     <p className="text-[15px] leading-7 text-[#45423d]">{item.summary}</p>
@@ -681,11 +655,9 @@ function RoomArtifactReadyMarker({ item }) {
     <RuntimeArtifactPopup
       open={popupOpen} onClose={() => setPopupOpen(false)} kind="text"
       title="Research output ready" subline={item.summary}
-      loading={preview.loading} textContent={preview.content}
+      loading={preview.loading} markdown={markdown} textContent={preview.content}
       downloadFilename={`${first?.key || 'research-output'}.json`}
-    >
-      {structured ? <ResearchDecisionContent data={preview.data} /> : null}
-    </RuntimeArtifactPopup>
+    />
   </div>;
 }
 
