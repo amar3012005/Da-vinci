@@ -2135,6 +2135,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getRuntimeArtifact(id) {
+    const { data } = await this.controlPlane.get(`/v1/hq/artifacts/${encodeURIComponent(id)}`);
+    return data;
+  }
+
   async createCampaign(payload) {
     const { data } = await this.controlPlane.post('/v1/campaigns', payload);
     return data;

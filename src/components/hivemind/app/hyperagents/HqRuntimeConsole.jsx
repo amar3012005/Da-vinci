@@ -8,6 +8,7 @@ import {
 import apiClient from '../shared/api-client';
 import { AuthorityReviewContent, CallPreview, CampaignLaunchPreview, GmailMessagePreview, PlatformActionPreview } from './RuntimeAuthorityPreview';
 import { CampaignAssetImage } from './campaigns/CampaignCreative';
+import RuntimeArtifactPopup from './RuntimeArtifactPopup';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 
@@ -327,6 +328,16 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
   const artifacts = collectRuntimeArtifacts(queue, growthBrief);
   const [artifactsOpen, setArtifactsOpen] = useState(true);
   const [tasksExpanded, setTasksExpanded] = useState(true);
+  const [artifactPreview, setArtifactPreview] = useState(null); // { loading, title, content } | null
+  const openArtifactPreview = useCallback(async (artifact) => {
+    setArtifactPreview({ loading: true, title: artifactLabel(artifact.key), content: null });
+    try {
+      const data = await apiClient.getRuntimeArtifact(artifact.id);
+      setArtifactPreview({ loading: false, title: data?.title ? String(data.title).replace(/^./, (c) => c.toUpperCase()) : artifactLabel(artifact.key), content: data?.content || 'No content available.' });
+    } catch {
+      setArtifactPreview({ loading: false, title: artifactLabel(artifact.key), content: 'Could not load this artifact.' });
+    }
+  }, []);
   return <section id="agent-runtime-tasks" className="relative w-full overflow-hidden rounded-[14px] border border-[#e3e0db] bg-white shadow-[0_14px_36px_-30px_rgba(0,0,0,0.55)]" aria-label="Artifacts and Runtime tasks">
     {onClose ? <button type="button" onClick={onClose} aria-label="Close Runtime tasks" title="Close" className="absolute right-3 top-3 z-10 grid h-7 w-7 place-items-center rounded-full text-[#8a8577] hover:bg-[#f2f0eb] hover:text-[#171717] lg:hidden"><X size={14} /></button> : null}
     <div className="max-h-[min(72vh,680px)] overflow-y-auto">
@@ -338,7 +349,7 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
           <ChevronDown size={14} className={`text-[#777168] transition-transform ${artifactsOpen ? 'rotate-180' : ''}`} />
         </button>
         {artifactsOpen ? <div className="space-y-1 px-4 pb-3">
-          {artifacts.slice(0, 6).map((artifact) => <div key={artifact.id} className="flex items-center gap-2 rounded-[6px] px-1 py-1.5"><FileText size={13} className="shrink-0 text-[#262626]" /><span className="min-w-0 flex-1 truncate text-[11px] text-[#393733]">{artifactLabel(artifact.key)}</span><span className="font-mono text-[7px] uppercase text-[#9a948b]">{artifact.status || ''}</span></div>)}
+          {artifacts.slice(0, 6).map((artifact) => <button type="button" key={artifact.id} onClick={() => openArtifactPreview(artifact)} className="flex w-full items-center gap-2 rounded-[6px] px-1 py-1.5 text-left hover:bg-[#f5f3ee]"><FileText size={13} className="shrink-0 text-[#262626]" /><span className="min-w-0 flex-1 truncate text-[11px] text-[#393733]">{artifactLabel(artifact.key)}</span><span className="font-mono text-[7px] uppercase text-[#9a948b]">{artifact.status || ''}</span></button>)}
           {!artifacts.length ? <p className="px-1 pb-1 text-[10px] text-[#9a948b]">Artifacts appear here as Room and provider checkpoints are accepted.</p> : null}
         </div> : null}
       </section>
@@ -360,6 +371,11 @@ export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experien
       </section>
     </div>
     {['AWAITING_START', 'REVIEW_LATER'].includes(firstLife?.status) ? <div className={`grid gap-2 border-t border-[#d8d3cc] bg-white p-3 ${firstLife.status === 'AWAITING_START' ? 'grid-cols-2' : 'grid-cols-1'}`}>{firstLife.status === 'AWAITING_START' ? <button type="button" onClick={() => onDecision('review_later')} className="h-9 border border-[#d8d3cc] px-3 text-[10px] font-semibold text-[#525252]">Review later</button> : null}<button type="button" onClick={() => onDecision('start')} disabled={experience && !experience.can_start} className="inline-flex h-9 items-center justify-center gap-2 bg-[#171717] px-3 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"><Play size={12} />Start recommended work</button></div> : null}
+    <RuntimeArtifactPopup
+      open={Boolean(artifactPreview)} onClose={() => setArtifactPreview(null)} kind="text"
+      title={artifactPreview?.title} loading={Boolean(artifactPreview?.loading)}
+      textContent={artifactPreview?.content} downloadFilename={`${(artifactPreview?.title || 'artifact').replaceAll(' ', '-')}.json`}
+    />
   </section>;
 }
 
@@ -541,6 +557,11 @@ export function ExternalActionMarker({ item }) {
 // already use) rather than hand-rolling a second image-fetch path.
 function CampaignVisualMarker({ item }) {
   const [asset, setAsset] = useState(null);
+  // Auto-opens once, the first time THIS event's asset resolves (mounts once
+  // per unique event id — see NarrativeEvent's list key — so it never
+  // re-pops on a later poll of the same event). Dismissible; the inline
+  // thumbnail below still stays in the feed either way.
+  const [popupOpen, setPopupOpen] = useState(false);
   const campaignId = item.details?.campaign_id;
   const assetId = item.details?.asset_id;
   useEffect(() => {
@@ -549,14 +570,42 @@ function CampaignVisualMarker({ item }) {
     apiClient.getCampaign(campaignId).then((data) => {
       if (!active) return;
       const found = (data?.campaign?.actions || []).flatMap((action) => action.assets || []).find((a) => a.id === assetId);
-      if (found) setAsset(found);
+      if (found) { setAsset(found); setPopupOpen(true); }
     }).catch(() => {});
     return () => { active = false; };
   }, [campaignId, assetId]);
   return <div className="my-5 max-w-4xl">
     <div className="mb-1.5 flex items-center gap-2 text-[12px] text-[#8a8577]"><Activity size={13} /><span>{item.title}</span><time className="ml-auto font-mono text-[8px] text-[#aaa49c]">{fmtTime(item.createdAt)}</time></div>
     <p className="text-[15px] leading-7 text-[#45423d]">{item.summary}</p>
-    {asset ? <CampaignAssetImage asset={asset} alt="Campaign visual" className="mt-3 aspect-video w-full max-w-sm rounded-md border border-[#e7e4df] object-cover" /> : null}
+    {asset ? <button type="button" onClick={() => setPopupOpen(true)} className="mt-3 block"><CampaignAssetImage asset={asset} alt="Campaign visual" className="aspect-video w-full max-w-sm rounded-md border border-[#e7e4df] object-cover" /></button> : null}
+    {asset ? <RuntimeArtifactPopup
+      open={popupOpen} onClose={() => setPopupOpen(false)} kind="image"
+      title="Campaign visual ready" subline={item.summary}
+      imageUrl={asset.content_url} downloadUrl={asset.content_url} shareUrl={asset.content_url}
+    /> : null}
+  </div>;
+}
+
+// Mirrors CampaignVisualMarker's "auto-pop once, stay in the feed after" — a
+// Room/specialist result that produced a real document/report (see the
+// `readyArtifacts`/`type: 'work.artifact_ready'` addition in
+// work-dispatcher.js). Links are real (verdict.artifacts url/title), so this
+// needs no extra fetch — unlike the Artifacts panel's click-to-preview,
+// which DOES need one for rows that only carry an id.
+function WorkArtifactReadyMarker({ item }) {
+  const [popupOpen, setPopupOpen] = useState(true);
+  const artifacts = Array.isArray(item.details?.artifacts) ? item.details.artifacts : [];
+  const first = artifacts[0] || {};
+  return <div className="my-5 max-w-4xl">
+    <div className="mb-1.5 flex items-center gap-2 text-[12px] text-[#8a8577]"><FileText size={13} /><span>{item.title}</span><time className="ml-auto font-mono text-[8px] text-[#aaa49c]">{fmtTime(item.createdAt)}</time></div>
+    <p className="text-[15px] leading-7 text-[#45423d]">{item.summary}</p>
+    <button type="button" onClick={() => setPopupOpen(true)} className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-[#171717] underline decoration-[#d8d3cc] underline-offset-2 hover:decoration-[#171717]"><FileText size={12} />{artifacts.length > 1 ? `View ${artifacts.length} artifacts` : 'View artifact'}</button>
+    <RuntimeArtifactPopup
+      open={popupOpen} onClose={() => setPopupOpen(false)} kind="text"
+      title={first.title || 'Document ready'} subline={item.summary}
+      textContent={artifacts.map((a) => `${a.title || 'Untitled'}${a.url ? `\n${a.url}` : ''}`).join('\n\n')}
+      downloadUrl={first.url} shareUrl={first.url}
+    />
   </div>;
 }
 
@@ -568,6 +617,7 @@ export function NarrativeEvent({ item, active }) {
   const Icon = wake ? Power : sleep ? Moon : blocked ? AlertTriangle : item.eventType === 'work_order_created' ? TerminalSquare : Activity;
   if (item.eventType === 'external_action_committed') return <ExternalActionMarker item={item} />;
   if (item.eventType === 'campaign_artifact_progress' && item.details?.type === 'campaign.asset_ready') return <CampaignVisualMarker item={item} />;
+  if (item.eventType === 'work_order_completed' && item.details?.type === 'work.artifact_ready') return <WorkArtifactReadyMarker item={item} />;
   if (item.eventType === 'baseline_observation') {
     const status = String(item.details?.status || item.summary || 'limited').replaceAll('_', ' ');
     const facts = item.details?.facts && typeof item.details.facts === 'object' ? item.details.facts : {};
