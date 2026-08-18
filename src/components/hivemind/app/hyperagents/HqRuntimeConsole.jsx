@@ -60,6 +60,15 @@ function MobileCheckinCall({ orgName, onStarted, onEnded }) {
   const [callLegId, setCallLegId] = useState(null);
   const [error, setError] = useState(null);
   const pollRef = useRef(null);
+  // The outbound provider returns TWO distinct ids: call_leg_id (for status
+  // polling/hangup against the telephony adapter) and session_id (what the
+  // admin-checkin route's transcript lookup is keyed on, via taraCall's
+  // orgId_sessionId — same field the web AaasVoiceWidget path already
+  // threads through). Passing call_leg_id where session_id is expected was
+  // a real, confirmed defect: the admin-checkin route would never find a
+  // taraCall row, so the completed-conversation's transcript was silently
+  // empty every time.
+  const sessionIdRef = useRef(null);
   const phoneValid = /^\+[1-9]\d{7,14}$/.test(phone.trim());
 
   const stopPoll = useCallback(() => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } }, []);
@@ -72,9 +81,9 @@ function MobileCheckinCall({ orgName, onStarted, onEnded }) {
         const r = await fetch(`${TARA_DG_HTTP}/calls/outbound/${callLegId}/status`);
         if (!r.ok) return;
         const d = await r.json();
-        if (d.status === 'connected' && callState !== 'connected') onStarted?.(callLegId);
+        if (d.status === 'connected' && callState !== 'connected') onStarted?.(sessionIdRef.current);
         setCallState(d.status);
-        if (d.status === 'ended' || d.status === 'error') { stopPoll(); onEnded?.(callLegId); }
+        if (d.status === 'ended' || d.status === 'error') { stopPoll(); onEnded?.(sessionIdRef.current); }
       } catch { /* network hiccup — next poll tries again */ }
     }, 2000);
     return stopPoll;
@@ -86,6 +95,7 @@ function MobileCheckinCall({ orgName, onStarted, onEnded }) {
     setCallState('dialing');
     try {
       const result = await apiClient.startTaraOutbound({ to: phone.trim(), company: orgName || undefined, goal: CHECKIN_GOAL });
+      sessionIdRef.current = result.session_id || null;
       setCallLegId(result.call_leg_id);
     } catch (e) {
       setCallState('error');
@@ -96,7 +106,7 @@ function MobileCheckinCall({ orgName, onStarted, onEnded }) {
     if (callLegId) { try { await apiClient.hangupTaraOutbound(callLegId); } catch { /* already ended */ } }
     setCallState('ended');
     stopPoll();
-    onEnded?.(callLegId);
+    onEnded?.(sessionIdRef.current);
   };
 
   if (!callState) return <div className="flex w-full max-w-sm flex-col items-center gap-3">
