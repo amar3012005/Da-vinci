@@ -557,10 +557,9 @@ export function ExternalActionMarker({ item }) {
 // already use) rather than hand-rolling a second image-fetch path.
 function CampaignVisualMarker({ item }) {
   const [asset, setAsset] = useState(null);
-  // Auto-opens once, the first time THIS event's asset resolves (mounts once
-  // per unique event id — see NarrativeEvent's list key — so it never
-  // re-pops on a later poll of the same event). Dismissible; the inline
-  // thumbnail below still stays in the feed either way.
+  // Click-to-view only — this does NOT auto-open. The inline thumbnail is
+  // enough of a "here it is" signal in the feed; forcing a modal on every
+  // generated visual was reported as unwanted noise.
   const [popupOpen, setPopupOpen] = useState(false);
   const campaignId = item.details?.campaign_id;
   const assetId = item.details?.asset_id;
@@ -570,7 +569,7 @@ function CampaignVisualMarker({ item }) {
     apiClient.getCampaign(campaignId).then((data) => {
       if (!active) return;
       const found = (data?.campaign?.actions || []).flatMap((action) => action.assets || []).find((a) => a.id === assetId);
-      if (found) { setAsset(found); setPopupOpen(true); }
+      if (found) setAsset(found);
     }).catch(() => {});
     return () => { active = false; };
   }, [campaignId, assetId]);
@@ -609,24 +608,67 @@ function WorkArtifactReadyMarker({ item }) {
   </div>;
 }
 
+// Structured render for a `research_decision` artifact (schema:
+// core/src/runtime-playbooks/artifact-schema.js — decision, evidence[{claim,
+// source_ref, confidence}], unknowns[]). Confirmed against a real production
+// row 2026-08-18 — there is no separate "recommendation"/"open_gaps" field,
+// only these three; this renders exactly what's actually there rather than
+// guessing at fields that don't exist.
+function ResearchDecisionContent({ data }) {
+  const evidence = Array.isArray(data?.evidence) ? data.evidence : [];
+  const unknowns = Array.isArray(data?.unknowns) ? data.unknowns : [];
+  return <div className="space-y-4">
+    <div>
+      <div className="mb-1 font-mono text-[9px] uppercase tracking-[0.12em] text-[#8a8577]">Decision</div>
+      <p className="text-[13px] leading-6 text-[#292824]">{data?.decision || 'No decision recorded.'}</p>
+    </div>
+    {evidence.length ? <div>
+      <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-[#8a8577]">Evidence</div>
+      <ul className="space-y-2.5">
+        {evidence.map((row, index) => <li key={index} className="border-l-2 border-[#e7e4df] pl-3 text-[12.5px] leading-5 text-[#45423d]">
+          <span>{row?.claim}</span>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 font-mono text-[10px] text-[#a3a3a3]">
+            {row?.confidence ? <span className="text-[#c99a2e]">{row.confidence}</span> : null}
+            {row?.source_ref ? <span>source: {row.source_ref}</span> : null}
+          </div>
+        </li>)}
+      </ul>
+    </div> : null}
+    {unknowns.length ? <div>
+      <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-[#8a8577]">Unknowns</div>
+      <ul className="list-disc space-y-1 pl-4 text-[12.5px] leading-5 text-[#45423d]">
+        {unknowns.map((row, index) => <li key={index}>{row}</li>)}
+      </ul>
+    </div> : null}
+  </div>;
+}
+
 // A Room checkpoint accepted a genuinely presentable output (e.g. a finished
 // research_decision — see ROOM_ARTIFACT_POPUP_KEYS in scheduler.js). Unlike
 // WorkArtifactReadyMarker (which gets real urls inline from the event),
 // this event only carries {id, key} — fetches full content via the same
 // GET /v1/hq/artifacts/:id the Artifacts panel uses, on mount.
+//
+// Auto-opens exactly ONCE per artifact, persisted in sessionStorage — a full
+// page reload re-mounts every component from scratch, which would otherwise
+// re-pop this on every visit for the same historical event (reported as
+// unwanted "shows every time").
 function RoomArtifactReadyMarker({ item }) {
-  const [popupOpen, setPopupOpen] = useState(true);
-  const [preview, setPreview] = useState({ loading: true, content: null });
   const artifacts = Array.isArray(item.details?.artifacts) ? item.details.artifacts : [];
   const first = artifacts[0];
+  const seenKey = first?.id ? `hq-artifact-popup-seen:${first.id}` : null;
+  const [popupOpen, setPopupOpen] = useState(() => Boolean(seenKey) && !window.sessionStorage.getItem(seenKey));
+  const [preview, setPreview] = useState({ loading: true, data: null, content: null });
+  useEffect(() => { if (seenKey) window.sessionStorage.setItem(seenKey, '1'); }, [seenKey]);
   useEffect(() => {
     let active = true;
-    if (!first?.id) { setPreview({ loading: false, content: 'No content available.' }); return undefined; }
-    apiClient.getRuntimeArtifact(first.id).then((data) => {
-      if (active) setPreview({ loading: false, content: data?.content || 'No content available.' });
-    }).catch(() => { if (active) setPreview({ loading: false, content: 'Could not load this artifact.' }); });
+    if (!first?.id) { setPreview({ loading: false, data: null, content: 'No content available.' }); return undefined; }
+    apiClient.getRuntimeArtifact(first.id).then((res) => {
+      if (active) setPreview({ loading: false, data: res?.data || null, content: res?.content || 'No content available.' });
+    }).catch(() => { if (active) setPreview({ loading: false, data: null, content: 'Could not load this artifact.' }); });
     return () => { active = false; };
   }, [first?.id]);
+  const structured = first?.key === 'research_decision' && preview.data;
   return <div className="my-5 max-w-4xl">
     <div className="mb-1.5 flex items-center gap-2 text-[12px] text-[#8a8577]"><FileText size={13} /><span>{item.title}</span><time className="ml-auto font-mono text-[8px] text-[#aaa49c]">{fmtTime(item.createdAt)}</time></div>
     <p className="text-[15px] leading-7 text-[#45423d]">{item.summary}</p>
@@ -636,7 +678,9 @@ function RoomArtifactReadyMarker({ item }) {
       title="Research output ready" subline={item.summary}
       loading={preview.loading} textContent={preview.content}
       downloadFilename={`${first?.key || 'research-output'}.json`}
-    />
+    >
+      {structured ? <ResearchDecisionContent data={preview.data} /> : null}
+    </RuntimeArtifactPopup>
   </div>;
 }
 
