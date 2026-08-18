@@ -592,7 +592,12 @@ function CampaignVisualMarker({ item }) {
 // needs no extra fetch — unlike the Artifacts panel's click-to-preview,
 // which DOES need one for rows that only carry an id.
 function WorkArtifactReadyMarker({ item }) {
-  const [popupOpen, setPopupOpen] = useState(true);
+  // Same sessionStorage-persisted "seen once" guard as RoomArtifactReadyMarker
+  // below — a page reload re-mounts every component from scratch, which would
+  // otherwise re-pop this for the same historical event every visit.
+  const seenKey = `hq-artifact-popup-seen:work:${item.id || item.sequence}`;
+  const [popupOpen, setPopupOpen] = useState(() => !window.sessionStorage.getItem(seenKey));
+  useEffect(() => { window.sessionStorage.setItem(seenKey, '1'); }, [seenKey]);
   const artifacts = Array.isArray(item.details?.artifacts) ? item.details.artifacts : [];
   const first = artifacts[0] || {};
   return <div className="my-5 max-w-4xl">
