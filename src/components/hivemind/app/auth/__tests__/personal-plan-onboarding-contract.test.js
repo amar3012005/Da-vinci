@@ -35,3 +35,12 @@ test('first-time onboarding uses an edge-to-edge equal split instead of a boxed 
   expect(login).toContain('HIVEMIND PRODUCT LAYERS');
   expect(login).toContain('Select a plan to preview your access');
 });
+
+test('login identifies the Singulance brand without the legacy hexagon mark', () => {
+  const login = read('../LoginPage.jsx');
+
+  expect(login).toContain('src="/images/singulance-orbit.png"');
+  expect(login).toContain('>SINGULANCE</h1>');
+  expect(login).toContain('HIVEMIND · MEMORY ENGINE');
+  expect(login).not.toContain('<Hexagon');
+});
