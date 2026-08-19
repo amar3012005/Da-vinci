@@ -419,7 +419,8 @@ export default function LoginPage() {
 
         <div className={`flex flex-col md:flex-row items-stretch bg-white overflow-hidden ${showOnboarding ? 'h-full w-full border-0 rounded-none shadow-none' : 'border border-[#e3e0db] rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
           {/* Left: Login form */}
-          <div className={`transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'h-full overflow-y-auto p-8 md:w-1/2 md:border-r md:border-[#e3e0db] lg:p-12 xl:p-16' : 'p-8 md:w-[448px]'}`}>
+          <div className={`transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'h-full overflow-y-auto p-7 md:w-1/2 md:border-r md:border-[#e3e0db] lg:p-10 xl:p-12' : 'p-8 md:w-[448px]'}`}>
+            <div className={showOnboarding ? 'mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center py-8 lg:py-12' : ''}>
             {/* Logo */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
@@ -925,13 +926,46 @@ export default function LoginPage() {
                 </motion.div>
               )}
             </AnimatePresence>
+            </div>
           </div>
 
           {/* Right pane — artwork until a personal plan is selected, then a
               useful plan summary in the same half of the onboarding card. */}
-          <div className={`hidden md:block bg-[#f8f7f2] overflow-hidden relative ${showOnboarding ? 'h-full md:w-1/2' : 'md:w-[448px]'}`}>
-            {showOnboarding && accountType === 'personal' && onboardingStep === 2 && selectedPlan ? (() => {
+          <div className={`hidden md:flex bg-[#f8f7f2] overflow-hidden relative flex-col ${showOnboarding ? 'h-full md:w-1/2' : 'md:w-[448px]'}`}>
+            {showOnboarding && accountType === 'personal' && onboardingStep === 2 ? (() => {
               const plan = PERSONAL_PLANS.find((candidate) => candidate.id === selectedPlan);
+              if (!plan) {
+                return (
+                  <div className="flex h-full flex-col justify-between p-10 lg:p-14 xl:p-16">
+                    <div>
+                      <p className="text-[9px] font-mono uppercase tracking-[0.22em] text-[#117dff]">HIVEMIND PRODUCT LAYERS</p>
+                      <h3 className="mt-4 max-w-md text-[38px] font-semibold leading-[1.04] tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">Choose the way your Brain grows.</h3>
+                      <p className="mt-5 max-w-md text-[15px] leading-relaxed text-[#525252]">Every plan begins with your memory. Add governed work and voice only when they belong in your workflow.</p>
+                    </div>
+
+                    <div className="my-10 space-y-3">
+                      {[
+                        { icon: Brain, title: 'BRAIN', body: 'Grounded memory that remains yours.' },
+                        { icon: Workflow, title: 'OPERATING SYSTEM', body: 'Approved agents that carry work forward.' },
+                        { icon: Mic2, title: 'VOICE', body: 'TARA for conversations that become memory.' },
+                      ].map(({ icon: Icon, title, body }, index) => (
+                        <div key={title} className="flex items-center gap-4 rounded-[10px] border border-[#e3e0db] bg-white px-4 py-4">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[7px] bg-[#117dff]/[0.07] text-[#117dff]"><Icon size={17} /></span>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-mono font-bold tracking-[0.15em] text-[#0a0a0a]">0{index + 1} · {title}</p>
+                            <p className="mt-1 text-[12px] text-[#737373]">{body}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-t border-[#e3e0db] pt-5">
+                      <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#a3a3a3]">Select a plan to preview your access</p>
+                      <p className="mt-2 max-w-md text-[11px] leading-relaxed text-[#737373]">You can change plans later. Your Brain is never metered per recall.</p>
+                    </div>
+                  </div>
+                );
+              }
               const layers = [
                 { label: 'BRAIN', enabled: true, icon: Brain },
                 { label: 'OPERATING SYSTEM', enabled: ['free', 'pro', 'scale'].includes(plan.id), icon: Workflow },
