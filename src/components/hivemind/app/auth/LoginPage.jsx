@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow } from 'lucide-react';
+import { Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 import { clearInvitationContext, loadInvitationContext, saveInvitationContext } from './invitation-session';
@@ -424,12 +424,14 @@ export default function LoginPage() {
             {/* Logo */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-[8px] bg-[#117dff]/10 border border-[#117dff]/25 flex items-center justify-center">
-                  <Hexagon size={22} className="text-[#117dff]" />
-                </div>
+                <img
+                  src="/images/singulance-orbit.png"
+                  alt="Singulance"
+                  className="h-10 w-14 shrink-0 object-contain"
+                />
                 <div>
-                  <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">HIVEMIND</h1>
-                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.18em]">Memory Engine</p>
+                  <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">SINGULANCE</h1>
+                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.18em]">HIVEMIND · MEMORY ENGINE</p>
                 </div>
               </div>
               <span className="hidden sm:inline text-[10px] font-mono text-[#d4d0ca] tabular-nums">[v2]</span>
