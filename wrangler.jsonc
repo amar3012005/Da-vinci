@@ -2,6 +2,9 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "hivemind-web",
   "compatibility_date": "2026-08-19",
+  "build": {
+    "command": "node scripts/assert-cloudflare-main-release.mjs && PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm run build:cloudflare"
+  },
   "assets": {
     "directory": "./build",
     "not_found_handling": "single-page-application"
