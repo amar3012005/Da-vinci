@@ -18,6 +18,7 @@ import RunwayEstimatorModal from '../components/RunwayEstimatorModal';
 import { PLAN_LIMIT_EVENT } from '../shared/planLimit';
 import ServiceErrorToast from '../components/ServiceErrorToast';
 import CallContractModal from '../components/CallContractModal';
+import ProductAccessModal from '../components/ProductAccessModal';
 
 /**
  * PlanLimitGate — listens for the global 'hm:plan-limit' window event
@@ -197,10 +198,10 @@ export default function AppShell() {
 
   const finishGate = () => {
     try { sessionStorage.removeItem('hm_new_user'); } catch { /* noop */ }
-    // Post-checklist landing: the HyperAgents company dashboard (mycompany) —
-    // the operating view of the workspace, not the generic overview. Also
-    // strips auth params so refresh doesn't replay the sequence.
-    navigate('/hivemind/app/employees/mycompany', { replace: true });
+    // Every subscription includes BRAIN, so post-login always lands on its
+    // overview. Product entitlements are applied only when the user chooses OS
+    // or VOICE; auth callbacks never strand a BRAIN-only user behind a gate.
+    navigate('/hivemind/app/overview', { replace: true });
     setGate('done');
   };
   // Self-host gate: only an org whose agent was NEVER registered gets the
@@ -252,6 +253,7 @@ export default function AppShell() {
     typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
   ));
   const [activeSection, setActiveSection] = useState(() => sectionForPath(location.pathname));
+  const [productUpgrade, setProductUpgrade] = useState(null);
   useEffect(() => {
     const section = sectionForPath(location.pathname);
     setActiveSection(section);
@@ -263,6 +265,12 @@ export default function AppShell() {
     const landing = { hivemind: '/hivemind/app/overview', hyperagents: '/hivemind/app/employees/mycompany', tara: '/hivemind/app/tara' };
     if (landing[s]) navigate(landing[s]);
   };
+  useEffect(() => {
+    apiClient.setProductAccessPlan(org?.plan);
+    const onRestrictedAction = (event) => setProductUpgrade(event.detail || null);
+    window.addEventListener('hm:product-access-required', onRestrictedAction);
+    return () => window.removeEventListener('hm:product-access-required', onRestrictedAction);
+  }, [org?.plan]);
   const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
   // HyperAgents runs its own left rail (rooms + account) — the app sidebar is
   // hidden entirely there so the workspace reads as one dedicated surface.
@@ -361,6 +369,17 @@ export default function AppShell() {
         {/* First-contact HITL popup for an autonomous TARA call — reacts to
             'hm:call-contract'. Approve → dial; nothing calls without it. */}
         <CallContractModal />
+
+        <ProductAccessModal
+          open={Boolean(productUpgrade)}
+          product={productUpgrade?.product}
+          currentPlan={org?.plan}
+          onClose={() => setProductUpgrade(null)}
+          onUpgrade={(plan) => {
+            setProductUpgrade(null);
+            navigate(`/hivemind/app/billing?upgrade=${plan}`);
+          }}
+        />
       </div>
     </TeamProvider>
     </QuickRecorderProvider>
