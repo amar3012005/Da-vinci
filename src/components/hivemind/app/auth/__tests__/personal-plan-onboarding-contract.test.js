@@ -23,3 +23,12 @@ test('paid signup choices never self-grant access and continue through Billing',
   expect(onboarding).toContain('`/hivemind/app/billing?upgrade=${selectedPlan}&source=signup`');
 });
 
+test('first-time onboarding uses an edge-to-edge equal split instead of a boxed card', () => {
+  const login = read('../LoginPage.jsx');
+
+  expect(login).toContain("showOnboarding ? 'h-screen overflow-hidden p-0'");
+  expect(login).toContain("showOnboarding ? 'h-full max-w-none m-0'");
+  expect(login).toContain("showOnboarding ? 'h-full w-full border-0 rounded-none shadow-none'");
+  expect(login).toContain("h-full overflow-y-auto p-8 md:w-1/2");
+  expect(login).toContain("h-full md:w-1/2");
+});
