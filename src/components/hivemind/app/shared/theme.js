@@ -61,19 +61,13 @@ export const shadows = {
 
 // API endpoints resolved from bootstrap
 //
-// Default to same-origin ('') so calls go to https://<frontend-host>/v1/* and
-// hit the Caddy reverse proxy in front of the control-plane. This avoids three
-// failure modes that produced false "Control plane unavailable" banners:
-//   1. Browsers / corporate networks / ad-blockers blocking the :8040 port
-//   2. Cross-origin cookie issues for first-party session cookies
-//   3. Wrong/empty REACT_APP_CONTROL_PLANE_URL baked into a Vercel build
-// FE is hosted on Vercel at hivemind.davinciai.eu — Vercel does NOT proxy
-// /v1/* to the control plane, so a same-origin request resolves to Vercel's
-// SPA fallback and returns 404/405. Always hit the api host explicitly.
+// The static frontend is served independently from the API. Always use the
+// public control-plane origin rather than a same-origin proxy or an exposed
+// Docker port. This keeps auth working on Cloudflare and on legacy hosts.
 export const API_DEFAULTS = {
   controlPlaneBase:
     process.env.REACT_APP_CONTROL_PLANE_URL ||
-    'https://api.hivemind.davinciai.eu:8040',
+    'https://api.singulancelabs.com',
   coreApiBase:
-    process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050',
+    process.env.REACT_APP_CORE_API_URL || 'https://core.singulancelabs.com',
 };
