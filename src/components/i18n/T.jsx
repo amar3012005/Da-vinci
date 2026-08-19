@@ -95,7 +95,7 @@ const MAX_BATCH = 100;
 function getApiBase() {
   return (
     (typeof process !== 'undefined' && process.env?.REACT_APP_CORE_API_URL) ||
-    'https://core.hivemind.davinciai.eu:8050'
+    'https://core.singulancelabs.com'
   );
 }
 

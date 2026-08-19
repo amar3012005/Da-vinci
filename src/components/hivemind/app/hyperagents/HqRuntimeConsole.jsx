@@ -51,7 +51,7 @@ function RuntimeMotion() {
 // Providers") is explicit that internal/white-label vendor identity (the
 // call is actually placed via Zernio, a Telnyx reseller) must stay behind
 // the capability boundary — the user only ever sees "call my mobile".
-const TARA_DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${(process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '')}/voice2`).replace(/\/$/, '');
+const TARA_DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${(process.env.REACT_APP_CORE_API_URL || 'https://core.singulancelabs.com').replace(/\/$/, '')}/voice2`).replace(/\/$/, '');
 const CHECKIN_GOAL = 'This is Runtime\'s scheduled admin check-in call. Ask about current status and priorities, capture any corrections to the retained plan, note active blockers, and keep it to about three minutes.';
 
 function MobileCheckinCall({ orgName, onStarted, onEnded }) {

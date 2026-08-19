@@ -35,7 +35,7 @@ import apiClient from '../shared/api-client';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 
 // Same-core-host derivation as AaasVoiceWidget — residency-correct, no per-host bake.
-const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
+const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.singulancelabs.com').replace(/\/$/, '');
 // tara-deepgram engine (Deepgram Voice Agent + Telnyx) — routed under the same core host.
 const DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${_CORE_HTTP}/voice2`).replace(/\/$/, '');
 

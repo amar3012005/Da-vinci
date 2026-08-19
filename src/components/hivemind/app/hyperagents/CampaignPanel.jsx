@@ -26,7 +26,7 @@ export const Spinner = ({ size = 10, className = 'animate-spin' }) => (
 
 const EMAIL_PACE_MS = 8500; // FE pacing (BE enforces 8s — stay just above)
 // tara-deepgram base (same residency-correct derivation as TaraConfig).
-const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
+const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.singulancelabs.com').replace(/\/$/, '');
 const DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${_CORE_HTTP}/voice2`).replace(/\/$/, '');
 const DG_WS = DG_HTTP.replace(/^http/, 'ws');
 // The live-listen tap lives on whichever ADAPTER ran the call — /voice2 for

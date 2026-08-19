@@ -15,7 +15,7 @@ import { Orb } from './Orb';
 import apiClient from './app/shared/api-client';
 
 const SAMPLE_RATE = 16000;
-const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
+const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.singulancelabs.com').replace(/\/$/, '');
 const DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${_CORE_HTTP}/voice2`).replace(/\/$/, '');
 const DG_WS = `${DG_HTTP.replace(/^http/, 'ws')}/voice`;
 

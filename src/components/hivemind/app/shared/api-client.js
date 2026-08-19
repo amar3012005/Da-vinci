@@ -153,7 +153,7 @@ class HiveMindApiClient {
     let safeUrl = url;
     if (safeUrl && /^https?:\/\/(hm-core|localhost|127\.0\.0\.1|::1)(?::\d+)?/i.test(safeUrl)) {
       console.warn('[api-client] ignoring internal core base URL from bootstrap:', safeUrl);
-      safeUrl = process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050';
+      safeUrl = process.env.REACT_APP_CORE_API_URL || 'https://core.singulancelabs.com';
     }
     if (safeUrl && safeUrl !== this._coreBaseUrl) {
       this._coreBaseUrl = safeUrl;
