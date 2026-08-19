@@ -36,9 +36,10 @@ Cloudflare's SPA fallback, so direct navigation to `/hivemind/login?create=1`
 returns the application shell.
 
 `wrangler.jsonc` runs a release guard and `build:cloudflare` before every
-`wrangler deploy`. The guard refuses a dirty checkout or any SHA that is not the
-current remote `main`, so `npx wrangler deploy` cannot publish stale build
-assets from a feature branch.
+`wrangler deploy`. The guard refuses tracked source changes or any SHA that is
+not the current remote `main`, so `npx wrangler deploy` cannot publish stale
+build assets from a feature branch. Wrangler's own untracked local metadata is
+intentionally ignored by this check.
 
 `build:cloudflare` removes two unreferenced historical media files and the
 Pages-only `_redirects` rule from the *build artifact only*. They are retained

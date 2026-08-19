@@ -2,7 +2,9 @@ import { execFileSync } from 'node:child_process';
 
 const run = (args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 const head = run(['rev-parse', 'HEAD']);
-const dirty = run(['status', '--porcelain']);
+// Wrangler may create local, untracked metadata before it invokes this command.
+// Only a tracked source change can make the release artifact ambiguous.
+const dirty = run(['status', '--porcelain', '--untracked-files=no']);
 const remoteMain = run(['ls-remote', 'origin', 'refs/heads/main']).split(/\s+/)[0];
 
 if (dirty) {
