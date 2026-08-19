@@ -29,7 +29,7 @@ const PLANS = [
     name: 'Free',
     price: '€0',
     period: '/month',
-    description: 'Try HIVEMIND with real documents. 100 pages/month, 1 user seat.',
+    description: 'Build a Brain that remembers your work. 100 pages included.',
     accent: false,
     features: [
       // Usage limits
@@ -43,11 +43,11 @@ const PLANS = [
       // All-plan features
       { label: 'Memory Graph', icon: Check },
       { label: 'MCP Protocol', icon: Check },
-      { label: 'Agent Swarm (CSI)', icon: Check },
+      { label: 'HyperAgents trial access', icon: Check },
       { label: 'Web Intelligence', icon: Check },
       { label: 'Deep Research', icon: Check },
       { label: 'Talk to HIVE', icon: Check },
-      { label: 'TARA Voice Agent', icon: Check },
+      { label: 'TARA Voice trial access', icon: Check },
       { label: 'LLM Observer', icon: Check },
       // Support
       { label: 'Community support', icon: Headphones },
@@ -64,11 +64,39 @@ const PLANS = [
     },
   },
   {
+    id: 'plus',
+    name: 'BRAIN+',
+    price: '€39',
+    period: '/month',
+    description: 'Keep your work history permanently. 1,000 pages included.',
+    accent: false,
+    features: [
+      { label: 'All BRAIN features from Free', icon: Check },
+      { label: '1,000 pages/month', icon: HardDrive },
+      { label: '10,000 memories', icon: Brain },
+      { label: 'Permanent personal history', icon: Check },
+      { label: 'More source types and connectors', icon: Cable },
+      { label: 'Deeper recall across your own work', icon: Sparkles },
+      { label: 'No per-query credits', icon: Check },
+      { label: 'Email support', icon: Headphones },
+    ],
+    limits: {
+      tokens: 5_000_000,
+      memories: 10_000,
+      connections: 10,
+      deepResearch: 10,
+      webIntel: 20,
+      searches: 50_000,
+      users: 1,
+      kbPages: 1_000,
+    },
+  },
+  {
     id: 'pro',
     name: 'Pro',
     price: '€79',
     period: '/month',
-    description: 'Teams building on institutional memory. 1,000 pages/month, 5 seats.',
+    description: 'Give your Brain work to carry out with HyperAgents.',
     accent: true,
     popular: true,
     features: [
@@ -87,7 +115,6 @@ const PLANS = [
       { label: 'Web Intelligence', icon: Check },
       { label: 'Deep Research', icon: Check },
       { label: 'Talk to HIVE', icon: Check },
-      { label: 'TARA Voice Agent', icon: Check },
       { label: 'LLM Observer', icon: Check },
       // Support
       { label: 'Email support (48h)', icon: Headphones },
@@ -374,6 +401,17 @@ export default function Billing() {
     ? billing.all_plans.map(planFromBackend)
     : PLANS.filter((plan) => plan.id !== 'enterprise');
 
+  useEffect(() => {
+    const requested = String(searchParams.get('upgrade') || '').toLowerCase();
+    if (!['plus', 'pro', 'scale'].includes(requested)) return;
+    if (!billing) return;
+    if (canManageBilling && !isEnterpriseWorkspace && requested !== currentPlan) setUpgradeModal(requested);
+    else if (!canManageBilling) setBillingError('Only an organization owner or admin can change the subscription.');
+    const next = new URLSearchParams(searchParams);
+    next.delete('upgrade');
+    setSearchParams(next, { replace: true });
+  }, [billing, canManageBilling, currentPlan, isEnterpriseWorkspace, searchParams, setSearchParams]);
+
   const currentPlanDef = billing?.plan
     ? planFromBackend(billing.plan)
     : planOptions.find((p) => p.id === currentPlan);
@@ -616,7 +654,7 @@ export default function Billing() {
       )}
 
       {!isEnterpriseWorkspace && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {planOptions.map((plan) => (
             <PlanCard
               key={plan.id}

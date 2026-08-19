@@ -2,6 +2,7 @@ import axios from 'axios';
 import { API_DEFAULTS } from './theme';
 import { isPlanLimitError, extractPlanLimit, emitPlanLimit } from './planLimit';
 import { isServiceError, extractServiceError, emitServiceError } from './serviceError';
+import { productActionDecision } from './product-access';
 
 const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
 
@@ -42,6 +43,7 @@ class HiveMindApiClient {
 
     this._apiKey = null;
     this._coreBaseUrl = null;
+    this._productAccessPlan = 'free';
     this._apiKeyStorageKey = 'hivemind_core_api_key';
 
     // Global plan-limit detector: on any 402 (or 403/429) carrying the
@@ -50,8 +52,32 @@ class HiveMindApiClient {
     // then re-reject so individual callers behave exactly as before.
     this._attachPlanLimitInterceptor(this.controlPlane);
     this._attachPlanLimitInterceptor(this.core);
+    this._attachProductAccessInterceptor(this.controlPlane);
+    this._attachProductAccessInterceptor(this.core);
 
     this.loadStoredApiKey();
+  }
+
+  setProductAccessPlan(planId) {
+    this._productAccessPlan = String(planId || 'free').toLowerCase();
+  }
+
+  _attachProductAccessInterceptor(instance) {
+    instance.interceptors.request.use((config) => {
+      if (typeof window === 'undefined') return config;
+      const method = String(config?.method || 'get').toLowerCase();
+      const pathname = window.location.pathname || '';
+      if (!pathname.startsWith('/hivemind/app/')) return config;
+      const requestPath = String(config?.url || '');
+      // Account/session/commercial controls belong to the app shell, not to
+      // the product currently visible behind it. They must remain usable from
+      // every screen (especially logout and upgrade checkout).
+      if (/^\/(?:auth\/|v1\/(?:account|billing)(?:\/|$))/.test(requestPath)) return config;
+      const decision = productActionDecision({ method, pathname, planId: this._productAccessPlan });
+      if (decision.allowed) return config;
+      window.dispatchEvent(new CustomEvent('hm:product-access-required', { detail: decision }));
+      throw new axios.CanceledError('subscription_access_required');
+    });
   }
 
   _attachPlanLimitInterceptor(instance) {
@@ -2132,6 +2158,11 @@ class HiveMindApiClient {
 
   async getCampaign(id) {
     const { data } = await this.controlPlane.get(`/v1/campaigns/${id}`);
+    return data;
+  }
+
+  async getRuntimeArtifact(id) {
+    const { data } = await this.controlPlane.get(`/v1/hq/artifacts/${encodeURIComponent(id)}`);
     return data;
   }
 

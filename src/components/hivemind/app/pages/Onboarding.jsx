@@ -85,6 +85,12 @@ export default function OnboardingFlow() {
       ? (saved.enterprise || saved.hivemind_name || 'My Organization')
       : (saved.name ? `${saved.name}'s Workspace` : (saved.hivemind_name || 'My Workspace'));
     const dep = saved.deployment === 'selfhost' || saved.deployment === 'self_hosted' ? 'selfhost' : 'managed';
+    // A paid selection is an upgrade intent, never an entitlement grant. New
+    // personal workspaces are created on Free and then continue to Billing so
+    // Stripe remains the authority for activating Plus, Pro or Scale.
+    const selectedPlan = ['free', 'plus', 'pro', 'scale'].includes(saved.selected_plan)
+      ? saved.selected_plan
+      : 'free';
     const signupTicket = `${saved.signup_ticket || ''}`.trim();
     setReferralCode(String(saved.referral_code || '').trim().toUpperCase());
     if (isEnt && !saved.enterprise_invitation) {
@@ -113,6 +119,11 @@ export default function OnboardingFlow() {
           setEnterpriseActivation(created.organization.enterprise_onboarding);
           setAutoCreating(false);
           window.setTimeout(() => { window.location.href = '/hivemind/app/overview'; }, 2400);
+          return;
+        }
+        if (!isEnt && selectedPlan !== 'free') {
+          try { sessionStorage.removeItem('hivemind_post_signup_upgrade'); } catch { /* ignore */ }
+          window.location.href = `/hivemind/app/billing?upgrade=${selectedPlan}&source=signup`;
           return;
         }
         window.location.href = '/hivemind/app/overview'; // managed → straight to the dashboard (no re-ask)

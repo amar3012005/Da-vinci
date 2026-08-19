@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, Cloud, Server, Lock, Check, Crown, KeyRound } from 'lucide-react';
+import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 import { clearInvitationContext, loadInvitationContext, saveInvitationContext } from './invitation-session';
@@ -57,6 +57,33 @@ function DotGrid() {
 /* input recipe — shared by both create-account forms */
 const INPUT_CLS = "w-full px-3.5 py-2.5 rounded-[6px] border border-[#e3e0db] bg-white text-[#0a0a0a] text-[13px] focus:outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]/20 transition-all";
 const LABEL_CLS = "text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5";
+
+const PERSONAL_PLANS = [
+  {
+    id: 'free', name: 'Free', product: 'BRAIN + OS + VOICE', price: '€0', cadence: '/mo',
+    eyebrow: 'Explore the complete system', capacity: '100 pages included',
+    summary: 'Try the full HIVEMIND experience within the existing free usage limits.',
+    features: ['Grounded recall from your own sources', 'Limited HyperAgent and VOICE access', 'PDF, DOCX and XLSX ingestion', 'Up to 3 connected sources'],
+  },
+  {
+    id: 'plus', name: 'Plus', product: 'BRAIN', price: '€39', cadence: '/mo',
+    eyebrow: 'Your permanent personal memory', capacity: '1,000 pages included',
+    summary: 'Keep your work history permanently and recall it without per-query credits.',
+    features: ['Everything in Free for BRAIN', 'Permanent personal history', 'More source types and connectors', 'Deeper recall across your own work'],
+  },
+  {
+    id: 'pro', name: 'Pro', product: 'BRAIN + Operating System', price: '€79', cadence: '/mo',
+    eyebrow: 'Give your Brain work to carry out', capacity: 'Higher memory capacity', popular: true,
+    summary: 'Turn your memory into an operating system with governed HyperAgents.',
+    features: ['Everything in Plus', 'Included HyperAgent runs each month', 'Deep Research and Web Intelligence', 'Connected-app actions with your approval'],
+  },
+  {
+    id: 'scale', name: 'Scale', product: 'BRAIN + OS + VOICE', price: '€239', cadence: '/mo',
+    eyebrow: 'Operate with a small AI team', capacity: '10,000 pages included',
+    summary: 'Combine memory, autonomous work and TARA voice for a trusted private circle.',
+    features: ['Everything in Pro', 'Larger HyperAgent allowance', 'TARA voice with included talk time', 'Up to 3 trusted collaborators'],
+  },
+];
 
 export default function LoginPage() {
   const { isAuthenticated, isUnreachable, loading, login, org, needsOnboarding } = useAuth();
@@ -132,6 +159,7 @@ export default function LoginPage() {
   const [loadArtwork, setLoadArtwork] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [accountType, setAccountType] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(null);
   const [hostingChoice, setHostingChoice] = useState(null); // 'managed' | 'self_hosted'
   const [userName, setUserName] = useState('');
   const [enterpriseName, setEnterpriseName] = useState('');
@@ -181,8 +209,9 @@ export default function LoginPage() {
     setEnterpriseName(saved.enterprise || '');
     setHivemindName(saved.hivemind_name || '');
     setHostingChoice(saved.deployment === 'selfhost' ? 'self_hosted' : (saved.deployment || 'managed'));
+    setSelectedPlan(saved.selected_plan || null);
     setEnterpriseInvitation(saved.enterprise_invitation || null);
-    setOnboardingStep(saved.type === 'enterprise' ? 3 : 2);
+    setOnboardingStep(saved.type === 'enterprise' ? 3 : (saved.selected_plan ? 3 : 2));
   }, [wantsCreate]);
 
   // Restore a validated invitation after reloads and between onboarding
@@ -301,6 +330,7 @@ export default function LoginPage() {
       hivemind_name: hivemindName,
       enterprise: enterpriseName || null,
       deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
+      ...(accountType === 'personal' ? { selected_plan: selectedPlan || 'free' } : {}),
       ...(accountType === 'personal' ? { referral_code: referralCode.trim() || null } : {}),
       ...(admission.invitation ? { enterprise_invitation: admission.invitation } : {}),
       signup_ticket: admission.signup_ticket,
@@ -308,6 +338,11 @@ export default function LoginPage() {
     // Save onboarding data for post-auth pickup
     try {
       localStorage.setItem('hivemind_onboarding', JSON.stringify(onboardingIntent));
+      if (accountType === 'personal' && selectedPlan && selectedPlan !== 'free') {
+        sessionStorage.setItem('hivemind_post_signup_upgrade', selectedPlan);
+      } else {
+        sessionStorage.removeItem('hivemind_post_signup_upgrade');
+      }
     } catch (e) {}
     // If the user came via an invite link, send them back there after OAuth so
     // they land on the invite-acceptance screen instead of the personal-org
@@ -337,6 +372,7 @@ export default function LoginPage() {
     setShowOnboarding(false);
     setOnboardingStep(1);
     setAccountType(null);
+    setSelectedPlan(null);
     setHostingChoice(null);
     setUserName('');
     setEnterpriseName('');
@@ -604,14 +640,70 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* Step 2a: Personal details */}
+                  {/* Step 2a: Personal plan selection. Selection is intent only;
+                      paid access is activated by the billing lifecycle. */}
                   {onboardingStep === 2 && accountType === 'personal' && (
                     <div className="space-y-4">
                       <div>
                         <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
-                          <span className="text-[#a3a3a3]">〉</span> SECOND BRAIN <span className="text-[#d4d0ca]">· 02</span>
+                          <span className="text-[#a3a3a3]">〉</span> PERSONAL PLAN <span className="text-[#d4d0ca]">· 02</span>
+                        </div>
+                        <h2 className="text-[22px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">Choose how your Brain grows</h2>
+                        <p className="text-[12px] text-[#737373] mt-1">Start free or choose the product layer you already need.</p>
+                      </div>
+
+                      <div className="divide-y divide-[#e3e0db] overflow-hidden rounded-[9px] border border-[#e3e0db] bg-white">
+                        {PERSONAL_PLANS.map((plan) => {
+                          const active = selectedPlan === plan.id;
+                          return (
+                            <button
+                              key={plan.id}
+                              type="button"
+                              aria-pressed={active}
+                              onClick={() => setSelectedPlan(plan.id)}
+                              className={`group relative flex w-full items-center gap-4 px-4 py-3 text-left transition-colors ${active ? 'bg-[#117dff]/[0.06]' : 'hover:bg-[#faf9f4]'}`}
+                            >
+                              {active && <span className="absolute inset-y-0 left-0 w-[3px] bg-[#117dff]" />}
+                              <div className="w-[92px] shrink-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[14px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">{plan.name}</span>
+                                  {plan.popular && <span className="rounded-full bg-[#117dff] px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider text-white">Popular</span>}
+                                </div>
+                                <span className="mt-0.5 block text-[12px] font-semibold text-[#0a0a0a]">{plan.price}<span className="text-[9px] font-normal text-[#a3a3a3]">{plan.cadence}</span></span>
+                              </div>
+                              <div className="min-w-0 flex-1 border-l border-[#eceae6] pl-4">
+                                <p className="text-[11px] font-semibold text-[#0a0a0a]">{plan.product}</p>
+                                <p className="mt-0.5 truncate text-[10px] text-[#737373]">{plan.capacity} · {plan.eyebrow}</p>
+                              </div>
+                              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${active ? 'border-[#117dff] bg-[#117dff] text-white' : 'border-[#d4d0ca] text-transparent group-hover:border-[#117dff]'}`}>
+                                <Check size={11} strokeWidth={3} />
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={!selectedPlan}
+                        onClick={() => selectedPlan && setOnboardingStep(3)}
+                        className="flex h-11 w-full items-center justify-center gap-2 rounded-[6px] border-none bg-[#117dff] text-[12px] font-semibold uppercase tracking-[0.08em] text-white transition-all hover:bg-[#0066e0] disabled:cursor-not-allowed disabled:opacity-35"
+                      >
+                        {selectedPlan ? 'Proceed' : 'Choose one'} <ArrowRight size={14} />
+                      </button>
+                      <p className="text-center text-[10px] leading-relaxed text-[#a3a3a3]">Paid access begins only after secure checkout. You can change plans later.</p>
+                    </div>
+                  )}
+
+                  {/* Step 3a: Personal details */}
+                  {onboardingStep === 3 && accountType === 'personal' && (
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
+                          <span className="text-[#a3a3a3]">〉</span> SECOND BRAIN <span className="text-[#d4d0ca]">· 03</span>
                         </div>
                         <h2 className="text-[20px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">Set up your Second Brain</h2>
+                        <p className="mt-1 text-[11px] text-[#737373]">{PERSONAL_PLANS.find((plan) => plan.id === selectedPlan)?.name || 'Free'} selected</p>
                       </div>
                       <div>
                         <label className={LABEL_CLS}>Your name</label>
@@ -835,22 +927,70 @@ export default function LoginPage() {
             </AnimatePresence>
           </div>
 
-          {/* Right pane — poster fills its half edge-to-edge */}
+          {/* Right pane — artwork until a personal plan is selected, then a
+              useful plan summary in the same half of the onboarding card. */}
           <div className={`hidden md:block bg-[#f8f7f2] overflow-hidden relative ${showOnboarding ? 'md:w-[576px]' : 'md:w-[448px]'}`}>
-            {loadArtwork && (
-              <img
-                src="/images/hivemind-login-art.webp"
-                alt="HIVEMIND memory system"
-                decoding="async"
-                className="h-full w-full object-cover object-top block"
-              />
+            {showOnboarding && accountType === 'personal' && onboardingStep === 2 && selectedPlan ? (() => {
+              const plan = PERSONAL_PLANS.find((candidate) => candidate.id === selectedPlan);
+              const layers = [
+                { label: 'BRAIN', enabled: true, icon: Brain },
+                { label: 'OPERATING SYSTEM', enabled: ['free', 'pro', 'scale'].includes(plan.id), icon: Workflow },
+                { label: 'VOICE', enabled: ['free', 'scale'].includes(plan.id), icon: Mic2 },
+              ];
+              return (
+                <motion.div
+                  key={plan.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex h-full flex-col p-10"
+                >
+                  <div className="flex items-center justify-between border-b border-[#e3e0db] pb-5">
+                    <div>
+                      <p className="text-[9px] font-mono uppercase tracking-[0.22em] text-[#117dff]">{plan.eyebrow}</p>
+                      <h3 className="mt-2 text-[32px] font-semibold tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">{plan.name}</h3>
+                    </div>
+                    <p className="text-right text-[28px] font-semibold text-[#0a0a0a]">{plan.price}<span className="text-[11px] font-normal text-[#737373]">{plan.cadence}</span></p>
+                  </div>
+                  <p className="mt-6 max-w-md text-[15px] leading-relaxed text-[#525252]">{plan.summary}</p>
+                  <div className="mt-6 grid grid-cols-3 gap-2">
+                    {layers.map(({ label, enabled, icon: Icon }) => (
+                      <div key={label} className={`rounded-[8px] border px-3 py-3 ${enabled ? 'border-[#117dff]/25 bg-white text-[#0a0a0a]' : 'border-[#e3e0db] bg-[#f3f1ec] text-[#b0ada7]'}`}>
+                        <Icon size={15} className={enabled ? 'text-[#117dff]' : 'text-[#c8c5bf]'} />
+                        <p className="mt-2 text-[8px] font-mono font-bold tracking-[0.12em]">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-7 space-y-3">
+                    {plan.features.map((feature) => (
+                      <div key={feature} className="flex items-start gap-2.5 text-[13px] text-[#525252]">
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#117dff]/10 text-[#117dff]"><Check size={10} strokeWidth={3} /></span>
+                        {feature}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-auto border-t border-[#e3e0db] pt-5">
+                    <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#a3a3a3]">{plan.capacity}</p>
+                    <p className="mt-2 text-[11px] leading-relaxed text-[#737373]">Your Brain remains yours. Upgrades expand capacity and product access; they never turn recall into a pay-per-query meter.</p>
+                  </div>
+                </motion.div>
+              );
+            })() : (
+              <>
+                {loadArtwork && (
+                  <img
+                    src="/images/hivemind-login-art.webp"
+                    alt="HIVEMIND memory system"
+                    decoding="async"
+                    className="h-full w-full object-cover object-top block"
+                  />
+                )}
+                <div className="absolute bottom-3 left-0 right-0 flex justify-center">
+                  <span className="px-2.5 py-1 rounded-[4px] bg-black/35 backdrop-blur-sm text-white/85 text-[9px] font-mono uppercase tracking-[0.26em]">
+                    memory · running inside everything
+                  </span>
+                </div>
+              </>
             )}
-            {/* mono caption over the art, supermemory-style */}
-            <div className="absolute bottom-3 left-0 right-0 flex justify-center">
-              <span className="px-2.5 py-1 rounded-[4px] bg-black/35 backdrop-blur-sm text-white/85 text-[9px] font-mono uppercase tracking-[0.26em]">
-                memory · running inside everything
-              </span>
-            </div>
           </div>
         </div>
 
