@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import UpdateBanner from './components/hivemind/UpdateBanner';
 import MobileHomepage from './components/mobile/MobileHomepage';
+import { HIVEMIND_PRIMARY_HOST, isHivemindHostName } from './components/hivemind/host-routing';
 
 // Hivemind
 const HivemindRedirect = React.lazy(() => import('./components/hivemind/HivemindRedirect'));
@@ -18,7 +19,6 @@ const CsiResearch = React.lazy(() => import('./components/CsiResearch'));
 const PostQuantumResearch = React.lazy(() => import('./components/research/PostQuantumResearch'));
 const PrivacySecurity = React.lazy(() => import('./components/PrivacySecurity'));
 
-const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davinciai.eu';
 const PLATFORM_ADMIN_HOST = 'admin.hivemind.singulancelabs.com';
 
 // PRODUCT_HOST — this domain serves the WHOLE product on ONE host (singulancelabs.com):
@@ -38,7 +38,7 @@ const PRODUCT_HOST = process.env.REACT_APP_PRODUCT_HOST === 'true';
 const HivemindExternalRedirect = () => {
   React.useEffect(() => {
     const { pathname, search, hash } = window.location;
-    window.location.replace(`https://${HIVEMIND_SITE_HOST}${pathname}${search}${hash}`);
+    window.location.replace(`https://${HIVEMIND_PRIMARY_HOST}${pathname}${search}${hash}`);
   }, []);
   return <div className="min-h-screen bg-[#0a0a0a]" />;
 };
@@ -65,7 +65,7 @@ function App() {
     typeof window !== 'undefined' && window.location.hostname === PLATFORM_ADMIN_HOST;
   const isHivemindHost =
     typeof window !== 'undefined' && (
-      window.location.hostname === HIVEMIND_SITE_HOST ||
+      isHivemindHostName(window.location.hostname) ||
       window.location.protocol === 'file:'
     );
 
