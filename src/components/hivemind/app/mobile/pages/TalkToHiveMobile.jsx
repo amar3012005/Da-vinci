@@ -62,6 +62,12 @@ import {
   takePendingConnectorPrompt,
 } from '../../shared/connector-aware-chat';
 
+// The composer changes on every keystroke. Keep completed transcript rows out
+// of that hot render path, especially on iOS where a long animated transcript
+// can make the native keyboard miss frames.
+const MemoUserBubble = React.memo(UserBubble);
+const MemoAiBubble = React.memo(AiBubble);
+
 const MAX_CHARS = 2000;
 const MAX_PERSIST = 200;
 // Keep the recorder implementation mounted and routable, but disable its
@@ -300,6 +306,13 @@ export default function TalkToHiveMobile() {
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const toolkitCatalogPromiseRef = useRef(null);
+  // State updates are asynchronous. A synchronous lock prevents a double tap
+  // on Send/Retry from opening two streams before `loading` has rendered.
+  const requestInFlightRef = useRef(false);
+  const messagesRef = useRef(messages);
+  const sendTextRef = useRef(null);
+
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const loadToolkitCatalog = useCallback(async () => {
     if (toolkitCatalogPromiseRef.current) return toolkitCatalogPromiseRef.current;
@@ -446,37 +459,30 @@ export default function TalkToHiveMobile() {
   const sendText = useCallback(async (overrideText) => {
     const fromInput = overrideText == null;
     const displayText = (fromInput ? input : overrideText).trim();
-    if (!displayText || loading) return;
-    const catalog = toolkits.length ? toolkits : await loadToolkitCatalog();
-    const activeToolkits = resolvePromptToolkits(displayText, fromInput ? selectedToolkits : [], catalog);
-    const disconnected = activeToolkits.find((toolkit) => !toolkit.connected);
-    if (disconnected) {
-      setConnectToolkit(disconnected);
-      setConnectorError('');
-      return;
-    }
-    const trimmed = composeToolkitPrompt(displayText, activeToolkits);
-    if (!trimmed) return;
-
-    const userMsg = { id: Date.now(), role: 'user', content: composeToolkitPrompt(displayText, activeToolkits) };
-    const streamingId = `answer-${userMsg.id}`;
-    // `message` carries the current turn; keep history to completed prior
-    // turns so follow-up tool actions see the preceding grounded answer once.
-    const fullHistory = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
-    setMessages((prev) => [...prev, userMsg]);
-    if (fromInput) { setInput(''); setSelectedToolkits([]); }
-    setLoading(true);
-
-    // Belt-and-braces language enforcement (mirror Chat.jsx + extension).
-    // Wraps the wire message with a strict directive when UI lang != EN so
-    // the LLM can't silently drift back to English. UI history keeps the
-    // clean user text; only the LLM sees the wrapped variant.
-    const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
-    // Language is a first-class /chat param (backend enforces it in the answer
-    // prompt). The old [STRICT LANGUAGE] prefix poisoned recall embeddings.
-    const wireMessage = trimmed;
-
+    if (!displayText || loading || requestInFlightRef.current) return;
+    requestInFlightRef.current = true;
     try {
+      const catalog = toolkits.length ? toolkits : await loadToolkitCatalog();
+      const activeToolkits = resolvePromptToolkits(displayText, fromInput ? selectedToolkits : [], catalog);
+      const disconnected = activeToolkits.find((toolkit) => !toolkit.connected);
+      if (disconnected) {
+        setConnectToolkit(disconnected);
+        setConnectorError('');
+        return;
+      }
+      const trimmed = composeToolkitPrompt(displayText, activeToolkits);
+      if (!trimmed) return;
+      const userMsg = { id: Date.now(), role: 'user', content: composeToolkitPrompt(displayText, activeToolkits) };
+      const streamingId = `answer-${userMsg.id}`;
+      // `message` carries the current turn; keep history to completed prior
+      // turns so follow-up tool actions see the preceding grounded answer once.
+      const fullHistory = messagesRef.current.slice(-10).map(m => ({ role: m.role, content: m.content }));
+      setMessages((prev) => [...prev, userMsg]);
+      if (fromInput) { setInput(''); setSelectedToolkits([]); }
+      setLoading(true);
+
+      const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
+      const wireMessage = trimmed;
       const streamedEvents = [];
       // Streamed like desktop Overview: SSE frames carry live tool_call /
       // tool_result events → animated activity while the answer is produced.
@@ -563,13 +569,17 @@ export default function TalkToHiveMobile() {
         { id: Date.now() + 1, role: 'assistant', content: errMsg, error: true, sources: [] },
       ]);
     } finally {
+      requestInFlightRef.current = false;
       setLoading(false);
       setAgentEvents([]);
     }
   }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools, selectedToolkits, toolkits, loadToolkitCatalog]);
 
+  useEffect(() => { sendTextRef.current = sendText; }, [sendText]);
+
   const continueOrchestration = useCallback(async (continuation, request, option) => {
-    if (loading) return;
+    if (loading || requestInFlightRef.current) return;
+    requestInFlightRef.current = true;
     setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: option.label }]);
     setLoading(true);
     const streamedEvents = [];
@@ -598,19 +608,20 @@ export default function TalkToHiveMobile() {
       }]);
     } catch (error) {
       setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', error: true, content: error.message, sources: [] }]);
-    } finally { setAgentEvents([]); setLoading(false); }
+    } finally { requestInFlightRef.current = false; setAgentEvents([]); setLoading(false); }
   }, [loading]);
 
   const send = useCallback(() => sendText(), [sendText]);
 
   // Regenerate: re-run the user prompt that preceded this assistant answer.
   const retry = useCallback((assistantMsg) => {
-    if (loading) return;
-    const idx = messages.findIndex((m) => m.id === assistantMsg.id);
+    if (requestInFlightRef.current) return;
+    const currentMessages = messagesRef.current;
+    const idx = currentMessages.findIndex((m) => m.id === assistantMsg.id);
     for (let i = idx - 1; i >= 0; i--) {
-      if (messages[i].role === 'user') { sendText(messages[i].content); return; }
+      if (currentMessages[i].role === 'user') { sendTextRef.current?.(currentMessages[i].content); return; }
     }
-  }, [loading, messages, sendText]);
+  }, []);
 
   // ─── Upload pipeline ──────────────────────────────────────────────────
   // Mobile chat fires-and-forgets: pick file(s) → POST each via
@@ -863,8 +874,8 @@ export default function TalkToHiveMobile() {
 
           {messages.map((m) =>
             m.role === 'user'
-              ? <UserBubble key={m.id} content={m.content} />
-              : <AiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />
+              ? <MemoUserBubble key={m.id} content={m.content} />
+              : <MemoAiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />
           )}
           {loading && !messages.some((item) => item.streaming) && <Thinking events={agentEvents} />}
         </div>
@@ -993,12 +1004,18 @@ export default function TalkToHiveMobile() {
             value={input}
             onChange={(e) => absorbToolkitMentions(e.target.value)}
             onKeyDown={(e) => {
+              // iOS/IME emits Enter while it is still composing a character.
+              // Sending at that point causes a lost character and keyboard jump.
+              if (e.nativeEvent.isComposing || e.keyCode === 229) return;
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 send();
               }
             }}
             rows={1}
+            enterKeyHint="send"
+            autoCapitalize="sentences"
+            autoCorrect="on"
             placeholder={t('overview.chatWith', 'Chat with HIVE…')}
             className="w-full resize-none border-none outline-none bg-transparent text-[16px] py-0.5 placeholder:text-[#a8a49c] max-h-[120px] leading-snug"
             style={{ fontFamily: 'inherit' }}
