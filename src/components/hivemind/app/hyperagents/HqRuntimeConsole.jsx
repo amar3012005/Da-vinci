@@ -3,7 +3,7 @@ import {
   Activity, AlertTriangle, ArrowRight, ArrowUpRight, Check, Clock3, Cable, Send,
   Moon, Pause, Play, Power, RefreshCw, ShieldCheck, Sparkles, PhoneCall,
   TerminalSquare, Wrench, X, SlidersHorizontal, ListTodo, RotateCcw,
-  ChevronDown, ChevronRight, FileText, Mic, MessageSquare, PhoneOff, Loader2,
+  ChevronDown, ChevronRight, FileText, Mic, MessageSquare, PhoneOff,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { AuthorityReviewContent, CallPreview, CampaignLaunchPreview, GmailMessagePreview, PlatformActionPreview } from './RuntimeAuthorityPreview';
