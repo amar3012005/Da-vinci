@@ -402,24 +402,24 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#faf9f4] relative overflow-hidden flex flex-col items-center justify-center py-10">
+    <div className={`min-h-screen bg-[#faf9f4] relative flex flex-col items-center justify-center ${showOnboarding ? 'h-screen overflow-hidden p-0' : 'overflow-hidden py-10'}`}>
       <DotGrid />
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-        className={`relative z-10 w-full mx-4 transition-[max-width] duration-300 ${showOnboarding ? 'max-w-xl md:max-w-[1000px]' : 'max-w-md md:max-w-3xl'}`}
+        className={`relative z-10 w-full transition-[max-width] duration-300 ${showOnboarding ? 'h-full max-w-none m-0' : 'mx-4 max-w-md md:max-w-3xl'}`}
       >
         {/* mono eyebrow above the card — supermemory-style section tag */}
-        <div className="flex items-center justify-center gap-2 mb-4 text-[10px] font-mono uppercase tracking-[0.28em] text-[#a3a3a3]">
+        <div className={`${showOnboarding ? 'hidden' : 'flex'} items-center justify-center gap-2 mb-4 text-[10px] font-mono uppercase tracking-[0.28em] text-[#a3a3a3]`}>
           <span className="text-[#117dff]">〉</span> The sovereign memory engine
           <span className="hidden sm:inline text-[#d4d0ca]">· EU-hosted</span>
         </div>
 
-        <div className="flex flex-col md:flex-row items-stretch bg-white border border-[#e3e0db] rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+        <div className={`flex flex-col md:flex-row items-stretch bg-white overflow-hidden ${showOnboarding ? 'h-full w-full border-0 rounded-none shadow-none' : 'border border-[#e3e0db] rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
           {/* Left: Login form */}
-          <div className={`p-8 transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'md:w-[576px]' : 'md:w-[448px]'}`}>
+          <div className={`transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'h-full overflow-y-auto p-8 md:w-1/2 md:border-r md:border-[#e3e0db] lg:p-12 xl:p-16' : 'p-8 md:w-[448px]'}`}>
             {/* Logo */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
@@ -929,7 +929,7 @@ export default function LoginPage() {
 
           {/* Right pane — artwork until a personal plan is selected, then a
               useful plan summary in the same half of the onboarding card. */}
-          <div className={`hidden md:block bg-[#f8f7f2] overflow-hidden relative ${showOnboarding ? 'md:w-[576px]' : 'md:w-[448px]'}`}>
+          <div className={`hidden md:block bg-[#f8f7f2] overflow-hidden relative ${showOnboarding ? 'h-full md:w-1/2' : 'md:w-[448px]'}`}>
             {showOnboarding && accountType === 'personal' && onboardingStep === 2 && selectedPlan ? (() => {
               const plan = PERSONAL_PLANS.find((candidate) => candidate.id === selectedPlan);
               const layers = [
@@ -942,7 +942,7 @@ export default function LoginPage() {
                   key={plan.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex h-full flex-col p-10"
+                  className="flex h-full flex-col p-10 lg:p-14 xl:p-16"
                 >
                   <div className="flex items-center justify-between border-b border-[#e3e0db] pb-5">
                     <div>
@@ -995,7 +995,7 @@ export default function LoginPage() {
         </div>
 
         {/* Feature pills — benchmark-style mono footer */}
-        <div className="flex items-center justify-center gap-5 mt-5">
+        <div className={`${showOnboarding ? 'hidden' : 'flex'} items-center justify-center gap-5 mt-5`}>
           {[
             { icon: Brain, label: 'Persistent Memory' },
             { icon: Zap, label: '<50ms Recall' },
