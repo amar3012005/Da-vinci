@@ -8,5 +8,15 @@
   "assets": {
     "directory": "./build",
     "not_found_handling": "single-page-application"
-  }
+  },
+  "routes": [
+    {
+      "pattern": "next.singulancelabs.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "admin.hivemind.singulancelabs.com",
+      "custom_domain": true
+    }
+  ]
 }
