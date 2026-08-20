@@ -2,6 +2,8 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "hivemind-web",
   "compatibility_date": "2026-08-19",
+  "workers_dev": true,
+  "preview_urls": true,
   "build": {
     "command": "node scripts/assert-cloudflare-main-release.mjs && PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm run build:cloudflare"
   },
