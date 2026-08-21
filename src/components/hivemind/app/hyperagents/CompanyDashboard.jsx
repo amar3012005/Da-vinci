@@ -90,7 +90,7 @@ const RUNTIME_FOCUSES = [
   { id: 'fundraising', label: 'Fundraising', detail: 'Prepare evidence, narrative, and investor work.' },
 ];
 
-export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime }) {
+export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime, showRuntimeInvite = true }) {
   const { t } = useTranslation('dashboard');
   const [state, setState] = useState(null); // {company, employees, hq_room_id}
   const [loading, setLoading] = useState(true);
@@ -138,11 +138,11 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   }, []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    if (!runtimeCompanyReady) return undefined;
+    if (!showRuntimeInvite || !runtimeCompanyReady) return undefined;
     try { if (window.localStorage.getItem(runtimeInviteStorageKey) === 'seen') return undefined; } catch { /* continue */ }
     const timer = window.setTimeout(() => setRuntimeInvite('intro'), 5000);
     return () => window.clearTimeout(timer);
-  }, [runtimeCompanyReady, runtimeInviteStorageKey]);
+  }, [runtimeCompanyReady, runtimeInviteStorageKey, showRuntimeInvite]);
   useEffect(() => {
     if (!state?.company?.screenshot_pending) return undefined;
     let attempts = 0;

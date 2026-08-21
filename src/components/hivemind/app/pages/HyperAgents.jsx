@@ -220,9 +220,9 @@ export default function HyperAgents() {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const { user, org, logout } = useAuth();
-  // Temporary Operating System presentation choice: keep the Rooms/account rail
-  // in code, but do not render it. Flip this to true to restore it unchanged.
-  const showOperatingSystemSidebar = false;
+  // The Operating System owns its Rooms/account rail. The app-level sidebar is
+  // still collapsed below so the OS workspace has one focused navigation rail.
+  const showOperatingSystemSidebar = true;
 
   // Collapse the sidebar to a rail in the Hyper Agents room (more canvas for
   // the live swarm). Sidebar's ChevronRight re-opens it. Restore on leave.
@@ -248,7 +248,9 @@ export default function HyperAgents() {
       const m = p.match(/\/employees\/rooms\/([0-9a-f-]{36})/i);
       if (m) return { mode: 'thread', roomId: m[1] };
       if (/\/employees\/agents/.test(p)) return { mode: 'roster', roomId: null };
-      if (/\/employees\/runtime/.test(p)) return { mode: 'runtime', roomId: null };
+      // Runtime remains routable for the future, but is deliberately presented
+      // as a product preview until the autonomous lifecycle is enabled.
+      if (/\/employees\/runtime/.test(p)) return { mode: 'hero', roomId: null, preview: 'runtime' };
       if (/\/employees\/leads/.test(p)) return { mode: 'leads', roomId: null };
       if (/\/employees\/campaigns/.test(p)) return { mode: 'campaigns', roomId: null };
       return { mode: 'hero', roomId: null };
@@ -257,6 +259,7 @@ export default function HyperAgents() {
   const _init = _parsePath();
   const [activeRoomId, setActiveRoomId] = useState(_init.roomId);
   const [viewMode, setViewMode] = useState(_init.mode);
+  const [comingSoon, setComingSoon] = useState(_init.preview || null);
   const goMode = useCallback((mode, roomId, query = {}) => {
     setViewMode(mode);
     if (roomId !== undefined) setActiveRoomId(roomId);
@@ -272,6 +275,17 @@ export default function HyperAgents() {
     if (query.campaign) params.set('campaign', query.campaign);
     navigate(`${url}${params.size ? `?${params.toString()}` : ''}`, { replace: true });
   }, [navigate]);
+  const openComingSoon = useCallback((feature) => setComingSoon(feature), []);
+
+  // A direct Runtime URL should land on the stable company dashboard while
+  // retaining the same preview the Runtime rail button opens.
+  useEffect(() => {
+    if (_init.preview !== 'runtime') return;
+    navigate('/hivemind/app/employees/mycompany', { replace: true });
+    // This only reflects the mount-time URL; navigation is intentionally not
+    // repeated after in-app state updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Canonicalize the bare /employees URL to /employees/mycompany (keep ?onboard=1).
   useEffect(() => {
     if (/\/employees\/?$/.test(window.location.pathname)) {
@@ -504,11 +518,11 @@ export default function HyperAgents() {
             {t('hyperAgents.yourCompany', 'Your Company')}
           </button>
           <button
-            onClick={() => goMode('runtime', hqRoom?.id || null)}
-            disabled={!hqRoom}
-            className={`mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors disabled:opacity-45 ${viewMode === 'runtime' ? 'bg-[#185bcc] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#bcd0ef]'}`}
+            type="button"
+            onClick={() => openComingSoon('runtime')}
+            className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#bcd0ef]"
           >
-            <Power size={13} className={viewMode === 'runtime' ? 'text-white' : 'text-[#185bcc]'} />
+            <Power size={13} className="text-[#185bcc]" />
             Runtime
           </button>
           {/* YOUR LEADS — outreach progress board (Notion-style). */}
@@ -521,11 +535,12 @@ export default function HyperAgents() {
           </button>
           {/* YOUR CAMPAIGNS — standalone paid media workspace, outside rooms. */}
           <button
-            onClick={() => goMode('campaigns', null)}
-            className={`mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${viewMode === 'campaigns' ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#e3e0db]'}`}
+            type="button"
+            onClick={() => openComingSoon('social')}
+            className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#e3e0db]"
           >
-            <Megaphone size={13} className={viewMode === 'campaigns' ? 'text-white' : 'text-[#c2410c]'} />
-            {t('hyperAgents.runAdsOnX', 'Run Ads on X')}
+            <Megaphone size={13} className="text-[#c2410c]" />
+            {t('hyperAgents.runSocialMedia', 'Run your Social Media')}
           </button>
         </div>
 
@@ -656,7 +671,7 @@ export default function HyperAgents() {
             }}
             onShowRoster={() => goMode('roster')}
             onOpenLeads={() => goMode('leads', null)}
-            onOpenRuntime={() => goMode('runtime', hqRoom?.id || null)}
+            showRuntimeInvite={false}
           />
         ) : viewMode === 'runtime' && hqRoom ? (
           <RoomThread
@@ -719,12 +734,81 @@ export default function HyperAgents() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {comingSoon ? (
+          <OperatingSystemComingSoonModal
+            feature={comingSoon}
+            onClose={() => setComingSoon(null)}
+          />
+        ) : null}
+      </AnimatePresence>
+
       {error && (
         <div className="absolute top-3 right-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[11px] text-red-700">
           {error}
         </div>
       )}
     </div>
+  );
+}
+
+function OperatingSystemComingSoonModal({ feature, onClose }) {
+  const isSocial = feature === 'social';
+  const Icon = isSocial ? Megaphone : Power;
+  const eyebrow = isSocial ? 'HIVEMIND SOCIAL' : 'HIVEMIND RUNTIME';
+  const title = isSocial ? 'Social Media is coming soon' : 'Runtime is coming soon';
+  const description = isSocial
+    ? 'Let HIVEMIND handle your social media end to end: strategy, content, approvals, and publishing across Instagram, LinkedIn, X, and the channels your company uses.'
+    : 'Let HIVEMIND Runtime handle your whole company: understand its context, coordinate the work, and carry out governed actions with your approval.';
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#101828]/35 p-4 backdrop-blur-[2px]"
+      onMouseDown={onClose}
+    >
+      <motion.section
+        initial={{ opacity: 0, y: 14, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 14, scale: 0.98 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="operating-system-coming-soon-title"
+        className="w-full max-w-[460px] rounded-[10px] border border-[#e3e0db] bg-white p-5 shadow-[0_28px_90px_rgba(12,38,84,0.24)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#117dff]/10 text-[#117dff]">
+              <Icon size={18} />
+            </span>
+            <div>
+              <p className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em] text-[#117dff]">{eyebrow}</p>
+              <h2 id="operating-system-coming-soon-title" className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-[#0a0a0a]">{title}</h2>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-md text-[#737373] hover:bg-[#faf9f4] hover:text-[#0a0a0a]" aria-label="Close coming soon preview">
+            <X size={16} />
+          </button>
+        </div>
+        <p className="mt-5 text-[13px] leading-6 text-[#525252]">{description}</p>
+        <p className="mt-4 border-l-2 border-[#117dff] pl-3 text-[11px] leading-5 text-[#737373]">Preview only — nothing will be connected, published, or run from this screen yet.</p>
+        <div className="mt-6 flex justify-end border-t border-[#e3e0db] pt-4">
+          <button type="button" onClick={onClose} className="rounded-lg bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#262626]">Close</button>
+        </div>
+      </motion.section>
+    </motion.div>
   );
 }
 
