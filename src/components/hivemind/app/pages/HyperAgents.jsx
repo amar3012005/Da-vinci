@@ -220,6 +220,9 @@ export default function HyperAgents() {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const { user, org, logout } = useAuth();
+  // Temporary Operating System presentation choice: keep the Rooms/account rail
+  // in code, but do not render it. Flip this to true to restore it unchanged.
+  const showOperatingSystemSidebar = false;
 
   // Collapse the sidebar to a rail in the Hyper Agents room (more canvas for
   // the live swarm). Sidebar's ChevronRight re-opens it. Restore on leave.
@@ -472,7 +475,7 @@ export default function HyperAgents() {
     <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
       <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
       {/* Left rail: rooms */}
-      <aside className="hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex">
+      <aside className={showOperatingSystemSidebar ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'}>
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
