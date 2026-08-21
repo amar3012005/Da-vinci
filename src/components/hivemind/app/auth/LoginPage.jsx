@@ -388,16 +388,17 @@ export default function LoginPage() {
     clearInvitationContext();
   };
 
-  /* Small square provider button (Microsoft / Apple / SSO) */
-  const ProviderTile = ({ onClick, label, children }) => (
+  /* Non-Google identity providers are intentionally visible but not live yet.
+     Keeping these as disabled native buttons prevents accidental OAuth redirects. */
+  const ComingSoonProvider = ({ label, children }) => (
     <button
-      onClick={onClick}
-      disabled={loading}
-      title={label}
-      aria-label={label}
-      className="flex-1 h-11 flex items-center justify-center gap-2 rounded-[6px] border border-[#e3e0db] bg-white hover:border-[#0a0a0a] hover:shadow-sm disabled:opacity-60 transition-all text-[#0a0a0a]"
+      type="button"
+      disabled
+      aria-label={`${label} — coming soon`}
+      className="flex-1 h-11 flex items-center justify-center gap-2 rounded-[6px] border border-[#e3e0db] bg-[#faf9f4] text-[#737373] cursor-not-allowed"
     >
       {children}
+      <span className="text-[9px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3]">Coming soon</span>
     </button>
   );
 
@@ -499,27 +500,28 @@ export default function LoginPage() {
                     )}
                     Continue with Google
                   </button>
-                  {/* Provider row: Microsoft · Apple · SSO */}
+                  {/* Visible provider roadmap — Google is the only live identity path. */}
                   <div className="flex items-center gap-2 mt-2.5">
-                    <ProviderTile label="Continue with Microsoft" onClick={() => login({ provider: 'microsoft', returnTo: returnToFromState || undefined })}>
+                    <ComingSoonProvider label="Microsoft">
                       <MicrosoftIcon size={15} />
                       <span className="text-[12px] font-medium">Microsoft</span>
-                    </ProviderTile>
-                    <ProviderTile label="Continue with Apple" onClick={() => login({ provider: 'apple', returnTo: returnToFromState || undefined })}>
+                    </ComingSoonProvider>
+                    <ComingSoonProvider label="Apple">
                       <AppleIcon size={16} />
                       <span className="text-[12px] font-medium">Apple</span>
-                    </ProviderTile>
+                    </ComingSoonProvider>
                   </div>
 
-                  {/* EU Sovereign SSO — full-width, the compliance path */}
+                  {/* Enterprise SSO stays visible without allowing an unavailable redirect. */}
                   <button
-                    onClick={() => login({ returnTo: returnToFromState || undefined })}
-                    disabled={loading}
-                    className="mt-2.5 w-full h-11 flex items-center justify-center gap-2.5 bg-white hover:bg-[#faf9f4] disabled:opacity-60 text-[#0a0a0a] font-medium rounded-[6px] transition-all text-[12px] font-['Space_Grotesk'] cursor-pointer border border-[#e3e0db] hover:border-[#0a0a0a] uppercase tracking-[0.075em]"
+                    type="button"
+                    disabled
+                    aria-label="Enterprise SSO — coming soon"
+                    className="mt-2.5 w-full h-11 flex items-center justify-center gap-2.5 bg-[#faf9f4] text-[#737373] font-medium rounded-[6px] text-[12px] font-['Space_Grotesk'] cursor-not-allowed border border-[#e3e0db] uppercase tracking-[0.075em]"
                   >
-                    <Shield size={14} className="text-[#117dff]" />
+                    <Shield size={14} className="text-[#a3a3a3]" />
                     Enterprise SSO · EU Sovereign
-                    <span className="text-[9px] font-mono normal-case tracking-normal text-[#a3a3a3]">SAML / OIDC</span>
+                    <span className="text-[9px] font-mono normal-case tracking-normal text-[#a3a3a3]">Coming soon</span>
                   </button>
 
                   {/* trust line */}
@@ -740,19 +742,20 @@ export default function LoginPage() {
                         Continue with Google
                       </button>
                       <div className="flex items-center gap-2">
-                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && personalAdmissionReady && handleCreateAccount('microsoft')}>
+                        <ComingSoonProvider label="Microsoft">
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
-                        </ProviderTile>
-                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && personalAdmissionReady && handleCreateAccount('apple')}>
+                        </ComingSoonProvider>
+                        <ComingSoonProvider label="Apple">
                           <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
-                        </ProviderTile>
+                        </ComingSoonProvider>
                       </div>
                       <button
-                        onClick={() => handleCreateAccount('zitadel')}
-                        disabled={!userName.trim() || !personalAdmissionReady}
-                        className="w-full h-10 rounded-[6px] bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-medium text-[12px] font-['Space_Grotesk'] transition-all cursor-pointer border border-[#e3e0db] hover:border-[#0a0a0a] flex items-center justify-center gap-2"
+                        type="button"
+                        disabled
+                        aria-label="Enterprise SSO — coming soon"
+                        className="w-full h-10 rounded-[6px] bg-[#faf9f4] text-[#737373] font-medium text-[12px] font-['Space_Grotesk'] cursor-not-allowed border border-[#e3e0db] flex items-center justify-center gap-2"
                       >
-                        <Shield size={13} className="text-[#117dff]" /> Enterprise SSO (EU Sovereign)
+                        <Shield size={13} className="text-[#a3a3a3]" /> Enterprise SSO (EU Sovereign) · <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#a3a3a3]">Coming soon</span>
                       </button>
                     </div>
                   )}
@@ -904,25 +907,29 @@ export default function LoginPage() {
                         </div>
                       )}
                       <button
-                        onClick={() => handleCreateAccount('zitadel')}
+                        onClick={() => handleCreateAccount('google')}
                         disabled={loadingEnterpriseInvitation || !userName.trim() || !enterpriseName.trim() || !enterpriseAdmissionReady}
-                        className="w-full h-11 rounded-[6px] bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
+                        className="w-full h-12 rounded-[6px] bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
                       >
-                        {hostingChoice === 'self_hosted'
-                          ? (<><Crown size={14} className="text-amber-300" /> Reserve Sovereign Instance</>)
-                          : (<><Shield size={14} /> Create with Enterprise SSO (EU)</>)}
+                        <span className="w-5 h-5 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={12} /></span>
+                        Continue with Google
                       </button>
                       <div className="flex items-center gap-2">
-                        <ProviderTile label="Create with Google" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('google')}>
-                          <GoogleIcon size={14} /><span className="text-[12px] font-medium">Google</span>
-                        </ProviderTile>
-                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('microsoft')}>
+                        <ComingSoonProvider label="Microsoft">
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
-                        </ProviderTile>
-                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('apple')}>
+                        </ComingSoonProvider>
+                        <ComingSoonProvider label="Apple">
                           <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
-                        </ProviderTile>
+                        </ComingSoonProvider>
                       </div>
+                      <button
+                        type="button"
+                        disabled
+                        aria-label="Enterprise SSO — coming soon"
+                        className="w-full h-10 rounded-[6px] bg-[#faf9f4] text-[#737373] font-medium text-[12px] font-['Space_Grotesk'] cursor-not-allowed border border-[#e3e0db] flex items-center justify-center gap-2"
+                      >
+                        <Shield size={13} className="text-[#a3a3a3]" /> Enterprise SSO (EU Sovereign) · <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#a3a3a3]">Coming soon</span>
+                      </button>
                     </div>
                   )}
                 </motion.div>
