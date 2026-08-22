@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Hexagon, KeyRound, Server, Terminal, Shield, BookOpen, ChevronRight, ChevronDown, Copy, Check, Zap, HardDrive, Github, Star, Rocket, Download } from 'lucide-react';
+import { Hexagon, KeyRound, Server, Terminal, Shield, BookOpen, ChevronRight, ChevronDown, Copy, Check, Zap, HardDrive, Github, Star, Rocket, Download, GitBranch, Layers, Brain, Lock, AlertTriangle, Wrench } from 'lucide-react';
 import { MEMORY_TOOLS, WEB_TOOLS, CODING_TOOLS, TEMPORAL_TOOLS } from './app/pages/McpServer';
 
 const ICARUS_REPO = 'amar3012005/ICARUS';
@@ -193,6 +193,64 @@ const ICARUS_GROUPS = [
       { id: 'selfhost-bm25', label: 'Native BM25 search' },
       { id: 'selfhost-frameworks', label: 'LangChain / LlamaIndex' },
       { id: 'selfhost-scope', label: 'Engine vs. platform' },
+    ],
+  },
+];
+
+// ── ICARUS Harness — the coding-agent operating layer (its own top-nav tab, distinct from
+// the .amr storage engine above). Content transcribed 1:1 from HARNESS_README.md.
+const HARNESS_GROUPS = [
+  {
+    title: 'Overview',
+    items: [
+      { id: 'harness-what-is', label: 'What it is' },
+      { id: 'harness-what-is-not', label: 'What it is not' },
+      { id: 'harness-architecture', label: 'Architecture' },
+    ],
+  },
+  {
+    title: 'Get started',
+    items: [
+      { id: 'harness-install', label: 'Install and initialize' },
+      { id: 'harness-agent-bridge', label: 'Install the agent bridge' },
+      { id: 'harness-loop', label: 'The agent operating loop' },
+    ],
+  },
+  {
+    title: 'Tasks',
+    items: [
+      { id: 'harness-contract', label: 'Contract' },
+      { id: 'harness-lifecycle', label: 'Legal lifecycle' },
+    ],
+  },
+  {
+    title: 'Context & graph',
+    items: [
+      { id: 'harness-context', label: 'Context-window optimization' },
+      { id: 'harness-graph', label: 'Code graph' },
+    ],
+  },
+  {
+    title: 'Memory & learning',
+    items: [
+      { id: 'harness-memory', label: 'Local memory' },
+      { id: 'harness-capture', label: 'Learning capture' },
+      { id: 'harness-skills', label: 'Governed skills' },
+    ],
+  },
+  {
+    title: 'Integration',
+    items: [
+      { id: 'harness-mcp', label: 'MCP and agent integration' },
+      { id: 'harness-verify', label: 'Verification, export & release evidence' },
+    ],
+  },
+  {
+    title: 'Reference',
+    items: [
+      { id: 'harness-cli', label: 'CLI reference' },
+      { id: 'harness-safety', label: 'Safety model & current limits' },
+      { id: 'harness-troubleshooting', label: 'Troubleshooting' },
     ],
   },
 ];
@@ -441,8 +499,582 @@ pip install -e ".[test]" && pytest tests/ -v`}</CodeBlock>
   );
 }
 
+// ── ICARUS Harness — the coding-agent operating layer (its own top-nav tab, its own landing).
+// A deterministic operating layer around a coding agent: bounded repository context, a governed
+// task lifecycle, and receipts turned from claims into evidence. Distinct from the .amr storage
+// engine documented above — the Harness is the layer that governs how an agent works, not where
+// memory is stored. Content transcribed 1:1 from HARNESS_README.md.
+function HarnessDocs() {
+  return (
+    <>
+      <Eyebrow>OPEN SOURCE · CODING-AGENT OPERATING LAYER</Eyebrow>
+      <h1 className="text-[34px] leading-[1.08] font-medium font-['Space_Grotesk'] text-[#0a0a0a] tracking-tight">ICARUS Harness.</h1>
+      <P>
+        A deterministic operating layer around a coding agent: it gives the agent bounded, traceable
+        repository context; records the task state it is allowed to act within; and turns executed
+        checks into durable evidence. It does <strong className="text-[#0a0a0a]">not</strong> provide
+        an LLM, secretly inspect a cloud account, upload a repository, or convert an agent&rsquo;s
+        prose into proof.
+      </P>
+      <P>
+        ICARUS Harness is for repository-scale work where an agent needs more than a long prompt. It
+        combines a local memory filesystem, a source graph, a governed task lifecycle, a context
+        compiler, verification receipts, and a cautiously promoted skill system. The model remains
+        replaceable &mdash; Claude Code, Codex, Cursor, or another MCP-capable coding agent can
+        supply reasoning and tools; ICARUS supplies durable state and enforcement-oriented evidence.
+      </P>
+      <P className="text-[12px]">
+        This is the dedicated guide to the Harness. For the AMR storage engine and language
+        bindings, see the <strong className="text-[#0a0a0a]">ICARUS &middot; self-host</strong> tab above.
+        For source-level specifications, see <Mono>docs/HARNESS_THREAT_MODEL.md</Mono>,{' '}
+        <Mono>docs/ADAPTER_CERTIFICATION.md</Mono>, and <Mono>docs/PHASE_STATUS.md</Mono> in the repo.
+      </P>
+      <div className="mt-4"><GithubStarBadge /></div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <a href="#harness-install" className="flex items-center gap-3 rounded-[10px] border border-[#e3e0db] bg-white p-4 no-underline hover:border-[#117dff] hover:shadow-sm">
+          <Rocket size={18} className="text-[#117dff] shrink-0" />
+          <div>
+            <div className="text-[13px] font-semibold text-[#0a0a0a]">Install & initialize</div>
+            <div className="text-[11.5px] text-[#737373]">CLI one-liner, harness init</div>
+          </div>
+        </a>
+        <a href="#harness-loop" className="flex items-center gap-3 rounded-[10px] border border-[#e3e0db] bg-white p-4 no-underline hover:border-[#117dff] hover:shadow-sm">
+          <GitBranch size={18} className="text-[#117dff] shrink-0" />
+          <div>
+            <div className="text-[13px] font-semibold text-[#0a0a0a]">Operating loop</div>
+            <div className="text-[11.5px] text-[#737373]">Contract → executing → sealed</div>
+          </div>
+        </a>
+        <a href={`https://github.com/${ICARUS_REPO}`} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-[10px] border border-[#e3e0db] bg-white p-4 no-underline hover:border-[#117dff] hover:shadow-sm">
+          <Github size={18} className="text-[#117dff] shrink-0" />
+          <div>
+            <div className="text-[13px] font-semibold text-[#0a0a0a]">GitHub</div>
+            <div className="text-[11.5px] text-[#737373]">Source, threat model, phase status</div>
+          </div>
+        </a>
+      </div>
+
+      {/* ── What it is ── */}
+      <section id="harness-what-is" className="mt-12">
+        <Eyebrow>01 · OVERVIEW</Eyebrow>
+        <H2 id="harness-what-is">What it is</H2>
+        <P>Think of a coding task as a durable state machine instead of an unstructured chat.</P>
+        <CodeBlock label="the loop, end to end">{`repository + policy + task contract
+                 │
+                 ▼
+        deterministic context compiler
+                 │
+                 ▼
+  coding agent reasons / edits / runs tools
+                 │
+                 ▼
+  receipts, checkpoints, graph freshness, scope checks
+                 │
+                 ▼
+      verification → sealed task → reusable learning candidate`}</CodeBlock>
+        <P>The Harness has five practical jobs:</P>
+        <ul className="space-y-2 text-[13px] text-[#525252] list-none">
+          {[
+            ['Orient an agent', 'It initializes repository identity, loads approved local context, and exposes graph queries before broad code search.'],
+            ['Bound a task', 'A Rust-owned immutable contract says which paths, criteria, budgets, and external-write policy apply.'],
+            ['Compress context structurally', 'It selects traceable repository evidence under a stated budget instead of copying a whole codebase into every new session.'],
+            ['Separate claims from evidence', 'A model saying "tests pass" is not a receipt. ICARUS runs declared criteria and records their status, digests, and freshness.'],
+            ['Learn without self-poisoning', 'Sealed work can produce reviewed memory and proposed skills; proposals require replay evidence before becoming active future context.'],
+          ].map(([tt, dd]) => (
+            <li key={tt} className="flex gap-2.5">
+              <Zap size={14} className="text-[#117dff] shrink-0 mt-0.5" />
+              <span><strong className="text-[#0a0a0a]">{tt}.</strong> {dd}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ── What it is not ── */}
+      <section id="harness-what-is-not" className="mt-12">
+        <Eyebrow>02 · OVERVIEW</Eyebrow>
+        <H2 id="harness-what-is-not">What it is not</H2>
+        <P>ICARUS is deliberately not an autonomous model platform.</P>
+        <ul className="space-y-2 text-[13px] text-[#525252] list-none">
+          {[
+            'It does not select, host, or pay for an LLM.',
+            'It does not infer external approval from local task authority.',
+            'It does not grant a task permission because an agent asks confidently.',
+            'It does not promise that every compatible client tool call is hard-intercepted.',
+            'It does not claim a task is complete because an agent exits.',
+            'It does not automatically promote model-authored skills.',
+          ].map((d) => (
+            <li key={d} className="flex gap-2.5">
+              <AlertTriangle size={14} className="text-[#d97706] shrink-0 mt-0.5" />
+              <span>{d}</span>
+            </li>
+          ))}
+        </ul>
+        <P>
+          That boundary matters: memory, graph lookup, contracts, and evidence are local
+          deterministic capabilities. Reasoning and user-facing decisions remain with the coding
+          agent and human.
+        </P>
+      </section>
+
+      {/* ── Architecture ── */}
+      <section id="harness-architecture" className="mt-12">
+        <Eyebrow>03 · OVERVIEW</Eyebrow>
+        <H2 id="harness-architecture">Architecture</H2>
+        <CodeBlock label="tracked vs. runtime state">{`Tracked repository state                         Ignored runtime state
+────────────────────────                         ─────────────────────
+.icarus/manifest.yaml      repository identity   .icarus/runtime/tasks/
+.icarus/policy.yaml        policy/schema         .icarus/runtime/events/
+.icarus/schemas/           contract schemas      .icarus/runtime/graph/
+AGENTS.md / CLAUDE.md      agent bootstrap       .icarus/data/<org>/
+                                                     local AMR shard
+
+Rust authority
+──────────────
+manifest · policy · contracts · lifecycle · event chain · context selection
+verification · sealing · skill promotion · canonical path containment
+
+Node / Bun boundary
+──────────────────
+CLI · terminal UI · MCP transport · Tree-sitter graph extraction · SQL.js graph store
+
+Coding agent
+────────────
+reasoning · code changes · natural-language explanation · proposed learning drafts`}</CodeBlock>
+        <P>
+          The tracked files define reproducible governance. Runtime files hold task snapshots,
+          receipts, event-chain state, graph data, and local memory; they are intentionally
+          excluded from Git.
+        </P>
+      </section>
+
+      {/* ── Install and initialize ── */}
+      <section id="harness-install" className="mt-12">
+        <Eyebrow>04 · GET STARTED</Eyebrow>
+        <H2 id="harness-install">Install and initialize</H2>
+        <H3 id="harness-install-cli">Install the CLI</H3>
+        <CodeBlock label="terminal">{`curl -fsSL https://raw.githubusercontent.com/${ICARUS_REPO}/main/install.sh | bash
+icarus --version`}</CodeBlock>
+        <P>
+          <Mono>icarus update</Mono> (or <Mono>/update</Mono> in the terminal UI) checks the
+          published checksum before atomic replacement. It streams a byte-based progress bar
+          during download and shows a SHA-256 verification phase before replacement.
+        </P>
+        <H3 id="harness-install-repo">Initialize a repository</H3>
+        <P>Run this at the root of the repository the agent will change:</P>
+        <CodeBlock label="terminal">{`cd /path/to/repository
+icarus harness init --agent codex
+icarus doctor
+icarus graph build --repo .`}</CodeBlock>
+        <P>
+          Initialization is idempotent. It creates tracked harness configuration and ignored
+          runtime directories, derives a repository identity, and safely copies legacy graph state
+          when necessary. It does not rewrite AMR shards or call an LLM.
+        </P>
+        <H3 id="harness-agent-bridge">Install the agent bridge</H3>
+        <CodeBlock label="terminal · from the repository root">{`# Choose the client actually used in this repository.
+icarus mcp install codex
+# or: icarus mcp install claude
+# or: icarus mcp install cursor`}</CodeBlock>
+        <P>
+          This registers the MCP server and refreshes the marked project instruction block in{' '}
+          <Mono>AGENTS.md</Mono>, <Mono>CLAUDE.md</Mono>, or a Cursor rule. Restart the agent after
+          installation or after updating ICARUS: an existing MCP process continues running the
+          binary it started with.
+        </P>
+        <P>The installed rule requires an agent, at the beginning of every new session, to:</P>
+        <ul className="space-y-1.5 text-[13px] text-[#525252] list-decimal list-inside">
+          <li>check whether <Mono>.icarus/manifest.yaml</Mono> exists;</li>
+          <li>call <Mono>icarus_harness_init</Mono> if it does not;</li>
+          <li>build a missing or stale graph;</li>
+          <li>create/load a task and call <Mono>icarus_context_get</Mono> before planning;</li>
+          <li>use graph queries for structural questions before whole-repository text search.</li>
+        </ul>
+      </section>
+
+      {/* ── Agent operating loop ── */}
+      <section id="harness-loop" className="mt-12">
+        <Eyebrow>05 · GET STARTED</Eyebrow>
+        <H2 id="harness-loop">The agent operating loop</H2>
+        <P>This is the intended loop for a real coding task.</P>
+        <CodeBlock label="operating loop">{`1. init / doctor / graph status
+2. create contract and task
+3. advance lifecycle to orienting
+4. retrieve deterministic context, inspect graph, plan
+5. advance to contracted → planned → executing
+6. make only contract-authorized changes; checkpoint meaningful state
+7. hand off to verification; run immutable acceptance criteria
+8. seal only with current successful receipts
+9. optionally capture reviewed memory and propose an evidence-backed skill`}</CodeBlock>
+        <P>
+          Do not replace this with &ldquo;start task, resume task, then write.&rdquo;{' '}
+          <Mono>resume</Mono> creates a linked execution attempt; it does{' '}
+          <strong className="text-[#0a0a0a]">not</strong> move a task from <Mono>created</Mono> to{' '}
+          <Mono>executing</Mono>.
+        </P>
+      </section>
+
+      {/* ── Task contracts and lifecycle ── */}
+      <section id="harness-contract" className="mt-12">
+        <Eyebrow>06 · TASKS</Eyebrow>
+        <H2 id="harness-contract">Task contracts and lifecycle</H2>
+        <H3 id="harness-contract-body">Contract</H3>
+        <P>The contract is the task&rsquo;s authority. It is reviewed input, not agent-generated decoration.</P>
+        <CodeBlock label="contract.json">{`{
+  "allowed_paths": ["core/src/**", "frontend/src/**", "docs/**"],
+  "forbidden_paths": [".env", "**/*secret*", "infra/**"],
+  "acceptance_criteria": [
+    { "id": "unit", "type": "test", "command": "npm test", "required": true },
+    { "id": "build", "type": "command", "command": "npm run build", "required": true }
+  ],
+  "risk": "medium",
+  "budgets": { "wall_time_minutes": 45 },
+  "authority": "User approved implementation and verification in the listed paths.",
+  "external_write_policy": "approval_required",
+  "decision_references": []
+}`}</CodeBlock>
+        <P>Create the task:</P>
+        <CodeBlock label="terminal">{`icarus task start --objective "Add organization profiles" --contract contract.json --repo .`}</CodeBlock>
+        <P>The command returns a <Mono>TASK-…</Mono> id and begins in <Mono>created</Mono>.</P>
+
+        <H3 id="harness-lifecycle">Legal lifecycle</H3>
+        <CodeBlock label="lifecycle">{`created
+  → orienting       inspect context, graph, repository state
+  → contracted      confirm contract and scope
+  → planned         form the implementation plan
+  → executing       managed code writes may be authorized
+  → verifying       run acceptance criteria and examine receipts
+  → sealed          final immutable receipt exists`}</CodeBlock>
+        <P>Advance one state at a time:</P>
+        <CodeBlock label="terminal">{`icarus task transition TASK-… orienting --repo .
+icarus context build --task TASK-… --budget 12000 --format markdown --repo .
+icarus task transition TASK-… contracted --repo .
+icarus task transition TASK-… planned --repo .
+icarus task transition TASK-… executing --repo .`}</CodeBlock>
+        <P>
+          The lifecycle is not cosmetic. Managed writes require <Mono>executing</Mono>; an
+          authorization denial must not be bypassed through another shell command. If the task
+          scope changes, amend the contract with an attributable reason and required approval
+          instead of silently editing outside the contract.
+        </P>
+        <P>Useful lifecycle commands:</P>
+        <CodeBlock label="terminal">{`icarus task status TASK-… --repo .
+icarus task resume TASK-… --repo .          # creates a linked execution, keeps lifecycle state
+icarus task checkpoint TASK-… --phase implementation --input state.json --repo .
+icarus task block TASK-… --reason "Waiting for product decision" --repo .
+icarus task reconcile TASK-… --repo .       # reconcile managed workspace state
+icarus task authorize TASK-… --kind write --path src/file.ts --repo .`}</CodeBlock>
+      </section>
+
+      {/* ── Context-window optimization ── */}
+      <section id="harness-context" className="mt-12">
+        <Eyebrow>07 · CONTEXT & GRAPH</Eyebrow>
+        <H2 id="harness-context">Context-window optimization</H2>
+        <P>The Harness reduces context structurally, not by pretending to measure a provider&rsquo;s bill.</P>
+        <P>
+          <Mono>icarus context build</Mono> compiles a bounded pack from durable task data, policy,
+          graph freshness, checkpoints, selected memory, and changed-state evidence. Every included
+          item has a source, reason, freshness signal, and digest. The agent gets the relevant
+          slices rather than a transcript or complete repository dump.
+        </P>
+        <CodeBlock label="terminal">{`icarus context build --task TASK-… --budget 12000 --format markdown --repo .
+icarus context inspect --task TASK-… --budget 12000 --format json --repo .`}</CodeBlock>
+        <P>
+          <Mono>--budget</Mono> is a conservative local token-unit budget, not a guarantee of
+          tokens billed by a provider. If a mandatory policy/context item cannot fit, ICARUS
+          returns <Mono>budget_unsatisfied</Mono> rather than silently dropping the required item.
+          Increase the budget, reduce the task&rsquo;s mandatory context through a reviewed
+          contract/policy change, or split the task; do not make the policy optional just to force
+          a response.
+        </P>
+        <P>Build context again after:</P>
+        <ul className="space-y-1.5 text-[13px] text-[#525252] list-disc list-inside">
+          <li>a session compaction or resumed execution;</li>
+          <li>a material repository change;</li>
+          <li>a task amendment;</li>
+          <li>a graph rebuild that changes relevant structural evidence.</li>
+        </ul>
+      </section>
+
+      {/* ── Code graph ── */}
+      <section id="harness-graph" className="mt-12">
+        <Eyebrow>08 · CONTEXT & GRAPH</Eyebrow>
+        <H2 id="harness-graph">Code graph</H2>
+        <P>
+          The graph is a local native symbol/call/import index used for structural questions such
+          as &ldquo;who calls this?&rdquo; or &ldquo;where is this imported?&rdquo; It currently
+          parses JavaScript, TypeScript, and Rust through Tree-sitter WASM and stores its local
+          index in SQL.js-backed runtime state.
+        </P>
+        <CodeBlock label="terminal">{`icarus graph build --repo .
+icarus graph status --repo .
+icarus graph query --repo . --kind find --name authenticateUser
+icarus graph query --repo . --kind callers_of --name authenticateUser
+icarus graph query --repo . --kind callees_of --name authenticateUser
+icarus graph query --repo . --kind imports_of --name auth`}</CodeBlock>
+        <P>
+          The graph has a source fingerprint and freshness receipt. Rebuild it after significant
+          restructuring. Graph data is a navigational aid, not a proof of behavior or authorization.
+        </P>
+        <H3 id="harness-graph-binary">Packaged binary note</H3>
+        <P>
+          Release binaries embed Tree-sitter grammars, Tree-sitter&rsquo;s runtime WASM, and
+          SQL.js&rsquo;s <Mono>sql-wasm.wasm</Mono>. CI hides SQL.js&rsquo;s source-copy WASM while
+          exercising graph construction, so an accidentally retained CI path cannot pass release
+          tests and then fail after installation.
+        </P>
+      </section>
+
+      {/* ── Memory and learning ── */}
+      <section id="harness-memory" className="mt-12">
+        <Eyebrow>09 · MEMORY & LEARNING</Eyebrow>
+        <H2 id="harness-memory">Memory and learning</H2>
+        <H3 id="harness-memory-local">Local memory</H3>
+        <P>
+          Each repository can have an isolated org/shard. Raw recall remains local and
+          deterministic; LLM-based synthesis is an explicit optional layer, never hidden behind
+          recall.
+        </P>
+        <CodeBlock label="terminal">{`icarus ingest ./docs --org acme
+icarus recall "Why was authentication scoped this way?" --org acme
+icarus save "Decision: use per-org authorization." --org acme
+icarus status`}</CodeBlock>
+        <P>
+          MCP exposes matching local-memory tools (<Mono>icarus_recall</Mono>,{' '}
+          <Mono>icarus_save_memory</Mono>, <Mono>icarus_get_memory</Mono>,{' '}
+          <Mono>icarus_list_memories</Mono>, <Mono>icarus_update_memory</Mono>,{' '}
+          <Mono>icarus_delete_memory</Mono>, and <Mono>icarus_traverse_graph</Mono>) plus
+          coding-oriented helpers such as <Mono>icarus_log_decision</Mono>,{' '}
+          <Mono>icarus_recall_bugs</Mono>, <Mono>icarus_track_refactor</Mono>, and{' '}
+          <Mono>icarus_why_code</Mono>.
+        </P>
+
+        <H3 id="harness-capture">Learning capture</H3>
+        <P>After a task is sealed, ICARUS can create a provenance-bound capture candidate:</P>
+        <CodeBlock label="terminal">{`icarus learn capture --task TASK-… --repo . > capture.json
+# Human/agent reviews the capture and writes a factual memory draft.
+icarus learn save-capture CAPTURE-… --digest <capture-digest> --file memory.json --org acme`}</CodeBlock>
+        <P>
+          The candidate is rejected if the task is unsealed, the final receipt changed, the digest
+          does not match, the draft is blank, or a different draft is attempted for the same
+          capture. This is meant to preserve decisions and lessons without persisting unreviewed
+          model speculation.
+        </P>
+
+        <H3 id="harness-skills">Governed skills (self-evolution with brakes)</H3>
+        <P>
+          ICARUS does not use its own LLM to &ldquo;self-improve.&rdquo; A coding agent may draft a
+          procedure from a Rust-derived evidence brief, but it remains a proposal until replay
+          evaluation proves it useful.
+        </P>
+        <CodeBlock label="terminal">{`icarus learn brief --task TASK-… --repo .
+# Give the returned evidence brief to the selected coding agent; it writes skill.json.
+icarus learn propose --file skill.json --repo .
+icarus learn evaluate <skill-id> --replay-task TASK-… --baseline-task TASK-… --repo .
+icarus learn review --repo .
+icarus learn promote <skill-id> --approval <approval-id> --repo .`}</CodeBlock>
+        <P>
+          Low-risk promotion requires distinct sealed source tasks and measurably improved
+          policy-clean replays against separate baselines. High-risk skills additionally require an
+          attributable owner approval. Active skills are reviewed and may be demoted or retired. A
+          proposal is never presented as active merely because a model wrote it.
+        </P>
+      </section>
+
+      {/* ── MCP and agent integration ── */}
+      <section id="harness-mcp" className="mt-12">
+        <Eyebrow>10 · INTEGRATION</Eyebrow>
+        <H2 id="harness-mcp">MCP and agent integration</H2>
+        <P>The MCP server exposes the Harness to agents without requiring them to scrape terminal text.</P>
+        <table className="w-full mt-3 text-[12.5px]">
+          <thead>
+            <tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]">
+              <th className="py-1.5 pr-3 font-semibold w-28">Group</th>
+              <th className="py-1.5 pr-3 font-semibold">Representative MCP tools</th>
+              <th className="py-1.5 font-semibold">Use</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#eae7e1]">
+            {[
+              ['Bootstrap', 'icarus_harness_init, icarus_harness_migrate, icarus_status', 'Create/check repository harness state.'],
+              ['Task', 'icarus_task_start, icarus_task_status, icarus_task_transition, icarus_task_resume', 'Create and legally advance a governed task.'],
+              ['Context', 'icarus_context_get, icarus_graph_build, icarus_graph_status, icarus_graph_query', 'Build bounded context and answer structural questions.'],
+              ['Write boundary', 'icarus_action_check, icarus_checkpoint, icarus_task_amend_contract, icarus_task_block', 'Check scope and record durable state.'],
+              ['Evidence', 'icarus_task_handoff, icarus_task_verify, icarus_task_attest, icarus_task_seal, icarus_task_export', 'Move from execution to evidence-backed completion.'],
+              ['Learning', 'icarus_harness_learning_capture, icarus_harness_skill_authoring_brief, icarus_harness_skill_propose, icarus_harness_skill_evaluate, icarus_harness_skill_promote', 'Capture reviewed lessons and govern reusable procedures.'],
+            ].map(([g, t, u]) => (
+              <tr key={g}>
+                <td className="py-2 pr-3 font-semibold text-[#0a0a0a] align-top whitespace-nowrap">{g}</td>
+                <td className="py-2 pr-3 font-mono text-[11.5px] text-[#117dff] align-top">{t}</td>
+                <td className="py-2 text-[#525252] align-top">{u}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <P>For a managed coding task, the minimal MCP sequence is:</P>
+        <CodeBlock label="mcp sequence">{`icarus_harness_init
+icarus_graph_status / icarus_graph_build
+icarus_task_start
+icarus_task_transition(orienting)
+icarus_context_get
+icarus_task_transition(contracted)
+icarus_task_transition(planned)
+icarus_task_transition(executing)
+icarus_action_check before a managed write
+… implementation …
+icarus_task_handoff → icarus_task_verify → icarus_task_seal`}</CodeBlock>
+      </section>
+
+      {/* ── Verification, export, and release evidence ── */}
+      <section id="harness-verify" className="mt-12">
+        <Eyebrow>11 · INTEGRATION</Eyebrow>
+        <H2 id="harness-verify">Verification, export, and release evidence</H2>
+        <P>Handoff says implementation is ready for checks; it does not mean the task passed.</P>
+        <CodeBlock label="terminal">{`icarus task handoff TASK-… --repo .
+icarus task verify TASK-… --criterion unit --repo .
+icarus task verify TASK-… --criterion build --repo .
+icarus task seal TASK-… --repo .
+icarus task export TASK-… --redact --repo .`}</CodeBlock>
+        <P>
+          Sealing requires current receipts for the immutable acceptance criteria, valid approvals
+          where required, an intact event chain, and final scope reconciliation. A sealed export is
+          a structured receipt, not a raw copy of <Mono>.icarus/runtime</Mono>.{' '}
+          <Mono>--redact</Mono> preserves useful digests and statuses while removing objective
+          text, paths, excerpts, and attestation identities.
+        </P>
+      </section>
+
+      {/* ── CLI reference ── */}
+      <section id="harness-cli" className="mt-12">
+        <Eyebrow>12 · REFERENCE</Eyebrow>
+        <H2 id="harness-cli">CLI reference</H2>
+        <H3 id="harness-cli-repo">Repository and policy</H3>
+        <CodeBlock label="cli">{`icarus harness init [--agent claude|codex|cursor|grok|all] [--repo DIR]
+icarus migrate [--dry-run] [--agent …] [--repo DIR]
+icarus doctor [--repo DIR]
+icarus policy check [--repo DIR]
+icarus policy explain DENIAL-ID [--repo DIR]
+icarus mcp install [claude|codex|cursor]`}</CodeBlock>
+        <H3 id="harness-cli-tasks">Tasks and context</H3>
+        <CodeBlock label="cli">{`icarus task start --objective TEXT --contract contract.json [--repo DIR]
+icarus task status TASK-ID [--repo DIR]
+icarus task resume TASK-ID [--repo DIR]
+icarus task transition TASK-ID STATE [--repo DIR]
+icarus task reconcile TASK-ID [--repo DIR]
+icarus task amend TASK-ID --contract contract.json --reason TEXT [--approval ID]
+icarus task checkpoint TASK-ID --phase NAME [--input state.json]
+icarus task block TASK-ID --reason TEXT [--repo DIR]
+icarus task authorize TASK-ID --kind write --path relative/file.ts [--repo DIR]
+icarus context build --task TASK-ID [--budget N] [--since-checkpoint N] [--format json|markdown]
+icarus context inspect --task TASK-ID [--budget N] [--format json]`}</CodeBlock>
+        <H3 id="harness-cli-graph">Graph, run, evidence, and learning</H3>
+        <CodeBlock label="cli">{`icarus graph build|status [--repo DIR]
+icarus graph query --kind callers_of|callees_of|imports_of|find --name SYMBOL [--repo DIR]
+icarus run --task TASK-ID --agent claude|codex|cursor|grok [--workspace isolated|current]
+icarus task handoff|verify|attest|seal|export …
+icarus learn brief|capture|save-capture|propose|evaluate|outcome|review|promote|retire …`}</CodeBlock>
+        <P className="text-[12px]">Run <Mono>icarus --help</Mono> for exact arguments on the installed version.</P>
+      </section>
+
+      {/* ── Safety model and current limits ── */}
+      <section id="harness-safety" className="mt-12">
+        <Eyebrow>13 · REFERENCE</Eyebrow>
+        <H2 id="harness-safety">Safety model and current limits</H2>
+        <H3 id="harness-safety-enforced">What is enforced by the native authority</H3>
+        <ul className="space-y-2 text-[13px] text-[#525252] list-none">
+          {[
+            'Repository identity, tracked policy, contracts, legal lifecycle transitions, event-chain integrity, canonical path containment, context selection, verification receipts, sealing, and skill-promotion gates are Rust-owned.',
+            'Managed isolated worktrees are the default. Current-workspace execution requires explicit acknowledgement and is not the safe default.',
+            'Path traversal, symlink escape, nested Git/submodule write routes, and out-of-contract paths are refused by the managed boundary.',
+            'A stale graph cannot be claimed current after relevant source changes.',
+          ].map((d) => (
+            <li key={d} className="flex gap-2.5">
+              <Lock size={14} className="text-[#117dff] shrink-0 mt-0.5" />
+              <span>{d}</span>
+            </li>
+          ))}
+        </ul>
+        <H3 id="harness-safety-adapter">Adapter status</H3>
+        <P>
+          No public adapter is currently <strong className="text-[#0a0a0a]">certified</strong>.
+          Claude Code and Codex are compatible; Codex&rsquo;s app-server bridge is explicitly
+          experimental. Compatibility means an agent can use contracts, context, checkpoints,
+          verification, and seal-time scope checks. It does{' '}
+          <strong className="text-[#0a0a0a]">not</strong> mean every client-side write and external
+          action is hard-intercepted. See the exact version-pinned evidence and missing
+          certification gates in <Mono>docs/ADAPTER_CERTIFICATION.md</Mono>.
+        </P>
+        <H3 id="harness-safety-limits">Important limits</H3>
+        <ul className="space-y-2 text-[13px] text-[#525252] list-none">
+          {[
+            'Local host compromise remains outside the local event-chain trust boundary.',
+            'Graph support is currently JS/TS/Rust, not every programming language.',
+            'Context-pack reduction is a structural measurement, not provider-billing proof.',
+            'Optional HIVE-MIND authority sync is opt-in; its remote transport and live approval/revocation evidence remain release-candidate gates.',
+            'v1.0 requires the remaining adapter certification and dogfood evidence gates; see docs/PHASE_STATUS.md.',
+          ].map((d) => (
+            <li key={d} className="flex gap-2.5">
+              <AlertTriangle size={14} className="text-[#d97706] shrink-0 mt-0.5" />
+              <span>{d}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ── Troubleshooting ── */}
+      <section id="harness-troubleshooting" className="mt-12 mb-20">
+        <Eyebrow>14 · REFERENCE</Eyebrow>
+        <H2 id="harness-troubleshooting">Troubleshooting</H2>
+
+        <H3 id="harness-ts-budget"><Mono>budget_unsatisfied</Mono></H3>
+        <P>
+          A mandatory context/policy item needs more than the requested conservative budget.
+          Increase <Mono>--budget</Mono>, split the task, or make a reviewed policy/contract
+          change. Do not drop mandatory context to make the call appear successful.
+        </P>
+
+        <H3 id="harness-ts-executing"><Mono>managed writes require an executing task contract</Mono></H3>
+        <P><Mono>task start</Mono> creates <Mono>created</Mono>; <Mono>task resume</Mono> does not advance it. Transition legally:</P>
+        <CodeBlock label="terminal">{`icarus task transition TASK-… orienting --repo .
+icarus task transition TASK-… contracted --repo .
+icarus task transition TASK-… planned --repo .
+icarus task transition TASK-… executing --repo .`}</CodeBlock>
+
+        <H3 id="harness-ts-wasm"><Mono>graph build</Mono> reports a missing WASM file</H3>
+        <P>First update, then restart the agent&rsquo;s MCP process and retry:</P>
+        <CodeBlock label="terminal">{`icarus update
+icarus graph build --repo .`}</CodeBlock>
+        <P>
+          Current release binaries embed the required Tree-sitter and SQL.js WASM files. If the
+          error persists after confirming the version, include <Mono>icarus --version</Mono>,{' '}
+          <Mono>icarus doctor</Mono>, and the full error in a bug report; do not patch paths inside
+          the installed executable.
+        </P>
+
+        <H3 id="harness-ts-mcp">An MCP tool is missing after an update</H3>
+        <P>MCP clients hold a running process. From the repository root, refresh the install block and restart the client:</P>
+        <CodeBlock label="terminal">{`icarus mcp install codex`}</CodeBlock>
+
+        <H3 id="harness-ts-denial">I need to inspect why an action was denied</H3>
+        <P>Use the denial ID from the response:</P>
+        <CodeBlock label="terminal">{`icarus policy explain DENIAL-… --repo .`}</CodeBlock>
+        <P>
+          Do not bypass a denial by moving the operation to an ungoverned shell command; either
+          narrow the task, amend the reviewed contract, or obtain the required approval.
+        </P>
+
+        <div className="mt-8 flex items-center gap-4 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+          <span className="flex items-center gap-1.5"><Layers size={11} className="text-[#117dff]/60" /> Deterministic operating layer</span>
+          <span className="flex items-center gap-1.5"><Brain size={11} className="text-[#117dff]/60" /> Evidence, not prose</span>
+          <span className="flex items-center gap-1.5"><Wrench size={11} className="text-[#117dff]/60" /> MCP-integrated</span>
+        </div>
+      </section>
+    </>
+  );
+}
+
 export default function DocsPage() {
-  const [product, setProduct] = useState('hivemind'); // 'hivemind' | 'icarus'
+  const [product, setProduct] = useState('hivemind'); // 'hivemind' | 'icarus' | 'harness'
   const toolGroups = useMemo(() => ([
     { id: 'tools-memory', title: 'Memory tools', count: MEMORY_TOOLS.length, tools: MEMORY_TOOLS, blurb: 'The core read/write surface of the memory engine. Every durable fact, decision, and conversation flows through these.' },
     { id: 'tools-web', title: 'Web intelligence tools', count: WEB_TOOLS.length, tools: WEB_TOOLS, blurb: 'Live web search + crawl with an async job model: submit → poll → read results. Quota-metered per workspace.' },
@@ -473,6 +1105,7 @@ export default function DocsPage() {
           {[
             { id: 'hivemind', label: 'HIVEMIND' },
             { id: 'icarus', label: 'ICARUS · self-host' },
+            { id: 'harness', label: 'Icarus Harness' },
           ].map((t) => (
             <button
               key={t.id}
@@ -488,12 +1121,12 @@ export default function DocsPage() {
       <div className="max-w-[1200px] mx-auto flex gap-10 px-5 md:px-8 py-10">
         {/* ── TOC ── */}
         <nav className="hidden lg:block w-60 shrink-0">
-          <Sidebar groups={product === 'hivemind' ? HIVEMIND_GROUPS : ICARUS_GROUPS} />
+          <Sidebar groups={product === 'hivemind' ? HIVEMIND_GROUPS : product === 'harness' ? HARNESS_GROUPS : ICARUS_GROUPS} />
         </nav>
 
         {/* ── Content ── */}
         <main className="flex-1 min-w-0 max-w-[760px]">
-          {product === 'icarus' ? <IcarusDocs /> : <>
+          {product === 'icarus' ? <IcarusDocs /> : product === 'harness' ? <HarnessDocs /> : <>
           <Eyebrow>DEVELOPER DOCUMENTATION</Eyebrow>
           <h1 className="text-[34px] leading-[1.08] font-medium font-['Space_Grotesk'] text-[#0a0a0a] tracking-tight">HIVEMIND API & MCP reference</h1>
           <P>
