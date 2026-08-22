@@ -272,7 +272,7 @@ function buildResearchReportHtml(job, scopeOptions = []) {
 
 // Open the report in a new tab (same-origin via document.write so it can
 // postMessage the opener for the authenticated save).
-function openResearchReportTab(job, scopeOptions) {
+export function openResearchReportTab(job, scopeOptions) {
   const w = window.open('', '_blank');
   if (!w) return false; // popup blocked
   w.document.open(); w.document.write(buildResearchReportHtml(job, scopeOptions)); w.document.close();
@@ -946,7 +946,7 @@ function PastResearchPanel({ jobs, onPick, onOpenReport, locked, savedByJob = {}
 
 /* ─── Past research preview modal (with one-click save) ──────────── */
 
-function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onOpenReport }) {
+export function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onOpenReport }) {
   const { t } = useTranslation('dashboard');
   const result = Array.isArray(job.results) ? job.results[0] : null;
   const title = deriveJobTitle(job, job.results || []);
@@ -1364,7 +1364,7 @@ function UsagePill({ icon: Icon, label, used, limit, muted }) {
 
 // Pick the best title for a job: research → report title; search/crawl →
 // query or first URL. Falls back to the bare query/URL params.
-function deriveJobTitle(job, results) {
+export function deriveJobTitle(job, results) {
   if (job.type === 'research' && results?.[0]?.title) return results[0].title;
   if (job.params?.input)  return job.params.input;
   if (job.params?.query)  return job.params.query;

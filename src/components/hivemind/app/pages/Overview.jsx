@@ -5,6 +5,7 @@ import OverviewTour, { useOverviewTour } from '../shared/OverviewTour';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowUp,
   BookOpen,
   Boxes,
@@ -12,6 +13,8 @@ import {
   Building2,
   Cable,
   CheckCircle2,
+  Chrome,
+  Eye,
   FileText,
   GitFork,
   Globe,
@@ -34,6 +37,10 @@ import { useApiQuery } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/upload-store';
+// Reuse Web Studio's research-report toolkit rather than hand-rolling a
+// second implementation — same "view in Chrome" tab, same in-app preview
+// modal + save-to-HIVEMIND flow, same job-title derivation.
+import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './WebStudio';
 
 // ─── Animation variants ──────────────────────────────────────────
 
@@ -134,7 +141,51 @@ function ChatBubble({ msg, onContinue }) {
   // Claude-exact turns (shared/claude-chat): user pill right, assistant is a
   // bubbleless serif answer with reasoning pill + sources + action row.
   if (msg.role === 'user') return <div className="flex justify-end"><UserBubble content={msg.content} /></div>;
+  if (msg.deepResearch) return null; // rendered by DeepResearchCard instead
   return <div className="flex flex-col">{<AiBubble msg={msg} onContinue={onContinue} />}</div>;
+}
+
+// ─── Deep Research turn — inline progress card + View in Chrome / Preview ──
+// Same job shape as Web Studio (getWebJob), so the same actions work
+// identically: openResearchReportTab opens the rendered report in a new tab
+// with its own Save-to-HIVEMIND button; Preview opens the same in-app modal.
+function DeepResearchCard({ dr, onPreview, onOpenChrome }) {
+  const { t } = useTranslation('dashboard');
+  const status = dr.status;
+  const job = dr.job;
+  const running = status === 'starting' || status === 'running' || status === 'queued' || status === 'processing';
+  const failed = status === 'failed';
+  const done = status === 'succeeded';
+  const sourceCount = done ? (job?.results?.[0]?.sources?.length || 0) : 0;
+  return (
+    <div className="mt-2 rounded-xl border border-[#e3e0db] bg-white p-3.5 max-w-md">
+      <div className="flex items-center gap-2.5">
+        <span className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 grid place-items-center flex-shrink-0">
+          {running ? <Loader2 size={13} className="text-blue-600 animate-spin" /> : failed ? <AlertTriangle size={13} className="text-red-500" /> : <CheckCircle2 size={13} className="text-emerald-600" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[12.5px] font-semibold text-[#0a0a0a] truncate">{dr.query}</div>
+          <div className="text-[10.5px] text-[#a3a3a3]">
+            {running
+              ? t('overview.chat.researching', 'Researching the web… (1-3 min, keeps running in the background)')
+              : failed
+                ? (dr.error || t('overview.chat.researchFailed', 'Research failed'))
+                : t('overview.chat.reportReady', 'Report ready{{sources}}', { sources: sourceCount ? ` · ${sourceCount} sources` : '' })}
+          </div>
+        </div>
+      </div>
+      {done && (
+        <div className="mt-3 flex items-center gap-1.5">
+          <button onClick={onPreview} className="inline-flex items-center gap-1 text-[11px] font-medium text-[#525252] hover:text-[#0a0a0a] bg-white hover:bg-[#f3f1ec] border border-[#e3e0db] rounded-lg px-2.5 py-1.5 transition-colors">
+            <Eye size={12} /> {t('webstudio.view', 'View')}
+          </button>
+          <button onClick={onOpenChrome} className="inline-flex items-center gap-1 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-2.5 py-1.5 transition-colors">
+            <Chrome size={12} /> {t('webstudio.viewInChrome', 'View in Chrome')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Cognitive band — drifting stream of swarm intelligence ─────
@@ -748,6 +799,87 @@ function OverviewChat({ inputRef }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, loading]);
 
+  // ─── Deep Research from the composer ──────────────────────────
+  // Same /v1/proxy/web/research/jobs backend as Web Studio's Research mode,
+  // just triggered inline from chat: submits the job, polls it in the
+  // background (doesn't block the composer — you can keep chatting), and
+  // renders progress + "View in Chrome" / "Preview" on the assistant turn
+  // once it lands. jobsByIdRef backs the postMessage save-bridge below,
+  // same pattern as Web Studio's own bridge.
+  const [deepResearchMode, setDeepResearchMode] = useState(false);
+  const [drPreviewJob, setDrPreviewJob] = useState(null);
+  const jobsByIdRef = useRef({});
+  const drPollersRef = useRef({});
+  useEffect(() => () => { Object.values(drPollersRef.current).forEach(clearInterval); }, []);
+
+  const scopeOptions = useMemo(() => ([
+    { label: '🔒 Personal', scope: 'personal', projectId: null },
+    { label: '🏢 Organization', scope: 'organization', projectId: null },
+    ...(projects || []).map((p) => ({ label: `📁 ${p.name || p.slug || 'Project'}`, scope: 'project', projectId: p.id })),
+  ]), [projects]);
+
+  const startDeepResearch = useCallback(async (query) => {
+    const trimmed = (query || '').trim();
+    if (!trimmed || loading) return;
+    setInput('');
+    const userMsg = { id: Date.now(), role: 'user', content: trimmed };
+    const drMsgId = `dr-${userMsg.id}`;
+    setMessages((prev) => [...prev, userMsg, { id: drMsgId, role: 'assistant', deepResearch: { status: 'starting', query: trimmed } }]);
+    try {
+      const r = await apiClient.submitWebResearch({ input: trimmed, model: 'auto', citation_format: 'numbered' });
+      const jobId = r?.job_id || r?.id;
+      if (!jobId) throw new Error('No job id returned');
+      setMessages((prev) => prev.map((m) => (m.id === drMsgId ? { ...m, deepResearch: { ...m.deepResearch, jobId, status: 'running' } } : m)));
+      const poll = setInterval(async () => {
+        try {
+          const job = await apiClient.getWebJob(jobId);
+          jobsByIdRef.current[jobId] = job;
+          setMessages((prev) => prev.map((m) => (m.id === drMsgId ? { ...m, deepResearch: { ...m.deepResearch, job, status: job.status } } : m)));
+          if (job.status === 'succeeded' || job.status === 'failed') {
+            clearInterval(drPollersRef.current[jobId]);
+            delete drPollersRef.current[jobId];
+          }
+        } catch {
+          clearInterval(drPollersRef.current[jobId]);
+          delete drPollersRef.current[jobId];
+        }
+      }, 1800);
+      drPollersRef.current[jobId] = poll;
+    } catch (err) {
+      setMessages((prev) => prev.map((m) => (m.id === drMsgId ? { ...m, deepResearch: { ...m.deepResearch, status: 'failed', error: err.response?.data?.error || err.message } } : m)));
+    }
+  }, [loading]);
+
+  // Bridge: the report tab (opened via openResearchReportTab) postMessages a
+  // scoped save request; perform the authenticated save here and post the
+  // result back — identical contract to Web Studio's own listener.
+  useEffect(() => {
+    const handler = async (e) => {
+      const d = e.data || {};
+      if (d.type !== 'hm-save-research' || !d.jobId) return;
+      const job = jobsByIdRef.current[d.jobId];
+      const result = job && Array.isArray(job.results) ? job.results[0] : null;
+      const reply = (msg) => { try { e.source?.postMessage({ type: 'hm-save-result', jobId: d.jobId, scopeLabel: d.scopeLabel, ...msg }, '*'); } catch { /* tab closed */ } };
+      if (!job || !result) { reply({ ok: false, error: 'report not found' }); return; }
+      try {
+        await apiClient.saveResearchAsMemory({
+          title: deriveJobTitle(job, job.results || []),
+          markdown: typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2),
+          sources: result.sources || [],
+          tags: [job.params?.model ? `tavily-${job.params.model}` : 'tavily'],
+          jobId: job.id,
+          targetScope: d.scope || 'personal',
+          projectId: d.projectId || undefined,
+        });
+        reply({ ok: true, memories: 1 });
+      } catch (err) {
+        reply({ ok: false, error: err.response?.data?.error || err.message });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   const sendMessage = useCallback(async (opts = {}) => {
     // opts.text / opts.projectId let a save-memory scope pick re-send the same
     // message bound to a chosen project (see the project_choice chooser below).
@@ -929,8 +1061,13 @@ function OverviewChat({ inputRef }) {
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      if (deepResearchMode) startDeepResearch(input);
+      else sendMessage();
     }
+  };
+  const onSendClick = () => {
+    if (deepResearchMode) startDeepResearch(input);
+    else sendMessage();
   };
 
   const hasThread = messages.length > 0 || loading;
@@ -973,6 +1110,16 @@ function OverviewChat({ inputRef }) {
           {messages.map((m) => (
             <React.Fragment key={m.id}>
               <ChatBubble msg={m} onContinue={continueOrchestration} />
+              {m.deepResearch && (
+                <DeepResearchCard
+                  dr={m.deepResearch}
+                  onPreview={() => setDrPreviewJob(m.deepResearch.job)}
+                  onOpenChrome={() => {
+                    const ok = openResearchReportTab(m.deepResearch.job, scopeOptions);
+                    if (!ok) window.alert('Popup blocked — allow popups for HIVEMIND to open the report.');
+                  }}
+                />
+              )}
               {m.projectChoice && !loading && (
                 <div className="mt-5 mb-1 flex flex-col gap-2" data-testid="save-scope-chooser">
                   <p className="text-[14px] font-semibold text-[#1a1a17]">
@@ -1032,7 +1179,7 @@ function OverviewChat({ inputRef }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={t('overview.chat.placeholder', 'Do anything with HIVE…')}
+          placeholder={deepResearchMode ? t('overview.chat.researchPlaceholder', 'Research the web…  e.g. "compare vector DBs for 1M-row RAG"') : t('overview.chat.placeholder', 'Do anything with HIVE…')}
           className="w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[13px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none"
         />
         <div className="flex items-center justify-between px-3 pb-2.5">
@@ -1123,6 +1270,22 @@ function OverviewChat({ inputRef }) {
               </AnimatePresence>
             </div>
 
+            {/* Deep Research — same /v1/proxy/web/research/jobs backend as Web
+                Studio's Research mode, triggered inline from chat. Runs in the
+                background (composer stays usable) and renders progress + View
+                in Chrome / Preview on the turn once it lands. */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={deepResearchMode}
+              onClick={() => setDeepResearchMode((v) => !v)}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 transition-all ${deepResearchMode ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-[#e3e0db] bg-white text-[#525252] hover:border-[#d4d0ca] hover:bg-[#faf9f4]'}`}
+              title={t('overview.chat.deepResearchHint', 'Compile a multi-source research report with citations (1-3 min)')}
+            >
+              <Globe size={12} />
+              <span className="text-[10px] font-semibold tracking-tight">{t('overview.chat.deepResearch', 'Deep Research')}</span>
+            </button>
+
           </div>
           <div className="flex items-center gap-2">
             {messages.length > 0 && (
@@ -1134,14 +1297,17 @@ function OverviewChat({ inputRef }) {
               </button>
             )}
             <button
-              onClick={sendMessage}
+              onClick={onSendClick}
               disabled={!input.trim() || loading}
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
                 input.trim() && !loading
-                  ? 'bg-[#117dff] text-white hover:bg-[#0066e0] shadow-[0_2px_8px_rgba(17,125,255,0.3)]'
+                  ? deepResearchMode
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-[0_2px_8px_rgba(37,99,235,0.3)]'
+                    : 'bg-[#117dff] text-white hover:bg-[#0066e0] shadow-[0_2px_8px_rgba(17,125,255,0.3)]'
                   : 'bg-[#f3f1ec] text-[#a3a3a3]'
               }`}
-              aria-label={t('overview.chat.send', 'Send')}
+              aria-label={deepResearchMode ? t('overview.chat.startResearch', 'Start deep research') : t('overview.chat.send', 'Send')}
+              title={deepResearchMode ? t('overview.chat.startResearch', 'Start deep research') : undefined}
             >
               <ArrowUp size={15} />
             </button>
@@ -1161,6 +1327,20 @@ function OverviewChat({ inputRef }) {
 
       {/* Full cognitive memory — opened from a band chip */}
       {openMemory && <MemoryModal memory={openMemory} onClose={() => setOpenMemory(null)} t={t} />}
+
+      {/* Deep Research preview — same in-app modal Web Studio uses */}
+      <AnimatePresence>
+        {drPreviewJob && (
+          <ResearchPreviewModal
+            job={drPreviewJob}
+            onClose={() => setDrPreviewJob(null)}
+            onOpenReport={() => {
+              const ok = openResearchReportTab(drPreviewJob, scopeOptions);
+              if (!ok) window.alert('Popup blocked — allow popups for HIVEMIND to open the report.');
+            }}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
