@@ -833,9 +833,11 @@ function OverviewChat({ inputRef }) {
       // Deferred save → render a clickable SCOPE CHOOSER (mirrors the mobile
       // Talk-to-HIVE flow) instead of asking the user to type a project name.
       // Clicking an option re-sends the same save bound to that scope.
-      const pcProjects = chatData.project_choice?.projects;
-      const projectChoice = (Array.isArray(pcProjects) && pcProjects.length)
-        ? { projects: pcProjects, originalMessage: trimmed }
+      const rawProjectChoice = chatData.project_choice;
+      const projectChoice = (rawProjectChoice?.draft
+          && ((Array.isArray(rawProjectChoice.projects) && rawProjectChoice.projects.length)
+            || (Array.isArray(rawProjectChoice.scope_options) && rawProjectChoice.scope_options.length)))
+        ? { ...rawProjectChoice }
         : null;
       const completedMessage = {
         id: Date.now() + 1,
@@ -866,6 +868,30 @@ function OverviewChat({ inputRef }) {
       setLoading(false);
     }
   }, [input, loading, messages, chatScope, i18n.language, t, useTools]);
+
+  const completePreparedSave = useCallback(async (messageId, choice, label, destination) => {
+    const draft = choice?.draft;
+    if (!draft || choice?.saving || choice?.saved) return;
+    setMessages((prev) => prev.map((item) => item.id === messageId
+      ? { ...item, projectChoice: { ...item.projectChoice, saving: true, saveError: null } }
+      : item));
+    try {
+      await apiClient.createMemory({
+        title: draft.title,
+        content: draft.content,
+        tags: draft.tags || [],
+        memory_type: draft.memory_type || 'fact',
+        ...destination,
+      });
+      setMessages((prev) => prev.map((item) => item.id === messageId
+        ? { ...item, projectChoice: { ...item.projectChoice, saving: false, saved: label } }
+        : item));
+    } catch (error) {
+      setMessages((prev) => prev.map((item) => item.id === messageId
+        ? { ...item, projectChoice: { ...item.projectChoice, saving: false, saveError: error?.response?.data?.error || error?.message || 'Save failed.' } }
+        : item));
+    }
+  }, []);
 
   const continueOrchestration = useCallback(async (continuation, request, option) => {
     if (loading) return;
@@ -953,27 +979,35 @@ function OverviewChat({ inputRef }) {
                     {t('overview.chat.chooseScope', 'Where should I save this?')}
                   </p>
                   <p className="text-[12.5px] leading-relaxed text-[#737373]">The memory is prepared but has not been saved. Choose its scope to finish.</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => sendMessage({ text: m.projectChoice.originalMessage, projectId: null })}
-                      className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] text-[#0a0a0a] hover:border-[#117dff] transition-colors"
-                    >
-                      <Lock size={13} className="text-[#a3a3a3]" />
-                      {t('knowledgebase.scopePersonalLabel', 'My Space')}
-                    </button>
+                  {m.projectChoice.saved ? (
+                    <p className="text-[12px] font-medium text-emerald-700">✓ Saved to {m.projectChoice.saved}</p>
+                  ) : <div className="flex flex-wrap gap-1.5">
+                    {(m.projectChoice.scope_options || [{ scope: 'personal', label: t('knowledgebase.scopePersonalLabel', 'My Space') }, { scope: 'organization', label: 'Organization' }]).map((option) => (
+                      <button
+                        key={option.scope}
+                        type="button"
+                        disabled={m.projectChoice.saving}
+                        onClick={() => completePreparedSave(m.id, m.projectChoice, option.label || option.scope, { scope: option.scope })}
+                        className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] text-[#0a0a0a] hover:border-[#117dff] transition-colors disabled:opacity-50"
+                      >
+                        {option.scope === 'personal' ? <Lock size={13} className="text-[#a3a3a3]" /> : <Globe size={13} className="text-[#a3a3a3]" />}
+                        {option.label || option.scope}
+                      </button>
+                    ))}
                     {m.projectChoice.projects.map((p) => (
                       <button
                         key={p.id || p.slug}
                         type="button"
-                        onClick={() => sendMessage({ text: m.projectChoice.originalMessage, projectId: p.id || p.slug })}
-                        className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] text-[#0a0a0a] hover:border-[#117dff] transition-colors"
+                        disabled={m.projectChoice.saving}
+                        onClick={() => completePreparedSave(m.id, m.projectChoice, p.name || p.slug || p.id, { project_id: p.id || p.slug })}
+                        className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] text-[#0a0a0a] hover:border-[#117dff] transition-colors disabled:opacity-50"
                       >
                         <Building2 size={13} className="text-[#a3a3a3]" />
                         {p.name || p.slug || p.id}
                       </button>
                     ))}
-                  </div>
+                  </div>}
+                  {m.projectChoice.saveError && <p className="text-[11px] text-red-600">{m.projectChoice.saveError}</p>}
                 </div>
               )}
             </React.Fragment>
