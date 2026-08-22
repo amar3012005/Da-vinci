@@ -298,12 +298,10 @@ export default function ShareInviteModal({
                           ? 'text-amber-700'
                           : 'text-[#737373]'
                   }`}>
-                    {newInvite.email_dispatch.ok
-                      ? `✓ Email accepted via ${newInvite.email_dispatch.provider || 'Cloudflare Email'}`
-                      : newInvite.email_dispatch.pending
-                        ? 'Email delivery queued via Cloudflare Email'
-                        : newInvite.email_dispatch.attempted
-                          ? `Email dispatch failed: ${newInvite.email_dispatch.error || 'delivery could not be confirmed'}`
+                    {newInvite.email_dispatch.ok || newInvite.email_dispatch.pending
+                      ? 'Email sent — invitation expires in 24 hours'
+                      : newInvite.email_dispatch.attempted
+                        ? `Email dispatch failed: ${newInvite.email_dispatch.error || 'delivery could not be confirmed'}`
                           : 'Link-only — share via channels below'}
                   </div>
                 )}
