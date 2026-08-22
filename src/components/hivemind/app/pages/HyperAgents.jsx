@@ -1178,6 +1178,10 @@ function RoomThread({ roomId, onArchived }) {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [activeTurnId, setActiveTurnId] = useState(null);
+  // A server may intentionally preserve the client-generated turn id. Track
+  // confirmation separately so releasing the pending-id latch always starts
+  // the live SSE/poll lifecycle, even when the id itself has not changed.
+  const [streamEpoch, setStreamEpoch] = useState(0);
   const [liveLines, setLiveLines] = useState([]);
   const [draft, setDraft] = useState('');
   // Uploaded attachments for the next turn — each {id, name, status, documentId, error}.
@@ -2059,7 +2063,7 @@ function RoomThread({ roomId, onArchived }) {
       clearInterval(poll);
       try { es.close(); } catch { /* ignore */ }
     };
-  }, [activeTurnId, roomId, load, mergeLiveEvents]);
+  }, [activeTurnId, roomId, load, mergeLiveEvents, streamEpoch]);
 
   // Reset live overlay when turn changes
   useEffect(() => {
@@ -2246,6 +2250,7 @@ function RoomThread({ roomId, onArchived }) {
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
       pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
+      setStreamEpoch(epoch => epoch + 1);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
@@ -2338,6 +2343,7 @@ function RoomThread({ roomId, onArchived }) {
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
       pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
+      setStreamEpoch(epoch => epoch + 1);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
@@ -2376,6 +2382,7 @@ function RoomThread({ roomId, onArchived }) {
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
       pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
+      setStreamEpoch(epoch => epoch + 1);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
