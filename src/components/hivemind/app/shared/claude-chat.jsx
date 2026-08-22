@@ -692,12 +692,17 @@ export function AiBubble({ msg, onRetry, onContinue }) {
   );
 }
 
-// Project picker (mobile) — Org-wide + each project; click → silent scoped save.
+// Scope picker (mobile) — the server returns a prepared canonical memory plus
+// explicit destinations. A click completes that prepared save directly; it does
+// not re-send the original statement and risk a second ambiguous planner turn.
 export function MobileProjectChoice({ choice }) {
   const [saved, setSaved] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const projects = choice?.projects || [];
+  const scopeOptions = Array.isArray(choice?.scope_options) && choice.scope_options.length
+    ? choice.scope_options
+    : [{ scope: 'personal', label: 'Personal' }, { scope: 'organization', label: 'Organization' }];
   const draft = choice?.draft || null;
   if (!draft) return null;
   const save = async (label, extra) => {
@@ -719,7 +724,11 @@ export function MobileProjectChoice({ choice }) {
       <div className="text-[14px] font-semibold text-[#1a1a17]">Choose where to save this memory</div>
       <div className="mt-1 text-[12.5px] leading-relaxed text-[#737373]">The memory is prepared but has not been saved. Choose its scope to finish.</div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={() => save('Org-wide', { scope: 'organization' })} disabled={busy} className={btn}>🌐 Org-wide</button>
+        {scopeOptions.map((option) => (
+          <button key={option.scope} type="button" onClick={() => save(option.label || option.scope, { scope: option.scope })} disabled={busy} className={btn}>
+            {option.label || option.scope}
+          </button>
+        ))}
         {projects.map((p) => (
           <button key={p.id} type="button" onClick={() => save(p.name, { project_id: p.id })} disabled={busy} className={btn}>{p.name}</button>
         ))}
