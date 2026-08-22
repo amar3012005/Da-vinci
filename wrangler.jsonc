@@ -13,6 +13,10 @@
   },
   "routes": [
     {
+      "pattern": "singulancelabs.com",
+      "custom_domain": true
+    },
+    {
       "pattern": "next.singulancelabs.com",
       "custom_domain": true
     },
