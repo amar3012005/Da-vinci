@@ -289,12 +289,22 @@ export default function ShareInviteModal({
                 </div>
 
                 {newInvite.email_dispatch && (
-                  <div className={`text-[10px] font-mono ${newInvite.email_dispatch.ok ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  <div className={`text-[10px] font-mono ${
+                    newInvite.email_dispatch.ok
+                      ? 'text-emerald-700'
+                      : newInvite.email_dispatch.pending
+                        ? 'text-sky-700'
+                        : newInvite.email_dispatch.attempted
+                          ? 'text-amber-700'
+                          : 'text-[#737373]'
+                  }`}>
                     {newInvite.email_dispatch.ok
-                      ? `✓ Email sent via ${newInvite.email_dispatch.provider}`
-                      : newInvite.email_dispatch.attempted
-                        ? `Email dispatch failed: ${newInvite.email_dispatch.error || 'no provider configured'}`
-                        : 'Link-only — share via channels below'}
+                      ? `✓ Email accepted via ${newInvite.email_dispatch.provider || 'Cloudflare Email'}`
+                      : newInvite.email_dispatch.pending
+                        ? 'Email delivery queued via Cloudflare Email'
+                        : newInvite.email_dispatch.attempted
+                          ? `Email dispatch failed: ${newInvite.email_dispatch.error || 'delivery could not be confirmed'}`
+                          : 'Link-only — share via channels below'}
                   </div>
                 )}
 
