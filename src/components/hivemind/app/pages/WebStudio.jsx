@@ -861,11 +861,16 @@ function PastResearchPanel({ jobs, onPick, onOpenReport, locked, savedByJob = {}
     <div className="h-full">
       {/* Guided start when there's nothing to show yet; otherwise the
           reports list is ALWAYS visible — no hidden dropdown to discover. */}
-      {jobs.length > 0 && (
+      {jobs.length > 0 ? (
         <div className="flex items-center gap-2 px-1 pb-2">
           <Sparkles size={14} className="text-blue-500" />
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">{t('webstudio.pastResearch', 'Research reports')}</span>
           <span className="text-[10px] font-mono text-[#a3a3a3]">{t('webstudio.reportCount', '{{count}} report', { count: jobs.length })}</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-1 pb-2">
+          <Sparkles size={14} className="text-blue-500" />
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">{t('webstudio.tryAnExample', 'Try an example')}</span>
         </div>
       )}
 
@@ -1180,8 +1185,12 @@ function PromptBar({
           })}
         </div>
         {forcedMode && (
-          <button onClick={() => setForcedMode(null)} className="text-[10px] font-mono text-[#a3a3a3] hover:text-[#0a0a0a]" title={t('webstudio.clearForcedMode', 'Back to auto-detect (URL → crawl, text → research)')}>
-            {t('webstudio.forcedClear', '← auto-detect')}
+          <button
+            onClick={() => setForcedMode(null)}
+            title={t('webstudio.clearForcedMode', 'Back to auto-detect (URL → crawl, text → research)')}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-[#e3e0db] bg-white text-[10.5px] font-medium text-[#737373] hover:text-[#0a0a0a] hover:border-[#d4d0ca] transition-colors self-center"
+          >
+            <RotateCcw size={10} /> {t('webstudio.backToAutoDetect', 'Auto-detect')}
           </button>
         )}
       </div>
@@ -1311,7 +1320,7 @@ function PromptBar({
           </div>
         )}
       </div>
-      <p className="mt-2 text-[10px] text-[#a3a3a3]">{t('webstudio.enterHint', 'Enter to run · results save to HIVEMIND memory')}</p>
+      <p className="mt-2 text-[10px] text-[#a3a3a3]">{t('webstudio.playgroundHint', 'Enter to run · results save to HIVEMIND memory')}</p>
     </div>
   );
 }
