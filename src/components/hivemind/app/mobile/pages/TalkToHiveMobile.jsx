@@ -573,7 +573,7 @@ export default function TalkToHiveMobile() {
       setLoading(false);
       setAgentEvents([]);
     }
-  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools, selectedToolkits, toolkits, loadToolkitCatalog]);
+  }, [input, loading, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools, selectedToolkits, toolkits, loadToolkitCatalog]);
 
   useEffect(() => { sendTextRef.current = sendText; }, [sendText]);
 
