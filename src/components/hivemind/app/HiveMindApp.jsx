@@ -205,11 +205,7 @@ export default function HiveMindApp() {
         <Route path="m/characters" element={<Navigate to="m/connectors" replace />} />
         <Route
           path="join/:slug/:token"
-          element={
-            <ProtectedRoute>
-              <PageSuspense><JoinOrg /></PageSuspense>
-            </ProtectedRoute>
-          }
+          element={<PageSuspense><JoinOrg /></PageSuspense>}
         />
 
         {/* Protected dashboard */}
