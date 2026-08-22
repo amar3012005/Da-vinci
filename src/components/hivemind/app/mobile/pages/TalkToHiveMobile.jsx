@@ -40,6 +40,9 @@ import {
   Boxes,
   Building2,
   Globe,
+  Chrome,
+  Eye,
+  AlertTriangle,
 } from 'lucide-react';
 // Chat turn presentation lives in shared/claude-chat (one source of truth for
 // mobile + desktop Overview + sidebar).
@@ -47,6 +50,9 @@ import { UserBubble, AiBubble, Thinking } from '../../shared/claude-chat';
 import apiClient from '../../shared/api-client';
 import MobileShell from '../MobileShell';
 import SingulanceMark from '../../shared/SingulanceMark';
+// Same Web Studio research-report toolkit Overview.jsx reuses — one
+// implementation of the report tab, save-bridge, and job-title logic.
+import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from '../../pages/WebStudio';
 import useDictation from '../../shared/useDictation';
 import { useTeamContext } from '../../shared/team-context';
 import { MeetingNotesPromo } from '../../shared/QuickRecorderProvider';
@@ -67,6 +73,43 @@ import {
 // can make the native keyboard miss frames.
 const MemoUserBubble = React.memo(UserBubble);
 const MemoAiBubble = React.memo(AiBubble);
+
+// Deep Research turn — inline progress card + View in Chrome / Preview, full
+// width for the phone thread (desktop's Overview.jsx uses a max-w-md version
+// of the same idea). Same job shape as Web Studio (getWebJob), same actions.
+function DeepResearchCard({ dr, onPreview, onOpenChrome }) {
+  const status = dr.status;
+  const job = dr.job;
+  const running = status === 'starting' || status === 'running' || status === 'queued' || status === 'processing';
+  const failed = status === 'failed';
+  const done = status === 'succeeded';
+  const sourceCount = done ? (job?.results?.[0]?.sources?.length || 0) : 0;
+  return (
+    <div className="w-full rounded-[16px] border border-[#e3e0db] bg-white p-3.5">
+      <div className="flex items-center gap-2.5">
+        <span className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 grid place-items-center flex-shrink-0">
+          {running ? <Loader2 size={14} className="text-blue-600 animate-spin" /> : failed ? <AlertTriangle size={14} className="text-red-500" /> : <CheckCircle2 size={14} className="text-emerald-600" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-semibold text-[#0a0a0a] truncate">{dr.query}</div>
+          <div className="text-[11px] text-[#a3a3a3]">
+            {running ? 'Researching the web… (1-3 min)' : failed ? (dr.error || 'Research failed') : `Report ready${sourceCount ? ` · ${sourceCount} sources` : ''}`}
+          </div>
+        </div>
+      </div>
+      {done && (
+        <div className="mt-3 flex items-center gap-1.5">
+          <button onClick={onPreview} className="flex-1 inline-flex items-center justify-center gap-1 text-[12px] font-medium text-[#525252] bg-white active:bg-[#f3f1ec] border border-[#e3e0db] rounded-lg h-9">
+            <Eye size={13} /> View
+          </button>
+          <button onClick={onOpenChrome} className="flex-1 inline-flex items-center justify-center gap-1 text-[12px] font-medium text-white bg-blue-600 active:bg-blue-700 rounded-lg h-9">
+            <Chrome size={13} /> Chrome
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const MAX_CHARS = 2000;
 const MAX_PERSIST = 200;
@@ -279,6 +322,80 @@ export default function TalkToHiveMobile() {
   const [chatScopeMode, setChatScopeMode] = useState('all');
   const [useTools, setUseTools] = useState(false);
   const [toolkits, setToolkits] = useState([]);
+
+  // ─── Deep Research from the mobile composer ───────────────────
+  // Same backend + reused report/save toolkit as Overview.jsx's desktop
+  // version — see that file for the full contract explanation.
+  const [deepResearchMode, setDeepResearchMode] = useState(false);
+  const [drPreviewJob, setDrPreviewJob] = useState(null);
+  const jobsByIdRef = useRef({});
+  const drPollersRef = useRef({});
+  useEffect(() => () => { Object.values(drPollersRef.current).forEach(clearInterval); }, []);
+
+  const scopeOptions = useMemo(() => ([
+    { label: '🔒 Personal', scope: 'personal', projectId: null },
+    { label: '🏢 Organization', scope: 'organization', projectId: null },
+    ...(ctxProjects || []).map((p) => ({ label: `📁 ${p.name || p.slug || 'Project'}`, scope: 'project', projectId: p.id })),
+  ]), [ctxProjects]);
+
+  const startDeepResearch = useCallback(async (query) => {
+    const trimmed = (query || '').trim();
+    if (!trimmed || loading) return;
+    setInput('');
+    const userMsg = { id: Date.now(), role: 'user', content: trimmed };
+    const drMsgId = `dr-${userMsg.id}`;
+    setMessages((prev) => [...prev, userMsg, { id: drMsgId, role: 'assistant', deepResearch: { status: 'starting', query: trimmed } }]);
+    try {
+      const r = await apiClient.submitWebResearch({ input: trimmed, model: 'auto', citation_format: 'numbered' });
+      const jobId = r?.job_id || r?.id;
+      if (!jobId) throw new Error('No job id returned');
+      setMessages((prev) => prev.map((m) => (m.id === drMsgId ? { ...m, deepResearch: { ...m.deepResearch, jobId, status: 'running' } } : m)));
+      const poll = setInterval(async () => {
+        try {
+          const job = await apiClient.getWebJob(jobId);
+          jobsByIdRef.current[jobId] = job;
+          setMessages((prev) => prev.map((m) => (m.id === drMsgId ? { ...m, deepResearch: { ...m.deepResearch, job, status: job.status } } : m)));
+          if (job.status === 'succeeded' || job.status === 'failed') {
+            clearInterval(drPollersRef.current[jobId]);
+            delete drPollersRef.current[jobId];
+          }
+        } catch {
+          clearInterval(drPollersRef.current[jobId]);
+          delete drPollersRef.current[jobId];
+        }
+      }, 1800);
+      drPollersRef.current[jobId] = poll;
+    } catch (err) {
+      setMessages((prev) => prev.map((m) => (m.id === drMsgId ? { ...m, deepResearch: { ...m.deepResearch, status: 'failed', error: err.response?.data?.error || err.message } } : m)));
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    const handler = async (e) => {
+      const d = e.data || {};
+      if (d.type !== 'hm-save-research' || !d.jobId) return;
+      const job = jobsByIdRef.current[d.jobId];
+      const result = job && Array.isArray(job.results) ? job.results[0] : null;
+      const reply = (msg) => { try { e.source?.postMessage({ type: 'hm-save-result', jobId: d.jobId, scopeLabel: d.scopeLabel, ...msg }, '*'); } catch { /* tab closed */ } };
+      if (!job || !result) { reply({ ok: false, error: 'report not found' }); return; }
+      try {
+        await apiClient.saveResearchAsMemory({
+          title: deriveJobTitle(job, job.results || []),
+          markdown: typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2),
+          sources: result.sources || [],
+          tags: [job.params?.model ? `tavily-${job.params.model}` : 'tavily'],
+          jobId: job.id,
+          targetScope: d.scope || 'personal',
+          projectId: d.projectId || undefined,
+        });
+        reply({ ok: true, memories: 1 });
+      } catch (err) {
+        reply({ ok: false, error: err.response?.data?.error || err.message });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
   const [selectedToolkits, setSelectedToolkits] = useState([]);
   const [connectToolkit, setConnectToolkit] = useState(null);
   const [connectingToolkit, setConnectingToolkit] = useState(false);
@@ -872,11 +989,23 @@ export default function TalkToHiveMobile() {
             </div>
           )}
 
-          {messages.map((m) =>
-            m.role === 'user'
-              ? <MemoUserBubble key={m.id} content={m.content} />
-              : <MemoAiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />
-          )}
+          {messages.map((m) => {
+            if (m.role === 'user') return <MemoUserBubble key={m.id} content={m.content} />;
+            if (m.deepResearch) {
+              return (
+                <DeepResearchCard
+                  key={m.id}
+                  dr={m.deepResearch}
+                  onPreview={() => setDrPreviewJob(m.deepResearch.job)}
+                  onOpenChrome={() => {
+                    const ok = openResearchReportTab(m.deepResearch.job, scopeOptions);
+                    if (!ok) window.alert('Popup blocked — allow popups for HIVEMIND to open the report.');
+                  }}
+                />
+              );
+            }
+            return <MemoAiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />;
+          })}
           {loading && !messages.some((item) => item.streaming) && <Thinking events={agentEvents} />}
         </div>
       </div>
@@ -1009,14 +1138,15 @@ export default function TalkToHiveMobile() {
               if (e.nativeEvent.isComposing || e.keyCode === 229) return;
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                send();
+                if (deepResearchMode) startDeepResearch(input);
+                else send();
               }
             }}
             rows={1}
             enterKeyHint="send"
             autoCapitalize="sentences"
             autoCorrect="on"
-            placeholder={t('overview.chatWith', 'Chat with HIVE…')}
+            placeholder={deepResearchMode ? 'Research the web…' : t('overview.chatWith', 'Chat with HIVE…')}
             className="w-full resize-none border-none outline-none bg-transparent text-[16px] py-0.5 placeholder:text-[#a8a49c] max-h-[120px] leading-snug"
             style={{ fontFamily: 'inherit' }}
           />
@@ -1107,6 +1237,19 @@ export default function TalkToHiveMobile() {
             </AnimatePresence>
           </div>
           <span className="flex-1" />
+          {/* Deep Research — same /v1/proxy/web/research/jobs backend as Web
+              Studio's Research mode. Icon-only to fit the action row. */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={deepResearchMode}
+            onClick={() => setDeepResearchMode((v) => !v)}
+            className={`w-9 h-9 rounded-full border flex items-center justify-center flex-shrink-0 active:scale-95 transition-all ${deepResearchMode ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-[#e8e5de] text-[#3d3d3a] active:bg-[#f1eee7]'}`}
+            aria-label="Deep Research"
+            title="Deep Research — multi-source report with citations"
+          >
+            <Globe size={16} />
+          </button>
           {/* Push-to-talk mic — tap to record, tap to stop & transcribe */}
           <button
             onClick={dictation.toggle}
@@ -1126,9 +1269,9 @@ export default function TalkToHiveMobile() {
                 : <Mic size={18} />}
           </button>
           <button
-            onClick={send}
+            onClick={() => { if (deepResearchMode) startDeepResearch(input); else send(); }}
             disabled={(!input.trim() && !loading) || loading}
-            className="w-10 h-10 rounded-full bg-[#1a1a17] text-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform disabled:opacity-100"
+            className={`w-10 h-10 rounded-full text-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform disabled:opacity-100 ${deepResearchMode && input.trim() ? 'bg-blue-600' : 'bg-[#1a1a17]'}`}
             aria-label={input.trim() ? 'Send' : 'Voice'}
           >
             {loading ? <Clock size={16} /> : input.trim() ? <Send size={16} /> : <AudioLines size={17} />}
@@ -1175,6 +1318,20 @@ export default function TalkToHiveMobile() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Deep Research preview — same in-app modal Web Studio / Overview use */}
+      <AnimatePresence>
+        {drPreviewJob && (
+          <ResearchPreviewModal
+            job={drPreviewJob}
+            onClose={() => setDrPreviewJob(null)}
+            onOpenReport={() => {
+              const ok = openResearchReportTab(drPreviewJob, scopeOptions);
+              if (!ok) window.alert('Popup blocked — allow popups for HIVEMIND to open the report.');
+            }}
+          />
         )}
       </AnimatePresence>
     </MobileShell>
