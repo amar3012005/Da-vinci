@@ -1375,6 +1375,22 @@ export default function DocsPage() {
             <a href="/hivemind/app/mcp" className="px-3 py-1.5 rounded-[6px] bg-[#117dff] hover:bg-[#0066e0] text-white text-[12px] font-semibold no-underline">Open console</a>
           </div>
         </div>
+        {/* Desktop header tabs — the three product sections, always visible in
+            the nav (not just the sidebar below), same underline-tab pattern
+            the rest of the app uses for section switching. */}
+        <div className="hidden lg:flex items-center gap-6 h-10 -mt-1">
+          {PRODUCT_CATS.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => { setProduct(c.id); setExpanded(c.id); }}
+              className={`h-full flex items-center gap-1.5 text-[12.5px] font-medium border-b-2 -mb-px transition-colors ${product === c.id ? 'border-[#117dff] text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}
+            >
+              <c.icon size={13} className={product === c.id ? 'text-[#117dff]' : 'text-[#a3a3a3]'} />
+              {c.label}
+            </button>
+          ))}
+        </div>
+
         {/* Mobile-only product switcher — the persistent sidebar below is lg+ only */}
         <div className="lg:hidden flex items-center gap-1 overflow-x-auto pb-2 -mx-1 px-1">
           {PRODUCT_CATS.map((c) => (
