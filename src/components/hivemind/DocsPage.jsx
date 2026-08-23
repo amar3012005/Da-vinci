@@ -1,5 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Hexagon, KeyRound, Server, Terminal, Shield, BookOpen, ChevronRight, ChevronDown, Copy, Check, Zap, HardDrive, Github, Star, Rocket, Download, GitBranch, Layers, Brain, Lock, AlertTriangle, Wrench } from 'lucide-react';
+import { motion } from 'framer-motion';
+import {
+  Hexagon, KeyRound, Server, Terminal, Shield, BookOpen, ChevronRight, ChevronDown, Copy, Check,
+  Zap, HardDrive, Github, Star, Rocket, Download, GitBranch, Layers, Brain, Lock, AlertTriangle,
+  Wrench, ArrowRight, ArrowDown, Compass, ClipboardCheck, ShieldCheck, Sparkles, GitCommit, FolderGit2,
+} from 'lucide-react';
 import { MEMORY_TOOLS, WEB_TOOLS, CODING_TOOLS, TEMPORAL_TOOLS } from './app/pages/McpServer';
 
 const ICARUS_REPO = 'amar3012005/ICARUS';
@@ -499,6 +504,213 @@ pip install -e ".[test]" && pytest tests/ -v`}</CodeBlock>
   );
 }
 
+// ── Harness visual primitives — diagrams instead of ASCII/text-in-boxes ────────────────────
+function PipelineFlow({ nodes }) {
+  return (
+    <div className="mt-4 flex flex-col md:flex-row items-stretch gap-1.5">
+      {nodes.map((n, i) => (
+        <React.Fragment key={n.title}>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.3, delay: i * 0.06 }}
+            className="flex-1 bg-white border border-[#e3e0db] rounded-[10px] p-3.5 min-w-0"
+          >
+            <div className="w-8 h-8 rounded-[8px] bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
+              <n.icon size={15} className="text-[#117dff]" />
+            </div>
+            <div className="text-[11.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-2 leading-snug">{n.title}</div>
+            {n.sub && <div className="text-[10px] text-[#a3a3a3] mt-0.5 font-mono">{n.sub}</div>}
+          </motion.div>
+          {i < nodes.length - 1 && (
+            <div className="flex md:flex-col items-center justify-center shrink-0 px-0.5">
+              <ArrowRight size={13} className="hidden md:block text-[#c9c5bc]" />
+              <ArrowDown size={13} className="md:hidden text-[#c9c5bc]" />
+            </div>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function JobCards({ jobs }) {
+  return (
+    <div className="mt-4 grid sm:grid-cols-2 gap-3">
+      {jobs.map((j, i) => (
+        <motion.div
+          key={j.title}
+          initial={{ opacity: 0, y: 8 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.3, delay: i * 0.05 }}
+          className="bg-white border border-[#e3e0db] rounded-[10px] p-4"
+        >
+          <div className="w-8 h-8 rounded-[8px] bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
+            <j.icon size={15} className="text-[#117dff]" />
+          </div>
+          <div className="text-[12.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-2.5">{j.title}</div>
+          <div className="text-[11.5px] text-[#737373] mt-1 leading-relaxed">{j.desc}</div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function WarningGrid({ items }) {
+  return (
+    <div className="mt-4 grid sm:grid-cols-2 gap-2.5">
+      {items.map((d) => (
+        <div key={d} className="flex gap-2 bg-[#fffaf0] border border-[#f5e6c8] rounded-[10px] p-3">
+          <AlertTriangle size={13} className="text-[#d97706] shrink-0 mt-0.5" />
+          <span className="text-[11.5px] text-[#525252] leading-relaxed">{d}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ArchLayers() {
+  const layers = [
+    { icon: Brain, title: 'Coding agent', items: ['reasoning', 'code changes', 'natural-language explanation', 'proposed learning drafts'] },
+    { icon: Terminal, title: 'Node / Bun boundary', items: ['CLI · terminal UI', 'MCP transport', 'Tree-sitter graph extraction', 'SQL.js graph store'] },
+    { icon: Lock, title: 'Rust authority', items: ['manifest · policy · contracts', 'lifecycle · event chain', 'context selection · verification', 'sealing · skill promotion'] },
+  ];
+  return (
+    <div className="mt-4">
+      {layers.map((l, i) => (
+        <React.Fragment key={l.title}>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.3, delay: i * 0.08 }}
+            className="bg-white border border-[#e3e0db] rounded-[10px] p-4"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-[8px] bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center shrink-0">
+                <l.icon size={15} className="text-[#117dff]" />
+              </div>
+              <div className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{l.title}</div>
+            </div>
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {l.items.map((it) => (
+                <span key={it} className="text-[10.5px] font-mono text-[#525252] bg-[#f3f1ec] border border-[#e3e0db] rounded-[5px] px-1.5 py-0.5">{it}</span>
+              ))}
+            </div>
+          </motion.div>
+          {i < layers.length - 1 && (
+            <div className="flex items-center justify-center py-1">
+              <ArrowDown size={14} className="text-[#c9c5bc]" />
+            </div>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function TrackedVsRuntime() {
+  const tracked = [
+    ['.icarus/manifest.yaml', 'repository identity'],
+    ['.icarus/policy.yaml', 'policy/schema'],
+    ['.icarus/schemas/', 'contract schemas'],
+    ['AGENTS.md / CLAUDE.md', 'agent bootstrap'],
+  ];
+  const runtime = [
+    ['.icarus/runtime/tasks/', 'task snapshots'],
+    ['.icarus/runtime/events/', 'event chain'],
+    ['.icarus/runtime/graph/', 'graph data'],
+    ['.icarus/data/<org>/', 'local AMR shard'],
+  ];
+  return (
+    <div className="mt-4 grid sm:grid-cols-2 gap-3">
+      <div className="bg-white border border-[#e3e0db] rounded-[10px] p-4">
+        <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[#10b981]"><GitCommit size={12} /> Tracked in git</div>
+        <div className="mt-3 space-y-2">
+          {tracked.map(([f, d]) => (
+            <div key={f} className="flex items-center justify-between gap-2 text-[11.5px]">
+              <code className="font-mono text-[#0a0a0a]">{f}</code>
+              <span className="text-[#a3a3a3] text-[10.5px] shrink-0 text-right">{d}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-[10px] p-4">
+        <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]"><FolderGit2 size={12} /> Ignored / runtime</div>
+        <div className="mt-3 space-y-2">
+          {runtime.map(([f, d]) => (
+            <div key={f} className="flex items-center justify-between gap-2 text-[11.5px]">
+              <code className="font-mono text-[#525252]">{f}</code>
+              <span className="text-[#a3a3a3] text-[10.5px] shrink-0 text-right">{d}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LifecycleStepper({ states }) {
+  return (
+    <div className="mt-4 overflow-x-auto pb-1">
+      <div className="flex items-start gap-0 min-w-[680px] md:min-w-0">
+        {states.map((s, i) => (
+          <React.Fragment key={s.id}>
+            <div className="flex flex-col items-center text-center w-[92px] shrink-0">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-mono font-semibold border ${i === states.length - 1 ? 'bg-[#117dff] border-[#117dff] text-white' : 'bg-white border-[#e3e0db] text-[#525252]'}`}>{i + 1}</div>
+              <div className="text-[11px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-2">{s.id}</div>
+              <div className="text-[9.5px] text-[#a3a3a3] mt-0.5 leading-snug">{s.desc}</div>
+            </div>
+            {i < states.length - 1 && (
+              <div className="h-8 flex items-center flex-1 min-w-[14px]">
+                <div className="w-full h-px bg-[#e3e0db]" />
+              </div>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VerticalTimeline({ steps }) {
+  return (
+    <div className="mt-4 relative pl-1">
+      <div className="absolute left-[15px] top-2 bottom-2 w-px bg-[#e3e0db]" />
+      <div className="space-y-3">
+        {steps.map((s, i) => (
+          <motion.div
+            key={s}
+            initial={{ opacity: 0, x: -6 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: '-30px' }}
+            transition={{ duration: 0.25, delay: i * 0.04 }}
+            className="relative flex items-center gap-3"
+          >
+            <div className="w-8 h-8 rounded-full bg-white border-2 border-[#117dff] text-[#117dff] text-[11px] font-mono font-bold flex items-center justify-center shrink-0 z-10">{i + 1}</div>
+            <div className="bg-white border border-[#e3e0db] rounded-[10px] px-3.5 py-2.5 flex-1 text-[12px] text-[#0a0a0a]">{s}</div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChipSequence({ chips }) {
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-1.5">
+      {chips.map((c, i) => (
+        <React.Fragment key={c}>
+          <span className="text-[10.5px] font-mono text-[#117dff] bg-[#117dff]/10 border border-[#117dff]/20 rounded-full px-2.5 py-1">{c}</span>
+          {i < chips.length - 1 && <ArrowRight size={11} className="text-[#c9c5bc] shrink-0" />}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
 // ── ICARUS Harness — the coding-agent operating layer (its own top-nav tab, its own landing).
 // A deterministic operating layer around a coding agent: bounded repository context, a governed
 // task lifecycle, and receipts turned from claims into evidence. Distinct from the .amr storage
@@ -560,34 +772,22 @@ function HarnessDocs() {
         <Eyebrow>01 · OVERVIEW</Eyebrow>
         <H2 id="harness-what-is">What it is</H2>
         <P>Think of a coding task as a durable state machine instead of an unstructured chat.</P>
-        <CodeBlock label="the loop, end to end">{`repository + policy + task contract
-                 │
-                 ▼
-        deterministic context compiler
-                 │
-                 ▼
-  coding agent reasons / edits / runs tools
-                 │
-                 ▼
-  receipts, checkpoints, graph freshness, scope checks
-                 │
-                 ▼
-      verification → sealed task → reusable learning candidate`}</CodeBlock>
-        <P>The Harness has five practical jobs:</P>
-        <ul className="space-y-2 text-[13px] text-[#525252] list-none">
-          {[
-            ['Orient an agent', 'It initializes repository identity, loads approved local context, and exposes graph queries before broad code search.'],
-            ['Bound a task', 'A Rust-owned immutable contract says which paths, criteria, budgets, and external-write policy apply.'],
-            ['Compress context structurally', 'It selects traceable repository evidence under a stated budget instead of copying a whole codebase into every new session.'],
-            ['Separate claims from evidence', 'A model saying "tests pass" is not a receipt. ICARUS runs declared criteria and records their status, digests, and freshness.'],
-            ['Learn without self-poisoning', 'Sealed work can produce reviewed memory and proposed skills; proposals require replay evidence before becoming active future context.'],
-          ].map(([tt, dd]) => (
-            <li key={tt} className="flex gap-2.5">
-              <Zap size={14} className="text-[#117dff] shrink-0 mt-0.5" />
-              <span><strong className="text-[#0a0a0a]">{tt}.</strong> {dd}</span>
-            </li>
-          ))}
-        </ul>
+        <PipelineFlow nodes={[
+          { icon: FolderGit2, title: 'Repo + policy + contract', sub: 'authority' },
+          { icon: Layers, title: 'Context compiler', sub: 'deterministic' },
+          { icon: Brain, title: 'Agent reasons / edits', sub: 'runs tools' },
+          { icon: ClipboardCheck, title: 'Receipts + checkpoints', sub: 'scope checks' },
+          { icon: ShieldCheck, title: 'Verification', sub: 'acceptance criteria' },
+          { icon: Sparkles, title: 'Sealed → learning', sub: 'reusable candidate' },
+        ]} />
+        <P className="mt-6">The Harness has five practical jobs:</P>
+        <JobCards jobs={[
+          { icon: Compass, title: 'Orient an agent', desc: 'It initializes repository identity, loads approved local context, and exposes graph queries before broad code search.' },
+          { icon: Lock, title: 'Bound a task', desc: 'A Rust-owned immutable contract says which paths, criteria, budgets, and external-write policy apply.' },
+          { icon: Layers, title: 'Compress context structurally', desc: 'It selects traceable repository evidence under a stated budget instead of copying a whole codebase into every new session.' },
+          { icon: ShieldCheck, title: 'Separate claims from evidence', desc: 'A model saying "tests pass" is not a receipt. ICARUS runs declared criteria and records their status, digests, and freshness.' },
+          { icon: Sparkles, title: 'Learn without self-poisoning', desc: 'Sealed work can produce reviewed memory and proposed skills; proposals require replay evidence before becoming active future context.' },
+        ]} />
       </section>
 
       {/* ── What it is not ── */}
@@ -595,22 +795,15 @@ function HarnessDocs() {
         <Eyebrow>02 · OVERVIEW</Eyebrow>
         <H2 id="harness-what-is-not">What it is not</H2>
         <P>ICARUS is deliberately not an autonomous model platform.</P>
-        <ul className="space-y-2 text-[13px] text-[#525252] list-none">
-          {[
-            'It does not select, host, or pay for an LLM.',
-            'It does not infer external approval from local task authority.',
-            'It does not grant a task permission because an agent asks confidently.',
-            'It does not promise that every compatible client tool call is hard-intercepted.',
-            'It does not claim a task is complete because an agent exits.',
-            'It does not automatically promote model-authored skills.',
-          ].map((d) => (
-            <li key={d} className="flex gap-2.5">
-              <AlertTriangle size={14} className="text-[#d97706] shrink-0 mt-0.5" />
-              <span>{d}</span>
-            </li>
-          ))}
-        </ul>
-        <P>
+        <WarningGrid items={[
+          'It does not select, host, or pay for an LLM.',
+          'It does not infer external approval from local task authority.',
+          'It does not grant a task permission because an agent asks confidently.',
+          'It does not promise that every compatible client tool call is hard-intercepted.',
+          'It does not claim a task is complete because an agent exits.',
+          'It does not automatically promote model-authored skills.',
+        ]} />
+        <P className="mt-4">
           That boundary matters: memory, graph lookup, contracts, and evidence are local
           deterministic capabilities. Reasoning and user-facing decisions remain with the coding
           agent and human.
@@ -621,31 +814,10 @@ function HarnessDocs() {
       <section id="harness-architecture" className="mt-12">
         <Eyebrow>03 · OVERVIEW</Eyebrow>
         <H2 id="harness-architecture">Architecture</H2>
-        <CodeBlock label="tracked vs. runtime state">{`Tracked repository state                         Ignored runtime state
-────────────────────────                         ─────────────────────
-.icarus/manifest.yaml      repository identity   .icarus/runtime/tasks/
-.icarus/policy.yaml        policy/schema         .icarus/runtime/events/
-.icarus/schemas/           contract schemas      .icarus/runtime/graph/
-AGENTS.md / CLAUDE.md      agent bootstrap       .icarus/data/<org>/
-                                                     local AMR shard
-
-Rust authority
-──────────────
-manifest · policy · contracts · lifecycle · event chain · context selection
-verification · sealing · skill promotion · canonical path containment
-
-Node / Bun boundary
-──────────────────
-CLI · terminal UI · MCP transport · Tree-sitter graph extraction · SQL.js graph store
-
-Coding agent
-────────────
-reasoning · code changes · natural-language explanation · proposed learning drafts`}</CodeBlock>
-        <P>
-          The tracked files define reproducible governance. Runtime files hold task snapshots,
-          receipts, event-chain state, graph data, and local memory; they are intentionally
-          excluded from Git.
-        </P>
+        <P>Three tiers, foundation up: a Rust authority owns every governance decision; a Node/Bun boundary speaks to the outside world; the coding agent reasons on top.</P>
+        <ArchLayers />
+        <P className="mt-6">The tracked files define reproducible governance. Runtime files hold task snapshots, receipts, event-chain state, graph data, and local memory; they are intentionally excluded from Git.</P>
+        <TrackedVsRuntime />
       </section>
 
       {/* ── Install and initialize ── */}
@@ -697,16 +869,18 @@ icarus mcp install codex
         <Eyebrow>05 · GET STARTED</Eyebrow>
         <H2 id="harness-loop">The agent operating loop</H2>
         <P>This is the intended loop for a real coding task.</P>
-        <CodeBlock label="operating loop">{`1. init / doctor / graph status
-2. create contract and task
-3. advance lifecycle to orienting
-4. retrieve deterministic context, inspect graph, plan
-5. advance to contracted → planned → executing
-6. make only contract-authorized changes; checkpoint meaningful state
-7. hand off to verification; run immutable acceptance criteria
-8. seal only with current successful receipts
-9. optionally capture reviewed memory and propose an evidence-backed skill`}</CodeBlock>
-        <P>
+        <VerticalTimeline steps={[
+          'init / doctor / graph status',
+          'create contract and task',
+          'advance lifecycle to orienting',
+          'retrieve deterministic context, inspect graph, plan',
+          'advance to contracted → planned → executing',
+          'make only contract-authorized changes; checkpoint meaningful state',
+          'hand off to verification; run immutable acceptance criteria',
+          'seal only with current successful receipts',
+          'optionally capture reviewed memory and propose an evidence-backed skill',
+        ]} />
+        <P className="mt-6">
           Do not replace this with &ldquo;start task, resume task, then write.&rdquo;{' '}
           <Mono>resume</Mono> creates a linked execution attempt; it does{' '}
           <strong className="text-[#0a0a0a]">not</strong> move a task from <Mono>created</Mono> to{' '}
@@ -738,14 +912,16 @@ icarus mcp install codex
         <P>The command returns a <Mono>TASK-…</Mono> id and begins in <Mono>created</Mono>.</P>
 
         <H3 id="harness-lifecycle">Legal lifecycle</H3>
-        <CodeBlock label="lifecycle">{`created
-  → orienting       inspect context, graph, repository state
-  → contracted      confirm contract and scope
-  → planned         form the implementation plan
-  → executing       managed code writes may be authorized
-  → verifying       run acceptance criteria and examine receipts
-  → sealed          final immutable receipt exists`}</CodeBlock>
-        <P>Advance one state at a time:</P>
+        <LifecycleStepper states={[
+          { id: 'created', desc: 'task opened' },
+          { id: 'orienting', desc: 'inspect context, graph, repo state' },
+          { id: 'contracted', desc: 'confirm contract & scope' },
+          { id: 'planned', desc: 'form implementation plan' },
+          { id: 'executing', desc: 'managed writes authorized' },
+          { id: 'verifying', desc: 'run acceptance criteria' },
+          { id: 'sealed', desc: 'final immutable receipt' },
+        ]} />
+        <P className="mt-5">Advance one state at a time:</P>
         <CodeBlock label="terminal">{`icarus task transition TASK-… orienting --repo .
 icarus context build --task TASK-… --budget 12000 --format markdown --repo .
 icarus task transition TASK-… contracted --repo .
@@ -912,17 +1088,11 @@ icarus learn promote <skill-id> --approval <approval-id> --repo .`}</CodeBlock>
           </tbody>
         </table>
         <P>For a managed coding task, the minimal MCP sequence is:</P>
-        <CodeBlock label="mcp sequence">{`icarus_harness_init
-icarus_graph_status / icarus_graph_build
-icarus_task_start
-icarus_task_transition(orienting)
-icarus_context_get
-icarus_task_transition(contracted)
-icarus_task_transition(planned)
-icarus_task_transition(executing)
-icarus_action_check before a managed write
-… implementation …
-icarus_task_handoff → icarus_task_verify → icarus_task_seal`}</CodeBlock>
+        <ChipSequence chips={[
+          'harness_init', 'graph_build', 'task_start', 'transition(orienting)', 'context_get',
+          'transition(contracted→planned→executing)', 'action_check', '… implementation …',
+          'task_handoff', 'task_verify', 'task_seal',
+        ]} />
       </section>
 
       {/* ── Verification, export, and release evidence ── */}
