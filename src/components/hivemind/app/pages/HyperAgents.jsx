@@ -3370,6 +3370,7 @@ function RoomThread({ roomId, onArchived }) {
         {dmAgent && (
           <AgentDmModal
             agent={dmAgent}
+            roomId={roomId}
             onClose={() => setDmAgent(null)}
           />
         )}
@@ -4574,7 +4575,33 @@ function ParticipantChip({ agent, canRemove, onRemove, onOpenDm }) {
 
 /* ─── 1-on-1 DM modal (history persisted in localStorage) ───────────── */
 
-function AgentDmModal({ agent, onClose }) {
+// Poll a room turn until it resolves, returning the forced-lead agent's reply.
+// This is the SAME turn pipeline the room composer uses for "@slug " mentions
+// (core control-plane -> sidecar _orchestrate: a leading "@slug" in
+// user_message forces that participant as sole lead) — reused here so a DM
+// gets identical persona/room-context/tool behavior to an in-room @mention.
+async function waitForLeadReply(roomId, turnId, slug, { timeoutMs = 60000, intervalMs = 450 } = {}) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const { turn } = await apiClient.getHyperTurn(roomId, turnId);
+    const lines = Array.isArray(turn?.lines) ? turn.lines : [];
+    const lead = lines.find((l) => l?.t === 'line' && l.kind === 'lead' && (!l.agent || l.agent === slug));
+    if (lead?.content) return lead.content;
+    const errorLine = lines.find((l) => l?.t === 'error');
+    if (errorLine) throw new Error(errorLine.message || errorLine.content || 'The room turn failed.');
+    if (turn?.status && turn.status !== 'live') {
+      const synth = lines.find((l) => l?.t === 'line' && l.kind === 'synthesis');
+      if (synth?.content) return synth.content;
+      const seal = lines.find((l) => l?.t === 'seal');
+      if (seal?.content) return seal.content;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error('No response — the room turn timed out.');
+}
+
+function AgentDmModal({ agent, roomId, onClose }) {
   const { t } = useTranslation('dashboard');
   // Stable per-user-agent conversation id. Backend uses this to keep
   // ReAct agent memory across turns within the same conversation; we
@@ -4613,12 +4640,30 @@ function AgentDmModal({ agent, onClose }) {
     setMessages(prev => [...prev, userMsg]);
     setDraft('');
     try {
-      const resp = await apiClient.controlPlane.post(
-        `/v1/employees/${agent.slug}/chat`,
-        { text, conversation_id: convId },
-      );
-      const reply = resp?.data?.reply || '(no reply)';
-      setMessages(prev => [...prev, { role: 'agent', content: reply, ts: Date.now() }]);
+      if (roomId && agent?.slug) {
+        // Hidden request: the user only ever sees `text`. Under the hood we
+        // prefix "@slug " — the exact convention the room composer's mention
+        // picker produces — so this DM runs through the identical forced-lead
+        // turn pipeline as an in-room @mention, not a separate, context-free
+        // ReAct chat.
+        const tempId = (window.crypto?.randomUUID?.() || `dm-${Date.now()}`);
+        const resp = await apiClient.postHyperTurn(roomId, {
+          user_message: `@${agent.slug} ${text}`,
+          idempotency_key: `dm:${agent.slug}:${Date.now()}`,
+          turn_id: tempId,
+        });
+        const reply = await waitForLeadReply(roomId, resp?.turn_id || tempId, agent.slug);
+        setMessages(prev => [...prev, { role: 'agent', content: reply, ts: Date.now() }]);
+      } else {
+        // No room context (opened outside a room) — fall back to the standalone
+        // per-employee chat.
+        const resp = await apiClient.controlPlane.post(
+          `/v1/employees/${agent.slug}/chat`,
+          { text, conversation_id: convId },
+        );
+        const reply = resp?.data?.reply || '(no reply)';
+        setMessages(prev => [...prev, { role: 'agent', content: reply, ts: Date.now() }]);
+      }
     } catch (e2) {
       setErr(e2.response?.data?.error || e2.message);
       // Roll back user msg so they can retry without dupes? keep it for context
