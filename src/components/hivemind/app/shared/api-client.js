@@ -1343,8 +1343,13 @@ class HiveMindApiClient {
     return data;
   }
 
-  async getPlatformAiCosts({ q = '', limit = 200 } = {}) {
-    const { data } = await this.controlPlane.get('/admin/api/platform/ai-costs', { params: { q, limit } });
+  async getPlatformAiCosts({ q = '', limit = 200, period = 'month' } = {}) {
+    const { data } = await this.controlPlane.get('/admin/api/platform/ai-costs', { params: { q, limit, period } });
+    return data;
+  }
+
+  async getPlatformAiCostDetail(orgId, { period = 'month' } = {}) {
+    const { data } = await this.controlPlane.get(`/admin/api/platform/ai-costs/${encodeURIComponent(orgId)}`, { params: { period } });
     return data;
   }
 

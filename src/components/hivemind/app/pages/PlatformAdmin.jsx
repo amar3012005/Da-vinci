@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import apiClient from "../shared/api-client";
 import AccessApplicationsPanel from "./AccessApplicationsPanel";
 
@@ -43,6 +43,7 @@ const PLAN_DETAILS = {
   enterprise: "Managed or self-hosted",
 };
 const CAP_LABELS = {
+  monthlyCredits: "Monthly credits",
   maxMemories: "Memory capacity",
   llmTokensPerDay: "LLM tokens per day",
   llmTokensPerMonth: "LLM tokens per month",
@@ -290,27 +291,46 @@ function ModelPolicyPanel() {
 function AiCostsPanel() {
   const [costs, setCosts] = useState(null);
   const [message, setMessage] = useState("");
-  const load = async () => {
+  const [period, setPeriod] = useState("month");
+  const [query, setQuery] = useState("");
+  const queryRef = useRef("");
+  const [selected, setSelected] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [detailMessage, setDetailMessage] = useState("");
+  const load = useCallback(async () => {
     setMessage("");
-    try { setCosts(await apiClient.getPlatformAiCosts()); }
+    try { setCosts(await apiClient.getPlatformAiCosts({ q: queryRef.current, period })); }
     catch (error) { setMessage(error.response?.data?.error || error.message); }
+  }, [period]);
+  useEffect(() => { load(); }, [load]);
+  const openDetail = async (account) => {
+    setSelected(account); setDetail(null); setDetailMessage("");
+    try { setDetail(await apiClient.getPlatformAiCostDetail(account.id, { period })); }
+    catch (error) { setDetailMessage(error.response?.data?.error || error.message); }
   };
-  useEffect(() => { load(); }, []);
   if (!costs) return <section className="mt-5 rounded-[10px] border border-[#e3e0db] bg-white p-4 text-sm text-[#737373]">{message || "Loading AI costs…"}</section>;
+  const totals = costs.totals || {};
+  const credits = (account) => account.credits?.included == null ? "Custom" : `${Number(account.credits?.remaining || 0).toLocaleString()} / ${Number(account.credits?.included || 0).toLocaleString()}`;
   return (
-    <section className="mt-5 rounded-[10px] border border-[#e3e0db] bg-white p-4">
+    <section className="mt-5">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">AI usage ledger</p><h3 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Cumulative cost by user</h3>
-          <p className="mt-1 text-xs text-[#737373]">Token usage and model pricing are accumulated across HIVE-MIND inference calls.</p></div>
-        <div className="text-right"><p className="text-xs text-[#737373]">Cumulative platform spend</p><p className="font-['Space_Grotesk'] text-2xl font-bold tabular-nums text-[#0a0a0a]">{usdFromMicros(costs.total_cost_micros)}</p><p className="text-[11px] text-[#737373]">Unattributed system work: {usdFromMicros(costs.unattributed_cost_micros)} · {costs.unattributed_calls || 0} calls</p></div>
+        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">Credits & cost intelligence</p><h3 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Platform usage, attributed to billing accounts</h3>
+          <p className="mt-1 max-w-2xl text-xs text-[#737373]">Credits are derived once from settled product activity. Provider costs and raw tokens remain independently auditable, so an internal planner or reranker never consumes a customer credit twice.</p></div>
+        <div className="flex items-center gap-2"><select value={period} onChange={(e) => setPeriod(e.target.value)} className="rounded-lg border border-[#e3e0db] bg-white px-3 py-2 text-xs"><option value="month">This month</option><option value="last_30_days">Last 30 days</option><option value="all">All time</option></select><button onClick={load} className="rounded-lg border border-[#e3e0db] px-3 py-2 text-xs hover:border-[#0a0a0a]">Refresh</button></div>
       </div>
-      <div className="overflow-auto rounded-[10px] border border-[#e3e0db]"><table className="w-full text-sm"><thead><tr className="border-b border-[#e3e0db] bg-[#faf9f4] text-left text-[10px] uppercase tracking-wider text-[#737373]"><th className="p-3">User</th><th>Calls</th><th>Input</th><th>Output</th><th>Cached</th><th>Cumulative cost</th><th>Last call</th></tr></thead>
-        <tbody>{(costs.users || []).map((user) => <tr key={user.id} className="border-b border-[#eae7e1] hover:bg-[#faf9f4]"><td className="p-3"><div>{user.display_name || 'Unnamed'}</div><div className="text-xs text-[#737373]">{user.email}</div></td><td>{user.calls}</td><td>{Number(user.prompt_tokens||0).toLocaleString()}</td><td>{Number(user.completion_tokens||0).toLocaleString()}</td><td>{Number(user.cached_prompt_tokens||0).toLocaleString()}</td><td className="font-semibold">{usdFromMicros(user.total_cost_micros)}</td><td>{when(user.last_call_at)}</td></tr>)}</tbody></table></div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-[#737373]">Unpriced calls remain visible with zero estimated cost. Historical events keep their original pricing snapshot.</p><button onClick={load} className="rounded-[6px] border border-[#e3e0db] px-3 py-1.5 text-xs text-[#525252] hover:border-[#0a0a0a]">Refresh costs</button></div>
+      <div className="mb-3 grid gap-3 md:grid-cols-5"><Metric label="Provider spend" value={usdFromMicros(totals.total_cost_micros)} /><Metric label="Raw input tokens" value={Number(totals.prompt_tokens || 0).toLocaleString()} /><Metric label="Raw output tokens" value={Number(totals.completion_tokens || 0).toLocaleString()} /><Metric label="Credits remaining" value={Number(totals.credits_remaining || 0).toLocaleString()} /><Metric label="Credits consumed" value={Number(totals.credits_used || 0).toLocaleString()} /></div>
+      <div className="mb-3 flex gap-2"><input value={query} onChange={(e) => { queryRef.current = e.target.value; setQuery(e.target.value); }} onKeyDown={(e) => { if (e.key === 'Enter') load(); }} placeholder="Find a workspace or billing account" className="w-full max-w-sm rounded-lg border border-[#e3e0db] bg-white px-3 py-2 text-sm"/><button onClick={load} className="rounded-lg bg-[#117dff] px-4 py-2 text-sm font-medium text-white">Search</button></div>
+      <div className="overflow-auto rounded-[10px] border border-[#e3e0db] bg-white"><table className="w-full min-w-[1050px] text-sm"><thead><tr className="border-b border-[#e3e0db] bg-[#faf9f4] text-left text-[10px] uppercase tracking-wider text-[#737373]"><th className="p-3">Billing account</th><th>Plan / access</th><th>Credits remaining</th><th>Usage by service</th><th>LLM tokens</th><th>Provider cost</th><th>Last inference</th><th /></tr></thead>
+        <tbody>{(costs.accounts || []).map((account) => <tr key={account.id} className="border-b border-[#eae7e1] hover:bg-[#faf9f4]"><td className="p-3"><div className="font-medium text-[#0a0a0a]">{account.name}</div><div className="text-xs text-[#737373]">{account.owner?.display_name || account.owner?.email || account.account_type} · {account.hosting_mode}</div></td><td><div className="capitalize font-medium">{account.effective_plan}</div><div className="text-xs text-[#737373]">{account.subscription_status || (account.trial_ends_at ? 'trial' : 'not subscribed')}</div></td><td><div className="font-semibold tabular-nums">{credits(account)}</div><div className="text-xs text-[#737373]">{Number(account.credits?.used || 0).toLocaleString()} used</div></td><td><div className="flex max-w-[250px] flex-wrap gap-1">{(account.product_usage || []).slice(0,3).map((item) => <span key={item.key} className="rounded-full bg-[#f5f4f0] px-2 py-0.5 text-[11px]">{item.label}: {item.quantity}</span>)}{!(account.product_usage || []).length && <span className="text-xs text-[#737373]">No settled activity</span>}</div></td><td>{Number(account.ai?.prompt_tokens || 0).toLocaleString()}<span className="text-[#a3a3a3]"> / </span>{Number(account.ai?.completion_tokens || 0).toLocaleString()}</td><td className="font-semibold tabular-nums">{usdFromMicros(account.ai?.total_cost_micros)}</td><td>{when(account.ai?.last_call_at)}</td><td className="p-2 pr-3 text-right"><button onClick={() => openDetail(account)} className="rounded-lg border border-[#e3e0db] px-3 py-1.5 text-xs hover:border-[#0a0a0a]">Inspect</button></td></tr>)}</tbody></table></div>
+      <p className="mt-3 text-xs text-[#737373]">Policy {costs.policy_version}. Credits shown here are the current transparent product-unit projection; model costs are immutable price snapshots. Any unmetered legacy feature remains visible in raw spend but is not silently charged as a credit.</p>
       {message && <p className="mt-3 text-xs text-red-700">{message}</p>}
+      {selected && <div className="fixed inset-0 z-[100] flex justify-end bg-black/20" role="dialog" aria-modal="true" aria-label="Billing account detail" onMouseDown={() => setSelected(null)}><aside className="h-full w-full max-w-2xl overflow-y-auto border-l border-[#e3e0db] bg-[#faf9f4] p-5 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}><div className="mb-5 flex items-start justify-between"><div><p className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">Billing account ledger</p><h3 className="mt-1 text-2xl font-semibold">{selected.name}</h3><p className="mt-1 text-sm text-[#737373]">{selected.owner?.email || 'No billing owner recorded'} · {selected.effective_plan}</p></div><button onClick={() => setSelected(null)} className="rounded-lg border border-[#e3e0db] px-3 py-1.5 text-xs">Close</button></div>{!detail && <p className="py-12 text-sm text-[#737373]">{detailMessage || 'Loading attribution…'}</p>}{detail && <div className="space-y-5"><div className="grid grid-cols-3 gap-2"><Metric label="Included credits" value={selected.credits?.included == null ? 'Custom' : Number(selected.credits.included).toLocaleString()} /><Metric label="Consumed" value={Number(selected.credits?.used || 0).toLocaleString()} /><Metric label="Remaining" value={selected.credits?.remaining == null ? 'Custom' : Number(selected.credits.remaining).toLocaleString()} /></div><LedgerSection title="Credit-bearing product activity" rows={detail.attribution?.product_events || []} columns={[['metric','Metric'],['source','Source'],['ingest_mode','Mode'],['quantity','Quantity'],['events','Events'],['last_used_at','Last activity']]} /><LedgerSection title="Model and provider spend" rows={detail.attribution?.by_model || []} columns={[['use_case','Use case'],['served_model','Model'],['provider','Provider'],['prompt_tokens','Input'],['completion_tokens','Output'],['total_cost_micros','Cost']]} moneyColumns={['total_cost_micros']} /><LedgerSection title="User attribution" rows={detail.attribution?.by_user || []} columns={[['display_name','User'],['email','Email'],['calls','Calls'],['prompt_tokens','Input'],['completion_tokens','Output'],['total_cost_micros','Cost'],['last_call_at','Last call']]} moneyColumns={['total_cost_micros']} /></div>}</aside></div>}
     </section>
   );
 }
+
+function Metric({ label, value }) { return <div className="rounded-[10px] border border-[#e3e0db] bg-white p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-[#737373]">{label}</p><p className="mt-1 font-['Space_Grotesk'] text-xl font-bold tabular-nums text-[#0a0a0a]">{value}</p></div>; }
+function LedgerSection({ title, rows, columns, moneyColumns = [] }) { return <section className="rounded-[10px] border border-[#e3e0db] bg-white"><h4 className="border-b border-[#e3e0db] px-4 py-3 text-sm font-semibold">{title}</h4><div className="overflow-auto"><table className="w-full min-w-[600px] text-xs"><thead><tr className="bg-[#faf9f4] text-left uppercase tracking-wider text-[#737373]">{columns.map(([, label]) => <th key={label} className="px-3 py-2">{label}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <tr key={index} className="border-t border-[#f0ede8]">{columns.map(([key]) => <td key={key} className="max-w-[200px] truncate px-3 py-2">{moneyColumns.includes(key) ? usdFromMicros(row[key]) : key.endsWith('_at') ? when(row[key]) : String(row[key] ?? '—')}</td>)}</tr>) : <tr><td colSpan={columns.length} className="px-3 py-4 text-[#737373]">No activity in this period.</td></tr>}</tbody></table></div></section>; }
 
 function CommercialManager() {
   const [tab, setTab] = useState("plans");
