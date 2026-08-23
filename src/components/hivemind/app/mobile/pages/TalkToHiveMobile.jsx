@@ -706,6 +706,18 @@ export default function TalkToHiveMobile() {
 
   useEffect(() => { sendTextRef.current = sendText; }, [sendText]);
 
+  // Persist a memory-scope choice onto the message itself (not just the
+  // picker's own local state), so it survives any re-render of the chat —
+  // reopening from localStorage included — instead of the option buttons
+  // reappearing as if nothing had been chosen.
+  const handleProjectChoiceSaved = useCallback((messageId, label) => {
+    setMessages((prev) => prev.map((item) => (
+      item.id === messageId && item.project_choice
+        ? { ...item, project_choice: { ...item.project_choice, saved_scope: label } }
+        : item
+    )));
+  }, []);
+
   const continueOrchestration = useCallback(async (continuation, request, option) => {
     if (loading || requestInFlightRef.current) return;
     requestInFlightRef.current = true;
@@ -1016,7 +1028,7 @@ export default function TalkToHiveMobile() {
                 />
               );
             }
-            return <MemoAiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />;
+            return <MemoAiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} onProjectChoiceSaved={handleProjectChoiceSaved} />;
           })}
           {loading && !messages.some((item) => item.streaming) && <Thinking events={agentEvents} />}
         </div>

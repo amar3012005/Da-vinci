@@ -141,12 +141,12 @@ async function readChatStream(response, onEvent) {
   return result;
 }
 
-function ChatBubble({ msg, onContinue }) {
+function ChatBubble({ msg, onContinue, onProjectChoiceSaved }) {
   // Claude-exact turns (shared/claude-chat): user pill right, assistant is a
   // bubbleless serif answer with reasoning pill + sources + action row.
   if (msg.role === 'user') return <div className="flex justify-end"><UserBubble content={msg.content} /></div>;
   if (msg.deepResearch) return null; // rendered by DeepResearchCard instead
-  return <div className="flex flex-col">{<AiBubble msg={msg} onContinue={onContinue} />}</div>;
+  return <div className="flex flex-col">{<AiBubble msg={msg} onContinue={onContinue} onProjectChoiceSaved={onProjectChoiceSaved} />}</div>;
 }
 
 // ─── Deep Research turn — inline progress card + View in Chrome / Preview ──
@@ -1029,6 +1029,18 @@ function OverviewChat({ inputRef }) {
     }
   }, []);
 
+  // Persist a memory-scope choice onto the message itself (not just the
+  // picker's own local state), so it survives any re-render of the chat —
+  // page reload restoring from localStorage included — instead of the
+  // option buttons reappearing as if nothing had been chosen.
+  const handleProjectChoiceSaved = useCallback((messageId, label) => {
+    setMessages((prev) => prev.map((item) => (
+      item.id === messageId && item.project_choice
+        ? { ...item, project_choice: { ...item.project_choice, saved_scope: label } }
+        : item
+    )));
+  }, []);
+
   const continueOrchestration = useCallback(async (continuation, request, option) => {
     if (loading) return;
     setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: option.label }]);
@@ -1113,7 +1125,7 @@ function OverviewChat({ inputRef }) {
         >
           {messages.map((m) => (
             <React.Fragment key={m.id}>
-              <ChatBubble msg={m} onContinue={continueOrchestration} />
+              <ChatBubble msg={m} onContinue={continueOrchestration} onProjectChoiceSaved={handleProjectChoiceSaved} />
               {m.deepResearch && (
                 <DeepResearchCard
                   dr={m.deepResearch}

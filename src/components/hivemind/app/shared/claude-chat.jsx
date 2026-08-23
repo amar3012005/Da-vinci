@@ -580,7 +580,7 @@ export function StepsDisclosure({ steps }) {
 
 // Claude-style assistant turn: NO bubble. Reasoning pill → serif answer on the
 // canvas → Sources pill → copy / retry / thumbs action row.
-export function AiBubble({ msg, onRetry, onContinue }) {
+export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved }) {
   const [showSources, setShowSources] = useState(false);
   const [copied, setCopied] = useState(false);
   const [vote, setVote] = useState(null);
@@ -687,7 +687,13 @@ export function AiBubble({ msg, onRetry, onContinue }) {
         </div>
       )}
 
-      {msg.project_choice && <MobileProjectChoice choice={msg.project_choice} />}
+      {msg.project_choice && (
+        <MobileProjectChoice
+          choice={msg.project_choice}
+          savedScope={msg.project_choice?.saved_scope}
+          onSaved={(label) => onProjectChoiceSaved?.(msg.id, label)}
+        />
+      )}
     </div>
   );
 }
@@ -695,8 +701,16 @@ export function AiBubble({ msg, onRetry, onContinue }) {
 // Scope picker (mobile) — the server returns a prepared canonical memory plus
 // explicit destinations. A click completes that prepared save directly; it does
 // not re-send the original statement and risk a second ambiguous planner turn.
-export function MobileProjectChoice({ choice }) {
-  const [saved, setSaved] = useState(null);
+//
+// `savedScope`/`onSaved` persist the choice onto the message object itself
+// (via the caller's messages state, not just local component state) — this
+// component previously kept "saved" as local state only, so anything that
+// re-rendered the surrounding message from scratch (streaming continuing,
+// a page reload restoring chat from localStorage, etc.) lost the confirmed
+// state and the option buttons reappeared as if nothing had been chosen.
+export function MobileProjectChoice({ choice, savedScope, onSaved }) {
+  const [saved, setSaved] = useState(savedScope || null);
+  useEffect(() => { if (savedScope && savedScope !== saved) setSaved(savedScope); }, [savedScope]); // eslint-disable-line react-hooks/exhaustive-deps
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const projects = choice?.projects || [];
@@ -714,6 +728,7 @@ export function MobileProjectChoice({ choice }) {
         memory_type: draft.memory_type || 'fact', ...extra,
       });
       setSaved(label);
+      onSaved?.(label);
     } catch (e) { setErr(e.response?.data?.error || e.message); }
     finally { setBusy(false); }
   };
