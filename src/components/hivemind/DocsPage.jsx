@@ -4,6 +4,7 @@ import {
   Hexagon, KeyRound, Server, Terminal, Shield, BookOpen, ChevronRight, ChevronDown, Copy, Check,
   Zap, HardDrive, Github, Star, Rocket, Download, GitBranch, Layers, Brain, Lock, AlertTriangle,
   Wrench, ArrowRight, ArrowDown, Compass, ClipboardCheck, ShieldCheck, Sparkles, GitCommit, FolderGit2,
+  Search,
 } from 'lucide-react';
 import { MEMORY_TOOLS, WEB_TOOLS, CODING_TOOLS, TEMPORAL_TOOLS } from './app/pages/McpServer';
 
@@ -260,22 +261,70 @@ const HARNESS_GROUPS = [
   },
 ];
 
-function Sidebar({ groups }) {
+// One persistent sidebar, three products — xAI-docs-style always-visible category tree instead
+// of top-nav tab switching. Each category is a product; clicking it both switches which
+// content renders in <main> and expands its own item tree.
+const PRODUCT_CATS = [
+  { id: 'hivemind', label: 'HIVEMIND', icon: Hexagon, groups: HIVEMIND_GROUPS },
+  { id: 'icarus', label: 'ICARUS · Self-host', icon: HardDrive, groups: ICARUS_GROUPS },
+  { id: 'harness', label: 'ICARUS Harness', icon: GitBranch, groups: HARNESS_GROUPS },
+];
+
+// Right-rail "On this page" — the major H2 sections of the active product, for quick jump.
+const HIVEMIND_TOC = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'api-keys', label: 'API key reference' },
+  { id: 'mcp-setup', label: 'MCP server' },
+  { id: 'agents', label: 'Agent integrations' },
+  { id: 'ingestion', label: 'Ingesting content' },
+  { id: 'recall', label: 'Recall & search' },
+  { id: 'documents', label: 'Documents & memories' },
+  { id: 'tools-memory', label: 'Memory tools' },
+  { id: 'tools-web', label: 'Web intelligence tools' },
+  { id: 'tools-coding', label: 'Coding intelligence tools' },
+  { id: 'tools-temporal', label: 'Time-travel tools' },
+  { id: 'best-practices', label: 'Best practices' },
+];
+const ICARUS_TOC = [
+  { id: 'selfhost-icarus', label: 'Overview' },
+  { id: 'selfhost-install', label: 'Install' },
+  { id: 'selfhost-quickstart', label: 'Quickstart' },
+  { id: 'selfhost-bm25', label: 'Native BM25 search' },
+  { id: 'selfhost-frameworks', label: 'LangChain / LlamaIndex' },
+  { id: 'selfhost-scope', label: 'Engine vs. platform' },
+];
+const HARNESS_TOC = [
+  { id: 'harness-what-is', label: 'What it is' },
+  { id: 'harness-what-is-not', label: 'What it is not' },
+  { id: 'harness-architecture', label: 'Architecture' },
+  { id: 'harness-install', label: 'Install and initialize' },
+  { id: 'harness-loop', label: 'The agent operating loop' },
+  { id: 'harness-contract', label: 'Task contracts and lifecycle' },
+  { id: 'harness-context', label: 'Context-window optimization' },
+  { id: 'harness-graph', label: 'Code graph' },
+  { id: 'harness-memory', label: 'Memory and learning' },
+  { id: 'harness-mcp', label: 'MCP and agent integration' },
+  { id: 'harness-verify', label: 'Verification & export' },
+  { id: 'harness-cli', label: 'CLI reference' },
+  { id: 'harness-safety', label: 'Safety model & limits' },
+  { id: 'harness-troubleshooting', label: 'Troubleshooting' },
+];
+
+function GroupList({ groups }) {
   const [open, setOpen] = useState(() => Object.fromEntries(groups.map((g) => [g.title, true])));
   useEffect(() => {
     setOpen(Object.fromEntries(groups.map((g) => [g.title, true])));
   }, [groups]);
   return (
-    <div className="sticky top-20 space-y-4">
-      <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Documentation</div>
+    <div className="space-y-3">
       {groups.map((g) => (
         <div key={g.title}>
           <button
             onClick={() => setOpen((o) => ({ ...o, [g.title]: !o[g.title] }))}
-            className="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a] uppercase tracking-wide"
+            className="w-full flex items-center justify-between px-2 py-1 text-[10.5px] font-semibold text-[#a3a3a3] uppercase tracking-wide"
           >
             {g.title}
-            {open[g.title] ? <ChevronDown size={12} className="text-[#a3a3a3]" /> : <ChevronRight size={12} className="text-[#a3a3a3]" />}
+            {open[g.title] ? <ChevronDown size={11} className="text-[#c9c5bc]" /> : <ChevronRight size={11} className="text-[#c9c5bc]" />}
           </button>
           {open[g.title] && (
             <div className="mt-0.5 space-y-0.5">
@@ -289,6 +338,52 @@ function Sidebar({ groups }) {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+// Persistent left sidebar — every product category always visible, xAI-docs style, instead of
+// top-nav tabs that hide the other two products entirely.
+function ProductNav({ product, setProduct, expanded, setExpanded }) {
+  return (
+    <div className="sticky top-20 space-y-1">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-2 px-2">Documentation</div>
+      {PRODUCT_CATS.map((c) => {
+        const isActive = product === c.id;
+        const isOpen = expanded === c.id;
+        return (
+          <div key={c.id}>
+            <button
+              onClick={() => { setProduct(c.id); setExpanded(c.id); }}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-[6px] text-[12.5px] font-semibold font-['Space_Grotesk'] transition-colors ${isActive ? 'text-[#0a0a0a] bg-[#f3f1ec]' : 'text-[#525252] hover:bg-[#faf9f4] hover:text-[#0a0a0a]'}`}
+            >
+              <c.icon size={13} className={isActive ? 'text-[#117dff]' : 'text-[#a3a3a3]'} />
+              <span className="flex-1 text-left">{c.label}</span>
+              {isOpen ? <ChevronDown size={12} className="text-[#a3a3a3]" /> : <ChevronRight size={12} className="text-[#a3a3a3]" />}
+            </button>
+            {isOpen && (
+              <div className="mt-1.5 mb-2 pl-3.5 ml-[13px] border-l border-[#e3e0db]">
+                <GroupList groups={c.groups} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function OnThisPage({ headings }) {
+  return (
+    <div className="sticky top-20 space-y-3">
+      <div className="text-[11px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">On this page</div>
+      <ul className="space-y-1.5 text-[12px] border-l border-[#e3e0db] pl-3">
+        {headings.map((h) => (
+          <li key={h.id}>
+            <a href={`#${h.id}`} className="text-[#737373] hover:text-[#117dff] no-underline leading-snug">{h.label}</a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -1245,6 +1340,8 @@ icarus graph build --repo .`}</CodeBlock>
 
 export default function DocsPage() {
   const [product, setProduct] = useState('hivemind'); // 'hivemind' | 'icarus' | 'harness'
+  const [expanded, setExpanded] = useState('hivemind'); // which sidebar category is open
+  const toc = product === 'icarus' ? ICARUS_TOC : product === 'harness' ? HARNESS_TOC : HIVEMIND_TOC;
   const toolGroups = useMemo(() => ([
     { id: 'tools-memory', title: 'Memory tools', count: MEMORY_TOOLS.length, tools: MEMORY_TOOLS, blurb: 'The core read/write surface of the memory engine. Every durable fact, decision, and conversation flows through these.' },
     { id: 'tools-web', title: 'Web intelligence tools', count: WEB_TOOLS.length, tools: WEB_TOOLS, blurb: 'Live web search + crawl with an async job model: submit → poll → read results. Quota-metered per workspace.' },
@@ -1254,48 +1351,53 @@ export default function DocsPage() {
 
   return (
     <div className="min-h-screen bg-[#faf9f4]">
-      {/* ── SINGULANCE navbar — top-level product tabs, Composio's Docs/Examples/Toolkits pattern ── */}
+      {/* ── SINGULANCE navbar — xAI-docs layout: brand, Docs label, search, auth actions ── */}
       <header className="sticky top-0 z-30 bg-[#faf9f4]/90 backdrop-blur-xl border-b border-[#e3e0db] px-5 md:px-8">
-        <div className="h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0 shrink-0">
             <a href="https://singulancelabs.com" className="text-[12px] font-bold font-['Space_Grotesk'] tracking-[0.22em] text-[#0a0a0a] no-underline">SINGULANCE</a>
             <span className="text-[#d4d0ca]">/</span>
             <a href="/hivemind" className="flex items-center gap-1.5 no-underline">
               <Hexagon size={14} className="text-[#117dff]" />
               <span className="text-[12px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">HIVEMIND</span>
             </a>
-            <span className="hidden sm:inline text-[10px] font-mono uppercase tracking-[0.2em] text-[#a3a3a3]">Docs</span>
+            <span className="hidden sm:flex items-center gap-1 text-[11px] font-medium text-[#525252]">
+              Docs <ChevronDown size={11} className="text-[#a3a3a3]" />
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex flex-1 max-w-[360px] items-center gap-2 h-9 px-3 rounded-[8px] border border-[#e3e0db] bg-white text-[#a3a3a3]">
+            <Search size={13} />
+            <span className="text-[12px]">Search docs…</span>
+            <span className="ml-auto text-[10px] font-mono border border-[#e3e0db] rounded-[4px] px-1.5 py-0.5 text-[#a3a3a3]">⌘K</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             <a href="/hivemind/login" className="px-3 py-1.5 rounded-[6px] text-[12px] text-[#525252] hover:text-[#0a0a0a] no-underline">Sign in</a>
             <a href="/hivemind/app/mcp" className="px-3 py-1.5 rounded-[6px] bg-[#117dff] hover:bg-[#0066e0] text-white text-[12px] font-semibold no-underline">Open console</a>
           </div>
         </div>
-        <div className="flex items-center gap-6 h-10">
-          {[
-            { id: 'hivemind', label: 'HIVEMIND' },
-            { id: 'icarus', label: 'ICARUS · self-host' },
-            { id: 'harness', label: 'Icarus Harness' },
-          ].map((t) => (
+        {/* Mobile-only product switcher — the persistent sidebar below is lg+ only */}
+        <div className="lg:hidden flex items-center gap-1 overflow-x-auto pb-2 -mx-1 px-1">
+          {PRODUCT_CATS.map((c) => (
             <button
-              key={t.id}
-              onClick={() => setProduct(t.id)}
-              className={`h-full text-[12.5px] font-medium border-b-2 -mb-px ${product === t.id ? 'border-[#117dff] text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}
+              key={c.id}
+              onClick={() => { setProduct(c.id); setExpanded(c.id); }}
+              className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11.5px] font-medium border ${product === c.id ? 'bg-[#0a0a0a] text-white border-[#0a0a0a]' : 'bg-white text-[#525252] border-[#e3e0db]'}`}
             >
-              {t.label}
+              <c.icon size={11} />
+              {c.label}
             </button>
           ))}
         </div>
       </header>
 
-      <div className="max-w-[1200px] mx-auto flex gap-10 px-5 md:px-8 py-10">
-        {/* ── TOC ── */}
-        <nav className="hidden lg:block w-60 shrink-0">
-          <Sidebar groups={product === 'hivemind' ? HIVEMIND_GROUPS : product === 'harness' ? HARNESS_GROUPS : ICARUS_GROUPS} />
+      <div className="max-w-[1360px] mx-auto flex gap-8 px-5 md:px-8 py-10">
+        {/* ── Left: persistent product sidebar (all three categories always visible) ── */}
+        <nav className="hidden lg:block w-64 shrink-0">
+          <ProductNav product={product} setProduct={setProduct} expanded={expanded} setExpanded={setExpanded} />
         </nav>
 
         {/* ── Content ── */}
-        <main className="flex-1 min-w-0 max-w-[760px]">
+        <main className="flex-1 min-w-0 max-w-[720px]">
           {product === 'icarus' ? <IcarusDocs /> : product === 'harness' ? <HarnessDocs /> : <>
           <Eyebrow>DEVELOPER DOCUMENTATION</Eyebrow>
           <h1 className="text-[34px] leading-[1.08] font-medium font-['Space_Grotesk'] text-[#0a0a0a] tracking-tight">HIVEMIND API & MCP reference</h1>
@@ -1726,6 +1828,11 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
           </section>
           </>}
         </main>
+
+        {/* ── Right: on-this-page jump list ── */}
+        <aside className="hidden xl:block w-52 shrink-0">
+          <OnThisPage headings={toc} />
+        </aside>
       </div>
     </div>
   );
