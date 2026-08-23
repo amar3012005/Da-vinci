@@ -135,7 +135,7 @@ function Sparkline({ values, accent }) {
   );
 }
 
-function MetricCard({ metric, data, spark, active, onClick }) {
+function MetricCard({ metric, data, spark, active, onClick, attributed = false }) {
   const Icon = metric.icon;
   const used = Number(data?.used) || 0;
   const limit = data?.limit;
@@ -163,11 +163,11 @@ function MetricCard({ metric, data, spark, active, onClick }) {
       <div className="flex items-end gap-1.5">
         <span className="text-2xl font-bold text-[#0a0a0a] font-['Space_Grotesk'] leading-none">{fmt(used)}</span>
         <span className="text-xs text-[#999] mb-0.5">
-          {unlimited ? <span className="inline-flex items-center gap-0.5">/<InfinityIcon size={12} /></span> : `/ ${fmt(limit)}`}
+          {attributed ? 'attributed' : (unlimited ? <span className="inline-flex items-center gap-0.5">/<InfinityIcon size={12} /></span> : `/ ${fmt(limit)}`)}
         </span>
       </div>
       <Sparkline values={spark} accent={metric.accent} />
-      <div className="text-[10px] text-[#999]">{unlimited ? 'Unlimited on plan' : `${pct}% of limit`}</div>
+      <div className="text-[10px] text-[#999]">{attributed ? 'Attributed to you' : (unlimited ? 'Unlimited on plan' : `${pct}% of limit`)}</div>
     </button>
   );
 }
@@ -195,6 +195,7 @@ function DailyBudget({ metric, data }) {
 export default function Usage() {
   const [metricKey, setMetricKey] = useState('tokens');
   const [days, setDays] = useState(30);
+  const [usageView, setUsageView] = useState('organization');
 
   const { data, loading, refetch } = useApiQuery(() => apiClient.getUsage().catch(() => null), []);
   const { data: billing, refetch: refetchBilling } = useApiQuery(() => apiClient.getBillingPlan().catch(() => null), []);
@@ -203,6 +204,27 @@ export default function Usage() {
   const planName = data?.planName || data?.plan || '—';
   const month = data?.period?.month || '';
   const reminders = Array.isArray(data?.reminders) ? data.reminders : [];
+  const memberTotals = useMemo(() => {
+    const totals = {};
+    for (const row of (data?.member_usage || [])) {
+      const key = String(row?.metric || '');
+      if (!key) continue;
+      totals[key] = (totals[key] || 0) + (Number(row?.quantity) || 0);
+    }
+    return totals;
+  }, [data?.member_usage]);
+  const aiUsage = usageView === 'organization' ? data?.organization_ai_usage : data?.member_ai_usage;
+  const usageFor = (metric) => {
+    if (metric.key === 'tokens' && aiUsage) {
+      return {
+        used: Number(aiUsage.total_tokens || 0),
+        limit: usageView === 'organization' ? data?.tokens?.limit : null,
+      };
+    }
+    return usageView === 'organization'
+      ? data?.[metric.key]
+      : { used: memberTotals[metric.key] || 0, limit: null };
+  };
 
   // date-fill the series against a continuous last-N-day axis
   const axis = useMemo(() => lastNDays(days), [days]);
@@ -226,12 +248,21 @@ export default function Usage() {
           <div>
             <h1 className="text-xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">Usage</h1>
             <p className="text-xs text-[#666]">
-              Platform usage for your org{month ? ` · ${month}` : ''} ·{' '}
+              {usageView === 'organization' ? 'Organization usage' : 'Your attributed usage'}{month ? ` · ${month}` : ''} ·{' '}
               <span className="font-medium text-[#117dff]">{planName}</span> plan
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden" aria-label="Usage scope">
+            {[
+              ['organization', 'Organization'],
+              ['user', 'You'],
+            ].map(([value, label]) => (
+              <button key={value} onClick={() => setUsageView(value)}
+                className={`px-2.5 py-1.5 text-xs font-medium ${usageView === value ? 'bg-[#0a0a0a] text-white' : 'text-[#525252] hover:bg-[#faf9f4]'}`}>{label}</button>
+            ))}
+          </div>
           <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden">
             {[7, 30, 90].map((d) => (
               <button key={d} onClick={() => setDays(d)}
@@ -258,7 +289,7 @@ export default function Usage() {
         </div>
       )}
 
-      <div className="mb-4">
+      {usageView === 'organization' && <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Today’s plan limits</h2>
           <span className="text-[10px] text-[#999]">Resets daily · {data?.period?.day || 'UTC'}</span>
@@ -266,10 +297,12 @@ export default function Usage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
           {DAILY_METRICS.map((metric) => <DailyBudget key={metric.key} metric={metric} data={data?.daily?.[metric.key]} />)}
         </div>
-      </div>
+      </div>}
 
-      {/* Hero graph */}
-      <section className="mb-7 border-y border-[#e6e3dd] py-5">
+      {/* Daily series is a workspace aggregate. Individual attribution is an
+          append-only cumulative ledger, so it is intentionally not presented
+          as a misleading per-day chart. */}
+      {usageView === 'organization' ? <section className="mb-7 border-y border-[#e6e3dd] py-5">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <heroMetric.icon size={17} style={{ color: heroMetric.accent }} />
@@ -284,13 +317,17 @@ export default function Usage() {
           </div>
         </div>
         <BarChart values={seriesByKey[metricKey] || []} days={axis} accent={heroMetric.accent} />
-      </section>
+      </section> : (
+        <section className="mb-7 border-y border-[#e6e3dd] py-5 text-sm text-[#666]">
+          This view shows usage attributed to your user ID in this organization. Workspace limits and billing remain organization-level.
+        </section>
+      )}
 
       {/* Metric cards (click → set hero) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-0">
         {METRICS.map((m, i) => (
           <motion.div key={m.key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, delay: i * 0.03 }}>
-            <MetricCard metric={m} data={data?.[m.key]} spark={(seriesByKey[m.key] || []).slice(-14)}
+            <MetricCard metric={m} data={usageFor(m)} attributed={usageView === 'user'} spark={usageView === 'organization' ? (seriesByKey[m.key] || []).slice(-14) : []}
               active={metricKey === m.key} onClick={() => setMetricKey(m.key)} />
           </motion.div>
         ))}
@@ -298,7 +335,7 @@ export default function Usage() {
 
       <div className="flex items-start gap-1.5 text-[10px] text-[#aaa] mt-5 justify-center">
         <Info size={12} className="mt-px shrink-0" />
-        <span>High-level usage. Tokens are metered at chat + TARA + HyperAgents background LLM ({data?.tokensScope || 'chat+tara+hyperagents'}); embeddings, vision &amp; ingest are not yet in the token count. Limits + guardrails are per plan.</span>
+        <span>{usageView === 'organization' ? 'Organization totals drive plan limits and billing.' : 'Personal totals include only events attributed to your user ID.'} Tokens are metered at chat + TARA + HyperAgents background LLM ({data?.tokensScope || 'chat+tara+hyperagents'}); embeddings, vision &amp; ingest are not yet in the token count.</span>
       </div>
     </div>
   );

@@ -261,6 +261,7 @@ function pendingFileKey(file) { return `${file.name}::${file.size}`; }
 // The evidence API is keyed by a UUID. Filenames are not identities: users can
 // upload the same name again with new content or into a different scope.
 function documentIdFrom(doc) {
+  if (doc?.id) return doc.id;
   const tags = doc?.tags || [];
   const hit = tags.find((t) => typeof t === 'string' && t.startsWith('doc-id:'));
   return hit ? hit.slice('doc-id:'.length) : (doc?.metadata?.document_id || null);
@@ -1073,92 +1074,30 @@ export default function KnowledgeBase() {
   const [relSummaries, setRelSummaries] = useState({});
 
   const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
-    // Fetch from THREE tag families in parallel — covers regular uploads, enterprise
-    // schema records, and the broader 'knowledge-base' bucket. Trust the backend tag:
-    // never filter out a document just because its metadata fields are missing
-    // (Smart Ingest UPDATE relationships sometimes strip metadata into a new version).
-    const tagQueries = ['document-summary', 'schema-record', 'knowledge-base'];
-    // Bumped limit 100 → 500 per tag family. Earlier 100 silently truncated
-    // accounts past 100 docs, which read as 'losing past documents'.
-    // owner_only:true scopes server-side to THIS user's own uploads so other
-    // members' org/project-shared docs never cross the wire (the client-side
-    // owner filter below stays as defense-in-depth).
-    const settled = await Promise.allSettled(
-      tagQueries.map(tag => apiClient.listMemories({ tags: tag, limit: 500, scope: 'all', owner_only: true }))
-    );
-
-    const seenIds = new Set();
-    const byDoc = new Map();   // documentId -> newest qualifying memory
-    const docs = [];
-    for (const result of settled) {
-      if (result.status !== 'fulfilled') continue;
-      const memories = result.value?.memories || [];
-      for (const m of memories) {
-        if (seenIds.has(m.id)) continue;
-        const tags = m.tags || [];
-        const title = m.title || '';
-        const meta = m.metadata || {};
-        const srcMeta = m.source_metadata || {};
-        const isDoc =
-          tags.includes('document-summary') ||
-          tags.includes('schema-record') ||
-          title.startsWith('Document:') ||
-          srcMeta.source_type === 'document-upload' ||
-          !!meta.document_title ||
-          !!meta.total_chunks;
-        const isChunk = tags.some(t => t.startsWith('section:') || t.startsWith('page:') || t.startsWith('chunk:'));
-        if (isDoc && !isChunk) {
-          // DEDUPE BY DOCUMENT, NOT BY MEMORY. `seenIds` keys on m.id, but this is a list of
-          // DOCUMENTS — and one document legitimately produces several qualifying memories (a
-          // `document-summary` AND a `schema-record`, plus a fresh summary on every re-ingest).
-          // Verified on live data: memories e659366b, fb2dffc1 and d7115c88 all carry the SAME
-          // metadata.document_id (ed13dc1d…), so that one PDF rendered as three rows. This is the
-          // reported "duplicates even after I deleted them": the list is derived from memories, so a
-          // document lingers while any of its memories survive, and re-uploading multiplies it.
-          // Keep the NEWEST memory per document — it carries the current counts and title.
-          const docKey = meta.document_id
-            || srcMeta.document_id
-            || (tags.find((t) => t.startsWith('source-id:')) || '')
-            || m.id;                       // last resort: behave exactly as before
-          const prev = byDoc.get(docKey);
-          const ts = Date.parse(m.updated_at || m.created_at || 0) || 0;
-          if (prev && prev.__ts >= ts) continue;
-          seenIds.add(m.id);
-          m.__ts = ts;
-          byDoc.set(docKey, m);
-        }
-      }
-    }
-
-    // One row per DOCUMENT, newest first.
-    docs.push(...[...byDoc.values()].sort((a, b) => (b.__ts || 0) - (a.__ts || 0)));
-
-    // Last-ditch fallback: if all three queries returned nothing, try semantic search.
-    if (docs.length === 0) {
-      try {
-        const result = await apiClient.searchMemories('knowledge-base document-summary', { scope: 'all', n_results: 100 });
-        const fallback = (result?.results || result?.memories || []).filter((m) => {
-          const tags = m.tags || [];
-          return tags.includes('document-summary') || tags.includes('schema-record');
-        });
-        for (const m of fallback) {
-          if (!seenIds.has(m.id)) {
-            seenIds.add(m.id);
-            docs.push(m);
-          }
-        }
-      } catch { /* swallow — empty list is acceptable here */ }
-    }
-
-    // OWN-DOCS-ONLY: KB doc-summaries are scope='organization' by default, so a
-    // scope:'all' fetch surfaces OTHER users' org/project-shared docs too. The
-    // Documents list must show only what THIS user uploaded → filter by owner.
-    // (Gate on a known user id; the query re-runs once auth resolves.)
-    const ownDocs = user?.id
-      ? docs.filter((d) => (d.user_id || d.owner?.id) === user.id)
-      : [];
-    return ownDocs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-  }, [user?.id]);
+    // The canonical documents endpoint applies the same visibility predicate as
+    // evidence recall: organization documents, authorized projects/teams, and
+    // only the caller's personal documents. A document list must not be derived
+    // from promoted memories—evidence-only uploads intentionally have no such
+    // memory, and invitees must not lose shared organization documents.
+    const response = await apiClient.listDocuments({ limit: 500 });
+    return (response?.documents || []).map((doc) => ({
+      ...doc,
+      created_at: doc.createdAt,
+      updated_at: doc.updatedAt,
+      metadata: {
+        ...(doc.parseMetadata || {}),
+        document_id: doc.id,
+        document_title: doc.title,
+        document_type: doc.documentType,
+        pages: doc.pageCount,
+      },
+      source_metadata: {
+        filename: doc.title,
+        source_platform: doc.sourcePlatform,
+        source_url: doc.sourceUrl,
+      },
+    }));
+  }, [org?.id, user?.id]);
 
   // Fetch per-doc relationship summaries in batch whenever the doc list changes.
   // Backend resolves doc+chunk cluster then groups by relationship type so we
@@ -1183,20 +1122,17 @@ export default function KnowledgeBase() {
   // made a re-upload inherit another document's segment/fact totals.
   const [phase1Stats, setPhase1Stats] = useState({});
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const resp = await apiClient.listDocuments({ limit: 200 });
-        if (cancelled) return;
-        const map = {};
-        for (const d of (resp?.documents || [])) {
-          if (!d?.id) continue;
-          map[d.id] = { segments: d.segmentCount || 0, memories: d.promotedCount || 0 };
-        }
-        setPhase1Stats(map);
-      } catch { /* noop */ }
-    })();
-    return () => { cancelled = true; };
+    const map = {};
+    for (const doc of (kbMemories || [])) {
+      if (!doc?.id) continue;
+      map[doc.id] = {
+        segments: doc.segmentCount || 0,
+        memories: doc.promotedCount || 0,
+        evidenceBytes: Number(doc.evidenceBytes || 0),
+        sourceBytes: Number(doc.sourceBytes || 0),
+      };
+    }
+    setPhase1Stats(map);
   }, [kbMemories]);
 
   // Combine fetched documents with just-uploaded ones for immediate display
@@ -2618,9 +2554,9 @@ export default function KnowledgeBase() {
                         return (
                           <span
                             className="text-[#16a34a] text-[10px] font-mono bg-[#16a34a]/8 border border-[#16a34a]/20 rounded px-1.5 py-0.5"
-                            title={`Evidence-backed: ${p1.segments} segments and ${p1.memories} live memories for this document`}
+                            title={`Evidence-backed: ${p1.segments} segments, ${formatBytes(p1.evidenceBytes)} of persisted evidence, and ${p1.memories} live memories for this document`}
                           >
-                            {p1.segments} seg · {p1.memories} mem
+                            {p1.segments} seg · {formatBytes(p1.evidenceBytes)} evidence · {p1.memories} mem
                           </span>
                         );
                       })()}
