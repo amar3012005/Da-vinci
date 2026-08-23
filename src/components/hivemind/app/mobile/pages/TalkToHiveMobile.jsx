@@ -1129,7 +1129,7 @@ export default function TalkToHiveMobile() {
             </button>
             <AnimatePresence>
               {toolsNotice && (
-                <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="absolute top-full left-0 mt-2 z-40 w-56 rounded-[6px] border border-[#e3e0db] bg-white px-2.5 py-2 text-[10px] text-[#525252] shadow-lg">
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="absolute bottom-full left-0 mb-2 z-40 w-56 rounded-[6px] border border-[#e3e0db] bg-white px-2.5 py-2 text-[10px] text-[#525252] shadow-lg">
                   <span className="mr-1.5 inline-flex rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] text-blue-700">{t('overview.chat.toolsBeta', 'Beta version')}</span>
                   {t('overview.chat.toolsNotice', 'Allows connected apps for this message; native HIVE-MIND remains available.')}
                 </motion.div>
