@@ -14,7 +14,7 @@
  * viewports <= 768px — see HiveMindApp.jsx).
  */
 
-import React, { useState, useRef, useEffect, useCallback, useMemo, useDeferredValue } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -43,6 +43,11 @@ import {
   Chrome,
   Eye,
   AlertTriangle,
+  Image as ImageIcon,
+  Camera,
+  FileText,
+  Search,
+  Check,
 } from 'lucide-react';
 // Chat turn presentation lives in shared/claude-chat (one source of truth for
 // mobile + desktop Overview + sidebar).
@@ -55,7 +60,7 @@ import SingulanceMark from '../../shared/SingulanceMark';
 import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from '../../pages/WebStudio';
 import useDictation from '../../shared/useDictation';
 import { useTeamContext } from '../../shared/team-context';
-import { MeetingNotesPromo } from '../../shared/QuickRecorderProvider';
+import { MeetingNotesPromo, useQuickRecorder } from '../../shared/QuickRecorderProvider';
 import PwaInstall from '../../shared/PwaInstall';
 import { useAuth } from '../../auth/AuthProvider';
 import {
@@ -409,6 +414,10 @@ export default function TalkToHiveMobile() {
   const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
   useEffect(() => { setChatScope(activeProjectId || null); }, [activeProjectId]);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  // "+" slide-up sheet — attachments, modes (Search/Deep Research), and the
+  // AI Meeting Notes entry point all live here now, off the main action row.
+  const [plusSheetOpen, setPlusSheetOpen] = useState(false);
+  const qrec = useQuickRecorder();
   const [scopeModalOpen, setScopeModalOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState([]);
   const [selectedScope, setSelectedScope] = useState('personal');
@@ -563,14 +572,16 @@ export default function TalkToHiveMobile() {
   }, [messages, loading]);
 
   // Auto-resize textarea (capped at 5 lines so it never eats the screen).
-  useEffect(() => {
+  // MUST run in useLayoutEffect, not a rAF-deferred useEffect: a rAF pushes the
+  // height correction to the NEXT frame, so iOS Safari paints one frame at the
+  // stale height and then snaps — that visible double-paint is the "jerk"
+  // users feel per keystroke. useLayoutEffect applies the new height
+  // synchronously before the browser paints, so there's only ever one frame.
+  useLayoutEffect(() => {
     const el = inputRef.current;
     if (!el) return;
-    const frame = requestAnimationFrame(() => {
-      el.style.height = 'auto';
-      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-    });
-    return () => cancelAnimationFrame(frame);
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   }, [input]);
 
   const sendText = useCallback(async (overrideText) => {
@@ -1103,8 +1114,9 @@ export default function TalkToHiveMobile() {
             Clear session
           </button>
         </div>
-        {/* Claude-style floating input card: text row on top, action row below */}
-        <div className="bg-white border border-[#e8e5de] rounded-[28px] shadow-[0_2px_14px_rgba(0,0,0,0.06)] px-4 pt-3 pb-2.5 focus-within:border-[#d5d1c8]">
+        {/* Compact floating input card: input row (with the tools extension
+            badge riding its top-right corner), then one slim action row. */}
+        <div className="bg-white border border-[#e8e5db] rounded-[24px] shadow-[0_2px_14px_rgba(0,0,0,0.06)] px-3.5 pt-2.5 pb-2 focus-within:border-[#d5d1c8]">
           <input
             ref={fileInputRef}
             type="file"
@@ -1119,7 +1131,7 @@ export default function TalkToHiveMobile() {
           />
 
           {selectedToolkits.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1.5">
+            <div className="mb-1.5 flex flex-wrap gap-1.5">
               {selectedToolkits.map((toolkit) => (
                 <button key={toolkit.slug} type="button" onClick={() => removeSelectedToolkit(toolkit.slug)} className="inline-flex items-center gap-1.5 rounded-full border border-[#e3e0db] bg-[#faf9f4] px-2 py-1 text-[11px] font-semibold text-[#525252]">
                   {toolkit.logo ? <img src={toolkit.logo} alt="" className="h-3.5 w-3.5 object-contain" /> : <Cable size={12} className="text-[#117dff]" />}
@@ -1128,157 +1140,272 @@ export default function TalkToHiveMobile() {
               ))}
             </div>
           )}
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => absorbToolkitMentions(e.target.value)}
-            onKeyDown={(e) => {
-              // iOS/IME emits Enter while it is still composing a character.
-              // Sending at that point causes a lost character and keyboard jump.
-              if (e.nativeEvent.isComposing || e.keyCode === 229) return;
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (deepResearchMode) startDeepResearch(input);
-                else send();
-              }
-            }}
-            rows={1}
-            enterKeyHint="send"
-            autoCapitalize="sentences"
-            autoCorrect="on"
-            placeholder={deepResearchMode ? 'Research the web…' : t('overview.chatWith', 'Chat with HIVE…')}
-            className="w-full resize-none border-none outline-none bg-transparent text-[16px] py-0.5 placeholder:text-[#a8a49c] max-h-[120px] leading-snug"
-            style={{ fontFamily: 'inherit' }}
-          />
-          {/* Action row: + · scope chip · spacer · mic · black voice/send */}
-          <div className="flex items-center gap-2 mt-2">
-          <button
-            onClick={handlePickFiles}
-            className="w-9 h-9 rounded-full border border-[#e8e5de] text-[#3d3d3a] flex items-center justify-center flex-shrink-0 active:bg-[#f1eee7]"
-            aria-label="Attach files"
-          >
-            <Plus size={18} strokeWidth={2} />
-          </button>
-          {/* Scope drop-UP — org-wide vs one project (Overview.jsx behavior) */}
-          <div className="relative">
-            {scopeMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setScopeMenuOpen(false)} />}
+
+          {/* Input row — the "Use tools" toggle is now a small extension badge
+              riding the field's top-right corner, not a full pill in the
+              action row below (see next-gen composer mockup). */}
+          <div className="relative flex items-start gap-1.5">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => absorbToolkitMentions(e.target.value)}
+              onKeyDown={(e) => {
+                // iOS/IME emits Enter while it is still composing a character.
+                // Sending at that point causes a lost character and keyboard jump.
+                if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (deepResearchMode) startDeepResearch(input);
+                  else send();
+                }
+              }}
+              rows={1}
+              enterKeyHint="send"
+              autoCapitalize="sentences"
+              autoCorrect="on"
+              placeholder={deepResearchMode ? 'Research the web…' : t('overview.chatWith', 'Chat with HIVE…')}
+              className="flex-1 min-w-0 resize-none border-none outline-none bg-transparent text-[16px] py-0.5 pr-1 placeholder:text-[#a8a49c] max-h-[120px] leading-snug"
+              style={{ fontFamily: 'inherit' }}
+            />
+            <div className="relative flex-shrink-0 mt-0.5">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={useTools}
+                onClick={toggleUseTools}
+                className={`relative w-6 h-6 rounded-[7px] flex items-center justify-center transition-colors ${useTools ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#a3a3a3] active:bg-[#f3f1ec]'}`}
+                aria-label={t('overview.chat.tools', 'Use tools')}
+                title={t('overview.chat.toolsHint', 'Allow connected apps for this message')}
+              >
+                <Sparkles size={13} className={useTools ? 'animate-pulse' : ''} />
+                <span className={`absolute top-0.5 right-0.5 w-[5px] h-[5px] rounded-full bg-[#10b981] border border-white transition-opacity ${useTools ? 'opacity-100' : 'opacity-0'}`} />
+              </button>
+              <AnimatePresence>
+                {toolsNotice && (
+                  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="absolute top-full right-0 mt-2 z-40 w-56 rounded-[6px] border border-[#e3e0db] bg-white px-2.5 py-2 text-[10px] text-[#525252] shadow-lg">
+                    <span className="mr-1.5 inline-flex rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] text-blue-700">{t('overview.chat.toolsBeta', 'Beta version')}</span>
+                    {t('overview.chat.toolsNotice', 'Allows connected apps for this message; native HIVE-MIND remains available.')}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Action row: + · scope chip · spacer · mic · send */}
+          <div className="flex items-center gap-1.5 mt-1.5">
             <button
-              onClick={() => { setScopeMenuOpen((v) => !v); setModelMenuOpen(false); setLangMenuOpen(false); }}
-              className={`relative z-40 inline-flex items-center gap-1 h-9 px-3 rounded-full text-[12px] font-medium max-w-[140px] ${chatScopeMode !== 'all' ? 'bg-[#117dff]/[0.08] text-[#117dff]' : 'bg-[#f1eee7] text-[#3d3d3a]'}`}
+              onClick={() => setPlusSheetOpen(true)}
+              className="w-8 h-8 rounded-full border border-[#e8e5de] text-[#3d3d3a] flex items-center justify-center flex-shrink-0 active:bg-[#f1eee7]"
+              aria-label="Add"
+            >
+              <Plus size={16} strokeWidth={2.2} />
+            </button>
+
+            {/* Scope — defaults to "All", tap opens a popup window (not an
+                anchored dropdown); choosing an option closes it immediately. */}
+            <button
+              onClick={() => setScopeMenuOpen(true)}
+              className={`inline-flex items-center gap-1 h-8 px-2.5 rounded-full text-[11.5px] font-semibold max-w-[126px] ${chatScopeMode !== 'all' ? 'bg-[#117dff]/[0.08] text-[#117dff]' : 'bg-[#f1eee7] text-[#3d3d3a]'}`}
               aria-label={t('overview.scope.hint', 'Answer scope: all, org-wide, my space, or one project')}
             >
-              {chatScopeMode === 'personal' ? <Lock size={12} /> : chatScopeMode === 'project' ? <Boxes size={12} /> : chatScopeMode === 'organization' ? <Building2 size={12} /> : <Globe size={12} />}
+              {chatScopeMode === 'personal' ? <Lock size={11} /> : chatScopeMode === 'project' ? <Boxes size={11} /> : chatScopeMode === 'organization' ? <Building2 size={11} /> : <Globe size={11} />}
               <span className="truncate">{
                 chatScopeMode === 'personal' ? t('overview.scope.personal', 'My Space')
                   : chatScopeMode === 'project' ? (((ctxProjects?.length ? ctxProjects : projects) || []).find((pr) => pr.id === chatScope)?.name || t('overview.scope.project', 'Project'))
                     : chatScopeMode === 'organization' ? t('overview.scope.org', 'Org-wide')
-                      : t('overview.scope.all', 'All memory')
+                      : t('overview.scope.all', 'All')
               }</span>
+              <ChevronDown size={10} className="text-current opacity-50" />
             </button>
-            {scopeMenuOpen && (
-              <div className="absolute bottom-full mb-2 left-0 z-40 w-56 bg-white border border-[#e8e5de] rounded-xl shadow-lg p-1.5">
-                <p className="px-2 py-1 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('overview.scope.title', 'Answer scope')}</p>
-                <button
-                  onClick={() => { setChatScopeMode('all'); setChatScope(null); setScopeMenuOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'all' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
-                >
-                  <Globe size={12} /> <span className="flex-1">{t('overview.scope.all', 'All memory')}</span>
-                  <span className="text-[9px] text-[#a3a3a3]">{t('overview.scope.allHint', 'everything')}</span>
-                </button>
-                <button
-                  onClick={() => { setChatScopeMode('organization'); setChatScope(null); setScopeMenuOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'organization' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
-                >
-                  <Building2 size={12} /> {t('overview.scope.org', 'Org-wide')}
-                </button>
-                <button
-                  onClick={() => { setChatScopeMode('personal'); setChatScope(null); setScopeMenuOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'personal' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
-                >
-                  <Lock size={12} /> {t('overview.scope.personal', 'My Space')}
-                </button>
-                {((ctxProjects?.length ? ctxProjects : projects) || []).map((pr) => (
-                  <button
-                    key={pr.id}
-                    onClick={() => { setChatScopeMode('project'); setChatScope(pr.id); setScopeMenuOpen(false); }}
-                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'project' && chatScope === pr.id ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
-                  >
-                    <Boxes size={12} /> <span className="truncate">{pr.name}</span>
-                  </button>
-                ))}
-                {((ctxProjects?.length ? ctxProjects : projects) || []).length === 0 && (
-                  <p className="px-2 py-1.5 text-[11px] text-[#a3a3a3]">{t('overview.scope.noProjects', 'No projects yet')}</p>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="relative">
+
+            <span className="flex-1" />
+
+            {/* Push-to-talk mic — tap to record, tap to stop & transcribe */}
             <button
-              type="button"
-              role="switch"
-              aria-checked={useTools}
-              onClick={toggleUseTools}
-              className={`group inline-flex h-9 items-center gap-2 rounded-full border px-2.5 transition-all active:scale-[0.98] ${useTools ? 'border-[#117dff]/30 bg-[#117dff]/[0.08] text-[#075fca]' : 'border-[#e3e0db] bg-white text-[#525252] active:bg-[#f3f1ec]'}`}
-              title={t('overview.chat.toolsHint', 'Allow connected apps for this message')}
+              onClick={dictation.toggle}
+              disabled={dictation.state === 'transcribing' || loading}
+              className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 active:scale-95 transition-all disabled:opacity-40 ${
+                dictation.state === 'recording'
+                  ? 'bg-[#ef4444] text-white animate-pulse'
+                  : 'text-[#525252] active:bg-[#ece9e2]/60'
+              }`}
+              aria-label={dictation.state === 'recording' ? 'Stop recording' : 'Dictate'}
+              title={dictation.error || (dictation.state === 'recording' ? 'Stop & transcribe' : 'Speak')}
             >
-              <span className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${useTools ? 'bg-[#117dff] text-white' : 'bg-[#f3f1ec] text-[#737373]'}`}>
-                <Sparkles size={11} className={useTools ? 'animate-pulse' : ''} />
-              </span>
-              <span className="text-[11px] font-semibold tracking-tight">{t('overview.chat.tools', 'Use tools')}</span>
-              <span className={`h-1.5 w-1.5 rounded-full transition-colors ${useTools ? 'bg-[#10b981]' : 'bg-[#d4d0ca]'}`} />
+              {dictation.state === 'transcribing'
+                ? <Loader2 size={16} className="animate-spin" />
+                : dictation.state === 'recording'
+                  ? <Square size={14} />
+                  : <Mic size={16} />}
             </button>
-            <AnimatePresence>
-              {toolsNotice && (
-                <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="absolute bottom-full left-0 mb-2 z-40 w-64 rounded-[6px] border border-[#e3e0db] bg-white px-2.5 py-2 text-[10px] text-[#525252] shadow-sm">
-                  <span className="mr-1.5 inline-flex rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] text-blue-700">{t('overview.chat.toolsBeta', 'Beta version')}</span>
-                  {t('overview.chat.toolsNotice', 'Allows connected apps for this message; native HIVE-MIND remains available.')}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          <span className="flex-1" />
-          {/* Deep Research — same /v1/proxy/web/research/jobs backend as Web
-              Studio's Research mode. Icon-only to fit the action row. */}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={deepResearchMode}
-            onClick={() => setDeepResearchMode((v) => !v)}
-            className={`w-9 h-9 rounded-full border flex items-center justify-center flex-shrink-0 active:scale-95 transition-all ${deepResearchMode ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-[#e8e5de] text-[#3d3d3a] active:bg-[#f1eee7]'}`}
-            aria-label="Deep Research"
-            title="Deep Research — multi-source report with citations"
-          >
-            <Globe size={16} />
-          </button>
-          {/* Push-to-talk mic — tap to record, tap to stop & transcribe */}
-          <button
-            onClick={dictation.toggle}
-            disabled={dictation.state === 'transcribing' || loading}
-            className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 active:scale-95 transition-all disabled:opacity-40 ${
-              dictation.state === 'recording'
-                ? 'bg-[#ef4444] text-white animate-pulse'
-                : 'text-[#525252] active:bg-[#ece9e2]/60'
-            }`}
-            aria-label={dictation.state === 'recording' ? 'Stop recording' : 'Dictate'}
-            title={dictation.error || (dictation.state === 'recording' ? 'Stop & transcribe' : 'Speak')}
-          >
-            {dictation.state === 'transcribing'
-              ? <Loader2 size={18} className="animate-spin" />
-              : dictation.state === 'recording'
-                ? <Square size={16} />
-                : <Mic size={18} />}
-          </button>
-          <button
-            onClick={() => { if (deepResearchMode) startDeepResearch(input); else send(); }}
-            disabled={(!input.trim() && !loading) || loading}
-            className={`w-10 h-10 rounded-full text-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform disabled:opacity-100 ${deepResearchMode && input.trim() ? 'bg-blue-600' : 'bg-[#1a1a17]'}`}
-            aria-label={input.trim() ? 'Send' : 'Voice'}
-          >
-            {loading ? <Clock size={16} /> : input.trim() ? <Send size={16} /> : <AudioLines size={17} />}
-          </button>
+            <button
+              onClick={() => { if (deepResearchMode) startDeepResearch(input); else send(); }}
+              disabled={(!input.trim() && !loading) || loading}
+              className={`w-9 h-9 rounded-full text-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform disabled:opacity-100 ${deepResearchMode && input.trim() ? 'bg-blue-600' : 'bg-[#1a1a17]'}`}
+              aria-label={input.trim() ? 'Send' : 'Voice'}
+            >
+              {loading ? <Clock size={15} /> : input.trim() ? <Send size={15} /> : <AudioLines size={16} />}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* ── Scope popup window — centered card, closes itself on choice ── */}
+      <AnimatePresence>
+        {scopeMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 px-6"
+            onClick={() => setScopeMenuOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+              className="w-full max-w-[300px] bg-white rounded-[20px] border border-[#e8e5de] shadow-xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 pt-3.5 pb-2.5 border-b border-[#f1eee7]">
+                <h3 className="text-[13.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('overview.scope.title', 'Answer scope')}</h3>
+                <p className="text-[11px] text-[#8a867e] mt-0.5">{t('overview.scope.hint', 'Answer scope: all, org-wide, my space, or one project')}</p>
+              </div>
+              <div className="p-1.5 max-h-[46vh] overflow-y-auto">
+                {[
+                  { mode: 'all', icon: Globe, label: t('overview.scope.all', 'All memory'), hint: t('overview.scope.allHint', 'everything') },
+                  { mode: 'organization', icon: Building2, label: t('overview.scope.org', 'Org-wide') },
+                  { mode: 'personal', icon: Lock, label: t('overview.scope.personal', 'My Space') },
+                ].map(({ mode, icon: Icon, label, hint }) => {
+                  const active = chatScopeMode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      onClick={() => { setChatScopeMode(mode); setChatScope(null); setScopeMenuOpen(false); }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[12px] text-[13px] text-left ${active ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
+                    >
+                      <Icon size={14} className={active ? 'text-[#117dff]' : 'text-[#8a867e]'} />
+                      <span className="flex-1">{label}</span>
+                      {hint && <span className="text-[10px] text-[#a3a3a3]">{hint}</span>}
+                      {active && <Check size={13} className="text-[#117dff]" />}
+                    </button>
+                  );
+                })}
+                {((ctxProjects?.length ? ctxProjects : projects) || []).map((pr) => {
+                  const active = chatScopeMode === 'project' && chatScope === pr.id;
+                  return (
+                    <button
+                      key={pr.id}
+                      onClick={() => { setChatScopeMode('project'); setChatScope(pr.id); setScopeMenuOpen(false); }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[12px] text-[13px] text-left ${active ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
+                    >
+                      <Boxes size={14} className={active ? 'text-[#117dff]' : 'text-[#8a867e]'} />
+                      <span className="flex-1 truncate">{pr.name}</span>
+                      {active && <Check size={13} className="text-[#117dff]" />}
+                    </button>
+                  );
+                })}
+                {((ctxProjects?.length ? ctxProjects : projects) || []).length === 0 && (
+                  <p className="px-3 py-2.5 text-[11px] text-[#a3a3a3]">{t('overview.scope.noProjects', 'No projects yet')}</p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── "+" slide-up sheet — attach, modes, meeting notes, connectors ── */}
+      <AnimatePresence>
+        {plusSheetOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-end bg-black/35"
+            onClick={() => setPlusSheetOpen(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 360, damping: 34 }}
+              className="w-full bg-white rounded-t-[24px] border-t border-[#e8e5de] px-4 pt-2.5"
+              style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 18px)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-8 h-1 rounded-full bg-[#d5d1c8] mx-auto mb-3" />
+              <h3 className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mb-2.5">Add to this chat</h3>
+
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <button
+                  onClick={() => { setPlusSheetOpen(false); handlePickFiles(); }}
+                  className="flex flex-col items-center gap-1.5 py-3 rounded-[14px] bg-[#faf9f4] border border-[#e8e5de] active:bg-[#f1eee7]"
+                >
+                  <ImageIcon size={17} className="text-[#0a0a0a]" />
+                  <span className="text-[10px] font-semibold text-[#525252]">Photo</span>
+                </button>
+                <button
+                  onClick={() => { setPlusSheetOpen(false); handlePickFiles(); }}
+                  className="flex flex-col items-center gap-1.5 py-3 rounded-[14px] bg-[#faf9f4] border border-[#e8e5de] active:bg-[#f1eee7]"
+                >
+                  <Camera size={17} className="text-[#0a0a0a]" />
+                  <span className="text-[10px] font-semibold text-[#525252]">Camera</span>
+                </button>
+                <button
+                  onClick={() => { setPlusSheetOpen(false); handlePickFiles(); }}
+                  className="flex flex-col items-center gap-1.5 py-3 rounded-[14px] bg-[#faf9f4] border border-[#e8e5de] active:bg-[#f1eee7]"
+                >
+                  <FileText size={17} className="text-[#0a0a0a]" />
+                  <span className="text-[10px] font-semibold text-[#525252]">File</span>
+                </button>
+              </div>
+
+              <p className="text-[9.5px] font-semibold uppercase tracking-wide text-[#a3a3a3] px-1 mb-1">Modes</p>
+              <button
+                onClick={() => { setDeepResearchMode(false); setPlusSheetOpen(false); }}
+                className="w-full flex items-center gap-2.5 px-2 py-2 rounded-[12px] active:bg-[#faf9f4]"
+              >
+                <span className="w-7 h-7 rounded-[9px] bg-[#117dff]/10 text-[#117dff] flex items-center justify-center flex-shrink-0"><Search size={14} /></span>
+                <span className="flex-1 min-w-0 text-left">
+                  <span className="block text-[12.5px] font-semibold text-[#0a0a0a]">Search</span>
+                  <span className="block text-[10.5px] text-[#8a867e]">Fast recall over your memory</span>
+                </span>
+                {!deepResearchMode && <Check size={14} className="text-[#117dff] flex-shrink-0" />}
+              </button>
+              <button
+                onClick={() => { setDeepResearchMode(true); setPlusSheetOpen(false); requestAnimationFrame(() => inputRef.current?.focus()); }}
+                className="w-full flex items-center gap-2.5 px-2 py-2 rounded-[12px] active:bg-[#faf9f4]"
+              >
+                <span className="w-7 h-7 rounded-[9px] bg-[#117dff]/10 text-[#117dff] flex items-center justify-center flex-shrink-0"><Globe size={14} /></span>
+                <span className="flex-1 min-w-0 text-left">
+                  <span className="block text-[12.5px] font-semibold text-[#0a0a0a]">Deep Research</span>
+                  <span className="block text-[10.5px] text-[#8a867e]">Multi-source report, runs in background</span>
+                </span>
+                {deepResearchMode && <Check size={14} className="text-[#117dff] flex-shrink-0" />}
+              </button>
+
+              <div className="h-px bg-[#f1eee7] my-2" />
+
+              <p className="text-[9.5px] font-semibold uppercase tracking-wide text-[#a3a3a3] px-1 mb-1">Add</p>
+              {qrec.supported && !qrec.active && (
+                <button
+                  onClick={() => { setPlusSheetOpen(false); qrec.openConfig(); }}
+                  className="w-full flex items-center gap-2.5 px-2 py-2 rounded-[12px] active:bg-[#faf9f4]"
+                >
+                  <span className="w-7 h-7 rounded-[9px] bg-[#fde8ea] text-[#e0455a] flex items-center justify-center flex-shrink-0"><Mic size={14} /></span>
+                  <span className="flex-1 min-w-0 text-left">
+                    <span className="block text-[12.5px] font-semibold text-[#0a0a0a]">Start taking meeting notes</span>
+                    <span className="block text-[10.5px] text-[#8a867e]">Triggers AI Meeting Notes for this call</span>
+                  </span>
+                </button>
+              )}
+              <button
+                onClick={() => { setPlusSheetOpen(false); window.location.href = '/hivemind/m/connectors'; }}
+                className="w-full flex items-center gap-2.5 px-2 py-2 rounded-[12px] active:bg-[#faf9f4]"
+              >
+                <span className="w-7 h-7 rounded-[9px] bg-[#117dff]/10 text-[#117dff] flex items-center justify-center flex-shrink-0"><Cable size={14} /></span>
+                <span className="flex-1 min-w-0 text-left">
+                  <span className="block text-[12.5px] font-semibold text-[#0a0a0a]">Connectors &amp; sources</span>
+                  <span className="block text-[10.5px] text-[#8a867e]">Gmail, GitHub, Calendar, Sheets…</span>
+                </span>
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <UploadScopeModal
         open={scopeModalOpen}
