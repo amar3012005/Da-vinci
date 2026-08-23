@@ -48,6 +48,8 @@ import {
   FileText,
   Search,
   Check,
+  LayoutGrid,
+  ChevronRight,
 } from 'lucide-react';
 // Chat turn presentation lives in shared/claude-chat (one source of truth for
 // mobile + desktop Overview + sidebar).
@@ -1114,9 +1116,33 @@ export default function TalkToHiveMobile() {
             Clear session
           </button>
         </div>
-        {/* Compact floating input card: input row (with the tools extension
-            badge riding its top-right corner), then one slim action row. */}
-        <div className="bg-white border border-[#e8e5db] rounded-[24px] shadow-[0_2px_14px_rgba(0,0,0,0.06)] px-3.5 pt-2.5 pb-2 focus-within:border-[#d5d1c8]">
+        {/* Compact floating input card. "Use tools" rides ABOVE the card as a
+            browser-extension-style pill overlapping its top-right corner —
+            not embedded in the input row. */}
+        <div className="relative bg-white border border-[#e8e5db] rounded-[24px] shadow-[0_2px_14px_rgba(0,0,0,0.06)] px-3.5 pt-2.5 pb-2 focus-within:border-[#d5d1c8]">
+          <div className="absolute -top-3.5 right-3 z-20">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={useTools}
+              onClick={toggleUseTools}
+              className={`inline-flex items-center gap-1.5 h-7 pl-2 pr-2.5 rounded-full shadow-[0_3px_10px_rgba(10,10,8,0.22)] transition-colors ${useTools ? 'bg-[#0a0a0a] text-white' : 'bg-[#0a0a0a] text-white/90'}`}
+              aria-label={t('overview.chat.tools', 'Use tools')}
+              title={t('overview.chat.toolsHint', 'Allow connected apps for this message')}
+            >
+              <LayoutGrid size={11} className={useTools ? 'text-[#4ade80]' : 'text-white/60'} />
+              <span className="text-[10.5px] font-semibold tracking-tight">{t('overview.chat.tools', 'Use tools')}</span>
+              <ChevronRight size={11} className="text-white/50" />
+            </button>
+            <AnimatePresence>
+              {toolsNotice && (
+                <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="absolute top-full right-0 mt-2 z-40 w-56 rounded-[6px] border border-[#e3e0db] bg-white px-2.5 py-2 text-[10px] text-[#525252] shadow-lg">
+                  <span className="mr-1.5 inline-flex rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] text-blue-700">{t('overview.chat.toolsBeta', 'Beta version')}</span>
+                  {t('overview.chat.toolsNotice', 'Allows connected apps for this message; native HIVE-MIND remains available.')}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -1141,55 +1167,28 @@ export default function TalkToHiveMobile() {
             </div>
           )}
 
-          {/* Input row — the "Use tools" toggle is now a small extension badge
-              riding the field's top-right corner, not a full pill in the
-              action row below (see next-gen composer mockup). */}
-          <div className="relative flex items-start gap-1.5">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => absorbToolkitMentions(e.target.value)}
-              onKeyDown={(e) => {
-                // iOS/IME emits Enter while it is still composing a character.
-                // Sending at that point causes a lost character and keyboard jump.
-                if (e.nativeEvent.isComposing || e.keyCode === 229) return;
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  if (deepResearchMode) startDeepResearch(input);
-                  else send();
-                }
-              }}
-              rows={1}
-              enterKeyHint="send"
-              autoCapitalize="sentences"
-              autoCorrect="on"
-              placeholder={deepResearchMode ? 'Research the web…' : t('overview.chatWith', 'Chat with HIVE…')}
-              className="flex-1 min-w-0 resize-none border-none outline-none bg-transparent text-[16px] py-0.5 pr-1 placeholder:text-[#a8a49c] max-h-[120px] leading-snug"
-              style={{ fontFamily: 'inherit' }}
-            />
-            <div className="relative flex-shrink-0 mt-0.5">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={useTools}
-                onClick={toggleUseTools}
-                className={`relative w-6 h-6 rounded-[7px] flex items-center justify-center transition-colors ${useTools ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#a3a3a3] active:bg-[#f3f1ec]'}`}
-                aria-label={t('overview.chat.tools', 'Use tools')}
-                title={t('overview.chat.toolsHint', 'Allow connected apps for this message')}
-              >
-                <Sparkles size={13} className={useTools ? 'animate-pulse' : ''} />
-                <span className={`absolute top-0.5 right-0.5 w-[5px] h-[5px] rounded-full bg-[#10b981] border border-white transition-opacity ${useTools ? 'opacity-100' : 'opacity-0'}`} />
-              </button>
-              <AnimatePresence>
-                {toolsNotice && (
-                  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="absolute top-full right-0 mt-2 z-40 w-56 rounded-[6px] border border-[#e3e0db] bg-white px-2.5 py-2 text-[10px] text-[#525252] shadow-lg">
-                    <span className="mr-1.5 inline-flex rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] text-blue-700">{t('overview.chat.toolsBeta', 'Beta version')}</span>
-                    {t('overview.chat.toolsNotice', 'Allows connected apps for this message; native HIVE-MIND remains available.')}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => absorbToolkitMentions(e.target.value)}
+            onKeyDown={(e) => {
+              // iOS/IME emits Enter while it is still composing a character.
+              // Sending at that point causes a lost character and keyboard jump.
+              if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (deepResearchMode) startDeepResearch(input);
+                else send();
+              }
+            }}
+            rows={1}
+            enterKeyHint="send"
+            autoCapitalize="sentences"
+            autoCorrect="on"
+            placeholder={deepResearchMode ? 'Research the web…' : t('overview.chatWith', 'Ask your brain anything…')}
+            className="w-full resize-none border-none outline-none bg-transparent text-[16px] py-0.5 placeholder:text-[#a8a49c] max-h-[120px] leading-snug"
+            style={{ fontFamily: 'inherit' }}
+          />
 
           {/* Action row: + · scope chip · spacer · mic · send */}
           <div className="flex items-center gap-1.5 mt-1.5">

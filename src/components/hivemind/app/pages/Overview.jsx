@@ -13,6 +13,7 @@ import {
   Building2,
   Cable,
   CheckCircle2,
+  ChevronUp,
   Chrome,
   Eye,
   FileText,
@@ -1182,7 +1183,7 @@ function OverviewChat({ inputRef }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={deepResearchMode ? t('overview.chat.researchPlaceholder', 'Research the web…  e.g. "compare vector DBs for 1M-row RAG"') : t('overview.chat.placeholder', 'Do anything with HIVE…')}
+          placeholder={deepResearchMode ? t('overview.chat.researchPlaceholder', 'Research the web…  e.g. "compare vector DBs for 1M-row RAG"') : t('overview.chat.placeholder', 'Ask your brain anything…')}
           className="w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[13px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none"
         />
         <div className="flex items-center justify-between px-3 pb-2.5">
@@ -1354,26 +1355,55 @@ function OverviewChat({ inputRef }) {
 // own banner (localStorage flag), so closing it is permanent per browser.
 const MOBILE_QR_DISMISS_KEY = 'hive:mobile-qr-dismissed';
 
-function MobileQrCard({ onOpen, onDismiss }) {
+// Single bottom-right widget: collapsed pill by default, and the QR code
+// slides UP out of the same card (in place) when tapped — no separate modal.
+function MobileQrCorner({ open, onToggle, onDismiss }) {
+  const qrValue = `${typeof window !== 'undefined' ? window.location.origin : 'https://hivemind.davinciai.eu'}/hivemind/m/chat?from=dashboard`;
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 12, scale: 0.98 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-      className="fixed bottom-5 right-5 z-40 w-[280px] bg-white border border-[#e3e0db] rounded-[14px] shadow-[0_16px_40px_rgba(20,20,15,0.12)] p-3.5"
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="fixed bottom-5 right-5 z-40 w-[280px] bg-white border border-[#e3e0db] rounded-[14px] shadow-[0_16px_40px_rgba(20,20,15,0.12)] overflow-hidden"
     >
       <button
         type="button"
         onClick={onDismiss}
         aria-label="Dismiss"
-        className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#0a0a0a] text-white flex items-center justify-center hover:bg-[#262626] transition-colors"
+        className="absolute -top-2 -right-2 z-10 w-6 h-6 rounded-full bg-[#0a0a0a] text-white flex items-center justify-center hover:bg-[#262626] transition-colors"
       >
         <X size={12} />
       </button>
-      <button type="button" onClick={onOpen} className="w-full text-left flex items-center gap-3 group">
+
+      {/* QR panel — slides up above the label row when open, folds away when not. */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="qr"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            className="overflow-hidden border-b border-[#f1eee7]"
+          >
+            <div className="px-4 pt-4 pb-4 flex flex-col items-center text-center">
+              <div className="w-[132px] h-[132px] bg-white border border-[#e3e0db] rounded-[10px] p-2 flex items-center justify-center">
+                <QRCodeSVG value={qrValue} size={112} level="M" marginSize={0} bgColor="#ffffff" fgColor="#0a0a0a" />
+              </div>
+              <p className="mt-3 text-[11px] text-[#525252] leading-relaxed max-w-[220px]">
+                Scan from mobile to carry your HIVEMIND in your pocket.
+              </p>
+              <p className="mt-1 text-[9.5px] font-mono text-[#a3a3a3]">Same memory · same organization</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <button type="button" onClick={onToggle} className="w-full text-left flex items-center gap-3 p-3.5 group">
         <span className="w-11 h-11 rounded-[10px] bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center flex-shrink-0">
-          <Smartphone size={19} className="text-[#117dff]" />
+          {open ? <QrCode size={19} className="text-[#117dff]" /> : <Smartphone size={19} className="text-[#117dff]" />}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[11px] text-[#a3a3a3]">For more compatibility</span>
@@ -1381,51 +1411,8 @@ function MobileQrCard({ onOpen, onDismiss }) {
             Use HIVEMIND Mobile
           </span>
         </span>
+        <ChevronUp size={14} className={`text-[#a3a3a3] flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-    </motion.div>
-  );
-}
-
-function MobileQrModal({ onClose }) {
-  const qrValue = `${typeof window !== 'undefined' ? window.location.origin : 'https://hivemind.davinciai.eu'}/hivemind/m/chat?from=dashboard`;
-  return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-[#1a1814]/45 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }}
-        transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-        className="bg-white rounded-none w-full max-w-[380px] border border-[#e3e0db] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.25)] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="px-6 py-4 flex items-center justify-between border-b border-[#e3e0db]">
-          <div className="flex items-center gap-3">
-            <span className="w-9 h-9 rounded-none flex items-center justify-center bg-[#117dff]/10 border border-[#117dff]/20 text-[#117dff]">
-              <QrCode size={17} />
-            </span>
-            <h3 className="text-[14.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">HIVEMIND in your pocket</h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="w-9 h-9 rounded-none text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#faf9f4] flex items-center justify-center"
-          >
-            <X size={16} />
-          </button>
-        </header>
-        <div className="px-6 py-6 flex flex-col items-center text-center">
-          <p className="text-[13px] text-[#525252] leading-relaxed mb-5 max-w-[280px]">
-            Scan the QR code from mobile to carry your HIVEMIND in your pocket.
-          </p>
-          <div className="w-[176px] h-[176px] bg-white border border-[#e3e0db] rounded-none p-2.5 flex items-center justify-center">
-            <QRCodeSVG value={qrValue} size={152} level="M" marginSize={0} bgColor="#ffffff" fgColor="#0a0a0a" />
-          </div>
-          <p className="mt-4 text-[10.5px] font-mono text-[#a3a3a3]">Same memory · same organization · one scan away</p>
-        </div>
-      </motion.div>
     </motion.div>
   );
 }
@@ -1439,12 +1426,14 @@ export default function Overview() {
   const tour = useOverviewTour();
   const chatInputRef = useRef(null);
 
-  // Mobile QR promo — corner card + popup. Dismissal is permanent per browser.
+  // Mobile QR promo — single bottom-right corner widget; tapping it slides
+  // the QR up inside the same card instead of opening a separate popup.
+  // Dismissal is permanent per browser.
   const [qrCardDismissed, setQrCardDismissed] = useState(() => {
     if (typeof window === 'undefined') return true;
     try { return window.localStorage.getItem(MOBILE_QR_DISMISS_KEY) === '1'; } catch { return false; }
   });
-  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
   const dismissQrCard = useCallback(() => {
     setQrCardDismissed(true);
     try { window.localStorage.setItem(MOBILE_QR_DISMISS_KEY, '1'); } catch { /* storage blocked */ }
@@ -1670,15 +1659,14 @@ export default function Overview() {
       {/* The HIVE chat — the Overview centerpiece */}
       <OverviewChat inputRef={chatInputRef} />
 
-      {/* Mobile QR promo — corner card + popup, desktop-only (mobile visitors
-          never reach this page — see the redirect effect above). */}
+      {/* Mobile QR promo — one bottom-right corner widget, desktop-only
+          (mobile visitors never reach this page — see the redirect effect
+          above). Tapping it slides the QR up inside the same card instead
+          of opening a separate popup. */}
       <AnimatePresence>
-        {!qrCardDismissed && !qrModalOpen && (
-          <MobileQrCard onOpen={() => setQrModalOpen(true)} onDismiss={dismissQrCard} />
+        {!qrCardDismissed && (
+          <MobileQrCorner open={qrOpen} onToggle={() => setQrOpen((v) => !v)} onDismiss={dismissQrCard} />
         )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {qrModalOpen && <MobileQrModal onClose={() => setQrModalOpen(false)} />}
       </AnimatePresence>
     </div>
   );
