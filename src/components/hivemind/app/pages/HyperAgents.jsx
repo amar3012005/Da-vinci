@@ -4601,6 +4601,23 @@ async function waitForLeadReply(roomId, turnId, slug, { timeoutMs = 60000, inter
   throw new Error('No response — the room turn timed out.');
 }
 
+// Some agents open a reply with a self-introduction line like
+// "**Maya Chen – Industry Strategy Lead**" — redundant with (and sometimes
+// inconsistent with) the real name/role we already render above the bubble.
+// Drop it when it's clearly that: a lone bold line whose text contains the
+// agent's own first name.
+function stripSelfHeader(content, agentName) {
+  if (!content) return content;
+  const firstName = String(agentName || '').trim().split(/\s+/)[0]?.toLowerCase();
+  const lines = String(content).split('\n');
+  const first = (lines[0] || '').trim();
+  const isLoneBoldLine = /^\*\*[^*]+\*\*$/.test(first);
+  if (isLoneBoldLine && firstName && first.toLowerCase().includes(firstName)) {
+    return lines.slice(1).join('\n').replace(/^\s+/, '');
+  }
+  return content;
+}
+
 function AgentDmModal({ agent, roomId, onClose }) {
   const { t } = useTranslation('dashboard');
   // Stable per-user-agent conversation id. Backend uses this to keep
@@ -4729,11 +4746,23 @@ function AgentDmModal({ agent, roomId, onClose }) {
                   </div>
                 </div>
               )
+              // Agent turn — same treatment as Overview.jsx's AiBubble: no box,
+              // markdown rendered straight onto the page background. The
+              // avatar/name/role line above it is the ONE source of truth for
+              // who's answering — stripSelfHeader() drops any redundant
+              // "**Name – Title**" line the model may have prepended, so it
+              // can never show a different role than the header above it.
               : (
-                <div key={i} className="flex gap-2">
-                  <AgentAvatar agent={agent} size={28} />
-                  <div className="max-w-[78%] bg-white border border-[#e3e0db] rounded-2xl rounded-tl-md px-3 py-2 text-[13px] text-[#0a0a0a] whitespace-pre-wrap break-words">
-                    {m.content}
+                <div key={i} className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <AgentAvatar agent={agent} size={22} />
+                    <span className="text-[12.5px] font-semibold text-[#0a0a0a]">{agent.name || agent.slug}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono" style={{ color: meta.color }}>
+                      <Icon size={9} /> {meta.label}
+                    </span>
+                  </div>
+                  <div className="pl-[30px] text-[13px] leading-relaxed text-[#0a0a0a] break-words">
+                    {renderMarkdownLite(stripSelfHeader(m.content, agent.name || agent.slug))}
                   </div>
                 </div>
               )
