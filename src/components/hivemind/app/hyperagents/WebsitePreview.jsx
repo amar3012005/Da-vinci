@@ -90,13 +90,21 @@ function WebsiteAnalysisParticles() {
   return <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden="true" />;
 }
 
+// Real captures are full-page browser screenshots (a tall, ~16:10-and-up
+// viewport ratio) — object-cover into a caller-fixed pixel height (the old
+// `h-[180px]`) crops mid-row and reads as a broken/misaligned capture.
+// object-contain inside a proper aspect box shows the WHOLE capture at its
+// real proportions, at any column width, with no crop artifacts.
+const PREVIEW_ASPECT = 'aspect-[16/10]';
+
 export default function WebsitePreview({ image, source, website, company, tagline, loading = false, compact = false, className = '' }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [image]);
   const src = useMemo(() => previewSrc(image), [image]);
   const domain = websiteLabel(website);
-  const content = loading && (!src || failed) ? (
-    <div className={`relative w-full ${compact ? 'h-full min-h-0' : 'aspect-video'} overflow-hidden bg-[#eef0f2]`}>
+  const hasRealImage = Boolean(src && !failed);
+  const content = loading && !hasRealImage ? (
+    <div className={`relative w-full ${compact ? PREVIEW_ASPECT : 'aspect-video'} overflow-hidden bg-[#eef0f2]`}>
       <WebsiteAnalysisParticles />
       <div className="absolute inset-0 grid place-items-center">
         <span className="rounded-[6px] border border-[#cfd3d7] bg-white/85 px-2.5 py-1 text-[9.5px] font-mono uppercase text-[#52565a] backdrop-blur-sm">
@@ -104,16 +112,16 @@ export default function WebsitePreview({ image, source, website, company, taglin
         </span>
       </div>
     </div>
-  ) : src && !failed ? (
+  ) : hasRealImage ? (
     <img
       src={src}
       alt={`${company || domain || 'Company'} website preview`}
-      className={`w-full ${compact ? 'h-full min-h-0' : 'aspect-video'} ${source === 'official-site-image' ? 'object-contain bg-white p-3' : 'object-cover object-top bg-[#f4f6f8]'}`}
+      className={`w-full ${compact ? PREVIEW_ASPECT : 'aspect-video'} object-contain bg-white`}
       loading="lazy"
       onError={() => setFailed(true)}
     />
   ) : (
-    <div className={`relative w-full ${compact ? 'h-full min-h-0' : 'aspect-video'} overflow-hidden bg-[#f4f6f8] border-b border-[#d9dee5] px-5 py-4 flex flex-col justify-between`}>
+    <div className={`relative w-full ${compact ? PREVIEW_ASPECT : 'aspect-video'} overflow-hidden bg-[#f4f6f8] px-5 py-4 flex flex-col justify-between`}>
       <div className="relative z-[1] flex items-start justify-between gap-3">
         <div className="w-9 h-9 rounded-[8px] bg-[#0a0a0a] text-white grid place-items-center">
           <Globe size={17} />
@@ -129,12 +137,27 @@ export default function WebsitePreview({ image, source, website, company, taglin
     </div>
   );
 
+  // Mini browser-chrome header — traffic lights + address bar — so the
+  // capture below reads unambiguously as "a real page at its real
+  // resolution", the way the app's own CodeBlock frames a terminal.
+  const chrome = (
+    <div className="h-7 px-2.5 flex items-center gap-1.5 bg-[#f4f2ed] border-b border-[#e3e0db] shrink-0">
+      <span className="w-2 h-2 rounded-full bg-[#FF5F57]" />
+      <span className="w-2 h-2 rounded-full bg-[#FEBC2E]" />
+      <span className="w-2 h-2 rounded-full bg-[#28C840]" />
+      <span className="ml-1.5 flex-1 min-w-0 h-4 rounded-[4px] bg-white border border-[#e3e0db] px-2 flex items-center">
+        <span className="text-[9px] font-mono text-[#a3a3a3] truncate">{domain || websiteHref(website)}</span>
+      </span>
+    </div>
+  );
+
   const frame = `overflow-hidden rounded-[8px] border border-[#d9dee5] bg-white transition-colors ${compact ? 'flex flex-col' : 'block'} ${className}`;
   if (!website) return <div className={frame}>{content}</div>;
   return (
     <a href={websiteHref(website)} target="_blank" rel="noreferrer" className={`${frame} group hover:border-[#0a0a0a]`}>
-      <div className={compact ? 'min-h-0 flex-1' : ''}>{content}</div>
-      <div className="h-8 px-3 flex items-center gap-2 text-[10.5px] text-[#525252] bg-white border-t border-[#ece9e3]">
+      {chrome}
+      <div className={compact ? 'min-h-0' : ''}>{content}</div>
+      <div className="h-8 px-3 flex items-center gap-2 text-[10.5px] text-[#525252] bg-white border-t border-[#ece9e3] mt-auto">
         <span className="font-mono truncate">{domain}</span>
         <ExternalLink size={11} className="ml-auto shrink-0 text-[#a3a3a3] group-hover:text-[#0a0a0a]" />
       </div>

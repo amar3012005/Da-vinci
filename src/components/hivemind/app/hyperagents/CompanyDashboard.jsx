@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import HyperOnboarding from './HyperOnboarding';
 import WebsitePreview from './WebsitePreview';
+import AgentAvatar from './AgentAvatar';
+import { LANE_META } from './rooms/shared';
 
 /**
  * CompanyDashboard — the HyperAgents HERO page (Polsia-style operating view).
@@ -72,6 +74,79 @@ function socialUsername(url) {
   } catch { return ''; }
 }
 
+// Same normalization AgentAvatar.jsx uses internally to pick a ring color —
+// duplicated here (small, static) so the Team card's role pill and the
+// profile popup can show the matching lane color/icon without reaching into
+// that module's private helper.
+const ARCHETYPE_TO_LANE = {
+  strategist: 'Strategist', coordinator: 'Strategist',
+  builder: 'Builder',
+  skeptic: 'Skeptic',
+  investigator: 'Researcher', researcher: 'Researcher',
+  generalist: 'Communicator', communicator: 'Communicator',
+};
+function laneFor(member) {
+  const raw = String(member?.roleArchetype || 'Communicator').trim();
+  if (LANE_META[raw]) return raw;
+  return ARCHETYPE_TO_LANE[raw.toLowerCase()] || 'Communicator';
+}
+// What each role actually does in the HyperAgents process — real, not a
+// fabricated per-person bio (the dashboard's employee record doesn't carry
+// a persona contract, only id/name/roleArchetype/status).
+const LANE_BLURB = {
+  Strategist: 'Sets direction — decides what the team works on next and why.',
+  Builder: 'Ships the plan — turns decisions into the actual work product.',
+  Skeptic: 'Pressure-tests claims and flags risk before it becomes a mistake.',
+  Researcher: 'Gathers and verifies evidence before decisions get made.',
+  Communicator: 'Keeps the answer legible and usable by the rest of the team.',
+};
+
+function EmployeeProfileModal({ member, onClose, onShowRoster }) {
+  const { t } = useTranslation('dashboard');
+  if (!member) return null;
+  const lane = laneFor(member);
+  const meta = LANE_META[lane] || LANE_META.Communicator;
+  const Icon = meta.icon;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="bg-white border border-[#e3e0db] rounded-2xl max-w-[380px] w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="h-16" style={{ background: `linear-gradient(135deg, ${meta.color}22, ${meta.color}08)` }} />
+        <div className="px-5 pb-5 -mt-10">
+          <div className="flex items-end justify-between">
+            <span className="rounded-2xl border-4 border-white shadow-sm" style={{ background: '#fff' }}>
+              <AgentAvatar agent={{ ...member, roleArchetype: lane }} size={72} />
+            </span>
+            <button onClick={onClose} className="mb-1 text-[#a3a3a3] hover:text-[#0a0a0a] p-1" aria-label={t('hyperDash.close', 'Close')}>
+              <X size={16} />
+            </button>
+          </div>
+          <h3 className="mt-3 text-[17px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{member.name}</h3>
+          <span className="inline-flex items-center gap-1.5 mt-1 text-[11.5px] font-mono px-2 py-0.5 rounded-full" style={{ background: meta.bg, color: meta.color }}>
+            <Icon size={12} /> {lane}
+          </span>
+          {member.status ? (
+            <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-mono uppercase text-[#a3a3a3]">
+              <span className={`w-1.5 h-1.5 rounded-full ${member.status === 'active' ? 'bg-emerald-500' : 'bg-[#d4d0ca]'}`} />
+              {member.status}
+            </span>
+          ) : null}
+          <p className="mt-3 text-[12.5px] text-[#525252] leading-relaxed">
+            {LANE_BLURB[lane]}
+          </p>
+          {onShowRoster ? (
+            <button
+              onClick={() => { onClose(); onShowRoster(); }}
+              className="mt-4 w-full rounded-lg border border-[#e3e0db] hover:border-[#0a0a0a] py-2 text-[12px] font-semibold text-[#0a0a0a] transition-colors"
+            >
+              {t('hyperDash.viewInRoster', 'View in full roster')}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SectionTitle({ children }) {
   return (
     <div className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] border-b border-[#0a0a0a] pb-1.5 mb-3">
@@ -96,6 +171,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   const [loading, setLoading] = useState(true);
   const [openingTask, setOpeningTask] = useState(null);
   const [confirmRerun, setConfirmRerun] = useState(false);
+  const [viewingProfile, setViewingProfile] = useState(null);
   const [resetting, setResetting] = useState(false);
   const [editingContacts, setEditingContacts] = useState(false);
   const [savingContacts, setSavingContacts] = useState(false);
@@ -356,14 +432,28 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
 
             <div className="mt-5">
               <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#a3a3a3] uppercase mb-2"><Users size={11} /> {t('hyperDash.team', 'Team')}</div>
-              <div className="space-y-2">
-                {employees.slice(0, 6).map((member) => (
-                  <div key={member.id} className="flex items-center gap-2 text-[12px] min-w-0">
-                    <span className="w-6 h-6 rounded-lg bg-violet-500/10 text-violet-700 flex items-center justify-center text-[10px] font-bold shrink-0">{(member.name || '?')[0]}</span>
-                    <span className="text-[#0a0a0a] font-medium shrink-0">{member.name}</span>
-                    {member.roleArchetype ? <span className="text-[#a3a3a3] text-[11px] truncate">{member.roleArchetype}</span> : null}
-                  </div>
-                ))}
+              <div className="space-y-1.5">
+                {employees.slice(0, 6).map((member) => {
+                  const lane = laneFor(member);
+                  const meta = LANE_META[lane] || LANE_META.Communicator;
+                  return (
+                    <div key={member.id} className="flex items-center gap-2 text-[12px] min-w-0 group">
+                      <AgentAvatar agent={{ ...member, roleArchetype: lane }} size={26} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[#0a0a0a] font-medium truncate">{member.name}</div>
+                        <div className="flex items-center gap-1 text-[10px] font-mono truncate" style={{ color: meta.color }}>
+                          <meta.icon size={9} /> {lane}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setViewingProfile(member)}
+                        className="shrink-0 text-[10px] font-semibold text-[#a3a3a3] group-hover:text-[#117dff] px-2 py-1 rounded-full border border-transparent group-hover:border-[#117dff]/30 transition-colors"
+                      >
+                        {t('hyperDash.viewProfile', 'View profile')}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -379,7 +469,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
                 tagline={p.tagline}
                 loading={Boolean(c.screenshot_pending)}
                 compact
-                className="h-[180px] 2xl:h-[250px]"
+                className="max-h-[280px]"
               />
             </div>
           ) : null}
@@ -498,6 +588,14 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
           </div>
         </section>
       </div>
+
+      {viewingProfile && (
+        <EmployeeProfileModal
+          member={viewingProfile}
+          onClose={() => setViewingProfile(null)}
+          onShowRoster={onShowRoster}
+        />
+      )}
 
       {confirmRerun && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !resetting && setConfirmRerun(false)}>
