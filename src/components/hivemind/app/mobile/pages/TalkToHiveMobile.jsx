@@ -49,7 +49,6 @@ import {
   Search,
   Check,
   LayoutGrid,
-  ChevronRight,
 } from 'lucide-react';
 // Chat turn presentation lives in shared/claude-chat (one source of truth for
 // mobile + desktop Overview + sidebar).
@@ -1111,30 +1110,22 @@ export default function TalkToHiveMobile() {
 
       {/* ── Composer ───────────────────────────────── */}
       <div className="flex-shrink-0 px-1.5 pt-2 bg-[#faf9f4]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
-        <div className="flex justify-end px-3 pb-1.5">
-          <button type="button" onClick={clearChat} className="text-[11px] font-medium text-[#737373] active:text-[#0a0a0a]">
-            Clear session
-          </button>
-        </div>
-        {/* Compact floating input card. "Use tools" rides ABOVE the card as a
-            browser-extension-style pill overlapping its top-right corner —
-            not embedded in the input row. */}
-        <div className="relative bg-white border border-[#e8e5db] rounded-[24px] shadow-[0_2px_14px_rgba(0,0,0,0.06)] px-3.5 pt-2.5 pb-2 focus-within:border-[#d5d1c8]">
-          {/* Left side — "Clear session" sits top-right above the card, so the
-              tools extension pill goes top-LEFT to avoid overlapping it. */}
-          <div className="absolute -top-3.5 left-3 z-20">
+        {/* Toolbar row above the card — "Use tools" chip (left) sits in the
+            same row as "Clear session" (right) instead of floating over the
+            card's rounded corner, which read as an odd, disconnected sticker. */}
+        <div className="flex items-center justify-between px-2 pb-1.5">
+          <div className="relative">
             <button
               type="button"
               role="switch"
               aria-checked={useTools}
               onClick={toggleUseTools}
-              className={`inline-flex items-center gap-1.5 h-7 pl-2 pr-2.5 rounded-full shadow-[0_3px_10px_rgba(10,10,8,0.22)] transition-colors ${useTools ? 'bg-[#0a0a0a] text-white' : 'bg-[#0a0a0a] text-white/90'}`}
+              className={`inline-flex items-center gap-1.5 h-6 pl-1.5 pr-2 rounded-full border transition-colors ${useTools ? 'bg-[#0a0a0a] border-[#0a0a0a] text-white' : 'bg-white border-[#e3e0db] text-[#6b6b66] active:bg-[#f3f1ec]'}`}
               aria-label={t('overview.chat.tools', 'Use tools')}
               title={t('overview.chat.toolsHint', 'Allow connected apps for this message')}
             >
-              <LayoutGrid size={11} className={useTools ? 'text-[#4ade80]' : 'text-white/60'} />
+              <LayoutGrid size={11} className={useTools ? 'text-[#4ade80]' : 'text-[#a3a3a3]'} />
               <span className="text-[10.5px] font-semibold tracking-tight">{t('overview.chat.tools', 'Use tools')}</span>
-              <ChevronRight size={11} className="text-white/50" />
             </button>
             <AnimatePresence>
               {toolsNotice && (
@@ -1145,6 +1136,11 @@ export default function TalkToHiveMobile() {
               )}
             </AnimatePresence>
           </div>
+          <button type="button" onClick={clearChat} className="text-[11px] font-medium text-[#737373] active:text-[#0a0a0a]">
+            Clear session
+          </button>
+        </div>
+        <div className="bg-white border border-[#e8e5db] rounded-[24px] shadow-[0_2px_14px_rgba(0,0,0,0.06)] px-3.5 pt-2.5 pb-2 focus-within:border-[#d5d1c8]">
           <input
             ref={fileInputRef}
             type="file"
