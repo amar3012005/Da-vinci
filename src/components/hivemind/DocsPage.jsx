@@ -96,6 +96,7 @@ function ToolCard({ tool }) {
       <p className="text-[12.5px] font-medium text-[#0a0a0a] mt-1.5">{tool.summary}</p>
       <p className="text-[12.5px] leading-relaxed text-[#525252] mt-1">{tool.description}</p>
       {tool.params?.length > 0 && (
+        <div className="overflow-x-auto">
         <table className="w-full mt-3 text-[12px]">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]">
@@ -114,6 +115,7 @@ function ToolCard({ tool }) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
       {tool.example && <CodeBlock label="example">{tool.example}</CodeBlock>}
     </div>
@@ -457,6 +459,7 @@ function IcarusDocs() {
           the <Mono>amr</Mono> mode: a per-tenant memory-mapped file (<Mono>.amr</Mono>) fusing semantic, entity,
           bi-temporal, and graph recall in one read — no server, no network hop.
         </P>
+        <div className="overflow-x-auto">
         <table className="w-full mt-3 text-[12.5px]">
           <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold" /><th className="py-1.5 pr-3 font-semibold">ICARUS</th><th className="py-1.5 font-semibold">Qdrant (REST, same data)</th></tr></thead>
           <tbody className="divide-y divide-[#eae7e1]">
@@ -471,6 +474,7 @@ function IcarusDocs() {
             ))}
           </tbody>
         </table>
+        </div>
         <P className="text-[12px]">Repo: <a className="text-[#117dff]" href={`https://github.com/${ICARUS_REPO}`} target="_blank" rel="noreferrer">github.com/{ICARUS_REPO}</a> · format RFC: <Mono>SPEC.md</Mono> · design + benchmarks: <Mono>THESIS.md</Mono>.</P>
       </section>
 
@@ -1157,6 +1161,7 @@ icarus learn promote <skill-id> --approval <approval-id> --repo .`}</CodeBlock>
         <Eyebrow>10 · INTEGRATION</Eyebrow>
         <H2 id="harness-mcp">MCP and agent integration</H2>
         <P>The MCP server exposes the Harness to agents without requiring them to scrape terminal text.</P>
+        <div className="overflow-x-auto">
         <table className="w-full mt-3 text-[12.5px]">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]">
@@ -1182,6 +1187,7 @@ icarus learn promote <skill-id> --approval <approval-id> --repo .`}</CodeBlock>
             ))}
           </tbody>
         </table>
+        </div>
         <P>For a managed coding task, the minimal MCP sequence is:</P>
         <ChipSequence chips={[
           'harness_init', 'graph_build', 'task_start', 'transition(orienting)', 'context_get',
@@ -1430,6 +1436,7 @@ export default function DocsPage() {
           <section id="overview" className="mt-10">
             <Eyebrow>01 · OVERVIEW</Eyebrow>
             <H2 id="overview">Base URLs</H2>
+            <div className="overflow-x-auto">
             <table className="w-full mt-3 text-[12.5px]">
               <tbody className="divide-y divide-[#eae7e1]">
                 <tr><td className="py-2 pr-4 text-[#737373] whitespace-nowrap">Core API</td><td className="py-2 font-mono text-[#0a0a0a] break-all">{CORE}</td></tr>
@@ -1439,6 +1446,7 @@ export default function DocsPage() {
                 <tr><td className="py-2 pr-4 text-[#737373] whitespace-nowrap">Residency</td><td className="py-2 text-[#525252]">EU-hosted (Frankfurt) · self-host tier keeps all data on your own servers</td></tr>
               </tbody>
             </table>
+            </div>
           </section>
 
           {/* ── API keys ── */}
@@ -1641,6 +1649,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
   "counts": { "pages": null, "segments": null, "candidates": null, "memories": null },
   "created_at": "2026-08-05T13:14:58Z"
 }`}</CodeBlock>
+            <div className="overflow-x-auto">
             <table className="w-full mt-3 text-[12px]">
               <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold">Field</th><th className="py-1.5 pr-3 font-semibold w-16">Req.</th><th className="py-1.5 font-semibold">Description</th></tr></thead>
               <tbody className="divide-y divide-[#eae7e1]">
@@ -1657,6 +1666,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
                 ))}
               </tbody>
             </table>
+            </div>
 
             <H3 id="ingest-source">Ingest text, a URL, or a conversation</H3>
             <P><Mono>POST /api/ingest/source</Mono> — a canonical envelope for content you already have as text (or a URL to extract). Pick a <Mono>mode</Mono> for how it&rsquo;s processed.</P>
@@ -1670,6 +1680,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
     "scope": "organization",
     "tags": ["planning","orion-x"]
   }'`}</CodeBlock>
+            <div className="overflow-x-auto">
             <table className="w-full mt-3 text-[12px]">
               <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold">Field</th><th className="py-1.5 font-semibold">Description</th></tr></thead>
               <tbody className="divide-y divide-[#eae7e1]">
@@ -1686,6 +1697,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
                 ))}
               </tbody>
             </table>
+            </div>
             <P><strong className="text-[#0a0a0a]">Modes at a glance.</strong> <Mono>document</Mono> = full pipeline (facts + entities + relationships). <Mono>atomic</Mono> = a single memory through the engine gateway. Source-envelope <Mono>evidence</Mono> is a legacy one-record mode; it is distinct from file upload <Mono>ingestMode=evidence</Mono>, which creates page-aware hybrid-searchable segments.</P>
 
             <H3 id="ingest-status">Poll ingestion status</H3>
@@ -1700,6 +1712,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
             <P>Stages: <Mono>both</Mono> uses <Mono>queued → parsing → segmenting → embedding → promoting → ready</Mono>. <Mono>evidence</Mono> stops after embedding and becomes ready only after both semantic and lexical evidence lanes are complete.</P>
 
             <H3 id="ingest-types">Supported types &amp; limits</H3>
+            <div className="overflow-x-auto">
             <table className="w-full mt-3 text-[12px]">
               <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold">Type</th><th className="py-1.5 pr-3 font-semibold">Formats</th><th className="py-1.5 font-semibold">Processing</th></tr></thead>
               <tbody className="divide-y divide-[#eae7e1]">
@@ -1712,6 +1725,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
                 ))}
               </tbody>
             </table>
+            </div>
             <P className="text-[12px]">Limits: document 50&nbsp;MB · image 20&nbsp;MB. Query <Mono>GET /api/knowledge/upload-capabilities</Mono> instead of hardcoding. Duplicate detection is by content checksum (a repeat returns <Mono>409</Mono> with the existing job) — pass <Mono>force</Mono> to re-ingest.</P>
 
             <H3 id="ingest-pipeline">What happens after 202</H3>
@@ -1742,6 +1756,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
   "evidence":  [ { "segmentId": "…", "snippet": "…", "score": 0.79 } ],
   "search_method": "hybrid", "mode_used": "quick", "timing_ms": 640
 }`}</CodeBlock>
+            <div className="overflow-x-auto">
             <table className="w-full mt-3 text-[12px]">
               <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold">Field</th><th className="py-1.5 font-semibold">Description</th></tr></thead>
               <tbody className="divide-y divide-[#eae7e1]">
@@ -1757,9 +1772,11 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
                 ))}
               </tbody>
             </table>
+            </div>
             <H3 id="recall-chat">Grounded chat</H3>
             <P><Mono>POST /api/chat</Mono> — the full agent turn: intent → retrieval → grounded answer, with <Mono>sources</Mono>, <Mono>answer_mode</Mono> (counted | temporal | graph | sampled), and <Mono>scopes_found</Mono>. Set <Mono>stream:true</Mono> for SSE. A retrieval timeout is reported honestly (&ldquo;couldn&rsquo;t look&rdquo;), never as &ldquo;nothing found&rdquo;.</P>
             <H3 id="recall-other">Other search routes</H3>
+            <div className="overflow-x-auto">
             <table className="w-full mt-3 text-[12px]">
               <tbody className="divide-y divide-[#eae7e1]">
                 {[
@@ -1773,12 +1790,14 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
 
           {/* ── REST · Documents ── */}
           <section id="documents" className="mt-12">
             <Eyebrow>07 · REST API — DOCUMENTS &amp; MEMORIES</Eyebrow>
             <H2 id="documents">Managing what you ingested</H2>
+            <div className="overflow-x-auto">
             <table className="w-full mt-3 text-[12.5px]">
               <thead><tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]"><th className="py-1.5 pr-3 font-semibold">Endpoint</th><th className="py-1.5 font-semibold">Description</th></tr></thead>
               <tbody className="divide-y divide-[#eae7e1]">
@@ -1797,6 +1816,7 @@ tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
                 ))}
               </tbody>
             </table>
+            </div>
             <P className="text-[12px] mt-3">
               <strong className="text-[#0a0a0a]">Storage modes.</strong> Every workspace runs one engine, chosen by plan/hosting:
               <Mono>hybrid</Mono> (central), <Mono>amr</Mono> (embedded sovereign shard), or <Mono>byod</Mono> (your own box). Ingestion + recall

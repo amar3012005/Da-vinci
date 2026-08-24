@@ -31,7 +31,7 @@ const MetricBars = () => {
         <span className="font-mono text-[11px] uppercase tracking-wider text-[#8a8a82]">retrieval quality — click a metric</span>
         <span className="font-mono text-[11px] text-[#a3a3a3]">singulancelabs.com/benchmark</span>
       </div>
-      <div className="flex items-end gap-3 rounded-lg border p-6" style={{ borderColor: BORDER, background: '#fff' }}>
+      <div className="flex items-end gap-3 overflow-x-auto rounded-lg border p-4 sm:p-6" style={{ borderColor: BORDER, background: '#fff' }}>
         {METRICS.map((met) => {
           const pct = met.unit === '%' ? met.value : met.value * 100;
           const isActive = met.id === active;
@@ -40,7 +40,7 @@ const MetricBars = () => {
               key={met.id}
               onClick={() => setActive(met.id)}
               onMouseEnter={() => setActive(met.id)}
-              className="group flex flex-1 flex-col items-center gap-2 bg-transparent"
+              className="group flex w-16 shrink-0 flex-col items-center gap-2 bg-transparent sm:w-auto sm:flex-1"
             >
               <span className="font-mono text-[11px] font-semibold" style={{ color: isActive ? EMBER : '#8a8a82' }}>
                 {met.unit === '%' ? `${met.value}%` : met.value.toFixed(2)}
