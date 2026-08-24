@@ -16,6 +16,7 @@
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
+import { emitUsageChanged } from '../../shared/useUsage';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send,
@@ -691,6 +692,7 @@ export default function TalkToHiveMobile() {
       setMessages((prev) => prev.some((item) => item.id === streamingId)
         ? prev.map((item) => item.id === streamingId ? assistantMsg : item)
         : [...prev, assistantMsg]);
+      emitUsageChanged();
     } catch (err) {
       const errMsg = err?.response?.data?.detail || err?.message || 'Something went wrong.';
       setMessages((prev) => [

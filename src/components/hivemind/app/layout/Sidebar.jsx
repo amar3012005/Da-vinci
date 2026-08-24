@@ -39,6 +39,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
+import { useUsage } from '../shared/useUsage';
+import CreditBalance from '../shared/CreditBalance';
 
 /** Build nav sections, conditionally including admin items. Filtered by activeSection. */
 function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection = 'hivemind' }) {
@@ -146,6 +148,7 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [showWebAdmin, setShowWebAdmin] = useState(false);
+  const { usage } = useUsage();
 
   // Probe admin access once on mount
   useEffect(() => {
@@ -325,6 +328,9 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
 
       {/* Fixed bottom: Account nav + upgrade banner + user/logout */}
       <div className="flex-shrink-0 border-t border-[#e3e0db]">
+        <div className={collapsed ? 'pt-2' : 'px-2.5 pt-2.5'}>
+          <CreditBalance credits={usage?.credits} compact collapsed={collapsed} />
+        </div>
         {/* Account section */}
         <div className="px-2.5 pt-2.5 pb-1">
           {!collapsed && (

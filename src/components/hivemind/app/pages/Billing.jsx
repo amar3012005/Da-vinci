@@ -20,6 +20,7 @@ import { useAuth } from '../auth/AuthProvider';
 import RunwayUpgradePanel from '../components/RunwayUpgradePanel';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
+import CreditBalance from '../shared/CreditBalance';
 
 // ─── Plan Definitions ────────────────────────────────────────────────────────
 
@@ -33,6 +34,7 @@ const PLANS = [
     accent: false,
     features: [
       // Usage limits
+      { label: '500 monthly credits', icon: Zap },
       { label: '100 pages/month', icon: HardDrive },
       { label: '1,000 memories', icon: HardDrive },
       { label: '1M LLM tokens/month', icon: Brain },
@@ -77,7 +79,7 @@ const PLANS = [
       { label: 'Permanent personal history', icon: Check },
       { label: 'More source types and connectors', icon: Cable },
       { label: 'Deeper recall across your own work', icon: Sparkles },
-      { label: 'No per-query credits', icon: Check },
+      { label: '10,000 monthly credits', icon: Zap },
       { label: 'Email support', icon: Headphones },
     ],
     limits: {
@@ -101,13 +103,14 @@ const PLANS = [
     popular: true,
     features: [
       // Usage limits
-      { label: '1,000 pages/month', icon: HardDrive },
+      { label: '100,000 monthly credits', icon: Zap },
+      { label: '5,000 pages/month', icon: HardDrive },
       { label: '25,000 memories', icon: HardDrive },
       { label: '10M LLM tokens/month', icon: Brain },
       { label: '20 Deep Research/month', icon: Zap },
       { label: '50 Web Intel/day', icon: Sparkles },
       { label: '10 connectors', icon: Cable },
-      { label: '5 users', icon: Users },
+      { label: '1 user', icon: Users },
       // All-plan features
       { label: 'Memory Graph', icon: Check },
       { label: 'MCP Protocol', icon: Check },
@@ -127,8 +130,8 @@ const PLANS = [
       deepResearch: 20,
       webIntel: 50,
       searches: 100_000,
-      users: 5,
-      kbPages: 1_000,
+      users: 1,
+      kbPages: 5_000,
     },
   },
   {
@@ -136,17 +139,18 @@ const PLANS = [
     name: 'Scale',
     price: '€239',
     period: '/month',
-    description: 'Mid-size regulated organisations. 10,000 pages/month, 25 seats.',
+    description: 'Operate with a small AI team. 10,000 pages included for one person.',
     accent: false,
     features: [
       // Usage limits
+      { label: '1,000,000 monthly credits', icon: Zap },
       { label: '10,000 pages/month', icon: HardDrive },
       { label: '250,000 memories', icon: HardDrive },
       { label: '100M LLM tokens/month', icon: Brain },
       { label: 'Unlimited Deep Research', icon: Zap },
       { label: '500 Web Intel/day', icon: Sparkles },
       { label: 'Unlimited connectors', icon: Cable },
-      { label: '25 users', icon: Users },
+      { label: '1 user', icon: Users },
       // All-plan features
       { label: 'Memory Graph', icon: Check },
       { label: 'MCP Protocol', icon: Check },
@@ -173,7 +177,7 @@ const PLANS = [
       deepResearch: null,
       webIntel: 500,
       searches: 2_000_000,
-      users: 25,
+      users: 1,
       kbPages: 10_000,
     },
   },
@@ -517,6 +521,9 @@ export default function Billing() {
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-900">
           {checkoutNotice}
         </div>
+      )}
+      {billing?.usage_summary?.credits && (
+        <CreditBalance credits={billing.usage_summary.credits} />
       )}
       <CommercialJourney billing={billing} />
       {/* Current Plan Overview */}

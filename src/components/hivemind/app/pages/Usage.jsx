@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
+import CreditBalance from '../shared/CreditBalance';
 import WorkspaceAccessCard from '../shared/WorkspaceAccessCard';
 
 // One screen, whole-platform, high-level usage. Cards = current month (DB-sourced,
@@ -277,6 +278,27 @@ export default function Usage() {
       </div>
 
       <div className="mb-5"><WorkspaceAccessCard billing={billing} compact /></div>
+
+      {data?.credits && (
+        <section className="mb-5 grid gap-3 lg:grid-cols-[minmax(280px,0.8fr)_1.2fr]">
+          <CreditBalance credits={data.credits} />
+          <div className="rounded-xl border border-[#e3e0db] bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#0a0a0a]">Credits by service</h2>
+              <span className="text-[10px] text-[#999]">Settled this month</span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-3">
+              {Object.entries(data.credits.catalog || {}).map(([key, item]) => (
+                <div key={key} className="border-b border-[#eeeae4] pb-2">
+                  <div className="text-[11px] font-medium text-[#525252]">{item.label}</div>
+                  <div className="mt-0.5 text-xs font-semibold text-[#0a0a0a]">{Number(data.credits.breakdown?.[key] || 0).toLocaleString()} used</div>
+                  <div className="text-[9px] text-[#999]">{item.credits} credit{item.credits === 1 ? '' : 's'} / {item.unit}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {reminders.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-1">

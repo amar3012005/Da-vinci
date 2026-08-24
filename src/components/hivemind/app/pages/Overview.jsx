@@ -38,6 +38,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { userScopedKey } from '../shared/user-storage';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
 import { useApiQuery } from '../shared/hooks';
+import { emitUsageChanged } from '../shared/useUsage';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/upload-store';
@@ -991,6 +992,7 @@ function OverviewChat({ inputRef }) {
       setMessages((prev) => prev.some((item) => item.id === streamingId)
         ? prev.map((item) => item.id === streamingId ? completedMessage : item)
         : [...prev, completedMessage]);
+      emitUsageChanged();
     } catch (err) {
       setMessages((prev) => [...prev, {
         id: Date.now() + 1,
