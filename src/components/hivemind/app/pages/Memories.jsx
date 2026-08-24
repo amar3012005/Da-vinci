@@ -67,14 +67,19 @@ const TABS = [
 ];
 
 const MEMORY_TYPES = [
-  { key: 'experience', label: 'Experience', color: '#3b82f6' },
-  { key: 'decision',   label: 'Decision',   color: '#f59e0b' },
   { key: 'fact',       label: 'Fact',       color: '#22c55e' },
+  { key: 'event',      label: 'Event',      color: '#3b82f6' },
+  { key: 'decision',   label: 'Decision',   color: '#f59e0b' },
   { key: 'preference', label: 'Preference', color: '#a855f7' },
+  { key: 'goal',       label: 'Goal',       color: '#0ea5e9' },
+  { key: 'commitment', label: 'Commitment', color: '#f97316' },
+  { key: 'policy',     label: 'Policy',     color: '#64748b' },
   { key: 'procedure',  label: 'Procedure',  color: '#ec4899' },
+  { key: 'lesson',     label: 'Lesson',     color: '#14b8a6' },
   // Cognition-loop output = "dreams" (auto-synthesized, queryable bi-temporally)
   { key: 'synthesis',  label: '🌙 Dreams',  color: '#8b5cf6' },
   { key: 'summary',    label: 'Summary',    color: '#06b6d4' },
+  { key: 'conversation', label: 'Conversation', color: '#6366f1' },
 ];
 
 const TYPE_COLOR_MAP = Object.fromEntries(MEMORY_TYPES.map((t) => [t.key, t.color]));
@@ -1034,6 +1039,7 @@ export default function Memories() {
   // Read from /memory/stats, which already reports it, so central-graph-only panels can be skipped
   // instead of firing requests that are guaranteed to 501.
   const [storageMode, setStorageMode] = useState(null);
+  const [layerCounts, setLayerCounts] = useState({ memories: null, documents: null, evidence: null });
   // Org name (normalized) — gates the "Company Info" label so it only shows
   // when a KB/document memory's company intent matches the user's organisation.
   const [orgKey, setOrgKey] = useState('');
@@ -1057,7 +1063,16 @@ export default function Memories() {
       // BOTH calls (the old code gated only contradictions, and only for the exact
       // string 'amr' — leaving topic-states firing and missing amr_embedded/byod).
       let _mode = null;
-      try { const stats = await apiClient.getMemoryStats().catch(() => null); _mode = stats?.storage_mode || null; setStorageMode(_mode); } catch { /* noop */ }
+      try {
+        const stats = await apiClient.getMemoryStats().catch(() => null);
+        _mode = stats?.storage_mode || null;
+        setStorageMode(_mode);
+        if (stats) setLayerCounts({
+          memories: Number.isFinite(stats.memories) ? stats.memories : null,
+          documents: Number.isFinite(stats.documents) ? stats.documents : null,
+          evidence: Number.isFinite(stats.evidence) ? stats.evidence : null,
+        });
+      } catch { /* noop */ }
       const _agentBacked = ['amr', 'amr_embedded', 'byod', 'byod_amr'].includes(String(_mode || ''));
       if (cancelled) return;
       if (_agentBacked) {
@@ -1203,6 +1218,11 @@ export default function Memories() {
               >
                 <Icon size={16} />
                 <span className="text-sm font-semibold">{t(`memories.tab_${tab.id}`, tab.label)}</span>
+                {Number.isFinite(layerCounts[tab.id]) && (
+                  <span className="rounded-full bg-[#f3f1ed] px-1.5 py-0.5 text-[10px] font-mono text-[#737373]">
+                    {layerCounts[tab.id].toLocaleString()}
+                  </span>
+                )}
                 {isActive && (
                   <motion.div
                     layoutId="activeTab"
@@ -2342,6 +2362,10 @@ function EvidenceCard({ evidence, onViewDocument }) {
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
+          <h3 className="mb-1 text-sm font-semibold text-[#0a0a0a]">
+            {evidence.title || evidence.metadata?.evidence_title
+              || `${evidence.document_title || evidence.document?.title || t('memories.evidence', 'Evidence')} : ${String((evidence.segment_index ?? evidence.metadata?.segmentIndex ?? 0) + 1).padStart(2, '0')}`}
+          </h3>
           <p className="text-[#0a0a0a] text-sm line-clamp-3 mb-2">
             {evidence.content || evidence.text || evidence.excerpt}
           </p>
