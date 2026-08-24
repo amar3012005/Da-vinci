@@ -158,6 +158,7 @@ export default function MobileShell({ children, rightAction = null, title = null
                 {firstName}
               </div>
               {org?.name && <div className="text-[11.5px] text-[#737373] truncate mt-0.5">{org.name}</div>}
+              <CreditBalance credits={usage?.credits} inline className="mt-1" />
             </div>
 
             <nav className="flex-1 overflow-y-auto px-2.5">
@@ -178,10 +179,6 @@ export default function MobileShell({ children, rightAction = null, title = null
                 );
               })}
             </nav>
-
-            <div className="px-3 pb-2">
-              <CreditBalance credits={usage?.credits} compact />
-            </div>
 
             <div className="p-3 border-t border-[#ece9e2]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
               {extraDrawerActions}
