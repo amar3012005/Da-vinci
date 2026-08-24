@@ -65,7 +65,6 @@ import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import { FIELDS, professionsForField, NAME_SUGGESTIONS } from '../shared/field-catalog';
 import AgentAvatar from '../hyperagents/AgentAvatar';
-import UsageTracker from '../components/UsageTracker';
 import { emitUsageChanged } from '../shared/useUsage';
 
 // Compact relative-time for room last-used. Pure, no deps.
@@ -454,7 +453,6 @@ export default function HyperAgents() {
             </p>
           </div>
           <div className="shrink-0 flex items-center gap-3">
-            <UsageTracker resource="hyperRooms" />
             <button
               onClick={() => setShowCreate(true)}
               className="flex items-center gap-1.5 bg-[#0a0a0a] hover:bg-[#262626] text-white text-[12px] font-semibold px-3.5 py-2 rounded-lg"
@@ -503,10 +501,6 @@ export default function HyperAgents() {
             <Plus size={14} />
           </button>
         </header>
-
-        <div className="px-3 py-2 border-b border-[#e3e0db]">
-          <UsageTracker resource="hyperRooms" compact />
-        </div>
 
         {/* YOUR COMPANY — always-present entry to the company/onboarding hero. */}
         <div className="px-2 pt-2">

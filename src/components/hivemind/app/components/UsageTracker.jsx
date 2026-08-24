@@ -7,7 +7,7 @@
  * from core/src/billing/plans.js (single source of truth).
  *
  * Props:
- *   resource   {string}  one of: memories | kbPages | connectors | hyperRooms |
+ *   resource   {string}  one of: memories | kbPages | connectors |
  *                        deepResearch | webIntel | searches | tokens | uploads
  *   compact    {boolean} tighter layout (default false)
  *   className  {string}  extra classes on the root
@@ -27,7 +27,6 @@ const LABELS = {
   memories: 'Memories',
   kbPages: 'Pages',
   connectors: 'Connectors',
-  hyperRooms: 'Rooms',
   deepResearch: 'Deep research',
   webIntel: 'Web intel',
   searches: 'Searches',

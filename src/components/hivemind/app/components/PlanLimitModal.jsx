@@ -35,7 +35,6 @@ const RESOURCE_LABELS = {
   searches: 'searches',
   tokens: 'LLM tokens',
   connectors: 'connectors',
-  hyperRooms: 'agent rooms',
   users: 'users',
 };
 

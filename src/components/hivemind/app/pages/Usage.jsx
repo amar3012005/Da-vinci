@@ -34,7 +34,6 @@ const METRICS = [
   { key: 'taraSeconds',  label: 'TARA Talk Time', icon: Mic,     accent: '#db2777', sub: 'seconds' },
   { key: 'hyperAgentRuns', label: 'HyperAgents Runs', icon: Bot, accent: '#0f766e', sub: 'runs' },
   { key: 'connectors',  label: 'Connectors',    icon: Plug,     accent: '#7c3aed', sub: 'active sources' },
-  { key: 'hyperRooms',  label: 'HyperAgents',   icon: Bot,      accent: '#0f766e', sub: 'rooms' },
   { key: 'users',       label: 'Seats',         icon: UserPlus, accent: '#b45309', sub: 'org members' },
 ];
 
