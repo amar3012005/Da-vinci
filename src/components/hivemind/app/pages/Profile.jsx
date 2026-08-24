@@ -42,6 +42,7 @@ import { useApiQuery } from '../shared/hooks';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import WorkspaceAccessCard from '../shared/WorkspaceAccessCard';
+import CreditBalance from '../shared/CreditBalance';
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
 
@@ -1536,6 +1537,7 @@ export default function Profile() {
         />
 
         <WorkspaceAccessCard billing={billing} />
+        <CreditBalance credits={billing?.usage_summary?.credits} />
 
         <OrganizationContextCard org={org} user={user} />
 
