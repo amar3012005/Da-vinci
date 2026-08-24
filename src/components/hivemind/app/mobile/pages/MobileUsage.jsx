@@ -12,6 +12,7 @@ import {
 import { useApiQuery } from '../../shared/hooks';
 import apiClient from '../../shared/api-client';
 import CreditBalance from '../../shared/CreditBalance';
+import CreditUsageBreakdown from '../../shared/CreditUsageBreakdown';
 import WorkspaceAccessCard from '../../shared/WorkspaceAccessCard';
 import MobileShell from '../MobileShell';
 
@@ -223,7 +224,12 @@ export default function MobileUsage() {
           </button>
         </div>
 
-        {data?.credits && <div className="mb-4"><CreditBalance credits={data.credits} /></div>}
+        {data?.credits && (
+          <div className="mb-4 space-y-2.5">
+            <CreditBalance credits={data.credits} />
+            <CreditUsageBreakdown credits={data.credits} compact />
+          </div>
+        )}
 
         {reminders.length > 0 && (
           <div className="mb-4 rounded-[12px] border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-1">
