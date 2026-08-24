@@ -22,26 +22,27 @@ const SELF_SERVE_TIERS = [
   {
     id: 'free', name: 'Free', product: 'BRAIN', tag: 'Build a Brain that remembers your work.',
     monthly: 0, annual: 0, cta: 'Start free', pop: false,
-    pages: '100',
+    access: 'BRAIN + OS + VOICE', credits: '500', pages: '100', people: '1 person',
     features: [
       'Grounded recall from your own sources', 'PDF, DOCX, XLSX ingestion',
-      'Up to 3 connected sources', 'Personal history preview', 'Community support',
+      'Up to 3 connected sources', 'Explore every product within your credits',
+      'Community support',
     ],
   },
   {
     id: 'plus', name: 'Plus', product: 'BRAIN+', tag: 'Keep your work history permanently.',
     monthly: 39, annual: 390, annualSave: 78, cta: 'Get Plus', pop: false,
-    pages: '1,000',
+    access: 'BRAIN', credits: '10,000', pages: '1,000', people: '1 person',
     features: [
       'Everything in Free', 'Permanent personal history',
       'More source types and connectors', 'Deeper recall across your own work',
-      'No per-query credits',
+      'A predictable monthly credit allowance',
     ],
   },
   {
     id: 'pro', name: 'Pro', product: 'BRAIN + HyperAgents', tag: 'Give your Brain work to carry out.',
     monthly: 79, annual: 790, annualSave: 158, cta: 'Get Pro', pop: true,
-    pages: 'Higher capacity',
+    access: 'BRAIN + OPERATING SYSTEM', credits: '100,000', pages: '5,000', people: '1 person',
     features: [
       'Everything in Plus', 'Included HyperAgent runs each month',
       'Deep Research and Web Intelligence allowance',
@@ -50,13 +51,13 @@ const SELF_SERVE_TIERS = [
     ],
   },
   {
-    id: 'scale', name: 'Scale', product: 'BRAIN + HyperAgents + TARA', tag: 'Operate with a small AI team.',
+    id: 'scale', name: 'Scale', product: 'BRAIN + HyperAgents + TARA', tag: 'Operate with a personal AI team.',
     monthly: 239, annual: 2390, annualSave: 478, cta: 'Get Scale', pop: false,
-    pages: '10,000', circle: 'Up to 3 trusted collaborators',
+    access: 'BRAIN + OPERATING SYSTEM + VOICE', credits: '1M', pages: '10,000', people: '1 person',
     features: [
       'Everything in Pro', 'Larger HyperAgent allowance',
       'TARA voice agent with included talk time',
-      'Up to 3 trusted collaborators', 'Priority support',
+      'One person, one complete AI operating layer', 'Priority support',
       'Optional HyperAgent and TARA Talk Packs',
     ],
   },
@@ -96,6 +97,7 @@ const PricingCard = ({ tier, annual, index }) => {
       </p>
       <p className="font-['Space_Grotesk'] text-lg font-semibold text-[#0a0a0a]">{tier.name}</p>
       <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#6b6b6b]">{tier.tag}</p>
+      <p className="mt-3 font-mono text-[10px] font-semibold uppercase tracking-[0.13em] text-[#45413b]">{tier.access}</p>
 
       <div className="mt-6 flex items-baseline gap-1">
         {price === 'Custom' ? (
@@ -113,15 +115,19 @@ const PricingCard = ({ tier, annual, index }) => {
         </p>
       )}
 
-      <div className={`mt-5 grid gap-2 border-t border-[#efece5] pt-4 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a39e92] ${tier.circle ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      <div className="mt-5 grid grid-cols-3 gap-2 border-t border-[#efece5] pt-4 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a39e92]">
+        <div>
+          <p className="text-[#0a0a0a]">{tier.credits}</p>
+          <p className="mt-0.5">credits / month</p>
+        </div>
         <div>
           <p className="text-[#0a0a0a]">{tier.pages}</p>
-          <p className="mt-0.5">{tier.pages === 'Higher capacity' ? 'memory capacity' : 'pages included'}</p>
+          <p className="mt-0.5">pages included</p>
         </div>
-        {tier.circle && <div>
-          <p className="text-[#0a0a0a]">Private Circle</p>
-          <p className="mt-0.5 normal-case tracking-normal">{tier.circle}</p>
-        </div>}
+        <div>
+          <p className="text-[#0a0a0a]">{tier.people}</p>
+          <p className="mt-0.5">access</p>
+        </div>
       </div>
 
       <ul className="mt-5 flex-1 space-y-2.5">
