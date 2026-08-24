@@ -19,7 +19,12 @@ import * as THREE from 'three';
  * film grain. Subtle camera + plate parallax keeps real depth.
  */
 
-const COVER_SRC = '/singulance-cover.webp';
+// 1600px-wide re-encode of the original 1586x992 source — visually identical
+// once run through the shader (bloom/grain/warp already soften detail), at
+// less than half the original 338KB. This is the WebGL texture, not an <img>,
+// so there's no responsive srcset here — 1600w already covers any desktop
+// viewport at the cover-fit crop this plane renders at.
+const COVER_SRC = '/singulance-cover-1600.webp';
 
 const vertex = /* glsl */ `
   varying vec2 vUv;
