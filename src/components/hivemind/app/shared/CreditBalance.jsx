@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 
 const fmt = (value) => Number(value || 0).toLocaleString();
 
-export default function CreditBalance({ credits, compact = false, collapsed = false, className = '' }) {
+export default function CreditBalance({ credits, compact = false, collapsed = false, inline = false, className = '' }) {
   if (!credits) return null;
   const unlimited = credits.unlimited || Number(credits.included) < 0;
   const remainingPct = unlimited ? 100 : Math.max(0, Number(credits.percent_remaining || 0));
@@ -16,6 +16,28 @@ export default function CreditBalance({ credits, compact = false, collapsed = fa
         <span className="grid h-7 w-7 place-items-center rounded-full bg-white text-[8px] font-bold" style={{ color }}>
           {unlimited ? '∞' : `${remainingPct}%`}
         </span>
+      </NavLink>
+    );
+  }
+  if (inline) {
+    const usedPct = unlimited ? 0 : Math.min(100, Math.max(0, Number(credits.percent_used || 0)));
+    const usedColor = usedPct >= 95 ? '#dc2626' : usedPct >= 80 ? '#d97706' : '#117dff';
+    return (
+      <NavLink
+        to="/hivemind/app/usage"
+        aria-label={unlimited ? 'View unlimited monthly credits' : `View credit usage: ${usedPct}% used, ${fmt(credits.remaining)} of ${fmt(credits.included)} remaining`}
+        className={`block pt-2 ${className}`}
+      >
+        <div className="h-1 overflow-hidden rounded-full bg-[#e3e0db]">
+          <div
+            className="h-full rounded-full transition-[width] duration-300"
+            style={{ width: unlimited ? '100%' : `${usedPct}%`, background: usedColor }}
+          />
+        </div>
+        <div className="mt-1 flex items-center justify-between gap-2 text-[9px] font-mono leading-none">
+          <span style={{ color: usedColor }}>{unlimited ? 'Unlimited' : `${usedPct}% used`}</span>
+          <span className="text-[#8b8b86]">{unlimited ? 'No monthly cap' : `${fmt(credits.remaining)}/${fmt(credits.included)} left`}</span>
+        </div>
       </NavLink>
     );
   }

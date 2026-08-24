@@ -328,9 +328,11 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
 
       {/* Fixed bottom: Account nav + upgrade banner + user/logout */}
       <div className="flex-shrink-0 border-t border-[#e3e0db]">
-        <div className={collapsed ? 'pt-2' : 'px-2.5 pt-2.5'}>
-          <CreditBalance credits={usage?.credits} compact collapsed={collapsed} />
-        </div>
+        {collapsed && (
+          <div className="pt-2">
+            <CreditBalance credits={usage?.credits} compact collapsed />
+          </div>
+        )}
         {/* Account section */}
         <div className="px-2.5 pt-2.5 pb-1">
           {!collapsed && (
@@ -420,13 +422,14 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
                   {(user.display_name || user.email || 'U')[0].toUpperCase()}
                 </span>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-[#0a0a0a] text-xs truncate">
                   {user.display_name || user.email || 'User'}
                 </p>
                 <p className="text-[#a3a3a3] text-[10px] font-mono truncate">
                   {planLabel}
                 </p>
+                <CreditBalance credits={usage?.credits} inline />
               </div>
             </div>
           )}
