@@ -688,6 +688,7 @@ export default function TalkToHiveMobile() {
         // Scope provenance — which tier(s) the answer's memories came from
         // (my-space / project:<name> / org-wide). Rendered under the answer.
         scopes_found: Array.isArray(data.scopes_found) ? data.scopes_found : [],
+        follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
       };
       setMessages((prev) => prev.some((item) => item.id === streamingId)
         ? prev.map((item) => item.id === streamingId ? assistantMsg : item)
@@ -707,6 +708,11 @@ export default function TalkToHiveMobile() {
   }, [input, loading, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools, selectedToolkits, toolkits, loadToolkitCatalog]);
 
   useEffect(() => { sendTextRef.current = sendText; }, [sendText]);
+
+  const selectFollowUp = useCallback((question) => {
+    setInput(String(question || '').slice(0, MAX_CHARS));
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
 
   // Persist a memory-scope choice onto the message itself (not just the
   // picker's own local state), so it survives any re-render of the chat —
@@ -746,6 +752,7 @@ export default function TalkToHiveMobile() {
         id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
         steps: data.steps || [], draft_ids: data.draft_ids || [], sources: data.sources || [],
         pending_actions: data.pending_actions || [],
+        follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
         orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
         continuation: data.continuation || null,
       }]);
@@ -1030,7 +1037,7 @@ export default function TalkToHiveMobile() {
                 />
               );
             }
-            return <MemoAiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} onProjectChoiceSaved={handleProjectChoiceSaved} />;
+            return <MemoAiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} onProjectChoiceSaved={handleProjectChoiceSaved} onFollowUp={selectFollowUp} />;
           })}
           {loading && !messages.some((item) => item.streaming) && <Thinking events={agentEvents} />}
         </div>
