@@ -30,7 +30,7 @@ export function hasIngestModeMismatch(requestedMode, returnedMode, { requireRetu
 export function documentIngestState({ ingestMode, evidenceOnly, memoryGenerationFailed, processing = false } = {}) {
   if (processing) return 'Processing';
   if (memoryGenerationFailed === true) return 'Memory generation failed';
-  if (ingestMode === 'evidence' || evidenceOnly === true) return 'Searchable evidence ready';
+  if (ingestMode === 'evidence' || evidenceOnly === true) return 'Evidence ready';
   if (ingestMode === 'both') return 'Memories + evidence ready';
   // A completed-looking record without the durable mode is ambiguous. Do not
   // invent a successful both-mode result from absent metadata.

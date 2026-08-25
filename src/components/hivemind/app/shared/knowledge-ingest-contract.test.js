@@ -24,7 +24,7 @@ describe('knowledge ingest frontend contract', () => {
   });
 
   test('uses deterministic document state labels', () => {
-    expect(documentIngestState({ ingestMode: 'evidence' })).toBe('Searchable evidence ready');
+    expect(documentIngestState({ ingestMode: 'evidence' })).toBe('Evidence ready');
     expect(documentIngestState({ ingestMode: 'both' })).toBe('Memories + evidence ready');
     expect(documentIngestState({ ingestMode: 'both', memoryGenerationFailed: true })).toBe('Memory generation failed');
     expect(documentIngestState({ processing: true })).toBe('Processing');
