@@ -33,7 +33,8 @@ function fmtElapsed(ms) {
 }
 
 function statusBadge(u) {
-  if (u.status === 'success') return { icon: CheckCircle2, color: '#16a34a', label: 'Uploaded' };
+  if (u.status === 'success') return { icon: CheckCircle2, color: '#16a34a', label: u.message || 'Uploaded' };
+  if (u.status === 'limited') return { icon: AlertTriangle, color: '#b45309', label: 'Quota reached' };
   if (u.status === 'error' || u.status === 'cancelled') return { icon: AlertTriangle, color: '#dc2626', label: u.status === 'cancelled' ? 'Cancelled' : 'Failed' };
   if (u.status === 'uploading') return { icon: Upload, color: '#117dff', label: u.bytesDone ? (u.stageLabel || 'Processing') : `${u.progress || 0}%` };
   return { icon: Upload, color: '#a3a3a3', label: 'Queued' };
@@ -62,6 +63,7 @@ export default function GlobalUploadStrip() {
   const inFlight = uploads.filter((u) => u.status === 'uploading' || u.status === 'queued').length;
   const done = uploads.filter((u) => u.status === 'success').length;
   const failed = uploads.filter((u) => u.status === 'error' || u.status === 'cancelled').length;
+  const limited = uploads.filter((u) => u.status === 'limited').length;
   const allLanded = inFlight === 0;
 
   // Auto-prune confirmed rows after a while so the strip clears itself.
@@ -97,9 +99,9 @@ export default function GlobalUploadStrip() {
             <div className="text-[12.5px] font-semibold text-[#0a0a0a] leading-tight">
               {inFlight > 0
                 ? `Uploading ${inFlight} ${inFlight === 1 ? 'file' : 'files'}…`
-                : allLanded && failed === 0
+                : allLanded && failed === 0 && limited === 0
                   ? `${done} ${done === 1 ? 'upload' : 'uploads'} complete`
-                  : `${done} done · ${failed} failed`}
+                  : `${done} done · ${failed + limited} unavailable`}
             </div>
             <div className="text-[10.5px] text-[#8a8a8a] mt-0.5 font-mono">
               {inFlight > 0 ? "Don't close this tab" : 'Safe to leave — server processing'}
@@ -133,6 +135,11 @@ export default function GlobalUploadStrip() {
                           <span className="text-[11.5px] text-[#0a0a0a] font-medium truncate">{u.filename}</span>
                           <span className="text-[10px] font-mono flex-shrink-0" style={{ color }}>{label}</span>
                         </div>
+                        {u.ingestMode && (
+                          <div className="text-[9px] text-[#8a8a8a] font-mono mt-0.5">
+                            {u.ingestMode === 'evidence' ? 'Evidence only' : 'Memories + evidence'}
+                          </div>
+                        )}
                         {/* tqdm-style filling bar — determinate while uploading,
                             pulsing once bytes hit 100% and the server is parsing. */}
                         {u.status === 'uploading' && (
@@ -149,6 +156,9 @@ export default function GlobalUploadStrip() {
                                 : `${Math.round(progress)}/100 [${elapsed}${u.etaSec != null ? `<${fmtElapsed(u.etaSec * 1000)}` : ''}]${u.bytesTotal ? ` · ${fmtUpBytes(u.bytesLoaded)}/${fmtUpBytes(u.bytesTotal)}` : ''}${u.speedBps > 0 ? ` · ${fmtUpBytes(u.speedBps)}/s` : ''}`}
                             </div>
                           </>
+                        )}
+                        {u.status === 'limited' && u.error && (
+                          <div className="text-[9px] text-[#b45309] font-mono mt-0.5 leading-snug">{u.error}</div>
                         )}
                       </div>
                       <button
