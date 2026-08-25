@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, ChevronRight, FileText, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
-  AlertTriangle, Loader2, ChevronDown, Brain, Sparkles,
+  AlertTriangle, Loader2, ChevronDown, Brain, Sparkles, CornerDownRight,
 } from 'lucide-react';
 import apiClient from './api-client';
 import { BRAND_LOGOS } from './connectors-catalog';
@@ -580,12 +580,16 @@ export function StepsDisclosure({ steps }) {
 
 // Claude-style assistant turn: NO bubble. Reasoning pill → serif answer on the
 // canvas → Sources pill → copy / retry / thumbs action row.
-export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved }) {
+export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFollowUp }) {
   const [showSources, setShowSources] = useState(false);
   const [copied, setCopied] = useState(false);
   const [vote, setVote] = useState(null);
   const hasSteps = Array.isArray(msg.steps) && msg.steps.length > 0;
   const hasSources = Array.isArray(msg.sources) && msg.sources.length > 0;
+  const followUps = [...new Set((Array.isArray(msg.follow_ups) ? msg.follow_ups : [])
+    .filter((item) => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean))].slice(0, 3);
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(msg.content || ''); setCopied(true); setTimeout(() => setCopied(false), 1500); }
@@ -684,6 +688,22 @@ export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved }) {
           <button onClick={() => setVote((v) => (v === 'down' ? null : 'down'))} className={`w-8 h-8 grid place-items-center rounded-full active:bg-[#f0eee6] ${vote === 'down' ? 'text-[#b91c1c]' : 'active:text-[#5f5c55]'}`} aria-label="Bad response">
             <ThumbsDown size={15} />
           </button>
+        </div>
+      )}
+
+      {!msg.error && followUps.length > 0 && (
+        <div className="mt-3 border-t border-[#e3e0db]" aria-label="Suggested follow-up questions">
+          {followUps.map((question) => (
+            <button
+              key={question}
+              type="button"
+              onClick={() => onFollowUp?.(question)}
+              className="group flex w-full items-start gap-3 border-b border-[#ece9e2] px-1 py-3 text-left text-[13.5px] leading-5 text-[#3d3d3a] transition-colors hover:bg-[#faf9f4] active:bg-[#f3f1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#117dff]/40"
+            >
+              <CornerDownRight size={16} className="mt-0.5 shrink-0 text-[#8a8577] transition-colors group-hover:text-[#117dff]" />
+              <span>{question}</span>
+            </button>
+          ))}
         </div>
       )}
 

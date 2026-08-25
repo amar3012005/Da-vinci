@@ -142,12 +142,12 @@ async function readChatStream(response, onEvent) {
   return result;
 }
 
-function ChatBubble({ msg, onContinue, onProjectChoiceSaved }) {
+function ChatBubble({ msg, onContinue, onProjectChoiceSaved, onFollowUp }) {
   // Claude-exact turns (shared/claude-chat): user pill right, assistant is a
   // bubbleless serif answer with reasoning pill + sources + action row.
   if (msg.role === 'user') return <div className="flex justify-end"><UserBubble content={msg.content} /></div>;
   if (msg.deepResearch) return null; // rendered by DeepResearchCard instead
-  return <div className="flex flex-col">{<AiBubble msg={msg} onContinue={onContinue} onProjectChoiceSaved={onProjectChoiceSaved} />}</div>;
+  return <div className="flex flex-col">{<AiBubble msg={msg} onContinue={onContinue} onProjectChoiceSaved={onProjectChoiceSaved} onFollowUp={onFollowUp} />}</div>;
 }
 
 // ─── Deep Research turn — inline progress card + View in Chrome / Preview ──
@@ -983,6 +983,7 @@ function OverviewChat({ inputRef }) {
         sources: Array.isArray(chatData.sources) ? chatData.sources : [],
         steps: Array.isArray(chatData.steps) ? chatData.steps : [],
         gaps: Array.isArray(chatData.gaps) ? chatData.gaps : [],
+        follow_ups: Array.isArray(chatData.follow_ups) ? chatData.follow_ups : [],
         orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
         continuation: chatData.continuation || null,
         draft_ids: Array.isArray(chatData.draft_ids) ? chatData.draft_ids : [],
@@ -1043,6 +1044,11 @@ function OverviewChat({ inputRef }) {
     )));
   }, []);
 
+  const selectFollowUp = useCallback((question) => {
+    setInput(String(question || '').slice(0, 4000));
+    requestAnimationFrame(() => inputRef?.current?.focus());
+  }, [inputRef]);
+
   const continueOrchestration = useCallback(async (continuation, request, option) => {
     if (loading) return;
     setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: option.label }]);
@@ -1068,6 +1074,7 @@ function OverviewChat({ inputRef }) {
         id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
         steps: data.steps || [], draft_ids: data.draft_ids || [], sources: data.sources || [],
         pending_actions: data.pending_actions || [],
+        follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
         orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
         continuation: data.continuation || null,
       }]);
@@ -1127,7 +1134,7 @@ function OverviewChat({ inputRef }) {
         >
           {messages.map((m) => (
             <React.Fragment key={m.id}>
-              <ChatBubble msg={m} onContinue={continueOrchestration} onProjectChoiceSaved={handleProjectChoiceSaved} />
+              <ChatBubble msg={m} onContinue={continueOrchestration} onProjectChoiceSaved={handleProjectChoiceSaved} onFollowUp={selectFollowUp} />
               {m.deepResearch && (
                 <DeepResearchCard
                   dr={m.deepResearch}
