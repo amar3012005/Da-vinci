@@ -45,6 +45,7 @@ import CampaignProgressDashboard from '../hyperagents/campaigns/CampaignProgress
 import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
+import RuntimeWaitlistModal from './RuntimeWaitlistModal';
 import {
   CAMPAIGN_INTELLIGENCE_V2,
   CampaignConnectionsRail,
@@ -729,7 +730,9 @@ export default function HyperAgents() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {comingSoon ? (
+        {comingSoon === 'runtime' ? (
+          <RuntimeWaitlistModal onClose={() => setComingSoon(null)} />
+        ) : comingSoon ? (
           <OperatingSystemComingSoonModal
             feature={comingSoon}
             onClose={() => setComingSoon(null)}
