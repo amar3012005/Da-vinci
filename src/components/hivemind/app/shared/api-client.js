@@ -3,6 +3,7 @@ import { API_DEFAULTS } from './theme';
 import { isPlanLimitError, extractPlanLimit, emitPlanLimit } from './planLimit';
 import { isServiceError, extractServiceError, emitServiceError } from './serviceError';
 import { productActionDecision } from './product-access';
+import { hasIngestModeMismatch, normalizeIngestMode } from './knowledge-ingest-contract';
 
 const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
 
@@ -2269,6 +2270,10 @@ class HiveMindApiClient {
   // ({ documentId, segmentCount, promotedCount }). Pass options.onStatus to
   // surface live stage/progress, options.signal to cancel.
   async uploadDocument(file, options = {}) {
+    // Capture the selected mode once. Every poll and terminal response is
+    // checked against this value so a later modal interaction cannot alter an
+    // in-flight file's intended pipeline.
+    const requestedIngestMode = normalizeIngestMode(options.ingestMode);
     const formData = new FormData();
     formData.append('file', file);
     if (options.tags) formData.append('tags', options.tags);
@@ -2282,7 +2287,7 @@ class HiveMindApiClient {
     // Images already sent it, which is why they succeeded in the same batch.
     if (options.projectId) formData.append('projectId', options.projectId);
     if (options.primaryTeamId) formData.append('primaryTeamId', options.primaryTeamId);
-    formData.append('ingestMode', options.ingestMode === 'evidence' ? 'evidence' : 'both');
+    formData.append('ingestMode', requestedIngestMode);
     // force=true re-ingests past the same-scope duplicate gate (user approved the
     // "upload anyway" prompt shown on a 409 duplicate_document).
     if (options.force) formData.append('force', 'true');
@@ -2300,7 +2305,15 @@ class HiveMindApiClient {
 
     // Back-compat: an older core (no async support) returns the sync result
     // directly (has documentId, no job_id) — pass it straight through.
-    if (!started?.job_id) return started;
+    if (!started?.job_id) {
+      const returnedMode = started?.ingestMode ?? started?.ingest_mode;
+      if (hasIngestModeMismatch(requestedIngestMode, returnedMode)) {
+        const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${returnedMode}.`);
+        error.code = 'INGEST_MODE_MISMATCH';
+        throw error;
+      }
+      return { ...started, ingestMode: returnedMode ?? requestedIngestMode };
+    }
 
     // 2. Poll status until terminal.
     const jobId = started.job_id;
@@ -2333,11 +2346,17 @@ class HiveMindApiClient {
       const segs = meta.segmentCount ?? st.segmentCount ?? counts.segments;
       const promoted = meta.promotedCount ?? st.promotedCount ?? counts.memories;
       const candidates = meta.candidateCount ?? st.candidateCount ?? counts.candidates;
+      const returnedMode = st.ingest_mode ?? meta.ingestMode;
+      if (hasIngestModeMismatch(requestedIngestMode, returnedMode)) {
+        const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${returnedMode}.`);
+        error.code = 'INGEST_MODE_MISMATCH';
+        throw error;
+      }
       if (options.onStatus) {
         options.onStatus({
           status: st.status, progress: st.progress, stage: meta.stage ?? st.stage,
           segments: segs ?? meta.segments, promoted: promoted ?? meta.promoted,
-          ingestMode: st.ingest_mode ?? meta.ingestMode,
+          ingestMode: returnedMode ?? requestedIngestMode,
           evidenceOnly: st.evidence_only ?? meta.evidenceOnly,
           evidenceOnlyReason: st.evidence_only_reason ?? meta.evidenceOnlyReason,
         });
@@ -2356,14 +2375,16 @@ class HiveMindApiClient {
           segmentCount: segs,
           candidateCount: candidates,
           promotedCount: promoted,
-          ingestMode: st.ingest_mode ?? options.ingestMode ?? 'both',
+          ingestMode: returnedMode ?? requestedIngestMode,
           evidenceOnly: st.evidence_only === true,
           evidenceOnlyReason: st.evidence_only_reason || null,
           job_id: jobId,
         };
       }
       if (st.status === 'failed') {
-        throw new Error(st.error || 'Ingestion failed');
+        const error = new Error(st.error || 'Ingestion failed');
+        error.code = 'INGEST_FAILED';
+        throw error;
       }
     }
     throw new Error('Ingestion timed out');

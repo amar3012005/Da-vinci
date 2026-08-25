@@ -37,6 +37,7 @@ import { useUploads, setUploads as setGlobalUploads } from '../shared/upload-sto
 import { isPlanLimitError } from '../shared/planLimit';
 import UsageTracker from '../components/UsageTracker';
 import { emitUsageChanged, useUsage } from '../shared/useUsage';
+import { documentIngestState, hasIngestModeMismatch, normalizeIngestMode, uploadQuotaMessage } from '../shared/knowledge-ingest-contract';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -1363,6 +1364,7 @@ export default function KnowledgeBase() {
   }, []);
 
   const handleFiles = useCallback(async (files, { targetScope = 'organization', project = null, ingestMode = 'both' } = {}) => {
+    const batchIngestMode = normalizeIngestMode(ingestMode);
     // ── Step 1: validate + queue all entries up-front (optimistic UI) ──
     const validQueue = []; // { uploadEntry, file, controller }
     const nowBase = Date.now();
@@ -1401,7 +1403,7 @@ export default function KnowledgeBase() {
         status: 'queued', // queued | uploading | success | error
         chunks: null,
         progress: 0,
-        ingestMode,
+        ingestMode: batchIngestMode,
         controller,
         startedAt: Date.now(),
       };
@@ -1430,6 +1432,7 @@ export default function KnowledgeBase() {
     // signal that frees this file's transfer slot the moment its bytes are in.
     const uploadOne = async (queueEntry, { force = false, attempt = 1 } = {}) => {
       const { uploadEntry, file } = queueEntry;
+      const requestedIngestMode = uploadEntry.ingestMode;
       // Move queued → uploading
       setUploads((prev) => prev.map((u) =>
         u.id === uploadEntry.id ? { ...u, status: 'uploading', error: undefined } : u
@@ -1523,7 +1526,7 @@ export default function KnowledgeBase() {
               projectId: targetScope === 'organization' ? null : (project || null),
               containerTag: targetScope === 'organization' ? (project || undefined) : undefined,
               force, // re-ingest past the same-scope duplicate gate when approved
-              ingestMode,
+              ingestMode: requestedIngestMode,
               signal: uploadEntry.controller.signal,
             };
         const result = await uploadFn(file, {
@@ -1632,6 +1635,18 @@ export default function KnowledgeBase() {
           return;
         }
 
+        const returnedIngestMode = result?.ingestMode ?? result?.ingest_mode;
+        if (hasIngestModeMismatch(requestedIngestMode, returnedIngestMode)) {
+          const mismatchError = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${returnedIngestMode}.`);
+          mismatchError.code = 'INGEST_MODE_MISMATCH';
+          throw mismatchError;
+        }
+        const terminalIngestMode = normalizeIngestMode(returnedIngestMode ?? requestedIngestMode);
+        const memoryGenerationFailed = result?.memoryGenerationFailed === true
+          || result?.memory_generation_failed === true
+          || result?.promotionFailed === true
+          || result?.promotion_failed === true;
+
         // Phase 1b document_first response shape:
         //   { mode: 'document_first', documentId, segmentCount,
         //     candidateCount, promotedCount, promotedMemoryIds }
@@ -1649,12 +1664,15 @@ export default function KnowledgeBase() {
                 candidateCount: result.candidateCount ?? null,
                 promotedCount: result.promotedCount ?? null,
                 promotedMemoryIds: result.promotedMemoryIds ?? null,
-                ingestMode: result.ingestMode || ingestMode,
-                evidenceOnly: result.evidenceOnly === true || ingestMode === 'evidence',
-                evidenceOnlyReason: result.evidenceOnlyReason || (ingestMode === 'evidence' ? 'user_selected' : null),
-                message: result.evidenceOnly === true || ingestMode === 'evidence'
-                  ? 'Searchable evidence ready'
-                  : undefined,
+                ingestMode: terminalIngestMode,
+                evidenceOnly: result.evidenceOnly === true || terminalIngestMode === 'evidence',
+                evidenceOnlyReason: result.evidenceOnlyReason || (terminalIngestMode === 'evidence' ? 'user_selected' : null),
+                memoryGenerationFailed,
+                message: documentIngestState({
+                  ingestMode: terminalIngestMode,
+                  evidenceOnly: result.evidenceOnly === true,
+                  memoryGenerationFailed,
+                }),
                 documentId: result.documentId ?? null,
                 uploadId: result.upload_id ?? null,
                 // Enterprise schema extraction (when enterprise=auto|true and
@@ -1675,8 +1693,8 @@ export default function KnowledgeBase() {
             total_chunks: result.segmentCount ?? result.chunks ?? 0,
             filename: result.filename || file.name,
             upload_id: result.upload_id,
-            ingest_mode: result.ingestMode || ingestMode,
-            evidence_only: result.evidenceOnly === true || ingestMode === 'evidence',
+            ingest_mode: terminalIngestMode,
+            evidence_only: result.evidenceOnly === true || terminalIngestMode === 'evidence',
           },
           tags: [
             ...(customTags ? customTags.split(',').map((t) => t.trim()) : []),
@@ -1704,7 +1722,8 @@ export default function KnowledgeBase() {
         // app-wide, so here we only need a clean, non-red inline note and MUST
         // NOT auto-retry (a 402/403/429 plan-limit is terminal for this upload).
         const isPlanLimit = isPlanLimitError(err);
-        const isTransient = !isCancelled && !isDuplicate && !isPlanLimit
+        const isTerminalIngestError = err?.code === 'INGEST_MODE_MISMATCH' || err?.code === 'INGEST_FAILED';
+        const isTransient = !isCancelled && !isDuplicate && !isPlanLimit && !isTerminalIngestError
           && (_st === 502 || _st === 503 || _st === 504 || _st === 429 || _st === undefined);
         const MAX_UPLOAD_ATTEMPTS = 4;
         if (isTransient && attempt < MAX_UPLOAD_ATTEMPTS) {
@@ -1734,7 +1753,7 @@ export default function KnowledgeBase() {
                   : isDuplicate
                     ? (err.response?.data?.message || 'This file is already in this scope.')
                     : isPlanLimit
-                      ? 'Upgrade for more pages'
+                      ? uploadQuotaMessage(err)
                       : friendlyUploadError(err),
                 // Duplicate → user gets an "Upload anyway" action. Stash the
                 // existing-doc info + a force re-ingest closure (same file/scope).
@@ -2428,14 +2447,21 @@ export default function KnowledgeBase() {
                   {u.stage === 'checking' && (
                     <span className="text-[#a3a3a3]">Checking if already uploaded…</span>
                   )}
+                  {u.status === 'success' && u.message && (
+                    <span className="text-[#16a34a]">{u.message}</span>
+                  )}
                   {u.mode === 'document_first' && u.segmentCount != null && (
-                    u.evidenceOnly ? (
+                    u.memoryGenerationFailed ? (
+                      <span className="text-[#dc2626]" title="Evidence is indexed, but memory generation failed after indexing.">
+                        Memory generation failed
+                      </span>
+                    ) : u.evidenceOnly ? (
                       <span className="text-[#16a34a]" title="Semantic and lexical evidence indexing complete; memory generation was intentionally skipped.">
-                        Searchable evidence ready · {u.segmentCount} segments · 0 memories
+                        Evidence ready · {u.segmentCount} segments · 0 memories
                       </span>
                     ) : u.segmentCount > 0 || (u.promotedCount ?? 0) > 0 ? (
                       <span className="text-[#16a34a]" title="Phase 1 evidence-first ingest">
-                        {u.segmentCount} seg · {u.promotedCount ?? 0}/{u.candidateCount ?? 0} promoted
+                        Memories + evidence ready · {u.segmentCount} seg · {u.promotedCount ?? 0}/{u.candidateCount ?? 0} promoted
                       </span>
                     ) : (
                       <span className="text-[#117dff]" title="Server is extracting + indexing this document. Memories will surface in 2-5 min.">

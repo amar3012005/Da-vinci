@@ -24,6 +24,7 @@ import {
   Lock,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { documentIngestState, exactLayerCount } from '../shared/knowledge-ingest-contract';
 import { useApiQuery, useDebounce } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
 import { filterUserVisibleMemories } from '../shared/memory-filters';
@@ -1067,11 +1068,14 @@ export default function Memories() {
         const stats = await apiClient.getMemoryStats().catch(() => null);
         _mode = stats?.storage_mode || null;
         setStorageMode(_mode);
-        if (stats) setLayerCounts({
-          memories: Number.isFinite(stats.memories) ? stats.memories : null,
-          documents: Number.isFinite(stats.documents) ? stats.documents : null,
-          evidence: Number.isFinite(stats.evidence) ? stats.evidence : null,
-        });
+        if (stats) {
+          const counts = stats.counts || stats;
+          setLayerCounts({
+            memories: exactLayerCount(counts.memories),
+            documents: exactLayerCount(counts.documents),
+            evidence: exactLayerCount(counts.evidence),
+          });
+        }
       } catch { /* noop */ }
       const _agentBacked = ['amr', 'amr_embedded', 'byod', 'byod_amr'].includes(String(_mode || ''));
       if (cancelled) return;
@@ -2292,6 +2296,12 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
   const typeColor = document.documentType === 'pdf' ? '#ef4444' :
                    document.documentType === 'docx' ? '#3b82f6' :
                    document.documentType === 'xlsx' ? '#10b981' : '#6b7280';
+  const documentState = documentIngestState({
+    ingestMode: document.ingestMode ?? document.ingest_mode,
+    evidenceOnly: document.evidenceOnly ?? document.evidence_only,
+    memoryGenerationFailed: document.memoryGenerationFailed ?? document.memory_generation_failed ?? document.promotionFailed ?? document.promotion_failed,
+    processing: ['queued', 'processing', 'parsing', 'segmenting', 'embedding', 'promoting'].includes(document.status),
+  });
 
   return (
     <motion.button
@@ -2334,6 +2344,9 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
         <span>·</span>
         <span>{document.promotedCount || 0} {t('memories.promotedLower', 'promoted')}</span>
       </div>
+      <p className={`mb-3 text-[10px] font-mono ${documentState === 'Memory generation failed' ? 'text-[#dc2626]' : documentState === 'Processing' ? 'text-[#117dff]' : 'text-[#16a34a]'}`}>
+        {documentState}
+      </p>
 
       {/* Tags */}
       {document.tags && document.tags.length > 0 && (
