@@ -1653,6 +1653,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async listEvidence(params = {}) {
+    const { data } = await this.controlPlane.get('/v1/proxy/evidence', { params });
+    return data;
+  }
+
   async hybridSearch(query, params = {}) {
     const { data } = await this.controlPlane.post('/v1/proxy/evidence/hybrid', { 
       query, ...params 

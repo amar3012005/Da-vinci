@@ -522,21 +522,29 @@ function UploadScopeModal({
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
+                  aria-pressed={selectedIngestMode === 'both'}
                   onClick={() => onIngestModeChange('both')}
-                  className={`rounded-lg border p-3 text-left transition-colors ${selectedIngestMode === 'both'
-                    ? 'border-[#117dff]/40 bg-[#117dff]/8' : 'border-[#e3e0db] hover:bg-[#faf9f4]'}`}
+                  className={`relative rounded-[10px] border p-3 text-left transition-all ${selectedIngestMode === 'both'
+                    ? 'border-2 border-[#117dff] bg-blue-50/70 shadow-[0_0_0_3px_rgba(17,125,255,0.08)]' : 'border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#faf9f4]'}`}
                 >
-                  <p className="text-xs font-semibold text-[#0a0a0a]">{t('knowledgebase.modeBoth', 'Memories + evidence')}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-[#0a0a0a]">{t('knowledgebase.modeBoth', 'Memories + evidence')}</p>
+                    {selectedIngestMode === 'both' && <CheckCircle size={16} className="shrink-0 text-[#117dff]" />}
+                  </div>
                   <p className="mt-1 text-[11px] text-[#737373]">{t('knowledgebase.modeBothDesc', 'Full facts, entities, relationships, and hybrid search.')}</p>
                 </button>
                 <button
                   type="button"
                   disabled={containsImage}
+                  aria-pressed={selectedIngestMode === 'evidence'}
                   onClick={() => !containsImage && onIngestModeChange('evidence')}
-                  className={`rounded-lg border p-3 text-left transition-colors ${selectedIngestMode === 'evidence'
-                    ? 'border-[#117dff]/40 bg-[#117dff]/8' : 'border-[#e3e0db] hover:bg-[#faf9f4]'} ${containsImage ? 'cursor-not-allowed opacity-45' : ''}`}
+                  className={`relative rounded-[10px] border p-3 text-left transition-all ${selectedIngestMode === 'evidence'
+                    ? 'border-2 border-[#117dff] bg-blue-50/70 shadow-[0_0_0_3px_rgba(17,125,255,0.08)]' : 'border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#faf9f4]'} ${containsImage ? 'cursor-not-allowed opacity-45' : ''}`}
                 >
-                  <p className="text-xs font-semibold text-[#0a0a0a]">{t('knowledgebase.modeEvidence', 'Evidence only')}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-[#0a0a0a]">{t('knowledgebase.modeEvidence', 'Evidence only')}</p>
+                    {selectedIngestMode === 'evidence' && <CheckCircle size={16} className="shrink-0 text-[#117dff]" />}
+                  </div>
                   <p className="mt-1 text-[11px] text-[#737373]">{t('knowledgebase.modeEvidenceDesc', 'Hybrid searchable segments; skips AI memory, entity, and relationship generation.')}</p>
                 </button>
               </div>
@@ -550,10 +558,11 @@ function UploadScopeModal({
             {/* Tier 1 — Personal: everyone, private */}
             <button
               type="button"
+              aria-pressed={selectedScope === 'personal'}
               onClick={() => onScopeChange('personal')}
-              className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
+              className={`w-full rounded-[10px] border px-4 py-3 text-left transition-all ${
                 selectedScope === 'personal'
-                  ? 'border-[#117dff]/30 bg-[#117dff]/8'
+                  ? 'border-2 border-[#117dff] bg-blue-50/70 shadow-[0_0_0_3px_rgba(17,125,255,0.08)]'
                   : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
               }`}
             >
@@ -561,10 +570,11 @@ function UploadScopeModal({
                 <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
                   <User size={16} className="text-[#117dff]" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopePersonalLabel', 'My Space')}</p>
                   <p className="text-xs text-[#525252]">{t('knowledgebase.scopePersonalDesc', 'Private memories only visible in your personal workspace.')}</p>
                 </div>
+                {selectedScope === 'personal' && <CheckCircle size={18} className="shrink-0 text-[#117dff]" />}
               </div>
             </button>
 
@@ -573,11 +583,12 @@ function UploadScopeModal({
             <div
               role="button"
               tabIndex={0}
+              aria-pressed={selectedScope === 'project'}
               onClick={() => onScopeChange('project')}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onScopeChange('project'); }}
-              className={`w-full rounded-xl border px-4 py-3 text-left transition-colors cursor-pointer ${
+              className={`w-full rounded-[10px] border px-4 py-3 text-left transition-all cursor-pointer ${
                 selectedScope === 'project'
-                  ? 'border-[#117dff]/30 bg-[#117dff]/8'
+                  ? 'border-2 border-[#117dff] bg-blue-50/70 shadow-[0_0_0_3px_rgba(17,125,255,0.08)]'
                   : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
               }`}
             >
@@ -585,10 +596,11 @@ function UploadScopeModal({
                 <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
                   <FolderKanban size={16} className="text-[#117dff]" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopeProjectLabel', 'Project')}</p>
                   <p className="text-xs text-[#525252]">{t('knowledgebase.scopeProjectDesc', 'Shared with the members invited to that project.')}</p>
                 </div>
+                {selectedScope === 'project' && <CheckCircle size={18} className="shrink-0 text-[#117dff]" />}
               </div>
               {selectedScope === 'project' && (
                 <div className="mt-3" onClick={(e) => e.stopPropagation()}>
@@ -642,10 +654,11 @@ function UploadScopeModal({
             <button
               type="button"
               disabled={!isOrgAdmin}
+              aria-pressed={selectedScope === 'organization'}
               onClick={() => isOrgAdmin && onScopeChange('organization')}
-              className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
+              className={`w-full rounded-[10px] border px-4 py-3 text-left transition-all ${
                 selectedScope === 'organization'
-                  ? 'border-[#117dff]/30 bg-[#117dff]/8'
+                  ? 'border-2 border-[#117dff] bg-blue-50/70 shadow-[0_0_0_3px_rgba(17,125,255,0.08)]'
                   : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
               } ${!isOrgAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
@@ -653,7 +666,7 @@ function UploadScopeModal({
                 <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
                   <Users size={16} className="text-[#117dff]" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
                     {org?.name
                       ? t('knowledgebase.scopeOrgLabelNamed', 'Entire organization: {{name}}', { name: org.name })
@@ -665,6 +678,7 @@ function UploadScopeModal({
                       : t('knowledgebase.scopeOrgDescLocked', 'Org-wide uploads are reserved for organization admins.')}
                   </p>
                 </div>
+                {selectedScope === 'organization' && <CheckCircle size={18} className="shrink-0 text-[#117dff]" />}
               </div>
             </button>
           </div>
@@ -1389,6 +1403,7 @@ export default function KnowledgeBase() {
         progress: 0,
         ingestMode,
         controller,
+        startedAt: Date.now(),
       };
       validQueue.push({ uploadEntry, file });
     });

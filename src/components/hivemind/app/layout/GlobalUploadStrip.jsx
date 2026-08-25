@@ -11,7 +11,7 @@
  * Hides itself entirely on KnowledgeBase to avoid duplication.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, ArrowUpRight } from 'lucide-react';
@@ -26,10 +26,16 @@ function fmtUpBytes(n) {
   return `${(n / 1024 / 1024).toFixed(1)}MB`;
 }
 
+function fmtElapsed(ms) {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(seconds / 60);
+  return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
 function statusBadge(u) {
   if (u.status === 'success') return { icon: CheckCircle2, color: '#16a34a', label: 'Uploaded' };
   if (u.status === 'error' || u.status === 'cancelled') return { icon: AlertTriangle, color: '#dc2626', label: u.status === 'cancelled' ? 'Cancelled' : 'Failed' };
-  if (u.status === 'uploading') return { icon: Upload, color: '#117dff', label: u.stage === 'processing' ? 'processing' : `${u.progress || 0}%` };
+  if (u.status === 'uploading') return { icon: Upload, color: '#117dff', label: u.bytesDone ? (u.stageLabel || 'Processing') : `${u.progress || 0}%` };
   return { icon: Upload, color: '#a3a3a3', label: 'Queued' };
 }
 
@@ -38,6 +44,14 @@ export default function GlobalUploadStrip() {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [clockNow, setClockNow] = useState(Date.now());
+
+  useEffect(() => {
+    const active = uploads?.some((u) => u.status === 'uploading' || u.status === 'queued');
+    if (!active) return undefined;
+    const timer = setInterval(() => setClockNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [uploads]);
 
   // Don't double up — KB has its own inline strip, and Overview shows the
   // compact drop-up above its chat composer.
@@ -106,6 +120,8 @@ export default function GlobalUploadStrip() {
               <div className="max-h-[260px] overflow-y-auto px-2 py-2 space-y-1">
                 {visible.map((u) => {
                   const { icon: Icon, color, label } = statusBadge(u);
+                  const progress = u.bytesDone ? Number(u.serverProgress || 0) : Number(u.progress || 0);
+                  const elapsed = fmtElapsed(clockNow - Number(u.startedAt || clockNow));
                   return (
                     <div
                       key={u.id}
@@ -122,16 +138,15 @@ export default function GlobalUploadStrip() {
                         {u.status === 'uploading' && (
                           <>
                             <div className="mt-1 h-1.5 rounded-full bg-[#e3e0db] overflow-hidden">
-                              {u.stage === 'processing' ? (
-                                <div className="h-full bg-[#117dff] animate-pulse" style={{ width: '100%' }} />
-                              ) : (
-                                <div className="h-full bg-[#117dff] transition-all duration-300" style={{ width: `${u.progress || 0}%` }} />
-                              )}
+                              <div
+                                className={`h-full bg-[#117dff] transition-all duration-300 ${u.bytesDone && progress < 100 ? 'animate-pulse' : ''}`}
+                                style={{ width: `${Math.max(2, Math.min(100, progress))}%` }}
+                              />
                             </div>
                             <div className="text-[9px] text-[#a3a3a3] font-mono mt-0.5 truncate">
-                              {u.stage === 'processing'
-                                ? 'parsing on server (Docling)…'
-                                : `${u.progress || 0}%${u.bytesTotal ? ` · ${fmtUpBytes(u.bytesLoaded)}/${fmtUpBytes(u.bytesTotal)}` : ''}${u.etaSec != null ? ` · ${Math.ceil(u.etaSec)}s left` : ''}`}
+                              {u.bytesDone
+                                ? `${Math.round(progress)}/100 [${elapsed} elapsed] · ${u.stageLabel || 'Processing'}`
+                                : `${Math.round(progress)}/100 [${elapsed}${u.etaSec != null ? `<${fmtElapsed(u.etaSec * 1000)}` : ''}]${u.bytesTotal ? ` · ${fmtUpBytes(u.bytesLoaded)}/${fmtUpBytes(u.bytesTotal)}` : ''}${u.speedBps > 0 ? ` · ${fmtUpBytes(u.speedBps)}/s` : ''}`}
                             </div>
                           </>
                         )}

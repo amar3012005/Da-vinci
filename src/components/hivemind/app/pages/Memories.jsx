@@ -2146,29 +2146,51 @@ function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelect
 
 function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDocument }) {
   const { t } = useTranslation('dashboard');
-  const [searchMode, setSearchMode] = useState('evidence'); // 'evidence' or 'hybrid'
+  const PAGE_SIZE = 40;
+  const [offset, setOffset] = useState(0);
+  const [evidenceRows, setEvidenceRows] = useState([]);
+  const [total, setTotal] = useState(0);
   const debouncedQuery = useDebounce(searchQuery, 350);
+  const isSearching = debouncedQuery.trim().length > 0;
+
+  useEffect(() => {
+    setOffset(0);
+    setEvidenceRows([]);
+  }, [debouncedQuery]);
 
   const {
     data,
     loading,
     error,
   } = useApiQuery(
-    () => {
-      if (!debouncedQuery.trim()) return Promise.resolve(null);
-      return searchMode === 'hybrid'
-        ? apiClient.hybridSearch(debouncedQuery, { limit: 20 })
-        : apiClient.searchEvidence(debouncedQuery, { limit: 20 });
-    },
-    [debouncedQuery, searchMode]
+    () => isSearching
+      ? apiClient.searchEvidence(debouncedQuery, { limit: 200 })
+      : apiClient.listEvidence({ limit: PAGE_SIZE, offset }),
+    [isSearching, debouncedQuery, offset]
   );
 
-  const results = data?.results || data?.evidence || data || [];
+  useEffect(() => {
+    if (!data) return;
+    const page = data?.results || data?.evidence || (Array.isArray(data) ? data : []);
+    if (isSearching) {
+      setEvidenceRows(page);
+      setTotal(page.length);
+      return;
+    }
+    setEvidenceRows((previous) => {
+      const base = offset === 0 ? [] : previous;
+      const seen = new Set(base.map((item) => item.segmentId || item.segment_id || item.id));
+      return [...base, ...page.filter((item) => !seen.has(item.segmentId || item.segment_id || item.id))];
+    });
+    setTotal(data?.pagination?.total ?? page.length);
+  }, [data, isSearching, offset]);
+
+  const hasMore = !isSearching && total > 0 && evidenceRows.length < total;
 
   return (
     <>
-      {/* ── Search Bar with Mode Toggle ── */}
-      <div className="space-y-4 mb-6">
+      {/* ── Search Bar ── */}
+      <div className="mb-6">
         <div className="relative">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#d4d0ca]" />
           {searchQuery && (
@@ -2188,30 +2210,6 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
           />
         </div>
 
-        {/* Mode Toggle */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[#a3a3a3] font-mono">{t('memories.searchMode', 'Search mode:')}</span>
-          <button
-            onClick={() => setSearchMode('evidence')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-              searchMode === 'evidence'
-                ? 'border-[#117dff] bg-[#117dff]/10 text-[#117dff]'
-                : 'border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca]'
-            }`}
-          >
-            {t('memories.evidenceOnly', 'Evidence only')}
-          </button>
-          <button
-            onClick={() => setSearchMode('hybrid')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-              searchMode === 'hybrid'
-                ? 'border-[#117dff] bg-[#117dff]/10 text-[#117dff]'
-                : 'border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca]'
-            }`}
-          >
-            {t('memories.hybridSearch', 'Hybrid (evidence + memories)')}
-          </button>
-        </div>
       </div>
 
       {/* ── Loading / Error States ── */}
@@ -2229,9 +2227,9 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
       )}
 
       {/* ── Evidence Results ── */}
-      {!loading && !error && results.length > 0 && (
+      {!loading && !error && evidenceRows.length > 0 && (
         <div className="space-y-3">
-          {results.map((item, idx) => (
+          {evidenceRows.map((item, idx) => (
             <EvidenceCard 
               key={`${item.segment_id || item.id}-${idx}`} 
               evidence={item}
@@ -2247,18 +2245,34 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
         </div>
       )}
 
+      {!loading && !error && evidenceRows.length > 0 && (
+        <div className="flex items-center justify-center gap-3 pt-5">
+          <span className="text-xs text-[#a3a3a3]">
+            {t('memories.showingEvidence', 'Showing')} {evidenceRows.length}{total ? ` / ${total}` : ''}
+          </span>
+          {hasMore && (
+            <button
+              onClick={() => setOffset((value) => value + PAGE_SIZE)}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-white border border-[#e5e2dc] text-[#525252] hover:bg-[#f5f3ee] transition-colors"
+            >
+              {t('memories.loadMore', 'Load more')}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── Empty / Prompt State ── */}
-      {!loading && !error && !debouncedQuery.trim() && (
+      {!loading && !error && !isSearching && evidenceRows.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Database size={48} className="text-[#d4d0ca] mb-4" />
-          <h3 className="text-[#525252] font-semibold mb-2">{t('memories.searchEvidenceTitle', 'Search evidence segments')}</h3>
+          <h3 className="text-[#525252] font-semibold mb-2">{t('memories.noEvidenceYet', 'No evidence segments yet')}</h3>
           <p className="text-[#a3a3a3] text-sm max-w-md">
-            {t('memories.searchEvidenceHint', 'Enter a query to search through uploaded document segments and find supporting evidence')}
+            {t('memories.noEvidenceUploadHint', 'Upload a document to create searchable evidence segments.')}
           </p>
         </div>
       )}
 
-      {!loading && !error && debouncedQuery.trim() && results.length === 0 && (
+      {!loading && !error && isSearching && evidenceRows.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Database size={48} className="text-[#d4d0ca] mb-4" />
           <h3 className="text-[#525252] font-semibold mb-2">{t('memories.noEvidenceFound', 'No evidence found')}</h3>
@@ -2351,21 +2365,46 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
 
 function EvidenceCard({ evidence, onViewDocument }) {
   const { t } = useTranslation('dashboard');
-  const hasDocument = evidence.document_id || evidence.documentId;
+  const [expanded, setExpanded] = useState(false);
+  const segmentId = evidence.segmentId || evidence.segment_id || evidence.id;
+  const documentId = evidence.documentId || evidence.document_id || evidence.document?.id || evidence.metadata?.document_id;
+  const documentTitle = evidence.document?.title || evidence.document_title || evidence.metadata?.source_title || t('memories.evidence', 'Evidence');
+  const segmentIndex = evidence.metadata?.segmentIndex ?? evidence.metadata?.segment_index ?? evidence.segment_index ?? 0;
+  const title = evidence.title || evidence.metadata?.evidence_title
+    || `${documentTitle} : ${String(Number(segmentIndex) + 1).padStart(2, '0')}`;
+  const detailMetadata = {
+    segment_id: segmentId,
+    document_id: documentId,
+    citation_id: evidence.citation_id || evidence.citationId,
+    type: 'evidence_segment',
+    created_at: evidence.createdAt || evidence.created_at,
+    score: evidence.score,
+    document: evidence.document,
+    ...(evidence.metadata || {}),
+  };
+  const metadataEntries = Object.entries(detailMetadata)
+    .filter(([, value]) => value !== null && value !== undefined && value !== '')
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  const displayMetadataValue = (value) => {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    try { return JSON.stringify(value); } catch { return String(value); }
+  };
   
   return (
     <motion.div
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-transparent border border-[#e3e0db] rounded-xl p-4 hover:border-[#d4d0ca] hover:shadow-sm transition-all"
+      className="bg-white border border-[#e3e0db] rounded-[10px] p-4 hover:border-[#d4d0ca] hover:shadow-sm transition-all"
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
-          <h3 className="mb-1 text-sm font-semibold text-[#0a0a0a]">
-            {evidence.title || evidence.metadata?.evidence_title
-              || `${evidence.document_title || evidence.document?.title || t('memories.evidence', 'Evidence')} : ${String((evidence.segment_index ?? evidence.metadata?.segmentIndex ?? 0) + 1).padStart(2, '0')}`}
-          </h3>
+          <button type="button" onClick={() => setExpanded((value) => !value)} className="w-full text-left flex items-start gap-2">
+            <ChevronRight size={14} className={`mt-0.5 shrink-0 text-[#a3a3a3] transition-transform ${expanded ? 'rotate-90' : ''}`} />
+            <h3 className="mb-1 text-sm font-semibold text-[#0a0a0a]">{title}</h3>
+          </button>
           <p className="text-[#0a0a0a] text-sm line-clamp-3 mb-2">
             {evidence.content || evidence.text || evidence.excerpt}
           </p>
@@ -2380,31 +2419,24 @@ function EvidenceCard({ evidence, onViewDocument }) {
       {/* Metadata */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-[10px] text-[#a3a3a3] font-mono flex-1">
-          {evidence.document_title && (
+          {documentTitle && (
             <>
               <FileText size={10} />
-              <span className="line-clamp-1">{evidence.document_title}</span>
+              <span className="line-clamp-1">{documentTitle}</span>
             </>
           )}
-          {evidence.segment_index != null && (
+          {segmentIndex != null && (
             <>
               <span>·</span>
-              <span>{t('memories.segment', 'Segment')} {evidence.segment_index + 1}</span>
-            </>
-          )}
-          {evidence.type === 'memory' && (
-            <>
-              <span>·</span>
-              <Brain size={10} />
-              <span>{t('memories.canonicalMemory', 'Canonical memory')}</span>
+              <span>{t('memories.segment', 'Segment')} {Number(segmentIndex) + 1}</span>
             </>
           )}
         </div>
         
         {/* View Document Button */}
-        {hasDocument && onViewDocument && (
+        {documentId && onViewDocument && (
           <button
-            onClick={() => onViewDocument(evidence.document_id || evidence.documentId)}
+            onClick={() => onViewDocument(documentId)}
             className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono text-[#117dff] hover:bg-[#117dff]/10 rounded transition-colors"
           >
             <ExternalLink size={10} />
@@ -2412,6 +2444,37 @@ function EvidenceCard({ evidence, onViewDocument }) {
           </button>
         )}
       </div>
+
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 pt-4 border-t border-[#eae7e1] space-y-4">
+              <div>
+                <div className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-2">Full evidence</div>
+                <p className="text-[12px] leading-relaxed text-[#525252] whitespace-pre-wrap break-words">
+                  {evidence.content || evidence.text || evidence.excerpt || '—'}
+                </p>
+              </div>
+              <div>
+                <div className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-2">Metadata</div>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                  {metadataEntries.map(([key, value]) => (
+                    <div key={key} className="min-w-0 border-b border-[#f3f1ec] pb-1.5">
+                      <dt className="text-[10px] font-mono text-[#a3a3a3] break-all">{key}</dt>
+                      <dd className="text-[11px] font-mono text-[#525252] break-all mt-0.5">{displayMetadataValue(value)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

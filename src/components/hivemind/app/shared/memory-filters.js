@@ -52,7 +52,25 @@ export function isTaraTranscriptMemory(memory) {
   );
 }
 
+export function isMemoryLayer(memory) {
+  if (!memory) return false;
+  const metadata = memory.metadata || {};
+  const kind = String(
+    memory.memory_type || memory.memoryType || memory.type || memory.kind
+    || metadata.memory_type || metadata.memoryType || metadata.type || metadata.kind || ''
+  ).toLowerCase();
+  const layer = String(memory.layer || metadata.layer || '').toLowerCase();
+  const tags = Array.isArray(memory.tags)
+    ? memory.tags.map((tag) => normalizePart(tag).toLowerCase())
+    : [];
+
+  if (layer === 'evidence' || layer === 'document') return false;
+  if (kind === 'evidence_segment' || kind === 'kb_document' || kind === 'knowledge_segment') return false;
+  if (tags.some((tag) => tag === 'layer:evidence' || tag === 'layer:document')) return false;
+  return true;
+}
+
 export function filterUserVisibleMemories(memories) {
   if (!Array.isArray(memories)) return [];
-  return memories.filter((memory) => !isTaraTranscriptMemory(memory));
+  return memories.filter((memory) => isMemoryLayer(memory) && !isTaraTranscriptMemory(memory));
 }
