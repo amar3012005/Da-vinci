@@ -24,7 +24,15 @@ import {
   Lock,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
-import { documentIngestState, exactLayerCount } from '../shared/knowledge-ingest-contract';
+import {
+  documentIngestMode,
+  documentIngestState,
+  evidenceCardTitle,
+  isKnowledgeEvidenceRow,
+  KNOWLEDGE_CHANGED_EVENT,
+  paginationTotal,
+  sanitizeEvidenceMetadata,
+} from '../shared/knowledge-ingest-contract';
 import { useApiQuery, useDebounce } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
 import { filterUserVisibleMemories } from '../shared/memory-filters';
@@ -1022,7 +1030,11 @@ export default function Memories() {
   // which sits outside the selected team simply vanished from this filter — the
   // scope filter would silently offer fewer projects than the user can actually
   // read. allProjects is the unfiltered set the same context already exposes.
-  const { allProjects: _allProjects, projects: _teamProjects } = useTeamContext() || {};
+  const {
+    allProjects: _allProjects,
+    projects: _teamProjects,
+    activeProjectId,
+  } = useTeamContext() || {};
   const accessibleProjects = (_allProjects && _allProjects.length ? _allProjects : _teamProjects) || [];
   const [showFilters, setShowFilters] = useState(false);
   // Phase 2 polish
@@ -1044,6 +1056,22 @@ export default function Memories() {
   // Org name (normalized) — gates the "Company Info" label so it only shows
   // when a KB/document memory's company intent matches the user's organisation.
   const [orgKey, setOrgKey] = useState('');
+
+  // Tab badges must be the same ACL-filtered projections the tabs render.
+  // Storage aggregate stats are intentionally not suitable for Documents or
+  // Evidence: they can include rows the current principal cannot read.
+  const refreshLayerCounts = useCallback(async () => {
+    const results = await Promise.allSettled([
+      apiClient.listMemories({ limit: 1 }),
+      apiClient.listDocuments({ limit: 1 }),
+      apiClient.listEvidence({ limit: 1 }),
+    ]);
+    setLayerCounts({
+      memories: results[0].status === 'fulfilled' ? paginationTotal(results[0].value) : null,
+      documents: results[1].status === 'fulfilled' ? paginationTotal(results[1].value) : null,
+      evidence: results[2].status === 'fulfilled' ? paginationTotal(results[2].value) : null,
+    });
+  }, []);
 
   // Fetch top entities + contradiction count once
   useEffect(() => {
@@ -1068,14 +1096,6 @@ export default function Memories() {
         const stats = await apiClient.getMemoryStats().catch(() => null);
         _mode = stats?.storage_mode || null;
         setStorageMode(_mode);
-        if (stats) {
-          const counts = stats.counts || stats;
-          setLayerCounts({
-            memories: exactLayerCount(counts.memories),
-            documents: exactLayerCount(counts.documents),
-            evidence: exactLayerCount(counts.evidence),
-          });
-        }
       } catch { /* noop */ }
       const _agentBacked = ['amr', 'amr_embedded', 'byod', 'byod_amr'].includes(String(_mode || ''));
       if (cancelled) return;
@@ -1106,6 +1126,19 @@ export default function Memories() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // A scope/project switch, upload completion, deletion, or promotion changes
+  // the visible rows. Re-read the three exact list totals rather than guessing
+  // from an in-memory grid or a storage-wide aggregate.
+  useEffect(() => {
+    refreshLayerCounts().catch(() => {});
+  }, [activeProjectId, refreshLayerCounts, tierProject, tierScope]);
+
+  useEffect(() => {
+    const refresh = () => { refreshLayerCounts().catch(() => {}); };
+    window.addEventListener(KNOWLEDGE_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(KNOWLEDGE_CHANGED_EVENT, refresh);
+  }, [refreshLayerCounts]);
 
   // Pagination
   const [offset, setOffset] = useState(0);
@@ -1374,6 +1407,7 @@ export default function Memories() {
             tierScope={tierScope}
             tierProject={tierProject}
             orgKey={orgKey}
+            onKnowledgeChanged={refreshLayerCounts}
           />
         )}
 
@@ -1434,6 +1468,7 @@ function MemoriesTab({
   setActiveTab,
   activeCognitiveRole,
   setActiveCognitiveRole,
+  onKnowledgeChanged,
 }) {
   // ─── Data fetching ──────────────────────────────────────────────
 
@@ -1626,8 +1661,9 @@ function MemoriesTab({
       setSelectedMemory(null);
       setAllMemories((prev) => prev.filter((m) => m.id !== id));
       refetchList();
+      onKnowledgeChanged?.();
     },
-    [refetchList, setAllMemories, setSelectedMemory],
+    [onKnowledgeChanged, refetchList, setAllMemories, setSelectedMemory],
   );
 
   return (
@@ -2175,7 +2211,11 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
 
   useEffect(() => {
     if (!data) return;
-    const page = data?.results || data?.evidence || (Array.isArray(data) ? data : []);
+    const rawPage = data?.results || data?.evidence || (Array.isArray(data) ? data : []);
+    // The Evidence tab is a KnowledgeSegment projection only. A search result
+    // may carry related records alongside a segment, but it must never become
+    // an evidence card merely because it has an arbitrary `id` field.
+    const page = (Array.isArray(rawPage) ? rawPage : []).filter(isKnowledgeEvidenceRow);
     if (isSearching) {
       setEvidenceRows(page);
       setTotal(page.length);
@@ -2234,8 +2274,8 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
       {!loading && !error && evidenceRows.length > 0 && (
         <div className="space-y-3">
           {evidenceRows.map((item, idx) => (
-            <EvidenceCard 
-              key={`${item.segment_id || item.id}-${idx}`} 
+            <EvidenceCard
+              key={`${item.segmentId || item.segment_id || item.id}-${idx}`}
               evidence={item}
               onViewDocument={(docId) => {
                 setActiveTab('documents');
@@ -2293,14 +2333,23 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
 
 function DocumentCard({ document, index, onSelect, isSelected }) {
   const { t } = useTranslation('dashboard');
+  const metadata = document.metadata || {};
+  const documentStatus = String(document.status ?? document.parseStatus ?? document.parse_status ?? '').toLowerCase();
   const typeColor = document.documentType === 'pdf' ? '#ef4444' :
                    document.documentType === 'docx' ? '#3b82f6' :
                    document.documentType === 'xlsx' ? '#10b981' : '#6b7280';
   const documentState = documentIngestState({
-    ingestMode: document.ingestMode ?? document.ingest_mode,
-    evidenceOnly: document.evidenceOnly ?? document.evidence_only,
-    memoryGenerationFailed: document.memoryGenerationFailed ?? document.memory_generation_failed ?? document.promotionFailed ?? document.promotion_failed,
-    processing: ['queued', 'processing', 'parsing', 'segmenting', 'embedding', 'promoting'].includes(document.status),
+    ingestMode: documentIngestMode(document),
+    evidenceOnly: document.evidenceOnly ?? document.evidence_only ?? metadata.evidence_only ?? metadata.evidenceOnly,
+    memoryGenerationFailed: document.memoryGenerationFailed
+      ?? document.memory_generation_failed
+      ?? document.promotionFailed
+      ?? document.promotion_failed
+      ?? metadata.memory_generation_failed
+      ?? metadata.memoryGenerationFailed
+      ?? metadata.promotion_failed
+      ?? metadata.promotionFailed,
+    processing: ['queued', 'processing', 'parsing', 'segmenting', 'embedding', 'promoting'].includes(documentStatus),
   });
 
   return (
@@ -2379,22 +2428,77 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
 function EvidenceCard({ evidence, onViewDocument }) {
   const { t } = useTranslation('dashboard');
   const [expanded, setExpanded] = useState(false);
+  const metadata = evidence.metadata || {};
   const segmentId = evidence.segmentId || evidence.segment_id || evidence.id;
-  const documentId = evidence.documentId || evidence.document_id || evidence.document?.id || evidence.metadata?.document_id;
-  const documentTitle = evidence.document?.title || evidence.document_title || evidence.metadata?.source_title || t('memories.evidence', 'Evidence');
-  const segmentIndex = evidence.metadata?.segmentIndex ?? evidence.metadata?.segment_index ?? evidence.segment_index ?? 0;
-  const title = evidence.title || evidence.metadata?.evidence_title
-    || `${documentTitle} : ${String(Number(segmentIndex) + 1).padStart(2, '0')}`;
-  const detailMetadata = {
+  const documentId = evidence.documentId || evidence.document_id || evidence.document?.id || metadata.document_id;
+  const documentTitle = evidence.document?.title || evidence.document_title || t('memories.evidence', 'Evidence');
+  const title = String(sanitizeEvidenceMetadata(evidenceCardTitle(evidence, documentTitle)));
+  const citationId = metadata.citation_id ?? evidence.citation_id ?? evidence.citationId;
+  const sourceTitle = metadata.source_title ?? evidence.source_title ?? documentTitle;
+  const segmentOrdinal = metadata.segment_ordinal
+    ?? metadata.segmentIndex
+    ?? metadata.segment_index
+    ?? evidence.segment_ordinal
+    ?? evidence.segmentIndex
+    ?? evidence.segment_index;
+  const page = metadata.page ?? metadata.page_number ?? metadata.pageNumber ?? evidence.page ?? evidence.page_number;
+  const scope = metadata.scope ?? metadata.scope_type ?? evidence.scope ?? evidence.scope_type;
+  const orgId = metadata.org_id ?? metadata.organization_id ?? evidence.org_id ?? evidence.organization_id;
+  const uploaderId = metadata.uploaded_by_user_id
+    ?? metadata.uploader_user_id
+    ?? evidence.uploaded_by_user_id
+    ?? evidence.uploader_user_id;
+  const projectIds = metadata.project_ids ?? evidence.project_ids;
+  const teamId = metadata.team_id ?? evidence.team_id;
+  const knownAt = metadata.known_at ?? evidence.known_at ?? evidence.createdAt ?? evidence.created_at;
+  const embeddingModel = metadata.embedding_model ?? evidence.embedding_model;
+  const embeddingVersion = metadata.embedding_version ?? metadata.embedding_model_version ?? evidence.embedding_version;
+  const safeValue = (value) => {
+    const sanitized = sanitizeEvidenceMetadata(value);
+    if (Array.isArray(sanitized)) return sanitized.join(', ');
+    if (sanitized && typeof sanitized === 'object') {
+      try { return JSON.stringify(sanitized); } catch { return String(sanitized); }
+    }
+    return sanitized == null ? '' : String(sanitized);
+  };
+  const provenance = [
+    citationId && { key: 'citation', Icon: Tag, label: `Citation ${safeValue(citationId)}` },
+    sourceTitle && { key: 'source', Icon: FileText, label: safeValue(sourceTitle) },
+    page != null && { key: 'page', Icon: FileText, label: `Page ${safeValue(page)}` },
+    segmentOrdinal != null && { key: 'segment', Icon: Database, label: `Segment ${safeValue(segmentOrdinal)}` },
+    scope && { key: 'scope', Icon: Lock, label: `Scope ${safeValue(scope)}` },
+    orgId && { key: 'org', Icon: Globe, label: `Org ${safeValue(orgId)}` },
+    uploaderId && { key: 'uploader', Icon: User, label: `Uploader ${safeValue(uploaderId)}` },
+    projectIds && { key: 'projects', Icon: FolderOpen, label: `Projects ${safeValue(projectIds)}` },
+    teamId && { key: 'team', Icon: Users, label: `Team ${safeValue(teamId)}` },
+    knownAt && { key: 'known-at', Icon: Clock, label: `Known ${safeValue(knownAt)}` },
+    embeddingModel && {
+      key: 'embedding',
+      Icon: Database,
+      label: `Embedding ${safeValue(embeddingModel)}${embeddingVersion ? ` ${safeValue(embeddingVersion)}` : ''}`,
+    },
+  ].filter(Boolean);
+  const detailMetadata = sanitizeEvidenceMetadata({
+    ...metadata,
     segment_id: segmentId,
     document_id: documentId,
-    citation_id: evidence.citation_id || evidence.citationId,
+    citation_id: citationId,
+    source_title: sourceTitle,
+    segment_ordinal: segmentOrdinal,
+    page,
+    scope,
+    org_id: orgId,
+    uploaded_by_user_id: uploaderId,
+    project_ids: projectIds,
+    team_id: teamId,
+    known_at: knownAt,
+    embedding_model: embeddingModel,
+    embedding_version: embeddingVersion,
     type: 'evidence_segment',
     created_at: evidence.createdAt || evidence.created_at,
     score: evidence.score,
     document: evidence.document,
-    ...(evidence.metadata || {}),
-  };
+  });
   const metadataEntries = Object.entries(detailMetadata)
     .filter(([, value]) => value !== null && value !== undefined && value !== '')
     .sort(([a], [b]) => a.localeCompare(b));
@@ -2438,12 +2542,6 @@ function EvidenceCard({ evidence, onViewDocument }) {
               <span className="line-clamp-1">{documentTitle}</span>
             </>
           )}
-          {segmentIndex != null && (
-            <>
-              <span>·</span>
-              <span>{t('memories.segment', 'Segment')} {Number(segmentIndex) + 1}</span>
-            </>
-          )}
         </div>
         
         {/* View Document Button */}
@@ -2457,6 +2555,21 @@ function EvidenceCard({ evidence, onViewDocument }) {
           </button>
         )}
       </div>
+
+      {provenance.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {provenance.map(({ key, Icon, label }) => (
+            <span
+              key={key}
+              title={label}
+              className="inline-flex max-w-full items-center gap-1 rounded-md border border-[#e3e0db] bg-[#faf9f4] px-1.5 py-0.5 text-[9.5px] font-mono text-[#525252]"
+            >
+              <Icon size={9} className="shrink-0 text-[#737373]" />
+              <span className="max-w-[180px] truncate">{label}</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       <AnimatePresence initial={false}>
         {expanded && (

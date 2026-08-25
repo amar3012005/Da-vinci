@@ -13,6 +13,7 @@ import {
   ExternalLink, RefreshCw,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { emitKnowledgeChanged } from '../shared/knowledge-ingest-contract';
 import DeepResearchGraph2D from './DeepResearchGraph2D';
 
 /* ─── Cartesia Light Theme Constants ───────────────────────────────── */
@@ -1269,6 +1270,7 @@ export default function DeepResearch() {
     if (!sessionId) return;
     try {
       const { data } = await apiClient.controlPlane.post(`/v1/proxy/research/${sessionId}/promote-memory`, {});
+      emitKnowledgeChanged();
       alert(`Promoted ${data.promotedCount || 0} claims into durable memory`);
     } catch (e) {
       console.error('Failed to promote research to memory:', e);

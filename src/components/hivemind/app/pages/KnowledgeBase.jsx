@@ -37,7 +37,14 @@ import { useUploads, setUploads as setGlobalUploads } from '../shared/upload-sto
 import { isPlanLimitError } from '../shared/planLimit';
 import UsageTracker from '../components/UsageTracker';
 import { emitUsageChanged, useUsage } from '../shared/useUsage';
-import { documentIngestState, hasIngestModeMismatch, normalizeIngestMode, uploadQuotaMessage } from '../shared/knowledge-ingest-contract';
+import {
+  documentIngestState,
+  emitKnowledgeChanged,
+  hasIngestModeMismatch,
+  normalizeIngestMode,
+  responseIngestMode,
+  uploadQuotaMessage,
+} from '../shared/knowledge-ingest-contract';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -1272,6 +1279,7 @@ export default function KnowledgeBase() {
         }]);
       }
       refetchKb();
+      emitKnowledgeChanged();
     } catch (err) {
       // 404 = already gone (stale list). Treat as success: drop it + refetch,
       // don't show a scary error.
@@ -1279,6 +1287,7 @@ export default function KnowledgeBase() {
         setJustUploadedDocs(prev => prev.filter(d => d.id !== docId));
         setDeleteConfirmId(null);
         refetchKb();
+        emitKnowledgeChanged();
       } else if (err?.response?.status === 403 && err?.response?.data?.code === 'not_owner') {
         // Creator-only delete: someone else uploaded this. Prompt to ask the owner.
         setNotOwnerInfo({ owner: err?.response?.data?.owner || null, docTitle: doc?.title || doc?.metadata?.document_title || 'this document' });
@@ -1375,6 +1384,7 @@ export default function KnowledgeBase() {
           id: nowBase + idx + Math.random(),
           filename: file.name,
           status: 'error',
+          ingestMode: batchIngestMode,
           error: `Unsupported file type: .${ext}`,
         }]);
         return;
@@ -1391,6 +1401,7 @@ export default function KnowledgeBase() {
           id: nowBase + idx + Math.random(),
           filename: file.name,
           status: 'error',
+          ingestMode: batchIngestMode,
           error: rejectReason,
         }]);
         return;
@@ -1635,7 +1646,7 @@ export default function KnowledgeBase() {
           return;
         }
 
-        const returnedIngestMode = result?.ingestMode ?? result?.ingest_mode;
+        const returnedIngestMode = responseIngestMode(result);
         if (hasIngestModeMismatch(requestedIngestMode, returnedIngestMode)) {
           const mismatchError = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${returnedIngestMode}.`);
           mismatchError.code = 'INGEST_MODE_MISMATCH';
@@ -1705,6 +1716,7 @@ export default function KnowledgeBase() {
         queueRefetch();
         // Refresh per-page usage meters (KB pages + memories) after a real upload.
         emitUsageChanged();
+        emitKnowledgeChanged();
       } catch (err) {
         if (processingTimer) { clearInterval(processingTimer); processingTimer = null; }
         const isCancelled = err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED';
@@ -1748,6 +1760,10 @@ export default function KnowledgeBase() {
             ? {
                 ...u,
                 status: isCancelled ? 'cancelled' : isDuplicate ? 'duplicate' : isPlanLimit ? 'limited' : 'error',
+                _completedAt: Date.now(),
+                progress: 100,
+                stage: isCancelled ? 'cancelled' : isPlanLimit ? 'admission_rejected' : 'failed',
+                stageLabel: undefined,
                 error: isCancelled
                   ? 'Cancelled by user'
                   : isDuplicate

@@ -28,6 +28,8 @@ import { Zap, ArrowRight } from 'lucide-react';
 // resource → friendly label (singular noun used in "{current}/{limit} X this month")
 const RESOURCE_LABELS = {
   kbPages: 'pages',
+  kb_pages: 'document pages',
+  document_pages: 'document pages',
   uploads: 'uploads',
   memories: 'memories',
   webIntel: 'Web Intel requests',

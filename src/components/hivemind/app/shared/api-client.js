@@ -3,7 +3,7 @@ import { API_DEFAULTS } from './theme';
 import { isPlanLimitError, extractPlanLimit, emitPlanLimit } from './planLimit';
 import { isServiceError, extractServiceError, emitServiceError } from './serviceError';
 import { productActionDecision } from './product-access';
-import { hasIngestModeMismatch, normalizeIngestMode } from './knowledge-ingest-contract';
+import { hasIngestModeMismatch, normalizeIngestMode, responseIngestMode } from './knowledge-ingest-contract';
 
 const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
 
@@ -48,7 +48,7 @@ class HiveMindApiClient {
     this._apiKeyStorageKey = 'hivemind_core_api_key';
 
     // Global plan-limit detector: on any 402 (or 403/429) carrying the
-    // `plan_limit_exceeded` machine code, emit a window event so the single
+    // `plan_limit_exceeded` or `quota_reached` machine code, emit a window event so the single
     // <PlanLimitModal> mounted in AppShell can surface the upgrade prompt —
     // then re-reject so individual callers behave exactly as before.
     this._attachPlanLimitInterceptor(this.controlPlane);
@@ -2302,17 +2302,22 @@ class HiveMindApiClient {
       onUploadProgress: options.onUploadProgress,
       signal: options.signal,
     });
+    const startedMode = responseIngestMode(started);
+    if (hasIngestModeMismatch(requestedIngestMode, startedMode)) {
+      const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${startedMode}.`);
+      error.code = 'INGEST_MODE_MISMATCH';
+      throw error;
+    }
 
     // Back-compat: an older core (no async support) returns the sync result
     // directly (has documentId, no job_id) — pass it straight through.
     if (!started?.job_id) {
-      const returnedMode = started?.ingestMode ?? started?.ingest_mode;
-      if (hasIngestModeMismatch(requestedIngestMode, returnedMode)) {
-        const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${returnedMode}.`);
+      if (hasIngestModeMismatch(requestedIngestMode, startedMode, { requireReturned: true })) {
+        const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${startedMode}.`);
         error.code = 'INGEST_MODE_MISMATCH';
         throw error;
       }
-      return { ...started, ingestMode: returnedMode ?? requestedIngestMode };
+      return { ...started, ingestMode: startedMode };
     }
 
     // 2. Poll status until terminal.
@@ -2326,6 +2331,7 @@ class HiveMindApiClient {
     options.onQueued?.({ job_id: jobId });
     const deadline = Date.now() + (options.timeoutMs || 10 * 60 * 1000);
     const pollMs = options.pollMs || 2500;
+    let reportedMode = startedMode;
     // Terminal SUCCESS states. Keep this the single source of truth for "the job is done".
     const TERMINAL_OK = new Set(['ready', 'indexed', 'complete', 'completed']);
     while (Date.now() < deadline) {
@@ -2346,17 +2352,18 @@ class HiveMindApiClient {
       const segs = meta.segmentCount ?? st.segmentCount ?? counts.segments;
       const promoted = meta.promotedCount ?? st.promotedCount ?? counts.memories;
       const candidates = meta.candidateCount ?? st.candidateCount ?? counts.candidates;
-      const returnedMode = st.ingest_mode ?? meta.ingestMode;
+      const returnedMode = responseIngestMode(st);
       if (hasIngestModeMismatch(requestedIngestMode, returnedMode)) {
         const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${returnedMode}.`);
         error.code = 'INGEST_MODE_MISMATCH';
         throw error;
       }
+      if (returnedMode != null) reportedMode = returnedMode;
       if (options.onStatus) {
         options.onStatus({
           status: st.status, progress: st.progress, stage: meta.stage ?? st.stage,
           segments: segs ?? meta.segments, promoted: promoted ?? meta.promoted,
-          ingestMode: returnedMode ?? requestedIngestMode,
+          ingestMode: returnedMode ?? reportedMode ?? requestedIngestMode,
           evidenceOnly: st.evidence_only ?? meta.evidenceOnly,
           evidenceOnlyReason: st.evidence_only_reason ?? meta.evidenceOnlyReason,
         });
@@ -2370,12 +2377,17 @@ class HiveMindApiClient {
       // in-memory tracker), which is exactly how the two sides drifted apart. Accept both, and treat
       // any unrecognised terminal-looking state as terminal rather than hanging on it.
       if (TERMINAL_OK.has(st.status)) {
+        if (hasIngestModeMismatch(requestedIngestMode, reportedMode, { requireReturned: true })) {
+          const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${reportedMode}.`);
+          error.code = 'INGEST_MODE_MISMATCH';
+          throw error;
+        }
         return {
           documentId: docId,
           segmentCount: segs,
           candidateCount: candidates,
           promotedCount: promoted,
-          ingestMode: returnedMode ?? requestedIngestMode,
+          ingestMode: reportedMode,
           evidenceOnly: st.evidence_only === true,
           evidenceOnlyReason: st.evidence_only_reason || null,
           job_id: jobId,
