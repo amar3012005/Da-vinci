@@ -3,6 +3,7 @@ import {
   documentIngestState,
   evidenceCardTitle,
   exactLayerCount,
+  hasMemoryGenerationFailure,
   hasIngestModeMismatch,
   isKnowledgeEvidenceRow,
   normalizeIngestMode,
@@ -30,6 +31,8 @@ describe('knowledge ingest frontend contract', () => {
     expect(documentIngestState({ processing: true })).toBe('Processing');
     expect(documentIngestState({})).toBe('Processing');
     expect(documentIngestMode({ metadata: { ingest_mode: 'evidence' } })).toBe('evidence');
+    expect(hasMemoryGenerationFailure({ evidence_only_reason: 'promotion_failed' })).toBe(true);
+    expect(hasMemoryGenerationFailure({ evidence_only_reason: 'user_selected' })).toBe(false);
   });
 
   test('accepts only exact non-negative integer layer totals', () => {

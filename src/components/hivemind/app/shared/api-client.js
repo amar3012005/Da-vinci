@@ -3,7 +3,7 @@ import { API_DEFAULTS } from './theme';
 import { isPlanLimitError, extractPlanLimit, emitPlanLimit } from './planLimit';
 import { isServiceError, extractServiceError, emitServiceError } from './serviceError';
 import { productActionDecision } from './product-access';
-import { hasIngestModeMismatch, normalizeIngestMode, responseIngestMode } from './knowledge-ingest-contract';
+import { hasIngestModeMismatch, hasMemoryGenerationFailure, normalizeIngestMode, responseIngestMode } from './knowledge-ingest-contract';
 
 const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
 
@@ -2390,6 +2390,7 @@ class HiveMindApiClient {
           ingestMode: reportedMode,
           evidenceOnly: st.evidence_only === true,
           evidenceOnlyReason: st.evidence_only_reason || null,
+          memoryGenerationFailed: hasMemoryGenerationFailure(st),
           job_id: jobId,
         };
       }

@@ -27,6 +27,15 @@ export function hasIngestModeMismatch(requestedMode, returnedMode, { requireRetu
   return returnedMode !== normalizeIngestMode(requestedMode);
 }
 
+export function hasMemoryGenerationFailure(response) {
+  return response?.memoryGenerationFailed === true
+    || response?.memory_generation_failed === true
+    || response?.promotionFailed === true
+    || response?.promotion_failed === true
+    || response?.evidenceOnlyReason === 'promotion_failed'
+    || response?.evidence_only_reason === 'promotion_failed';
+}
+
 export function documentIngestState({ ingestMode, evidenceOnly, memoryGenerationFailed, processing = false } = {}) {
   if (processing) return 'Processing';
   if (memoryGenerationFailed === true) return 'Memory generation failed';
