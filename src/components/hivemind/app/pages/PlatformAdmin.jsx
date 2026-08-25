@@ -352,6 +352,7 @@ function CommercialManager() {
     account_type: "enterprise_managed",
     storage_mode: "hybrid",
     onboarding_days: 14,
+    max_invites: 0,
     invitation_expires_at: "",
     welcome_message: "",
     private_notes: "",
@@ -370,6 +371,7 @@ function CommercialManager() {
     useState(false);
   const [invitationSending, setInvitationSending] = useState(false);
   const [extendInvitation, setExtendInvitation] = useState(null);
+  const [editingInvitationInvites, setEditingInvitationInvites] = useState(null);
   const [emailForm, setEmailForm] = useState({
     template_id: "welcome_signup",
     to: "",
@@ -604,6 +606,7 @@ function CommercialManager() {
     try {
       const result = await apiClient.createPlatformEnterpriseInvitation({
         ...enterpriseInvitationForm,
+        max_invites: Number(enterpriseInvitationForm.max_invites),
         hosting_mode:
           enterpriseInvitationForm.account_type === "enterprise_self_hosted"
             ? "self_host"
@@ -625,6 +628,7 @@ function CommercialManager() {
         company_name: "",
         workspace_name: "",
         recipient_email: "",
+        max_invites: 0,
         welcome_message: "",
         private_notes: "",
       });
@@ -737,6 +741,8 @@ function CommercialManager() {
           ? "Invitation revoked."
           : action === "extend"
             ? "Invitation expiry updated."
+            : action === "update-max-invites"
+              ? "Team invitation allowance updated and applied to the active tenant."
             : "Invitation updated.",
       );
       await load();
@@ -1186,8 +1192,8 @@ function CommercialManager() {
           <div className="mt-5 max-w-4xl">
             <p className="mb-3 text-sm text-[#737373]">
               One invitation creates one enterprise owner workspace. It starts a
-              14-day unlimited onboarding period; the owner then chooses a paid
-              Runway configuration.
+              14-day Scale-equivalent onboarding period; choose how many
+              additional teammates that tenant may invite.
             </p>
             <form
               onSubmit={submitEnterpriseInvitation}
@@ -1287,6 +1293,26 @@ function CommercialManager() {
                 className="border border-[#d8d6cf] px-3 py-2"
                 aria-label="Onboarding days"
               />
+              <label className="text-sm text-[#525252]">
+                Additional team invites
+                <input
+                  type="number"
+                  min="0"
+                  max="10000"
+                  value={enterpriseInvitationForm.max_invites}
+                  onChange={(e) =>
+                    setEnterpriseInvitationForm({
+                      ...enterpriseInvitationForm,
+                      max_invites: e.target.value,
+                    })
+                  }
+                  className="mt-1 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"
+                  aria-label="Additional team invites"
+                />
+                <span className="mt-1 block text-xs text-[#737373]">
+                  0 means owner-only. This can be changed later and applies to the tenant immediately.
+                </span>
+              </label>
               <p className="self-center text-sm leading-5 text-[#737373]">
                 Creates a draft only. Review the rendered email before sending
                 from <strong className="font-medium text-[#161616]">welcome@admin.singulancelabs.com</strong>.
@@ -1360,6 +1386,7 @@ function CommercialManager() {
                     {invitation.entitlement
                       ? `${invitation.entitlement.status} until ${when(invitation.entitlement.ends_at)}`
                       : "Not redeemed"}
+                    {" · "}{invitation.max_invites || 0} additional team invite{Number(invitation.max_invites || 0) === 1 ? "" : "s"}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1368,6 +1395,17 @@ function CommercialManager() {
                     className="border border-[#d8d6cf] px-2 py-1"
                   >
                     History
+                  </button>
+                  <button
+                    onClick={() => setEditingInvitationInvites({
+                      id: invitation.id,
+                      companyName: invitation.company_name,
+                      maxInvites: invitation.max_invites || 0,
+                      activeTenant: Boolean(invitation.entitlement?.grant_id),
+                    })}
+                    className="border border-[#d8d6cf] px-2 py-1"
+                  >
+                    Team invites
                   </button>
                   {["draft", "sent"].includes(invitation.status) && (
                     <>
@@ -1476,6 +1514,22 @@ function CommercialManager() {
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
               <form onSubmit={(event) => { event.preventDefault(); invitationAction(extendInvitation.id, 'extend', { invitation_expires_at: new Date(extendInvitation.expiresAt).toISOString() }); setExtendInvitation(null); }} className="w-full max-w-md bg-white p-5 shadow-xl">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">Invitation expiry</p><h3 className="mt-2 text-lg font-semibold text-[#161616]">Extend {extendInvitation.companyName}</h3><label className="mt-5 block text-sm font-medium text-[#525252]">New expiry<input required type="datetime-local" value={extendInvitation.expiresAt} onChange={(event) => setExtendInvitation({ ...extendInvitation, expiresAt: event.target.value })} className="mt-2 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"/></label><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setExtendInvitation(null)} className="border border-[#d8d6cf] px-3 py-2">Cancel</button><button className="bg-[#117dff] px-3 py-2 font-medium text-white">Save expiry</button></div>
+              </form>
+            </div>
+          )}
+          {editingInvitationInvites && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+              <form onSubmit={async (event) => {
+                event.preventDefault();
+                await invitationAction(editingInvitationInvites.id, "update-max-invites", { max_invites: Number(editingInvitationInvites.maxInvites) });
+                setEditingInvitationInvites(null);
+              }} className="w-full max-w-md bg-white p-5 shadow-xl">
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">Team capacity</p>
+                <h3 className="mt-2 text-lg font-semibold text-[#161616]">{editingInvitationInvites.companyName}</h3>
+                <p className="mt-2 text-sm leading-5 text-[#525252]">Set the number of additional people this tenant can invite. The owner is already included, so 0 means owner-only.</p>
+                <label className="mt-5 block text-sm font-medium text-[#525252]">Maximum additional invites<input required type="number" min="0" max="10000" value={editingInvitationInvites.maxInvites} onChange={(event) => setEditingInvitationInvites({ ...editingInvitationInvites, maxInvites: event.target.value })} className="mt-2 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"/></label>
+                {editingInvitationInvites.activeTenant && <p className="mt-2 text-xs text-[#737373]">Saving publishes a new entitlement version for this active tenant immediately.</p>}
+                <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setEditingInvitationInvites(null)} className="border border-[#d8d6cf] px-3 py-2">Cancel</button><button className="bg-[#117dff] px-3 py-2 font-medium text-white">Save team invites</button></div>
               </form>
             </div>
           )}
