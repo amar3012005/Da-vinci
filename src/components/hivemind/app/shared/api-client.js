@@ -2345,6 +2345,7 @@ class HiveMindApiClient {
       }
       const meta = st?.metadata || {};
       const counts = st?.counts || {};
+      const detail = st?.progress_detail || meta?.progress_detail || {};
       // Doc fields may arrive nested under `metadata` (in-memory tracker path)
       // or flat at the top level (durable-queue Redis mirror). Read both so a
       // queued upload still resolves a real documentId.
@@ -2363,6 +2364,12 @@ class HiveMindApiClient {
         options.onStatus({
           status: st.status, progress: st.progress, stage: meta.stage ?? st.stage,
           segments: segs ?? meta.segments, promoted: promoted ?? meta.promoted,
+          processed: detail.processed ?? st.processed,
+          total: detail.total ?? st.total,
+          elapsedMs: detail.elapsed_ms,
+          startedAt: detail.started_at ?? st.started_at ?? st.created_at,
+          stageStartedAt: detail.stage_started_at,
+          timings: detail.timings_ms,
           ingestMode: returnedMode ?? reportedMode ?? requestedIngestMode,
           evidenceOnly: st.evidence_only ?? meta.evidenceOnly,
           evidenceOnlyReason: st.evidence_only_reason ?? meta.evidenceOnlyReason,

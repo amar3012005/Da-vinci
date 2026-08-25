@@ -1555,7 +1555,7 @@ export default function KnowledgeBase() {
           // Bytes are in and the server owns the job — free the transfer slot so the next file
           // starts NOW rather than after this document's 30-134s ingest.
           onQueued: () => queueEntry._slotReleased?.(),
-          onStatus: ({ status, progress, stage, segments, promoted, evidenceOnly, evidenceOnlyReason } = {}) => {
+          onStatus: ({ status, progress, stage, segments, promoted, processed, total, elapsedMs, evidenceOnly, evidenceOnlyReason } = {}) => {
             const LABEL = {
               queued: 'Queued — waiting for a worker',
               // The queue reports 'processing' at 5% the moment a worker picks the
@@ -1582,6 +1582,9 @@ export default function KnowledgeBase() {
               serverProgress: typeof progress === 'number' ? progress : u.serverProgress,
               segments: segments ?? u.segments,
               promoted: promoted ?? u.promoted,
+              processed: processed ?? u.processed,
+              total: total ?? u.total,
+              processingSec: Number.isFinite(Number(elapsedMs)) ? Math.floor(Number(elapsedMs) / 1000) : u.processingSec,
               evidenceOnly: evidenceOnly ?? u.evidenceOnly,
               evidenceOnlyReason: evidenceOnlyReason ?? u.evidenceOnlyReason,
             } : u)));
@@ -2298,7 +2301,7 @@ export default function KnowledgeBase() {
                         {t('knowledgebase.uploadingWarning', "Don't close this page yet — {{count}} file{{plural}} still uploading.", { count: inFlight, plural: inFlight === 1 ? '' : 's' })}
                       </div>
                       <div className="text-[#a16207] text-[11.5px] mt-0.5">
-                        {t('knowledgebase.uploadingHint', 'Once every row shows Uploaded, you\'re safe to leave — the server takes over and your new memories surface in 2–5 minutes.')}
+                        {t('knowledgebase.uploadingHint', 'Keep this page open while files upload. Server-side parsing, indexing, and memory extraction continue with live progress below.')}
                       </div>
                     </div>
                   </div>
@@ -2315,7 +2318,7 @@ export default function KnowledgeBase() {
                         {t('knowledgebase.allUploadsComplete', 'All uploads complete — safe to close this page.')}
                       </div>
                       <div className="text-[#15803d] text-[11.5px] mt-0.5">
-                        {t('knowledgebase.allUploadsHint', 'The server is now extracting + indexing. New memories will appear in 2–5 minutes on the Memories page.')}
+                        {t('knowledgebase.allUploadsHint', 'Parsing, indexing, and memory extraction are complete. The documents are searchable now.')}
                       </div>
                     </div>
                   </div>
@@ -2338,8 +2341,14 @@ export default function KnowledgeBase() {
               // read as a stalled/misleading upload. Terminal = 100% contribution
               // so the bar hits 100% exactly when nothing is in flight.
               const isSettled = (u) => ['success', 'duplicate', 'limited', 'error', 'cancelled'].includes(u.status);
+              const effectiveProgress = (u) => {
+                if (isSettled(u)) return 100;
+                if (u.bytesDone) return Number(u.serverProgress || 0);
+                // Transfer occupies the first 5% of the visible end-to-end job.
+                return Math.round(Number(u.progress || 0) * 0.05);
+              };
               const totalProgress = uploads.length > 0
-                ? Math.round(uploads.reduce((s, u) => s + (isSettled(u) ? 100 : (u.progress || 0)), 0) / uploads.length)
+                ? Math.round(uploads.reduce((s, u) => s + effectiveProgress(u), 0) / uploads.length)
                 : 0;
               return (
                 <div className="flex items-center gap-4 px-4 py-2 rounded-xl bg-[#faf9f4] border border-[#ece8de] text-[11px] font-mono">
@@ -2431,6 +2440,15 @@ export default function KnowledgeBase() {
                       {u.stageLabel
                         ? u.stageLabel
                         : `Processing${u.processingSec ? ` · ${u.processingSec}s` : '…'}`}
+                      {u.processed != null && u.total > 0 && (
+                        <span className="text-[#525252] font-normal"> · {u.processed}/{u.total}</span>
+                      )}
+                      {u.serverProgress != null && (
+                        <span className="text-[#525252] font-normal"> · {Math.round(u.serverProgress)}%</span>
+                      )}
+                      {u.processingSec != null && (
+                        <span className="text-[#a3a3a3] font-normal"> · {Math.floor(u.processingSec / 60)}:{String(u.processingSec % 60).padStart(2, '0')} elapsed</span>
+                      )}
                       {u.segments != null && u.segments > 0 && (
                         <span className="text-[#a3a3a3] font-normal"> · {u.segments} sections</span>
                       )}
