@@ -4,12 +4,17 @@
   "compatibility_date": "2026-08-19",
   "workers_dev": true,
   "preview_urls": true,
+  "main": "./cloudflare/worker.mjs",
   "build": {
     "command": "node scripts/assert-cloudflare-main-release.mjs && PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm run build:cloudflare"
   },
   "assets": {
     "directory": "./build",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/static/*"
+    ]
   },
   "routes": [
     {
