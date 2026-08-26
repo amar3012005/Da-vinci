@@ -1037,6 +1037,19 @@ class HiveMindApiClient {
     return `${base}/v1/hyper-rooms/${roomId}/turns/${turnId}/stream`;
   }
 
+  hyperArtifactAssetUrl(path) {
+    const value = String(path || '');
+    if (!value.startsWith('/v1/hyper-artifacts/')) return '';
+    return `${API_DEFAULTS.controlPlaneBase.replace(/\/$/, '')}${value}`;
+  }
+
+  async getHyperArtifact(path) {
+    const value = String(path || '');
+    if (!value.startsWith('/v1/hyper-artifacts/')) throw new Error('Invalid HyperRoom artifact path');
+    const { data } = await this.controlPlane.get(value, { responseType: 'text' });
+    return String(data || '');
+  }
+
   // ─── Control Plane: Digital Employees ───────────────────────
 
   async listEmployees() {

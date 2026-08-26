@@ -1983,7 +1983,7 @@ function RoomThread({ roomId, onArchived }) {
       'work_brief', 'action_intent', 'connection_required',
       // Additional Population-Sim report (hideable popup dashboard):
       'sim_report',
-      'connector_logo', 'gather', 'recon_pre', 'execute',
+      'connector_logo', 'artifact_ready', 'gather', 'recon_pre', 'execute',
       // Places prospect discovery — 'using Maps' chip.
       'prospects',
       // Self-evolving employees: per-turn playbook learning signal.
@@ -3539,6 +3539,38 @@ function RoomLeadResponse({ content }) {
   </div>;
 }
 
+function VisualArtifactModal({ artifact, onClose }) {
+  const [html, setHtml] = useState('');
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    apiClient.getHyperArtifact(artifact?.url)
+      .then((value) => { if (active) setHtml(value); })
+      .catch(() => { if (active) setError('The verified artifact could not be loaded.'); });
+    return () => { active = false; };
+  }, [artifact?.url]);
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={artifact?.title || 'Interactive artifact'}>
+      <div className="flex h-[min(920px,94vh)] w-full max-w-[1500px] flex-col overflow-hidden rounded-md bg-white shadow-2xl">
+        <div className="flex min-h-12 items-center gap-3 border-b border-[#dedad4] px-3 sm:px-4">
+          <LayoutGrid size={15} className="shrink-0 text-violet-600" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[12px] font-semibold text-[#24211f]">{artifact?.title || 'Interactive artifact'}</div>
+            <div className="text-[9px] uppercase text-emerald-700">Rendered and verified</div>
+          </div>
+          <a href={apiClient.hyperArtifactAssetUrl(artifact?.url)} target="_blank" rel="noreferrer" className="grid h-9 w-9 place-items-center text-[#6f6962] hover:text-[#171717]" title="Open in a new tab" aria-label="Open artifact in a new tab"><ExternalLink size={15} /></a>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center text-[#6f6962] hover:text-[#171717]" title="Close" aria-label="Close artifact"><X size={17} /></button>
+        </div>
+        <div className="min-h-0 flex-1 bg-[#efede9]">
+          {!html && !error && <div className="grid h-full place-items-center text-[11px] text-[#77716a]"><Loader2 size={18} className="animate-spin" /></div>}
+          {error && <div className="grid h-full place-items-center px-6 text-center text-[12px] text-red-700">{error}</div>}
+          {html && <iframe title={artifact?.title || 'Interactive artifact'} srcDoc={html} sandbox="allow-scripts" className="h-full w-full border-0 bg-white" />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TurnView({ turn, participants: participantsProp, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag, onRunNextTask }) {
   // Normalise participants to an ARRAY once. This component used it both as an
   // array ((participants || []).find, line ~3009) and as an object
@@ -3688,6 +3720,12 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
     lines.filter(l => l.t === 'connector_logo' && l.url).forEach(l => { byUrl[l.url] = l; });
     return Object.values(byUrl);
   })();
+  const visualArtifacts = (() => {
+    const byId = {};
+    lines.filter(l => l.t === 'artifact_ready' && l.artifact_id && l.url)
+      .forEach(l => { byId[l.artifact_id] = l; });
+    return Object.values(byId);
+  })();
   const approvalRequests = lines.filter(l => l.t === 'approval_request');
   const approvalResolutions = lines.filter(l => l.t === 'approval_resolved');
   const resolutionById = {};
@@ -3697,6 +3735,7 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const [evidenceMemoryId, setEvidenceMemoryId] = useState(null);
   // In-app artifact preview (email draft / doc / notion) — no Google redirect.
   const [artifactPreview, setArtifactPreview] = useState(null);
+  const [visualArtifact, setVisualArtifact] = useState(null);
 
   const isCampaignTurn = roomKind === 'campaign'
     || String(taskTag || '').toUpperCase() === 'CAMPAIGN'
@@ -4271,6 +4310,29 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         />
       )}
 
+      {visualArtifacts.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {visualArtifacts.map((artifact) => (
+            <section key={artifact.artifact_id} className="overflow-hidden rounded-md border border-[#d8d3cc] bg-white" aria-label={artifact.title || 'Interactive artifact'}>
+              <button type="button" onClick={() => setVisualArtifact(artifact)} className="group block w-full text-left">
+                <div className="aspect-[16/9] overflow-hidden border-b border-[#e4e0da] bg-[#efede9]">
+                  {artifact.preview_url
+                    ? <img src={apiClient.hyperArtifactAssetUrl(artifact.preview_url)} alt="" className="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.01]" />
+                    : <div className="grid h-full place-items-center"><LayoutGrid size={24} className="text-[#99928a]" /></div>}
+                </div>
+                <div className="flex items-center gap-3 px-3 py-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-[12px] font-semibold text-[#24211f]">{artifact.title || 'Interactive artifact'}</h3>
+                    <p className="mt-0.5 text-[9px] uppercase text-emerald-700">Rendered and verified</p>
+                  </div>
+                  <Eye size={15} className="shrink-0 text-[#6f6962] group-hover:text-violet-600" />
+                </div>
+              </button>
+            </section>
+          ))}
+        </div>
+      )}
+
       {/* Produced deliverables (docs/sheets) — connector-logo "view in new tab"
           buttons. The swarm built these after reaching consensus; no approval. */}
       {connectorLogos.length > 0 && (
@@ -4318,6 +4380,7 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         <ArtifactPreviewModal key={artifactPreview.approval_id || artifactPreview.url || 'p'}
           preview={artifactPreview} roomId={roomId} onClose={() => setArtifactPreview(null)} />
       )}
+      {visualArtifact && <VisualArtifactModal artifact={visualArtifact} onClose={() => setVisualArtifact(null)} />}
 
       {/* Phase 5 — recon/verify verdict vs the done-criterion. */}
       {verifyLine && (
