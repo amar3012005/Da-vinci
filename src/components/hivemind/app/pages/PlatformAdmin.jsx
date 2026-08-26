@@ -2055,7 +2055,7 @@ function AdminNavigation({ activeItem, mobileOpen, onClose, onNavigate }) {
 }
 
 export default function PlatformAdmin() {
-  const [passkey, setPasskey] = useState("");
+  const [passcode, setPasscode] = useState("");
   const [data, setData] = useState(null);
   const [metrics, setMetrics] = useState(null);
   const [logs, setLogs] = useState(emptyLogs);
@@ -2090,8 +2090,8 @@ export default function PlatformAdmin() {
     setLoading(true);
     setError("");
     try {
-      await apiClient.unlockPlatformAdmin(passkey);
-      setPasskey("");
+      await apiClient.unlockPlatformAdmin(passcode);
+      setPasscode("");
       await load();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -2142,8 +2142,8 @@ export default function PlatformAdmin() {
           <input
             required
             type="password"
-            value={passkey}
-            onChange={(e) => setPasskey(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            value={passcode}
+            onChange={(e) => setPasscode(e.target.value.replace(/\D/g, "").slice(0, 6))}
             placeholder="••••••"
             inputMode="numeric"
             autoComplete="one-time-code"
@@ -2152,7 +2152,7 @@ export default function PlatformAdmin() {
             className="w-full rounded-[6px] border border-[#d8d6cf] px-3 py-3 text-center font-mono text-xl tracking-[0.45em] text-[#0a0a0a] outline-none placeholder:tracking-[0.45em] focus:border-[#117dff]"
           />
           <button
-            disabled={loading || passkey.length !== 6}
+            disabled={loading || passcode.length !== 6}
             className="w-full rounded-[6px] bg-[#117dff] py-3 text-[13px] font-semibold text-white hover:bg-[#0066e0] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Unlocking..." : "Unlock"}
