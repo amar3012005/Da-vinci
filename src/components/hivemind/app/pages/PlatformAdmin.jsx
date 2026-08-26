@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, BarChart3, ChevronRight, FileText, Gift, LayoutDashboard, Menu, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
+import { Activity, BarChart3, ChevronRight, FileText, Gift, LayoutDashboard, Menu, MessageCircle, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
 import apiClient from "../shared/api-client";
 import AccessApplicationsPanel from "./AccessApplicationsPanel";
 
@@ -2012,6 +2012,7 @@ const ADMIN_NAV_ITEMS = [
   { id: "invitations", label: "Invitations", icon: Send },
   { id: "email", label: "Email", icon: FileText },
   { id: "models", label: "AI policies", icon: Activity },
+  { id: "chat", label: "HIVE Chat", icon: MessageCircle },
   { id: "logs", label: "Live logs", icon: ShieldCheck },
 ];
 
@@ -2125,6 +2126,10 @@ export default function PlatformAdmin() {
     }
     if (target === "logs") {
       setLogsOpen(true);
+      return;
+    }
+    if (target === "chat") {
+      window.location.assign("https://next.singulancelabs.com/hivemind/m/chat");
       return;
     }
     document.getElementById("admin-commercial")?.scrollIntoView({ behavior: "smooth", block: "start" });
