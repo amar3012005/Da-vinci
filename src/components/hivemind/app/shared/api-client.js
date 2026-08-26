@@ -1309,8 +1309,8 @@ class HiveMindApiClient {
     return data;
   }
 
-  async unlockPlatformAdmin(passkey, operatorName) {
-    const { data } = await this.controlPlane.post('/admin/api/platform/unlock', { passkey, operator_name: operatorName });
+  async unlockPlatformAdmin(passcode) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/unlock', { passcode });
     return data;
   }
 

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Activity, BarChart3, ChevronRight, FileText, Gift, LayoutDashboard, Menu, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
 import apiClient from "../shared/api-client";
 import AccessApplicationsPanel from "./AccessApplicationsPanel";
 
@@ -331,6 +332,12 @@ function AiCostsPanel() {
 
 function Metric({ label, value }) { return <div className="rounded-[10px] border border-[#e3e0db] bg-white p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-[#737373]">{label}</p><p className="mt-1 font-['Space_Grotesk'] text-xl font-bold tabular-nums text-[#0a0a0a]">{value}</p></div>; }
 function LedgerSection({ title, rows, columns, moneyColumns = [] }) { return <section className="rounded-[10px] border border-[#e3e0db] bg-white"><h4 className="border-b border-[#e3e0db] px-4 py-3 text-sm font-semibold">{title}</h4><div className="overflow-auto"><table className="w-full min-w-[600px] text-xs"><thead><tr className="bg-[#faf9f4] text-left uppercase tracking-wider text-[#737373]">{columns.map(([, label]) => <th key={label} className="px-3 py-2">{label}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <tr key={index} className="border-t border-[#f0ede8]">{columns.map(([key]) => <td key={key} className="max-w-[200px] truncate px-3 py-2">{moneyColumns.includes(key) ? usdFromMicros(row[key]) : key.endsWith('_at') ? when(row[key]) : String(row[key] ?? '—')}</td>)}</tr>) : <tr><td colSpan={columns.length} className="px-3 py-4 text-[#737373]">No activity in this period.</td></tr>}</tbody></table></div></section>; }
+
+const COMMERCIAL_TABS = [
+  ["plans", "Plans"], ["models", "Models"], ["ai_costs", "AI Costs"],
+  ["promotions", "Promotions"], ["invitations", "Invitations"], ["email", "Email"],
+  ["referrals", "Referral codes"], ["pilots", "Pilot organizations"], ["redemptions", "Redemptions"],
+];
 
 function CommercialManager() {
   const [tab, setTab] = useState("plans");
@@ -778,19 +785,16 @@ function CommercialManager() {
       setEmailSending(false);
     }
   };
-  const tabs = [
-    ["plans", "Plans"],
-    ["models", "Models"],
-    ["ai_costs", "AI Costs"],
-    ["promotions", "Promotions"],
-    ["invitations", "Invitations"],
-    ["email", "Email"],
-    ["referrals", "Referral codes"],
-    ["pilots", "Pilot organizations"],
-    ["redemptions", "Redemptions"],
-  ];
+  useEffect(() => {
+    const selectTab = (event) => {
+      const requested = event.detail?.tab;
+      if (COMMERCIAL_TABS.some(([id]) => id === requested)) setTab(requested);
+    };
+    window.addEventListener("platform-admin:navigate", selectTab);
+    return () => window.removeEventListener("platform-admin:navigate", selectTab);
+  }, []);
   return (
-    <section className="mb-6 border-y border-[#dfddd5] py-5">
+    <section id="admin-commercial" className="mb-6 border-y border-[#dfddd5] py-5 scroll-mt-20">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#737373]">
@@ -811,12 +815,12 @@ function CommercialManager() {
           Refresh
         </button>
       </div>
-      <nav className="mt-5 flex flex-wrap gap-2 border-b border-[#dfddd5] pb-3">
-        {tabs.map(([id, label]) => (
+      <nav className="mt-5 flex gap-1 overflow-x-auto border-b border-[#dfddd5] pb-0 [-webkit-overflow-scrolling:touch]">
+        {COMMERCIAL_TABS.map(([id, label]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`px-3 py-1.5 text-sm ${tab === id ? "border-b-2 border-[#117dff] font-semibold text-[#161616]" : "text-[#737373]"}`}
+            className={`shrink-0 px-3 py-2 text-[12px] ${tab === id ? "border-b-2 border-[#117dff] font-semibold text-[#161616]" : "text-[#737373]"}`}
           >
             {label}
           </button>
@@ -2000,9 +2004,58 @@ function CommercialManager() {
   );
 }
 
+const ADMIN_NAV_ITEMS = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "users", label: "Users", icon: Users },
+  { id: "plans", label: "Plans & credits", icon: BarChart3 },
+  { id: "promotions", label: "Promotions", icon: Gift },
+  { id: "invitations", label: "Invitations", icon: Send },
+  { id: "email", label: "Email", icon: FileText },
+  { id: "models", label: "AI policies", icon: Activity },
+  { id: "logs", label: "Live logs", icon: ShieldCheck },
+];
+
+function AdminNavigation({ activeItem, mobileOpen, onClose, onNavigate }) {
+  const content = (
+    <>
+      <div className="flex h-14 items-center justify-between border-b border-[#e3e0db] px-4">
+        <div className="min-w-0">
+          <p className="font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">HIVEMIND Admin</p>
+          <p className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#a3a3a3]">Platform control</p>
+        </div>
+        <button type="button" onClick={onClose} className="rounded-[6px] p-1.5 text-[#737373] hover:bg-[#f3f1ec] hover:text-[#0a0a0a] lg:hidden" aria-label="Close admin navigation"><X size={18} /></button>
+      </div>
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#a3a3a3]">Operations</p>
+        {ADMIN_NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+          <button key={id} type="button" onClick={() => onNavigate(id)} className={`flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-2 text-left text-[13px] transition-colors ${activeItem === id ? "bg-[#f3f1ec] font-medium text-[#0a0a0a]" : "text-[#525252] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"}`}>
+            <Icon size={16} className={activeItem === id ? "text-[#117dff]" : "text-[#a3a3a3]"} />
+            {label}
+            <ChevronRight size={13} className="ml-auto text-[#a3a3a3]" />
+          </button>
+        ))}
+      </nav>
+      <div className="border-t border-[#e3e0db] p-3">
+        <button type="button" onClick={() => onNavigate("invitations")} className="flex w-full items-center justify-center gap-1.5 rounded-[6px] bg-[#117dff] px-3 py-2 text-[12px] font-semibold text-white hover:bg-[#0066e0]">
+          <Send size={14} /> New invitation
+        </button>
+        <button type="button" onClick={() => onNavigate("promotions")} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[6px] border border-[#e3e0db] px-3 py-2 text-[12px] font-medium text-[#525252] hover:bg-[#f3f1ec]">
+          <Tags size={14} /> New promotion
+        </button>
+      </div>
+    </>
+  );
+  return <>
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-[#e3e0db] bg-[#faf9f4] lg:flex">{content}</aside>
+    {mobileOpen && <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Admin navigation">
+      <button type="button" aria-label="Close navigation" onClick={onClose} className="absolute inset-0 bg-black/30" />
+      <aside className="relative flex h-full w-[min(84vw,320px)] flex-col bg-[#faf9f4] shadow-xl">{content}</aside>
+    </div>}
+  </>;
+}
+
 export default function PlatformAdmin() {
   const [passkey, setPasskey] = useState("");
-  const [operatorName, setOperatorName] = useState("");
   const [data, setData] = useState(null);
   const [metrics, setMetrics] = useState(null);
   const [logs, setLogs] = useState(emptyLogs);
@@ -2010,6 +2063,8 @@ export default function PlatformAdmin() {
   const [logView, setLogView] = useState("mixed");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [activeItem, setActiveItem] = useState("overview");
 
   const load = async () => {
     setLoading(true);
@@ -2035,7 +2090,7 @@ export default function PlatformAdmin() {
     setLoading(true);
     setError("");
     try {
-      await apiClient.unlockPlatformAdmin(passkey, operatorName);
+      await apiClient.unlockPlatformAdmin(passkey);
       setPasskey("");
       await load();
     } catch (err) {
@@ -2057,46 +2112,69 @@ export default function PlatformAdmin() {
     return () => clearInterval(timer);
   }, [data, logsOpen]);
 
+  const navigateAdmin = useCallback((target) => {
+    setActiveItem(target);
+    setMobileNavOpen(false);
+    if (target === "overview") {
+      document.getElementById("admin-overview")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (target === "users") {
+      document.getElementById("admin-users")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (target === "logs") {
+      setLogsOpen(true);
+      return;
+    }
+    document.getElementById("admin-commercial")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => window.dispatchEvent(new CustomEvent("platform-admin:navigate", { detail: { tab: target } })), 0);
+  }, []);
+
   if (!data)
     return (
-      <main className="max-w-md mx-auto py-20 px-5">
-        <h1 className="text-2xl font-bold mb-2">Platform Admin</h1>
-        <p className="text-sm text-[#737373] mb-6">
-          Commercial operations and diagnostics. Access expires after 15
-          minutes.
-        </p>
-        <form onSubmit={unlock} className="space-y-3">
-          <input
-            autoFocus
-            value={operatorName}
-            onChange={(e) => setOperatorName(e.target.value)}
-            placeholder="Operator name"
-            className="w-full border rounded-lg px-3 py-2"
-          />
+      <main className="min-h-screen bg-[#faf9f4] px-5 py-10 sm:flex sm:items-center sm:justify-center">
+        <section className="mx-auto w-full max-w-md rounded-[10px] border border-[#e3e0db] bg-white p-5 sm:p-7">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">HIVEMIND · Platform control</p>
+          <h1 className="mt-2 font-['Space_Grotesk'] text-[26px] font-semibold text-[#0a0a0a]">Admin unlock</h1>
+          <p className="mt-2 text-sm leading-6 text-[#737373]">Enter the six-digit platform passcode. Access expires after 15 minutes.</p>
+          <form onSubmit={unlock} className="mt-6 space-y-3">
           <input
             required
             type="password"
             value={passkey}
-            onChange={(e) => setPasskey(e.target.value)}
-            placeholder="Admin passkey"
-            className="w-full border rounded-lg px-3 py-2"
+            onChange={(e) => setPasskey(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="••••••"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            aria-label="Platform admin passcode"
+            className="w-full rounded-[6px] border border-[#d8d6cf] px-3 py-3 text-center font-mono text-xl tracking-[0.45em] text-[#0a0a0a] outline-none placeholder:tracking-[0.45em] focus:border-[#117dff]"
           />
           <button
-            disabled={loading || !operatorName.trim()}
-            className="w-full rounded-lg bg-[#117dff] text-white py-2"
+            disabled={loading || passkey.length !== 6}
+            className="w-full rounded-[6px] bg-[#117dff] py-3 text-[13px] font-semibold text-white hover:bg-[#0066e0] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Unlocking..." : "Unlock"}
           </button>
           {error && <p className="text-sm text-red-600">{error}</p>}
-        </form>
+          </form>
+        </section>
       </main>
     );
 
   const s = data.summary || {};
   const activeLogs = logs[logView] || [];
   return (
-    <main className="max-w-7xl mx-auto py-10 px-5">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen bg-[#faf9f4] lg:pl-[232px]">
+      <AdminNavigation activeItem={activeItem} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onNavigate={navigateAdmin} />
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[#e3e0db] bg-[#faf9f4]/95 px-4 backdrop-blur lg:hidden">
+        <button type="button" onClick={() => setMobileNavOpen(true)} className="rounded-[6px] p-1.5 text-[#525252] hover:bg-[#f3f1ec]" aria-label="Open admin navigation"><Menu size={20} /></button>
+        <p className="font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">HIVEMIND Admin</p>
+        <button type="button" onClick={() => navigateAdmin("invitations")} className="rounded-[6px] bg-[#117dff] px-2.5 py-1.5 text-[11px] font-semibold text-white">Invite</button>
+      </header>
+      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-8 lg:px-8">
+      <div id="admin-overview" className="mb-6 flex flex-col gap-3 scroll-mt-20 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Platform Admin</h1>
           <p className="text-sm text-[#737373]">
@@ -2134,7 +2212,7 @@ export default function PlatformAdmin() {
         ))}
       </div>
       <CapacityPanel metrics={metrics} />
-      <div className="border rounded-xl overflow-auto bg-white">
+      <div id="admin-users" className="overflow-x-auto rounded-[10px] border border-[#e3e0db] bg-white scroll-mt-20">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left bg-[#faf9f4]">
@@ -2215,6 +2293,7 @@ export default function PlatformAdmin() {
           </section>
         </div>
       )}
-    </main>
+      </main>
+    </div>
   );
 }
