@@ -1342,6 +1342,15 @@ class HiveMindApiClient {
   }
 
   /**
+   * Explicit, server-side allowlisted canary enrollment. This does not weaken
+   * the stable release gate; unauthorized organizations receive 403.
+   */
+  async createSelfHostCanaryBootstrap() {
+    const { data } = await this.controlPlane.post('/v1/selfhost/canary-bootstrap');
+    return data;
+  }
+
+  /**
    * Self-host connection status (polled during onboarding).
    * Returns { registered, reachable, kind?, transport? }
    */

@@ -13,6 +13,12 @@ describe('self-host setup contract', () => {
     expect(command).not.toContain('git clone');
   });
 
+  test('canary enrollment is explicit in the command and never changes the stable default', () => {
+    const command = buildInstallCommand('canary-token', 'canary');
+    expect(command).toContain('HIVEMIND_MEMORY_BOX_CHANNEL=canary');
+    expect(buildInstallCommand('stable-token')).not.toContain('HIVEMIND_MEMORY_BOX_CHANNEL=canary');
+  });
+
   test('advanced setup uses the same signed installer instead of a mutable branch', () => {
     const command = buildAdvancedInstallCommand('hmk_live_test');
     expect(command).toContain('https://get.singulancelabs.com/memory-box');
