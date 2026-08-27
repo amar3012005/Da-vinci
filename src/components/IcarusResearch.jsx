@@ -32,26 +32,26 @@ const AgentOnboardingPill = () => {
     }
   };
   return (
-    <div className="mx-auto mb-7 flex max-w-[650px] justify-center px-1 sm:mb-9">
+    <div className="mx-auto flex w-full max-w-[460px] justify-center px-1">
       <button
         type="button"
         onClick={copySetupPrompt}
         aria-label="Copy the ICARUS coding-agent onboarding prompt"
-        className="group flex w-full items-center justify-between gap-3 rounded-full border border-[#d8d6d0] bg-white px-4 py-3 text-left shadow-[0_1px_2px_rgba(10,10,10,0.04)] transition-all hover:border-[#0a0a0a] hover:shadow-sm sm:px-6 sm:py-4"
+        className="group flex w-full items-center justify-between gap-2 rounded-full border border-white/60 bg-white px-3 py-2 text-left shadow-[0_2px_12px_rgba(0,0,0,0.2)] transition-all hover:border-white hover:shadow-md sm:px-4"
       >
-        <span className="min-w-0 font-['Space_Grotesk'] text-[17px] font-medium tracking-tight text-[#0a0a0a] sm:text-[22px]">Onboard your coding agent to ICARUS</span>
-        <span className="flex shrink-0 items-center gap-1.5 text-[#0a0a0a] sm:gap-2">
+        <span className="min-w-0 truncate font-['Space_Grotesk'] text-[13px] font-medium tracking-tight text-[#0a0a0a] sm:text-[15px]">Onboard your coding agent to ICARUS</span>
+        <span className="flex shrink-0 items-center gap-1 text-[#0a0a0a] sm:gap-1.5">
           {CODING_AGENT_LOGOS.map((agent) => (
             <img
               key={agent.name}
               src={agent.src}
               alt={`${agent.name} logo`}
               title={agent.name}
-              className="h-5 w-5 object-contain sm:h-[22px] sm:w-[22px]"
+              className="h-4 w-4 object-contain sm:h-[18px] sm:w-[18px]"
             />
           ))}
-          <span className={`ml-1 flex h-7 w-7 items-center justify-center rounded-[6px] border transition-colors sm:ml-2 ${copied ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252] group-hover:border-[#0a0a0a] group-hover:text-[#0a0a0a]'}`}>
-            {copied ? <Check size={15} strokeWidth={2.2} /> : <Copy size={15} />}
+          <span className={`ml-0.5 flex h-6 w-6 items-center justify-center rounded-[5px] border transition-colors sm:ml-1 ${copied ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252] group-hover:border-[#0a0a0a] group-hover:text-[#0a0a0a]'}`}>
+            {copied ? <Check size={13} strokeWidth={2.2} /> : <Copy size={13} />}
           </span>
         </span>
       </button>
@@ -371,11 +371,11 @@ const IcarusResearch = () => {
       author="SINGULANCE Labs"
       heroImg={HERO_IMG}
       heroScene={motionOk ? <Suspense fallback={null}><IcarusHeroScene /></Suspense> : null}
+      heroAccessory={<AgentOnboardingPill />}
       seo={meta.seo}
       product={{ name: 'ICARUS', tag: '.amr format', desc: 'A memory filesystem for AI agents — one mmap’d file per tenant, no server.' }}
       highlights={meta.highlights}
     >
-      <AgentOnboardingPill />
       <VersionToggle version={version} onChange={setVersion} />
       <div key={version} className="animate-[icarusFade_.45s_ease]">
         {version === 'v1' ? <V1Body motionOk={motionOk} /> : <V2Body motionOk={motionOk} />}

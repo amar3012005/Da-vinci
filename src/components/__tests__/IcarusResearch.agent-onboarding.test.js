@@ -5,7 +5,7 @@ jest.mock('lucide-react', () => ({
   Check: () => null, Copy: () => null,
 }), { virtual: true });
 jest.mock('../research/NewsArticleLayout', () => {
-  const Layout = ({ children }) => <main>{children}</main>;
+  const Layout = ({ children, heroAccessory }) => <main><header>{heroAccessory}</header>{children}</main>;
   const Section = ({ children }) => <section>{children}</section>;
   return { __esModule: true, default: Layout, H2: Section, P: Section, Table: () => null, FullBleed: Section };
 });

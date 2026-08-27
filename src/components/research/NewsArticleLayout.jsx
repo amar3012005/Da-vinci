@@ -25,6 +25,7 @@ const NewsArticleLayout = ({
   product,        // { name, tag, desc }
   highlights = [],
   heroScene,      // optional R3F node rendered behind the hero
+  heroAccessory,  // optional compact, interactive callout above the title
   children,
 }) => {
   const navigate = useNavigate();
@@ -59,7 +60,8 @@ const NewsArticleLayout = ({
         {/* centered title */}
         <div className="pointer-events-none relative z-10 flex flex-1 flex-col items-center justify-center px-6 text-center">
           <span className="rounded bg-white/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-white backdrop-blur-sm">{badge}</span>
-          <h1 className="font-['Space_Grotesk'] mt-6 max-w-4xl text-4xl font-medium leading-[1.08] tracking-tight text-white md:text-6xl">{title}</h1>
+          {heroAccessory && <div className="pointer-events-auto mt-4 w-full">{heroAccessory}</div>}
+          <h1 className={`font-['Space_Grotesk'] max-w-4xl text-4xl font-medium leading-[1.08] tracking-tight text-white md:text-6xl ${heroAccessory ? 'mt-5' : 'mt-6'}`}>{title}</h1>
           <p className="mt-5 font-mono text-[12px] uppercase tracking-[0.2em] text-white/65">{date} &nbsp;·&nbsp; By {author}</p>
         </div>
 
