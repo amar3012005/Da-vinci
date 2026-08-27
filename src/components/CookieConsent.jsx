@@ -16,7 +16,7 @@ const categories = [
   {
     id: 'analytics',
     title: 'Analytics',
-    description: 'Allows EU-hosted PostHog analytics, interaction measurement, and session replay so we can improve the product.',
+    description: 'Allows EU-hosted PostHog aggregate analytics and interaction measurement so we can improve the product. Session replay is disabled.',
   },
   {
     id: 'marketing',
@@ -59,7 +59,7 @@ export default function CookieConsent() {
           <div className="mx-auto flex max-w-[1380px] flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
               <div className="flex items-center gap-2"><Cookie size={17} className="text-[#117dff]" /><h2 id="cookie-title" className="font-['Space_Grotesk'] text-[18px] font-semibold text-[#0a0a0a]">Your privacy. Your choice.</h2></div>
-              <p className="mt-2 text-[13px] leading-5 text-[#525252]">We use strictly necessary storage to run and secure this site. With your permission, we also use preferences and EU-hosted product analytics, including session replay. Marketing trackers are currently not installed. You can change your choice at any time.</p>
+              <p className="mt-2 text-[13px] leading-5 text-[#525252]">We use strictly necessary storage to run and secure this site. With your permission, we also use preferences and EU-hosted aggregate product analytics. Session replay and marketing trackers are not enabled. You can change your choice at any time.</p>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px]"><a className="text-[#117dff] underline underline-offset-2" href="/cookies">Cookie Policy</a><a className="text-[#117dff] underline underline-offset-2" href="/privacy">Privacy Policy</a></div>
             </div>
             <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto lg:min-w-[530px]">

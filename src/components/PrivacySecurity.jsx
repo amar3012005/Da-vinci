@@ -167,7 +167,7 @@ const PrivacySecurity = ({ mode = 'privacy' }) => {
               Our edge provider necessarily processes request information such as IP address, user agent, requested URL,
               status code, and timestamp to deliver and protect the site. We store your versioned cookie choices in the
               strictly necessary first-party cookie <code>singulance_cookie_consent_v1</code>. Optional preferences,
-              PostHog EU product analytics, autocapture, and session replay remain disabled until you opt in. We currently
+              PostHog EU product analytics and autocapture remain disabled until you opt in. Session replay remains disabled. We currently
               install no advertising or retargeting tracker. See our <a href="/cookies" style={{ color: EMBER }}>Cookie Policy</a>{' '}
               for the provider, purpose, category, and duration of each browser technology.
             </P>
@@ -177,7 +177,7 @@ const PrivacySecurity = ({ mode = 'privacy' }) => {
             <H2 id="legal-bases">Lawful Bases</H2>
             <Ul items={[
               'Contract or steps requested before contract (GDPR Art. 6(1)(b)): accounts, authentication, requested product functions, support, and billing',
-              'Consent (Art. 6(1)(a)): optional analytics, session replay, marketing technology, and consent-based communications; consent can be withdrawn at any time',
+              'Consent (Art. 6(1)(a)): optional analytics, marketing technology, and consent-based communications; consent can be withdrawn at any time',
               'Legitimate interests (Art. 6(1)(f)): essential security, fraud prevention, service reliability, and responding to business inquiries, balanced against your rights',
               'Legal obligation (Art. 6(1)(c)): tax, accounting, regulatory, and lawful-request records where applicable',
             ]} />
@@ -266,7 +266,7 @@ const PrivacySecurity = ({ mode = 'privacy' }) => {
             <Ul items={[
               'Cloudflare for DNS, edge delivery, security controls, Workers, and controlled AI routing',
               'EU infrastructure providers, including Hetzner, for application, database, and memory services',
-              'PostHog EU Cloud for optional product analytics and session replay only after consent',
+              'PostHog EU Cloud for optional aggregate product analytics only after consent; session replay is disabled',
               'Stripe for checkout, subscriptions, and payment records; SINGULANCE does not store full card numbers',
               'Google or other identity providers when you choose their sign-in method',
               'Model and connector providers needed for a feature you request, subject to the selected deployment and routing configuration',

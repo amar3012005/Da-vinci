@@ -7,7 +7,7 @@ const rows = [
   ['singulance_cookie_consent_v1', 'SINGULANCE', 'Necessary', 'Stores the consent-policy version and your category choices.', '1 year'],
   ['Authentication session cookies', 'SINGULANCE / authentication provider', 'Necessary', 'Keeps signed-in sessions secure. Only created when you sign in.', 'Session or configured expiry'],
   ['singulance-field', 'SINGULANCE', 'Preferences', 'Remembers the industry experience you explicitly select.', 'Until removed'],
-  ['PostHog persistence and replay identifiers', 'PostHog EU Cloud', 'Analytics', 'Measures product use and, when enabled, records session replay to improve the service.', 'Up to 1 year'],
+  ['PostHog analytics identifiers', 'PostHog EU Cloud', 'Analytics', 'Measures aggregate product use after consent. Session replay is disabled.', 'Up to 1 year'],
 ];
 
 export default function CookiePolicy() {
@@ -24,7 +24,7 @@ export default function CookiePolicy() {
       <section className="mt-16"><h2 className="font-['Space_Grotesk'] text-2xl font-semibold">Categories</h2><div className="mt-5 grid gap-px border border-[#e3e0db] bg-[#e3e0db] md:grid-cols-2">{[
         ['Strictly necessary', 'Security, authentication, consent storage, and services you explicitly request. These cannot be disabled.'],
         ['Preferences', 'Optional storage that remembers choices and customizes your experience.'],
-        ['Analytics', 'EU-hosted product measurement and session replay. Disabled until accepted.'],
+        ['Analytics', 'EU-hosted aggregate product measurement. Disabled until accepted; session replay remains disabled.'],
         ['Marketing', 'Advertising and campaign attribution. No marketing tracker is currently installed.'],
       ].map(([title, body]) => <div key={title} className="bg-white p-5"><h3 className="text-[14px] font-semibold">{title}</h3><p className="mt-2 text-[13px] leading-5 text-[#525252]">{body}</p></div>)}</div></section>
 

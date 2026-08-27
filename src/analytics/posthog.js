@@ -1,5 +1,5 @@
 /**
- * PostHog — product analytics + session replay, wired frontend-wide (e2e).
+ * PostHog — consent-gated aggregate product analytics.
  *
  * Safe no-op until REACT_APP_POSTHOG_KEY (the PUBLIC project key, phc_…) is set
  * at build time — never embed a personal phx_ key here. Host defaults to EU
@@ -33,7 +33,10 @@ export function initPostHog() {
     capture_pageview: 'history',         // SPA-correct pageviews across React Router
     capture_pageleave: true,
     autocapture: true,                   // clicks, form interactions
-    disable_session_recording: false,    // session replay ON
+    // HIVE-MIND can display sensitive company, memory, and chat content. Keep
+    // replay disabled globally; aggregate events are sufficient for product
+    // analytics and avoid recording rendered workspace content.
+    disable_session_recording: true,
     person_profiles: 'identified_only',  // don't create a profile for every anon hit
     persistence: 'localStorage+cookie',
     loaded: (client) => client.opt_in_capturing(),
