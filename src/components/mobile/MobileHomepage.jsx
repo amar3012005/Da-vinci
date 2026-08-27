@@ -23,6 +23,7 @@ import SingulanceFooter from './SingulanceFooter';
 // import TaraVoiceWidget from './TaraVoiceWidget';
 // import TaraVoiceWidgetIndic from './TaraVoiceWidgetIndic';
 import { useTheme, t } from './ThemeContext';
+import { hasConsent } from '../../privacy/consent';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -44,13 +45,13 @@ const PageContent = () => {
     // Field personalization: popup on first visit drives the adaptive narration.
     const [field, setField] = React.useState(() => {
         if (typeof window === 'undefined') return null;
-        try { return window.localStorage.getItem('singulance-field'); } catch (e) { return null; }
+        try { return window.sessionStorage.getItem('singulance-field') || (hasConsent('preferences') ? window.localStorage.getItem('singulance-field') : null); } catch (e) { return null; }
     });
     const [pickerOpen, setPickerOpen] = React.useState(false);
     React.useEffect(() => {
         if (typeof window === 'undefined') return;
         let chosen = null;
-        try { chosen = window.localStorage.getItem('singulance-field'); } catch (e) {}
+        try { chosen = window.sessionStorage.getItem('singulance-field') || (hasConsent('preferences') ? window.localStorage.getItem('singulance-field') : null); } catch (e) {}
         if (!chosen) { const tmr = setTimeout(() => setPickerOpen(true), 1200); return () => clearTimeout(tmr); }
     }, []);
     // Lenis smooth-scroll + GSAP ScrollTrigger sync (buttery scrub for FallScene).
@@ -68,7 +69,10 @@ const PageContent = () => {
     }, []);
     const pickField = (id) => {
         setField(id); setPickerOpen(false);
-        try { window.localStorage.setItem('singulance-field', id); } catch (e) {}
+        try {
+            window.sessionStorage.setItem('singulance-field', id);
+            if (hasConsent('preferences')) window.localStorage.setItem('singulance-field', id);
+        } catch (e) {}
         // stay on this page — the choice re-tells the Fall story for that field
     };
 

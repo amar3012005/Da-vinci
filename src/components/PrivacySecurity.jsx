@@ -19,11 +19,14 @@ const MUTED = '#6b6b64';
 const SECTIONS = [
   { id: 'overview', label: 'Overview', group: 'privacy' },
   { id: 'info-collection', label: 'Information We Collect', group: 'privacy' },
+  { id: 'website-data', label: 'Website & Cookies', group: 'privacy' },
+  { id: 'legal-bases', label: 'Lawful Bases', group: 'privacy' },
   { id: 'connected-services', label: 'Connected Services', group: 'privacy' },
   { id: 'ai-processing', label: 'AI Processing', group: 'privacy' },
   { id: 'use-of-information', label: 'Use of Information', group: 'privacy' },
   { id: 'data-residency', label: 'Data Residency & Hosting', group: 'privacy' },
   { id: 'disclosure', label: 'Information Disclosure', group: 'privacy' },
+  { id: 'subprocessors', label: 'Service Providers', group: 'privacy' },
   { id: 'retention', label: 'Data Retention & Deletion', group: 'privacy' },
   { id: 'your-rights', label: 'Your Rights (GDPR)', group: 'privacy' },
   { id: 'international-transfers', label: 'International Transfers', group: 'privacy' },
@@ -64,14 +67,16 @@ const Ul = ({ items }) => (
 
 const Section = ({ children }) => <div className="mt-14 first:mt-0">{children}</div>;
 
-const PrivacySecurity = () => {
+const PrivacySecurity = ({ mode = 'privacy' }) => {
   const navigate = useNavigate();
-  const [active, setActive] = useState('overview');
+  const isSecurity = mode === 'security';
+  const visibleSections = React.useMemo(() => SECTIONS.filter((section) => section.group === mode || section.group === 'both'), [mode]);
+  const [active, setActive] = useState(isSecurity ? 'security' : 'overview');
 
   useEffect(() => {
     const onScroll = () => {
-      let current = SECTIONS[0].id;
-      for (const s of SECTIONS) {
+      let current = visibleSections[0].id;
+      for (const s of visibleSections) {
         const el = document.getElementById(s.id);
         if (el && el.getBoundingClientRect().top <= 140) current = s.id;
       }
@@ -80,7 +85,7 @@ const PrivacySecurity = () => {
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [visibleSections]);
 
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -89,9 +94,9 @@ const PrivacySecurity = () => {
   return (
     <div style={{ background: PAPER, color: INK }} className="min-h-screen font-['Inter']">
       <Seo
-        title="Privacy &amp; Security — SINGULANCE"
-        description="How SINGULANCE collects, processes, and protects data across HIVEMIND, Tara, and Sentinel Agents — EU-hosted, single-tenant, GDPR-native by design."
-        canonical="https://singulancelabs.com/privacy"
+        title={`${isSecurity ? 'Security' : 'Privacy Policy'} — SINGULANCE`}
+        description={isSecurity ? 'The technical and organizational security controls protecting SINGULANCE and HIVEMIND.' : 'How SINGULANCE collects, uses, retains, and protects personal data, and how to exercise your privacy rights.'}
+        canonical={`https://singulancelabs.com/${isSecurity ? 'security' : 'privacy'}`}
       />
 
       {/* top bar */}
@@ -105,10 +110,10 @@ const PrivacySecurity = () => {
       {/* header card */}
       <div className="mx-6 mt-6 rounded-xl border px-8 py-14 text-center md:mx-10 md:py-20" style={{ borderColor: BORDER }}>
         <h1 className="font-['Space_Grotesk'] mx-auto max-w-3xl text-4xl font-semibold tracking-tight md:text-6xl" style={{ color: INK }}>
-          Privacy &amp; Security
+          {isSecurity ? 'Security' : 'Privacy Policy'}
         </h1>
         <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.18em]" style={{ color: MUTED }}>
-          Effective Date: August 9, 2026 &nbsp;·&nbsp; SINGULANCE, Hannover, Germany
+          Last updated: August 27, 2026 &nbsp;·&nbsp; SINGULANCE, Hannover, Germany
         </p>
       </div>
 
@@ -118,7 +123,7 @@ const PrivacySecurity = () => {
           <div className="sticky top-8">
             <p className="font-mono text-[11px] uppercase tracking-[0.2em]" style={{ color: MUTED }}>Contents</p>
             <nav className="mt-4 space-y-1 border-l" style={{ borderColor: BORDER }}>
-              {SECTIONS.map((s) => (
+              {visibleSections.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => scrollTo(s.id)}
@@ -139,6 +144,7 @@ const PrivacySecurity = () => {
 
         {/* content */}
         <article className="min-w-0 pt-10 md:pt-0">
+          {!isSecurity && <>
           {/* ── PRIVACY POLICY ── */}
           <p className="font-mono text-[11px] uppercase tracking-[0.2em]" style={{ color: EMBER }}>Part I</p>
           <h2 className="font-['Space_Grotesk'] mt-2 text-3xl font-semibold tracking-tight">Privacy Policy</h2>
@@ -150,8 +156,32 @@ const PrivacySecurity = () => {
               protects information across our products — HIVEMIND (memory engine), Tara (voice agent), and Sentinel Agents
               (autonomous digital employees), together the &ldquo;Services.&rdquo; SINGULANCE is built EU-first: single-tenant
               deployments, EU-hosted infrastructure, and data handling designed around GDPR, DORA, and the EU AI Act from
-              day one — not retrofitted for compliance.
+              day one. These design goals support customer compliance obligations; they are not a legal certification or
+              a substitute for each customer&rsquo;s own assessment.
             </P>
+          </Section>
+
+          <Section>
+            <H2 id="website-data">Website Data, Cookies &amp; Similar Technology</H2>
+            <P>
+              Our edge provider necessarily processes request information such as IP address, user agent, requested URL,
+              status code, and timestamp to deliver and protect the site. We store your versioned cookie choices in the
+              strictly necessary first-party cookie <code>singulance_cookie_consent_v1</code>. Optional preferences,
+              PostHog EU product analytics, autocapture, and session replay remain disabled until you opt in. We currently
+              install no advertising or retargeting tracker. See our <a href="/cookies" style={{ color: EMBER }}>Cookie Policy</a>{' '}
+              for the provider, purpose, category, and duration of each browser technology.
+            </P>
+          </Section>
+
+          <Section>
+            <H2 id="legal-bases">Lawful Bases</H2>
+            <Ul items={[
+              'Contract or steps requested before contract (GDPR Art. 6(1)(b)): accounts, authentication, requested product functions, support, and billing',
+              'Consent (Art. 6(1)(a)): optional analytics, session replay, marketing technology, and consent-based communications; consent can be withdrawn at any time',
+              'Legitimate interests (Art. 6(1)(f)): essential security, fraud prevention, service reliability, and responding to business inquiries, balanced against your rights',
+              'Legal obligation (Art. 6(1)(c)): tax, accounting, regulatory, and lawful-request records where applicable',
+            ]} />
+            <P>Access to the public site and core contractual service is not conditional on accepting optional analytics or marketing technology.</P>
           </Section>
 
           <Section>
@@ -198,7 +228,7 @@ const PrivacySecurity = () => {
             <H2 id="ai-processing">AI Processing</H2>
             <P>
               When you use HIVEMIND&rsquo;s recall, chat, or agent features, your content may be processed by
-              large-language-model providers (currently Groq and OpenRouter-routed models) solely to generate the
+              model providers routed through our controlled AI gateway solely to generate the
               response or action you requested. We do not permit these providers to train on your data. Where a
               connector routes execution through a third-party platform (for example, Composio for certain tool
               integrations), the same principle applies — processing happens at your direction, for your request, and
@@ -222,11 +252,26 @@ const PrivacySecurity = () => {
           <Section>
             <H2 id="data-residency">Data Residency &amp; Hosting</H2>
             <P>
-              SINGULANCE deployments are single-tenant by design — your organization&rsquo;s memory is never mixed with
-              another tenant&rsquo;s data in a shared index. Production infrastructure runs on EU-based hosting; we do not
-              route your primary data through US cloud regions. This is a structural property of the architecture, not a
-              configuration toggle.
+              Hosted HIVEMIND workspaces apply organization and user scope across application, database, vector-search,
+              and graph paths. Dedicated and self-hosted deployment options provide additional physical isolation where
+              contracted. Primary application and memory infrastructure is operated in Europe; a connector or model
+              provider you deliberately invoke may process the minimum necessary request outside the EEA under an
+              applicable transfer mechanism described below.
             </P>
+          </Section>
+
+          <Section>
+            <H2 id="subprocessors">Service Providers &amp; Sub-processors</H2>
+            <P>Depending on the product and configuration you use, service providers may include:</P>
+            <Ul items={[
+              'Cloudflare for DNS, edge delivery, security controls, Workers, and controlled AI routing',
+              'EU infrastructure providers, including Hetzner, for application, database, and memory services',
+              'PostHog EU Cloud for optional product analytics and session replay only after consent',
+              'Stripe for checkout, subscriptions, and payment records; SINGULANCE does not store full card numbers',
+              'Google or other identity providers when you choose their sign-in method',
+              'Model and connector providers needed for a feature you request, subject to the selected deployment and routing configuration',
+            ]} />
+            <P>We review this list when providers or processing purposes change and update this notice before materially different optional processing is enabled.</P>
           </Section>
 
           <Section>
@@ -246,7 +291,9 @@ const PrivacySecurity = () => {
             <H2 id="retention">Data Retention &amp; Deletion</H2>
             <P>
               We retain account and memory data for as long as your account is active, or as needed to provide the
-              Services. You may delete individual memories, disconnect a connector, or request full account deletion at
+              Services, subject to configured retention and legal obligations. Consent records are retained for the
+              stated cookie lifetime, optional analytics identifiers for the period listed in the Cookie Policy, and
+              payment or tax records for applicable statutory periods. You may delete individual memories, disconnect a connector, or request full account deletion at
               any time. Disconnecting a service stops new sync but does not automatically delete previously ingested
               data unless you request it. Full-account deletion requests are honored subject to legal retention
               requirements and reasonable processing time.
@@ -266,6 +313,7 @@ const PrivacySecurity = () => {
               'Lodge a complaint with your local data protection authority',
             ]} />
             <P>To exercise any of these rights, contact us — see Contact below.</P>
+            <P>We normally respond within one month after verifying the request. You may also complain to your competent supervisory authority, including the State Commissioner for Data Protection of Lower Saxony where applicable.</P>
           </Section>
 
           <Section>
@@ -284,9 +332,11 @@ const PrivacySecurity = () => {
               holders or a prominent notice in the product before they take effect.
             </P>
           </Section>
+          </>}
 
           {/* ── SECURITY ── */}
-          <div className="mt-20 border-t pt-14" style={{ borderColor: BORDER }}>
+          {isSecurity && <>
+          <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.2em]" style={{ color: EMBER }}>Part II</p>
             <h2 className="font-['Space_Grotesk'] mt-2 text-3xl font-semibold tracking-tight">Security</h2>
           </div>
@@ -295,7 +345,7 @@ const PrivacySecurity = () => {
             <H2 id="security">Security Overview</H2>
             <P>
               Security is architectural at SINGULANCE, not a policy layer bolted on afterward. Every design decision —
-              single-tenant deployment, encryption defaults, credential handling — starts from &ldquo;what does a
+              tenant isolation, dedicated-deployment options, encryption defaults, credential handling — starts from &ldquo;what does a
               regulated European enterprise&rsquo;s security team need to see&rdquo; rather than being retrofitted later.
             </P>
           </Section>
@@ -312,9 +362,10 @@ const PrivacySecurity = () => {
           <Section>
             <H2 id="tenant-isolation">Tenant Isolation</H2>
             <P>
-              Every organization&rsquo;s memory, vectors, and connector credentials are isolated at the storage layer —
-              queries are always scoped by tenant/organization ID, with no shared index across customers. This is the
-              same property that makes single-tenant deployments possible for customers who require it contractually.
+              Every hosted request is scoped to the authenticated user and organization across database, vector, and graph
+              access paths. Dedicated and self-hosted deployments are available for customers that require physical
+              isolation contractually. Logical isolation and dedicated deployment are distinct controls and are not
+              represented as the same thing.
             </P>
           </Section>
 
@@ -323,7 +374,7 @@ const PrivacySecurity = () => {
             <P>We rely on a small number of vetted infrastructure providers, each contractually bound to appropriate security standards:</P>
             <Ul items={[
               'EU-based hosting for primary application and database infrastructure',
-              'Groq and OpenRouter for LLM inference, invoked only at your request',
+              'Cloudflare AI Gateway and configured model providers for inference invoked by a requested feature',
               'Composio, where used, for specific third-party tool execution you authorize',
             ]} />
           </Section>
@@ -341,11 +392,13 @@ const PrivacySecurity = () => {
           <Section>
             <H2 id="incident-response">Incident Response</H2>
             <P>
-              In the event of a security incident affecting your data, we will notify affected customers without undue
-              delay, consistent with GDPR&rsquo;s 72-hour breach-notification requirement, and provide the information
-              needed for your own regulatory obligations under DORA or equivalent frameworks.
+              In the event of a personal-data breach, we notify affected controllers without undue delay and support the
+              information they need for their own obligations. Where SINGULANCE is the controller, we assess notification
+              to the competent supervisory authority within GDPR&rsquo;s 72-hour window and notify affected individuals when
+              the law requires it.
             </P>
           </Section>
+          </>}
 
           <Section>
             <H2 id="contact">Contact</H2>

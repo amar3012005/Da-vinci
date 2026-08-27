@@ -1,6 +1,7 @@
 import React from 'react';
 import { Instagram, Linkedin, Twitter, Youtube, Github, MessageCircle, Apple, Play } from 'lucide-react';
 import { HIVEMIND_URL, hivemindHref } from './hivemindLinks';
+import { openCookiePreferences } from '../../privacy/consent';
 
 /**
  * SINGULANCE footer — Mistral footer layout, pixel-faithful, in the dark skin.
@@ -48,7 +49,7 @@ const COLS = [
     links: [
       ['Terms of Service', '/terms'],
       ['Privacy Policy', '/privacy'],
-      ['Privacy choices', '/privacy'],
+      ['Cookie Policy', '/cookies'],
       ['Data processing agreement', '/legal'],
       ['Legal notice', '/legal'],
     ],
@@ -93,9 +94,7 @@ const SingulanceFooter = () => {
               <ul className="mt-6 space-y-4">
                 {col.links.map(([label, href]) => (
                   <li key={label}>
-                    <a href={href} className="text-[15px] text-white/80 no-underline transition-colors hover:text-white">
-                      {label}
-                    </a>
+                    {label === 'Cookie Policy' ? <><a href={href} className="text-[15px] text-white/80 no-underline transition-colors hover:text-white">{label}</a><button type="button" onClick={openCookiePreferences} className="mt-4 block text-left text-[15px] text-white/80 transition-colors hover:text-white">Privacy choices</button></> : <a href={href} className="text-[15px] text-white/80 no-underline transition-colors hover:text-white">{label}</a>}
                   </li>
                 ))}
               </ul>
