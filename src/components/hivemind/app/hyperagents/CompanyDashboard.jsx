@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Building2, Target, Users, FileText, Globe, ArrowUpRight,
@@ -180,6 +180,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   const [runtimeFocuses, setRuntimeFocuses] = useState([]);
   const [runtimeLaunching, setRuntimeLaunching] = useState(false);
   const [runtimeError, setRuntimeError] = useState('');
+  const dayZeroReportRequested = useRef(false);
   const runtimeCompanyReady = Boolean(state?.onboarded && state?.company?.company);
   const runtimeInviteStorageKey = `hm_runtime_invite:${state?.hq_room_id || state?.company?.company || 'company'}`;
 
@@ -213,6 +214,21 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
+  // Claim delivery only after the real CompanyDashboard has committed its
+  // persisted company record to the screen. The server owns idempotency, while
+  // this latch avoids a duplicate POST from local re-renders.
+  useEffect(() => {
+    if (!state?.onboarded || !state?.company || dayZeroReportRequested.current) return;
+    if (state.company.day0_report_email?.status === 'sent' || state.company.day0_report_email?.status === 'sending') return;
+    dayZeroReportRequested.current = true;
+    const timer = window.setTimeout(() => {
+      apiClient.claimHyperCompanyDayZeroReport().catch(() => {
+        // A later visit may retry a failed delivery; this never blocks the
+        // company workspace or makes email transport a UI failure.
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [state?.onboarded, state?.company, state?.hq_room_id]);
   useEffect(() => {
     if (!showRuntimeInvite || !runtimeCompanyReady) return undefined;
     try { if (window.localStorage.getItem(runtimeInviteStorageKey) === 'seen') return undefined; } catch { /* continue */ }
@@ -258,10 +274,10 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
       <div className="flex-1 min-h-0 overflow-y-auto bg-white px-6 py-4">
         <div className="max-w-[1280px] mx-auto">
           <HyperOnboarding
-            onComplete={(result) => {
-              if (result?.room_id) onOpenRoom?.({ id: result.room_id, name: result.room_name });
-              load();
-            }}
+            // The first destination is the completed CompanyDashboard itself:
+            // it is the record the owner reviews and the moment Day-0 is sent.
+            // The HQ remains available from the HQ card once this view loads.
+            onComplete={() => load()}
             onSkip={() => load()}
           />
         </div>

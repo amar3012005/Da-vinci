@@ -447,6 +447,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Claim the one-time Day-0 report after Your Company has rendered. */
+  async claimHyperCompanyDayZeroReport() {
+    const { data } = await this.controlPlane.post('/v1/hyper/company/day0-report', {});
+    return data;
+  }
+
   /** Confirm the organization's headquarters before entering its workspace. */
   async updateHyperCompanyLocation(location) {
     const { data } = await this.controlPlane.patch('/v1/hyper/company/location', { location });
