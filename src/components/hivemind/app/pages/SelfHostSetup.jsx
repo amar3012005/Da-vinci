@@ -7,7 +7,7 @@ const CONTROL_PLANE_URL = (process.env.REACT_APP_CONTROL_PLANE_URL || 'https://a
 const INSTALLER_URL = 'https://get.singulancelabs.com/memory-box';
 export const ADVANCED_SELFHOST_SCOPES = ['selfhost:connect'];
 const shellQuote = (value) => `'${String(value).replace(/'/g, "'\\''")}'`;
-const downloadedInstallerCommand = (credentialName, credential) => `( installer="$(mktemp)"; trap 'rm -f -- "$installer"' EXIT; curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --output "$installer" ${shellQuote(INSTALLER_URL)} && sudo env ${credentialName}=${shellQuote(credential)} HIVEMIND_CENTRAL_URL=${shellQuote(CONTROL_PLANE_URL)} bash "$installer" )`;
+const downloadedInstallerCommand = (credentialName, credential) => `curl -fsSL ${shellQuote(INSTALLER_URL)} | sudo env ${credentialName}=${shellQuote(credential)} HIVEMIND_CENTRAL_URL=${shellQuote(CONTROL_PLANE_URL)} bash`;
 
 export const buildInstallCommand = (token, channel = 'stable') => {
   const normalizedChannel = channel === 'canary' ? 'canary' : 'stable';
