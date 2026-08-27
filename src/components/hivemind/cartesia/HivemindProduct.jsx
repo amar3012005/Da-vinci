@@ -169,13 +169,13 @@ const Hero = () => {
       <div className="pointer-events-none absolute inset-0"
         style={{ background: 'radial-gradient(90% 65% at 50% 42%, rgba(251,251,248,0) 40%, #FBFBF8 92%)' }} />
 
-      <div className="relative mx-auto max-w-[1200px] px-6 pb-10 pt-[4.75rem] text-center md:min-h-[calc(100svh-72px)] md:pb-6 md:pt-[clamp(2rem,5vh,4rem)]">
+      <div className="relative mx-auto max-w-[1200px] px-6 pb-10 pt-[7rem] text-center md:min-h-[calc(100svh-72px)] md:pb-6 md:pt-[clamp(7rem,12vh,9rem)]">
         <motion.div style={{ y: headY }}>
           <Reveal>
             <span className="inline-flex items-center gap-2 rounded-full border border-[#e7e4dd] bg-white px-4 py-1.5 font-mono text-[11px] tracking-[0.18em] text-[#6b6b6b]">
               <motion.span className="h-1.5 w-1.5 rounded-full" style={{ background: BLUE }}
                 animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 2, repeat: Infinity }} />
-              SOVEREIGN MEMORY ENGINE · EU
+              SOVEREIGN OPERATING SYSTEM
             </span>
           </Reveal>
 

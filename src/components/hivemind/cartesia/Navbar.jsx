@@ -2,15 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ArrowRight, ChevronRight } from 'lucide-react';
+import SingulanceBrand from '../app/shared/SingulanceBrand';
 
 const navLinks = [
-  { label: 'Platform', href: '#features' },
   { label: 'Solutions', href: '#solutions' },
   { label: 'Developers', href: '#developers' },
   { label: 'Pricing', href: '#pricing' },
   { label: 'Docs', href: '/hivemind/docs' },
   { label: './ Research', href: '/research' },
   { label: './ Benchmark', href: '/benchmark' },
+];
+
+const productLinks = [
+  { label: 'BRAIN', href: '/hivemind/app/overview' },
+  { label: 'OS', href: '/hivemind/app/employees/mycompany' },
+  { label: 'VOICE', href: '/hivemind/app/tara' },
 ];
 
 const Navbar = () => {
@@ -65,11 +71,19 @@ const Navbar = () => {
               onClick={() => handleNavClick('/hivemind')}
               className="flex items-center gap-2 sm:gap-2.5 bg-transparent border-none cursor-pointer group"
             >
-              <span className="font-['Space_Grotesk'] text-base font-bold tracking-[-0.04em] text-[#0a0a0a] sm:text-lg">HIVEMIND</span>
+              <SingulanceBrand variant="light" markSize={30} />
             </motion.button>
 
             {/* Center Links — Desktop */}
-            <div className="hidden lg:flex items-center gap-6">
+            <div className="hidden lg:flex items-center gap-5">
+              <div className="flex items-center gap-2 border-r border-[#d9d6d0] pr-5 font-mono text-[10px] font-semibold tracking-[0.16em] text-[#737373]">
+                {productLinks.map((item, index) => (
+                  <React.Fragment key={item.label}>
+                    {index > 0 && <span className="text-[#c4c0b8]">|</span>}
+                    <button onClick={() => handleNavClick(item.href)} className="border-0 bg-transparent p-0 text-inherit transition-colors hover:text-[#117dff]">{item.label}</button>
+                  </React.Fragment>
+                ))}
+              </div>
               {navLinks.map((item) => (
                 <motion.button
                   key={item.label}
@@ -134,6 +148,14 @@ const Navbar = () => {
             className="fixed inset-0 z-[99] bg-[#faf9f4]/98 backdrop-blur-xl lg:hidden"
           >
             <div className="pt-20 px-4 flex flex-col gap-1 max-h-screen overflow-y-auto">
+              <div className="mb-3 flex items-center justify-center gap-3 border-b border-[#e3e0db] pb-4 font-mono text-[11px] font-semibold tracking-[0.16em] text-[#525252]">
+                {productLinks.map((item, index) => (
+                  <React.Fragment key={item.label}>
+                    {index > 0 && <span className="text-[#c4c0b8]">|</span>}
+                    <button onClick={() => handleNavClick(item.href)} className="border-0 bg-transparent p-0 text-inherit">{item.label}</button>
+                  </React.Fragment>
+                ))}
+              </div>
               {navLinks.map((item, i) => (
                 <motion.button
                   key={item.label}
