@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { Bot, BrainCircuit, Check, Copy, Terminal } from 'lucide-react';
 import NewsArticleLayout, { H2, P, Table, FullBleed } from './research/NewsArticleLayout';
 import InteractiveByteSlot from './research/InteractiveByteSlot';
 
@@ -6,12 +7,54 @@ const IcarusHeroScene = lazy(() => import('./research/three/IcarusHeroScene'));
 
 const EMBER = '#FF5229';
 const BORDER = '#E4E3DE';
+const ICARUS_AGENT_SETUP_URL = 'https://icarus.singulancelabs.com/agent-setup/prompt.md';
+const ICARUS_AGENT_SETUP_PROMPT = `Fetch and follow the ICARUS coding-agent setup instructions at:
+
+${ICARUS_AGENT_SETUP_URL}
+
+Set up ICARUS for the current repository. Detect the coding agent, install ICARUS only if needed, register its MCP integration, initialize this repository, and verify the result. Do not create a graph, governed task, or upload project data unless the user’s actual task requires it. Use ICARUS primarily for targeted durable memory and recall; use the full harness only for high-risk changes such as production, security, tenant, billing, migration, destructive, or major-refactor work.`;
+
+const AgentOnboardingPill = () => {
+  const [copied, setCopied] = useState(false);
+  const copySetupPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(ICARUS_AGENT_SETUP_PROMPT);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <div className="mx-auto mb-7 flex max-w-[650px] justify-center px-1 sm:mb-9">
+      <button
+        type="button"
+        onClick={copySetupPrompt}
+        aria-label="Copy the ICARUS coding-agent onboarding prompt"
+        className="group flex w-full items-center justify-between gap-3 rounded-full border border-[#d8d6d0] bg-white px-4 py-3 text-left shadow-[0_1px_2px_rgba(10,10,10,0.04)] transition-all hover:border-[#0a0a0a] hover:shadow-sm sm:px-6 sm:py-4"
+      >
+        <span className="min-w-0 font-['Space_Grotesk'] text-[17px] font-medium tracking-tight text-[#0a0a0a] sm:text-[22px]">Onboard your coding agent to ICARUS</span>
+        <span className="flex shrink-0 items-center gap-1.5 text-[#0a0a0a] sm:gap-2">
+          <BrainCircuit size={22} strokeWidth={1.8} className="hidden sm:block" aria-hidden="true" />
+          <Bot size={22} strokeWidth={1.8} aria-hidden="true" />
+          <Terminal size={22} strokeWidth={1.8} aria-hidden="true" />
+          <span className={`ml-1 flex h-7 w-7 items-center justify-center rounded-[6px] border transition-colors sm:ml-2 ${copied ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252] group-hover:border-[#0a0a0a] group-hover:text-[#0a0a0a]'}`}>
+            {copied ? <Check size={15} strokeWidth={2.2} /> : <Copy size={15} />}
+          </span>
+        </span>
+      </button>
+      <span className="sr-only" aria-live="polite">{copied ? 'ICARUS agent setup prompt copied to clipboard.' : ''}</span>
+    </div>
+  );
+};
 
 const useMotionOk = () => {
   const [ok, setOk] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    setOk(window.matchMedia('(min-width: 768px)').matches && !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const wide = window.matchMedia?.('(min-width: 768px)');
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    setOk(Boolean(wide?.matches && !reducedMotion?.matches));
   }, []);
   return ok;
 };
@@ -320,6 +363,7 @@ const IcarusResearch = () => {
       product={{ name: 'ICARUS', tag: '.amr format', desc: 'A memory filesystem for AI agents — one mmap’d file per tenant, no server.' }}
       highlights={meta.highlights}
     >
+      <AgentOnboardingPill />
       <VersionToggle version={version} onChange={setVersion} />
       <div key={version} className="animate-[icarusFade_.45s_ease]">
         {version === 'v1' ? <V1Body motionOk={motionOk} /> : <V2Body motionOk={motionOk} />}
