@@ -9,7 +9,13 @@ export const ADVANCED_SELFHOST_SCOPES = ['selfhost:connect'];
 const shellQuote = (value) => `'${String(value).replace(/'/g, "'\\''")}'`;
 const downloadedInstallerCommand = (credentialName, credential) => `( installer="$(mktemp)"; trap 'rm -f -- "$installer"' EXIT; curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --output "$installer" ${shellQuote(INSTALLER_URL)} && sudo env ${credentialName}=${shellQuote(credential)} HIVEMIND_CENTRAL_URL=${shellQuote(CONTROL_PLANE_URL)} bash "$installer" )`;
 
-export const buildInstallCommand = (token) => downloadedInstallerCommand('HIVEMIND_ENROLLMENT_TOKEN', token || '<enrollment-token>');
+export const buildInstallCommand = (token, channel = 'stable') => {
+  const normalizedChannel = channel === 'canary' ? 'canary' : 'stable';
+  const command = downloadedInstallerCommand('HIVEMIND_ENROLLMENT_TOKEN', token || '<enrollment-token>');
+  return normalizedChannel === 'canary'
+    ? command.replace('HIVEMIND_CENTRAL_URL=', 'HIVEMIND_MEMORY_BOX_CHANNEL=canary HIVEMIND_CENTRAL_URL=')
+    : command;
+};
 export const buildAdvancedInstallCommand = (key) => downloadedInstallerCommand('HIVEMIND_API_KEY', key || '<your-key>');
 
 export function normalizeConnectionState(payload) {
@@ -70,12 +76,21 @@ export default function SelfHostSetup({ onDone }) {
     setLoading(true);
     setError(null);
     try {
-      const result = await apiClient.createSelfHostBootstrap();
+      let result;
+      try {
+        result = await apiClient.createSelfHostBootstrap();
+      } catch (stableError) {
+        // Canary is an explicit server-side allowlisted test path. It is never
+        // attempted unless stable is unavailable, and the API rejects every
+        // organization that has not been approved for this release.
+        if (stableError?.response?.data?.code !== 'memory_box_automatic_setup_unavailable') throw stableError;
+        result = await apiClient.createSelfHostCanaryBootstrap();
+      }
       const token = result?.enrollment_token || result?.enrollmentToken;
       if (!token) throw new Error('The enrollment token was not returned.');
       // Build the governed command locally from the typed token. Never render
       // a server-provided shell string or a curl-to-shell pipeline.
-      setBootstrap({ ...result, enrollmentToken: token, installCommand: buildInstallCommand(token) });
+      setBootstrap({ ...result, enrollmentToken: token, installCommand: buildInstallCommand(token, result?.channel) });
     } catch (e) {
       setError(e?.response?.data?.error || e?.message || 'Could not create an enrollment command.');
       // The governed stable channel may intentionally be unavailable until a
@@ -132,7 +147,7 @@ export default function SelfHostSetup({ onDone }) {
         </section>
 
         <section className="mt-6">
-          <div className="flex items-center justify-between gap-3 mb-2"><div><h2 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider">Run on your Linux server</h2><p className="text-[11px] text-[#a3a3a3] mt-1">The enrollment token is organization-bound, single-use, and short-lived.</p></div>{bootstrap?.expires_at && <span className="text-[9px] text-[#a3a3a3] font-mono whitespace-nowrap">expires {new Date(bootstrap.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}</div>
+          <div className="flex items-center justify-between gap-3 mb-2"><div><h2 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider">Run on your Linux server</h2><p className="text-[11px] text-[#a3a3a3] mt-1">The enrollment token is organization-bound, single-use, and short-lived.{bootstrap?.channel === 'canary' ? ' This organization is enrolled in the signed canary test channel.' : ''}</p></div>{bootstrap?.expires_at && <span className="text-[9px] text-[#a3a3a3] font-mono whitespace-nowrap">expires {new Date(bootstrap.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}</div>
           {loading ? <div className="rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] p-4 flex items-center gap-2 text-[12px] text-[#737373]"><Loader2 size={15} className="animate-spin" /> Creating secure enrollment command…</div> : bootstrap?.installCommand ? <div className="relative"><pre className="bg-[#0a0a0a] text-[#f5f5f5] text-[11px] sm:text-[12px] leading-relaxed rounded-[10px] p-4 pr-12 overflow-x-auto font-mono whitespace-pre-wrap break-all">{bootstrap.installCommand}</pre><button onClick={() => commandCopy.copy(bootstrap.installCommand)} className="absolute right-2.5 top-2.5 p-2 rounded-[6px] bg-white/10 hover:bg-white/20 text-white" title="Copy command" aria-label="Copy installation command">{commandCopy.copied ? <Check size={15} /> : <Copy size={15} />}</button></div> : <button onClick={createBootstrap} className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"><RefreshCw size={14} /> Create new command</button>}
           {error && <div role="alert" className="mt-3 rounded-[6px] border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">{error}</div>}
         </section>
