@@ -1180,6 +1180,25 @@
     "workspaceName": "Arbeitsbereichsname"
   },
   "overview": {
+    "launch": "Starten",
+    "feat": {
+      "chat": "Mit HIVE sprechen",
+      "chatHint": "Frage HIVE alles und erhalte Antworten, die auf deinem Unternehmensgedächtnis basieren.",
+      "rooms": "HyperAgents-Räume",
+      "roomsHint": "Bringe KI-Spezialisten zusammen, um Arbeit zu planen, zu prüfen und auszuführen.",
+      "workspace": "Arbeitsbereich",
+      "workspaceHint": "Verwalte Team, Projekte, Zugriffe und Unternehmenseinstellungen.",
+      "knowledge": "Wissensbasis",
+      "knowledgeHint": "Lade beliebige Dokumente hoch und lass HIVEMIND sie dauerhaft behalten.",
+      "graph": "Gedächtnisgraph",
+      "graphHint": "Erkunde, wie Erinnerungen, Personen, Entscheidungen und Belege über die Zeit verbunden sind.",
+      "swarm": "Schwarm",
+      "swarmHint": "Lass spezialisierte KI-Agenten gemeinsam an komplexer Unternehmensarbeit arbeiten.",
+      "connectors": "Konnektoren",
+      "connectorsHint": "Verbinde die bereits genutzten Werkzeuge und halte ihr Wissen synchron.",
+      "web": "Web Intelligence",
+      "webHint": "Recherchiere im Live-Web und verwandle verlässliche Ergebnisse in dauerhaftes Unternehmenswissen."
+    },
     "askMe": "Frag mich alles",
     "askPlaceholder": "Frage HIVE alles…",
     "browseMemories": "Gedächtnisse durchsuchen",
