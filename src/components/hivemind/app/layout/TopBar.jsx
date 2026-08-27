@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import TeamSwitcher from './TeamSwitcher';
 import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
+import SingulanceBrand from '../shared/SingulanceBrand';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -83,6 +84,15 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
     <header className="sticky top-0 z-30 flex h-14 items-center justify-center border-b border-[#e3e0db] bg-[#faf9f4]/90 px-3 backdrop-blur-xl md:justify-between md:px-6">
       {/* Left: Title + Description + Team switcher */}
       <div className="hidden min-w-0 items-center gap-4 lg:flex">
+        <button
+          type="button"
+          onClick={() => navigate('/hivemind/app/overview')}
+          className="shrink-0 border-0 bg-transparent p-0"
+          aria-label="SINGULANCE overview"
+        >
+          <SingulanceBrand variant="light" markSize={28} />
+        </button>
+        <span className="h-7 w-px shrink-0 bg-[#e3e0db]" aria-hidden="true" />
         <div>
           <h1 className="text-[#0a0a0a] text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
             {tTitle}

@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../auth/AuthProvider';
 import SingulanceSplash from './SingulanceSplash';
 import SingulanceMark from '../shared/SingulanceMark';
+import SingulanceBrand from '../shared/SingulanceBrand';
 import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
 
@@ -109,9 +110,9 @@ export default function MobileShell({ children, rightAction = null, title = null
           >
             <AlignLeft size={22} strokeWidth={2} />
           </button>
-          {title && (
-            <div className="text-[15px] font-semibold font-['Space_Grotesk'] absolute left-1/2 -translate-x-1/2">{title}</div>
-          )}
+          <div className="absolute left-1/2 -translate-x-1/2">
+            <SingulanceBrand variant="light" markSize={24} />
+          </div>
           <div className="w-11 h-11 grid place-items-center">{rightAction}</div>
         </header>
       )}
@@ -145,8 +146,7 @@ export default function MobileShell({ children, rightAction = null, title = null
           >
             <div className="h-14 px-4 flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
-                <SingulanceMark size={18} className="flex-shrink-0" />
-                <span className="text-[14px] font-semibold font-['Space_Grotesk'] truncate">HIVEMIND</span>
+                <SingulanceBrand variant="light" markSize={25} />
               </div>
               <button onClick={() => setDrawer(false)} className="w-10 h-10 rounded-full grid place-items-center active:bg-[#ece9e2]" aria-label="Close menu">
                 <X size={19} />

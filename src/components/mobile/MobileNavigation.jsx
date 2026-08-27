@@ -5,6 +5,7 @@ import { Menu, X, Sun, Moon, ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
 import { getMobileCopy } from './mobileCopy';
 import { HIVEMIND_URL, hivemindHref } from './hivemindLinks';
+import SingulanceBrand from '../hivemind/app/shared/SingulanceBrand';
 
 const MobileNavigation = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -65,7 +66,7 @@ const MobileNavigation = () => {
       <nav className={`fixed top-0 inset-x-0 z-[100] transition-colors duration-500 ${scrolled || mobileOpen ? 'bg-[#05070f]/70 backdrop-blur-md border-b border-white/10' : 'bg-transparent border-b border-transparent'}`}>
         <div className={`max-w-[1200px] mx-auto border-x transition-colors duration-500 ${scrolled || mobileOpen ? 'border-white/10' : 'border-transparent'}`}>
           <div className="px-6 h-16 flex items-center justify-between">
-            {/* Logo — SINGULANCE wordmark */}
+            {/* Canonical dark-chrome SINGULANCE vector lockup. */}
             <button
               onClick={() => {
                 if (typeof window !== 'undefined' && window.location.pathname.startsWith('/test')) {
@@ -75,8 +76,9 @@ const MobileNavigation = () => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               className="flex items-center bg-transparent border-none cursor-pointer p-0"
+              aria-label="SINGULANCE home"
             >
-              <span className="text-white text-lg font-semibold tracking-[0.04em]">SINGULANCE</span>
+              <SingulanceBrand variant="dark" markSize={32} />
             </button>
 
             {/* Center Links — Desktop */}
