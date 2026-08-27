@@ -37,6 +37,14 @@ import { useUploads, setUploads as setGlobalUploads } from '../shared/upload-sto
 import { isPlanLimitError } from '../shared/planLimit';
 import UsageTracker from '../components/UsageTracker';
 import { emitUsageChanged, useUsage } from '../shared/useUsage';
+import {
+  documentIngestState,
+  emitKnowledgeChanged,
+  hasIngestModeMismatch,
+  normalizeIngestMode,
+  responseIngestMode,
+  uploadQuotaMessage,
+} from '../shared/knowledge-ingest-contract';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -261,6 +269,7 @@ function pendingFileKey(file) { return `${file.name}::${file.size}`; }
 // The evidence API is keyed by a UUID. Filenames are not identities: users can
 // upload the same name again with new content or into a different scope.
 function documentIdFrom(doc) {
+  if (doc?.id) return doc.id;
   const tags = doc?.tags || [];
   const hit = tags.find((t) => typeof t === 'string' && t.startsWith('doc-id:'));
   return hit ? hit.slice('doc-id:'.length) : (doc?.metadata?.document_id || null);
@@ -521,21 +530,29 @@ function UploadScopeModal({
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
+                  aria-pressed={selectedIngestMode === 'both'}
                   onClick={() => onIngestModeChange('both')}
-                  className={`rounded-lg border p-3 text-left transition-colors ${selectedIngestMode === 'both'
-                    ? 'border-[#117dff]/40 bg-[#117dff]/8' : 'border-[#e3e0db] hover:bg-[#faf9f4]'}`}
+                  className={`relative rounded-[10px] border p-3 text-left transition-all ${selectedIngestMode === 'both'
+                    ? 'border-2 border-[#117dff] bg-blue-50/70 shadow-[0_0_0_3px_rgba(17,125,255,0.08)]' : 'border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#faf9f4]'}`}
                 >
-                  <p className="text-xs font-semibold text-[#0a0a0a]">{t('knowledgebase.modeBoth', 'Memories + evidence')}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-[#0a0a0a]">{t('knowledgebase.modeBoth', 'Memories + evidence')}</p>
+                    {selectedIngestMode === 'both' && <CheckCircle size={16} className="shrink-0 text-[#117dff]" />}
+                  </div>
                   <p className="mt-1 text-[11px] text-[#737373]">{t('knowledgebase.modeBothDesc', 'Full facts, entities, relationships, and hybrid search.')}</p>
                 </button>
                 <button
                   type="button"
                   disabled={containsImage}
+                  aria-pressed={selectedIngestMode === 'evidence'}
                   onClick={() => !containsImage && onIngestModeChange('evidence')}
-                  className={`rounded-lg border p-3 text-left transition-colors ${selectedIngestMode === 'evidence'
-                    ? 'border-[#117dff]/40 bg-[#117dff]/8' : 'border-[#e3e0db] hover:bg-[#faf9f4]'} ${containsImage ? 'cursor-not-allowed opacity-45' : ''}`}
+                  className={`relative rounded-[10px] border p-3 text-left transition-all ${selectedIngestMode === 'evidence'
+                    ? 'border-2 border-[#117dff] bg-blue-50/70 shadow-[0_0_0_3px_rgba(17,125,255,0.08)]' : 'border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#faf9f4]'} ${containsImage ? 'cursor-not-allowed opacity-45' : ''}`}
                 >
-                  <p className="text-xs font-semibold text-[#0a0a0a]">{t('knowledgebase.modeEvidence', 'Evidence only')}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-[#0a0a0a]">{t('knowledgebase.modeEvidence', 'Evidence only')}</p>
+                    {selectedIngestMode === 'evidence' && <CheckCircle size={16} className="shrink-0 text-[#117dff]" />}
+                  </div>
                   <p className="mt-1 text-[11px] text-[#737373]">{t('knowledgebase.modeEvidenceDesc', 'Hybrid searchable segments; skips AI memory, entity, and relationship generation.')}</p>
                 </button>
               </div>
@@ -549,10 +566,11 @@ function UploadScopeModal({
             {/* Tier 1 — Personal: everyone, private */}
             <button
               type="button"
+              aria-pressed={selectedScope === 'personal'}
               onClick={() => onScopeChange('personal')}
-              className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
+              className={`w-full rounded-[10px] border px-4 py-3 text-left transition-all ${
                 selectedScope === 'personal'
-                  ? 'border-[#117dff]/30 bg-[#117dff]/8'
+                  ? 'border-2 border-[#117dff] bg-blue-50/70 shadow-[0_0_0_3px_rgba(17,125,255,0.08)]'
                   : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
               }`}
             >
@@ -560,10 +578,11 @@ function UploadScopeModal({
                 <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
                   <User size={16} className="text-[#117dff]" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopePersonalLabel', 'My Space')}</p>
                   <p className="text-xs text-[#525252]">{t('knowledgebase.scopePersonalDesc', 'Private memories only visible in your personal workspace.')}</p>
                 </div>
+                {selectedScope === 'personal' && <CheckCircle size={18} className="shrink-0 text-[#117dff]" />}
               </div>
             </button>
 
@@ -572,11 +591,12 @@ function UploadScopeModal({
             <div
               role="button"
               tabIndex={0}
+              aria-pressed={selectedScope === 'project'}
               onClick={() => onScopeChange('project')}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onScopeChange('project'); }}
-              className={`w-full rounded-xl border px-4 py-3 text-left transition-colors cursor-pointer ${
+              className={`w-full rounded-[10px] border px-4 py-3 text-left transition-all cursor-pointer ${
                 selectedScope === 'project'
-                  ? 'border-[#117dff]/30 bg-[#117dff]/8'
+                  ? 'border-2 border-[#117dff] bg-blue-50/70 shadow-[0_0_0_3px_rgba(17,125,255,0.08)]'
                   : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
               }`}
             >
@@ -584,10 +604,11 @@ function UploadScopeModal({
                 <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
                   <FolderKanban size={16} className="text-[#117dff]" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopeProjectLabel', 'Project')}</p>
                   <p className="text-xs text-[#525252]">{t('knowledgebase.scopeProjectDesc', 'Shared with the members invited to that project.')}</p>
                 </div>
+                {selectedScope === 'project' && <CheckCircle size={18} className="shrink-0 text-[#117dff]" />}
               </div>
               {selectedScope === 'project' && (
                 <div className="mt-3" onClick={(e) => e.stopPropagation()}>
@@ -641,10 +662,11 @@ function UploadScopeModal({
             <button
               type="button"
               disabled={!isOrgAdmin}
+              aria-pressed={selectedScope === 'organization'}
               onClick={() => isOrgAdmin && onScopeChange('organization')}
-              className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
+              className={`w-full rounded-[10px] border px-4 py-3 text-left transition-all ${
                 selectedScope === 'organization'
-                  ? 'border-[#117dff]/30 bg-[#117dff]/8'
+                  ? 'border-2 border-[#117dff] bg-blue-50/70 shadow-[0_0_0_3px_rgba(17,125,255,0.08)]'
                   : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
               } ${!isOrgAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
@@ -652,7 +674,7 @@ function UploadScopeModal({
                 <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
                   <Users size={16} className="text-[#117dff]" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
                     {org?.name
                       ? t('knowledgebase.scopeOrgLabelNamed', 'Entire organization: {{name}}', { name: org.name })
@@ -664,6 +686,7 @@ function UploadScopeModal({
                       : t('knowledgebase.scopeOrgDescLocked', 'Org-wide uploads are reserved for organization admins.')}
                   </p>
                 </div>
+                {selectedScope === 'organization' && <CheckCircle size={18} className="shrink-0 text-[#117dff]" />}
               </div>
             </button>
           </div>
@@ -1073,92 +1096,30 @@ export default function KnowledgeBase() {
   const [relSummaries, setRelSummaries] = useState({});
 
   const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
-    // Fetch from THREE tag families in parallel — covers regular uploads, enterprise
-    // schema records, and the broader 'knowledge-base' bucket. Trust the backend tag:
-    // never filter out a document just because its metadata fields are missing
-    // (Smart Ingest UPDATE relationships sometimes strip metadata into a new version).
-    const tagQueries = ['document-summary', 'schema-record', 'knowledge-base'];
-    // Bumped limit 100 → 500 per tag family. Earlier 100 silently truncated
-    // accounts past 100 docs, which read as 'losing past documents'.
-    // owner_only:true scopes server-side to THIS user's own uploads so other
-    // members' org/project-shared docs never cross the wire (the client-side
-    // owner filter below stays as defense-in-depth).
-    const settled = await Promise.allSettled(
-      tagQueries.map(tag => apiClient.listMemories({ tags: tag, limit: 500, scope: 'all', owner_only: true }))
-    );
-
-    const seenIds = new Set();
-    const byDoc = new Map();   // documentId -> newest qualifying memory
-    const docs = [];
-    for (const result of settled) {
-      if (result.status !== 'fulfilled') continue;
-      const memories = result.value?.memories || [];
-      for (const m of memories) {
-        if (seenIds.has(m.id)) continue;
-        const tags = m.tags || [];
-        const title = m.title || '';
-        const meta = m.metadata || {};
-        const srcMeta = m.source_metadata || {};
-        const isDoc =
-          tags.includes('document-summary') ||
-          tags.includes('schema-record') ||
-          title.startsWith('Document:') ||
-          srcMeta.source_type === 'document-upload' ||
-          !!meta.document_title ||
-          !!meta.total_chunks;
-        const isChunk = tags.some(t => t.startsWith('section:') || t.startsWith('page:') || t.startsWith('chunk:'));
-        if (isDoc && !isChunk) {
-          // DEDUPE BY DOCUMENT, NOT BY MEMORY. `seenIds` keys on m.id, but this is a list of
-          // DOCUMENTS — and one document legitimately produces several qualifying memories (a
-          // `document-summary` AND a `schema-record`, plus a fresh summary on every re-ingest).
-          // Verified on live data: memories e659366b, fb2dffc1 and d7115c88 all carry the SAME
-          // metadata.document_id (ed13dc1d…), so that one PDF rendered as three rows. This is the
-          // reported "duplicates even after I deleted them": the list is derived from memories, so a
-          // document lingers while any of its memories survive, and re-uploading multiplies it.
-          // Keep the NEWEST memory per document — it carries the current counts and title.
-          const docKey = meta.document_id
-            || srcMeta.document_id
-            || (tags.find((t) => t.startsWith('source-id:')) || '')
-            || m.id;                       // last resort: behave exactly as before
-          const prev = byDoc.get(docKey);
-          const ts = Date.parse(m.updated_at || m.created_at || 0) || 0;
-          if (prev && prev.__ts >= ts) continue;
-          seenIds.add(m.id);
-          m.__ts = ts;
-          byDoc.set(docKey, m);
-        }
-      }
-    }
-
-    // One row per DOCUMENT, newest first.
-    docs.push(...[...byDoc.values()].sort((a, b) => (b.__ts || 0) - (a.__ts || 0)));
-
-    // Last-ditch fallback: if all three queries returned nothing, try semantic search.
-    if (docs.length === 0) {
-      try {
-        const result = await apiClient.searchMemories('knowledge-base document-summary', { scope: 'all', n_results: 100 });
-        const fallback = (result?.results || result?.memories || []).filter((m) => {
-          const tags = m.tags || [];
-          return tags.includes('document-summary') || tags.includes('schema-record');
-        });
-        for (const m of fallback) {
-          if (!seenIds.has(m.id)) {
-            seenIds.add(m.id);
-            docs.push(m);
-          }
-        }
-      } catch { /* swallow — empty list is acceptable here */ }
-    }
-
-    // OWN-DOCS-ONLY: KB doc-summaries are scope='organization' by default, so a
-    // scope:'all' fetch surfaces OTHER users' org/project-shared docs too. The
-    // Documents list must show only what THIS user uploaded → filter by owner.
-    // (Gate on a known user id; the query re-runs once auth resolves.)
-    const ownDocs = user?.id
-      ? docs.filter((d) => (d.user_id || d.owner?.id) === user.id)
-      : [];
-    return ownDocs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-  }, [user?.id]);
+    // The canonical documents endpoint applies the same visibility predicate as
+    // evidence recall: organization documents, authorized projects/teams, and
+    // only the caller's personal documents. A document list must not be derived
+    // from promoted memories—evidence-only uploads intentionally have no such
+    // memory, and invitees must not lose shared organization documents.
+    const response = await apiClient.listDocuments({ limit: 500 });
+    return (response?.documents || []).map((doc) => ({
+      ...doc,
+      created_at: doc.createdAt,
+      updated_at: doc.updatedAt,
+      metadata: {
+        ...(doc.parseMetadata || {}),
+        document_id: doc.id,
+        document_title: doc.title,
+        document_type: doc.documentType,
+        pages: doc.pageCount,
+      },
+      source_metadata: {
+        filename: doc.title,
+        source_platform: doc.sourcePlatform,
+        source_url: doc.sourceUrl,
+      },
+    }));
+  }, [org?.id, user?.id]);
 
   // Fetch per-doc relationship summaries in batch whenever the doc list changes.
   // Backend resolves doc+chunk cluster then groups by relationship type so we
@@ -1183,20 +1144,17 @@ export default function KnowledgeBase() {
   // made a re-upload inherit another document's segment/fact totals.
   const [phase1Stats, setPhase1Stats] = useState({});
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const resp = await apiClient.listDocuments({ limit: 200 });
-        if (cancelled) return;
-        const map = {};
-        for (const d of (resp?.documents || [])) {
-          if (!d?.id) continue;
-          map[d.id] = { segments: d.segmentCount || 0, memories: d.promotedCount || 0 };
-        }
-        setPhase1Stats(map);
-      } catch { /* noop */ }
-    })();
-    return () => { cancelled = true; };
+    const map = {};
+    for (const doc of (kbMemories || [])) {
+      if (!doc?.id) continue;
+      map[doc.id] = {
+        segments: doc.segmentCount || 0,
+        memories: doc.promotedCount || 0,
+        evidenceBytes: Number(doc.evidenceBytes || 0),
+        sourceBytes: Number(doc.sourceBytes || 0),
+      };
+    }
+    setPhase1Stats(map);
   }, [kbMemories]);
 
   // Combine fetched documents with just-uploaded ones for immediate display
@@ -1321,6 +1279,7 @@ export default function KnowledgeBase() {
         }]);
       }
       refetchKb();
+      emitKnowledgeChanged();
     } catch (err) {
       // 404 = already gone (stale list). Treat as success: drop it + refetch,
       // don't show a scary error.
@@ -1328,6 +1287,7 @@ export default function KnowledgeBase() {
         setJustUploadedDocs(prev => prev.filter(d => d.id !== docId));
         setDeleteConfirmId(null);
         refetchKb();
+        emitKnowledgeChanged();
       } else if (err?.response?.status === 403 && err?.response?.data?.code === 'not_owner') {
         // Creator-only delete: someone else uploaded this. Prompt to ask the owner.
         setNotOwnerInfo({ owner: err?.response?.data?.owner || null, docTitle: doc?.title || doc?.metadata?.document_title || 'this document' });
@@ -1413,6 +1373,7 @@ export default function KnowledgeBase() {
   }, []);
 
   const handleFiles = useCallback(async (files, { targetScope = 'organization', project = null, ingestMode = 'both' } = {}) => {
+    const batchIngestMode = normalizeIngestMode(ingestMode);
     // ── Step 1: validate + queue all entries up-front (optimistic UI) ──
     const validQueue = []; // { uploadEntry, file, controller }
     const nowBase = Date.now();
@@ -1423,6 +1384,7 @@ export default function KnowledgeBase() {
           id: nowBase + idx + Math.random(),
           filename: file.name,
           status: 'error',
+          ingestMode: batchIngestMode,
           error: `Unsupported file type: .${ext}`,
         }]);
         return;
@@ -1439,6 +1401,7 @@ export default function KnowledgeBase() {
           id: nowBase + idx + Math.random(),
           filename: file.name,
           status: 'error',
+          ingestMode: batchIngestMode,
           error: rejectReason,
         }]);
         return;
@@ -1451,8 +1414,9 @@ export default function KnowledgeBase() {
         status: 'queued', // queued | uploading | success | error
         chunks: null,
         progress: 0,
-        ingestMode,
+        ingestMode: batchIngestMode,
         controller,
+        startedAt: Date.now(),
       };
       validQueue.push({ uploadEntry, file });
     });
@@ -1479,6 +1443,7 @@ export default function KnowledgeBase() {
     // signal that frees this file's transfer slot the moment its bytes are in.
     const uploadOne = async (queueEntry, { force = false, attempt = 1 } = {}) => {
       const { uploadEntry, file } = queueEntry;
+      const requestedIngestMode = uploadEntry.ingestMode;
       // Move queued → uploading
       setUploads((prev) => prev.map((u) =>
         u.id === uploadEntry.id ? { ...u, status: 'uploading', error: undefined } : u
@@ -1572,7 +1537,7 @@ export default function KnowledgeBase() {
               projectId: targetScope === 'organization' ? null : (project || null),
               containerTag: targetScope === 'organization' ? (project || undefined) : undefined,
               force, // re-ingest past the same-scope duplicate gate when approved
-              ingestMode,
+              ingestMode: requestedIngestMode,
               signal: uploadEntry.controller.signal,
             };
         const result = await uploadFn(file, {
@@ -1590,7 +1555,7 @@ export default function KnowledgeBase() {
           // Bytes are in and the server owns the job — free the transfer slot so the next file
           // starts NOW rather than after this document's 30-134s ingest.
           onQueued: () => queueEntry._slotReleased?.(),
-          onStatus: ({ status, progress, stage, segments, promoted, evidenceOnly, evidenceOnlyReason } = {}) => {
+          onStatus: ({ status, progress, stage, segments, promoted, processed, total, elapsedMs, evidenceOnly, evidenceOnlyReason } = {}) => {
             const LABEL = {
               queued: 'Queued — waiting for a worker',
               // The queue reports 'processing' at 5% the moment a worker picks the
@@ -1617,6 +1582,9 @@ export default function KnowledgeBase() {
               serverProgress: typeof progress === 'number' ? progress : u.serverProgress,
               segments: segments ?? u.segments,
               promoted: promoted ?? u.promoted,
+              processed: processed ?? u.processed,
+              total: total ?? u.total,
+              processingSec: Number.isFinite(Number(elapsedMs)) ? Math.floor(Number(elapsedMs) / 1000) : u.processingSec,
               evidenceOnly: evidenceOnly ?? u.evidenceOnly,
               evidenceOnlyReason: evidenceOnlyReason ?? u.evidenceOnlyReason,
             } : u)));
@@ -1681,6 +1649,18 @@ export default function KnowledgeBase() {
           return;
         }
 
+        const returnedIngestMode = responseIngestMode(result);
+        if (hasIngestModeMismatch(requestedIngestMode, returnedIngestMode)) {
+          const mismatchError = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${returnedIngestMode}.`);
+          mismatchError.code = 'INGEST_MODE_MISMATCH';
+          throw mismatchError;
+        }
+        const terminalIngestMode = normalizeIngestMode(returnedIngestMode ?? requestedIngestMode);
+        const memoryGenerationFailed = result?.memoryGenerationFailed === true
+          || result?.memory_generation_failed === true
+          || result?.promotionFailed === true
+          || result?.promotion_failed === true;
+
         // Phase 1b document_first response shape:
         //   { mode: 'document_first', documentId, segmentCount,
         //     candidateCount, promotedCount, promotedMemoryIds }
@@ -1698,12 +1678,15 @@ export default function KnowledgeBase() {
                 candidateCount: result.candidateCount ?? null,
                 promotedCount: result.promotedCount ?? null,
                 promotedMemoryIds: result.promotedMemoryIds ?? null,
-                ingestMode: result.ingestMode || ingestMode,
-                evidenceOnly: result.evidenceOnly === true || ingestMode === 'evidence',
-                evidenceOnlyReason: result.evidenceOnlyReason || (ingestMode === 'evidence' ? 'user_selected' : null),
-                message: result.evidenceOnly === true || ingestMode === 'evidence'
-                  ? 'Searchable evidence ready'
-                  : undefined,
+                ingestMode: terminalIngestMode,
+                evidenceOnly: result.evidenceOnly === true || terminalIngestMode === 'evidence',
+                evidenceOnlyReason: result.evidenceOnlyReason || (terminalIngestMode === 'evidence' ? 'user_selected' : null),
+                memoryGenerationFailed,
+                message: documentIngestState({
+                  ingestMode: terminalIngestMode,
+                  evidenceOnly: result.evidenceOnly === true,
+                  memoryGenerationFailed,
+                }),
                 documentId: result.documentId ?? null,
                 uploadId: result.upload_id ?? null,
                 // Enterprise schema extraction (when enterprise=auto|true and
@@ -1724,8 +1707,8 @@ export default function KnowledgeBase() {
             total_chunks: result.segmentCount ?? result.chunks ?? 0,
             filename: result.filename || file.name,
             upload_id: result.upload_id,
-            ingest_mode: result.ingestMode || ingestMode,
-            evidence_only: result.evidenceOnly === true || ingestMode === 'evidence',
+            ingest_mode: terminalIngestMode,
+            evidence_only: result.evidenceOnly === true || terminalIngestMode === 'evidence',
           },
           tags: [
             ...(customTags ? customTags.split(',').map((t) => t.trim()) : []),
@@ -1736,6 +1719,7 @@ export default function KnowledgeBase() {
         queueRefetch();
         // Refresh per-page usage meters (KB pages + memories) after a real upload.
         emitUsageChanged();
+        emitKnowledgeChanged();
       } catch (err) {
         if (processingTimer) { clearInterval(processingTimer); processingTimer = null; }
         const isCancelled = err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED';
@@ -1753,7 +1737,8 @@ export default function KnowledgeBase() {
         // app-wide, so here we only need a clean, non-red inline note and MUST
         // NOT auto-retry (a 402/403/429 plan-limit is terminal for this upload).
         const isPlanLimit = isPlanLimitError(err);
-        const isTransient = !isCancelled && !isDuplicate && !isPlanLimit
+        const isTerminalIngestError = err?.code === 'INGEST_MODE_MISMATCH' || err?.code === 'INGEST_FAILED';
+        const isTransient = !isCancelled && !isDuplicate && !isPlanLimit && !isTerminalIngestError
           && (_st === 502 || _st === 503 || _st === 504 || _st === 429 || _st === undefined);
         const MAX_UPLOAD_ATTEMPTS = 4;
         if (isTransient && attempt < MAX_UPLOAD_ATTEMPTS) {
@@ -1778,12 +1763,16 @@ export default function KnowledgeBase() {
             ? {
                 ...u,
                 status: isCancelled ? 'cancelled' : isDuplicate ? 'duplicate' : isPlanLimit ? 'limited' : 'error',
+                _completedAt: Date.now(),
+                progress: 100,
+                stage: isCancelled ? 'cancelled' : isPlanLimit ? 'admission_rejected' : 'failed',
+                stageLabel: undefined,
                 error: isCancelled
                   ? 'Cancelled by user'
                   : isDuplicate
                     ? (err.response?.data?.message || 'This file is already in this scope.')
                     : isPlanLimit
-                      ? 'Upgrade for more pages'
+                      ? uploadQuotaMessage(err)
                       : friendlyUploadError(err),
                 // Duplicate → user gets an "Upload anyway" action. Stash the
                 // existing-doc info + a force re-ingest closure (same file/scope).
@@ -2312,7 +2301,7 @@ export default function KnowledgeBase() {
                         {t('knowledgebase.uploadingWarning', "Don't close this page yet — {{count}} file{{plural}} still uploading.", { count: inFlight, plural: inFlight === 1 ? '' : 's' })}
                       </div>
                       <div className="text-[#a16207] text-[11.5px] mt-0.5">
-                        {t('knowledgebase.uploadingHint', 'Once every row shows Uploaded, you\'re safe to leave — the server takes over and your new memories surface in 2–5 minutes.')}
+                        {t('knowledgebase.uploadingHint', 'Keep this page open while files upload. Server-side parsing, indexing, and memory extraction continue with live progress below.')}
                       </div>
                     </div>
                   </div>
@@ -2329,7 +2318,7 @@ export default function KnowledgeBase() {
                         {t('knowledgebase.allUploadsComplete', 'All uploads complete — safe to close this page.')}
                       </div>
                       <div className="text-[#15803d] text-[11.5px] mt-0.5">
-                        {t('knowledgebase.allUploadsHint', 'The server is now extracting + indexing. New memories will appear in 2–5 minutes on the Memories page.')}
+                        {t('knowledgebase.allUploadsHint', 'Parsing, indexing, and memory extraction are complete. The documents are searchable now.')}
                       </div>
                     </div>
                   </div>
@@ -2352,8 +2341,14 @@ export default function KnowledgeBase() {
               // read as a stalled/misleading upload. Terminal = 100% contribution
               // so the bar hits 100% exactly when nothing is in flight.
               const isSettled = (u) => ['success', 'duplicate', 'limited', 'error', 'cancelled'].includes(u.status);
+              const effectiveProgress = (u) => {
+                if (isSettled(u)) return 100;
+                if (u.bytesDone) return Number(u.serverProgress || 0);
+                // Transfer occupies the first 5% of the visible end-to-end job.
+                return Math.round(Number(u.progress || 0) * 0.05);
+              };
               const totalProgress = uploads.length > 0
-                ? Math.round(uploads.reduce((s, u) => s + (isSettled(u) ? 100 : (u.progress || 0)), 0) / uploads.length)
+                ? Math.round(uploads.reduce((s, u) => s + effectiveProgress(u), 0) / uploads.length)
                 : 0;
               return (
                 <div className="flex items-center gap-4 px-4 py-2 rounded-xl bg-[#faf9f4] border border-[#ece8de] text-[11px] font-mono">
@@ -2445,6 +2440,15 @@ export default function KnowledgeBase() {
                       {u.stageLabel
                         ? u.stageLabel
                         : `Processing${u.processingSec ? ` · ${u.processingSec}s` : '…'}`}
+                      {u.processed != null && u.total > 0 && (
+                        <span className="text-[#525252] font-normal"> · {u.processed}/{u.total}</span>
+                      )}
+                      {u.serverProgress != null && (
+                        <span className="text-[#525252] font-normal"> · {Math.round(u.serverProgress)}%</span>
+                      )}
+                      {u.processingSec != null && (
+                        <span className="text-[#a3a3a3] font-normal"> · {Math.floor(u.processingSec / 60)}:{String(u.processingSec % 60).padStart(2, '0')} elapsed</span>
+                      )}
                       {u.segments != null && u.segments > 0 && (
                         <span className="text-[#a3a3a3] font-normal"> · {u.segments} sections</span>
                       )}
@@ -2477,14 +2481,21 @@ export default function KnowledgeBase() {
                   {u.stage === 'checking' && (
                     <span className="text-[#a3a3a3]">Checking if already uploaded…</span>
                   )}
+                  {u.status === 'success' && u.message && (
+                    <span className="text-[#16a34a]">{u.message}</span>
+                  )}
                   {u.mode === 'document_first' && u.segmentCount != null && (
-                    u.evidenceOnly ? (
+                    u.memoryGenerationFailed ? (
+                      <span className="text-[#dc2626]" title="Evidence is indexed, but memory generation failed after indexing.">
+                        Memory generation failed
+                      </span>
+                    ) : u.evidenceOnly ? (
                       <span className="text-[#16a34a]" title="Semantic and lexical evidence indexing complete; memory generation was intentionally skipped.">
-                        Searchable evidence ready · {u.segmentCount} segments · 0 memories
+                        Evidence ready · {u.segmentCount} segments · 0 memories
                       </span>
                     ) : u.segmentCount > 0 || (u.promotedCount ?? 0) > 0 ? (
                       <span className="text-[#16a34a]" title="Phase 1 evidence-first ingest">
-                        {u.segmentCount} seg · {u.promotedCount ?? 0}/{u.candidateCount ?? 0} promoted
+                        Memories + evidence ready · {u.segmentCount} seg · {u.promotedCount ?? 0}/{u.candidateCount ?? 0} promoted
                       </span>
                     ) : (
                       <span className="text-[#117dff]" title="Server is extracting + indexing this document. Memories will surface in 2-5 min.">
@@ -2618,9 +2629,9 @@ export default function KnowledgeBase() {
                         return (
                           <span
                             className="text-[#16a34a] text-[10px] font-mono bg-[#16a34a]/8 border border-[#16a34a]/20 rounded px-1.5 py-0.5"
-                            title={`Evidence-backed: ${p1.segments} segments and ${p1.memories} live memories for this document`}
+                            title={`Evidence-backed: ${p1.segments} segments, ${formatBytes(p1.evidenceBytes)} of persisted evidence, and ${p1.memories} live memories for this document`}
                           >
-                            {p1.segments} seg · {p1.memories} mem
+                            {p1.segments} seg · {formatBytes(p1.evidenceBytes)} evidence · {p1.memories} mem
                           </span>
                         );
                       })()}

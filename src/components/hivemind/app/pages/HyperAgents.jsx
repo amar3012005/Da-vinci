@@ -45,6 +45,7 @@ import CampaignProgressDashboard from '../hyperagents/campaigns/CampaignProgress
 import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
+import RuntimeWaitlistModal from './RuntimeWaitlistModal';
 import {
   CAMPAIGN_INTELLIGENCE_V2,
   CampaignConnectionsRail,
@@ -65,7 +66,6 @@ import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import { FIELDS, professionsForField, NAME_SUGGESTIONS } from '../shared/field-catalog';
 import AgentAvatar from '../hyperagents/AgentAvatar';
-import UsageTracker from '../components/UsageTracker';
 import { emitUsageChanged } from '../shared/useUsage';
 
 // Compact relative-time for room last-used. Pure, no deps.
@@ -220,6 +220,9 @@ export default function HyperAgents() {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const { user, org, logout } = useAuth();
+  // The Operating System owns its Rooms/account rail. The app-level sidebar is
+  // still collapsed below so the OS workspace has one focused navigation rail.
+  const showOperatingSystemSidebar = true;
 
   // Collapse the sidebar to a rail in the Hyper Agents room (more canvas for
   // the live swarm). Sidebar's ChevronRight re-opens it. Restore on leave.
@@ -245,7 +248,9 @@ export default function HyperAgents() {
       const m = p.match(/\/employees\/rooms\/([0-9a-f-]{36})/i);
       if (m) return { mode: 'thread', roomId: m[1] };
       if (/\/employees\/agents/.test(p)) return { mode: 'roster', roomId: null };
-      if (/\/employees\/runtime/.test(p)) return { mode: 'runtime', roomId: null };
+      // Runtime remains routable for the future, but is deliberately presented
+      // as a product preview until the autonomous lifecycle is enabled.
+      if (/\/employees\/runtime/.test(p)) return { mode: 'hero', roomId: null, preview: 'runtime' };
       if (/\/employees\/leads/.test(p)) return { mode: 'leads', roomId: null };
       if (/\/employees\/campaigns/.test(p)) return { mode: 'campaigns', roomId: null };
       return { mode: 'hero', roomId: null };
@@ -254,6 +259,7 @@ export default function HyperAgents() {
   const _init = _parsePath();
   const [activeRoomId, setActiveRoomId] = useState(_init.roomId);
   const [viewMode, setViewMode] = useState(_init.mode);
+  const [comingSoon, setComingSoon] = useState(_init.preview || null);
   const goMode = useCallback((mode, roomId, query = {}) => {
     setViewMode(mode);
     if (roomId !== undefined) setActiveRoomId(roomId);
@@ -269,6 +275,17 @@ export default function HyperAgents() {
     if (query.campaign) params.set('campaign', query.campaign);
     navigate(`${url}${params.size ? `?${params.toString()}` : ''}`, { replace: true });
   }, [navigate]);
+  const openComingSoon = useCallback((feature) => setComingSoon(feature), []);
+
+  // A direct Runtime URL should land on the stable company dashboard while
+  // retaining the same preview the Runtime rail button opens.
+  useEffect(() => {
+    if (_init.preview !== 'runtime') return;
+    navigate('/hivemind/app/employees/mycompany', { replace: true });
+    // This only reflects the mount-time URL; navigation is intentionally not
+    // repeated after in-app state updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Canonicalize the bare /employees URL to /employees/mycompany (keep ?onboard=1).
   useEffect(() => {
     if (/\/employees\/?$/.test(window.location.pathname)) {
@@ -437,7 +454,6 @@ export default function HyperAgents() {
             </p>
           </div>
           <div className="shrink-0 flex items-center gap-3">
-            <UsageTracker resource="hyperRooms" />
             <button
               onClick={() => setShowCreate(true)}
               className="flex items-center gap-1.5 bg-[#0a0a0a] hover:bg-[#262626] text-white text-[12px] font-semibold px-3.5 py-2 rounded-lg"
@@ -472,7 +488,7 @@ export default function HyperAgents() {
     <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
       <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
       {/* Left rail: rooms */}
-      <aside className="hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex">
+      <aside className={showOperatingSystemSidebar ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'}>
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
@@ -487,10 +503,6 @@ export default function HyperAgents() {
           </button>
         </header>
 
-        <div className="px-3 py-2 border-b border-[#e3e0db]">
-          <UsageTracker resource="hyperRooms" compact />
-        </div>
-
         {/* YOUR COMPANY — always-present entry to the company/onboarding hero. */}
         <div className="px-2 pt-2">
           <button
@@ -501,11 +513,11 @@ export default function HyperAgents() {
             {t('hyperAgents.yourCompany', 'Your Company')}
           </button>
           <button
-            onClick={() => goMode('runtime', hqRoom?.id || null)}
-            disabled={!hqRoom}
-            className={`mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors disabled:opacity-45 ${viewMode === 'runtime' ? 'bg-[#185bcc] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#bcd0ef]'}`}
+            type="button"
+            onClick={() => openComingSoon('runtime')}
+            className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#bcd0ef]"
           >
-            <Power size={13} className={viewMode === 'runtime' ? 'text-white' : 'text-[#185bcc]'} />
+            <Power size={13} className="text-[#185bcc]" />
             Runtime
           </button>
           {/* YOUR LEADS — outreach progress board (Notion-style). */}
@@ -518,11 +530,12 @@ export default function HyperAgents() {
           </button>
           {/* YOUR CAMPAIGNS — standalone paid media workspace, outside rooms. */}
           <button
-            onClick={() => goMode('campaigns', null)}
-            className={`mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${viewMode === 'campaigns' ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#e3e0db]'}`}
+            type="button"
+            onClick={() => openComingSoon('social')}
+            className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#e3e0db]"
           >
-            <Megaphone size={13} className={viewMode === 'campaigns' ? 'text-white' : 'text-[#c2410c]'} />
-            {t('hyperAgents.runAdsOnX', 'Run Ads on X')}
+            <Megaphone size={13} className="text-[#c2410c]" />
+            {t('hyperAgents.runSocialMedia', 'Run your Social Media')}
           </button>
         </div>
 
@@ -653,7 +666,7 @@ export default function HyperAgents() {
             }}
             onShowRoster={() => goMode('roster')}
             onOpenLeads={() => goMode('leads', null)}
-            onOpenRuntime={() => goMode('runtime', hqRoom?.id || null)}
+            showRuntimeInvite={false}
           />
         ) : viewMode === 'runtime' && hqRoom ? (
           <RoomThread
@@ -716,12 +729,83 @@ export default function HyperAgents() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {comingSoon === 'runtime' ? (
+          <RuntimeWaitlistModal onClose={() => setComingSoon(null)} />
+        ) : comingSoon ? (
+          <OperatingSystemComingSoonModal
+            feature={comingSoon}
+            onClose={() => setComingSoon(null)}
+          />
+        ) : null}
+      </AnimatePresence>
+
       {error && (
         <div className="absolute top-3 right-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[11px] text-red-700">
           {error}
         </div>
       )}
     </div>
+  );
+}
+
+function OperatingSystemComingSoonModal({ feature, onClose }) {
+  const isSocial = feature === 'social';
+  const Icon = isSocial ? Megaphone : Power;
+  const eyebrow = isSocial ? 'HIVEMIND SOCIAL' : 'HIVEMIND RUNTIME';
+  const title = isSocial ? 'Social Media is coming soon' : 'Runtime is coming soon';
+  const description = isSocial
+    ? 'Let HIVEMIND handle your social media end to end: strategy, content, approvals, and publishing across Instagram, LinkedIn, X, and the channels your company uses.'
+    : 'Let HIVEMIND Runtime handle your whole company: understand its context, coordinate the work, and carry out governed actions with your approval.';
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#101828]/35 p-4 backdrop-blur-[2px]"
+      onMouseDown={onClose}
+    >
+      <motion.section
+        initial={{ opacity: 0, y: 14, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 14, scale: 0.98 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="operating-system-coming-soon-title"
+        className="w-full max-w-[460px] rounded-[10px] border border-[#e3e0db] bg-white p-5 shadow-[0_28px_90px_rgba(12,38,84,0.24)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#117dff]/10 text-[#117dff]">
+              <Icon size={18} />
+            </span>
+            <div>
+              <p className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em] text-[#117dff]">{eyebrow}</p>
+              <h2 id="operating-system-coming-soon-title" className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-[#0a0a0a]">{title}</h2>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-md text-[#737373] hover:bg-[#faf9f4] hover:text-[#0a0a0a]" aria-label="Close coming soon preview">
+            <X size={16} />
+          </button>
+        </div>
+        <p className="mt-5 text-[13px] leading-6 text-[#525252]">{description}</p>
+        <p className="mt-4 border-l-2 border-[#117dff] pl-3 text-[11px] leading-5 text-[#737373]">Preview only — nothing will be connected, published, or run from this screen yet.</p>
+        <div className="mt-6 flex justify-end border-t border-[#e3e0db] pt-4">
+          <button type="button" onClick={onClose} className="rounded-lg bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#262626]">Close</button>
+        </div>
+      </motion.section>
+    </motion.div>
   );
 }
 
@@ -1091,6 +1175,10 @@ function RoomThread({ roomId, onArchived }) {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [activeTurnId, setActiveTurnId] = useState(null);
+  // A server may intentionally preserve the client-generated turn id. Track
+  // confirmation separately so releasing the pending-id latch always starts
+  // the live SSE/poll lifecycle, even when the id itself has not changed.
+  const [streamEpoch, setStreamEpoch] = useState(0);
   const [liveLines, setLiveLines] = useState([]);
   const [draft, setDraft] = useState('');
   // Uploaded attachments for the next turn — each {id, name, status, documentId, error}.
@@ -1895,7 +1983,7 @@ function RoomThread({ roomId, onArchived }) {
       'work_brief', 'action_intent', 'connection_required',
       // Additional Population-Sim report (hideable popup dashboard):
       'sim_report',
-      'connector_logo', 'gather', 'recon_pre', 'execute',
+      'connector_logo', 'artifact_ready', 'gather', 'recon_pre', 'execute',
       // Places prospect discovery — 'using Maps' chip.
       'prospects',
       // Self-evolving employees: per-turn playbook learning signal.
@@ -1972,7 +2060,7 @@ function RoomThread({ roomId, onArchived }) {
       clearInterval(poll);
       try { es.close(); } catch { /* ignore */ }
     };
-  }, [activeTurnId, roomId, load, mergeLiveEvents]);
+  }, [activeTurnId, roomId, load, mergeLiveEvents, streamEpoch]);
 
   // Reset live overlay when turn changes
   useEffect(() => {
@@ -2159,6 +2247,7 @@ function RoomThread({ roomId, onArchived }) {
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
       pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
+      setStreamEpoch(epoch => epoch + 1);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
@@ -2251,6 +2340,7 @@ function RoomThread({ roomId, onArchived }) {
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
       pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
+      setStreamEpoch(epoch => epoch + 1);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
@@ -2289,6 +2379,7 @@ function RoomThread({ roomId, onArchived }) {
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
       pendingTurnIdRef.current = null;
       setActiveTurnId(resp.turn_id);
+      setStreamEpoch(epoch => epoch + 1);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
@@ -3276,6 +3367,7 @@ function RoomThread({ roomId, onArchived }) {
         {dmAgent && (
           <AgentDmModal
             agent={dmAgent}
+            roomId={roomId}
             onClose={() => setDmAgent(null)}
           />
         )}
@@ -3447,6 +3539,38 @@ function RoomLeadResponse({ content }) {
   </div>;
 }
 
+function VisualArtifactModal({ artifact, onClose }) {
+  const [html, setHtml] = useState('');
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    apiClient.getHyperArtifact(artifact?.url)
+      .then((value) => { if (active) setHtml(value); })
+      .catch(() => { if (active) setError('The verified artifact could not be loaded.'); });
+    return () => { active = false; };
+  }, [artifact?.url]);
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={artifact?.title || 'Interactive artifact'}>
+      <div className="flex h-[min(920px,94vh)] w-full max-w-[1500px] flex-col overflow-hidden rounded-md bg-white shadow-2xl">
+        <div className="flex min-h-12 items-center gap-3 border-b border-[#dedad4] px-3 sm:px-4">
+          <LayoutGrid size={15} className="shrink-0 text-violet-600" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[12px] font-semibold text-[#24211f]">{artifact?.title || 'Interactive artifact'}</div>
+            <div className="text-[9px] uppercase text-emerald-700">Rendered and verified</div>
+          </div>
+          <a href={apiClient.hyperArtifactAssetUrl(artifact?.url)} target="_blank" rel="noreferrer" className="grid h-9 w-9 place-items-center text-[#6f6962] hover:text-[#171717]" title="Open in a new tab" aria-label="Open artifact in a new tab"><ExternalLink size={15} /></a>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center text-[#6f6962] hover:text-[#171717]" title="Close" aria-label="Close artifact"><X size={17} /></button>
+        </div>
+        <div className="min-h-0 flex-1 bg-[#efede9]">
+          {!html && !error && <div className="grid h-full place-items-center text-[11px] text-[#77716a]"><Loader2 size={18} className="animate-spin" /></div>}
+          {error && <div className="grid h-full place-items-center px-6 text-center text-[12px] text-red-700">{error}</div>}
+          {html && <iframe title={artifact?.title || 'Interactive artifact'} srcDoc={html} sandbox="allow-scripts" className="h-full w-full border-0 bg-white" />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TurnView({ turn, participants: participantsProp, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag, onRunNextTask }) {
   // Normalise participants to an ARRAY once. This component used it both as an
   // array ((participants || []).find, line ~3009) and as an object
@@ -3596,6 +3720,12 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
     lines.filter(l => l.t === 'connector_logo' && l.url).forEach(l => { byUrl[l.url] = l; });
     return Object.values(byUrl);
   })();
+  const visualArtifacts = (() => {
+    const byId = {};
+    lines.filter(l => l.t === 'artifact_ready' && l.artifact_id && l.url)
+      .forEach(l => { byId[l.artifact_id] = l; });
+    return Object.values(byId);
+  })();
   const approvalRequests = lines.filter(l => l.t === 'approval_request');
   const approvalResolutions = lines.filter(l => l.t === 'approval_resolved');
   const resolutionById = {};
@@ -3605,6 +3735,7 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const [evidenceMemoryId, setEvidenceMemoryId] = useState(null);
   // In-app artifact preview (email draft / doc / notion) — no Google redirect.
   const [artifactPreview, setArtifactPreview] = useState(null);
+  const [visualArtifact, setVisualArtifact] = useState(null);
 
   const isCampaignTurn = roomKind === 'campaign'
     || String(taskTag || '').toUpperCase() === 'CAMPAIGN'
@@ -4179,6 +4310,29 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         />
       )}
 
+      {visualArtifacts.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {visualArtifacts.map((artifact) => (
+            <section key={artifact.artifact_id} className="overflow-hidden rounded-md border border-[#d8d3cc] bg-white" aria-label={artifact.title || 'Interactive artifact'}>
+              <button type="button" onClick={() => setVisualArtifact(artifact)} className="group block w-full text-left">
+                <div className="aspect-[16/9] overflow-hidden border-b border-[#e4e0da] bg-[#efede9]">
+                  {artifact.preview_url
+                    ? <img src={apiClient.hyperArtifactAssetUrl(artifact.preview_url)} alt="" className="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.01]" />
+                    : <div className="grid h-full place-items-center"><LayoutGrid size={24} className="text-[#99928a]" /></div>}
+                </div>
+                <div className="flex items-center gap-3 px-3 py-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-[12px] font-semibold text-[#24211f]">{artifact.title || 'Interactive artifact'}</h3>
+                    <p className="mt-0.5 text-[9px] uppercase text-emerald-700">Rendered and verified</p>
+                  </div>
+                  <Eye size={15} className="shrink-0 text-[#6f6962] group-hover:text-violet-600" />
+                </div>
+              </button>
+            </section>
+          ))}
+        </div>
+      )}
+
       {/* Produced deliverables (docs/sheets) — connector-logo "view in new tab"
           buttons. The swarm built these after reaching consensus; no approval. */}
       {connectorLogos.length > 0 && (
@@ -4226,6 +4380,7 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         <ArtifactPreviewModal key={artifactPreview.approval_id || artifactPreview.url || 'p'}
           preview={artifactPreview} roomId={roomId} onClose={() => setArtifactPreview(null)} />
       )}
+      {visualArtifact && <VisualArtifactModal artifact={visualArtifact} onClose={() => setVisualArtifact(null)} />}
 
       {/* Phase 5 — recon/verify verdict vs the done-criterion. */}
       {verifyLine && (
@@ -4480,7 +4635,50 @@ function ParticipantChip({ agent, canRemove, onRemove, onOpenDm }) {
 
 /* ─── 1-on-1 DM modal (history persisted in localStorage) ───────────── */
 
-function AgentDmModal({ agent, onClose }) {
+// Poll a room turn until it resolves, returning the forced-lead agent's reply.
+// This is the SAME turn pipeline the room composer uses for "@slug " mentions
+// (core control-plane -> sidecar _orchestrate: a leading "@slug" in
+// user_message forces that participant as sole lead) — reused here so a DM
+// gets identical persona/room-context/tool behavior to an in-room @mention.
+async function waitForLeadReply(roomId, turnId, slug, { timeoutMs = 60000, intervalMs = 450 } = {}) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const { turn } = await apiClient.getHyperTurn(roomId, turnId);
+    const lines = Array.isArray(turn?.lines) ? turn.lines : [];
+    const lead = lines.find((l) => l?.t === 'line' && l.kind === 'lead' && (!l.agent || l.agent === slug));
+    if (lead?.content) return lead.content;
+    const errorLine = lines.find((l) => l?.t === 'error');
+    if (errorLine) throw new Error(errorLine.message || errorLine.content || 'The room turn failed.');
+    if (turn?.status && turn.status !== 'live') {
+      const synth = lines.find((l) => l?.t === 'line' && l.kind === 'synthesis');
+      if (synth?.content) return synth.content;
+      const seal = lines.find((l) => l?.t === 'seal');
+      if (seal?.content) return seal.content;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error('No response — the room turn timed out.');
+}
+
+// Some agents open a reply with a self-introduction line like
+// "**Maya Chen – Industry Strategy Lead**" — redundant with (and sometimes
+// inconsistent with) the real name/role we already render above the bubble.
+// Drop it when it's clearly that: a lone bold line whose text contains the
+// agent's own first name.
+function stripSelfHeader(content, agentName) {
+  if (!content) return content;
+  const firstName = String(agentName || '').trim().split(/\s+/)[0]?.toLowerCase();
+  const lines = String(content).split('\n');
+  const first = (lines[0] || '').trim();
+  const isLoneBoldLine = /^\*\*[^*]+\*\*$/.test(first);
+  if (isLoneBoldLine && firstName && first.toLowerCase().includes(firstName)) {
+    return lines.slice(1).join('\n').replace(/^\s+/, '');
+  }
+  return content;
+}
+
+function AgentDmModal({ agent, roomId, onClose }) {
   const { t } = useTranslation('dashboard');
   // Stable per-user-agent conversation id. Backend uses this to keep
   // ReAct agent memory across turns within the same conversation; we
@@ -4519,12 +4717,30 @@ function AgentDmModal({ agent, onClose }) {
     setMessages(prev => [...prev, userMsg]);
     setDraft('');
     try {
-      const resp = await apiClient.controlPlane.post(
-        `/v1/employees/${agent.slug}/chat`,
-        { text, conversation_id: convId },
-      );
-      const reply = resp?.data?.reply || '(no reply)';
-      setMessages(prev => [...prev, { role: 'agent', content: reply, ts: Date.now() }]);
+      if (roomId && agent?.slug) {
+        // Hidden request: the user only ever sees `text`. Under the hood we
+        // prefix "@slug " — the exact convention the room composer's mention
+        // picker produces — so this DM runs through the identical forced-lead
+        // turn pipeline as an in-room @mention, not a separate, context-free
+        // ReAct chat.
+        const tempId = (window.crypto?.randomUUID?.() || `dm-${Date.now()}`);
+        const resp = await apiClient.postHyperTurn(roomId, {
+          user_message: `@${agent.slug} ${text}`,
+          idempotency_key: `dm:${agent.slug}:${Date.now()}`,
+          turn_id: tempId,
+        });
+        const reply = await waitForLeadReply(roomId, resp?.turn_id || tempId, agent.slug);
+        setMessages(prev => [...prev, { role: 'agent', content: reply, ts: Date.now() }]);
+      } else {
+        // No room context (opened outside a room) — fall back to the standalone
+        // per-employee chat.
+        const resp = await apiClient.controlPlane.post(
+          `/v1/employees/${agent.slug}/chat`,
+          { text, conversation_id: convId },
+        );
+        const reply = resp?.data?.reply || '(no reply)';
+        setMessages(prev => [...prev, { role: 'agent', content: reply, ts: Date.now() }]);
+      }
     } catch (e2) {
       setErr(e2.response?.data?.error || e2.message);
       // Roll back user msg so they can retry without dupes? keep it for context
@@ -4590,11 +4806,23 @@ function AgentDmModal({ agent, onClose }) {
                   </div>
                 </div>
               )
+              // Agent turn — same treatment as Overview.jsx's AiBubble: no box,
+              // markdown rendered straight onto the page background. The
+              // avatar/name/role line above it is the ONE source of truth for
+              // who's answering — stripSelfHeader() drops any redundant
+              // "**Name – Title**" line the model may have prepended, so it
+              // can never show a different role than the header above it.
               : (
-                <div key={i} className="flex gap-2">
-                  <AgentAvatar agent={agent} size={28} />
-                  <div className="max-w-[78%] bg-white border border-[#e3e0db] rounded-2xl rounded-tl-md px-3 py-2 text-[13px] text-[#0a0a0a] whitespace-pre-wrap break-words">
-                    {m.content}
+                <div key={i} className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <AgentAvatar agent={agent} size={22} />
+                    <span className="text-[12.5px] font-semibold text-[#0a0a0a]">{agent.name || agent.slug}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono" style={{ color: meta.color }}>
+                      <Icon size={9} /> {meta.label}
+                    </span>
+                  </div>
+                  <div className="pl-[30px] text-[13px] leading-relaxed text-[#0a0a0a] break-words">
+                    {renderMarkdownLite(stripSelfHeader(m.content, agent.name || agent.slug))}
                   </div>
                 </div>
               )

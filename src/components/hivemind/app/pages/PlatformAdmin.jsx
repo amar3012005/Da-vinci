@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Activity, BarChart3, ChevronRight, FileText, Gift, LayoutDashboard, Menu, MessageCircle, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
 import apiClient from "../shared/api-client";
 import AccessApplicationsPanel from "./AccessApplicationsPanel";
 
@@ -43,6 +44,7 @@ const PLAN_DETAILS = {
   enterprise: "Managed or self-hosted",
 };
 const CAP_LABELS = {
+  monthlyCredits: "Monthly credits",
   maxMemories: "Memory capacity",
   llmTokensPerDay: "LLM tokens per day",
   llmTokensPerMonth: "LLM tokens per month",
@@ -290,27 +292,52 @@ function ModelPolicyPanel() {
 function AiCostsPanel() {
   const [costs, setCosts] = useState(null);
   const [message, setMessage] = useState("");
-  const load = async () => {
+  const [period, setPeriod] = useState("month");
+  const [query, setQuery] = useState("");
+  const queryRef = useRef("");
+  const [selected, setSelected] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [detailMessage, setDetailMessage] = useState("");
+  const load = useCallback(async () => {
     setMessage("");
-    try { setCosts(await apiClient.getPlatformAiCosts()); }
+    try { setCosts(await apiClient.getPlatformAiCosts({ q: queryRef.current, period })); }
     catch (error) { setMessage(error.response?.data?.error || error.message); }
+  }, [period]);
+  useEffect(() => { load(); }, [load]);
+  const openDetail = async (account) => {
+    setSelected(account); setDetail(null); setDetailMessage("");
+    try { setDetail(await apiClient.getPlatformAiCostDetail(account.id, { period })); }
+    catch (error) { setDetailMessage(error.response?.data?.error || error.message); }
   };
-  useEffect(() => { load(); }, []);
   if (!costs) return <section className="mt-5 rounded-[10px] border border-[#e3e0db] bg-white p-4 text-sm text-[#737373]">{message || "Loading AI costs…"}</section>;
+  const totals = costs.totals || {};
+  const credits = (account) => account.credits?.included == null ? "Custom" : `${Number(account.credits?.remaining || 0).toLocaleString()} / ${Number(account.credits?.included || 0).toLocaleString()}`;
   return (
-    <section className="mt-5 rounded-[10px] border border-[#e3e0db] bg-white p-4">
+    <section className="mt-5">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">AI usage ledger</p><h3 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Cumulative cost by user</h3>
-          <p className="mt-1 text-xs text-[#737373]">Token usage and model pricing are accumulated across HIVE-MIND inference calls.</p></div>
-        <div className="text-right"><p className="text-xs text-[#737373]">Cumulative platform spend</p><p className="font-['Space_Grotesk'] text-2xl font-bold tabular-nums text-[#0a0a0a]">{usdFromMicros(costs.total_cost_micros)}</p><p className="text-[11px] text-[#737373]">Unattributed system work: {usdFromMicros(costs.unattributed_cost_micros)} · {costs.unattributed_calls || 0} calls</p></div>
+        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">Credits & cost intelligence</p><h3 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Platform usage, attributed to billing accounts</h3>
+          <p className="mt-1 max-w-2xl text-xs text-[#737373]">Credits are derived once from settled product activity. Provider costs and raw tokens remain independently auditable, so an internal planner or reranker never consumes a customer credit twice.</p></div>
+        <div className="flex items-center gap-2"><select value={period} onChange={(e) => setPeriod(e.target.value)} className="rounded-lg border border-[#e3e0db] bg-white px-3 py-2 text-xs"><option value="month">This month</option><option value="last_30_days">Last 30 days</option><option value="all">All time</option></select><button onClick={load} className="rounded-lg border border-[#e3e0db] px-3 py-2 text-xs hover:border-[#0a0a0a]">Refresh</button></div>
       </div>
-      <div className="overflow-auto rounded-[10px] border border-[#e3e0db]"><table className="w-full text-sm"><thead><tr className="border-b border-[#e3e0db] bg-[#faf9f4] text-left text-[10px] uppercase tracking-wider text-[#737373]"><th className="p-3">User</th><th>Calls</th><th>Input</th><th>Output</th><th>Cached</th><th>Cumulative cost</th><th>Last call</th></tr></thead>
-        <tbody>{(costs.users || []).map((user) => <tr key={user.id} className="border-b border-[#eae7e1] hover:bg-[#faf9f4]"><td className="p-3"><div>{user.display_name || 'Unnamed'}</div><div className="text-xs text-[#737373]">{user.email}</div></td><td>{user.calls}</td><td>{Number(user.prompt_tokens||0).toLocaleString()}</td><td>{Number(user.completion_tokens||0).toLocaleString()}</td><td>{Number(user.cached_prompt_tokens||0).toLocaleString()}</td><td className="font-semibold">{usdFromMicros(user.total_cost_micros)}</td><td>{when(user.last_call_at)}</td></tr>)}</tbody></table></div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-[#737373]">Unpriced calls remain visible with zero estimated cost. Historical events keep their original pricing snapshot.</p><button onClick={load} className="rounded-[6px] border border-[#e3e0db] px-3 py-1.5 text-xs text-[#525252] hover:border-[#0a0a0a]">Refresh costs</button></div>
+      <div className="mb-3 grid gap-3 md:grid-cols-5"><Metric label="Provider spend" value={usdFromMicros(totals.total_cost_micros)} /><Metric label="Raw input tokens" value={Number(totals.prompt_tokens || 0).toLocaleString()} /><Metric label="Raw output tokens" value={Number(totals.completion_tokens || 0).toLocaleString()} /><Metric label="Credits remaining" value={Number(totals.credits_remaining || 0).toLocaleString()} /><Metric label="Credits consumed" value={Number(totals.credits_used || 0).toLocaleString()} /></div>
+      <div className="mb-3 flex gap-2"><input value={query} onChange={(e) => { queryRef.current = e.target.value; setQuery(e.target.value); }} onKeyDown={(e) => { if (e.key === 'Enter') load(); }} placeholder="Find a workspace or billing account" className="w-full max-w-sm rounded-lg border border-[#e3e0db] bg-white px-3 py-2 text-sm"/><button onClick={load} className="rounded-lg bg-[#117dff] px-4 py-2 text-sm font-medium text-white">Search</button></div>
+      <div className="overflow-auto rounded-[10px] border border-[#e3e0db] bg-white"><table className="w-full min-w-[1050px] text-sm"><thead><tr className="border-b border-[#e3e0db] bg-[#faf9f4] text-left text-[10px] uppercase tracking-wider text-[#737373]"><th className="p-3">Billing account</th><th>Plan / access</th><th>Credits remaining</th><th>Usage by service</th><th>LLM tokens</th><th>Provider cost</th><th>Last inference</th><th /></tr></thead>
+        <tbody>{(costs.accounts || []).map((account) => <tr key={account.id} className="border-b border-[#eae7e1] hover:bg-[#faf9f4]"><td className="p-3"><div className="font-medium text-[#0a0a0a]">{account.name}</div><div className="text-xs text-[#737373]">{account.owner?.display_name || account.owner?.email || account.account_type} · {account.hosting_mode}</div></td><td><div className="capitalize font-medium">{account.effective_plan}</div><div className="text-xs text-[#737373]">{account.subscription_status || (account.trial_ends_at ? 'trial' : 'not subscribed')}</div></td><td><div className="font-semibold tabular-nums">{credits(account)}</div><div className="text-xs text-[#737373]">{Number(account.credits?.used || 0).toLocaleString()} used</div></td><td><div className="flex max-w-[250px] flex-wrap gap-1">{(account.product_usage || []).slice(0,3).map((item) => <span key={item.key} className="rounded-full bg-[#f5f4f0] px-2 py-0.5 text-[11px]">{item.label}: {item.quantity}</span>)}{!(account.product_usage || []).length && <span className="text-xs text-[#737373]">No settled activity</span>}</div></td><td>{Number(account.ai?.prompt_tokens || 0).toLocaleString()}<span className="text-[#a3a3a3]"> / </span>{Number(account.ai?.completion_tokens || 0).toLocaleString()}</td><td className="font-semibold tabular-nums">{usdFromMicros(account.ai?.total_cost_micros)}</td><td>{when(account.ai?.last_call_at)}</td><td className="p-2 pr-3 text-right"><button onClick={() => openDetail(account)} className="rounded-lg border border-[#e3e0db] px-3 py-1.5 text-xs hover:border-[#0a0a0a]">Inspect</button></td></tr>)}</tbody></table></div>
+      <p className="mt-3 text-xs text-[#737373]">Policy {costs.policy_version}. Credits shown here are the current transparent product-unit projection; model costs are immutable price snapshots. Any unmetered legacy feature remains visible in raw spend but is not silently charged as a credit.</p>
       {message && <p className="mt-3 text-xs text-red-700">{message}</p>}
+      {selected && <div className="fixed inset-0 z-[100] flex justify-end bg-black/20" role="dialog" aria-modal="true" aria-label="Billing account detail" onMouseDown={() => setSelected(null)}><aside className="h-full w-full max-w-2xl overflow-y-auto border-l border-[#e3e0db] bg-[#faf9f4] p-5 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}><div className="mb-5 flex items-start justify-between"><div><p className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">Billing account ledger</p><h3 className="mt-1 text-2xl font-semibold">{selected.name}</h3><p className="mt-1 text-sm text-[#737373]">{selected.owner?.email || 'No billing owner recorded'} · {selected.effective_plan}</p></div><button onClick={() => setSelected(null)} className="rounded-lg border border-[#e3e0db] px-3 py-1.5 text-xs">Close</button></div>{!detail && <p className="py-12 text-sm text-[#737373]">{detailMessage || 'Loading attribution…'}</p>}{detail && <div className="space-y-5"><div className="grid grid-cols-3 gap-2"><Metric label="Included credits" value={selected.credits?.included == null ? 'Custom' : Number(selected.credits.included).toLocaleString()} /><Metric label="Consumed" value={Number(selected.credits?.used || 0).toLocaleString()} /><Metric label="Remaining" value={selected.credits?.remaining == null ? 'Custom' : Number(selected.credits.remaining).toLocaleString()} /></div><LedgerSection title="Credit-bearing product activity" rows={detail.attribution?.product_events || []} columns={[['metric','Metric'],['source','Source'],['ingest_mode','Mode'],['quantity','Quantity'],['events','Events'],['last_used_at','Last activity']]} /><LedgerSection title="Model and provider spend" rows={detail.attribution?.by_model || []} columns={[['use_case','Use case'],['served_model','Model'],['provider','Provider'],['prompt_tokens','Input'],['completion_tokens','Output'],['total_cost_micros','Cost']]} moneyColumns={['total_cost_micros']} /><LedgerSection title="User attribution" rows={detail.attribution?.by_user || []} columns={[['display_name','User'],['email','Email'],['calls','Calls'],['prompt_tokens','Input'],['completion_tokens','Output'],['total_cost_micros','Cost'],['last_call_at','Last call']]} moneyColumns={['total_cost_micros']} /></div>}</aside></div>}
     </section>
   );
 }
+
+function Metric({ label, value }) { return <div className="rounded-[10px] border border-[#e3e0db] bg-white p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-[#737373]">{label}</p><p className="mt-1 font-['Space_Grotesk'] text-xl font-bold tabular-nums text-[#0a0a0a]">{value}</p></div>; }
+function LedgerSection({ title, rows, columns, moneyColumns = [] }) { return <section className="rounded-[10px] border border-[#e3e0db] bg-white"><h4 className="border-b border-[#e3e0db] px-4 py-3 text-sm font-semibold">{title}</h4><div className="overflow-auto"><table className="w-full min-w-[600px] text-xs"><thead><tr className="bg-[#faf9f4] text-left uppercase tracking-wider text-[#737373]">{columns.map(([, label]) => <th key={label} className="px-3 py-2">{label}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <tr key={index} className="border-t border-[#f0ede8]">{columns.map(([key]) => <td key={key} className="max-w-[200px] truncate px-3 py-2">{moneyColumns.includes(key) ? usdFromMicros(row[key]) : key.endsWith('_at') ? when(row[key]) : String(row[key] ?? '—')}</td>)}</tr>) : <tr><td colSpan={columns.length} className="px-3 py-4 text-[#737373]">No activity in this period.</td></tr>}</tbody></table></div></section>; }
+
+const COMMERCIAL_TABS = [
+  ["plans", "Plans"], ["models", "Models"], ["ai_costs", "AI Costs"],
+  ["promotions", "Promotions"], ["invitations", "Invitations"], ["email", "Email"],
+  ["referrals", "Referral codes"], ["pilots", "Pilot organizations"], ["redemptions", "Redemptions"],
+];
 
 function CommercialManager() {
   const [tab, setTab] = useState("plans");
@@ -332,6 +359,8 @@ function CommercialManager() {
     account_type: "enterprise_managed",
     storage_mode: "hybrid",
     onboarding_days: 14,
+    max_invites: 0,
+    monthly_credits: 20000,
     invitation_expires_at: "",
     welcome_message: "",
     private_notes: "",
@@ -350,6 +379,7 @@ function CommercialManager() {
     useState(false);
   const [invitationSending, setInvitationSending] = useState(false);
   const [extendInvitation, setExtendInvitation] = useState(null);
+  const [editingInvitationInvites, setEditingInvitationInvites] = useState(null);
   const [emailForm, setEmailForm] = useState({
     template_id: "welcome_signup",
     to: "",
@@ -584,6 +614,8 @@ function CommercialManager() {
     try {
       const result = await apiClient.createPlatformEnterpriseInvitation({
         ...enterpriseInvitationForm,
+        max_invites: Number(enterpriseInvitationForm.max_invites),
+        monthly_credits: Number(enterpriseInvitationForm.monthly_credits),
         hosting_mode:
           enterpriseInvitationForm.account_type === "enterprise_self_hosted"
             ? "self_host"
@@ -605,6 +637,8 @@ function CommercialManager() {
         company_name: "",
         workspace_name: "",
         recipient_email: "",
+        max_invites: 0,
+        monthly_credits: 20000,
         welcome_message: "",
         private_notes: "",
       });
@@ -717,6 +751,8 @@ function CommercialManager() {
           ? "Invitation revoked."
           : action === "extend"
             ? "Invitation expiry updated."
+            : action === "update-max-invites"
+              ? "Team invitation allowance updated and applied to the active tenant."
             : "Invitation updated.",
       );
       await load();
@@ -752,19 +788,16 @@ function CommercialManager() {
       setEmailSending(false);
     }
   };
-  const tabs = [
-    ["plans", "Plans"],
-    ["models", "Models"],
-    ["ai_costs", "AI Costs"],
-    ["promotions", "Promotions"],
-    ["invitations", "Invitations"],
-    ["email", "Email"],
-    ["referrals", "Referral codes"],
-    ["pilots", "Pilot organizations"],
-    ["redemptions", "Redemptions"],
-  ];
+  useEffect(() => {
+    const selectTab = (event) => {
+      const requested = event.detail?.tab;
+      if (COMMERCIAL_TABS.some(([id]) => id === requested)) setTab(requested);
+    };
+    window.addEventListener("platform-admin:navigate", selectTab);
+    return () => window.removeEventListener("platform-admin:navigate", selectTab);
+  }, []);
   return (
-    <section className="mb-6 border-y border-[#dfddd5] py-5">
+    <section id="admin-commercial" className="mb-6 border-y border-[#dfddd5] py-5 scroll-mt-20">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#737373]">
@@ -785,12 +818,12 @@ function CommercialManager() {
           Refresh
         </button>
       </div>
-      <nav className="mt-5 flex flex-wrap gap-2 border-b border-[#dfddd5] pb-3">
-        {tabs.map(([id, label]) => (
+      <nav className="mt-5 flex gap-1 overflow-x-auto border-b border-[#dfddd5] pb-0 [-webkit-overflow-scrolling:touch]">
+        {COMMERCIAL_TABS.map(([id, label]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`px-3 py-1.5 text-sm ${tab === id ? "border-b-2 border-[#117dff] font-semibold text-[#161616]" : "text-[#737373]"}`}
+            className={`shrink-0 px-3 py-2 text-[12px] ${tab === id ? "border-b-2 border-[#117dff] font-semibold text-[#161616]" : "text-[#737373]"}`}
           >
             {label}
           </button>
@@ -1166,8 +1199,8 @@ function CommercialManager() {
           <div className="mt-5 max-w-4xl">
             <p className="mb-3 text-sm text-[#737373]">
               One invitation creates one enterprise owner workspace. It starts a
-              14-day unlimited onboarding period; the owner then chooses a paid
-              Runway configuration.
+              14-day Scale-equivalent onboarding period; choose how many
+              additional teammates that tenant may invite.
             </p>
             <form
               onSubmit={submitEnterpriseInvitation}
@@ -1267,6 +1300,46 @@ function CommercialManager() {
                 className="border border-[#d8d6cf] px-3 py-2"
                 aria-label="Onboarding days"
               />
+              <label className="text-sm text-[#525252]">
+                Additional team invites
+                <input
+                  type="number"
+                  min="0"
+                  max="10000"
+                  value={enterpriseInvitationForm.max_invites}
+                  onChange={(e) =>
+                    setEnterpriseInvitationForm({
+                      ...enterpriseInvitationForm,
+                      max_invites: e.target.value,
+                    })
+                  }
+                  className="mt-1 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"
+                  aria-label="Additional team invites"
+                />
+                <span className="mt-1 block text-xs text-[#737373]">
+                  0 means owner-only. This can be changed later and applies to the tenant immediately.
+                </span>
+              </label>
+              <label className="text-sm text-[#525252]">
+                Shared onboarding credits
+                <input
+                  type="number"
+                  min="-1"
+                  max="100000000"
+                  value={enterpriseInvitationForm.monthly_credits}
+                  onChange={(e) =>
+                    setEnterpriseInvitationForm({
+                      ...enterpriseInvitationForm,
+                      monthly_credits: e.target.value,
+                    })
+                  }
+                  className="mt-1 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"
+                  aria-label="Shared onboarding credits"
+                />
+                <span className="mt-1 block text-xs text-[#737373]">
+                  One organization-wide pool shared by every teammate. Use -1 only for unlimited credits; onboarding has no separate daily or service caps.
+                </span>
+              </label>
               <p className="self-center text-sm leading-5 text-[#737373]">
                 Creates a draft only. Review the rendered email before sending
                 from <strong className="font-medium text-[#161616]">welcome@admin.singulancelabs.com</strong>.
@@ -1340,6 +1413,8 @@ function CommercialManager() {
                     {invitation.entitlement
                       ? `${invitation.entitlement.status} until ${when(invitation.entitlement.ends_at)}`
                       : "Not redeemed"}
+                    {" · "}{invitation.max_invites || 0} additional team invite{Number(invitation.max_invites || 0) === 1 ? "" : "s"}
+                    {" · "}{Number(invitation.onboarding_monthly_credits) === -1 ? "unlimited credits" : `${Number(invitation.onboarding_monthly_credits || 0).toLocaleString()} shared credits`}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1348,6 +1423,18 @@ function CommercialManager() {
                     className="border border-[#d8d6cf] px-2 py-1"
                   >
                     History
+                  </button>
+                  <button
+                    onClick={() => setEditingInvitationInvites({
+                      id: invitation.id,
+                      companyName: invitation.company_name,
+                      maxInvites: invitation.max_invites || 0,
+                      monthlyCredits: invitation.onboarding_monthly_credits,
+                      activeTenant: Boolean(invitation.entitlement?.grant_id),
+                    })}
+                    className="border border-[#d8d6cf] px-2 py-1"
+                  >
+                    Team & credits
                   </button>
                   {["draft", "sent"].includes(invitation.status) && (
                     <>
@@ -1456,6 +1543,26 @@ function CommercialManager() {
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
               <form onSubmit={(event) => { event.preventDefault(); invitationAction(extendInvitation.id, 'extend', { invitation_expires_at: new Date(extendInvitation.expiresAt).toISOString() }); setExtendInvitation(null); }} className="w-full max-w-md bg-white p-5 shadow-xl">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">Invitation expiry</p><h3 className="mt-2 text-lg font-semibold text-[#161616]">Extend {extendInvitation.companyName}</h3><label className="mt-5 block text-sm font-medium text-[#525252]">New expiry<input required type="datetime-local" value={extendInvitation.expiresAt} onChange={(event) => setExtendInvitation({ ...extendInvitation, expiresAt: event.target.value })} className="mt-2 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"/></label><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setExtendInvitation(null)} className="border border-[#d8d6cf] px-3 py-2">Cancel</button><button className="bg-[#117dff] px-3 py-2 font-medium text-white">Save expiry</button></div>
+              </form>
+            </div>
+          )}
+          {editingInvitationInvites && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+              <form onSubmit={async (event) => {
+                event.preventDefault();
+                await invitationAction(editingInvitationInvites.id, "update-max-invites", {
+                  max_invites: Number(editingInvitationInvites.maxInvites),
+                  monthly_credits: Number(editingInvitationInvites.monthlyCredits),
+                });
+                setEditingInvitationInvites(null);
+              }} className="w-full max-w-md bg-white p-5 shadow-xl">
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">Onboarding allocation</p>
+                <h3 className="mt-2 text-lg font-semibold text-[#161616]">{editingInvitationInvites.companyName}</h3>
+                <p className="mt-2 text-sm leading-5 text-[#525252]">Set the number of additional people this tenant can invite. The owner is already included, so 0 means owner-only.</p>
+                <label className="mt-5 block text-sm font-medium text-[#525252]">Maximum additional invites<input required type="number" min="0" max="10000" value={editingInvitationInvites.maxInvites} onChange={(event) => setEditingInvitationInvites({ ...editingInvitationInvites, maxInvites: event.target.value })} className="mt-2 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"/></label>
+                <label className="mt-4 block text-sm font-medium text-[#525252]">Shared monthly credits<input required type="number" min="-1" max="100000000" value={editingInvitationInvites.monthlyCredits} onChange={(event) => setEditingInvitationInvites({ ...editingInvitationInvites, monthlyCredits: event.target.value })} className="mt-2 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"/><span className="mt-1 block text-xs font-normal text-[#737373]">Shared by all users. Use -1 only for unlimited credits.</span></label>
+                {editingInvitationInvites.activeTenant && <p className="mt-2 text-xs text-[#737373]">Saving publishes a new entitlement version for this active tenant immediately.</p>}
+                <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setEditingInvitationInvites(null)} className="border border-[#d8d6cf] px-3 py-2">Cancel</button><button className="bg-[#117dff] px-3 py-2 font-medium text-white">Save allocation</button></div>
               </form>
             </div>
           )}
@@ -1926,9 +2033,59 @@ function CommercialManager() {
   );
 }
 
+const ADMIN_NAV_ITEMS = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "users", label: "Users", icon: Users },
+  { id: "plans", label: "Plans & credits", icon: BarChart3 },
+  { id: "promotions", label: "Promotions", icon: Gift },
+  { id: "invitations", label: "Invitations", icon: Send },
+  { id: "email", label: "Email", icon: FileText },
+  { id: "models", label: "AI policies", icon: Activity },
+  { id: "chat", label: "HIVE Chat", icon: MessageCircle },
+  { id: "logs", label: "Live logs", icon: ShieldCheck },
+];
+
+function AdminNavigation({ activeItem, mobileOpen, onClose, onNavigate }) {
+  const content = (
+    <>
+      <div className="flex h-14 items-center justify-between border-b border-[#e3e0db] px-4">
+        <div className="min-w-0">
+          <p className="font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">HIVEMIND Admin</p>
+          <p className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#a3a3a3]">Platform control</p>
+        </div>
+        <button type="button" onClick={onClose} className="rounded-[6px] p-1.5 text-[#737373] hover:bg-[#f3f1ec] hover:text-[#0a0a0a] lg:hidden" aria-label="Close admin navigation"><X size={18} /></button>
+      </div>
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#a3a3a3]">Operations</p>
+        {ADMIN_NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+          <button key={id} type="button" onClick={() => onNavigate(id)} className={`flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-2 text-left text-[13px] transition-colors ${activeItem === id ? "bg-[#f3f1ec] font-medium text-[#0a0a0a]" : "text-[#525252] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"}`}>
+            <Icon size={16} className={activeItem === id ? "text-[#117dff]" : "text-[#a3a3a3]"} />
+            {label}
+            <ChevronRight size={13} className="ml-auto text-[#a3a3a3]" />
+          </button>
+        ))}
+      </nav>
+      <div className="border-t border-[#e3e0db] p-3">
+        <button type="button" onClick={() => onNavigate("invitations")} className="flex w-full items-center justify-center gap-1.5 rounded-[6px] bg-[#117dff] px-3 py-2 text-[12px] font-semibold text-white hover:bg-[#0066e0]">
+          <Send size={14} /> New invitation
+        </button>
+        <button type="button" onClick={() => onNavigate("promotions")} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[6px] border border-[#e3e0db] px-3 py-2 text-[12px] font-medium text-[#525252] hover:bg-[#f3f1ec]">
+          <Tags size={14} /> New promotion
+        </button>
+      </div>
+    </>
+  );
+  return <>
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-[#e3e0db] bg-[#faf9f4] lg:flex">{content}</aside>
+    {mobileOpen && <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Admin navigation">
+      <button type="button" aria-label="Close navigation" onClick={onClose} className="absolute inset-0 bg-black/30" />
+      <aside className="relative flex h-full w-[min(84vw,320px)] flex-col bg-[#faf9f4] shadow-xl">{content}</aside>
+    </div>}
+  </>;
+}
+
 export default function PlatformAdmin() {
-  const [passkey, setPasskey] = useState("");
-  const [operatorName, setOperatorName] = useState("");
+  const [passcode, setPasscode] = useState("");
   const [data, setData] = useState(null);
   const [metrics, setMetrics] = useState(null);
   const [logs, setLogs] = useState(emptyLogs);
@@ -1936,6 +2093,8 @@ export default function PlatformAdmin() {
   const [logView, setLogView] = useState("mixed");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [activeItem, setActiveItem] = useState("overview");
 
   const load = async () => {
     setLoading(true);
@@ -1961,8 +2120,8 @@ export default function PlatformAdmin() {
     setLoading(true);
     setError("");
     try {
-      await apiClient.unlockPlatformAdmin(passkey, operatorName);
-      setPasskey("");
+      await apiClient.unlockPlatformAdmin(passcode);
+      setPasscode("");
       await load();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -1983,46 +2142,73 @@ export default function PlatformAdmin() {
     return () => clearInterval(timer);
   }, [data, logsOpen]);
 
+  const navigateAdmin = useCallback((target) => {
+    setActiveItem(target);
+    setMobileNavOpen(false);
+    if (target === "overview") {
+      document.getElementById("admin-overview")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (target === "users") {
+      document.getElementById("admin-users")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (target === "logs") {
+      setLogsOpen(true);
+      return;
+    }
+    if (target === "chat") {
+      window.location.assign("https://next.singulancelabs.com/hivemind/m/chat");
+      return;
+    }
+    document.getElementById("admin-commercial")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => window.dispatchEvent(new CustomEvent("platform-admin:navigate", { detail: { tab: target } })), 0);
+  }, []);
+
   if (!data)
     return (
-      <main className="max-w-md mx-auto py-20 px-5">
-        <h1 className="text-2xl font-bold mb-2">Platform Admin</h1>
-        <p className="text-sm text-[#737373] mb-6">
-          Commercial operations and diagnostics. Access expires after 15
-          minutes.
-        </p>
-        <form onSubmit={unlock} className="space-y-3">
-          <input
-            autoFocus
-            value={operatorName}
-            onChange={(e) => setOperatorName(e.target.value)}
-            placeholder="Operator name"
-            className="w-full border rounded-lg px-3 py-2"
-          />
+      <main className="min-h-screen bg-[#faf9f4] px-5 py-10 sm:flex sm:items-center sm:justify-center">
+        <section className="mx-auto w-full max-w-md rounded-[10px] border border-[#e3e0db] bg-white p-5 sm:p-7">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">HIVEMIND · Platform control</p>
+          <h1 className="mt-2 font-['Space_Grotesk'] text-[26px] font-semibold text-[#0a0a0a]">Admin unlock</h1>
+          <p className="mt-2 text-sm leading-6 text-[#737373]">Enter the six-digit platform passcode. Access expires after 15 minutes.</p>
+          <form onSubmit={unlock} className="mt-6 space-y-3">
           <input
             required
             type="password"
-            value={passkey}
-            onChange={(e) => setPasskey(e.target.value)}
-            placeholder="Admin passkey"
-            className="w-full border rounded-lg px-3 py-2"
+            value={passcode}
+            onChange={(e) => setPasscode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="••••••"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            aria-label="Platform admin passcode"
+            className="w-full rounded-[6px] border border-[#d8d6cf] px-3 py-3 text-center font-mono text-xl tracking-[0.45em] text-[#0a0a0a] outline-none placeholder:tracking-[0.45em] focus:border-[#117dff]"
           />
           <button
-            disabled={loading || !operatorName.trim()}
-            className="w-full rounded-lg bg-[#117dff] text-white py-2"
+            disabled={loading || passcode.length !== 6}
+            className="w-full rounded-[6px] bg-[#117dff] py-3 text-[13px] font-semibold text-white hover:bg-[#0066e0] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Unlocking..." : "Unlock"}
           </button>
           {error && <p className="text-sm text-red-600">{error}</p>}
-        </form>
+          </form>
+        </section>
       </main>
     );
 
   const s = data.summary || {};
   const activeLogs = logs[logView] || [];
   return (
-    <main className="max-w-7xl mx-auto py-10 px-5">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen bg-[#faf9f4] lg:pl-[232px]">
+      <AdminNavigation activeItem={activeItem} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onNavigate={navigateAdmin} />
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[#e3e0db] bg-[#faf9f4]/95 px-4 backdrop-blur lg:hidden">
+        <button type="button" onClick={() => setMobileNavOpen(true)} className="rounded-[6px] p-1.5 text-[#525252] hover:bg-[#f3f1ec]" aria-label="Open admin navigation"><Menu size={20} /></button>
+        <p className="font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">HIVEMIND Admin</p>
+        <button type="button" onClick={() => navigateAdmin("invitations")} className="rounded-[6px] bg-[#117dff] px-2.5 py-1.5 text-[11px] font-semibold text-white">Invite</button>
+      </header>
+      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-8 lg:px-8">
+      <div id="admin-overview" className="mb-6 flex flex-col gap-3 scroll-mt-20 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Platform Admin</h1>
           <p className="text-sm text-[#737373]">
@@ -2060,7 +2246,7 @@ export default function PlatformAdmin() {
         ))}
       </div>
       <CapacityPanel metrics={metrics} />
-      <div className="border rounded-xl overflow-auto bg-white">
+      <div id="admin-users" className="overflow-x-auto rounded-[10px] border border-[#e3e0db] bg-white scroll-mt-20">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left bg-[#faf9f4]">
@@ -2141,6 +2327,7 @@ export default function PlatformAdmin() {
           </section>
         </div>
       )}
-    </main>
+      </main>
+    </div>
   );
 }

@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { useApiQuery } from '../../shared/hooks';
 import apiClient from '../../shared/api-client';
+import CreditBalance from '../../shared/CreditBalance';
+import CreditUsageBreakdown from '../../shared/CreditUsageBreakdown';
 import WorkspaceAccessCard from '../../shared/WorkspaceAccessCard';
 import MobileShell from '../MobileShell';
 
@@ -33,7 +35,6 @@ const METRICS = [
   { key: 'taraSeconds',  label: 'TARA Talk Time', icon: Mic,     accent: '#db2777', sub: 'seconds' },
   { key: 'hyperAgentRuns', label: 'HyperAgents Runs', icon: Bot, accent: '#0f766e', sub: 'runs' },
   { key: 'connectors',  label: 'Connectors',    icon: Plug,     accent: '#7c3aed', sub: 'active sources' },
-  { key: 'hyperRooms',  label: 'HyperAgents',   icon: Bot,      accent: '#0f766e', sub: 'rooms' },
   { key: 'users',       label: 'Seats',         icon: UserPlus, accent: '#b45309', sub: 'org members' },
 ];
 
@@ -221,6 +222,13 @@ export default function MobileUsage() {
             <RefreshCw size={13} className={loading ? 'animate-spin text-[#525252]' : 'text-[#525252]'} />
           </button>
         </div>
+
+        {data?.credits && (
+          <div className="mb-4 space-y-2.5">
+            <CreditBalance credits={data.credits} />
+            <CreditUsageBreakdown credits={data.credits} compact />
+          </div>
+        )}
 
         {reminders.length > 0 && (
           <div className="mb-4 rounded-[12px] border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-1">

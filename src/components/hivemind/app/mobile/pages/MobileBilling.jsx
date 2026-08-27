@@ -11,6 +11,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApiQuery } from '../../shared/hooks';
 import apiClient from '../../shared/api-client';
+import CreditBalance from '../../shared/CreditBalance';
 import MobileShell from '../MobileShell';
 
 const PLANS = [
@@ -174,6 +175,7 @@ export default function MobileBilling() {
         {checkoutNotice && (
           <div className="rounded-[12px] border border-emerald-200 bg-emerald-50 p-3 text-[12px] font-medium text-emerald-900">{checkoutNotice}</div>
         )}
+        <CreditBalance credits={billing?.usage_summary?.credits} />
 
         {/* Current plan */}
         <div className="rounded-[16px] border border-[#e3e0db] bg-white p-4">

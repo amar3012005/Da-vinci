@@ -78,6 +78,8 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "build:cloudflare": "npm run build && node scripts/prune-cloudflare-assets.mjs",
+    "deploy:cloudflare": "npx wrangler deploy --keep-vars --strict",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "type-check": "tsc --noEmit"

@@ -3,8 +3,9 @@
  *
  * Backend contract (backend produces, frontend detects):
  *   HTTP 402 (also tolerate 403/429) with body:
- *     { error, code: 'plan_limit_exceeded', message, resource, plan,
- *       limit, current, suggested_plan, upgrade_url }
+ *     { error, code: 'plan_limit_exceeded'|'quota_reached', message, resource,
+ *       metric, plan, limit, current, remaining, estimated_pages,
+ *       suggested_plan, upgrade_url }
  *
  * The axios response interceptors (shared/api-client.js) turn any matching
  * error into a global `window` CustomEvent('hm:plan-limit', { detail }) so a
@@ -26,25 +27,32 @@ export function isPlanLimitError(err) {
   const status = err?.response?.status;
   const data = err?.response?.data;
   const code = data?.code || data?.error;
-  if (code !== PLAN_LIMIT_CODE) return false;
-  return status === 402 || status === 403 || status === 429;
+  if (status !== 402 && status !== 403 && status !== 429) return false;
+  return code === PLAN_LIMIT_CODE || code === 'quota_reached';
 }
 
 /**
  * Normalize a plan-limit error into the shape the modal consumes.
  * Tolerates both snake_case (backend contract) and camelCase.
  * @param {unknown} err
- * @returns {{ resource: (string|null), plan: (string|null), message: (string|null), limit: (number|null), current: (number|null), suggestedPlan: (string|null), upgradeUrl: string }}
+ * @returns {{ resource: (string|null), metric: (string|null), plan: (string|null), message: (string|null), limit: (number|null), current: (number|null), remaining: (number|null), estimatedPages: (number|null), suggestedPlan: (string|null), upgradeUrl: string }}
  */
 export function extractPlanLimit(err) {
   const data = err?.response?.data || {};
   const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const rawMessage = data.message ?? data.detail ?? null;
+  const message = /^(?:quota_reached|plan_limit_exceeded|limit_reached)$/i.test(String(rawMessage || '').trim())
+    ? null
+    : rawMessage;
   return {
-    resource: data.resource ?? null,
+    resource: data.resource ?? data.metric ?? null,
+    metric: data.metric ?? null,
     plan: data.plan ?? null,
-    message: data.message ?? null,
+    message,
     limit: num(data.limit),
     current: num(data.current),
+    remaining: num(data.remaining ?? data.remaining_capacity),
+    estimatedPages: num(data.estimated_pages ?? data.estimatedPages ?? data.requested_pages),
     suggestedPlan: data.suggested_plan ?? data.suggestedPlan ?? null,
     upgradeUrl: data.upgrade_url ?? data.upgradeUrl ?? '/hivemind/app/billing',
   };

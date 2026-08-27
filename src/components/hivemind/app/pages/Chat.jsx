@@ -489,6 +489,7 @@ export function ChatPanel({ isOpen, onClose }) {
         trace: data.trace || null,
         project_choice: data.project_choice || null,
         scopes_found: Array.isArray(data.scopes_found) ? data.scopes_found : [],
+        follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
       };
       setMessages((prev) => prev.some((item) => item.id === streamingId)
         ? prev.map((item) => item.id === streamingId ? assistantMsg : item)
@@ -506,6 +507,11 @@ export function ChatPanel({ isOpen, onClose }) {
   }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId]);
 
   const sendMessage = useCallback(() => sendText(), [sendText]);
+
+  const selectFollowUp = useCallback((question) => {
+    setInput(String(question || '').slice(0, MAX_CHARS));
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, []);
 
   const continueOrchestration = useCallback(async (continuation, request, option) => {
     if (loading) return;
@@ -533,6 +539,7 @@ export function ChatPanel({ isOpen, onClose }) {
         id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
         steps: data.steps || [], draft_ids: data.draft_ids || [], pending_actions: data.pending_actions || [],
         sources: data.sources || [], continuation: data.continuation || null,
+        follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
       }]);
     } catch (error) {
       setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', error: true, content: error.message, sources: [] }]);
@@ -794,7 +801,7 @@ export function ChatPanel({ isOpen, onClose }) {
                     {messages.map((m) =>
                       m.role === 'user'
                         ? <UserBubble key={m.id} content={m.content} />
-                        : <AiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />
+                        : <AiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} onFollowUp={selectFollowUp} />
                     )}
                     {loading && !messages.some((item) => item.streaming) && <Thinking events={agentEvents} />}
                   </>

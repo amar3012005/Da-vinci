@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "hivemind-web",
+  "compatibility_date": "2026-08-19",
+  "workers_dev": true,
+  "preview_urls": true,
+  "main": "./cloudflare/worker.mjs",
+  "build": {
+    "command": "node scripts/assert-cloudflare-main-release.mjs && PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm run build:cloudflare"
+  },
+  "assets": {
+    "directory": "./build",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [
+    {
+      "pattern": "singulancelabs.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "next.singulancelabs.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "admin.hivemind.singulancelabs.com",
+      "custom_domain": true
+    }
+  ]
+}

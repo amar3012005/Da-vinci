@@ -80,8 +80,12 @@ const StoreBadge = ({ icon: Icon, top, big }) => (
 const SingulanceFooter = () => {
   return (
     <footer className="relative" style={{ background: '#05070f' }}>
-      {/* link columns */}
-      <div className="mx-auto max-w-[1200px] px-6 py-16 md:py-20">
+      {/* link columns — fallback anchor for nav's "Solutions" scroll-to on phone
+          widths, where SubProducts (the real #solutions section) isn't mounted.
+          Named distinctly (not "solutions") to avoid a duplicate id on wider
+          viewports where SubProducts IS mounted — see MobileNavigation's
+          handleNavClick fallback lookup. */}
+      <div id="solutions-footer" className="mx-auto max-w-[1200px] px-6 py-16 md:py-20 scroll-mt-20">
         <div className="grid grid-cols-2 gap-y-12 md:grid-cols-4 md:gap-y-0">
           {COLS.map((col, i) => (
             <div key={col.title} className={i > 0 ? 'md:border-l md:border-white/8 md:pl-8' : 'md:pr-8'}>
@@ -105,8 +109,10 @@ const SingulanceFooter = () => {
         <div className="h-px w-full bg-white/8" />
       </div>
 
-      {/* bottom row */}
-      <div className="mx-auto flex max-w-[1200px] flex-col gap-10 px-6 py-10 md:flex-row md:items-center md:justify-between">
+      {/* bottom row — fallback anchor for nav's "Contact" scroll-to on phone
+          widths, where MobileAboutSection (the real #cta-section) isn't
+          mounted. Named distinctly to avoid a duplicate id on wider viewports. */}
+      <div id="cta-section-footer" className="mx-auto flex max-w-[1200px] flex-col gap-10 px-6 py-10 scroll-mt-20 md:flex-row md:items-center md:justify-between">
         {/* socials */}
         <div className="flex items-center gap-5">
           {SOCIALS.map(([Icon, href, label]) => (

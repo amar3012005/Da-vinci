@@ -5,6 +5,7 @@ import OverviewTour, { useOverviewTour } from '../shared/OverviewTour';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowUp,
   BookOpen,
   Boxes,
@@ -12,7 +13,12 @@ import {
   Building2,
   Cable,
   CheckCircle2,
+  ChevronUp,
+  Chrome,
+  Eye,
   FileText,
+  Smartphone,
+  QrCode,
   GitFork,
   Globe,
   HelpCircle,
@@ -28,12 +34,18 @@ import {
   X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { QRCodeSVG } from 'qrcode.react';
 import { userScopedKey } from '../shared/user-storage';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
 import { useApiQuery } from '../shared/hooks';
+import { emitUsageChanged } from '../shared/useUsage';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/upload-store';
+// Reuse Web Studio's research-report toolkit rather than hand-rolling a
+// second implementation — same "view in Chrome" tab, same in-app preview
+// modal + save-to-HIVEMIND flow, same job-title derivation.
+import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './WebStudio';
 
 // ─── Animation variants ──────────────────────────────────────────
 
@@ -130,11 +142,55 @@ async function readChatStream(response, onEvent) {
   return result;
 }
 
-function ChatBubble({ msg, onContinue }) {
+function ChatBubble({ msg, onContinue, onProjectChoiceSaved, onFollowUp }) {
   // Claude-exact turns (shared/claude-chat): user pill right, assistant is a
   // bubbleless serif answer with reasoning pill + sources + action row.
   if (msg.role === 'user') return <div className="flex justify-end"><UserBubble content={msg.content} /></div>;
-  return <div className="flex flex-col">{<AiBubble msg={msg} onContinue={onContinue} />}</div>;
+  if (msg.deepResearch) return null; // rendered by DeepResearchCard instead
+  return <div className="flex flex-col">{<AiBubble msg={msg} onContinue={onContinue} onProjectChoiceSaved={onProjectChoiceSaved} onFollowUp={onFollowUp} />}</div>;
+}
+
+// ─── Deep Research turn — inline progress card + View in Chrome / Preview ──
+// Same job shape as Web Studio (getWebJob), so the same actions work
+// identically: openResearchReportTab opens the rendered report in a new tab
+// with its own Save-to-HIVEMIND button; Preview opens the same in-app modal.
+function DeepResearchCard({ dr, onPreview, onOpenChrome }) {
+  const { t } = useTranslation('dashboard');
+  const status = dr.status;
+  const job = dr.job;
+  const running = status === 'starting' || status === 'running' || status === 'queued' || status === 'processing';
+  const failed = status === 'failed';
+  const done = status === 'succeeded';
+  const sourceCount = done ? (job?.results?.[0]?.sources?.length || 0) : 0;
+  return (
+    <div className="mt-2 rounded-xl border border-[#e3e0db] bg-white p-3.5 max-w-md">
+      <div className="flex items-center gap-2.5">
+        <span className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 grid place-items-center flex-shrink-0">
+          {running ? <Loader2 size={13} className="text-blue-600 animate-spin" /> : failed ? <AlertTriangle size={13} className="text-red-500" /> : <CheckCircle2 size={13} className="text-emerald-600" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[12.5px] font-semibold text-[#0a0a0a] truncate">{dr.query}</div>
+          <div className="text-[10.5px] text-[#a3a3a3]">
+            {running
+              ? t('overview.chat.researching', 'Researching the web… (1-3 min, keeps running in the background)')
+              : failed
+                ? (dr.error || t('overview.chat.researchFailed', 'Research failed'))
+                : t('overview.chat.reportReady', 'Report ready{{sources}}', { sources: sourceCount ? ` · ${sourceCount} sources` : '' })}
+          </div>
+        </div>
+      </div>
+      {done && (
+        <div className="mt-3 flex items-center gap-1.5">
+          <button onClick={onPreview} className="inline-flex items-center gap-1 text-[11px] font-medium text-[#525252] hover:text-[#0a0a0a] bg-white hover:bg-[#f3f1ec] border border-[#e3e0db] rounded-lg px-2.5 py-1.5 transition-colors">
+            <Eye size={12} /> {t('webstudio.view', 'View')}
+          </button>
+          <button onClick={onOpenChrome} className="inline-flex items-center gap-1 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-2.5 py-1.5 transition-colors">
+            <Chrome size={12} /> {t('webstudio.viewInChrome', 'View in Chrome')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Cognitive band — drifting stream of swarm intelligence ─────
@@ -748,6 +804,87 @@ function OverviewChat({ inputRef }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, loading]);
 
+  // ─── Deep Research from the composer ──────────────────────────
+  // Same /v1/proxy/web/research/jobs backend as Web Studio's Research mode,
+  // just triggered inline from chat: submits the job, polls it in the
+  // background (doesn't block the composer — you can keep chatting), and
+  // renders progress + "View in Chrome" / "Preview" on the assistant turn
+  // once it lands. jobsByIdRef backs the postMessage save-bridge below,
+  // same pattern as Web Studio's own bridge.
+  const [deepResearchMode, setDeepResearchMode] = useState(false);
+  const [drPreviewJob, setDrPreviewJob] = useState(null);
+  const jobsByIdRef = useRef({});
+  const drPollersRef = useRef({});
+  useEffect(() => () => { Object.values(drPollersRef.current).forEach(clearInterval); }, []);
+
+  const scopeOptions = useMemo(() => ([
+    { label: '🔒 Personal', scope: 'personal', projectId: null },
+    { label: '🏢 Organization', scope: 'organization', projectId: null },
+    ...(projects || []).map((p) => ({ label: `📁 ${p.name || p.slug || 'Project'}`, scope: 'project', projectId: p.id })),
+  ]), [projects]);
+
+  const startDeepResearch = useCallback(async (query) => {
+    const trimmed = (query || '').trim();
+    if (!trimmed || loading) return;
+    setInput('');
+    const userMsg = { id: Date.now(), role: 'user', content: trimmed };
+    const drMsgId = `dr-${userMsg.id}`;
+    setMessages((prev) => [...prev, userMsg, { id: drMsgId, role: 'assistant', deepResearch: { status: 'starting', query: trimmed } }]);
+    try {
+      const r = await apiClient.submitWebResearch({ input: trimmed, model: 'auto', citation_format: 'numbered' });
+      const jobId = r?.job_id || r?.id;
+      if (!jobId) throw new Error('No job id returned');
+      setMessages((prev) => prev.map((m) => (m.id === drMsgId ? { ...m, deepResearch: { ...m.deepResearch, jobId, status: 'running' } } : m)));
+      const poll = setInterval(async () => {
+        try {
+          const job = await apiClient.getWebJob(jobId);
+          jobsByIdRef.current[jobId] = job;
+          setMessages((prev) => prev.map((m) => (m.id === drMsgId ? { ...m, deepResearch: { ...m.deepResearch, job, status: job.status } } : m)));
+          if (job.status === 'succeeded' || job.status === 'failed') {
+            clearInterval(drPollersRef.current[jobId]);
+            delete drPollersRef.current[jobId];
+          }
+        } catch {
+          clearInterval(drPollersRef.current[jobId]);
+          delete drPollersRef.current[jobId];
+        }
+      }, 1800);
+      drPollersRef.current[jobId] = poll;
+    } catch (err) {
+      setMessages((prev) => prev.map((m) => (m.id === drMsgId ? { ...m, deepResearch: { ...m.deepResearch, status: 'failed', error: err.response?.data?.error || err.message } } : m)));
+    }
+  }, [loading]);
+
+  // Bridge: the report tab (opened via openResearchReportTab) postMessages a
+  // scoped save request; perform the authenticated save here and post the
+  // result back — identical contract to Web Studio's own listener.
+  useEffect(() => {
+    const handler = async (e) => {
+      const d = e.data || {};
+      if (d.type !== 'hm-save-research' || !d.jobId) return;
+      const job = jobsByIdRef.current[d.jobId];
+      const result = job && Array.isArray(job.results) ? job.results[0] : null;
+      const reply = (msg) => { try { e.source?.postMessage({ type: 'hm-save-result', jobId: d.jobId, scopeLabel: d.scopeLabel, ...msg }, '*'); } catch { /* tab closed */ } };
+      if (!job || !result) { reply({ ok: false, error: 'report not found' }); return; }
+      try {
+        await apiClient.saveResearchAsMemory({
+          title: deriveJobTitle(job, job.results || []),
+          markdown: typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2),
+          sources: result.sources || [],
+          tags: [job.params?.model ? `tavily-${job.params.model}` : 'tavily'],
+          jobId: job.id,
+          targetScope: d.scope || 'personal',
+          projectId: d.projectId || undefined,
+        });
+        reply({ ok: true, memories: 1 });
+      } catch (err) {
+        reply({ ok: false, error: err.response?.data?.error || err.message });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   const sendMessage = useCallback(async (opts = {}) => {
     // opts.text / opts.projectId let a save-memory scope pick re-send the same
     // message bound to a chosen project (see the project_choice chooser below).
@@ -833,9 +970,11 @@ function OverviewChat({ inputRef }) {
       // Deferred save → render a clickable SCOPE CHOOSER (mirrors the mobile
       // Talk-to-HIVE flow) instead of asking the user to type a project name.
       // Clicking an option re-sends the same save bound to that scope.
-      const pcProjects = chatData.project_choice?.projects;
-      const projectChoice = (Array.isArray(pcProjects) && pcProjects.length)
-        ? { projects: pcProjects, originalMessage: trimmed }
+      const rawProjectChoice = chatData.project_choice;
+      const projectChoice = (rawProjectChoice?.draft
+          && ((Array.isArray(rawProjectChoice.projects) && rawProjectChoice.projects.length)
+            || (Array.isArray(rawProjectChoice.scope_options) && rawProjectChoice.scope_options.length)))
+        ? { ...rawProjectChoice }
         : null;
       const completedMessage = {
         id: Date.now() + 1,
@@ -844,6 +983,7 @@ function OverviewChat({ inputRef }) {
         sources: Array.isArray(chatData.sources) ? chatData.sources : [],
         steps: Array.isArray(chatData.steps) ? chatData.steps : [],
         gaps: Array.isArray(chatData.gaps) ? chatData.gaps : [],
+        follow_ups: Array.isArray(chatData.follow_ups) ? chatData.follow_ups : [],
         orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
         continuation: chatData.continuation || null,
         draft_ids: Array.isArray(chatData.draft_ids) ? chatData.draft_ids : [],
@@ -853,6 +993,7 @@ function OverviewChat({ inputRef }) {
       setMessages((prev) => prev.some((item) => item.id === streamingId)
         ? prev.map((item) => item.id === streamingId ? completedMessage : item)
         : [...prev, completedMessage]);
+      emitUsageChanged();
     } catch (err) {
       setMessages((prev) => [...prev, {
         id: Date.now() + 1,
@@ -866,6 +1007,47 @@ function OverviewChat({ inputRef }) {
       setLoading(false);
     }
   }, [input, loading, messages, chatScope, i18n.language, t, useTools]);
+
+  const completePreparedSave = useCallback(async (messageId, choice, label, destination) => {
+    const draft = choice?.draft;
+    if (!draft || choice?.saving || choice?.saved) return;
+    setMessages((prev) => prev.map((item) => item.id === messageId
+      ? { ...item, projectChoice: { ...item.projectChoice, saving: true, saveError: null } }
+      : item));
+    try {
+      await apiClient.createMemory({
+        title: draft.title,
+        content: draft.content,
+        tags: draft.tags || [],
+        memory_type: draft.memory_type || 'fact',
+        ...destination,
+      });
+      setMessages((prev) => prev.map((item) => item.id === messageId
+        ? { ...item, projectChoice: { ...item.projectChoice, saving: false, saved: label } }
+        : item));
+    } catch (error) {
+      setMessages((prev) => prev.map((item) => item.id === messageId
+        ? { ...item, projectChoice: { ...item.projectChoice, saving: false, saveError: error?.response?.data?.error || error?.message || 'Save failed.' } }
+        : item));
+    }
+  }, []);
+
+  // Persist a memory-scope choice onto the message itself (not just the
+  // picker's own local state), so it survives any re-render of the chat —
+  // page reload restoring from localStorage included — instead of the
+  // option buttons reappearing as if nothing had been chosen.
+  const handleProjectChoiceSaved = useCallback((messageId, label) => {
+    setMessages((prev) => prev.map((item) => (
+      item.id === messageId && item.project_choice
+        ? { ...item, project_choice: { ...item.project_choice, saved_scope: label } }
+        : item
+    )));
+  }, []);
+
+  const selectFollowUp = useCallback((question) => {
+    setInput(String(question || '').slice(0, 4000));
+    requestAnimationFrame(() => inputRef?.current?.focus());
+  }, [inputRef]);
 
   const continueOrchestration = useCallback(async (continuation, request, option) => {
     if (loading) return;
@@ -892,6 +1074,7 @@ function OverviewChat({ inputRef }) {
         id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
         steps: data.steps || [], draft_ids: data.draft_ids || [], sources: data.sources || [],
         pending_actions: data.pending_actions || [],
+        follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
         orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
         continuation: data.continuation || null,
       }]);
@@ -903,8 +1086,13 @@ function OverviewChat({ inputRef }) {
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      if (deepResearchMode) startDeepResearch(input);
+      else sendMessage();
     }
+  };
+  const onSendClick = () => {
+    if (deepResearchMode) startDeepResearch(input);
+    else sendMessage();
   };
 
   const hasThread = messages.length > 0 || loading;
@@ -946,34 +1134,52 @@ function OverviewChat({ inputRef }) {
         >
           {messages.map((m) => (
             <React.Fragment key={m.id}>
-              <ChatBubble msg={m} onContinue={continueOrchestration} />
+              <ChatBubble msg={m} onContinue={continueOrchestration} onProjectChoiceSaved={handleProjectChoiceSaved} onFollowUp={selectFollowUp} />
+              {m.deepResearch && (
+                <DeepResearchCard
+                  dr={m.deepResearch}
+                  onPreview={() => setDrPreviewJob(m.deepResearch.job)}
+                  onOpenChrome={() => {
+                    const ok = openResearchReportTab(m.deepResearch.job, scopeOptions);
+                    if (!ok) window.alert('Popup blocked — allow popups for HIVEMIND to open the report.');
+                  }}
+                />
+              )}
               {m.projectChoice && !loading && (
                 <div className="mt-5 mb-1 flex flex-col gap-2" data-testid="save-scope-chooser">
                   <p className="text-[14px] font-semibold text-[#1a1a17]">
                     {t('overview.chat.chooseScope', 'Where should I save this?')}
                   </p>
                   <p className="text-[12.5px] leading-relaxed text-[#737373]">The memory is prepared but has not been saved. Choose its scope to finish.</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => sendMessage({ text: m.projectChoice.originalMessage, projectId: null })}
-                      className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] text-[#0a0a0a] hover:border-[#117dff] transition-colors"
-                    >
-                      <Lock size={13} className="text-[#a3a3a3]" />
-                      {t('knowledgebase.scopePersonalLabel', 'My Space')}
-                    </button>
+                  {m.projectChoice.saved ? (
+                    <p className="text-[12px] font-medium text-emerald-700">✓ Saved to {m.projectChoice.saved}</p>
+                  ) : <div className="flex flex-wrap gap-1.5">
+                    {(m.projectChoice.scope_options || [{ scope: 'personal', label: t('knowledgebase.scopePersonalLabel', 'My Space') }, { scope: 'organization', label: 'Organization' }]).map((option) => (
+                      <button
+                        key={option.scope}
+                        type="button"
+                        disabled={m.projectChoice.saving}
+                        onClick={() => completePreparedSave(m.id, m.projectChoice, option.label || option.scope, { scope: option.scope })}
+                        className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] text-[#0a0a0a] hover:border-[#117dff] transition-colors disabled:opacity-50"
+                      >
+                        {option.scope === 'personal' ? <Lock size={13} className="text-[#a3a3a3]" /> : <Globe size={13} className="text-[#a3a3a3]" />}
+                        {option.label || option.scope}
+                      </button>
+                    ))}
                     {m.projectChoice.projects.map((p) => (
                       <button
                         key={p.id || p.slug}
                         type="button"
-                        onClick={() => sendMessage({ text: m.projectChoice.originalMessage, projectId: p.id || p.slug })}
-                        className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] text-[#0a0a0a] hover:border-[#117dff] transition-colors"
+                        disabled={m.projectChoice.saving}
+                        onClick={() => completePreparedSave(m.id, m.projectChoice, p.name || p.slug || p.id, { project_id: p.id || p.slug })}
+                        className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] text-[#0a0a0a] hover:border-[#117dff] transition-colors disabled:opacity-50"
                       >
                         <Building2 size={13} className="text-[#a3a3a3]" />
                         {p.name || p.slug || p.id}
                       </button>
                     ))}
-                  </div>
+                  </div>}
+                  {m.projectChoice.saveError && <p className="text-[11px] text-red-600">{m.projectChoice.saveError}</p>}
                 </div>
               )}
             </React.Fragment>
@@ -998,7 +1204,7 @@ function OverviewChat({ inputRef }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={t('overview.chat.placeholder', 'Do anything with HIVE…')}
+          placeholder={deepResearchMode ? t('overview.chat.researchPlaceholder', 'Research the web…  e.g. "compare vector DBs for 1M-row RAG"') : t('overview.chat.placeholder', 'Ask your brain anything…')}
           className="w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[13px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none"
         />
         <div className="flex items-center justify-between px-3 pb-2.5">
@@ -1089,6 +1295,22 @@ function OverviewChat({ inputRef }) {
               </AnimatePresence>
             </div>
 
+            {/* Deep Research — same /v1/proxy/web/research/jobs backend as Web
+                Studio's Research mode, triggered inline from chat. Runs in the
+                background (composer stays usable) and renders progress + View
+                in Chrome / Preview on the turn once it lands. */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={deepResearchMode}
+              onClick={() => setDeepResearchMode((v) => !v)}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 transition-all ${deepResearchMode ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-[#e3e0db] bg-white text-[#525252] hover:border-[#d4d0ca] hover:bg-[#faf9f4]'}`}
+              title={t('overview.chat.deepResearchHint', 'Compile a multi-source research report with citations (1-3 min)')}
+            >
+              <Globe size={12} />
+              <span className="text-[10px] font-semibold tracking-tight">{t('overview.chat.deepResearch', 'Deep Research')}</span>
+            </button>
+
           </div>
           <div className="flex items-center gap-2">
             {messages.length > 0 && (
@@ -1100,14 +1322,17 @@ function OverviewChat({ inputRef }) {
               </button>
             )}
             <button
-              onClick={sendMessage}
+              onClick={onSendClick}
               disabled={!input.trim() || loading}
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
                 input.trim() && !loading
-                  ? 'bg-[#117dff] text-white hover:bg-[#0066e0] shadow-[0_2px_8px_rgba(17,125,255,0.3)]'
+                  ? deepResearchMode
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-[0_2px_8px_rgba(37,99,235,0.3)]'
+                    : 'bg-[#117dff] text-white hover:bg-[#0066e0] shadow-[0_2px_8px_rgba(17,125,255,0.3)]'
                   : 'bg-[#f3f1ec] text-[#a3a3a3]'
               }`}
-              aria-label={t('overview.chat.send', 'Send')}
+              aria-label={deepResearchMode ? t('overview.chat.startResearch', 'Start deep research') : t('overview.chat.send', 'Send')}
+              title={deepResearchMode ? t('overview.chat.startResearch', 'Start deep research') : undefined}
             >
               <ArrowUp size={15} />
             </button>
@@ -1127,6 +1352,88 @@ function OverviewChat({ inputRef }) {
 
       {/* Full cognitive memory — opened from a band chip */}
       {openMemory && <MemoryModal memory={openMemory} onClose={() => setOpenMemory(null)} t={t} />}
+
+      {/* Deep Research preview — same in-app modal Web Studio uses */}
+      <AnimatePresence>
+        {drPreviewJob && (
+          <ResearchPreviewModal
+            job={drPreviewJob}
+            onClose={() => setDrPreviewJob(null)}
+            onOpenReport={() => {
+              const ok = openResearchReportTab(drPreviewJob, scopeOptions);
+              if (!ok) window.alert('Popup blocked — allow popups for HIVEMIND to open the report.');
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ─── Mobile QR promo — floating corner card + popup ──────────────
+// Same QR pairing target as the Talk-to-HIVE slide panel (Chat.jsx) — one
+// destination, no second implementation. Dismissal persists like PwaInstall's
+// own banner (localStorage flag), so closing it is permanent per browser.
+const MOBILE_QR_DISMISS_KEY = 'hive:mobile-qr-dismissed';
+
+// Single bottom-right widget: collapsed pill by default, and the QR code
+// slides UP out of the same card (in place) when tapped — no separate modal.
+function MobileQrCorner({ open, onToggle, onDismiss }) {
+  const qrValue = `${typeof window !== 'undefined' ? window.location.origin : 'https://hivemind.davinciai.eu'}/hivemind/m/chat?from=dashboard`;
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 12, scale: 0.98 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="fixed bottom-5 right-5 z-40 w-[280px] bg-white border border-[#e3e0db] rounded-[14px] shadow-[0_16px_40px_rgba(20,20,15,0.12)] overflow-hidden"
+    >
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="absolute -top-2 -right-2 z-10 w-6 h-6 rounded-full bg-[#0a0a0a] text-white flex items-center justify-center hover:bg-[#262626] transition-colors"
+      >
+        <X size={12} />
+      </button>
+
+      {/* QR panel — slides up above the label row when open, folds away when not. */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="qr"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            className="overflow-hidden border-b border-[#f1eee7]"
+          >
+            <div className="px-4 pt-4 pb-4 flex flex-col items-center text-center">
+              <div className="w-[132px] h-[132px] bg-white border border-[#e3e0db] rounded-[10px] p-2 flex items-center justify-center">
+                <QRCodeSVG value={qrValue} size={112} level="M" marginSize={0} bgColor="#ffffff" fgColor="#0a0a0a" />
+              </div>
+              <p className="mt-3 text-[11px] text-[#525252] leading-relaxed max-w-[220px]">
+                Scan from mobile to carry your HIVEMIND in your pocket.
+              </p>
+              <p className="mt-1 text-[9.5px] font-mono text-[#a3a3a3]">Same memory · same organization</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <button type="button" onClick={onToggle} className="w-full text-left flex items-center gap-3 p-3.5 group">
+        <span className="w-11 h-11 rounded-[10px] bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center flex-shrink-0">
+          {open ? <QrCode size={19} className="text-[#117dff]" /> : <Smartphone size={19} className="text-[#117dff]" />}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[11px] text-[#a3a3a3]">For more compatibility</span>
+          <span className="block text-[13.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] group-hover:text-[#117dff] transition-colors">
+            Use HIVEMIND Mobile
+          </span>
+        </span>
+        <ChevronUp size={14} className={`text-[#a3a3a3] flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
     </motion.div>
   );
 }
@@ -1139,6 +1446,19 @@ export default function Overview() {
   // First-visit guided tour — glass overlay + arrows to each sidebar page.
   const tour = useOverviewTour();
   const chatInputRef = useRef(null);
+
+  // Mobile QR promo — single bottom-right corner widget; tapping it slides
+  // the QR up inside the same card instead of opening a separate popup.
+  // Dismissal is permanent per browser.
+  const [qrCardDismissed, setQrCardDismissed] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    try { return window.localStorage.getItem(MOBILE_QR_DISMISS_KEY) === '1'; } catch { return false; }
+  });
+  const [qrOpen, setQrOpen] = useState(false);
+  const dismissQrCard = useCallback(() => {
+    setQrCardDismissed(true);
+    try { window.localStorage.setItem(MOBILE_QR_DISMISS_KEY, '1'); } catch { /* storage blocked */ }
+  }, []);
 
   // Auto-redirect to the dedicated mobile chat page on phones. The full
   // Overview surface is hard to navigate one-handed; mobile users land on
@@ -1359,6 +1679,16 @@ export default function Overview() {
 
       {/* The HIVE chat — the Overview centerpiece */}
       <OverviewChat inputRef={chatInputRef} />
+
+      {/* Mobile QR promo — one bottom-right corner widget, desktop-only
+          (mobile visitors never reach this page — see the redirect effect
+          above). Tapping it slides the QR up inside the same card instead
+          of opening a separate popup. */}
+      <AnimatePresence>
+        {!qrCardDismissed && (
+          <MobileQrCorner open={qrOpen} onToggle={() => setQrOpen((v) => !v)} onDismiss={dismissQrCard} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

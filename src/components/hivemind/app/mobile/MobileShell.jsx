@@ -9,6 +9,8 @@ import {
 import { useAuth } from '../auth/AuthProvider';
 import SingulanceSplash from './SingulanceSplash';
 import SingulanceMark from '../shared/SingulanceMark';
+import { useUsage } from '../shared/useUsage';
+import CreditBalance from '../shared/CreditBalance';
 
 const SPLASH_FLAG = 'hm_m_splashed';
 
@@ -40,6 +42,7 @@ export default function MobileShell({ children, rightAction = null, title = null
   const location = useLocation();
   const { user, org, logout } = useAuth() || {};
   const [drawer, setDrawer] = useState(false);
+  const { usage } = useUsage();
 
   // SINGULANCE onboarding splash — plays once per device, and again right
   // after a QR scan (?from=dashboard). Decided synchronously on first render so
@@ -155,6 +158,7 @@ export default function MobileShell({ children, rightAction = null, title = null
                 {firstName}
               </div>
               {org?.name && <div className="text-[11.5px] text-[#737373] truncate mt-0.5">{org.name}</div>}
+              <CreditBalance credits={usage?.credits} inline className="mt-1" />
             </div>
 
             <nav className="flex-1 overflow-y-auto px-2.5">

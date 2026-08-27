@@ -51,7 +51,11 @@ const MobileNavigation = () => {
       if (item.href.startsWith('http')) window.location.assign(item.href);
       else navigate(item.href);
     } else if (item.sectionId) {
-      const el = document.getElementById(item.sectionId);
+      // On phone widths, MobileHomepage skips mounting the heavy sections
+      // (SubProducts/MobileAboutSection) that own these ids — fall back to
+      // the always-mounted footer's namesake anchor so the link still lands
+      // somewhere real instead of silently doing nothing.
+      const el = document.getElementById(item.sectionId) || document.getElementById(`${item.sectionId}-footer`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };

@@ -24,6 +24,15 @@ import {
   Lock,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import {
+  documentIngestMode,
+  documentIngestState,
+  evidenceCardTitle,
+  isKnowledgeEvidenceRow,
+  KNOWLEDGE_CHANGED_EVENT,
+  paginationTotal,
+  sanitizeEvidenceMetadata,
+} from '../shared/knowledge-ingest-contract';
 import { useApiQuery, useDebounce } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
 import { filterUserVisibleMemories } from '../shared/memory-filters';
@@ -67,14 +76,19 @@ const TABS = [
 ];
 
 const MEMORY_TYPES = [
-  { key: 'experience', label: 'Experience', color: '#3b82f6' },
-  { key: 'decision',   label: 'Decision',   color: '#f59e0b' },
   { key: 'fact',       label: 'Fact',       color: '#22c55e' },
+  { key: 'event',      label: 'Event',      color: '#3b82f6' },
+  { key: 'decision',   label: 'Decision',   color: '#f59e0b' },
   { key: 'preference', label: 'Preference', color: '#a855f7' },
+  { key: 'goal',       label: 'Goal',       color: '#0ea5e9' },
+  { key: 'commitment', label: 'Commitment', color: '#f97316' },
+  { key: 'policy',     label: 'Policy',     color: '#64748b' },
   { key: 'procedure',  label: 'Procedure',  color: '#ec4899' },
+  { key: 'lesson',     label: 'Lesson',     color: '#14b8a6' },
   // Cognition-loop output = "dreams" (auto-synthesized, queryable bi-temporally)
   { key: 'synthesis',  label: '🌙 Dreams',  color: '#8b5cf6' },
   { key: 'summary',    label: 'Summary',    color: '#06b6d4' },
+  { key: 'conversation', label: 'Conversation', color: '#6366f1' },
 ];
 
 const TYPE_COLOR_MAP = Object.fromEntries(MEMORY_TYPES.map((t) => [t.key, t.color]));
@@ -1016,7 +1030,11 @@ export default function Memories() {
   // which sits outside the selected team simply vanished from this filter — the
   // scope filter would silently offer fewer projects than the user can actually
   // read. allProjects is the unfiltered set the same context already exposes.
-  const { allProjects: _allProjects, projects: _teamProjects } = useTeamContext() || {};
+  const {
+    allProjects: _allProjects,
+    projects: _teamProjects,
+    activeProjectId,
+  } = useTeamContext() || {};
   const accessibleProjects = (_allProjects && _allProjects.length ? _allProjects : _teamProjects) || [];
   const [showFilters, setShowFilters] = useState(false);
   // Phase 2 polish
@@ -1034,9 +1052,26 @@ export default function Memories() {
   // Read from /memory/stats, which already reports it, so central-graph-only panels can be skipped
   // instead of firing requests that are guaranteed to 501.
   const [storageMode, setStorageMode] = useState(null);
+  const [layerCounts, setLayerCounts] = useState({ memories: null, documents: null, evidence: null });
   // Org name (normalized) — gates the "Company Info" label so it only shows
   // when a KB/document memory's company intent matches the user's organisation.
   const [orgKey, setOrgKey] = useState('');
+
+  // Tab badges must be the same ACL-filtered projections the tabs render.
+  // Storage aggregate stats are intentionally not suitable for Documents or
+  // Evidence: they can include rows the current principal cannot read.
+  const refreshLayerCounts = useCallback(async () => {
+    const results = await Promise.allSettled([
+      apiClient.listMemories({ limit: 1 }),
+      apiClient.listDocuments({ limit: 1 }),
+      apiClient.listEvidence({ limit: 1 }),
+    ]);
+    setLayerCounts({
+      memories: results[0].status === 'fulfilled' ? paginationTotal(results[0].value) : null,
+      documents: results[1].status === 'fulfilled' ? paginationTotal(results[1].value) : null,
+      evidence: results[2].status === 'fulfilled' ? paginationTotal(results[2].value) : null,
+    });
+  }, []);
 
   // Fetch top entities + contradiction count once
   useEffect(() => {
@@ -1057,7 +1092,11 @@ export default function Memories() {
       // BOTH calls (the old code gated only contradictions, and only for the exact
       // string 'amr' — leaving topic-states firing and missing amr_embedded/byod).
       let _mode = null;
-      try { const stats = await apiClient.getMemoryStats().catch(() => null); _mode = stats?.storage_mode || null; setStorageMode(_mode); } catch { /* noop */ }
+      try {
+        const stats = await apiClient.getMemoryStats().catch(() => null);
+        _mode = stats?.storage_mode || null;
+        setStorageMode(_mode);
+      } catch { /* noop */ }
       const _agentBacked = ['amr', 'amr_embedded', 'byod', 'byod_amr'].includes(String(_mode || ''));
       if (cancelled) return;
       if (_agentBacked) {
@@ -1087,6 +1126,19 @@ export default function Memories() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // A scope/project switch, upload completion, deletion, or promotion changes
+  // the visible rows. Re-read the three exact list totals rather than guessing
+  // from an in-memory grid or a storage-wide aggregate.
+  useEffect(() => {
+    refreshLayerCounts().catch(() => {});
+  }, [activeProjectId, refreshLayerCounts, tierProject, tierScope]);
+
+  useEffect(() => {
+    const refresh = () => { refreshLayerCounts().catch(() => {}); };
+    window.addEventListener(KNOWLEDGE_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(KNOWLEDGE_CHANGED_EVENT, refresh);
+  }, [refreshLayerCounts]);
 
   // Pagination
   const [offset, setOffset] = useState(0);
@@ -1203,6 +1255,11 @@ export default function Memories() {
               >
                 <Icon size={16} />
                 <span className="text-sm font-semibold">{t(`memories.tab_${tab.id}`, tab.label)}</span>
+                {Number.isFinite(layerCounts[tab.id]) && (
+                  <span className="rounded-full bg-[#f3f1ed] px-1.5 py-0.5 text-[10px] font-mono text-[#737373]">
+                    {layerCounts[tab.id].toLocaleString()}
+                  </span>
+                )}
                 {isActive && (
                   <motion.div
                     layoutId="activeTab"
@@ -1350,6 +1407,7 @@ export default function Memories() {
             tierScope={tierScope}
             tierProject={tierProject}
             orgKey={orgKey}
+            onKnowledgeChanged={refreshLayerCounts}
           />
         )}
 
@@ -1410,6 +1468,7 @@ function MemoriesTab({
   setActiveTab,
   activeCognitiveRole,
   setActiveCognitiveRole,
+  onKnowledgeChanged,
 }) {
   // ─── Data fetching ──────────────────────────────────────────────
 
@@ -1602,8 +1661,9 @@ function MemoriesTab({
       setSelectedMemory(null);
       setAllMemories((prev) => prev.filter((m) => m.id !== id));
       refetchList();
+      onKnowledgeChanged?.();
     },
-    [refetchList, setAllMemories, setSelectedMemory],
+    [onKnowledgeChanged, refetchList, setAllMemories, setSelectedMemory],
   );
 
   return (
@@ -2126,29 +2186,55 @@ function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelect
 
 function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDocument }) {
   const { t } = useTranslation('dashboard');
-  const [searchMode, setSearchMode] = useState('evidence'); // 'evidence' or 'hybrid'
+  const PAGE_SIZE = 40;
+  const [offset, setOffset] = useState(0);
+  const [evidenceRows, setEvidenceRows] = useState([]);
+  const [total, setTotal] = useState(0);
   const debouncedQuery = useDebounce(searchQuery, 350);
+  const isSearching = debouncedQuery.trim().length > 0;
+
+  useEffect(() => {
+    setOffset(0);
+    setEvidenceRows([]);
+  }, [debouncedQuery]);
 
   const {
     data,
     loading,
     error,
   } = useApiQuery(
-    () => {
-      if (!debouncedQuery.trim()) return Promise.resolve(null);
-      return searchMode === 'hybrid'
-        ? apiClient.hybridSearch(debouncedQuery, { limit: 20 })
-        : apiClient.searchEvidence(debouncedQuery, { limit: 20 });
-    },
-    [debouncedQuery, searchMode]
+    () => isSearching
+      ? apiClient.searchEvidence(debouncedQuery, { limit: 200 })
+      : apiClient.listEvidence({ limit: PAGE_SIZE, offset }),
+    [isSearching, debouncedQuery, offset]
   );
 
-  const results = data?.results || data?.evidence || data || [];
+  useEffect(() => {
+    if (!data) return;
+    const rawPage = data?.results || data?.evidence || (Array.isArray(data) ? data : []);
+    // The Evidence tab is a KnowledgeSegment projection only. A search result
+    // may carry related records alongside a segment, but it must never become
+    // an evidence card merely because it has an arbitrary `id` field.
+    const page = (Array.isArray(rawPage) ? rawPage : []).filter(isKnowledgeEvidenceRow);
+    if (isSearching) {
+      setEvidenceRows(page);
+      setTotal(page.length);
+      return;
+    }
+    setEvidenceRows((previous) => {
+      const base = offset === 0 ? [] : previous;
+      const seen = new Set(base.map((item) => item.segmentId || item.segment_id || item.id));
+      return [...base, ...page.filter((item) => !seen.has(item.segmentId || item.segment_id || item.id))];
+    });
+    setTotal(data?.pagination?.total ?? page.length);
+  }, [data, isSearching, offset]);
+
+  const hasMore = !isSearching && total > 0 && evidenceRows.length < total;
 
   return (
     <>
-      {/* ── Search Bar with Mode Toggle ── */}
-      <div className="space-y-4 mb-6">
+      {/* ── Search Bar ── */}
+      <div className="mb-6">
         <div className="relative">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#d4d0ca]" />
           {searchQuery && (
@@ -2168,30 +2254,6 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
           />
         </div>
 
-        {/* Mode Toggle */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[#a3a3a3] font-mono">{t('memories.searchMode', 'Search mode:')}</span>
-          <button
-            onClick={() => setSearchMode('evidence')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-              searchMode === 'evidence'
-                ? 'border-[#117dff] bg-[#117dff]/10 text-[#117dff]'
-                : 'border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca]'
-            }`}
-          >
-            {t('memories.evidenceOnly', 'Evidence only')}
-          </button>
-          <button
-            onClick={() => setSearchMode('hybrid')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-              searchMode === 'hybrid'
-                ? 'border-[#117dff] bg-[#117dff]/10 text-[#117dff]'
-                : 'border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca]'
-            }`}
-          >
-            {t('memories.hybridSearch', 'Hybrid (evidence + memories)')}
-          </button>
-        </div>
       </div>
 
       {/* ── Loading / Error States ── */}
@@ -2209,11 +2271,11 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
       )}
 
       {/* ── Evidence Results ── */}
-      {!loading && !error && results.length > 0 && (
+      {!loading && !error && evidenceRows.length > 0 && (
         <div className="space-y-3">
-          {results.map((item, idx) => (
-            <EvidenceCard 
-              key={`${item.segment_id || item.id}-${idx}`} 
+          {evidenceRows.map((item, idx) => (
+            <EvidenceCard
+              key={`${item.segmentId || item.segment_id || item.id}-${idx}`}
               evidence={item}
               onViewDocument={(docId) => {
                 setActiveTab('documents');
@@ -2227,18 +2289,34 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
         </div>
       )}
 
+      {!loading && !error && evidenceRows.length > 0 && (
+        <div className="flex items-center justify-center gap-3 pt-5">
+          <span className="text-xs text-[#a3a3a3]">
+            {t('memories.showingEvidence', 'Showing')} {evidenceRows.length}{total ? ` / ${total}` : ''}
+          </span>
+          {hasMore && (
+            <button
+              onClick={() => setOffset((value) => value + PAGE_SIZE)}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-white border border-[#e5e2dc] text-[#525252] hover:bg-[#f5f3ee] transition-colors"
+            >
+              {t('memories.loadMore', 'Load more')}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── Empty / Prompt State ── */}
-      {!loading && !error && !debouncedQuery.trim() && (
+      {!loading && !error && !isSearching && evidenceRows.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Database size={48} className="text-[#d4d0ca] mb-4" />
-          <h3 className="text-[#525252] font-semibold mb-2">{t('memories.searchEvidenceTitle', 'Search evidence segments')}</h3>
+          <h3 className="text-[#525252] font-semibold mb-2">{t('memories.noEvidenceYet', 'No evidence segments yet')}</h3>
           <p className="text-[#a3a3a3] text-sm max-w-md">
-            {t('memories.searchEvidenceHint', 'Enter a query to search through uploaded document segments and find supporting evidence')}
+            {t('memories.noEvidenceUploadHint', 'Upload a document to create searchable evidence segments.')}
           </p>
         </div>
       )}
 
-      {!loading && !error && debouncedQuery.trim() && results.length === 0 && (
+      {!loading && !error && isSearching && evidenceRows.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Database size={48} className="text-[#d4d0ca] mb-4" />
           <h3 className="text-[#525252] font-semibold mb-2">{t('memories.noEvidenceFound', 'No evidence found')}</h3>
@@ -2255,9 +2333,24 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
 
 function DocumentCard({ document, index, onSelect, isSelected }) {
   const { t } = useTranslation('dashboard');
+  const metadata = document.metadata || {};
+  const documentStatus = String(document.status ?? document.parseStatus ?? document.parse_status ?? '').toLowerCase();
   const typeColor = document.documentType === 'pdf' ? '#ef4444' :
                    document.documentType === 'docx' ? '#3b82f6' :
                    document.documentType === 'xlsx' ? '#10b981' : '#6b7280';
+  const documentState = documentIngestState({
+    ingestMode: documentIngestMode(document),
+    evidenceOnly: document.evidenceOnly ?? document.evidence_only ?? metadata.evidence_only ?? metadata.evidenceOnly,
+    memoryGenerationFailed: document.memoryGenerationFailed
+      ?? document.memory_generation_failed
+      ?? document.promotionFailed
+      ?? document.promotion_failed
+      ?? metadata.memory_generation_failed
+      ?? metadata.memoryGenerationFailed
+      ?? metadata.promotion_failed
+      ?? metadata.promotionFailed,
+    processing: ['queued', 'processing', 'parsing', 'segmenting', 'embedding', 'promoting'].includes(documentStatus),
+  });
 
   return (
     <motion.button
@@ -2300,6 +2393,9 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
         <span>·</span>
         <span>{document.promotedCount || 0} {t('memories.promotedLower', 'promoted')}</span>
       </div>
+      <p className={`mb-3 text-[10px] font-mono ${documentState === 'Memory generation failed' ? 'text-[#dc2626]' : documentState === 'Processing' ? 'text-[#117dff]' : 'text-[#16a34a]'}`}>
+        {documentState}
+      </p>
 
       {/* Tags */}
       {document.tags && document.tags.length > 0 && (
@@ -2331,17 +2427,101 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
 
 function EvidenceCard({ evidence, onViewDocument }) {
   const { t } = useTranslation('dashboard');
-  const hasDocument = evidence.document_id || evidence.documentId;
+  const [expanded, setExpanded] = useState(false);
+  const metadata = evidence.metadata || {};
+  const segmentId = evidence.segmentId || evidence.segment_id || evidence.id;
+  const documentId = evidence.documentId || evidence.document_id || evidence.document?.id || metadata.document_id;
+  const documentTitle = evidence.document?.title || evidence.document_title || t('memories.evidence', 'Evidence');
+  const title = String(sanitizeEvidenceMetadata(evidenceCardTitle(evidence, documentTitle)));
+  const citationId = metadata.citation_id ?? evidence.citation_id ?? evidence.citationId;
+  const sourceTitle = metadata.source_title ?? evidence.source_title ?? documentTitle;
+  const segmentOrdinal = metadata.segment_ordinal
+    ?? metadata.segmentIndex
+    ?? metadata.segment_index
+    ?? evidence.segment_ordinal
+    ?? evidence.segmentIndex
+    ?? evidence.segment_index;
+  const page = metadata.page ?? metadata.page_number ?? metadata.pageNumber ?? evidence.page ?? evidence.page_number;
+  const scope = metadata.scope ?? metadata.scope_type ?? evidence.scope ?? evidence.scope_type;
+  const orgId = metadata.org_id ?? metadata.organization_id ?? evidence.org_id ?? evidence.organization_id;
+  const uploaderId = metadata.uploaded_by_user_id
+    ?? metadata.uploader_user_id
+    ?? evidence.uploaded_by_user_id
+    ?? evidence.uploader_user_id;
+  const projectIds = metadata.project_ids ?? evidence.project_ids;
+  const teamId = metadata.team_id ?? evidence.team_id;
+  const knownAt = metadata.known_at ?? evidence.known_at ?? evidence.createdAt ?? evidence.created_at;
+  const embeddingModel = metadata.embedding_model ?? evidence.embedding_model;
+  const embeddingVersion = metadata.embedding_version ?? metadata.embedding_model_version ?? evidence.embedding_version;
+  const safeValue = (value) => {
+    const sanitized = sanitizeEvidenceMetadata(value);
+    if (Array.isArray(sanitized)) return sanitized.join(', ');
+    if (sanitized && typeof sanitized === 'object') {
+      try { return JSON.stringify(sanitized); } catch { return String(sanitized); }
+    }
+    return sanitized == null ? '' : String(sanitized);
+  };
+  const provenance = [
+    citationId && { key: 'citation', Icon: Tag, label: `Citation ${safeValue(citationId)}` },
+    sourceTitle && { key: 'source', Icon: FileText, label: safeValue(sourceTitle) },
+    page != null && { key: 'page', Icon: FileText, label: `Page ${safeValue(page)}` },
+    segmentOrdinal != null && { key: 'segment', Icon: Database, label: `Segment ${safeValue(segmentOrdinal)}` },
+    scope && { key: 'scope', Icon: Lock, label: `Scope ${safeValue(scope)}` },
+    orgId && { key: 'org', Icon: Globe, label: `Org ${safeValue(orgId)}` },
+    uploaderId && { key: 'uploader', Icon: User, label: `Uploader ${safeValue(uploaderId)}` },
+    projectIds && { key: 'projects', Icon: FolderOpen, label: `Projects ${safeValue(projectIds)}` },
+    teamId && { key: 'team', Icon: Users, label: `Team ${safeValue(teamId)}` },
+    knownAt && { key: 'known-at', Icon: Clock, label: `Known ${safeValue(knownAt)}` },
+    embeddingModel && {
+      key: 'embedding',
+      Icon: Database,
+      label: `Embedding ${safeValue(embeddingModel)}${embeddingVersion ? ` ${safeValue(embeddingVersion)}` : ''}`,
+    },
+  ].filter(Boolean);
+  const detailMetadata = sanitizeEvidenceMetadata({
+    ...metadata,
+    segment_id: segmentId,
+    document_id: documentId,
+    citation_id: citationId,
+    source_title: sourceTitle,
+    segment_ordinal: segmentOrdinal,
+    page,
+    scope,
+    org_id: orgId,
+    uploaded_by_user_id: uploaderId,
+    project_ids: projectIds,
+    team_id: teamId,
+    known_at: knownAt,
+    embedding_model: embeddingModel,
+    embedding_version: embeddingVersion,
+    type: 'evidence_segment',
+    created_at: evidence.createdAt || evidence.created_at,
+    score: evidence.score,
+    document: evidence.document,
+  });
+  const metadataEntries = Object.entries(detailMetadata)
+    .filter(([, value]) => value !== null && value !== undefined && value !== '')
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  const displayMetadataValue = (value) => {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    try { return JSON.stringify(value); } catch { return String(value); }
+  };
   
   return (
     <motion.div
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-transparent border border-[#e3e0db] rounded-xl p-4 hover:border-[#d4d0ca] hover:shadow-sm transition-all"
+      className="bg-white border border-[#e3e0db] rounded-[10px] p-4 hover:border-[#d4d0ca] hover:shadow-sm transition-all"
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
+          <button type="button" onClick={() => setExpanded((value) => !value)} className="w-full text-left flex items-start gap-2">
+            <ChevronRight size={14} className={`mt-0.5 shrink-0 text-[#a3a3a3] transition-transform ${expanded ? 'rotate-90' : ''}`} />
+            <h3 className="mb-1 text-sm font-semibold text-[#0a0a0a]">{title}</h3>
+          </button>
           <p className="text-[#0a0a0a] text-sm line-clamp-3 mb-2">
             {evidence.content || evidence.text || evidence.excerpt}
           </p>
@@ -2356,31 +2536,18 @@ function EvidenceCard({ evidence, onViewDocument }) {
       {/* Metadata */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-[10px] text-[#a3a3a3] font-mono flex-1">
-          {evidence.document_title && (
+          {documentTitle && (
             <>
               <FileText size={10} />
-              <span className="line-clamp-1">{evidence.document_title}</span>
-            </>
-          )}
-          {evidence.segment_index != null && (
-            <>
-              <span>·</span>
-              <span>{t('memories.segment', 'Segment')} {evidence.segment_index + 1}</span>
-            </>
-          )}
-          {evidence.type === 'memory' && (
-            <>
-              <span>·</span>
-              <Brain size={10} />
-              <span>{t('memories.canonicalMemory', 'Canonical memory')}</span>
+              <span className="line-clamp-1">{documentTitle}</span>
             </>
           )}
         </div>
         
         {/* View Document Button */}
-        {hasDocument && onViewDocument && (
+        {documentId && onViewDocument && (
           <button
-            onClick={() => onViewDocument(evidence.document_id || evidence.documentId)}
+            onClick={() => onViewDocument(documentId)}
             className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono text-[#117dff] hover:bg-[#117dff]/10 rounded transition-colors"
           >
             <ExternalLink size={10} />
@@ -2388,6 +2555,52 @@ function EvidenceCard({ evidence, onViewDocument }) {
           </button>
         )}
       </div>
+
+      {provenance.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {provenance.map(({ key, Icon, label }) => (
+            <span
+              key={key}
+              title={label}
+              className="inline-flex max-w-full items-center gap-1 rounded-md border border-[#e3e0db] bg-[#faf9f4] px-1.5 py-0.5 text-[9.5px] font-mono text-[#525252]"
+            >
+              <Icon size={9} className="shrink-0 text-[#737373]" />
+              <span className="max-w-[180px] truncate">{label}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 pt-4 border-t border-[#eae7e1] space-y-4">
+              <div>
+                <div className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-2">Full evidence</div>
+                <p className="text-[12px] leading-relaxed text-[#525252] whitespace-pre-wrap break-words">
+                  {evidence.content || evidence.text || evidence.excerpt || '—'}
+                </p>
+              </div>
+              <div>
+                <div className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-2">Metadata</div>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                  {metadataEntries.map(([key, value]) => (
+                    <div key={key} className="min-w-0 border-b border-[#f3f1ec] pb-1.5">
+                      <dt className="text-[10px] font-mono text-[#a3a3a3] break-all">{key}</dt>
+                      <dd className="text-[11px] font-mono text-[#525252] break-all mt-0.5">{displayMetadataValue(value)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

@@ -3,6 +3,7 @@ import { API_DEFAULTS } from './theme';
 import { isPlanLimitError, extractPlanLimit, emitPlanLimit } from './planLimit';
 import { isServiceError, extractServiceError, emitServiceError } from './serviceError';
 import { productActionDecision } from './product-access';
+import { hasIngestModeMismatch, hasMemoryGenerationFailure, normalizeIngestMode, responseIngestMode } from './knowledge-ingest-contract';
 
 const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
 
@@ -47,7 +48,7 @@ class HiveMindApiClient {
     this._apiKeyStorageKey = 'hivemind_core_api_key';
 
     // Global plan-limit detector: on any 402 (or 403/429) carrying the
-    // `plan_limit_exceeded` machine code, emit a window event so the single
+    // `plan_limit_exceeded` or `quota_reached` machine code, emit a window event so the single
     // <PlanLimitModal> mounted in AppShell can surface the upgrade prompt —
     // then re-reject so individual callers behave exactly as before.
     this._attachPlanLimitInterceptor(this.controlPlane);
@@ -171,18 +172,20 @@ class HiveMindApiClient {
    * The control plane owns redirect_uri (for Zitadel).
    * The frontend owns return_to (for the browser flow after login).
    */
-  getLoginUrl(returnTo, idpHint) {
+  getLoginUrl(returnTo, idpHint, workspaceInviteToken) {
     const params = new URLSearchParams();
     if (returnTo) params.set('return_to', returnTo);
     if (idpHint) params.set('idp_hint', idpHint); // microsoft | apple | google — federated via ZITADEL
+    if (workspaceInviteToken) params.set('workspace_invite', workspaceInviteToken);
     const qs = params.toString();
     return `${this.controlPlane.defaults.baseURL}/auth/login${qs ? `?${qs}` : ''}`;
   }
 
-  getGoogleLoginUrl(returnTo, signupTicket) {
+  getGoogleLoginUrl(returnTo, signupTicket, workspaceInviteToken) {
     const params = new URLSearchParams();
     if (returnTo) params.set('return_to', returnTo);
     if (signupTicket) params.set('signup_ticket', signupTicket);
+    if (workspaceInviteToken) params.set('workspace_invite', workspaceInviteToken);
     const qs = params.toString();
     return `${this.controlPlane.defaults.baseURL}/auth/google${qs ? `?${qs}` : ''}`;
   }
@@ -1040,6 +1043,19 @@ class HiveMindApiClient {
     return `${base}/v1/hyper-rooms/${roomId}/turns/${turnId}/stream`;
   }
 
+  hyperArtifactAssetUrl(path) {
+    const value = String(path || '');
+    if (!value.startsWith('/v1/hyper-artifacts/')) return '';
+    return `${API_DEFAULTS.controlPlaneBase.replace(/\/$/, '')}${value}`;
+  }
+
+  async getHyperArtifact(path) {
+    const value = String(path || '');
+    if (!value.startsWith('/v1/hyper-artifacts/')) throw new Error('Invalid HyperRoom artifact path');
+    const { data } = await this.controlPlane.get(value, { responseType: 'text' });
+    return String(data || '');
+  }
+
   // ─── Control Plane: Digital Employees ───────────────────────
 
   async listEmployees() {
@@ -1321,8 +1337,8 @@ class HiveMindApiClient {
     return data;
   }
 
-  async unlockPlatformAdmin(passkey, operatorName) {
-    const { data } = await this.controlPlane.post('/admin/api/platform/unlock', { passkey, operator_name: operatorName });
+  async unlockPlatformAdmin(passcode) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/unlock', { passcode });
     return data;
   }
 
@@ -1356,8 +1372,13 @@ class HiveMindApiClient {
     return data;
   }
 
-  async getPlatformAiCosts({ q = '', limit = 200 } = {}) {
-    const { data } = await this.controlPlane.get('/admin/api/platform/ai-costs', { params: { q, limit } });
+  async getPlatformAiCosts({ q = '', limit = 200, period = 'month' } = {}) {
+    const { data } = await this.controlPlane.get('/admin/api/platform/ai-costs', { params: { q, limit, period } });
+    return data;
+  }
+
+  async getPlatformAiCostDetail(orgId, { period = 'month' } = {}) {
+    const { data } = await this.controlPlane.get(`/admin/api/platform/ai-costs/${encodeURIComponent(orgId)}`, { params: { period } });
     return data;
   }
 
@@ -1658,6 +1679,11 @@ class HiveMindApiClient {
     const { data } = await this.controlPlane.post('/v1/proxy/evidence/search', { 
       query, ...params 
     });
+    return data;
+  }
+
+  async listEvidence(params = {}) {
+    const { data } = await this.controlPlane.get('/v1/proxy/evidence', { params });
     return data;
   }
 
@@ -2272,6 +2298,10 @@ class HiveMindApiClient {
   // ({ documentId, segmentCount, promotedCount }). Pass options.onStatus to
   // surface live stage/progress, options.signal to cancel.
   async uploadDocument(file, options = {}) {
+    // Capture the selected mode once. Every poll and terminal response is
+    // checked against this value so a later modal interaction cannot alter an
+    // in-flight file's intended pipeline.
+    const requestedIngestMode = normalizeIngestMode(options.ingestMode);
     const formData = new FormData();
     formData.append('file', file);
     if (options.tags) formData.append('tags', options.tags);
@@ -2285,7 +2315,7 @@ class HiveMindApiClient {
     // Images already sent it, which is why they succeeded in the same batch.
     if (options.projectId) formData.append('projectId', options.projectId);
     if (options.primaryTeamId) formData.append('primaryTeamId', options.primaryTeamId);
-    formData.append('ingestMode', options.ingestMode === 'evidence' ? 'evidence' : 'both');
+    formData.append('ingestMode', requestedIngestMode);
     // force=true re-ingests past the same-scope duplicate gate (user approved the
     // "upload anyway" prompt shown on a 409 duplicate_document).
     if (options.force) formData.append('force', 'true');
@@ -2300,10 +2330,23 @@ class HiveMindApiClient {
       onUploadProgress: options.onUploadProgress,
       signal: options.signal,
     });
+    const startedMode = responseIngestMode(started);
+    if (hasIngestModeMismatch(requestedIngestMode, startedMode)) {
+      const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${startedMode}.`);
+      error.code = 'INGEST_MODE_MISMATCH';
+      throw error;
+    }
 
     // Back-compat: an older core (no async support) returns the sync result
     // directly (has documentId, no job_id) — pass it straight through.
-    if (!started?.job_id) return started;
+    if (!started?.job_id) {
+      if (hasIngestModeMismatch(requestedIngestMode, startedMode, { requireReturned: true })) {
+        const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${startedMode}.`);
+        error.code = 'INGEST_MODE_MISMATCH';
+        throw error;
+      }
+      return { ...started, ingestMode: startedMode };
+    }
 
     // 2. Poll status until terminal.
     const jobId = started.job_id;
@@ -2316,6 +2359,7 @@ class HiveMindApiClient {
     options.onQueued?.({ job_id: jobId });
     const deadline = Date.now() + (options.timeoutMs || 10 * 60 * 1000);
     const pollMs = options.pollMs || 2500;
+    let reportedMode = startedMode;
     // Terminal SUCCESS states. Keep this the single source of truth for "the job is done".
     const TERMINAL_OK = new Set(['ready', 'indexed', 'complete', 'completed']);
     while (Date.now() < deadline) {
@@ -2329,6 +2373,7 @@ class HiveMindApiClient {
       }
       const meta = st?.metadata || {};
       const counts = st?.counts || {};
+      const detail = st?.progress_detail || meta?.progress_detail || {};
       // Doc fields may arrive nested under `metadata` (in-memory tracker path)
       // or flat at the top level (durable-queue Redis mirror). Read both so a
       // queued upload still resolves a real documentId.
@@ -2336,11 +2381,24 @@ class HiveMindApiClient {
       const segs = meta.segmentCount ?? st.segmentCount ?? counts.segments;
       const promoted = meta.promotedCount ?? st.promotedCount ?? counts.memories;
       const candidates = meta.candidateCount ?? st.candidateCount ?? counts.candidates;
+      const returnedMode = responseIngestMode(st);
+      if (hasIngestModeMismatch(requestedIngestMode, returnedMode)) {
+        const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${returnedMode}.`);
+        error.code = 'INGEST_MODE_MISMATCH';
+        throw error;
+      }
+      if (returnedMode != null) reportedMode = returnedMode;
       if (options.onStatus) {
         options.onStatus({
           status: st.status, progress: st.progress, stage: meta.stage ?? st.stage,
           segments: segs ?? meta.segments, promoted: promoted ?? meta.promoted,
-          ingestMode: st.ingest_mode ?? meta.ingestMode,
+          processed: detail.processed ?? st.processed,
+          total: detail.total ?? st.total,
+          elapsedMs: detail.elapsed_ms,
+          startedAt: detail.started_at ?? st.started_at ?? st.created_at,
+          stageStartedAt: detail.stage_started_at,
+          timings: detail.timings_ms,
+          ingestMode: returnedMode ?? reportedMode ?? requestedIngestMode,
           evidenceOnly: st.evidence_only ?? meta.evidenceOnly,
           evidenceOnlyReason: st.evidence_only_reason ?? meta.evidenceOnlyReason,
         });
@@ -2354,19 +2412,27 @@ class HiveMindApiClient {
       // in-memory tracker), which is exactly how the two sides drifted apart. Accept both, and treat
       // any unrecognised terminal-looking state as terminal rather than hanging on it.
       if (TERMINAL_OK.has(st.status)) {
+        if (hasIngestModeMismatch(requestedIngestMode, reportedMode, { requireReturned: true })) {
+          const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${reportedMode}.`);
+          error.code = 'INGEST_MODE_MISMATCH';
+          throw error;
+        }
         return {
           documentId: docId,
           segmentCount: segs,
           candidateCount: candidates,
           promotedCount: promoted,
-          ingestMode: st.ingest_mode ?? options.ingestMode ?? 'both',
+          ingestMode: reportedMode,
           evidenceOnly: st.evidence_only === true,
           evidenceOnlyReason: st.evidence_only_reason || null,
+          memoryGenerationFailed: hasMemoryGenerationFailure(st),
           job_id: jobId,
         };
       }
       if (st.status === 'failed') {
-        throw new Error(st.error || 'Ingestion failed');
+        const error = new Error(st.error || 'Ingestion failed');
+        error.code = 'INGEST_FAILED';
+        throw error;
       }
     }
     throw new Error('Ingestion timed out');

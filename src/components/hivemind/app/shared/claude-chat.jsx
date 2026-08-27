@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, ChevronRight, FileText, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
-  AlertTriangle, Loader2, ChevronDown, Brain, Sparkles,
+  AlertTriangle, Loader2, ChevronDown, Brain, Sparkles, CornerDownRight,
 } from 'lucide-react';
 import apiClient from './api-client';
 import { BRAND_LOGOS } from './connectors-catalog';
@@ -580,12 +580,16 @@ export function StepsDisclosure({ steps }) {
 
 // Claude-style assistant turn: NO bubble. Reasoning pill → serif answer on the
 // canvas → Sources pill → copy / retry / thumbs action row.
-export function AiBubble({ msg, onRetry, onContinue }) {
+export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFollowUp }) {
   const [showSources, setShowSources] = useState(false);
   const [copied, setCopied] = useState(false);
   const [vote, setVote] = useState(null);
   const hasSteps = Array.isArray(msg.steps) && msg.steps.length > 0;
   const hasSources = Array.isArray(msg.sources) && msg.sources.length > 0;
+  const followUps = [...new Set((Array.isArray(msg.follow_ups) ? msg.follow_ups : [])
+    .filter((item) => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean))].slice(0, 3);
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(msg.content || ''); setCopied(true); setTimeout(() => setCopied(false), 1500); }
@@ -687,17 +691,52 @@ export function AiBubble({ msg, onRetry, onContinue }) {
         </div>
       )}
 
-      {msg.project_choice && <MobileProjectChoice choice={msg.project_choice} />}
+      {!msg.error && followUps.length > 0 && (
+        <div className="mt-3 border-t border-[#e3e0db]" aria-label="Suggested follow-up questions">
+          {followUps.map((question) => (
+            <button
+              key={question}
+              type="button"
+              onClick={() => onFollowUp?.(question)}
+              className="group flex w-full items-start gap-3 border-b border-[#ece9e2] px-1 py-3 text-left text-[13.5px] leading-5 text-[#3d3d3a] transition-colors hover:bg-[#faf9f4] active:bg-[#f3f1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#117dff]/40"
+            >
+              <CornerDownRight size={16} className="mt-0.5 shrink-0 text-[#8a8577] transition-colors group-hover:text-[#117dff]" />
+              <span>{question}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {msg.project_choice && (
+        <MobileProjectChoice
+          choice={msg.project_choice}
+          savedScope={msg.project_choice?.saved_scope}
+          onSaved={(label) => onProjectChoiceSaved?.(msg.id, label)}
+        />
+      )}
     </div>
   );
 }
 
-// Project picker (mobile) — Org-wide + each project; click → silent scoped save.
-export function MobileProjectChoice({ choice }) {
-  const [saved, setSaved] = useState(null);
+// Scope picker (mobile) — the server returns a prepared canonical memory plus
+// explicit destinations. A click completes that prepared save directly; it does
+// not re-send the original statement and risk a second ambiguous planner turn.
+//
+// `savedScope`/`onSaved` persist the choice onto the message object itself
+// (via the caller's messages state, not just local component state) — this
+// component previously kept "saved" as local state only, so anything that
+// re-rendered the surrounding message from scratch (streaming continuing,
+// a page reload restoring chat from localStorage, etc.) lost the confirmed
+// state and the option buttons reappeared as if nothing had been chosen.
+export function MobileProjectChoice({ choice, savedScope, onSaved }) {
+  const [saved, setSaved] = useState(savedScope || null);
+  useEffect(() => { if (savedScope && savedScope !== saved) setSaved(savedScope); }, [savedScope]); // eslint-disable-line react-hooks/exhaustive-deps
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const projects = choice?.projects || [];
+  const scopeOptions = Array.isArray(choice?.scope_options) && choice.scope_options.length
+    ? choice.scope_options
+    : [{ scope: 'personal', label: 'Personal' }, { scope: 'organization', label: 'Organization' }];
   const draft = choice?.draft || null;
   if (!draft) return null;
   const save = async (label, extra) => {
@@ -709,6 +748,7 @@ export function MobileProjectChoice({ choice }) {
         memory_type: draft.memory_type || 'fact', ...extra,
       });
       setSaved(label);
+      onSaved?.(label);
     } catch (e) { setErr(e.response?.data?.error || e.message); }
     finally { setBusy(false); }
   };
@@ -719,7 +759,11 @@ export function MobileProjectChoice({ choice }) {
       <div className="text-[14px] font-semibold text-[#1a1a17]">Choose where to save this memory</div>
       <div className="mt-1 text-[12.5px] leading-relaxed text-[#737373]">The memory is prepared but has not been saved. Choose its scope to finish.</div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={() => save('Org-wide', { scope: 'organization' })} disabled={busy} className={btn}>🌐 Org-wide</button>
+        {scopeOptions.map((option) => (
+          <button key={option.scope} type="button" onClick={() => save(option.label || option.scope, { scope: option.scope })} disabled={busy} className={btn}>
+            {option.label || option.scope}
+          </button>
+        ))}
         {projects.map((p) => (
           <button key={p.id} type="button" onClick={() => save(p.name, { project_id: p.id })} disabled={busy} className={btn}>{p.name}</button>
         ))}

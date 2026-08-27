@@ -141,14 +141,14 @@ export function AuthProvider({ children }) {
       : defaultReturn;
     if (options.provider === 'google') {
       // Direct Google OAuth — bypasses Zitadel
-      window.location.href = apiClient.getGoogleLoginUrl(returnTo);
+      window.location.href = apiClient.getGoogleLoginUrl(returnTo, null, options.workspaceInviteToken);
     } else if (options.provider === 'microsoft' || options.provider === 'apple') {
       // Federated through ZITADEL — control plane maps the hint to the
       // registered IdP (or falls back to the ZITADEL chooser).
-      window.location.href = apiClient.getLoginUrl(returnTo, options.provider);
+      window.location.href = apiClient.getLoginUrl(returnTo, options.provider, options.workspaceInviteToken);
     } else {
       // Zitadel Enterprise SSO
-      window.location.href = apiClient.getLoginUrl(returnTo);
+      window.location.href = apiClient.getLoginUrl(returnTo, undefined, options.workspaceInviteToken);
     }
   }, []);
 

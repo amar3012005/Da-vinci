@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow } from 'lucide-react';
+import { Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 import { clearInvitationContext, loadInvitationContext, saveInvitationContext } from './invitation-session';
@@ -388,16 +388,17 @@ export default function LoginPage() {
     clearInvitationContext();
   };
 
-  /* Small square provider button (Microsoft / Apple / SSO) */
-  const ProviderTile = ({ onClick, label, children }) => (
+  /* Non-Google identity providers are intentionally visible but not live yet.
+     Keeping these as disabled native buttons prevents accidental OAuth redirects. */
+  const ComingSoonProvider = ({ label, children }) => (
     <button
-      onClick={onClick}
-      disabled={loading}
-      title={label}
-      aria-label={label}
-      className="flex-1 h-11 flex items-center justify-center gap-2 rounded-[6px] border border-[#e3e0db] bg-white hover:border-[#0a0a0a] hover:shadow-sm disabled:opacity-60 transition-all text-[#0a0a0a]"
+      type="button"
+      disabled
+      aria-label={`${label} — coming soon`}
+      className="flex-1 h-11 flex items-center justify-center gap-2 rounded-[6px] border border-[#e3e0db] bg-[#faf9f4] text-[#737373] cursor-not-allowed"
     >
       {children}
+      <span className="text-[9px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3]">Coming soon</span>
     </button>
   );
 
@@ -419,16 +420,19 @@ export default function LoginPage() {
 
         <div className={`flex flex-col md:flex-row items-stretch bg-white overflow-hidden ${showOnboarding ? 'h-full w-full border-0 rounded-none shadow-none' : 'border border-[#e3e0db] rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
           {/* Left: Login form */}
-          <div className={`transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'h-full overflow-y-auto p-8 md:w-1/2 md:border-r md:border-[#e3e0db] lg:p-12 xl:p-16' : 'p-8 md:w-[448px]'}`}>
+          <div className={`transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'h-full overflow-y-auto p-7 md:w-1/2 md:border-r md:border-[#e3e0db] lg:p-10 xl:p-12' : 'p-8 md:w-[448px]'}`}>
+            <div className={showOnboarding ? 'mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center py-8 lg:py-12' : ''}>
             {/* Logo */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-[8px] bg-[#117dff]/10 border border-[#117dff]/25 flex items-center justify-center">
-                  <Hexagon size={22} className="text-[#117dff]" />
-                </div>
+                <img
+                  src="/images/singulance-orbit.png"
+                  alt="Singulance"
+                  className="h-10 w-14 shrink-0 object-contain"
+                />
                 <div>
-                  <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">HIVEMIND</h1>
-                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.18em]">Memory Engine</p>
+                  <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">SINGULANCE</h1>
+                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.18em]">HIVEMIND · MEMORY ENGINE</p>
                 </div>
               </div>
               <span className="hidden sm:inline text-[10px] font-mono text-[#d4d0ca] tabular-nums">[v2]</span>
@@ -496,27 +500,28 @@ export default function LoginPage() {
                     )}
                     Continue with Google
                   </button>
-                  {/* Provider row: Microsoft · Apple · SSO */}
+                  {/* Visible provider roadmap — Google is the only live identity path. */}
                   <div className="flex items-center gap-2 mt-2.5">
-                    <ProviderTile label="Continue with Microsoft" onClick={() => login({ provider: 'microsoft', returnTo: returnToFromState || undefined })}>
+                    <ComingSoonProvider label="Microsoft">
                       <MicrosoftIcon size={15} />
                       <span className="text-[12px] font-medium">Microsoft</span>
-                    </ProviderTile>
-                    <ProviderTile label="Continue with Apple" onClick={() => login({ provider: 'apple', returnTo: returnToFromState || undefined })}>
+                    </ComingSoonProvider>
+                    <ComingSoonProvider label="Apple">
                       <AppleIcon size={16} />
                       <span className="text-[12px] font-medium">Apple</span>
-                    </ProviderTile>
+                    </ComingSoonProvider>
                   </div>
 
-                  {/* EU Sovereign SSO — full-width, the compliance path */}
+                  {/* Enterprise SSO stays visible without allowing an unavailable redirect. */}
                   <button
-                    onClick={() => login({ returnTo: returnToFromState || undefined })}
-                    disabled={loading}
-                    className="mt-2.5 w-full h-11 flex items-center justify-center gap-2.5 bg-white hover:bg-[#faf9f4] disabled:opacity-60 text-[#0a0a0a] font-medium rounded-[6px] transition-all text-[12px] font-['Space_Grotesk'] cursor-pointer border border-[#e3e0db] hover:border-[#0a0a0a] uppercase tracking-[0.075em]"
+                    type="button"
+                    disabled
+                    aria-label="Enterprise SSO — coming soon"
+                    className="mt-2.5 w-full h-11 flex items-center justify-center gap-2.5 bg-[#faf9f4] text-[#737373] font-medium rounded-[6px] text-[12px] font-['Space_Grotesk'] cursor-not-allowed border border-[#e3e0db] uppercase tracking-[0.075em]"
                   >
-                    <Shield size={14} className="text-[#117dff]" />
+                    <Shield size={14} className="text-[#a3a3a3]" />
                     Enterprise SSO · EU Sovereign
-                    <span className="text-[9px] font-mono normal-case tracking-normal text-[#a3a3a3]">SAML / OIDC</span>
+                    <span className="text-[9px] font-mono normal-case tracking-normal text-[#a3a3a3]">Coming soon</span>
                   </button>
 
                   {/* trust line */}
@@ -737,19 +742,20 @@ export default function LoginPage() {
                         Continue with Google
                       </button>
                       <div className="flex items-center gap-2">
-                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && personalAdmissionReady && handleCreateAccount('microsoft')}>
+                        <ComingSoonProvider label="Microsoft">
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
-                        </ProviderTile>
-                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && personalAdmissionReady && handleCreateAccount('apple')}>
+                        </ComingSoonProvider>
+                        <ComingSoonProvider label="Apple">
                           <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
-                        </ProviderTile>
+                        </ComingSoonProvider>
                       </div>
                       <button
-                        onClick={() => handleCreateAccount('zitadel')}
-                        disabled={!userName.trim() || !personalAdmissionReady}
-                        className="w-full h-10 rounded-[6px] bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-medium text-[12px] font-['Space_Grotesk'] transition-all cursor-pointer border border-[#e3e0db] hover:border-[#0a0a0a] flex items-center justify-center gap-2"
+                        type="button"
+                        disabled
+                        aria-label="Enterprise SSO — coming soon"
+                        className="w-full h-10 rounded-[6px] bg-[#faf9f4] text-[#737373] font-medium text-[12px] font-['Space_Grotesk'] cursor-not-allowed border border-[#e3e0db] flex items-center justify-center gap-2"
                       >
-                        <Shield size={13} className="text-[#117dff]" /> Enterprise SSO (EU Sovereign)
+                        <Shield size={13} className="text-[#a3a3a3]" /> Enterprise SSO (EU Sovereign) · <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#a3a3a3]">Coming soon</span>
                       </button>
                     </div>
                   )}
@@ -901,37 +907,74 @@ export default function LoginPage() {
                         </div>
                       )}
                       <button
-                        onClick={() => handleCreateAccount('zitadel')}
+                        onClick={() => handleCreateAccount('google')}
                         disabled={loadingEnterpriseInvitation || !userName.trim() || !enterpriseName.trim() || !enterpriseAdmissionReady}
-                        className="w-full h-11 rounded-[6px] bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
+                        className="w-full h-12 rounded-[6px] bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
                       >
-                        {hostingChoice === 'self_hosted'
-                          ? (<><Crown size={14} className="text-amber-300" /> Reserve Sovereign Instance</>)
-                          : (<><Shield size={14} /> Create with Enterprise SSO (EU)</>)}
+                        <span className="w-5 h-5 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={12} /></span>
+                        Continue with Google
                       </button>
                       <div className="flex items-center gap-2">
-                        <ProviderTile label="Create with Google" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('google')}>
-                          <GoogleIcon size={14} /><span className="text-[12px] font-medium">Google</span>
-                        </ProviderTile>
-                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('microsoft')}>
+                        <ComingSoonProvider label="Microsoft">
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
-                        </ProviderTile>
-                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('apple')}>
+                        </ComingSoonProvider>
+                        <ComingSoonProvider label="Apple">
                           <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
-                        </ProviderTile>
+                        </ComingSoonProvider>
                       </div>
+                      <button
+                        type="button"
+                        disabled
+                        aria-label="Enterprise SSO — coming soon"
+                        className="w-full h-10 rounded-[6px] bg-[#faf9f4] text-[#737373] font-medium text-[12px] font-['Space_Grotesk'] cursor-not-allowed border border-[#e3e0db] flex items-center justify-center gap-2"
+                      >
+                        <Shield size={13} className="text-[#a3a3a3]" /> Enterprise SSO (EU Sovereign) · <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#a3a3a3]">Coming soon</span>
+                      </button>
                     </div>
                   )}
                 </motion.div>
               )}
             </AnimatePresence>
+            </div>
           </div>
 
           {/* Right pane — artwork until a personal plan is selected, then a
               useful plan summary in the same half of the onboarding card. */}
-          <div className={`hidden md:block bg-[#f8f7f2] overflow-hidden relative ${showOnboarding ? 'h-full md:w-1/2' : 'md:w-[448px]'}`}>
-            {showOnboarding && accountType === 'personal' && onboardingStep === 2 && selectedPlan ? (() => {
+          <div className={`hidden md:flex bg-[#f8f7f2] overflow-hidden relative flex-col ${showOnboarding ? 'h-full md:w-1/2' : 'md:w-[448px]'}`}>
+            {showOnboarding && accountType === 'personal' && onboardingStep === 2 ? (() => {
               const plan = PERSONAL_PLANS.find((candidate) => candidate.id === selectedPlan);
+              if (!plan) {
+                return (
+                  <div className="flex h-full flex-col justify-between p-10 lg:p-14 xl:p-16">
+                    <div>
+                      <p className="text-[9px] font-mono uppercase tracking-[0.22em] text-[#117dff]">HIVEMIND PRODUCT LAYERS</p>
+                      <h3 className="mt-4 max-w-md text-[38px] font-semibold leading-[1.04] tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">Choose the way your Brain grows.</h3>
+                      <p className="mt-5 max-w-md text-[15px] leading-relaxed text-[#525252]">Every plan begins with your memory. Add governed work and voice only when they belong in your workflow.</p>
+                    </div>
+
+                    <div className="my-10 space-y-3">
+                      {[
+                        { icon: Brain, title: 'BRAIN', body: 'Grounded memory that remains yours.' },
+                        { icon: Workflow, title: 'OPERATING SYSTEM', body: 'Approved agents that carry work forward.' },
+                        { icon: Mic2, title: 'VOICE', body: 'TARA for conversations that become memory.' },
+                      ].map(({ icon: Icon, title, body }, index) => (
+                        <div key={title} className="flex items-center gap-4 rounded-[10px] border border-[#e3e0db] bg-white px-4 py-4">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[7px] bg-[#117dff]/[0.07] text-[#117dff]"><Icon size={17} /></span>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-mono font-bold tracking-[0.15em] text-[#0a0a0a]">0{index + 1} · {title}</p>
+                            <p className="mt-1 text-[12px] text-[#737373]">{body}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-t border-[#e3e0db] pt-5">
+                      <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#a3a3a3]">Select a plan to preview your access</p>
+                      <p className="mt-2 max-w-md text-[11px] leading-relaxed text-[#737373]">You can change plans later. Your Brain is never metered per recall.</p>
+                    </div>
+                  </div>
+                );
+              }
               const layers = [
                 { label: 'BRAIN', enabled: true, icon: Brain },
                 { label: 'OPERATING SYSTEM', enabled: ['free', 'pro', 'scale'].includes(plan.id), icon: Workflow },

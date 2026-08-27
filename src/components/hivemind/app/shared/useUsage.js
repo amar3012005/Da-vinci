@@ -9,7 +9,7 @@
  * every limit surfaced here comes straight off that response.
  *
  * Shape (per resource key): { used:number, limit:number(-1=unlimited), isDaily?:boolean }
- * Keys the FE consumes: memories, kbPages, connectors, hyperRooms,
+ * Keys the FE consumes: memories, kbPages, connectors,
  * deepResearch, webIntel, searches, tokens (uploads kept for back-compat).
  *
  * Refreshes on:
