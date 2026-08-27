@@ -1600,13 +1600,9 @@ export default function Overview() {
         transition={{ duration: 0.35 }}
         className="mb-6 bg-white border border-[#e3e0db] rounded-[10px] px-4 py-3 flex items-center gap-4 flex-wrap"
       >
-        {/* SINGULANCE brand lockup */}
-        <div className="flex items-center gap-2.5 flex-shrink-0" aria-label="SINGULANCE · HIVEMIND Operating System">
+        {/* Brand mark only — the overview status bar stays intentionally quiet. */}
+        <div className="flex flex-shrink-0" aria-label="SINGULANCE">
           <SingulanceMark size={36} />
-          <div className="hidden md:block leading-none">
-            <div className="text-[13px] font-bold tracking-[-0.02em] text-[#0a0a0a]">SINGULANCE</div>
-            <div className="mt-1 text-[7px] font-mono font-semibold tracking-[0.17em] text-[#a3a3a3]">HIVEMIND · OPERATING SYSTEM</div>
-          </div>
         </div>
 
         {/* Live clock */}
