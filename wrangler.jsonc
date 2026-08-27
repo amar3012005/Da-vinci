@@ -25,6 +25,10 @@
     {
       "pattern": "admin.hivemind.singulancelabs.com",
       "custom_domain": true
+    },
+    {
+      "pattern": "icarus.singulancelabs.com",
+      "custom_domain": true
     }
   ]
 }

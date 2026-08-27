@@ -9,6 +9,48 @@ import {
 import { MEMORY_TOOLS, WEB_TOOLS, CODING_TOOLS, TEMPORAL_TOOLS } from './app/pages/McpServer';
 
 const ICARUS_REPO = 'amar3012005/ICARUS';
+const ICARUS_AGENT_SETUP_URL = 'https://icarus.singulancelabs.com/agent-setup/prompt.md';
+const ICARUS_AGENT_SETUP_PROMPT = `Fetch and follow the ICARUS coding-agent setup instructions at:
+
+${ICARUS_AGENT_SETUP_URL}
+
+Set up ICARUS for the current repository. Detect the coding agent, install ICARUS only if needed, register its MCP integration, initialize this repository, and verify the result. Do not create a graph, governed task, or upload project data unless the user’s actual task requires it. Use ICARUS primarily for targeted durable memory and recall; use the full harness only for high-risk changes such as production, security, tenant, billing, migration, destructive, or major-refactor work.`;
+
+function IcarusAgentSetupBanner() {
+  const [copied, setCopied] = useState(false);
+  const copyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(ICARUS_AGENT_SETUP_PROMPT);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <section className="mt-6 rounded-[10px] border border-[#117dff]/25 bg-[#f7fbff] p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-[#117dff]/20 bg-white text-[#117dff]">
+            <Sparkles size={16} />
+          </div>
+          <div>
+            <div className="font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">Onboard your coding agent to ICARUS</div>
+            <p className="mt-0.5 text-[11.5px] leading-relaxed text-[#525252]">Copy one reviewed prompt. Your agent installs, registers, initializes, and verifies ICARUS for this repository.</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button type="button" onClick={copyPrompt} className="inline-flex items-center gap-1.5 rounded-[6px] bg-[#117dff] px-3 py-2 text-[12px] font-medium text-white hover:bg-[#0066e0]">
+            {copied ? <Check size={13} /> : <Copy size={13} />}{copied ? 'Copied' : 'Copy setup prompt'}
+          </button>
+          <a href={ICARUS_AGENT_SETUP_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] font-medium text-[#525252] no-underline hover:border-[#0a0a0a] hover:text-[#0a0a0a]">
+            Read <ArrowRight size={13} />
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function GithubStarBadge() {
   const [stars, setStars] = useState(null);
@@ -424,6 +466,7 @@ function IcarusDocs() {
         drop-in for a Qdrant client — <strong className="text-[#0a0a0a]">run it yourself, on your own box.</strong>
       </P>
       <div className="mt-4"><GithubStarBadge /></div>
+      <IcarusAgentSetupBanner />
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         <a href="#selfhost-quickstart" className="flex items-center gap-3 rounded-[10px] border border-[#e3e0db] bg-white p-4 no-underline hover:border-[#117dff] hover:shadow-sm">
@@ -922,7 +965,8 @@ function HarnessDocs() {
       {/* ── Install and initialize ── */}
       <section id="harness-install" className="mt-12">
         <Eyebrow>04 · GET STARTED</Eyebrow>
-        <H2 id="harness-install">Install and initialize</H2>
+      <H2 id="harness-install">Install and initialize</H2>
+      <IcarusAgentSetupBanner />
         <H3 id="harness-install-cli">Install the CLI</H3>
         <CodeBlock label="terminal">{`curl -fsSL https://raw.githubusercontent.com/${ICARUS_REPO}/main/install.sh | bash
 icarus --version`}</CodeBlock>
@@ -935,8 +979,7 @@ icarus --version`}</CodeBlock>
         <P>Run this at the root of the repository the agent will change:</P>
         <CodeBlock label="terminal">{`cd /path/to/repository
 icarus harness init --agent codex
-icarus doctor
-icarus graph build --repo .`}</CodeBlock>
+icarus doctor --repo .`}</CodeBlock>
         <P>
           Initialization is idempotent. It creates tracked harness configuration and ignored
           runtime directories, derives a repository identity, and safely copies legacy graph state
@@ -953,13 +996,14 @@ icarus mcp install codex
           installation or after updating ICARUS: an existing MCP process continues running the
           binary it started with.
         </P>
-        <P>The installed rule requires an agent, at the beginning of every new session, to:</P>
+        <P>The installed rule makes ICARUS memory available at the beginning of every new session. It requires an agent to:</P>
         <ul className="space-y-1.5 text-[13px] text-[#525252] list-decimal list-inside">
           <li>check whether <Mono>.icarus/manifest.yaml</Mono> exists;</li>
           <li>call <Mono>icarus_harness_init</Mono> if it does not;</li>
-          <li>build a missing or stale graph;</li>
-          <li>create/load a task and call <Mono>icarus_context_get</Mono> before planning;</li>
-          <li>use graph queries for structural questions before whole-repository text search.</li>
+          <li>recall targeted prior decisions, bugs, and code explanations only when relevant;</li>
+          <li>save confirmed durable decisions, root causes, patches, and verification facts;</li>
+          <li>use a graph only when one is already available or the user explicitly requests one; otherwise inspect relevant files directly;</li>
+          <li>use the full task/context lifecycle only for high-risk or explicitly resumable work.</li>
         </ul>
       </section>
 
@@ -967,20 +1011,18 @@ icarus mcp install codex
       <section id="harness-loop" className="mt-12">
         <Eyebrow>05 · GET STARTED</Eyebrow>
         <H2 id="harness-loop">The agent operating loop</H2>
-        <P>This is the intended loop for a real coding task.</P>
+        <P>This is the default loop for ordinary coding work. The governed lifecycle below is reserved for high-risk or explicitly resumable work.</P>
         <VerticalTimeline steps={[
-          'init / doctor / graph status',
-          'create contract and task',
-          'advance lifecycle to orienting',
-          'retrieve deterministic context, inspect graph, plan',
-          'advance to contracted → planned → executing',
-          'make only contract-authorized changes; checkpoint meaningful state',
-          'hand off to verification; run immutable acceptance criteria',
-          'seal only with current successful receipts',
-          'optionally capture reviewed memory and propose an evidence-backed skill',
+          'initialize only if this repository is not initialized',
+          'recall targeted prior decisions, bugs, and code explanations when relevant',
+          'inspect the relevant repository files and make the scoped change',
+          'test the affected behavior',
+          'save confirmed durable decisions, root causes, patch lessons, and verification facts',
+          'use a graph only when already available or explicitly requested',
+          'for high-risk work only: contract → lifecycle → context → authorization → checkpoint → verification',
         ]} />
         <P className="mt-6">
-          Do not replace this with &ldquo;start task, resume task, then write.&rdquo;{' '}
+          Do not turn routine work into &ldquo;start task, resume task, then write.&rdquo;{' '}
           <Mono>resume</Mono> creates a linked execution attempt; it does{' '}
           <strong className="text-[#0a0a0a]">not</strong> move a task from <Mono>created</Mono> to{' '}
           <Mono>executing</Mono>.
@@ -1089,7 +1131,10 @@ icarus graph query --repo . --kind callees_of --name authenticateUser
 icarus graph query --repo . --kind imports_of --name auth`}</CodeBlock>
         <P>
           The graph has a source fingerprint and freshness receipt. Rebuild it after significant
-          restructuring. Graph data is a navigational aid, not a proof of behavior or authorization.
+          restructuring or when the user explicitly requests an index. It is never a prerequisite for
+          tracing, planning, or a normal fix: inspect the relevant files directly when no graph exists.
+          A default graph build is safety-bounded and leaves no partial index on timeout. Graph data is
+          a navigational aid, not a proof of behavior or authorization.
         </P>
         <H3 id="harness-graph-binary">Packaged binary note</H3>
         <P>
