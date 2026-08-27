@@ -1,4 +1,4 @@
-import { buildInstallCommand, normalizeConnectionState } from '../SelfHostSetup';
+import { ADVANCED_SELFHOST_SCOPES, buildAdvancedInstallCommand, buildInstallCommand, normalizeConnectionState } from '../SelfHostSetup';
 
 describe('self-host setup contract', () => {
   test('builds one organization enrollment command without a general API key', () => {
@@ -6,8 +6,23 @@ describe('self-host setup contract', () => {
     expect(command).toContain('https://get.singulancelabs.com/memory-box');
     expect(command).toContain('sudo env HIVEMIND_ENROLLMENT_TOKEN=');
     expect(command).toContain('HIVEMIND_CENTRAL_URL=');
+    expect(command).toContain('--output "$installer"');
+    expect(command).toContain("trap 'rm -f -- \"$installer\"' EXIT");
+    expect(command).not.toContain('| sudo');
     expect(command).not.toContain('HIVEMIND_API_KEY=');
     expect(command).not.toContain('git clone');
+  });
+
+  test('advanced setup uses the same signed installer instead of a mutable branch', () => {
+    const command = buildAdvancedInstallCommand('hmk_live_test');
+    expect(command).toContain('https://get.singulancelabs.com/memory-box');
+    expect(command).toContain('sudo env HIVEMIND_API_KEY=');
+    expect(command).toContain('--output "$installer"');
+    expect(command).not.toContain('git clone');
+    expect(command).not.toContain('| sudo');
+    expect(ADVANCED_SELFHOST_SCOPES).toEqual(['selfhost:connect']);
+    expect(ADVANCED_SELFHOST_SCOPES).not.toContain('memory:read');
+    expect(ADVANCED_SELFHOST_SCOPES).not.toContain('memory:write');
   });
 
   test.each([

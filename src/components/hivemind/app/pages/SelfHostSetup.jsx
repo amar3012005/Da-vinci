@@ -3,13 +3,14 @@ import { AlertTriangle, ArrowRight, Check, CheckCircle2, ChevronDown, ChevronUp,
 import apiClient from '../shared/api-client';
 import { useCopyToClipboard } from '../shared/hooks';
 
-const REPO = 'https://github.com/amar3012005/HIVEMIND.git';
 const CONTROL_PLANE_URL = (process.env.REACT_APP_CONTROL_PLANE_URL || 'https://api.singulancelabs.com').replace(/\/$/, '');
 const INSTALLER_URL = 'https://get.singulancelabs.com/memory-box';
+export const ADVANCED_SELFHOST_SCOPES = ['selfhost:connect'];
 const shellQuote = (value) => `'${String(value).replace(/'/g, "'\\''")}'`;
+const downloadedInstallerCommand = (credentialName, credential) => `( installer="$(mktemp)"; trap 'rm -f -- "$installer"' EXIT; curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --output "$installer" ${shellQuote(INSTALLER_URL)} && sudo env ${credentialName}=${shellQuote(credential)} HIVEMIND_CENTRAL_URL=${shellQuote(CONTROL_PLANE_URL)} bash "$installer" )`;
 
-export const buildInstallCommand = (token) => `curl -fsSL ${INSTALLER_URL} | sudo env HIVEMIND_ENROLLMENT_TOKEN=${shellQuote(token || '<enrollment-token>')} HIVEMIND_CENTRAL_URL=${shellQuote(CONTROL_PLANE_URL)} bash`;
-export const buildAdvancedInstallCommand = (key) => `git clone --branch byod --single-branch ${REPO} hivemind-byod && cd hivemind-byod && HIVEMIND_API_KEY=${shellQuote(key || '<your-key>')} HIVEMIND_CENTRAL_URL=${shellQuote(CONTROL_PLANE_URL)} ./setup.sh`;
+export const buildInstallCommand = (token) => downloadedInstallerCommand('HIVEMIND_ENROLLMENT_TOKEN', token || '<enrollment-token>');
+export const buildAdvancedInstallCommand = (key) => downloadedInstallerCommand('HIVEMIND_API_KEY', key || '<your-key>');
 
 export function normalizeConnectionState(payload) {
   const raw = String(payload?.state || payload?.status || '').toUpperCase().replace(/-/g, '_');
@@ -71,8 +72,10 @@ export default function SelfHostSetup({ onDone }) {
     try {
       const result = await apiClient.createSelfHostBootstrap();
       const token = result?.enrollment_token || result?.enrollmentToken;
-      if (!token && !result?.install_command) throw new Error('The enrollment command was not returned.');
-      setBootstrap({ ...result, enrollmentToken: token, installCommand: result?.install_command || buildInstallCommand(token) });
+      if (!token) throw new Error('The enrollment token was not returned.');
+      // Build the governed command locally from the typed token. Never render
+      // a server-provided shell string or a curl-to-shell pipeline.
+      setBootstrap({ ...result, enrollmentToken: token, installCommand: buildInstallCommand(token) });
     } catch (e) {
       setError(e?.response?.data?.error || e?.message || 'Could not create an enrollment command.');
       // The governed stable channel may intentionally be unavailable until a
@@ -109,7 +112,7 @@ export default function SelfHostSetup({ onDone }) {
   const mintAdvancedKey = async () => {
     setMintingKey(true); setError(null);
     try {
-      const result = await apiClient.createApiKey('self-host-advanced', { scopes: ['memory:read', 'memory:write'] });
+      const result = await apiClient.createApiKey('self-host-advanced', { scopes: ADVANCED_SELFHOST_SCOPES });
       if (!result?.api_key) throw new Error('The API key was not returned.');
       setApiKey(result.api_key);
     } catch (e) { setError(e?.response?.data?.error || e?.message || 'Could not create the advanced API key.'); }
@@ -138,7 +141,7 @@ export default function SelfHostSetup({ onDone }) {
 
         <section className="mt-5 border-t border-[#eae7e1] pt-4">
           <button onClick={() => setAdvanced((value) => !value)} className="w-full flex items-center justify-between gap-3 text-left text-[12px] font-medium text-[#525252] hover:text-[#0a0a0a]" aria-expanded={advanced}><span className="flex items-center gap-2"><KeyRound size={14} /> Advanced networking and compatibility setup</span>{advanced ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
-          {advanced && <div className="mt-3 rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] p-4"><p className="text-[11px] text-[#525252] leading-5">Use the proven API-key flow when your organization manages its own HTTPS endpoint or Tailscale network. Existing installations continue unchanged.</p>{!apiKey ? <button onClick={mintAdvancedKey} disabled={mintingKey} className="mt-3 flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#0a0a0a] text-white text-[12px] hover:bg-[#262626] disabled:opacity-50">{mintingKey ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />} Create compatibility key</button> : <div className="relative mt-3"><pre className="bg-white border border-[#e3e0db] rounded-[6px] p-3 pr-10 overflow-x-auto whitespace-pre-wrap break-all text-[10px] text-[#525252] font-mono">{buildAdvancedInstallCommand(apiKey)}</pre><button onClick={() => advancedCopy.copy(buildAdvancedInstallCommand(apiKey))} className="absolute right-2 top-2 p-1.5 text-[#737373] hover:text-[#0a0a0a]" aria-label="Copy advanced installation command">{advancedCopy.copied ? <Check size={14} /> : <Copy size={14} />}</button></div>}</div>}
+          {advanced && <div className="mt-3 rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] p-4"><p className="text-[11px] text-[#525252] leading-5">Use a connection-only compatibility key when your organization manages its own HTTPS endpoint or Tailscale network. This key cannot read or write memories. Existing installations continue unchanged.</p>{!apiKey ? <button onClick={mintAdvancedKey} disabled={mintingKey} className="mt-3 flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#0a0a0a] text-white text-[12px] hover:bg-[#262626] disabled:opacity-50">{mintingKey ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />} Create connection-only key</button> : <div className="relative mt-3"><pre className="bg-white border border-[#e3e0db] rounded-[6px] p-3 pr-10 overflow-x-auto whitespace-pre-wrap break-all text-[10px] text-[#525252] font-mono">{buildAdvancedInstallCommand(apiKey)}</pre><button onClick={() => advancedCopy.copy(buildAdvancedInstallCommand(apiKey))} className="absolute right-2 top-2 p-1.5 text-[#737373] hover:text-[#0a0a0a]" aria-label="Copy advanced installation command">{advancedCopy.copied ? <Check size={14} /> : <Copy size={14} />}</button></div>}</div>}
         </section>
 
         <footer className="mt-6 pt-4 border-t border-[#eae7e1] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3"><p className="text-[10px] text-[#a3a3a3]">This organization requires a connected Memory Box before entering the workspace.</p><button onClick={() => onDone?.()} disabled={connectionState !== 'READY'} className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0] disabled:bg-[#e3e0db] disabled:text-[#a3a3a3] disabled:cursor-not-allowed">Enter HIVEMIND <ArrowRight size={14} /></button></footer>
