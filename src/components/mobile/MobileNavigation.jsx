@@ -158,7 +158,8 @@ const MobileNavigation = () => {
                   onMouseEnter={() => item.menu && openMenu(item.menu)}
                   onFocus={() => item.menu && openMenu(item.menu)}
                   aria-expanded={activeMenu === item.menu}
-                  className={`group flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-medium ${activeMenu === item.menu ? (isDark ? 'bg-white/10 text-white' : 'bg-black/5 text-[#0a0a0a]') : `${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'}`} transition-colors bg-transparent border-none cursor-pointer tracking-wide`}
+                  className={`group flex items-center gap-1 border-0 border-b px-2 py-2 text-[13px] font-medium ${activeMenu === item.menu ? (isDark ? 'border-white/70 text-white' : 'border-black/60 text-[#0a0a0a]') : `border-transparent ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'}`} rounded-none bg-transparent shadow-none backdrop-blur-none transition-colors cursor-pointer tracking-wide`}
+                  style={{ borderRadius: 0, WebkitBackdropFilter: 'none' }}
                 >
                   {item.label}
                   {item.menu && <ChevronDown size={13} className={`transition-transform ${activeMenu === item.menu ? 'rotate-180' : ''}`} />}
@@ -231,21 +232,19 @@ const MobileNavigation = () => {
           <div
             onMouseEnter={cancelMenuClose}
             onMouseLeave={closeMenuSoon}
-            className="pointer-events-none fixed inset-x-6 top-[72px] z-[99] hidden justify-center lg:flex"
+            className="pointer-events-none fixed inset-x-0 top-16 z-[99] hidden lg:block"
           >
-            <motion.div initial={{ opacity: 0, y: -10, scale: 0.985 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.985 }} transition={{ duration: 0.18, ease: 'easeOut' }} className="pointer-events-auto w-full max-w-[1320px] overflow-hidden rounded-[16px] border border-white/[0.16] bg-[#090c12]/65 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.13),0_30px_90px_rgba(0,0,0,0.42)] backdrop-blur-3xl" style={{ WebkitBackdropFilter: 'blur(30px) saturate(165%)' }}>
-              <div className="mb-3 flex items-center justify-between border-b border-white/10 px-2 pb-3"><span className="font-mono text-[10px] font-semibold tracking-[0.2em] text-white/50">{activeContent.eyebrow}</span><span className="text-[11px] text-white/50">Explore the system <ArrowUpRight size={12} className="ml-1 inline" /></span></div>
-              <div className={`grid gap-3 ${activeContent.items.length === 5 ? 'grid-cols-5' : 'grid-cols-3'}`}>
-                {activeContent.items.map((item, index) => {
+            <motion.div
+              initial={{ opacity: 0, y: -18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="pointer-events-auto w-full overflow-hidden border-y border-white/[0.18] bg-[#080b10]/68 shadow-[0_30px_90px_rgba(0,0,0,0.34)] backdrop-blur-3xl"
+              style={{ WebkitBackdropFilter: 'blur(30px) saturate(155%)' }}
+            >
+              <div className="flex h-11 items-center justify-between border-b border-white/10 px-[clamp(2rem,6vw,8rem)]"><span className="font-mono text-[10px] font-semibold tracking-[0.2em] text-white/50">{activeContent.eyebrow}</span><span className="text-[11px] text-white/50">Explore the system <ArrowUpRight size={12} className="ml-1 inline" /></span></div>
+              <div className={`grid divide-x divide-white/10 px-[clamp(1rem,4vw,6rem)] ${activeContent.items.length === 5 ? 'grid-cols-5' : 'grid-cols-3'}`}>
+                {activeContent.items.map((item) => {
                   const Icon = item.icon;
-                  const backdrops = [
-                    'radial-gradient(circle at 82% 14%,rgba(34,211,238,.46),transparent 28%),linear-gradient(145deg,rgba(17,125,255,.30),rgba(5,8,16,.92) 64%)',
-                    'linear-gradient(104deg,rgba(255,74,26,.56),transparent 28%,rgba(255,176,0,.25) 52%,transparent 72%),linear-gradient(155deg,#171117,#07090d)',
-                    'radial-gradient(circle at 50% 88%,rgba(27,126,255,.62),transparent 36%),linear-gradient(150deg,#11151d,#07090d)',
-                    'radial-gradient(circle at 20% 90%,rgba(255,53,114,.60),transparent 38%),linear-gradient(145deg,#171019,#07090d)',
-                    'linear-gradient(165deg,rgba(34,211,238,.30),transparent 38%),radial-gradient(circle at 76% 82%,rgba(255,118,38,.52),transparent 34%),linear-gradient(145deg,#10151a,#07090d)',
-                  ];
-                  return <a key={`${item.title}-${item.label}`} href={item.href} onClick={() => setActiveMenu(null)} className="group relative flex min-h-[245px] flex-col justify-between overflow-hidden rounded-[12px] border border-white/[0.13] p-5 text-white no-underline shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] transition-all duration-300 hover:-translate-y-1 hover:border-[#63ddf3]/70" style={{ background: backdrops[index % backdrops.length] }}>
+                  return <a key={`${item.title}-${item.label}`} href={item.href} onClick={() => setActiveMenu(null)} className="group relative flex min-h-[238px] flex-col justify-between px-7 py-6 text-white no-underline transition-colors duration-300 hover:bg-white/[0.055]">
                     <div className="relative flex items-center justify-between"><div className="flex items-center gap-2"><Icon size={17} className="text-[#62e6ff]" /><span className="text-[11px] font-semibold">{item.title}</span></div><ArrowUpRight size={14} className="text-white/45 group-hover:text-white" /></div>
                     <div className="relative max-w-[15ch] font-['Space_Grotesk'] text-[clamp(18px,1.35vw,24px)] font-medium leading-[1.04] tracking-[-0.03em]">{item.description}</div>
                     <div className="relative border-t border-white/10 pt-3 font-mono text-[9px] font-semibold tracking-[0.18em] text-[#62e6ff]">{item.label}{item.soon ? ' · LAUNCHING SOON' : ''}</div>
