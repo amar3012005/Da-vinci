@@ -342,7 +342,12 @@ export default function AppShell() {
         >
           {!graphFullscreen && <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />}
           <main className={graphFullscreen ? "flex-1 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
-            <Outlet />
+            {/* HyperAgents is an operating canvas rather than a conventional
+                dashboard. Give every /employees route a denser desktop view
+                without changing browser zoom or reducing mobile touch targets. */}
+            <div style={hyperFullscreen && !compactViewport ? { zoom: 0.8 } : undefined}>
+              <Outlet />
+            </div>
           </main>
         </div>
 
