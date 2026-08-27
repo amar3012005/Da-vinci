@@ -79,7 +79,7 @@ const PLANS = [
       { label: 'Permanent personal history', icon: Check },
       { label: 'More source types and connectors', icon: Cable },
       { label: 'Deeper recall across your own work', icon: Sparkles },
-      { label: '10,000 monthly credits', icon: Zap },
+      { label: '2,000 monthly credits', icon: Zap },
       { label: 'Email support', icon: Headphones },
     ],
     limits: {
@@ -103,7 +103,7 @@ const PLANS = [
     popular: true,
     features: [
       // Usage limits
-      { label: '100,000 monthly credits', icon: Zap },
+      { label: '5,000 monthly credits', icon: Zap },
       { label: '5,000 pages/month', icon: HardDrive },
       { label: '25,000 memories', icon: HardDrive },
       { label: '10M LLM tokens/month', icon: Brain },
@@ -143,7 +143,7 @@ const PLANS = [
     accent: false,
     features: [
       // Usage limits
-      { label: '1,000,000 monthly credits', icon: Zap },
+      { label: '10,000 monthly credits', icon: Zap },
       { label: '10,000 pages/month', icon: HardDrive },
       { label: '250,000 memories', icon: HardDrive },
       { label: '100M LLM tokens/month', icon: Brain },

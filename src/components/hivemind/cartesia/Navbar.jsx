@@ -9,8 +9,8 @@ const navLinks = [
   { label: 'Developers', href: '#developers' },
   { label: 'Pricing', href: '#pricing' },
   { label: 'Docs', href: '/hivemind/docs' },
-  { label: './ Research', href: '/research' },
-  { label: './ Benchmark', href: '/benchmark' },
+  { label: 'Research', href: '/research', technical: true },
+  { label: 'Benchmark', href: '/benchmark', technical: true },
 ];
 
 const proofMetrics = [
@@ -137,11 +137,12 @@ const Navbar = () => {
                   key={item.label}
                   whileHover={{ y: -1 }}
                   onClick={() => handleNavClick(item.href)}
-                  onMouseEnter={() => openMenu(item.label.replace('./ ', ''))}
-                  onFocus={() => openMenu(item.label.replace('./ ', ''))}
-                  className="relative shrink-0 cursor-pointer border-none bg-transparent text-xs font-medium text-[#525252] transition-colors hover:text-[#117dff] xl:text-sm"
+                  onMouseEnter={() => openMenu(item.label)}
+                  onFocus={() => openMenu(item.label)}
+                  className="relative shrink-0 cursor-pointer border-0 bg-transparent p-0 text-xs font-medium text-[#525252] shadow-none backdrop-blur-none transition-colors hover:bg-transparent hover:text-[#117dff] xl:text-sm"
+                  style={{ borderRadius: 0, WebkitBackdropFilter: 'none' }}
                 >
-                  {item.label}
+                  {item.technical && <span className="mr-1 font-mono text-[10px] text-[#a3a3a3]">./</span>}{item.label}
                   <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#117dff] transition-all group-hover:w-full" />
                 </motion.button>
               ))}

@@ -19,17 +19,26 @@ const PLANS = [
     id: 'free', name: 'Free', price: '€0', period: '/month',
     description: 'Try HIVEMIND with real documents. 100 pages/month, 1 user seat.',
     features: [
-      { label: '100 pages/month', icon: HardDrive }, { label: '1,000 memories', icon: HardDrive },
+      { label: '500 monthly credits', icon: Zap }, { label: '100 pages/month', icon: HardDrive }, { label: '1,000 memories', icon: HardDrive },
       { label: '1M LLM tokens/month', icon: Brain }, { label: '3 Deep Research/month', icon: Zap },
       { label: '3 connectors', icon: Cable }, { label: '1 user', icon: Users },
       { label: 'Community support', icon: Headphones },
     ],
   },
   {
+    id: 'plus', name: 'BRAIN+', price: '€39', period: '/month',
+    description: 'Permanent personal history with 1,000 pages included.',
+    features: [
+      { label: '2,000 monthly credits', icon: Zap }, { label: '1,000 pages/month', icon: HardDrive },
+      { label: '10,000 memories', icon: Brain }, { label: '10 connectors', icon: Cable },
+      { label: '1 user', icon: Users }, { label: 'Email support', icon: Headphones },
+    ],
+  },
+  {
     id: 'pro', name: 'Pro', price: '€79', period: '/month', popular: true,
     description: 'Teams building on institutional memory. 1,000 pages/month, 5 seats.',
     features: [
-      { label: '1,000 pages/month', icon: HardDrive }, { label: '25,000 memories', icon: HardDrive },
+      { label: '5,000 monthly credits', icon: Zap }, { label: '5,000 pages/month', icon: HardDrive }, { label: '25,000 memories', icon: HardDrive },
       { label: '10M LLM tokens/month', icon: Brain }, { label: '20 Deep Research/month', icon: Zap },
       { label: '10 connectors', icon: Cable }, { label: '5 users', icon: Users },
       { label: 'Email support (48h)', icon: Headphones }, { label: '99.5% SLA', icon: Clock },
@@ -39,7 +48,7 @@ const PLANS = [
     id: 'scale', name: 'Scale', price: '€239', period: '/month',
     description: 'Mid-size regulated organisations. 10,000 pages/month, 25 seats.',
     features: [
-      { label: '10,000 pages/month', icon: HardDrive }, { label: '250,000 memories', icon: HardDrive },
+      { label: '10,000 monthly credits', icon: Zap }, { label: '10,000 pages/month', icon: HardDrive }, { label: '250,000 memories', icon: HardDrive },
       { label: '100M LLM tokens/month', icon: Brain }, { label: 'Unlimited Deep Research', icon: Zap },
       { label: 'Unlimited connectors', icon: Cable }, { label: '25 users', icon: Users },
       { label: 'SSO / SAML', icon: Shield }, { label: 'Priority support (24h)', icon: Headphones }, { label: '99.9% SLA', icon: Clock },

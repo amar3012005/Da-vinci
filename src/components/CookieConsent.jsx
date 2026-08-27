@@ -1,5 +1,6 @@
 import React from 'react';
 import { Cookie, ShieldCheck, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { CONSENT_EVENT, OPEN_CONSENT_EVENT, readConsent, writeConsent } from '../privacy/consent';
 
 const categories = [
@@ -54,22 +55,31 @@ export default function CookieConsent() {
 
   return (
     <>
-      {bannerOpen && (
-        <section className="fixed inset-x-0 bottom-0 z-[1000] border-t border-[#d9d6cf] bg-white px-5 py-5 shadow-[0_-10px_40px_rgba(10,10,10,0.08)] md:px-8" role="dialog" aria-modal="true" aria-labelledby="cookie-title">
-          <div className="mx-auto flex max-w-[1380px] flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="flex items-center gap-2"><Cookie size={17} className="text-[#117dff]" /><h2 id="cookie-title" className="font-['Space_Grotesk'] text-[18px] font-semibold text-[#0a0a0a]">Your privacy. Your choice.</h2></div>
-              <p className="mt-2 text-[13px] leading-5 text-[#525252]">We use strictly necessary storage to run and secure this site. With your permission, we also use preferences and EU-hosted aggregate product analytics. Session replay and marketing trackers are not enabled. You can change your choice at any time.</p>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px]"><a className="text-[#117dff] underline underline-offset-2" href="/cookies">Cookie Policy</a><a className="text-[#117dff] underline underline-offset-2" href="/privacy">Privacy Policy</a></div>
+      <AnimatePresence>
+        {bannerOpen && (
+          <motion.section
+            initial={{ y: '100%', opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: '100%', opacity: 0 }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-x-0 bottom-0 z-[1000] overflow-hidden border-y border-white/20 bg-[#080a0c]/75 text-white shadow-[0_-24px_80px_rgba(0,0,0,0.24)] backdrop-blur-2xl"
+            style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px)', backgroundSize: '40px 40px', WebkitBackdropFilter: 'blur(24px) saturate(135%)' }}
+            role="dialog" aria-modal="true" aria-labelledby="cookie-title"
+          >
+            <div className="h-px w-full bg-[linear-gradient(90deg,transparent,rgba(72,204,231,.9),rgba(17,125,255,.9),transparent)]" />
+            <div className="grid min-h-[190px] w-full lg:grid-cols-[minmax(0,1fr)_auto]">
+              <div className="flex flex-col justify-center px-5 py-7 sm:px-8 lg:px-[clamp(2rem,5vw,6rem)]">
+                <div className="flex items-center gap-2"><Cookie size={17} className="text-[#48cce7]" /><h2 id="cookie-title" className="font-['Space_Grotesk'] text-[19px] font-semibold">Your privacy. Your choice.</h2></div>
+                <p className="mt-2 max-w-4xl text-[13px] leading-5 text-white/68">We use strictly necessary storage to run and secure this site. With your permission, we also use preferences and EU-hosted aggregate product analytics. Session replay and marketing trackers are not enabled. Change your choice at any time.</p>
+                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] uppercase tracking-[0.13em]"><a className="text-[#7ddff2] hover:text-white" href="/cookies">Cookie policy</a><a className="text-[#7ddff2] hover:text-white" href="/privacy">Privacy policy</a></div>
+              </div>
+              <div className="grid border-t border-white/15 sm:grid-cols-3 lg:w-[610px] lg:border-l lg:border-t-0">
+                <button type="button" onClick={() => setPreferencesOpen(true)} className="min-h-[64px] border-0 border-b border-white/15 bg-transparent px-5 text-[12px] font-semibold text-white transition-colors hover:bg-white/10 sm:border-b-0 sm:border-r">Manage preferences</button>
+                <button type="button" onClick={reject} className="min-h-[64px] border-0 border-b border-white/15 bg-transparent px-5 text-[12px] font-semibold text-white transition-colors hover:bg-white/10 sm:border-b-0 sm:border-r">Reject optional</button>
+                <button type="button" onClick={accept} className="min-h-[64px] border-0 bg-[#117dff]/80 px-5 text-[12px] font-semibold text-white transition-colors hover:bg-[#117dff]">Accept all</button>
+              </div>
             </div>
-            <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto lg:min-w-[530px]">
-              <button type="button" onClick={() => setPreferencesOpen(true)} className="h-11 border border-[#d9d6cf] bg-white px-5 text-[13px] font-semibold text-[#0a0a0a] hover:bg-[#faf9f4]">Manage preferences</button>
-              <button type="button" onClick={reject} className="h-11 border border-[#0a0a0a] bg-[#0a0a0a] px-5 text-[13px] font-semibold text-white hover:bg-[#262626]">Reject optional</button>
-              <button type="button" onClick={accept} className="h-11 border border-[#117dff] bg-[#117dff] px-5 text-[13px] font-semibold text-white hover:bg-[#0066e0]">Accept all</button>
-            </div>
-          </div>
-        </section>
-      )}
+          </motion.section>
+        )}
+      </AnimatePresence>
 
       {preferencesOpen && (
         <div className="fixed inset-0 z-[1010] grid place-items-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-labelledby="preferences-title">

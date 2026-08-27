@@ -32,7 +32,7 @@ const SELF_SERVE_TIERS = [
   {
     id: 'plus', name: 'Plus', product: 'BRAIN+', tag: 'Keep your work history permanently.',
     monthly: 39, annual: 390, annualSave: 78, cta: 'Get Plus', pop: false,
-    access: 'BRAIN', credits: '10,000', pages: '1,000', people: '1 person',
+    access: 'BRAIN', credits: '2,000', pages: '1,000', people: '1 person',
     features: [
       'Everything in Free', 'Permanent personal history',
       'More source types and connectors', 'Deeper recall across your own work',
@@ -42,7 +42,7 @@ const SELF_SERVE_TIERS = [
   {
     id: 'pro', name: 'Pro', product: 'BRAIN + HyperAgents', tag: 'Give your Brain work to carry out.',
     monthly: 79, annual: 790, annualSave: 158, cta: 'Get Pro', pop: true,
-    access: 'BRAIN + OPERATING SYSTEM', credits: '100,000', pages: '5,000', people: '1 person',
+    access: 'BRAIN + OPERATING SYSTEM', credits: '5,000', pages: '5,000', people: '1 person',
     features: [
       'Everything in Plus', 'Included HyperAgent runs each month',
       'Deep Research and Web Intelligence allowance',
@@ -53,7 +53,7 @@ const SELF_SERVE_TIERS = [
   {
     id: 'scale', name: 'Scale', product: 'BRAIN + HyperAgents + TARA', tag: 'Operate with a personal AI team.',
     monthly: 239, annual: 2390, annualSave: 478, cta: 'Get Scale', pop: false,
-    access: 'BRAIN + OPERATING SYSTEM + VOICE', credits: '1M', pages: '10,000', people: '1 person',
+    access: 'BRAIN + OPERATING SYSTEM + VOICE', credits: '10,000', pages: '10,000', people: '1 person',
     features: [
       'Everything in Pro', 'Larger HyperAgent allowance',
       'TARA voice agent with included talk time',

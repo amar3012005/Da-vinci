@@ -335,11 +335,11 @@ export default function AppShell() {
     <QuickRecorderProvider>
     <TeamProvider>
       <div
-        className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]"
+        className="min-h-screen overflow-x-hidden bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]"
         style={hyperFullscreen && !compactViewport ? {
-          zoom: 0.8,
-          width: '125%',
-          minHeight: '125vh',
+          zoom: 0.9,
+          width: '111.111111%',
+          minHeight: '111.111111vh',
         } : undefined}
       >
         {!compactViewport && !graphFullscreen && !hyperFullscreen && <Sidebar activeSection={activeSection} />}
