@@ -1304,11 +1304,20 @@ class HiveMindApiClient {
   }
 
   /**
+   * Create a short-lived, single-use enrollment credential for the active
+   * self-hosted organization. Authentication comes from the browser session.
+   */
+  async createSelfHostBootstrap() {
+    const { data } = await this.controlPlane.post('/v1/selfhost/bootstrap');
+    return data;
+  }
+
+  /**
    * Self-host connection status (polled during onboarding).
    * Returns { registered, reachable, kind?, transport? }
    */
   async selfHostStatus(apiKey) {
-    const { data } = await this.controlPlane.post('/v1/selfhost/status', { apiKey });
+    const { data } = await this.controlPlane.post('/v1/selfhost/status', apiKey ? { apiKey } : {});
     return data;
   }
 
