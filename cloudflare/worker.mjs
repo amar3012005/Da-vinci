@@ -1,4 +1,5 @@
 const STATIC_ASSET_PREFIX = '/static/';
+const AGENT_SETUP_PREFIX = '/agent-setup/';
 
 function isHtml(response) {
   return (response.headers.get('content-type') || '').toLowerCase().includes('text/html');
@@ -21,7 +22,7 @@ export default {
     const response = await env.ASSETS.fetch(request);
 
     // SPA fallback must never turn a missing executable asset into index.html.
-    if (pathname.startsWith(STATIC_ASSET_PREFIX) && isHtml(response)) {
+    if ((pathname.startsWith(STATIC_ASSET_PREFIX) || pathname.startsWith(AGENT_SETUP_PREFIX)) && isHtml(response)) {
       return missingAssetResponse();
     }
 
