@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ArrowRight, ChevronRight } from 'lucide-react';
+import { Menu, X, ArrowRight, ChevronRight, ArrowUpRight, Brain, Network, Sparkles, BookOpen, Code2, ShieldCheck, FlaskConical, Landmark } from 'lucide-react';
 import SingulanceBrand from '../app/shared/SingulanceBrand';
 
 const navLinks = [
@@ -13,10 +13,44 @@ const navLinks = [
   { label: './ Benchmark', href: '/benchmark' },
 ];
 
-const productLinks = [
-  { label: 'BRAIN', href: '/hivemind/app/overview' },
-  { label: 'OS', href: '/hivemind/app/employees/mycompany' },
-  { label: 'VOICE', href: '/hivemind/app/tara' },
+const proofMetrics = [
+  { value: '<50ms', label: 'recall' },
+  { value: '100%', label: 'yours' },
+  { value: '∞', label: 'retention' },
+];
+
+const MENU_CONTENT = {
+  Solutions: [
+    { title: 'Sovereign intelligence', label: 'EU-READY', brief: 'Keep intelligence inside the boundary you control.', href: '#solutions', icon: Landmark },
+    { title: 'Company memory', label: 'KNOWLEDGE', brief: 'Turn scattered company knowledge into living context.', href: '/hivemind/app/knowledge', icon: Brain },
+    { title: 'Digital workforce', label: 'HYPERAGENTS', brief: 'Recruit specialists who already understand the company.', href: '/hivemind/app/employees', icon: Sparkles },
+  ],
+  Developers: [
+    { title: 'Developer docs', label: 'DOCUMENTATION', brief: 'Build once against memory that keeps getting smarter.', href: '/hivemind/docs', icon: BookOpen },
+    { title: 'MCP server', label: 'TOOLS', brief: 'Give every coding agent governed company recall.', href: '/hivemind/app/mcp', icon: Code2 },
+    { title: 'ICARUS', label: 'MEMORY SYSTEMS', brief: 'Agent memory that survives models, sessions, and time.', href: '/research/icarus', icon: ShieldCheck },
+  ],
+  Pricing: [
+    { title: 'Personal', label: 'START FREE', brief: 'Start with one brain. Grow into an operating system.', href: '#pricing', icon: Brain },
+    { title: 'Teams', label: 'SHARED CONTEXT', brief: 'Give every teammate the same living company context.', href: '#pricing', icon: Network },
+    { title: 'Enterprise', label: 'SOVEREIGN', brief: 'Deploy a governed AI company on your terms.', href: '#pricing', icon: Landmark },
+  ],
+  Docs: [
+    { title: 'Documentation', label: 'GUIDES', brief: 'Go from first memory to a working AI company.', href: '/hivemind/docs', icon: BookOpen },
+    { title: 'Research', label: 'PAPERS', brief: 'Read the systems thinking behind SINGULANCE.', href: '/research', icon: ShieldCheck },
+    { title: 'Benchmark', label: 'EVALUATION', brief: 'Measure recall before trusting it.', href: '/benchmark', icon: FlaskConical },
+  ],
+  Research: [
+    { title: 'Research index', label: 'ALL PAPERS', brief: 'Ideas that become the infrastructure of AI companies.', href: '/research', icon: BookOpen },
+    { title: 'ICARUS', label: 'MEMORY FILESYSTEM', brief: 'Memory that outlives the model using it.', href: '/research/icarus', icon: ShieldCheck },
+    { title: 'Benchmark', label: 'LONGMEMEVAL', brief: 'Evidence, not promises.', href: '/benchmark', icon: FlaskConical },
+  ],
+};
+
+const CARD_BACKDROPS = [
+  'radial-gradient(circle at 82% 14%,rgba(34,211,238,.28),transparent 30%),linear-gradient(145deg,rgba(17,125,255,.14),rgba(255,255,255,.64) 65%)',
+  'linear-gradient(105deg,rgba(255,92,32,.32),transparent 30%,rgba(255,174,0,.16) 58%,transparent 74%),linear-gradient(155deg,rgba(255,255,255,.76),rgba(244,241,235,.74))',
+  'radial-gradient(circle at 50% 92%,rgba(17,125,255,.28),transparent 38%),radial-gradient(circle at 80% 16%,rgba(34,211,238,.20),transparent 30%),linear-gradient(150deg,rgba(255,255,255,.82),rgba(240,238,232,.70))',
 ];
 
 const Navbar = () => {
@@ -24,6 +58,8 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [visible, setVisible] = useState(true);
+  const [activeMenu, setActiveMenu] = useState(null);
+  const closeTimerRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,14 +76,26 @@ const Navbar = () => {
     setMobileOpen(false);
   }, [navigate]);
 
+  useEffect(() => () => window.clearTimeout(closeTimerRef.current), []);
+
   const handleNavClick = (href) => {
     setMobileOpen(false);
+    setActiveMenu(null);
     if (href.startsWith('/')) {
       navigate(href);
     } else if (href.startsWith('#')) {
       const el = document.querySelector(href);
       if (el) el.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const openMenu = (menu) => {
+    window.clearTimeout(closeTimerRef.current);
+    setActiveMenu(MENU_CONTENT[menu] ? menu : null);
+  };
+  const closeMenuSoon = () => {
+    window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = window.setTimeout(() => setActiveMenu(null), 140);
   };
 
   return (
@@ -75,13 +123,13 @@ const Navbar = () => {
             </motion.button>
 
             {/* Center Links — Desktop */}
-            <div className="hidden lg:flex items-center gap-5">
-              <div className="flex items-center gap-2 border-r border-[#d9d6d0] pr-5 font-mono text-[10px] font-semibold tracking-[0.16em] text-[#737373]">
-                {productLinks.map((item, index) => (
-                  <React.Fragment key={item.label}>
-                    {index > 0 && <span className="text-[#c4c0b8]">|</span>}
-                    <button onClick={() => handleNavClick(item.href)} className="border-0 bg-transparent p-0 text-inherit transition-colors hover:text-[#117dff]">{item.label}</button>
-                  </React.Fragment>
+            <div className="hidden lg:flex items-center gap-5" onMouseLeave={closeMenuSoon}>
+              <div className="flex items-center gap-3 border-r border-[#d9d6d0] pr-5">
+                {proofMetrics.map((metric) => (
+                  <div key={metric.label} className="min-w-[42px] text-center leading-none">
+                    <div className="font-['Space_Grotesk'] text-[11px] font-bold text-[#0a0a0a]">{metric.value}</div>
+                    <div className="mt-1 font-mono text-[7px] uppercase tracking-[0.15em] text-[#9b968d]">{metric.label}</div>
+                  </div>
                 ))}
               </div>
               {navLinks.map((item) => (
@@ -89,6 +137,8 @@ const Navbar = () => {
                   key={item.label}
                   whileHover={{ y: -1 }}
                   onClick={() => handleNavClick(item.href)}
+                  onMouseEnter={() => openMenu(item.label.replace('./ ', ''))}
+                  onFocus={() => openMenu(item.label.replace('./ ', ''))}
                   className="text-xs sm:text-sm font-medium text-[#525252] hover:text-[#117dff] transition-colors bg-transparent border-none cursor-pointer relative group"
                 >
                   {item.label}
@@ -137,6 +187,34 @@ const Navbar = () => {
         </div>
       </motion.nav>
 
+      <AnimatePresence>
+        {activeMenu && MENU_CONTENT[activeMenu] && (
+          <div className="pointer-events-none fixed inset-x-6 top-[72px] z-[99] hidden justify-center lg:flex" onMouseEnter={() => openMenu(activeMenu)} onMouseLeave={closeMenuSoon}>
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.985 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.985 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="pointer-events-auto w-full max-w-[1200px] overflow-hidden rounded-[16px] border border-white/70 bg-white/55 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_30px_80px_rgba(50,45,35,0.18)] backdrop-blur-3xl"
+              style={{ WebkitBackdropFilter: 'blur(30px) saturate(155%)' }}
+            >
+              <div className="mb-3 flex items-center justify-between border-b border-[#cbc6bc]/60 px-2 pb-3">
+                <span className="font-mono text-[9px] font-semibold tracking-[0.2em] text-[#777168]">{activeMenu.toUpperCase()} · SINGULANCE</span>
+                <span className="text-[10px] text-[#777168]">Explore the system <ArrowUpRight size={11} className="ml-1 inline" /></span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {MENU_CONTENT[activeMenu].map((item, index) => {
+                  const Icon = item.icon;
+                  return <a key={item.title} href={item.href} onClick={() => setActiveMenu(null)} className="group relative flex min-h-[238px] flex-col justify-between overflow-hidden rounded-[12px] border border-white/80 p-5 text-[#0a0a0a] no-underline shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition-all duration-300 hover:-translate-y-1 hover:border-[#48cce7] hover:shadow-[0_18px_36px_rgba(70,60,40,0.16)]" style={{ background: CARD_BACKDROPS[index] }}>
+                    <div className="relative flex items-center justify-between"><div className="flex items-center gap-2"><Icon size={17} className="text-[#117dff]" /><span className="text-[11px] font-semibold">{item.title}</span></div><ArrowUpRight size={14} className="text-[#777168] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></div>
+                    <div className="relative max-w-[15ch] font-['Space_Grotesk'] text-[25px] font-medium leading-[1.02] tracking-[-0.035em]">{item.brief}</div>
+                    <div className="relative border-t border-black/10 pt-3 font-mono text-[9px] font-semibold tracking-[0.18em] text-[#117dff]">{item.label}</div>
+                  </a>;
+                })}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {mobileOpen && (
@@ -148,13 +226,8 @@ const Navbar = () => {
             className="fixed inset-0 z-[99] bg-[#faf9f4]/98 backdrop-blur-xl lg:hidden"
           >
             <div className="pt-20 px-4 flex flex-col gap-1 max-h-screen overflow-y-auto">
-              <div className="mb-3 flex items-center justify-center gap-3 border-b border-[#e3e0db] pb-4 font-mono text-[11px] font-semibold tracking-[0.16em] text-[#525252]">
-                {productLinks.map((item, index) => (
-                  <React.Fragment key={item.label}>
-                    {index > 0 && <span className="text-[#c4c0b8]">|</span>}
-                    <button onClick={() => handleNavClick(item.href)} className="border-0 bg-transparent p-0 text-inherit">{item.label}</button>
-                  </React.Fragment>
-                ))}
+              <div className="mb-3 flex items-center justify-center gap-5 border-b border-[#e3e0db] pb-4">
+                {proofMetrics.map((metric) => <div key={metric.label} className="text-center"><div className="font-['Space_Grotesk'] text-sm font-bold">{metric.value}</div><div className="mt-1 font-mono text-[8px] uppercase tracking-[0.15em] text-[#9b968d]">{metric.label}</div></div>)}
               </div>
               {navLinks.map((item, i) => (
                 <motion.button

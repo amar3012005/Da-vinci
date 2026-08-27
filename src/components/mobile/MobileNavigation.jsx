@@ -228,39 +228,32 @@ const MobileNavigation = () => {
           from a link into its panel never closes it before a user can click. */}
       <AnimatePresence>
         {activeContent && (
-          <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.985 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.985 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
+          <div
             onMouseEnter={cancelMenuClose}
             onMouseLeave={closeMenuSoon}
-            className={`fixed left-1/2 top-[72px] z-[99] hidden w-[min(980px,calc(100vw-48px))] -translate-x-1/2 overflow-hidden rounded-[18px] border p-3 shadow-[0_24px_70px_rgba(0,0,0,0.26)] backdrop-blur-2xl lg:block ${isDark ? 'border-white/15 bg-[#0d1016]/80' : 'border-black/10 bg-white/80'}`}
-            style={{ WebkitBackdropFilter: 'blur(24px) saturate(145%)' }}
+            className="pointer-events-none fixed inset-x-6 top-[72px] z-[99] hidden justify-center lg:flex"
           >
-            <div className={`mb-3 flex items-center justify-between border-b px-2 pb-3 ${isDark ? 'border-white/10' : 'border-black/10'}`}>
-              <span className={`font-mono text-[10px] font-semibold tracking-[0.18em] ${isDark ? 'text-white/45' : 'text-black/45'}`}>{activeContent.eyebrow}</span>
-              <span className={`text-[11px] ${isDark ? 'text-white/45' : 'text-black/45'}`}>Explore the system <ArrowUpRight size={12} className="ml-1 inline" /></span>
-            </div>
-            <div className={`grid gap-2 ${activeContent.items.length === 5 ? 'grid-cols-5' : 'grid-cols-3'}`}>
-              {activeContent.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <a
-                    key={`${item.title}-${item.label}`}
-                    href={item.href}
-                    onClick={() => setActiveMenu(null)}
-                    className={`group block min-h-[180px] rounded-[13px] border p-4 no-underline transition-all ${isDark ? 'border-white/10 bg-white/[0.055] hover:border-[#22d3ee]/70 hover:bg-white/[0.1]' : 'border-black/10 bg-white/45 hover:border-[#117dff]/60 hover:bg-white/75'}`}
-                  >
-                    <div className="flex items-center justify-between"><Icon size={18} className={isDark ? 'text-[#22d3ee]' : 'text-[#117dff]'} /><ArrowUpRight size={14} className={`opacity-0 transition-opacity group-hover:opacity-100 ${isDark ? 'text-white' : 'text-[#0a0a0a]'}`} /></div>
-                    <div className={`mt-8 text-[13px] font-semibold ${isDark ? 'text-white' : 'text-[#0a0a0a]'}`}>{item.title}</div>
-                    <div className="mt-0.5 font-mono text-[10px] font-semibold tracking-[0.14em] text-[#22d3ee]">{item.label}{item.soon ? ' · LAUNCHING SOON' : ''}</div>
-                    <p className={`mt-3 text-[11px] leading-5 ${isDark ? 'text-white/55' : 'text-[#525252]'}`}>{item.description}</p>
-                  </a>
-                );
-              })}
-            </div>
-          </motion.div>
+            <motion.div initial={{ opacity: 0, y: -10, scale: 0.985 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.985 }} transition={{ duration: 0.18, ease: 'easeOut' }} className="pointer-events-auto w-full max-w-[1320px] overflow-hidden rounded-[16px] border border-white/[0.16] bg-[#090c12]/65 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.13),0_30px_90px_rgba(0,0,0,0.42)] backdrop-blur-3xl" style={{ WebkitBackdropFilter: 'blur(30px) saturate(165%)' }}>
+              <div className="mb-3 flex items-center justify-between border-b border-white/10 px-2 pb-3"><span className="font-mono text-[10px] font-semibold tracking-[0.2em] text-white/50">{activeContent.eyebrow}</span><span className="text-[11px] text-white/50">Explore the system <ArrowUpRight size={12} className="ml-1 inline" /></span></div>
+              <div className={`grid gap-3 ${activeContent.items.length === 5 ? 'grid-cols-5' : 'grid-cols-3'}`}>
+                {activeContent.items.map((item, index) => {
+                  const Icon = item.icon;
+                  const backdrops = [
+                    'radial-gradient(circle at 82% 14%,rgba(34,211,238,.46),transparent 28%),linear-gradient(145deg,rgba(17,125,255,.30),rgba(5,8,16,.92) 64%)',
+                    'linear-gradient(104deg,rgba(255,74,26,.56),transparent 28%,rgba(255,176,0,.25) 52%,transparent 72%),linear-gradient(155deg,#171117,#07090d)',
+                    'radial-gradient(circle at 50% 88%,rgba(27,126,255,.62),transparent 36%),linear-gradient(150deg,#11151d,#07090d)',
+                    'radial-gradient(circle at 20% 90%,rgba(255,53,114,.60),transparent 38%),linear-gradient(145deg,#171019,#07090d)',
+                    'linear-gradient(165deg,rgba(34,211,238,.30),transparent 38%),radial-gradient(circle at 76% 82%,rgba(255,118,38,.52),transparent 34%),linear-gradient(145deg,#10151a,#07090d)',
+                  ];
+                  return <a key={`${item.title}-${item.label}`} href={item.href} onClick={() => setActiveMenu(null)} className="group relative flex min-h-[245px] flex-col justify-between overflow-hidden rounded-[12px] border border-white/[0.13] p-5 text-white no-underline shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] transition-all duration-300 hover:-translate-y-1 hover:border-[#63ddf3]/70" style={{ background: backdrops[index % backdrops.length] }}>
+                    <div className="relative flex items-center justify-between"><div className="flex items-center gap-2"><Icon size={17} className="text-[#62e6ff]" /><span className="text-[11px] font-semibold">{item.title}</span></div><ArrowUpRight size={14} className="text-white/45 group-hover:text-white" /></div>
+                    <div className="relative max-w-[15ch] font-['Space_Grotesk'] text-[clamp(18px,1.35vw,24px)] font-medium leading-[1.04] tracking-[-0.03em]">{item.description}</div>
+                    <div className="relative border-t border-white/10 pt-3 font-mono text-[9px] font-semibold tracking-[0.18em] text-[#62e6ff]">{item.label}{item.soon ? ' · LAUNCHING SOON' : ''}</div>
+                  </a>;
+                })}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
