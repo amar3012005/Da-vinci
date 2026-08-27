@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 jest.mock('lucide-react', () => ({
-  Bot: () => null, BrainCircuit: () => null, Check: () => null, Copy: () => null, Terminal: () => null,
+  Check: () => null, Copy: () => null,
 }), { virtual: true });
 jest.mock('../research/NewsArticleLayout', () => {
   const Layout = ({ children }) => <main>{children}</main>;
@@ -32,6 +32,9 @@ test('research hero exposes a copyable ICARUS coding-agent onboarding prompt', a
   const banner = container.querySelector('[aria-label="Copy the ICARUS coding-agent onboarding prompt"]');
   expect(container.textContent).toContain('Onboard your coding agent to ICARUS');
   expect(banner).not.toBeNull();
+  expect(container.querySelector('img[alt="OpenAI Codex logo"]')).not.toBeNull();
+  expect(container.querySelector('img[alt="Claude Code logo"]')).not.toBeNull();
+  expect(container.querySelector('img[alt="Cursor logo"]')).not.toBeNull();
 
   await act(async () => { banner.click(); });
   expect(writeText).toHaveBeenCalledWith(expect.stringContaining('https://icarus.singulancelabs.com/agent-setup/prompt.md'));

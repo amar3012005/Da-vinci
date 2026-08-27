@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { Bot, BrainCircuit, Check, Copy, Terminal } from 'lucide-react';
+import { Check, Copy } from 'lucide-react';
 import NewsArticleLayout, { H2, P, Table, FullBleed } from './research/NewsArticleLayout';
 import InteractiveByteSlot from './research/InteractiveByteSlot';
 
@@ -13,6 +13,12 @@ const ICARUS_AGENT_SETUP_PROMPT = `Fetch and follow the ICARUS coding-agent setu
 ${ICARUS_AGENT_SETUP_URL}
 
 Set up ICARUS for the current repository. Detect the coding agent, install ICARUS only if needed, register its MCP integration, initialize this repository, and verify the result. Do not create a graph, governed task, or upload project data unless the user’s actual task requires it. Use ICARUS primarily for targeted durable memory and recall; use the full harness only for high-risk changes such as production, security, tenant, billing, migration, destructive, or major-refactor work.`;
+
+const CODING_AGENT_LOGOS = [
+  { name: 'OpenAI Codex', src: '/agent-setup/icons/openai.svg' },
+  { name: 'Claude Code', src: '/agent-setup/icons/anthropic.svg' },
+  { name: 'Cursor', src: '/agent-setup/icons/cursor.svg' },
+];
 
 const AgentOnboardingPill = () => {
   const [copied, setCopied] = useState(false);
@@ -35,9 +41,15 @@ const AgentOnboardingPill = () => {
       >
         <span className="min-w-0 font-['Space_Grotesk'] text-[17px] font-medium tracking-tight text-[#0a0a0a] sm:text-[22px]">Onboard your coding agent to ICARUS</span>
         <span className="flex shrink-0 items-center gap-1.5 text-[#0a0a0a] sm:gap-2">
-          <BrainCircuit size={22} strokeWidth={1.8} className="hidden sm:block" aria-hidden="true" />
-          <Bot size={22} strokeWidth={1.8} aria-hidden="true" />
-          <Terminal size={22} strokeWidth={1.8} aria-hidden="true" />
+          {CODING_AGENT_LOGOS.map((agent) => (
+            <img
+              key={agent.name}
+              src={agent.src}
+              alt={`${agent.name} logo`}
+              title={agent.name}
+              className="h-5 w-5 object-contain sm:h-[22px] sm:w-[22px]"
+            />
+          ))}
           <span className={`ml-1 flex h-7 w-7 items-center justify-center rounded-[6px] border transition-colors sm:ml-2 ${copied ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252] group-hover:border-[#0a0a0a] group-hover:text-[#0a0a0a]'}`}>
             {copied ? <Check size={15} strokeWidth={2.2} /> : <Copy size={15} />}
           </span>
