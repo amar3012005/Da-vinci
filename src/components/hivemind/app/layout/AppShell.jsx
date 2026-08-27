@@ -334,7 +334,14 @@ export default function AppShell() {
   return (
     <QuickRecorderProvider>
     <TeamProvider>
-      <div className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
+      <div
+        className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]"
+        style={hyperFullscreen && !compactViewport ? {
+          zoom: 0.8,
+          width: '125%',
+          minHeight: '125vh',
+        } : undefined}
+      >
         {!compactViewport && !graphFullscreen && !hyperFullscreen && <Sidebar activeSection={activeSection} />}
         <div
           className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen ? 'sidebar-content-expanded' : ''}`}
@@ -342,12 +349,7 @@ export default function AppShell() {
         >
           {!graphFullscreen && <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />}
           <main className={graphFullscreen ? "flex-1 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
-            {/* HyperAgents is an operating canvas rather than a conventional
-                dashboard. Give every /employees route a denser desktop view
-                without changing browser zoom or reducing mobile touch targets. */}
-            <div style={hyperFullscreen && !compactViewport ? { zoom: 0.8 } : undefined}>
-              <Outlet />
-            </div>
+            <Outlet />
           </main>
         </div>
 
