@@ -88,7 +88,13 @@ const ARCHETYPE_TO_LANE = {
 function laneFor(member) {
   const raw = String(member?.roleArchetype || 'Communicator').trim();
   if (LANE_META[raw]) return raw;
-  return ARCHETYPE_TO_LANE[raw.toLowerCase()] || 'Communicator';
+  const normalized = raw.toLowerCase();
+  if (ARCHETYPE_TO_LANE[normalized]) return ARCHETYPE_TO_LANE[normalized];
+  if (/(risk|quality|compliance|legal|audit|security)/.test(normalized)) return 'Skeptic';
+  if (/(research|analyst|insight|intelligence|investigat)/.test(normalized)) return 'Researcher';
+  if (/(strategy|strategist|positioning|brand|direction)/.test(normalized)) return 'Strategist';
+  if (/(engineer|builder|developer|architect|implementation)/.test(normalized)) return 'Builder';
+  return 'Communicator';
 }
 // What each role actually does in the HyperAgents process — real, not a
 // fabricated per-person bio (the dashboard's employee record doesn't carry
@@ -105,6 +111,7 @@ function EmployeeProfileModal({ member, onClose, onShowRoster }) {
   const { t } = useTranslation('dashboard');
   if (!member) return null;
   const lane = laneFor(member);
+  const jobTitle = String(member.roleArchetype || lane).trim();
   const meta = LANE_META[lane] || LANE_META.Communicator;
   const Icon = meta.icon;
   return (
@@ -114,7 +121,7 @@ function EmployeeProfileModal({ member, onClose, onShowRoster }) {
         <div className="px-5 pb-5 -mt-10">
           <div className="flex items-end justify-between">
             <span className="rounded-2xl border-4 border-white shadow-sm" style={{ background: '#fff' }}>
-              <AgentAvatar agent={{ ...member, roleArchetype: lane }} size={72} />
+              <AgentAvatar agent={{ ...member, lane }} size={72} />
             </span>
             <button onClick={onClose} className="mb-1 text-[#a3a3a3] hover:text-[#0a0a0a] p-1" aria-label={t('hyperDash.close', 'Close')}>
               <X size={16} />
@@ -122,7 +129,7 @@ function EmployeeProfileModal({ member, onClose, onShowRoster }) {
           </div>
           <h3 className="mt-3 text-[17px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{member.name}</h3>
           <span className="inline-flex items-center gap-1.5 mt-1 text-[11.5px] font-mono px-2 py-0.5 rounded-full" style={{ background: meta.bg, color: meta.color }}>
-            <Icon size={12} /> {lane}
+            <Icon size={12} /> {jobTitle}
           </span>
           {member.status ? (
             <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-mono uppercase text-[#a3a3a3]">
@@ -131,7 +138,7 @@ function EmployeeProfileModal({ member, onClose, onShowRoster }) {
             </span>
           ) : null}
           <p className="mt-3 text-[12.5px] text-[#525252] leading-relaxed">
-            {LANE_BLURB[lane]}
+            {member.persona || LANE_BLURB[lane]}
           </p>
           {onShowRoster ? (
             <button
@@ -454,11 +461,11 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
                   const meta = LANE_META[lane] || LANE_META.Communicator;
                   return (
                     <div key={member.id} className="flex items-center gap-2 text-[12px] min-w-0 group">
-                      <AgentAvatar agent={{ ...member, roleArchetype: lane }} size={26} />
+                      <AgentAvatar agent={{ ...member, lane }} size={26} />
                       <div className="min-w-0 flex-1">
                         <div className="text-[#0a0a0a] font-medium truncate">{member.name}</div>
                         <div className="flex items-center gap-1 text-[10px] font-mono truncate" style={{ color: meta.color }}>
-                          <meta.icon size={9} /> {lane}
+                          <meta.icon size={9} /> {member.roleArchetype || lane}
                         </div>
                       </div>
                       <button

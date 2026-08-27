@@ -453,6 +453,19 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Persistent workspace notification stream used by the global navbar. */
+  async listWorkspaceNotifications({ limit = 20, unread = false } = {}) {
+    const { data } = await this.controlPlane.get('/v1/workspace/notifications', {
+      params: { limit, ...(unread ? { unread: true } : {}) },
+    });
+    return data;
+  }
+
+  async markWorkspaceNotificationRead(notificationId) {
+    const { data } = await this.controlPlane.post(`/v1/workspace/notifications/${encodeURIComponent(notificationId)}/read`, {});
+    return data;
+  }
+
   /** Confirm the organization's headquarters before entering its workspace. */
   async updateHyperCompanyLocation(location) {
     const { data } = await this.controlPlane.patch('/v1/hyper/company/location', { location });

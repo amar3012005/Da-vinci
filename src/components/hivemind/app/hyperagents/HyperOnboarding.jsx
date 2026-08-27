@@ -145,6 +145,10 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
       };
       setResult(nextResult);
       setLocationPromptOpen(false);
+      // Entering the completed workspace is the authoritative Day-0 moment.
+      // The server owns the idempotent claim; CompanyDashboard repeats the
+      // same safe call as a recovery path if navigation/network timing races.
+      await apiClient.claimHyperCompanyDayZeroReport().catch(() => null);
       onComplete?.(nextResult);
     } catch (err) {
       setLocationError(err.response?.data?.error || err.message);

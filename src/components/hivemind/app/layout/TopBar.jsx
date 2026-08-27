@@ -5,6 +5,7 @@ import { Search, BookOpen, UserPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import TeamSwitcher from './TeamSwitcher';
 import LangSwitcher from './LangSwitcher';
+import WorkspaceNotifications from './WorkspaceNotifications';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -113,11 +114,11 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
       </div>
 
       {/* Right: Actions */}
-      <div className="hidden items-center gap-2 md:flex">
+      <div className="absolute right-3 flex items-center gap-2 md:static">
         {/* Global Search */}
         <button
           onClick={() => navigate('/hivemind/app/memories')}
-          className="flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] hover:border-[#d4d0ca] text-[#a3a3a3] hover:text-[#525252] transition-all text-xs"
+          className="hidden md:flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] hover:border-[#d4d0ca] text-[#a3a3a3] hover:text-[#525252] transition-all text-xs"
         >
           <Search size={13} />
           <span className="hidden md:inline">{t('topbar.searchMemories', 'Search memories...')}</span>
@@ -129,29 +130,32 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
         {/* Docs */}
         <a
           href="/hivemind/docs"
-          className="flex items-center justify-center w-8 h-8 rounded-[6px] hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors"
+          className="hidden md:flex items-center justify-center w-8 h-8 rounded-[6px] hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors"
           title="Documentation"
         >
           <BookOpen size={15} />
         </a>
+
+        {/* Durable lifecycle + workspace notification center. */}
+        <WorkspaceNotifications />
 
         {/* Invite your Team — ALWAYS visible on the main navbar, right next
             to the language toggle. Routes to the Workspace Admin members tab,
             which owns the full invite flow (email + link + channels). */}
         <button
           onClick={() => navigate('/hivemind/app/workspace?tab=members')}
-          className="flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#117dff] text-white hover:bg-[#0e6fe0] transition-all text-xs font-semibold"
+          className="hidden md:flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#117dff] text-white hover:bg-[#0e6fe0] transition-all text-xs font-semibold"
         >
           <UserPlus size={13} />
           <span className="hidden md:inline">{t('topbar.inviteTeam', 'Invite your Team')}</span>
         </button>
 
         {/* Language switcher */}
-        <LangSwitcher />
+        <div className="hidden md:block"><LangSwitcher /></div>
 
 
         {/* Health */}
-        <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db]">
+        <div className="hidden md:flex items-center gap-1.5 h-8 px-2.5 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db]">
           <div
             className={`w-1.5 h-1.5 rounded-full ${
               healthy === null
