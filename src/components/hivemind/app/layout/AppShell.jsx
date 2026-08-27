@@ -272,6 +272,26 @@ export default function AppShell() {
   // HyperAgents runs its own left rail (rooms + account) — the app sidebar is
   // hidden entirely there so the workspace reads as one dedicated surface.
   const hyperFullscreen = location.pathname.startsWith('/hivemind/app/employees');
+  // CSS zoom on the document root is the closest web-controlled equivalent to
+  // browser zoom: it expands the layout viewport while scaling every fixed and
+  // flowing element together. Applying zoom to an inner wrapper and then
+  // compensating its width caused clipped right rails and artificial height.
+  useEffect(() => {
+    const root = document.documentElement;
+    const previousZoom = root.style.zoom;
+    const previousOverflowX = root.style.overflowX;
+    if (hyperFullscreen && !compactViewport) {
+      root.style.zoom = '0.9';
+      root.style.overflowX = 'hidden';
+    } else {
+      root.style.zoom = previousZoom;
+      root.style.overflowX = previousOverflowX;
+    }
+    return () => {
+      root.style.zoom = previousZoom;
+      root.style.overflowX = previousOverflowX;
+    };
+  }, [hyperFullscreen, compactViewport]);
   // Overview embeds the HIVE chat as the page centerpiece — the floating
   // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
   // every other page keeps the FAB.
@@ -336,11 +356,6 @@ export default function AppShell() {
     <TeamProvider>
       <div
         className="min-h-screen overflow-x-hidden bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]"
-        style={hyperFullscreen && !compactViewport ? {
-          zoom: 0.9,
-          width: '111.111111%',
-          minHeight: '111.111111vh',
-        } : undefined}
       >
         {!compactViewport && !graphFullscreen && !hyperFullscreen && <Sidebar activeSection={activeSection} />}
         <div
