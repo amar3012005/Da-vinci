@@ -1471,6 +1471,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getPlatformEmailTemplates() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/email/templates');
+    return data;
+  }
+
   async sendPlatformEmail(payload) {
     const { data } = await this.controlPlane.post('/admin/api/platform/email/send', payload);
     return data;

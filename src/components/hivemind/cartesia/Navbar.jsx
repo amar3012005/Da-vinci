@@ -110,8 +110,8 @@ const Navbar = () => {
             : 'bg-transparent'
         }`}
       >
-        <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db]">
-          <div className="px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+        <div className="mx-auto max-w-[1480px] border-x border-[#e3e0db]">
+          <div className="flex h-14 items-center justify-between gap-6 px-4 sm:h-16 sm:px-8">
             {/* Logo */}
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -123,8 +123,8 @@ const Navbar = () => {
             </motion.button>
 
             {/* Center Links — Desktop */}
-            <div className="hidden lg:flex items-center gap-5" onMouseLeave={closeMenuSoon}>
-              <div className="flex items-center gap-3 border-r border-[#d9d6d0] pr-5">
+            <div className="hidden min-w-0 flex-1 items-center justify-center gap-4 lg:flex" onMouseLeave={closeMenuSoon}>
+              <div className="hidden shrink-0 items-center gap-2 border-r border-[#d9d6d0] pr-4 xl:flex">
                 {proofMetrics.map((metric) => (
                   <div key={metric.label} className="min-w-[42px] text-center leading-none">
                     <div className="font-['Space_Grotesk'] text-[11px] font-bold text-[#0a0a0a]">{metric.value}</div>
@@ -139,7 +139,7 @@ const Navbar = () => {
                   onClick={() => handleNavClick(item.href)}
                   onMouseEnter={() => openMenu(item.label.replace('./ ', ''))}
                   onFocus={() => openMenu(item.label.replace('./ ', ''))}
-                  className="text-xs sm:text-sm font-medium text-[#525252] hover:text-[#117dff] transition-colors bg-transparent border-none cursor-pointer relative group"
+                  className="relative shrink-0 cursor-pointer border-none bg-transparent text-xs font-medium text-[#525252] transition-colors hover:text-[#117dff] xl:text-sm"
                 >
                   {item.label}
                   <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#117dff] transition-all group-hover:w-full" />

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, BarChart3, ChevronRight, FileText, Gift, LayoutDashboard, Menu, MessageCircle, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
+import { Activity, BarChart3, ChevronRight, Eye, EyeOff, FileText, Gift, LayoutDashboard, Mail, Menu, MessageCircle, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
 import apiClient from "../shared/api-client";
 import AccessApplicationsPanel from "./AccessApplicationsPanel";
 
@@ -381,9 +381,18 @@ function CommercialManager() {
   const [extendInvitation, setExtendInvitation] = useState(null);
   const [editingInvitationInvites, setEditingInvitationInvites] = useState(null);
   const [emailForm, setEmailForm] = useState({
-    template_id: "welcome_signup",
-    to: "",
-    name: "",
+    template_id: "custom",
+    recipients: "",
+    sender_local: "welcome",
+    sender_domain: "admin.singulancelabs.com",
+    from_name: "Singulance",
+    subject: "",
+    body: "",
+    visual: true,
+  });
+  const [emailCapabilities, setEmailCapabilities] = useState({
+    templates: [{ id: "custom", label: "Custom message" }, { id: "welcome_signup", label: "Welcome to HIVEMIND" }, { id: "welcome_login", label: "Welcome back to HIVEMIND" }],
+    sender_domains: ["admin.singulancelabs.com", "runtime.singulancelabs.com", "founder.singulancelabs.com"],
   });
   const [emailPreview, setEmailPreview] = useState(null);
   const [emailPreviewing, setEmailPreviewing] = useState(false);
@@ -772,6 +781,10 @@ function CommercialManager() {
       setEmailPreviewing(false);
     }
   };
+  useEffect(() => {
+    if (tab !== "email") return;
+    apiClient.getPlatformEmailTemplates().then(setEmailCapabilities).catch(() => {});
+  }, [tab]);
   const sendEmail = async (event) => {
     event.preventDefault();
     setError("");
@@ -780,7 +793,7 @@ function CommercialManager() {
     try {
       const result = await apiClient.sendPlatformEmail(emailForm);
       setNotice(
-        `Email accepted by ${result.provider || "the configured provider"}${result.delivery_status ? ` (${result.delivery_status})` : ""}.`,
+        `${result.sent || 0} of ${result.total || 0} email${result.total === 1 ? "" : "s"} accepted by ${result.provider || "the configured provider"}${result.delivery_status ? ` (${result.delivery_status})` : ""}.`,
       );
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -1569,135 +1582,35 @@ function CommercialManager() {
         </>
       )}
       {tab === "email" && (
-        <section className="mt-5 overflow-hidden border border-[#d8d6cf] bg-white font-['Space_Grotesk']">
-          <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
-            <form onSubmit={sendEmail} className="p-6 sm:p-8">
-              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-[#117dff]">
-                Transactional email
-              </p>
-              <h3 className="mt-3 text-2xl font-semibold tracking-normal text-[#0a0a0a]">
-                Send a polished welcome
-              </h3>
-              <p className="mt-2 max-w-md text-sm leading-6 text-[#737373]">
-                From{" "}
-                <strong className="font-medium text-[#0a0a0a]">
-                  welcome@admin.singulancelabs.com
-                </strong>
-                . Use Invitations for secure enterprise activation links and
-                recovery codes.
-              </p>
-              <div className="mt-7 space-y-4">
-                <label className="block">
-                  <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[#737373]">
-                    Template
-                  </span>
-                  <select
-                    value={emailForm.template_id}
-                    onChange={(event) => {
-                      setEmailForm({
-                        ...emailForm,
-                        template_id: event.target.value,
-                      });
-                      setEmailPreview(null);
-                    }}
-                    className="mt-2 w-full rounded-[6px] border border-[#d8d6cf] bg-white px-3 py-3 text-sm text-[#0a0a0a] outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]"
-                  >
-                    <option value="welcome_signup">Welcome to HIVEMIND</option>
-                    <option value="welcome_login">
-                      Welcome back to HIVEMIND
-                    </option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[#737373]">
-                    Recipient email
-                  </span>
-                  <input
-                    required
-                    type="email"
-                    value={emailForm.to}
-                    onChange={(event) => {
-                      setEmailForm({ ...emailForm, to: event.target.value });
-                      setEmailPreview(null);
-                    }}
-                    placeholder="owner@company.com"
-                    className="mt-2 w-full rounded-[6px] border border-[#d8d6cf] px-3 py-3 text-sm text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3] focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]"
-                  />
-                </label>
-                <label className="block">
-                  <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[#737373]">
-                    Recipient name
-                  </span>
-                  <input
-                    value={emailForm.name}
-                    onChange={(event) => {
-                      setEmailForm({ ...emailForm, name: event.target.value });
-                      setEmailPreview(null);
-                    }}
-                    placeholder="Optional"
-                    className="mt-2 w-full rounded-[6px] border border-[#d8d6cf] px-3 py-3 text-sm text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3] focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]"
-                  />
-                </label>
+        <section className="mt-5 overflow-hidden rounded-[10px] border border-[#e3e0db] bg-white">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e0db] bg-[#faf9f4] px-4 py-3">
+            <div className="flex items-center gap-2"><Mail size={15} className="text-[#117dff]"/><div><h3 className="text-[14px] font-semibold text-[#0a0a0a]">New message</h3><p className="text-[10px] text-[#a3a3a3]">Cloudflare Email Sending · authenticated platform operation</p></div></div>
+            <label className="flex items-center gap-2 text-[11px] font-medium text-[#525252]">
+              {emailForm.visual ? <Eye size={13}/> : <EyeOff size={13}/>} Visual template
+              <button type="button" role="switch" aria-checked={emailForm.visual} onClick={() => { setEmailForm({ ...emailForm, visual: !emailForm.visual }); setEmailPreview(null); }} className={`relative h-5 w-9 rounded-full transition-colors ${emailForm.visual ? "bg-[#117dff]" : "bg-[#e3e0db]"}`}><span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${emailForm.visual ? "translate-x-[18px]" : "translate-x-0.5"}`}/></button>
+            </label>
+          </header>
+          <div className="grid min-h-[680px] lg:grid-cols-[minmax(420px,0.9fr)_minmax(500px,1.1fr)]">
+            <form onSubmit={sendEmail} className="flex min-h-0 flex-col border-r border-[#e3e0db]">
+              <div className="space-y-0 px-4 pt-3">
+                <div className="grid grid-cols-[64px_1fr] items-center border-b border-[#eae7e1] py-2"><span className="text-[11px] text-[#737373]">From</span><div className="grid grid-cols-[minmax(90px,.65fr)_minmax(180px,1fr)] gap-2"><input required value={emailForm.sender_local} onChange={(event) => { setEmailForm({ ...emailForm, sender_local: event.target.value }); setEmailPreview(null); }} placeholder="amar" className="min-w-0 rounded-[6px] border border-[#e3e0db] px-2.5 py-2 text-[12px] outline-none focus:border-[#117dff]"/><select value={emailForm.sender_domain} onChange={(event) => { setEmailForm({ ...emailForm, sender_domain: event.target.value }); setEmailPreview(null); }} className="min-w-0 rounded-[6px] border border-[#e3e0db] bg-white px-2 py-2 text-[11px] outline-none focus:border-[#117dff]">{emailCapabilities.sender_domains.map((domain) => <option key={domain} value={domain}>@{domain}</option>)}</select></div></div>
+                <div className="grid grid-cols-[64px_1fr] items-center border-b border-[#eae7e1] py-2"><span className="text-[11px] text-[#737373]">Name</span><input value={emailForm.from_name} onChange={(event) => { setEmailForm({ ...emailForm, from_name: event.target.value }); setEmailPreview(null); }} placeholder="Singulance" className="border-0 px-0 py-2 text-[12px] outline-none"/></div>
+                <div className="grid grid-cols-[64px_1fr] items-start border-b border-[#eae7e1] py-2"><span className="pt-2 text-[11px] text-[#737373]">To</span><textarea required rows={2} value={emailForm.recipients} onChange={(event) => { setEmailForm({ ...emailForm, recipients: event.target.value }); setEmailPreview(null); }} placeholder="person@company.com, another@company.com" className="resize-none border-0 px-0 py-2 text-[12px] leading-5 outline-none"/><span className="col-start-2 text-[9px] text-[#a3a3a3]">Separate recipients with commas, spaces, semicolons, or new lines · maximum 200</span></div>
+                <div className="grid grid-cols-[64px_1fr] items-center border-b border-[#eae7e1] py-2"><span className="text-[11px] text-[#737373]">Template</span><select value={emailForm.template_id} onChange={(event) => { setEmailForm({ ...emailForm, template_id: event.target.value }); setEmailPreview(null); }} className="border-0 bg-white px-0 py-2 text-[12px] outline-none">{emailCapabilities.templates.map((template) => <option key={template.id} value={template.id}>{template.label}</option>)}</select></div>
+                {emailForm.template_id === "custom" ? <>
+                  <div className="grid grid-cols-[64px_1fr] items-center border-b border-[#eae7e1] py-2"><span className="text-[11px] text-[#737373]">Subject</span><input required value={emailForm.subject} onChange={(event) => { setEmailForm({ ...emailForm, subject: event.target.value }); setEmailPreview(null); }} placeholder="Subject" className="border-0 px-0 py-2 text-[12px] font-medium outline-none"/></div>
+                  <textarea required value={emailForm.body} onChange={(event) => { setEmailForm({ ...emailForm, body: event.target.value }); setEmailPreview(null); }} placeholder="Write your message…" className="min-h-[320px] w-full resize-none border-0 px-0 py-5 text-[13px] leading-6 text-[#0a0a0a] outline-none"/>
+                </> : <div className="min-h-[360px] py-6"><p className="text-[12px] leading-5 text-[#737373]">This server-owned lifecycle template preserves its approved subject, copy, links, and responsive visual treatment. Preview it before sending.</p></div>}
               </div>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={previewEmail}
-                  disabled={emailPreviewing}
-                  className="border border-[#0a0a0a] px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[#0a0a0a] disabled:opacity-50"
-                >
-                  {emailPreviewing ? "Rendering..." : "Preview email"}
-                </button>
-                <button
-                  disabled={emailSending}
-                  className="bg-[#117dff] px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-white disabled:opacity-50"
-                >
-                  {emailSending ? "Sending..." : "Send email"}
-                </button>
-              </div>
+              <footer className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-[#e3e0db] bg-[#faf9f4] px-4 py-3"><span className="text-[10px] text-[#a3a3a3]">Sender domains are restricted server-side to verified Cloudflare domains.</span><div className="flex gap-2"><button type="button" onClick={previewEmail} disabled={emailPreviewing} className="rounded-[6px] border border-[#d4d0ca] bg-white px-3 py-2 text-[11px] font-medium text-[#525252] disabled:opacity-50">{emailPreviewing ? "Rendering…" : "Preview"}</button><button disabled={emailSending} className="flex items-center gap-1.5 rounded-[6px] bg-[#117dff] px-4 py-2 text-[11px] font-semibold text-white hover:bg-[#0066e0] disabled:opacity-50"><Send size={12}/>{emailSending ? "Sending…" : "Send"}</button></div></footer>
             </form>
-            <div className="min-h-[480px] bg-[#0d0d0f] p-5 sm:p-7">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#24d2ed]">
-                    Message preview
-                  </p>
-                  <p className="mt-2 text-sm text-[#b5b5b9]">
-                    {emailPreview
-                      ? emailPreview.subject
-                      : "Render a server-owned template before sending."}
-                  </p>
-                </div>
-                <span className="border border-[#2f3035] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a9aaae]">
-                  Email v1
-                </span>
+            <aside className="min-w-0 bg-[#faf9f4] p-4 sm:p-5">
+              <div className="flex items-center justify-between"><div><p className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-[#117dff]">Inbox preview</p><p className="mt-1 text-[11px] text-[#737373]">Exact HTML/text prepared by the server</p></div><span className="rounded-full border border-[#e3e0db] bg-white px-2 py-1 font-mono text-[9px] text-[#737373]">{emailForm.visual ? "VISUAL" : "PLAIN TEXT"}</span></div>
+              <div className="mt-4 overflow-hidden rounded-[10px] border border-[#e3e0db] bg-white shadow-sm">
+                <div className="border-b border-[#eae7e1] px-4 py-3"><div className="truncate text-[13px] font-semibold text-[#0a0a0a]">{emailPreview?.subject || emailForm.subject || "Your subject appears here"}</div><div className="mt-2 flex gap-2 text-[10px] text-[#737373]"><span className="font-medium text-[#0a0a0a]">{emailForm.from_name || emailForm.sender_local}</span><span>&lt;{emailForm.sender_local}@{emailForm.sender_domain}&gt;</span></div><div className="mt-1 truncate text-[9px] text-[#a3a3a3]">to {emailPreview?.recipients?.join(", ") || emailForm.recipients || "recipient"}</div></div>
+                <div className="h-[535px] overflow-auto bg-white">{emailPreview ? (emailForm.visual ? <iframe title="Email preview" sandbox="" srcDoc={emailPreview.html} className="h-full min-h-[535px] w-full border-0 bg-white"/> : <pre className="whitespace-pre-wrap p-5 font-sans text-[12px] leading-6 text-[#0a0a0a]">{emailPreview.text}</pre>) : <div className="flex h-full items-center justify-center p-8 text-center"><div><Mail size={24} className="mx-auto text-[#d4d0ca]"/><p className="mt-3 text-[12px] font-medium text-[#525252]">Compose, then preview</p><p className="mt-1 text-[10px] text-[#a3a3a3]">Nothing is sent until you press Send.</p></div></div>}</div>
               </div>
-              <div className="mt-6 h-[380px] overflow-hidden border border-[#303138] bg-[#f8fafc] shadow-[0_14px_45px_rgba(0,0,0,0.25)]">
-                {emailPreview ? (
-                  <iframe
-                    title="Email preview"
-                    sandbox=""
-                    srcDoc={emailPreview.html}
-                    className="h-full w-full border-0 bg-white"
-                  />
-                ) : (
-                  <div className="flex h-full flex-col justify-between p-6">
-                    <div>
-                      <div className="h-1 w-12 bg-[#24d2ed]" />
-                      <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.18em] text-[#117dff]">
-                        HIVEMIND / System message
-                      </p>
-                      <h4 className="mt-4 text-2xl font-semibold text-[#0a0a0a]">
-                        Your welcome message will appear here.
-                      </h4>
-                    </div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#737373]">
-                      Preview uses the exact server template
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+            </aside>
           </div>
         </section>
       )}
