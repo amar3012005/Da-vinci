@@ -204,14 +204,12 @@ export default function AppShell() {
     navigate('/hivemind/app/overview', { replace: true });
     setGate('done');
   };
-  // Self-host gate: only an org whose agent was NEVER registered gets the
-  // connect-your-agent setup screen (it mints + reveals the self-host key, so
-  // it must not reappear on every visit). An org that completed setup before
-  // (registered in the agent registry) goes straight to the dashboard even if
-  // the agent is momentarily unreachable — data calls surface their own errors.
+  // Self-host gate: the workspace opens only after the control plane confirms
+  // authenticated reachability. Registered-but-offline organizations see the
+  // recovery state instead of entering a workspace whose storage cannot serve.
   //   'checking' → first /v1/selfhost/status in flight (sub-second + 2.5s ping budget)
-  //   'setup'    → never registered → show SelfHostSetup
-  //   'ok'       → registered → workspace
+  //   'setup'    → install, recover, or update → show SelfHostSetup
+  //   'ok'       → registered and reachable → workspace
   const isSelfHost = org?.hosting_mode === 'self_host';
   const [shGate, setShGate] = useState('checking');
   // Count consecutive status-call failures so a single blip never walls a
@@ -228,8 +226,7 @@ export default function AppShell() {
         const s = await apiClient.selfHostStatus();
         if (!alive) return;
         shFailsRef.current = 0;
-        // Only an EXPLICIT not-registered answer opens the setup flow.
-        if (s?.registered) setShGate('ok');
+        if (s?.registered && s?.reachable) setShGate('ok');
         else setShGate('setup');
       } catch {
         if (!alive) return;
