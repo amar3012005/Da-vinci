@@ -6,9 +6,8 @@ describe('self-host setup contract', () => {
     expect(command).toContain('https://get.singulancelabs.com/memory-box');
     expect(command).toContain('sudo env HIVEMIND_ENROLLMENT_TOKEN=');
     expect(command).toContain('HIVEMIND_CENTRAL_URL=');
-    expect(command).toContain('--output "$installer"');
-    expect(command).toContain("trap 'rm -f -- \"$installer\"' EXIT");
-    expect(command).not.toContain('| sudo');
+    expect(command).toContain('curl -fsSL');
+    expect(command).toContain('| sudo env');
     expect(command).not.toContain('HIVEMIND_API_KEY=');
     expect(command).not.toContain('git clone');
   });
@@ -23,9 +22,9 @@ describe('self-host setup contract', () => {
     const command = buildAdvancedInstallCommand('hmk_live_test');
     expect(command).toContain('https://get.singulancelabs.com/memory-box');
     expect(command).toContain('sudo env HIVEMIND_API_KEY=');
-    expect(command).toContain('--output "$installer"');
+    expect(command).toContain('curl -fsSL');
     expect(command).not.toContain('git clone');
-    expect(command).not.toContain('| sudo');
+    expect(command).toContain('| sudo env');
     expect(ADVANCED_SELFHOST_SCOPES).toEqual(['selfhost:connect']);
     expect(ADVANCED_SELFHOST_SCOPES).not.toContain('memory:read');
     expect(ADVANCED_SELFHOST_SCOPES).not.toContain('memory:write');
