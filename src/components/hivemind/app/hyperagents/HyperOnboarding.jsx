@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -63,6 +63,143 @@ function Panel({ icon: Icon, title, lit, complete = lit, children, className = '
   );
 }
 
+const AWAKENING_LINES = [
+  'IT’S THE AWAKENING',
+  'Your HIVEMIND is awake.',
+  'We reviewed {company} and prepared your first moves…',
+  'Three HyperAgents now live inside your company brain.',
+];
+
+function agentAssignment(member) {
+  return member?.assignment
+    || member?.job
+    || member?.responsibility
+    || member?.persona
+    || member?.description
+    || 'Briefed with your company context and ready for the first move.';
+}
+
+function AwakeningOverlay({ company, team, onContinue, onClose }) {
+  const reduceMotion = useReducedMotion();
+  const [lineIndex, setLineIndex] = useState(0);
+  const [characterIndex, setCharacterIndex] = useState(0);
+  const [profilesVisible, setProfilesVisible] = useState(false);
+  const sentences = useMemo(
+    () => AWAKENING_LINES.map((line) => line.replace('{company}', company)),
+    [company],
+  );
+  const activeSentence = sentences[lineIndex] || '';
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
+
+  useEffect(() => {
+    if (profilesVisible) return undefined;
+    if (reduceMotion) {
+      setLineIndex(sentences.length - 1);
+      setCharacterIndex(sentences.at(-1).length);
+      const revealTimer = window.setTimeout(() => setProfilesVisible(true), 500);
+      return () => window.clearTimeout(revealTimer);
+    }
+    if (characterIndex < activeSentence.length) {
+      const typeTimer = window.setTimeout(() => setCharacterIndex((current) => current + 1), lineIndex === 0 ? 72 : 38);
+      return () => window.clearTimeout(typeTimer);
+    }
+    const holdTimer = window.setTimeout(() => {
+      if (lineIndex < sentences.length - 1) {
+        setLineIndex((current) => current + 1);
+        setCharacterIndex(0);
+      } else {
+        setProfilesVisible(true);
+      }
+    }, lineIndex === 0 ? 1050 : 1250);
+    return () => window.clearTimeout(holdTimer);
+  }, [activeSentence, characterIndex, lineIndex, profilesVisible, reduceMotion, sentences]);
+
+  const skipToProfiles = () => {
+    setLineIndex(sentences.length - 1);
+    setCharacterIndex(sentences.at(-1).length);
+    setProfilesVisible(true);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: reduceMotion ? 0 : 0.45 }}
+      className="fixed inset-0 z-[110] overflow-y-auto bg-[#d7d7d7] text-[#0a0a0a]"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${company} HIVEMIND awakening`}
+    >
+      <div
+        className="fixed inset-0"
+        aria-hidden="true"
+        style={{
+          background: 'repeating-linear-gradient(90deg, rgba(0,0,0,.34) 0, rgba(0,0,0,.06) 2px, rgba(255,255,255,.42) 7px, rgba(255,255,255,.08) 13px, rgba(18,18,18,.25) 18px), linear-gradient(180deg,#e7e7e7 0%,#c9c9c9 48%,#202020 100%)',
+          filter: 'blur(1.5px)',
+          transform: 'scale(1.02)',
+        }}
+      />
+      <div className="fixed inset-0 bg-white/34 backdrop-blur-[22px]" aria-hidden="true" />
+      <div className="fixed inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,.16),rgba(10,10,10,.26))]" aria-hidden="true" />
+
+      <button type="button" onClick={profilesVisible ? onClose : skipToProfiles} className="fixed right-5 top-5 z-10 rounded-full border border-white/50 bg-white/35 px-4 py-2 text-[10px] font-mono uppercase tracking-[0.14em] text-[#262626] backdrop-blur-xl transition-colors hover:bg-white/60">
+        {profilesVisible ? 'Back' : 'Skip introduction'}
+      </button>
+
+      <div className="relative z-[1] mx-auto flex min-h-full w-full max-w-[1180px] items-center justify-center px-5 py-20 sm:px-8">
+        <AnimatePresence mode="wait">
+          {!profilesVisible ? (
+            <motion.div
+              key={`sentence-${lineIndex}`}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: reduceMotion ? 0 : 0.28 }}
+              className="flex min-h-[240px] max-w-[980px] items-center justify-center text-center"
+            >
+              <h1 className={`${lineIndex === 0 ? 'text-[clamp(2.2rem,6vw,6.4rem)] tracking-[-0.04em]' : 'text-[clamp(1.85rem,4.7vw,5rem)] tracking-[-0.035em]'} font-semibold leading-[1.04] text-[#0a0a0a] font-['Space_Grotesk'] drop-shadow-[0_1px_0_rgba(255,255,255,.7)]`}>
+                {activeSentence.slice(0, characterIndex)}
+                <span className="ml-1 inline-block w-[0.08em] animate-pulse bg-[#0a0a0a] align-[-0.08em]">&nbsp;</span>
+              </h1>
+            </motion.div>
+          ) : (
+            <motion.div key="agents" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full">
+              <div className="text-center">
+                <div className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#3f3d39]">HIVEMIND · HyperAgents online</div>
+                <h1 className="mt-3 text-[clamp(2rem,4vw,4.6rem)] font-semibold leading-none tracking-[-0.04em] text-[#0a0a0a] font-['Space_Grotesk']">Your company brain is alive.</h1>
+                <p className="mx-auto mt-3 max-w-[620px] text-[13px] leading-6 text-[#3f3d39]">Three specialists were hired from your onboarding assignments. Each one is briefed with {company}’s context and ready to work.</p>
+              </div>
+              <div className="mt-9 grid grid-cols-1 divide-y divide-white/50 border-y border-white/60 bg-white/22 backdrop-blur-2xl md:grid-cols-3 md:divide-x md:divide-y-0">
+                {team.slice(0, 3).map((member, index) => (
+                  <motion.div key={member.id || member.name} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : index * 0.14 }} className="min-h-[220px] p-6 text-center sm:p-8">
+                    <div className="mx-auto w-fit rounded-full border border-white/70 bg-white/35 p-1.5 shadow-[0_12px_35px_rgba(0,0,0,.1)] backdrop-blur-xl"><AgentAvatar agent={member} size={64} /></div>
+                    <h2 className="mt-4 text-[18px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{member.name}</h2>
+                    <div className="mt-1 text-[10px] font-mono uppercase tracking-[0.12em] text-[#3f3d39]">{member.roleArchetype || member.role || 'HyperAgent'}</div>
+                    <p className="mt-3 text-[11.5px] leading-5 text-[#525252]">{agentAssignment(member)}</p>
+                    <span className="mt-4 inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.13em] text-[#176b43]"><span className="h-1.5 w-1.5 rounded-full bg-[#16a34a]" /> Online</span>
+                  </motion.div>
+                ))}
+              </div>
+              <div className="mt-8 text-center">
+                <p className="text-[clamp(1.2rem,2vw,1.75rem)] font-medium tracking-[-0.02em] text-[#0a0a0a] font-['Space_Grotesk']">Let’s make {company} an AI company.</p>
+                <button type="button" onClick={onContinue} className="mt-5 inline-flex h-12 items-center justify-center gap-3 rounded-full bg-[#0a0a0a] px-7 text-[12px] font-semibold text-white transition-all hover:bg-[#262626] hover:px-8">
+                  Begin the first move <ArrowRight size={15} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function HyperOnboarding({ onComplete, onSkip }) {
   const { t } = useTranslation('dashboard');
   const [phase, setPhase] = useState('input'); // input | running | done
@@ -76,6 +213,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
   const [locationPromptOpen, setLocationPromptOpen] = useState(false);
   const [savingLocation, setSavingLocation] = useState(false);
   const [locationError, setLocationError] = useState('');
+  const [awakeningOpen, setAwakeningOpen] = useState(false);
   const pollRef = useRef(null);
 
   const stopPolling = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
@@ -128,6 +266,11 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
     setCompanyLocation(result?.profile?.location || result?.company_location || '');
     setLocationError('');
     setLocationPromptOpen(true);
+  };
+
+  const beginWorkspaceEntry = () => {
+    setAwakeningOpen(false);
+    requestWorkspaceEntry();
   };
 
   const confirmWorkspaceLocation = async (event) => {
@@ -239,7 +382,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">
-          <div className="col-span-2">
+          <div className="col-span-2 lg:col-span-1 lg:row-span-2 min-w-0 self-start">
             <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-[#a3a3a3] uppercase mb-2">
               <Globe size={11} /> {t('hyperOnboarding.websitePreview', 'Website preview')}
             </div>
@@ -251,11 +394,11 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
               tagline={p.tagline}
               loading={Boolean(result?.screenshot_pending) || (!done && !result?.screenshot)}
               compact
-              className="h-[204px] w-full max-w-none"
+              className="w-full shadow-[0_12px_36px_rgba(10,10,10,0.06)]"
             />
           </div>
 
-          <Panel icon={Building2} title={t('hyperOnboarding.company', 'Company')} lit={lit.company} complete={Boolean(p.what_it_does) || done} className="h-[122px]">
+          <Panel icon={Building2} title={t('hyperOnboarding.company', 'Company')} lit={lit.company} complete={Boolean(p.what_it_does) || done} className="min-h-[142px]">
             <p className="text-[12px] text-[#0a0a0a] leading-snug line-clamp-2">{p.what_it_does || '—'}</p>
             {p.location ? <p className="text-[11px] text-[#525252] mt-1 truncate"><span className="text-[#a3a3a3]">HQ:</span> {p.location}</p> : null}
             {p.icp ? <p className="text-[11px] text-[#525252] mt-1 line-clamp-1"><span className="text-[#a3a3a3]">ICP:</span> {p.icp}</p> : null}
@@ -270,7 +413,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             ) : null}
           </Panel>
 
-          <Panel icon={Target} title={t('hyperOnboarding.mission', 'Mission')} lit={lit.mission} complete={Boolean(result?.mission) || done} className="h-[122px]">
+          <Panel icon={Target} title={t('hyperOnboarding.mission', 'Mission')} lit={lit.mission} complete={Boolean(result?.mission) || done} className="min-h-[142px]">
             <p className="text-[12px] text-[#0a0a0a] leading-snug line-clamp-4">{result?.mission || '—'}</p>
           </Panel>
 
@@ -316,9 +459,9 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
         <AnimatePresence>
           {done && (
             <motion.button initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              onClick={requestWorkspaceEntry}
+              onClick={() => setAwakeningOpen(true)}
               className="mt-3 w-full flex items-center justify-center gap-2 bg-[#0a0a0a] hover:bg-[#262626] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors">
-              {t('hyperOnboarding.enterWorkspace', 'Enter your workspace')} <ArrowRight size={15} />
+              {t('hyperOnboarding.enterHivemind', 'Enter your HIVEMIND')} <ArrowRight size={15} />
             </motion.button>
           )}
         </AnimatePresence>
@@ -331,6 +474,17 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {awakeningOpen && (
+          <AwakeningOverlay
+            company={companyName}
+            team={result?.team || []}
+            onContinue={beginWorkspaceEntry}
+            onClose={() => setAwakeningOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {locationPromptOpen && (
@@ -346,7 +500,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
                 <button type="button" onClick={() => setLocationPromptOpen(false)} className="h-9 px-3 border border-[#d9dee5] rounded-lg text-[12px] font-medium text-[#525252] hover:bg-[#faf9f4]">Back</button>
                 <button type="submit" disabled={!companyLocation.trim() || savingLocation} className="h-9 px-4 bg-[#0a0a0a] text-white rounded-lg text-[12px] font-semibold disabled:opacity-40 inline-flex items-center gap-2">
                   {savingLocation ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
-                  Enter workspace
+                  Enter your HIVEMIND
                 </button>
               </div>
             </motion.form>

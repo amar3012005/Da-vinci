@@ -95,6 +95,8 @@ function WebsiteAnalysisParticles() {
 // `h-[180px]`) crops mid-row and reads as a broken/misaligned capture.
 // object-contain inside a proper aspect box shows the WHOLE capture at its
 // real proportions, at any column width, with no crop artifacts.
+// A desktop browser viewport, not a banner. Both onboarding and My Company
+// use this same contained ratio so captures never stretch across the page.
 const PREVIEW_ASPECT = 'aspect-[16/10]';
 
 export default function WebsitePreview({ image, source, website, company, tagline, loading = false, compact = false, className = '' }) {

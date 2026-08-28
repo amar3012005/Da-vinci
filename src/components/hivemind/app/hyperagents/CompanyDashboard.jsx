@@ -492,7 +492,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
                 tagline={p.tagline}
                 loading={Boolean(c.screenshot_pending)}
                 compact
-                className="max-h-[280px]"
+                className="mx-auto w-full max-w-[720px] shadow-[0_10px_30px_rgba(10,10,10,0.05)]"
               />
             </div>
           ) : null}
