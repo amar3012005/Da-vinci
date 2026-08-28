@@ -131,7 +131,7 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: reduceMotion ? 0 : 0.45 }}
-      className="fixed inset-0 z-[110] overflow-y-auto bg-[#d7d7d7] text-[#0a0a0a]"
+      className="fixed inset-0 z-[110] overflow-y-auto bg-[#071a35] text-white"
       role="dialog"
       aria-modal="true"
       aria-label={`${company} HIVEMIND awakening`}
@@ -140,15 +140,15 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
         className="fixed inset-0"
         aria-hidden="true"
         style={{
-          background: 'repeating-linear-gradient(90deg, rgba(0,0,0,.34) 0, rgba(0,0,0,.06) 2px, rgba(255,255,255,.42) 7px, rgba(255,255,255,.08) 13px, rgba(18,18,18,.25) 18px), linear-gradient(180deg,#e7e7e7 0%,#c9c9c9 48%,#202020 100%)',
-          filter: 'blur(1.5px)',
+          background: 'radial-gradient(circle at 50% 12%, rgba(76,165,255,.58), transparent 38%), radial-gradient(circle at 14% 54%, rgba(17,125,255,.28), transparent 34%), repeating-linear-gradient(90deg, rgba(183,224,255,.18) 0, rgba(183,224,255,.05) 3px, rgba(3,22,52,.24) 9px, rgba(62,145,231,.16) 15px, rgba(2,16,38,.3) 22px), linear-gradient(180deg,#153f70 0%,#0a2c58 48%,#04152f 100%)',
+          filter: 'blur(0.7px)',
           transform: 'scale(1.02)',
         }}
       />
-      <div className="fixed inset-0 bg-white/34 backdrop-blur-[22px]" aria-hidden="true" />
-      <div className="fixed inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,.16),rgba(10,10,10,.26))]" aria-hidden="true" />
+      <div className="fixed inset-0 bg-[#071a35]/12 backdrop-blur-[18px]" aria-hidden="true" />
+      <div className="fixed inset-0 bg-[linear-gradient(180deg,rgba(186,225,255,.1),rgba(0,17,43,.34))]" aria-hidden="true" />
 
-      <button type="button" onClick={profilesVisible ? onClose : skipToProfiles} className="fixed right-5 top-5 z-10 rounded-full border border-white/50 bg-white/35 px-4 py-2 text-[10px] font-mono uppercase tracking-[0.14em] text-[#262626] backdrop-blur-xl transition-colors hover:bg-white/60">
+      <button type="button" onClick={profilesVisible ? onClose : skipToProfiles} className="fixed right-5 top-5 z-10 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-[10px] font-mono uppercase tracking-[0.14em] text-white/80 backdrop-blur-xl transition-colors hover:bg-white/20 hover:text-white">
         {profilesVisible ? 'Back' : 'Skip introduction'}
       </button>
 
@@ -163,32 +163,32 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
               transition={{ duration: reduceMotion ? 0 : 0.28 }}
               className="flex min-h-[240px] max-w-[980px] items-center justify-center text-center"
             >
-              <h1 className={`${lineIndex === 0 ? 'text-[clamp(2.2rem,6vw,6.4rem)] tracking-[-0.04em]' : 'text-[clamp(1.85rem,4.7vw,5rem)] tracking-[-0.035em]'} font-semibold leading-[1.04] text-[#0a0a0a] font-['Space_Grotesk'] drop-shadow-[0_1px_0_rgba(255,255,255,.7)]`}>
+              <h1 className={`${lineIndex === 0 ? 'text-[clamp(1.8rem,4vw,4rem)] tracking-[-0.035em]' : 'text-[clamp(1.45rem,3.2vw,3.1rem)] tracking-[-0.025em]'} max-w-[900px] font-medium leading-[1.12] text-white font-['Space_Grotesk'] drop-shadow-[0_8px_30px_rgba(0,20,55,.45)]`}>
                 {activeSentence.slice(0, characterIndex)}
-                <span className="ml-1 inline-block w-[0.08em] animate-pulse bg-[#0a0a0a] align-[-0.08em]">&nbsp;</span>
+                <span className="ml-1 inline-block w-[0.07em] animate-pulse bg-[#8fd0ff] align-[-0.08em]">&nbsp;</span>
               </h1>
             </motion.div>
           ) : (
-            <motion.div key="agents" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full">
+            <motion.div key="agents" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[1120px]">
               <div className="text-center">
-                <div className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#3f3d39]">HIVEMIND · HyperAgents online</div>
-                <h1 className="mt-3 text-[clamp(2rem,4vw,4.6rem)] font-semibold leading-none tracking-[-0.04em] text-[#0a0a0a] font-['Space_Grotesk']">Your company brain is alive.</h1>
-                <p className="mx-auto mt-3 max-w-[620px] text-[13px] leading-6 text-[#3f3d39]">Three specialists were hired from your onboarding assignments. Each one is briefed with {company}’s context and ready to work.</p>
+                <div className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#a9d8ff]">HIVEMIND · HyperAgents online</div>
+                <h1 className="mt-3 text-[clamp(1.8rem,3.25vw,3.5rem)] font-semibold leading-none tracking-[-0.035em] text-white font-['Space_Grotesk']">Your company brain is alive.</h1>
+                <p className="mx-auto mt-3 max-w-[620px] text-[13px] leading-6 text-white/70">Three specialists were hired from your onboarding assignments. Each one is briefed with {company}’s context and ready to work.</p>
               </div>
-              <div className="mt-9 grid grid-cols-1 divide-y divide-white/50 border-y border-white/60 bg-white/22 backdrop-blur-2xl md:grid-cols-3 md:divide-x md:divide-y-0">
+              <div className="mt-8 grid grid-cols-1 divide-y divide-white/15 border-y border-white/20 bg-[#0b315f]/35 shadow-[inset_0_1px_0_rgba(255,255,255,.12),0_24px_80px_rgba(0,12,32,.2)] backdrop-blur-2xl md:grid-cols-3 md:divide-x md:divide-y-0">
                 {team.slice(0, 3).map((member, index) => (
                   <motion.div key={member.id || member.name} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : index * 0.14 }} className="min-h-[220px] p-6 text-center sm:p-8">
                     <div className="mx-auto w-fit rounded-full border border-white/70 bg-white/35 p-1.5 shadow-[0_12px_35px_rgba(0,0,0,.1)] backdrop-blur-xl"><AgentAvatar agent={member} size={64} /></div>
-                    <h2 className="mt-4 text-[18px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{member.name}</h2>
-                    <div className="mt-1 text-[10px] font-mono uppercase tracking-[0.12em] text-[#3f3d39]">{member.roleArchetype || member.role || 'HyperAgent'}</div>
-                    <p className="mt-3 text-[11.5px] leading-5 text-[#525252]">{agentAssignment(member)}</p>
-                    <span className="mt-4 inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.13em] text-[#176b43]"><span className="h-1.5 w-1.5 rounded-full bg-[#16a34a]" /> Online</span>
+                    <h2 className="mt-4 text-[18px] font-semibold text-white font-['Space_Grotesk']">{member.name}</h2>
+                    <div className="mt-1 text-[10px] font-mono uppercase tracking-[0.12em] text-[#a9d8ff]">{member.roleArchetype || member.role || 'HyperAgent'}</div>
+                    <p className="mt-3 text-[11.5px] leading-5 text-white/65">{agentAssignment(member)}</p>
+                    <span className="mt-4 inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.13em] text-[#79e6b1]"><span className="h-1.5 w-1.5 rounded-full bg-[#52d892]" /> Online</span>
                   </motion.div>
                 ))}
               </div>
               <div className="mt-8 text-center">
-                <p className="text-[clamp(1.2rem,2vw,1.75rem)] font-medium tracking-[-0.02em] text-[#0a0a0a] font-['Space_Grotesk']">Let’s make {company} an AI company.</p>
-                <button type="button" onClick={onContinue} className="mt-5 inline-flex h-12 items-center justify-center gap-3 rounded-full bg-[#0a0a0a] px-7 text-[12px] font-semibold text-white transition-all hover:bg-[#262626] hover:px-8">
+                <p className="text-[clamp(1.15rem,1.8vw,1.6rem)] font-medium tracking-[-0.02em] text-white font-['Space_Grotesk']">Let’s make {company} an AI company.</p>
+                <button type="button" onClick={onContinue} className="mt-5 inline-flex h-12 items-center justify-center gap-3 rounded-full border border-white/20 bg-white px-7 text-[12px] font-semibold text-[#08264e] shadow-[0_12px_35px_rgba(0,13,35,.28)] transition-all hover:bg-[#eaf6ff] hover:px-8">
                   Begin the first move <ArrowRight size={15} />
                 </button>
               </div>
@@ -381,8 +381,8 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="col-span-2 lg:col-span-1 lg:row-span-2 min-w-0 self-start">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:items-stretch">
+          <div className="min-w-0 self-start lg:row-span-2">
             <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-[#a3a3a3] uppercase mb-2">
               <Globe size={11} /> {t('hyperOnboarding.websitePreview', 'Website preview')}
             </div>
@@ -445,7 +445,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             </ul>
           </Panel>
 
-          <div className="col-span-2">
+          <div className="lg:col-span-2">
             <Panel icon={FileText} title={t('hyperOnboarding.documents', 'Documents filed to HIVEMIND memory')} lit={lit.company} className="h-[58px]">
               <div className="flex flex-wrap gap-2">
                 {[`${companyName} — Company profile`, `${companyName} — Mission`].map((d) => (
