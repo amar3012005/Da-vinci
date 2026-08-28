@@ -175,7 +175,7 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
             </motion.div>
           ) : !systemVisible ? (
             <motion.div key="agents" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[1120px]">
-              <div className="-translate-y-4 text-center sm:-translate-y-6">
+              <div className="-translate-y-14 text-center sm:-translate-y-20 lg:-translate-y-24">
                 <div className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#a9d8ff]">HIVEMIND · HyperAgents online</div>
                 <h1 className="mt-2 text-[clamp(1.8rem,3.25vw,3.5rem)] font-semibold leading-none tracking-[-0.035em] text-white font-['Space_Grotesk']">Your company brain is alive.</h1>
                 <p className="mx-auto mt-2 max-w-[940px] text-[12px] leading-5 text-white/70 sm:text-[13px]">Three specialists were hired from your onboarding assignments. Each one is briefed with {company}’s context and ready to work.</p>
