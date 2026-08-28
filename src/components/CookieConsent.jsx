@@ -60,21 +60,20 @@ export default function CookieConsent() {
           <motion.section
             initial={{ y: '100%', opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: '100%', opacity: 0 }}
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-x-0 bottom-0 z-[1000] overflow-hidden border-y border-white/20 bg-[#080a0c]/75 text-white shadow-[0_-24px_80px_rgba(0,0,0,0.24)] backdrop-blur-2xl"
+            className="fixed inset-x-0 bottom-0 z-[1000] overflow-hidden border-t border-white/20 bg-[#080b10]/68 px-5 py-5 text-white shadow-[0_-18px_60px_rgba(0,0,0,0.24)] backdrop-blur-3xl md:px-8"
             style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px)', backgroundSize: '40px 40px', WebkitBackdropFilter: 'blur(24px) saturate(135%)' }}
             role="dialog" aria-modal="true" aria-labelledby="cookie-title"
           >
-            <div className="h-px w-full bg-[linear-gradient(90deg,transparent,rgba(72,204,231,.9),rgba(17,125,255,.9),transparent)]" />
-            <div className="grid min-h-[190px] w-full lg:grid-cols-[minmax(0,1fr)_auto]">
-              <div className="flex flex-col justify-center px-5 py-7 sm:px-8 lg:px-[clamp(2rem,5vw,6rem)]">
-                <div className="flex items-center gap-2"><Cookie size={17} className="text-[#48cce7]" /><h2 id="cookie-title" className="font-['Space_Grotesk'] text-[19px] font-semibold">Your privacy. Your choice.</h2></div>
-                <p className="mt-2 max-w-4xl text-[13px] leading-5 text-white/68">We use strictly necessary storage to run and secure this site. With your permission, we also use preferences and EU-hosted aggregate product analytics. Session replay and marketing trackers are not enabled. Change your choice at any time.</p>
-                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] uppercase tracking-[0.13em]"><a className="text-[#7ddff2] hover:text-white" href="/cookies">Cookie policy</a><a className="text-[#7ddff2] hover:text-white" href="/privacy">Privacy policy</a></div>
+            <div className="mx-auto flex max-w-[1380px] flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-3xl">
+                <div className="flex items-center gap-2"><Cookie size={17} className="text-[#62e6ff]" /><h2 id="cookie-title" className="font-['Space_Grotesk'] text-[18px] font-semibold">Your privacy. Your choice.</h2></div>
+                <p className="mt-2 text-[13px] leading-5 text-white/68">We use strictly necessary storage to run and secure this site. With your permission, we also use preferences and EU-hosted aggregate product analytics. Session replay and marketing trackers are not enabled. You can change your choice at any time.</p>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px]"><a className="text-[#7ddff2] underline underline-offset-2" href="/cookies">Cookie Policy</a><a className="text-[#7ddff2] underline underline-offset-2" href="/privacy">Privacy Policy</a></div>
               </div>
-              <div className="grid border-t border-white/15 sm:grid-cols-3 lg:w-[610px] lg:border-l lg:border-t-0">
-                <button type="button" onClick={() => setPreferencesOpen(true)} className="min-h-[64px] border-0 border-b border-white/15 bg-transparent px-5 text-[12px] font-semibold text-white transition-colors hover:bg-white/10 sm:border-b-0 sm:border-r">Manage preferences</button>
-                <button type="button" onClick={reject} className="min-h-[64px] border-0 border-b border-white/15 bg-transparent px-5 text-[12px] font-semibold text-white transition-colors hover:bg-white/10 sm:border-b-0 sm:border-r">Reject optional</button>
-                <button type="button" onClick={accept} className="min-h-[64px] border-0 bg-[#117dff]/80 px-5 text-[12px] font-semibold text-white transition-colors hover:bg-[#117dff]">Accept all</button>
+              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto lg:min-w-[530px]">
+                <button type="button" onClick={() => setPreferencesOpen(true)} className="h-11 rounded-[6px] border border-white/20 bg-white/[0.06] px-5 text-[12px] font-semibold text-white transition-colors hover:bg-white/10">Manage preferences</button>
+                <button type="button" onClick={reject} className="h-11 rounded-[6px] border border-white/25 bg-black/25 px-5 text-[12px] font-semibold text-white transition-colors hover:bg-black/40">Reject optional</button>
+                <button type="button" onClick={accept} className="h-11 rounded-[6px] border border-[#117dff] bg-[#117dff] px-5 text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0]">Accept all</button>
               </div>
             </div>
           </motion.section>

@@ -74,8 +74,8 @@ const MobileNavigation = () => {
     { label: 'Developers', href: hivemindHref('#developers'), menu: 'Developers' },
     { label: 'Pricing', href: hivemindHref('#pricing'), menu: 'Pricing' },
     { label: 'Docs', href: hivemindHref('/docs'), menu: 'Docs' },
-    { label: './ ' + copy.nav.links.research, href: '/research', menu: 'Research' },
-    { label: './ Benchmark', href: '/benchmark', menu: 'Research' },
+    { label: copy.nav.links.research, href: '/research', menu: 'Research' },
+    { label: 'Benchmark', href: '/benchmark', menu: 'Research' },
   ];
   const mobileOnlyLinks = [...navLinks, { label: copy.nav.links.contact, sectionId: 'cta-section' }];
 
