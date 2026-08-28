@@ -1,0 +1,9 @@
+# ICARUS Harness repository contract. Commit this file; never commit .icarus/runtime/.
+schema_version: 1
+harness_version: 1
+repo_id: repo-ed0efa0a09f9ca6e
+repo_root: /private/tmp/davinci-release-8a080228
+git_remote_fingerprint: ed0efa0a09f9ca6e
+policy_version: 1
+agents:
+- codex

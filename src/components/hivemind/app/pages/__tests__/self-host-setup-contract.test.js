@@ -1,4 +1,4 @@
-import { ADVANCED_SELFHOST_SCOPES, buildAdvancedInstallCommand, buildInstallCommand, canUseCanaryFallback, enrollmentErrorMessage, normalizeConnectionState } from '../SelfHostSetup';
+import { ADVANCED_SELFHOST_SCOPES, buildAdvancedInstallCommand, buildInstallCommand, canUseCanaryFallback, connectionPollDelay, connectionProgress, enrollmentErrorMessage, normalizeConnectionState } from '../SelfHostSetup';
 
 describe('self-host setup contract', () => {
   test('builds one organization enrollment command without a general API key', () => {
@@ -46,12 +46,31 @@ describe('self-host setup contract', () => {
     [{ state: 'installing' }, 'INSTALLING'],
     [{ status: 'registered' }, 'CONNECTING'],
     [{ registered: true }, 'CONNECTING'],
-    [{ reachable: true }, 'READY'],
+    [{ registered: true, reachable: true }, 'READY'],
+    [{ state: 'ready', registered: true, reachable: null, stale: true }, 'CONNECTING'],
+    [{ state: 'ready', registered: true, reachable: false }, 'CONNECTING'],
+    [{ state: 'ready', registered: false, reachable: true }, 'CONNECTING'],
     [{ state: 'degraded', reachable: false }, 'DEGRADED'],
     [{ state: 'offline' }, 'OFFLINE'],
     [{ state: 'update-required' }, 'UPDATE_REQUIRED'],
     [{}, 'WAITING'],
   ])('normalizes backend connection state %#', (payload, expected) => {
     expect(normalizeConnectionState(payload)).toBe(expected);
+  });
+
+  test('uses rapid non-overlapping polling while installation is active and stops when ready', () => {
+    expect(connectionPollDelay('WAITING', false)).toBe(5000);
+    expect(connectionPollDelay('WAITING', true)).toBe(2000);
+    expect(connectionPollDelay('INSTALLING', false)).toBe(2000);
+    expect(connectionPollDelay('CONNECTING', false)).toBe(2000);
+    expect(connectionPollDelay('READY', true, false)).toBe(1000);
+    expect(connectionPollDelay('READY', true, true)).toBeNull();
+  });
+
+  test('maps durable backend states to monotonic setup progress', () => {
+    expect(connectionProgress('WAITING')).toBeLessThan(connectionProgress('INSTALLING'));
+    expect(connectionProgress('INSTALLING')).toBeLessThan(connectionProgress('CONNECTING'));
+    expect(connectionProgress('CONNECTING')).toBeLessThan(connectionProgress('READY'));
+    expect(connectionProgress('READY')).toBe(100);
   });
 });

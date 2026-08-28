@@ -23,3 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 dist/
 .vercel
+# ICARUS Harness runtime state (local, never commit)
+.icarus/runtime/
+.icarus-graph/
