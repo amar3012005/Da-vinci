@@ -60,20 +60,20 @@ export default function CookieConsent() {
           <motion.section
             initial={{ y: '100%', opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: '100%', opacity: 0 }}
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-x-0 bottom-0 z-[1000] overflow-hidden border-t border-white/20 bg-[#080b10]/68 px-5 py-5 text-white shadow-[0_-18px_60px_rgba(0,0,0,0.24)] backdrop-blur-3xl md:px-8"
-            style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px)', backgroundSize: '40px 40px', WebkitBackdropFilter: 'blur(24px) saturate(135%)' }}
+            className="fixed inset-x-0 bottom-0 z-[1000] overflow-hidden border-t border-white/20 bg-[#080b10]/72 px-5 py-3 text-white shadow-[0_-14px_48px_rgba(0,0,0,0.22)] backdrop-blur-3xl md:px-8"
+            style={{ backgroundImage: 'radial-gradient(ellipse 55% 150% at 54% -55%,rgba(255,172,76,.34),rgba(132,48,19,.14) 42%,transparent 72%),linear-gradient(180deg,rgba(18,17,17,.76),rgba(4,7,10,.92))', WebkitBackdropFilter: 'blur(24px) saturate(135%)' }}
             role="dialog" aria-modal="true" aria-labelledby="cookie-title"
           >
             <div className="mx-auto flex max-w-[1380px] flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-3xl">
                 <div className="flex items-center gap-2"><Cookie size={17} className="text-[#62e6ff]" /><h2 id="cookie-title" className="font-['Space_Grotesk'] text-[18px] font-semibold">Your privacy. Your choice.</h2></div>
-                <p className="mt-2 text-[13px] leading-5 text-white/68">We use strictly necessary storage to run and secure this site. With your permission, we also use preferences and EU-hosted aggregate product analytics. Session replay and marketing trackers are not enabled. You can change your choice at any time.</p>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px]"><a className="text-[#7ddff2] underline underline-offset-2" href="/cookies">Cookie Policy</a><a className="text-[#7ddff2] underline underline-offset-2" href="/privacy">Privacy Policy</a></div>
+                <p className="mt-1 text-[12px] leading-[18px] text-white/68">We use strictly necessary storage to run and secure this site. With your permission, we also use preferences and EU-hosted aggregate product analytics. Session replay and marketing trackers are not enabled. You can change your choice at any time.</p>
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px]"><a className="text-[#7ddff2] underline underline-offset-2" href="/cookies">Cookie Policy</a><a className="text-[#7ddff2] underline underline-offset-2" href="/privacy">Privacy Policy</a></div>
               </div>
               <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto lg:min-w-[530px]">
-                <button type="button" onClick={() => setPreferencesOpen(true)} className="h-11 rounded-[6px] border border-white/20 bg-white/[0.06] px-5 text-[12px] font-semibold text-white transition-colors hover:bg-white/10">Manage preferences</button>
-                <button type="button" onClick={reject} className="h-11 rounded-[6px] border border-white/25 bg-black/25 px-5 text-[12px] font-semibold text-white transition-colors hover:bg-black/40">Reject optional</button>
-                <button type="button" onClick={accept} className="h-11 rounded-[6px] border border-[#117dff] bg-[#117dff] px-5 text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0]">Accept all</button>
+                <button type="button" onClick={() => setPreferencesOpen(true)} className="h-10 rounded-[6px] border border-white/20 bg-white/[0.06] px-5 text-[12px] font-semibold text-white transition-colors hover:bg-white/10">Manage preferences</button>
+                <button type="button" onClick={reject} className="h-10 rounded-[6px] border border-white/25 bg-black/25 px-5 text-[12px] font-semibold text-white transition-colors hover:bg-black/40">Reject optional</button>
+                <button type="button" onClick={accept} className="h-10 rounded-[6px] border border-[#117dff] bg-[#117dff] px-5 text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0]">Accept all</button>
               </div>
             </div>
           </motion.section>
