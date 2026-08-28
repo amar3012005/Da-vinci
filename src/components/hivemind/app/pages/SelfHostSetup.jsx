@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ArrowRight, Check, CheckCircle2, ChevronDown, ChevronUp, Cloud, Copy, KeyRound, Loader2, RefreshCw, Server, ShieldCheck, WifiOff, Wrench } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Check, CheckCircle2, ChevronDown, ChevronUp, Cloud, Copy, KeyRound, Loader2, LogOut, RefreshCw, Server, ShieldCheck, WifiOff, Wrench } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useCopyToClipboard } from '../shared/hooks';
 
@@ -17,6 +17,23 @@ export const buildInstallCommand = (token, channel = 'stable') => {
     : command;
 };
 export const buildAdvancedInstallCommand = (key) => downloadedInstallerCommand('HIVEMIND_API_KEY', key || '<your-key>');
+
+export const canUseCanaryFallback = (error) => {
+  const data = error?.response?.data || {};
+  return data.canary_allowed === true || data.canary_eligible === true || data.release_channel === 'canary';
+};
+
+export const enrollmentErrorMessage = (error) => {
+  const status = Number(error?.response?.status || 0);
+  const code = String(error?.response?.data?.code || '');
+  if (status === 401) return 'Your session expired. Sign in again to continue setup.';
+  if (status === 403) return 'Organization administrator access is required to create a Memory Box connection.';
+  if (code === 'memory_box_automatic_setup_unavailable' || code.includes('canary')) {
+    return 'Automatic setup is temporarily unavailable. You can retry shortly or use the advanced connection option below.';
+  }
+  if (!error?.response) return 'HIVEMIND could not reach the setup service. Check your connection and try again.';
+  return 'HIVEMIND could not create the enrollment command. Retry, or use the advanced connection option below.';
+};
 
 export function normalizeConnectionState(payload) {
   const raw = String(payload?.state || payload?.status || '').toUpperCase().replace(/-/g, '_');
@@ -59,7 +76,7 @@ function StatusPanel({ state, status, onRetry, retrying }) {
   );
 }
 
-export default function SelfHostSetup({ onDone }) {
+export default function SelfHostSetup({ onDone, onBackToLogin }) {
   const [bootstrap, setBootstrap] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -68,6 +85,7 @@ export default function SelfHostSetup({ onDone }) {
   const [advanced, setAdvanced] = useState(false);
   const [apiKey, setApiKey] = useState(null);
   const [mintingKey, setMintingKey] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const bootstrapRef = useRef(false);
   const commandCopy = useCopyToClipboard();
   const advancedCopy = useCopyToClipboard();
@@ -80,10 +98,9 @@ export default function SelfHostSetup({ onDone }) {
       try {
         result = await apiClient.createSelfHostBootstrap();
       } catch (stableError) {
-        // Canary is an explicit server-side allowlisted test path. It is never
-        // attempted unless stable is unavailable, and the API rejects every
-        // organization that has not been approved for this release.
-        if (stableError?.response?.data?.code !== 'memory_box_automatic_setup_unavailable') throw stableError;
+        // Canary is never a generic fallback. Only an explicit server-side
+        // eligibility signal allows an approved test organization to use it.
+        if (!canUseCanaryFallback(stableError)) throw stableError;
         result = await apiClient.createSelfHostCanaryBootstrap();
       }
       const token = result?.enrollment_token || result?.enrollmentToken;
@@ -92,7 +109,7 @@ export default function SelfHostSetup({ onDone }) {
       // a server-provided shell string or a curl-to-shell pipeline.
       setBootstrap({ ...result, enrollmentToken: token, installCommand: buildInstallCommand(token, result?.channel) });
     } catch (e) {
-      setError(e?.response?.data?.error || e?.message || 'Could not create an enrollment command.');
+      setError(enrollmentErrorMessage(e));
       // The governed stable channel may intentionally be unavailable until a
       // signed release is promoted. Keep the proven operator-managed path in
       // view instead of presenting the automatic path as usable.
@@ -134,12 +151,25 @@ export default function SelfHostSetup({ onDone }) {
     finally { setMintingKey(false); }
   };
 
+  const backToLogin = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      if (onBackToLogin) await onBackToLogin();
+      else await apiClient.logout();
+    } catch { /* still return to login so the user is never trapped on setup */ }
+    window.location.replace('/hivemind/login');
+  };
+
   return (
     <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center px-3 py-6 sm:px-6 sm:py-10">
       <main className="w-full max-w-3xl bg-white border border-[#e3e0db] rounded-[10px] p-5 sm:p-8">
         <header className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-[10px] bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0"><Server size={20} className="text-[#117dff]" /></div>
-          <div className="min-w-0"><div className="text-[11px] text-[#a3a3a3] font-mono uppercase tracking-wider">HIVEMIND · Enterprise</div><h1 className="text-[24px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Set up your Memory Box</h1><p className="text-[12px] text-[#737373] mt-1">One signed command connects your organization without opening inbound firewall ports.</p></div>
+          <div className="min-w-0 flex-1"><div className="text-[11px] text-[#a3a3a3] font-mono uppercase tracking-wider">HIVEMIND · Enterprise</div><h1 className="text-[24px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Set up your Memory Box</h1><p className="text-[12px] text-[#737373] mt-1">One signed command connects your organization without opening inbound firewall ports.</p></div>
+          <button type="button" onClick={backToLogin} disabled={signingOut} className="shrink-0 flex items-center gap-1.5 px-2.5 py-2 rounded-[6px] border border-[#e3e0db] text-[11px] text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4] disabled:opacity-50" aria-label="Back to login">
+            {signingOut ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />} <span className="hidden sm:inline">Back to login</span>
+          </button>
         </header>
 
         <section className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-2">

@@ -173,7 +173,7 @@ function sectionForPath(pathname) {
  *   2. otherwise -> full dashboard (API key generated on-demand when needed)
  */
 export default function AppShell() {
-  const { needsOnboarding, org } = useAuth();
+  const { needsOnboarding, org, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -320,7 +320,7 @@ export default function AppShell() {
     );
   }
   if (isSelfHost && shGate === 'setup') {
-    return <SelfHostSetup onDone={() => setShGate('ok')} />;
+    return <SelfHostSetup onDone={() => setShGate('ok')} onBackToLogin={logout} />;
   }
 
   // New-user capability deck → activation checklist → workspace reveal.

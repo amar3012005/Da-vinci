@@ -35,7 +35,7 @@ function deriveSlug(name) {
 
 export default function OnboardingFlow() {
   const { t } = useTranslation('dashboard');
-  const { user, createOrg } = useAuth();
+  const { user, createOrg, logout } = useAuth();
   // Two-step flow for users who signed in WITHOUT the login-page create-account
   // path (e.g. plain "Continue with Google" as a brand-new user): step 1 asks
   // "How will you use HIVEMIND?" exactly like the login page, step 2 collects
@@ -186,7 +186,7 @@ export default function OnboardingFlow() {
     }
   };
 
-  if (showSelfHost) return <SelfHostSetup onDone={() => { window.location.href = '/hivemind/app/overview'; }} />;
+  if (showSelfHost) return <SelfHostSetup onDone={() => { window.location.href = '/hivemind/app/overview'; }} onBackToLogin={logout} />;
 
   if (enterpriseActivation) {
     const endsAt = new Date(enterpriseActivation.ends_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });

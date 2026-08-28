@@ -1,4 +1,4 @@
-import { ADVANCED_SELFHOST_SCOPES, buildAdvancedInstallCommand, buildInstallCommand, normalizeConnectionState } from '../SelfHostSetup';
+import { ADVANCED_SELFHOST_SCOPES, buildAdvancedInstallCommand, buildInstallCommand, canUseCanaryFallback, enrollmentErrorMessage, normalizeConnectionState } from '../SelfHostSetup';
 
 describe('self-host setup contract', () => {
   test('builds one organization enrollment command without a general API key', () => {
@@ -16,6 +16,18 @@ describe('self-host setup contract', () => {
     const command = buildInstallCommand('canary-token', 'canary');
     expect(command).toContain('HIVEMIND_MEMORY_BOX_CHANNEL=canary');
     expect(buildInstallCommand('stable-token')).not.toContain('HIVEMIND_MEMORY_BOX_CHANNEL=canary');
+  });
+
+  test('canary fallback requires an explicit server eligibility signal', () => {
+    expect(canUseCanaryFallback({ response: { data: { code: 'memory_box_automatic_setup_unavailable' } } })).toBe(false);
+    expect(canUseCanaryFallback({ response: { data: { canary_eligible: true } } })).toBe(true);
+  });
+
+  test('ordinary users see actionable enrollment errors without canary policy details', () => {
+    expect(enrollmentErrorMessage({ response: { status: 503, data: { code: 'memory_box_automatic_setup_unavailable', error: 'canary_not_allowlisted' } } }))
+      .toBe('Automatic setup is temporarily unavailable. You can retry shortly or use the advanced connection option below.');
+    expect(enrollmentErrorMessage({ response: { status: 403, data: { error: 'canary policy denied' } } }))
+      .toBe('Organization administrator access is required to create a Memory Box connection.');
   });
 
   test('advanced setup uses the same signed installer instead of a mutable branch', () => {
