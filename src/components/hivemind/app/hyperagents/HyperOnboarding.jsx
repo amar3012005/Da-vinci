@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin } from 'lucide-react';
+import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin, BrainCircuit, AudioWaveform, Orbit } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import SingulanceMark from '../shared/SingulanceMark';
@@ -84,6 +84,7 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
   const [lineIndex, setLineIndex] = useState(0);
   const [characterIndex, setCharacterIndex] = useState(0);
   const [profilesVisible, setProfilesVisible] = useState(false);
+  const [systemVisible, setSystemVisible] = useState(false);
   const sentences = useMemo(
     () => AWAKENING_LINES.map((line) => line.replace('{company}', company)),
     [company],
@@ -136,17 +137,21 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
       aria-modal="true"
       aria-label={`${company} HIVEMIND awakening`}
     >
-      <div
-        className="fixed inset-0"
-        aria-hidden="true"
-        style={{
-          background: 'radial-gradient(circle at 50% 12%, rgba(76,165,255,.58), transparent 38%), radial-gradient(circle at 14% 54%, rgba(17,125,255,.28), transparent 34%), repeating-linear-gradient(90deg, rgba(183,224,255,.18) 0, rgba(183,224,255,.05) 3px, rgba(3,22,52,.24) 9px, rgba(62,145,231,.16) 15px, rgba(2,16,38,.3) 22px), linear-gradient(180deg,#153f70 0%,#0a2c58 48%,#04152f 100%)',
-          filter: 'blur(0.7px)',
-          transform: 'scale(1.02)',
-        }}
-      />
-      <div className="fixed inset-0 bg-[#071a35]/12 backdrop-blur-[18px]" aria-hidden="true" />
-      <div className="fixed inset-0 bg-[linear-gradient(180deg,rgba(186,225,255,.1),rgba(0,17,43,.34))]" aria-hidden="true" />
+      <picture className="fixed inset-0 block h-full w-full">
+        <source
+          type="image/webp"
+          srcSet="/assets/onboarding/awakening-1280.webp 1280w, /assets/onboarding/awakening-1920.webp 1920w, /assets/onboarding/awakening-2560.webp 2560w, /assets/onboarding/awakening-3840.webp 3840w"
+          sizes="100vw"
+        />
+        <img
+          src="/assets/onboarding/awakening-1920.webp"
+          alt=""
+          fetchPriority="high"
+          decoding="async"
+          className="h-full w-full object-cover object-center"
+        />
+      </picture>
+      <div className="fixed inset-0 bg-[#04152f]/[0.08]" aria-hidden="true" />
 
       <button type="button" onClick={profilesVisible ? onClose : skipToProfiles} className="fixed right-5 top-5 z-10 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-[10px] font-mono uppercase tracking-[0.14em] text-white/80 backdrop-blur-xl transition-colors hover:bg-white/20 hover:text-white">
         {profilesVisible ? 'Back' : 'Skip introduction'}
@@ -168,7 +173,7 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
                 <span className="ml-1 inline-block w-[0.07em] animate-pulse bg-[#8fd0ff] align-[-0.08em]">&nbsp;</span>
               </h1>
             </motion.div>
-          ) : (
+          ) : !systemVisible ? (
             <motion.div key="agents" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[1120px]">
               <div className="text-center">
                 <div className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#a9d8ff]">HIVEMIND · HyperAgents online</div>
@@ -188,10 +193,41 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
               </div>
               <div className="mt-8 text-center">
                 <p className="text-[clamp(1.15rem,1.8vw,1.6rem)] font-medium tracking-[-0.02em] text-white font-['Space_Grotesk']">Let’s make {company} an AI company.</p>
-                <button type="button" onClick={onContinue} className="mt-5 inline-flex h-12 items-center justify-center gap-3 rounded-full border border-white/20 bg-white px-7 text-[12px] font-semibold text-[#08264e] shadow-[0_12px_35px_rgba(0,13,35,.28)] transition-all hover:bg-[#eaf6ff] hover:px-8">
-                  Begin the first move <ArrowRight size={15} />
+                <button type="button" onClick={() => setSystemVisible(true)} className="mt-5 inline-flex h-12 items-center justify-center gap-3 rounded-full border border-white/20 bg-white px-7 text-[12px] font-semibold text-[#08264e] shadow-[0_12px_35px_rgba(0,13,35,.28)] transition-all hover:bg-[#eaf6ff] hover:px-8">
+                  See your operating system <ArrowRight size={15} />
                 </button>
               </div>
+            </motion.div>
+          ) : (
+            <motion.div key="system" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[1080px] text-center">
+              <div className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#cce8ff]">Your AI company architecture</div>
+              <h1 className="mt-3 text-[clamp(1.65rem,3vw,3rem)] font-medium tracking-[-0.035em] text-white font-['Space_Grotesk']">One intelligence. Three interfaces.</h1>
+              <div className="relative mx-auto mt-9 w-[min(82vw,1020px)]">
+                <div
+                  className="grid grid-cols-3 border border-white/50 bg-[#06162d]/25 backdrop-blur-[12px]"
+                  style={{ clipPath: 'polygon(18px 0, calc(100% - 18px) 0, 100% 18px, 100% calc(100% - 18px), calc(100% - 18px) 100%, 18px 100%, 0 calc(100% - 18px), 0 18px)' }}
+                >
+                  {[
+                    { label: 'BRAIN', icon: BrainCircuit, note: 'Company memory' },
+                    { label: 'OS', icon: Orbit, note: 'HyperAgents', active: true },
+                    { label: 'VOICE', icon: AudioWaveform, note: 'TARA' },
+                  ].map(({ label, icon: Icon, note, active }, index) => (
+                    <motion.div key={label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : index * 0.16 }} className={`relative flex h-[126px] flex-col items-center justify-center border-white/30 sm:h-[160px] ${index ? 'border-l' : ''}`}>
+                      <div className="flex items-center gap-2.5 sm:gap-4">
+                        <Icon size={active ? 36 : 30} strokeWidth={1.2} className={active ? 'text-white drop-shadow-[0_0_14px_rgba(180,224,255,.95)]' : 'text-white/80'} />
+                        <span className="text-[13px] font-medium tracking-[0.16em] text-white font-['Space_Grotesk'] sm:text-[18px]">{label}</span>
+                      </div>
+                      <span className="mt-3 hidden font-mono text-[8px] uppercase tracking-[0.18em] text-white/55 sm:block">{note}</span>
+                      {active && <motion.span className="absolute inset-x-[12%] bottom-0 h-px bg-white shadow-[0_0_10px_rgba(183,224,255,.9)]" animate={{ opacity: [0.35, 1, 0.35] }} transition={{ duration: 1.8, repeat: Infinity }} />}
+                    </motion.div>
+                  ))}
+                </div>
+                <span className="absolute left-full top-1/2 ml-3 -translate-y-1/2 font-mono text-[8px] uppercase tracking-[0.18em] text-white/65 sm:ml-4 sm:text-[10px]">Soon</span>
+              </div>
+              <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.26em] text-white/60 sm:text-[10px]">Brain · operating system · voice</p>
+              <button type="button" onClick={onContinue} className="mt-7 inline-flex h-12 items-center justify-center gap-3 rounded-full border border-white/20 bg-white px-7 text-[12px] font-semibold text-[#08264e] shadow-[0_12px_35px_rgba(0,13,35,.28)] transition-all hover:bg-[#eaf6ff] hover:px-8">
+                Begin the first move <ArrowRight size={15} />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

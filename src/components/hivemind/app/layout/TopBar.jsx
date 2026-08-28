@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
-import { Search, BookOpen, UserPlus } from 'lucide-react';
+import { Search, BookOpen, UserPlus, BrainCircuit, Orbit, AudioWaveform } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import TeamSwitcher from './TeamSwitcher';
 import LangSwitcher from './LangSwitcher';
@@ -55,9 +55,9 @@ const pageDescriptions = {
 };
 
 const SECTIONS = [
-  { key: 'hivemind', label: 'BRAIN' },
-  { key: 'hyperagents', label: 'Operating System' },
-  { key: 'tara', label: 'VOICE' },
+  { key: 'hivemind', label: 'BRAIN', icon: BrainCircuit },
+  { key: 'hyperagents', label: 'OS', icon: Orbit },
+  { key: 'tara', label: 'VOICE', icon: AudioWaveform },
 ];
 
 const SECTION_TITLES = {
@@ -107,20 +107,21 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
       </div>
 
       {/* Section Toggle */}
-      <div className="flex items-center h-8 bg-[#f3f1ec] rounded-lg border border-[#e3e0db] p-0.5">
-        {SECTIONS.map((s) => (
-          <button
-            key={s.key}
-            onClick={() => onSectionChange?.(s.key)}
-            className={`relative px-3.5 py-1 rounded-md text-[11px] font-semibold tracking-[0.04em] transition-all duration-150 font-['Space_Grotesk'] ${
-              activeSection === s.key
-                ? 'bg-white text-[#0a0a0a] shadow-sm'
-                : 'text-[#a3a3a3] hover:text-[#525252]'
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
+      <div className="relative">
+        <div className="flex h-9 items-stretch border border-[#d4d0ca] bg-white/55 p-[2px] shadow-[0_8px_24px_rgba(10,10,10,0.045)] backdrop-blur-xl" style={{ clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)' }}>
+          {SECTIONS.map((s, index) => {
+            const active = activeSection === s.key;
+            const Icon = s.icon;
+            return (
+              <button key={s.key} onClick={() => onSectionChange?.(s.key)} className={`relative flex min-w-[68px] items-center justify-center gap-1.5 border-[#e3e0db] px-2.5 text-[9px] font-semibold tracking-[0.1em] transition-all duration-300 font-['Space_Grotesk'] sm:min-w-[86px] sm:px-4 sm:text-[10px] ${index ? 'border-l' : ''} ${active ? 'bg-[#0a0a0a] text-white' : 'text-[#8d8d8d] hover:bg-white/80 hover:text-[#0a0a0a]'}`}>
+                <Icon size={13} strokeWidth={1.5} className={active ? (s.key === 'hyperagents' ? 'animate-[spin_5s_linear_infinite] text-[#7db8ff]' : 'animate-pulse text-[#7db8ff]') : ''} />
+                <span>{s.label}</span>
+                {active && <span className="absolute inset-x-3 bottom-0 h-px bg-[#117dff] shadow-[0_0_8px_#117dff]" />}
+              </button>
+            );
+          })}
+        </div>
+        <span className="pointer-events-none absolute left-full top-1/2 ml-1.5 -translate-y-1/2 font-mono text-[7px] uppercase tracking-[0.12em] text-[#a3a3a3] sm:ml-2 sm:text-[8px]">Soon</span>
       </div>
 
       {/* Right: Actions */}
