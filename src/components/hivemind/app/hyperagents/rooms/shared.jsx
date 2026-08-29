@@ -1634,6 +1634,7 @@ export function splitSynthesisSections(content) {
 
 export function hyperEventKey(event, index) {
   if (!event) return `empty:${index}`;
+  if (event.event_id) return `event:${event.event_id}`;
   if (event.id) return `id:${event.id}`;
   return [
     event.t || 'line',

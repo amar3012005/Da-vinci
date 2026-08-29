@@ -1983,7 +1983,8 @@ function RoomThread({ roomId, onArchived }) {
       'work_brief', 'action_intent', 'connection_required',
       // Additional Population-Sim report (hideable popup dashboard):
       'sim_report',
-      'connector_logo', 'artifact_ready', 'gather', 'recon_pre', 'execute',
+      'connector_logo', 'artifact_progress', 'artifact_candidate', 'artifact_ready', 'artifact_rejected',
+      'gather', 'recon_pre', 'execute',
       // Places prospect discovery — 'using Maps' chip.
       'prospects',
       // Self-evolving employees: per-turn playbook learning signal.
@@ -3726,6 +3727,10 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
       .forEach(l => { byId[l.artifact_id] = l; });
     return Object.values(byId);
   })();
+  const visualArtifactProgress = [...lines].reverse().find((line) =>
+    line.t === 'artifact_progress' && line.status === 'active');
+  const visualArtifactRejected = [...lines].reverse().find((line) =>
+    line.t === 'artifact_rejected' && line.status === 'rejected');
   const approvalRequests = lines.filter(l => l.t === 'approval_request');
   const approvalResolutions = lines.filter(l => l.t === 'approval_resolved');
   const resolutionById = {};
@@ -4308,6 +4313,37 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
             .filter(p => (campaignChannel === 'email' ? p.email : p.phone)).length}
           onClose={() => setCampaignChannel(null)}
         />
+      )}
+
+      {visualArtifactProgress && visualArtifacts.length === 0 && !visualArtifactRejected && (
+        <section className="overflow-hidden rounded-md border border-[#d8d3cc] bg-white" aria-live="polite" aria-label="Visual artifact progress">
+          <div className="flex items-start gap-3 px-4 py-3">
+            <div className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-sm border border-[#b9d4ff] bg-[#edf5ff] text-[#117dff]">
+              <Loader2 size={14} className="animate-spin" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-[#24211f]">{visualArtifactProgress.title || 'Preparing visual artifact'}</p>
+              <p className="mt-0.5 text-[10.5px] leading-relaxed text-[#6f6962]">{visualArtifactProgress.detail || 'The visual deliverable is being prepared.'}</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {visualArtifactRejected && visualArtifacts.length === 0 && (
+        <section className="overflow-hidden rounded-md border border-amber-200 bg-amber-50/60" aria-label="Visual artifact render result">
+          <div className="flex items-start gap-3 px-4 py-3">
+            <AlertTriangle size={15} className="mt-0.5 shrink-0 text-amber-700" />
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-amber-900">{visualArtifactRejected.title || 'Visual artifact was not shown'}</p>
+              <p className="mt-0.5 text-[10.5px] leading-relaxed text-amber-800">{visualArtifactRejected.detail || 'The grounded text response was retained.'}</p>
+              {Array.isArray(visualArtifactRejected.errors) && visualArtifactRejected.errors.length > 0 && (
+                <ul className="mt-2 space-y-1 border-t border-amber-200 pt-2 text-[10px] leading-relaxed text-amber-900">
+                  {visualArtifactRejected.errors.slice(0, 3).map((error, index) => <li key={`${error}-${index}`}>• {error}</li>)}
+                </ul>
+              )}
+            </div>
+          </div>
+        </section>
       )}
 
       {visualArtifacts.length > 0 && (
