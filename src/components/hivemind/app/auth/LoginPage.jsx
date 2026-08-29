@@ -157,6 +157,9 @@ export default function LoginPage() {
   );
 
   const [showOnboarding, setShowOnboarding] = useState(wantsCreate);
+  const [localPreviewEmail, setLocalPreviewEmail] = useState('');
+  const [localPreviewMessage, setLocalPreviewMessage] = useState('');
+  const [localPreviewSubmitting, setLocalPreviewSubmitting] = useState(false);
   const [loadArtwork, setLoadArtwork] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [accountType, setAccountType] = useState(null);
@@ -490,23 +493,29 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* Preview-only local session or the normal Google flow. */}
+                  {localPreviewAuth && <div className="mb-3"><label className="block text-[11px] font-medium text-[#525252] mb-1.5" htmlFor="local-preview-email">Email address</label><input id="local-preview-email" type="email" autoComplete="email" value={localPreviewEmail} onChange={(event) => setLocalPreviewEmail(event.target.value)} placeholder="you@company.com" className="w-full h-11 px-3 rounded-[6px] border border-[#d9d7d0] text-[13px] outline-none focus:border-[#117dff]" />{localPreviewMessage && <p className="mt-2 text-[11px] text-[#525252]">{localPreviewMessage}</p>}</div>}
+                  {/* Preview-only email sign-in or the normal Google flow. */}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (localPreviewAuth) {
                         const returnTo = returnToFromState || `${window.location.origin}/hivemind/app/overview?auth=callback`;
-                        window.location.href = `${process.env.REACT_APP_CONTROL_PLANE_URL.replace(/\/$/, '')}/auth/local-preview?return_to=${encodeURIComponent(returnTo)}`;
+                        setLocalPreviewSubmitting(true); setLocalPreviewMessage('');
+                        try {
+                          const response = await fetch(`${process.env.REACT_APP_CONTROL_PLANE_URL.replace(/\/$/, '')}/auth/local-preview/request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ email: localPreviewEmail, return_to: returnTo }) });
+                          const payload = await response.json().catch(() => ({}));
+                          setLocalPreviewMessage(response.ok ? (payload.message || 'Check your email for a sign-in link.') : (payload.error || 'Unable to send the sign-in link.'));
+                        } finally { setLocalPreviewSubmitting(false); }
                         return;
                       }
                       login({ provider: 'google', returnTo: returnToFromState || undefined });
                     }}
-                    disabled={loading}
+                    disabled={loading || localPreviewSubmitting || (localPreviewAuth && !localPreviewEmail.trim())}
                     className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]"
                   >
-                    {loading ? <Loader2 size={16} className="animate-spin text-white/60" /> : (
+                    {(loading || localPreviewSubmitting) ? <Loader2 size={16} className="animate-spin text-white/60" /> : (
                       <span className="w-6 h-6 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={14} /></span>
                     )}
-                    {localPreviewAuth ? 'Enter local preview' : 'Continue with Google'}
+                    {localPreviewAuth ? 'Email me a preview sign-in link' : 'Continue with Google'}
                   </button>
                   {/* Visible provider roadmap — Google is the only live identity path. */}
                   <div className="flex items-center gap-2 mt-2.5">
