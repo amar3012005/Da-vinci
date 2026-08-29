@@ -1122,7 +1122,8 @@ function buildCodeSnippet(mode, input, opts) {
       ? { input: input || 'compare vector DBs for 1M-row RAG', model: opts.researchModel, citation_format: opts.citationFormat }
       : { query: input || 'milvus vs qdrant benchmarks', limit: 10 };
   const path = mode === 'crawl' ? '/v1/proxy/web/crawl/jobs' : mode === 'research' ? '/v1/proxy/web/research/jobs' : '/v1/proxy/web/search/jobs';
-  return `curl -X POST https://api.singulancelabs.com${path} \\
+  const controlPlane = (process.env.REACT_APP_CONTROL_PLANE_URL || 'https://api.singulancelabs.com').replace(/\/$/, '');
+  return `curl -X POST ${controlPlane}${path} \\
   -H "Authorization: Bearer $HIVEMIND_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '${JSON.stringify(body, null, 2).replace(/\n/g, '\n  ')}'`;

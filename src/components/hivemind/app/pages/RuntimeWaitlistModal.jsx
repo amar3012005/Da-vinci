@@ -131,7 +131,8 @@ export default function RuntimeWaitlistModal({ onClose }) {
     if (!canSubmit) return;
     setStatus('sending');
     try {
-      const res = await fetch('https://api.singulancelabs.com/auth/runtime-waitlist', {
+      const controlPlane = (process.env.REACT_APP_CONTROL_PLANE_URL || 'https://api.singulancelabs.com').replace(/\/$/, '');
+      const res = await fetch(`${controlPlane}/auth/runtime-waitlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), use_case: useCase.trim() }),

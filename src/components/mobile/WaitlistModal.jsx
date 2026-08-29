@@ -132,7 +132,8 @@ export default function WaitlistModal({ open, onClose }) {
     if (!isLast) { setStep((s) => s + 1); return; }
     setState('sending');
     try {
-      const res = await fetch('https://api.singulancelabs.com/auth/access-applications', {
+      const controlPlane = (process.env.REACT_APP_CONTROL_PLANE_URL || 'https://api.singulancelabs.com').replace(/\/$/, '');
+      const res = await fetch(`${controlPlane}/auth/access-applications`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, account_type: form.use?.toLowerCase(), source: 'singulancelabs.com/hero' }),
       });
