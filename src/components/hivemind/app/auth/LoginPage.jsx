@@ -89,6 +89,7 @@ export default function LoginPage() {
   const { isAuthenticated, isUnreachable, loading, login, org, needsOnboarding } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const localPreviewAuth = process.env.REACT_APP_LOCAL_AUTH_BYPASS === 'true';
 
   // If the user landed on /login via ProtectedRoute (e.g. clicked an invite link
   // /hivemind/join/<slug>/<token> while signed out), preserve that path as the
@@ -489,16 +490,23 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* Primary: Google */}
+                  {/* Preview-only local session or the normal Google flow. */}
                   <button
-                    onClick={() => login({ provider: 'google', returnTo: returnToFromState || undefined })}
+                    onClick={() => {
+                      if (localPreviewAuth) {
+                        const returnTo = returnToFromState || `${window.location.origin}/hivemind/app/overview?auth=callback`;
+                        window.location.href = `${process.env.REACT_APP_CONTROL_PLANE_URL.replace(/\/$/, '')}/auth/local-preview?return_to=${encodeURIComponent(returnTo)}`;
+                        return;
+                      }
+                      login({ provider: 'google', returnTo: returnToFromState || undefined });
+                    }}
                     disabled={loading}
                     className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]"
                   >
                     {loading ? <Loader2 size={16} className="animate-spin text-white/60" /> : (
                       <span className="w-6 h-6 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={14} /></span>
                     )}
-                    Continue with Google
+                    {localPreviewAuth ? 'Enter local preview' : 'Continue with Google'}
                   </button>
                   {/* Visible provider roadmap — Google is the only live identity path. */}
                   <div className="flex items-center gap-2 mt-2.5">
