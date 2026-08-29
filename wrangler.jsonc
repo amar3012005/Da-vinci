@@ -6,7 +6,7 @@
   "preview_urls": true,
   "main": "./cloudflare/worker.mjs",
   "build": {
-    "command": "node scripts/assert-cloudflare-main-release.mjs && PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm run build:cloudflare"
+    "command": "node scripts/assert-cloudflare-main-release.mjs && npm run build:cloudflare"
   },
   "assets": {
     "directory": "./build",
