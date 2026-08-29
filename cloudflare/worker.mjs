@@ -11,7 +11,8 @@ const PUBLIC_MARKETING_HOSTS = new Set([
 const PRIVATE_ROBOTS = `# This hostname serves an authenticated SINGULANCE application.\nUser-agent: *\nDisallow: /\n`;
 
 function hostname(request) {
-  return new URL(request.url).hostname.toLowerCase();
+  const host = request.headers.get('host');
+  return (host ? host.split(':')[0] : new URL(request.url).hostname).toLowerCase();
 }
 
 function noIndex(response) {
