@@ -3069,6 +3069,31 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getSubjectProfiles(limit = 50) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/cognition/subject-profiles?limit=${encodeURIComponent(limit)}`);
+    return data;
+  }
+
+  async getSubjectProfile(profileId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/cognition/subject-profile?profile_id=${encodeURIComponent(profileId)}`);
+    return data;
+  }
+
+  async getDreamCandidates(status = 'quarantined', limit = 50) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/cognition/candidates?status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}`);
+    return data;
+  }
+
+  async reviewDreamCandidate(candidateId, decision, reason) {
+    const { data } = await this.controlPlane.post('/v1/proxy/cognition/candidate-review', { candidate_id: candidateId, decision, reason });
+    return data;
+  }
+
+  async cancelCognitionRun(runId) {
+    const { data } = await this.controlPlane.post('/v1/proxy/cognition/run-cancel', { run_id: runId });
+    return data;
+  }
+
   // ─── Hermes: Agents ──────────────────────────────────────────
 
   /** GET /hermes/agents → { agents: [{id,org_id,tenant_id,name,config,status,created_at,updated_at}] } */

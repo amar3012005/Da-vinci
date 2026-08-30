@@ -25,6 +25,8 @@ export default function CognitionSettings() {
   const [saving, setSaving] = useState(/** @type {string|null} */ (null));
   const [dreaming, setDreaming] = useState(false);
   const [runs, setRuns] = useState(/** @type {Array<any>} */ ([]));
+  const [subjectProfiles, setSubjectProfiles] = useState(/** @type {Array<any>} */ ([]));
+  const [reviewCandidates, setReviewCandidates] = useState(/** @type {Array<any>} */ ([]));
   const [runsLoading, setRunsLoading] = useState(false);
   const [expandedRun, setExpandedRun] = useState(/** @type {string|null} */ (null));
   const [runDreams, setRunDreams] = useState(/** @type {Record<string, any[]>} */ ({}));
@@ -192,14 +194,26 @@ export default function CognitionSettings() {
   const loadRuns = useCallback(async () => {
     setRunsLoading(true);
     try {
-      const data = await apiClient.getCognitionRuns(20);
+      const [data, profiles, candidates] = await Promise.all([
+        apiClient.getCognitionRuns(20),
+        apiClient.getSubjectProfiles(12).catch(() => ({ profiles: [] })),
+        apiClient.getDreamCandidates('quarantined', 12).catch(() => ({ candidates: [] })),
+      ]);
       setRuns(Array.isArray(data?.runs) ? data.runs : []);
+      setSubjectProfiles(Array.isArray(profiles?.profiles) ? profiles.profiles : []);
+      setReviewCandidates(Array.isArray(candidates?.candidates) ? candidates.candidates : []);
     } catch {
       /* non-blocking — runs are auxiliary */
     } finally {
       setRunsLoading(false);
     }
   }, []);
+
+  const reviewCandidate = useCallback(async (id, decision) => {
+    await apiClient.reviewDreamCandidate(id, decision);
+    setReviewCandidates((items) => items.filter((item) => item.id !== id));
+    showToast(decision === 'approved' ? 'Insight approved.' : 'Insight rejected.');
+  }, [showToast]);
 
   const handleDreamNow = useCallback(async () => {
     setDreaming(true);
@@ -498,6 +512,31 @@ export default function CognitionSettings() {
                   <RefreshCw size={11} className={runsLoading ? 'animate-spin' : ''} />
                 </button>
               </div>
+              {(subjectProfiles.length > 0 || reviewCandidates.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 py-1">
+                  <div className="rounded-[6px] border border-[#ece9e4] p-2">
+                    <div className="text-[10px] font-semibold text-[#737373] uppercase tracking-wide">Subject profiles</div>
+                    {subjectProfiles.slice(0, 5).map((profile) => (
+                      <div key={profile.id} className="mt-1 text-[11px] flex justify-between gap-2">
+                        <span className="truncate text-[#0a0a0a]">{profile.display_name}</span>
+                        <span className="text-[#a3a3a3] shrink-0">{profile.subject_type} · v{profile.projection_version}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-[6px] border border-[#ece9e4] p-2">
+                    <div className="text-[10px] font-semibold text-[#737373] uppercase tracking-wide">Review required</div>
+                    {reviewCandidates.slice(0, 3).map((candidate) => (
+                      <div key={candidate.id} className="mt-1.5 text-[11px]">
+                        <div className="line-clamp-2 text-[#0a0a0a]">{candidate.claim}</div>
+                        <div className="flex gap-2 mt-1">
+                          <button onClick={() => reviewCandidate(candidate.id, 'approved')} className="text-[#16a34a]">Approve</button>
+                          <button onClick={() => reviewCandidate(candidate.id, 'rejected')} className="text-[#dc2626]">Reject</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {runs.length === 0 && !runsLoading && (
                 <p className="text-[11px] text-[#a3a3a3]">{t('cognition.noRuns', 'No dream runs yet.')}</p>
               )}
@@ -642,7 +681,9 @@ function RunRow({ run, expanded, dreams, deleting, canDelete, onToggle, onDelete
     ? (run.skipped_reason || 'skipped')
     : run.status === 'error'
       ? (run.error || 'error')
-      : `${run.dream_count} dream${run.dream_count === 1 ? '' : 's'}`;
+      : run.pipeline_version === 2
+        ? `${run.published_count || 0} published · ${run.quarantined_count || 0} review`
+        : `${run.dream_count} dream${run.dream_count === 1 ? '' : 's'}`;
   const hasDreams = run.dream_count > 0;
 
   return (
@@ -661,6 +702,9 @@ function RunRow({ run, expanded, dreams, deleting, canDelete, onToggle, onDelete
           <span className="text-[#737373] tabular-nums shrink-0">{whenStr}</span>
           <span className="px-1.5 py-0.5 rounded bg-[#ece9e4] text-[#737373] text-[10px] shrink-0">{run.trigger}</span>
           <span className={`font-medium truncate ${statusCls}`}>{summary}</span>
+          {run.pipeline_version === 2 && run.status === 'running' && (
+            <span className="text-[#737373] shrink-0">· {run.stage || 'queued'} {run.progress || 0}%</span>
+          )}
           {secs && <span className="text-[#a3a3a3] shrink-0">· {secs}</span>}
         </button>
         {canDelete && (
