@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import apiClient from './api-client';
 
 /**
  * Generic data fetching hook
@@ -73,25 +72,3 @@ export function useDebounce(value, delay = 300) {
   return debounced;
 }
 
-/**
- * Core health status polling
- */
-export function useHealthStatus(interval = 30000) {
-  const [healthy, setHealthy] = useState(null);
-
-  useEffect(() => {
-    const check = async () => {
-      try {
-        await apiClient.health();
-        setHealthy(true);
-      } catch {
-        setHealthy(false);
-      }
-    };
-    check();
-    const id = setInterval(check, interval);
-    return () => clearInterval(id);
-  }, [interval]);
-
-  return healthy;
-}

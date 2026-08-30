@@ -1,6 +1,5 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useHealthStatus } from '../shared/hooks';
 import { Search, BookOpen, UserPlus, BrainCircuit, Orbit, AudioWaveform } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import TeamSwitcher from './TeamSwitcher';
@@ -69,7 +68,6 @@ const SECTION_TITLES = {
 export default function TopBar({ activeSection = 'hivemind', onSectionChange }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const healthy = useHealthStatus();
 
   const title = pageTitles[location.pathname] || SECTION_TITLES[activeSection] || 'HIVEMIND';
   const description = pageDescriptions[location.pathname] || '';
@@ -163,23 +161,6 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
 
         {/* Language switcher */}
         <div className="hidden md:block"><LangSwitcher /></div>
-
-
-        {/* Health */}
-        <div className="hidden md:flex items-center gap-1.5 h-8 px-2.5 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db]">
-          <div
-            className={`w-1.5 h-1.5 rounded-full ${
-              healthy === null
-                ? 'bg-[#a3a3a3]'
-                : healthy
-                ? 'bg-[#16a34a]'
-                : 'bg-[#dc2626]'
-            }`}
-          />
-          <span className="text-[10px] text-[#a3a3a3] font-mono whitespace-nowrap">
-            {healthy === null ? '...' : healthy ? t('topbar.online', 'Online') : t('topbar.offline', 'Offline')}
-          </span>
-        </div>
       </div>
     </header>
   );
