@@ -2713,6 +2713,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getMemoryClaims(memoryId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/memories/${encodeURIComponent(memoryId)}/claims`);
+    return data;
+  }
+
   async getWebJob(jobId) {
     const { data } = await this.controlPlane.get(`/v1/proxy/web/jobs/${jobId}`);
     return data;

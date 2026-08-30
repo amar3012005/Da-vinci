@@ -38,6 +38,7 @@ import { useTeamContext } from '../shared/team-context';
 import { filterUserVisibleMemories } from '../shared/memory-filters';
 import UsageTracker from '../components/UsageTracker';
 import { buildMemoryListParams } from './memory-list-params';
+import { normalizeMemoryClaims } from '../shared/memory-claims';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -537,14 +538,12 @@ function MemoryCard({ memory, index, onSelect, isSelected, orgKey }) {
 //   Extends      — sky     (this extended / was extended)
 //   Derives      — purple  (derived from / derivation source for)
 //   Contradicts  — red     (conflict)
-//   Mentions     — violet  (entity co-mention via LLM linker)
 //   PartOf       — slate   (section/turn/message → parent doc/session/thread)
 const REL_TYPE_STYLE = {
   Updates:     { bg: 'bg-emerald-50',  border: 'border-emerald-200',  text: 'text-emerald-700',  label: 'Updates' },
   Extends:     { bg: 'bg-sky-50',      border: 'border-sky-200',      text: 'text-sky-700',      label: 'Extends' },
   Derives:     { bg: 'bg-purple-50',   border: 'border-purple-200',   text: 'text-purple-700',   label: 'Derives' },
   Contradicts: { bg: 'bg-red-50',      border: 'border-red-200',      text: 'text-red-700',      label: 'Contradicts' },
-  Mentions:    { bg: 'bg-violet-50',   border: 'border-violet-200',   text: 'text-violet-700',   label: 'Mentions' },
   PartOf:      { bg: 'bg-slate-50',    border: 'border-slate-200',    text: 'text-slate-700',    label: 'Part Of' },
 };
 
@@ -554,40 +553,39 @@ function RelationsBlock({ loading, relations }) {
     return (
       <div>
         <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-          {t('memories.relations', 'Relations')}
+          {t('memories.memoryLineage', 'Memory lineage')}
         </label>
         <div className="text-[11px] text-[#a3a3a3] italic">{t('memories.loadingRelations', 'Loading…')}</div>
       </div>
     );
   }
   const byType = relations?.by_type;
-  const total = relations?.counts?.total || 0;
+  const TYPE_ORDER = ['Updates', 'Extends', 'Derives', 'Contradicts', 'PartOf'];
+  const total = byType
+    ? TYPE_ORDER.reduce((count, type) => count + (Array.isArray(byType[type]) ? byType[type].length : 0), 0)
+    : 0;
   if (!byType || total === 0) {
     return (
       <div>
         <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-          {t('memories.relations', 'Relations')}
+          {t('memories.memoryLineage', 'Memory lineage')}
         </label>
-        <div className="text-[11px] text-[#a3a3a3] italic">{t('memories.noRelations', 'No relations yet.')}</div>
+        <div className="text-[11px] text-[#a3a3a3] italic">{t('memories.noMemoryLineage', 'No memory-lineage relations.')}</div>
       </div>
     );
   }
   // Stable order so the same memory always renders the same section sequence.
-  const TYPE_ORDER = ['Updates', 'Extends', 'Derives', 'Contradicts', 'Mentions', 'PartOf'];
-  const orderedTypes = [
-    ...TYPE_ORDER.filter(t => byType[t]?.length),
-    ...Object.keys(byType).filter(t => !TYPE_ORDER.includes(t)),
-  ];
+  const orderedTypes = TYPE_ORDER.filter(t => byType[t]?.length);
 
   return (
     <div>
       <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-2">
-        {t('memories.relationsCount', 'Relations · {{count}}', { count: total })}
+        {t('memories.memoryLineageCount', 'Memory lineage · {{count}}', { count: total })}
       </label>
       <div className="space-y-3">
         {orderedTypes.map((type) => {
           const edges = byType[type] || [];
-          const style = REL_TYPE_STYLE[type] || REL_TYPE_STYLE.Mentions;
+          const style = REL_TYPE_STYLE[type];
           return (
             <div key={type}>
               <div className={`inline-flex items-center gap-1 text-[9.5px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded mb-1.5 border ${style.bg} ${style.text} ${style.border}`}>
@@ -637,17 +635,91 @@ function RelationsBlock({ loading, relations }) {
   );
 }
 
+function ClaimsBlock({ loading, available, claims, projection }) {
+  const { t } = useTranslation('dashboard');
+  if (!available && !loading) return null;
+
+  const projectionStatus = typeof projection === 'string'
+    ? projection
+    : projection?.claims || projection?.status || null;
+  return (
+    <div>
+      <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-2">
+        {t('memories.claimsCount', 'Claims · {{count}}', { count: claims.length })}
+      </label>
+      {loading ? (
+        <div className="text-[11px] text-[#a3a3a3] italic">{t('memories.loadingClaims', 'Loading…')}</div>
+      ) : claims.length === 0 ? (
+        <div className="text-[11px] text-[#a3a3a3] italic">
+          {projectionStatus && !['complete', 'completed', 'ready'].includes(String(projectionStatus).toLowerCase())
+            ? t('memories.claimProjectionStatus', 'Claim projection: {{status}}', { status: projectionStatus })
+            : t('memories.noClaims', 'No canonical claims yet.')}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {claims.map((claim, index) => (
+            <div key={claim.id || `${claim.subject}-${claim.predicate}-${claim.object}-${index}`} className="bg-white border border-[#e3e0db] rounded-lg px-3 py-2.5">
+              <div className="flex items-center gap-2 text-[12px] min-w-0">
+                <span className="font-semibold text-[#0a0a0a] truncate">{claim.subject}</span>
+                <span className="font-mono text-[10px] text-[#117dff] shrink-0">→ {String(claim.predicate).replaceAll('_', ' ')} →</span>
+                <span className="font-semibold text-[#0a0a0a] truncate">{claim.object}</span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[9.5px] font-mono text-[#a3a3a3]">
+                <span>{String(claim.assertionStatus).replaceAll('_', ' ')}</span>
+                {claim.validFrom && <span>valid from {new Date(claim.validFrom).toLocaleDateString()}</span>}
+                {claim.validTo && <span>to {new Date(claim.validTo).toLocaleDateString()}</span>}
+                {claim.evidence.length > 0 && <span>{claim.evidence.length} evidence {claim.evidence.length === 1 ? 'link' : 'links'}</span>}
+                {claim.confidence !== null && <span>{claim.confidence.toFixed(2)} confidence</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }) {
   const { t } = useTranslation('dashboard');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [evidenceCount, setEvidenceCount] = useState(null);
   const [entities, setEntities] = useState(null); // [{ canonical_name, entity_type, mention_count }]
-  const [relations, setRelations] = useState(null); // { by_type: { Mentions: [...], ... }, counts: {} }
+  const [relations, setRelations] = useState(null); // { by_type: { Updates: [...], ... }, counts: {} }
   const [relationsLoading, setRelationsLoading] = useState(false);
+  const [claims, setClaims] = useState([]);
+  const [claimsProjection, setClaimsProjection] = useState(null);
+  const [claimsAvailable, setClaimsAvailable] = useState(false);
+  const [claimsLoading, setClaimsLoading] = useState(false);
 
-  // Fetch all relationships for this memory grouped by type (Mentions,
-  // Updates, Extends, Derives, Contradicts, PartOf). One round-trip
+  // Claims are additive and feature-flagged. A flag-off deployment returns no
+  // endpoint (404/501), in which case the pre-Phase-0 UI remains unchanged.
+  useEffect(() => {
+    if (!memory?.id) return;
+    let cancelled = false;
+    setClaims([]);
+    setClaimsProjection(null);
+    setClaimsAvailable(false);
+    setClaimsLoading(true);
+    apiClient.getMemoryClaims(memory.id)
+      .then((data) => {
+        if (cancelled) return;
+        const normalized = normalizeMemoryClaims(data);
+        setClaims(normalized.claims);
+        setClaimsProjection(normalized.projection || memory.projection || null);
+        setClaimsAvailable(true);
+      })
+      .catch(() => {
+        if (!cancelled) setClaimsAvailable(false);
+      })
+      .finally(() => {
+        if (!cancelled) setClaimsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [memory?.id, memory?.projection]);
+
+  // Fetch memory-lineage relationships grouped by type (Updates, Extends,
+  // Derives, Contradicts, PartOf). One round-trip
   // pulls edges in both directions + peer titles for inline display.
   useEffect(() => {
     if (!memory?.id) return;
@@ -828,10 +900,17 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
             </div>
           )}
 
-          {/* Relationships — grouped by edge type, fetched live from
+          <ClaimsBlock
+            loading={claimsLoading}
+            available={claimsAvailable}
+            claims={claims}
+            projection={claimsProjection}
+          />
+
+          {/* Memory lineage — grouped by edge type, fetched live from
               /api/memories/:id/relationships. Each type gets its own
-              section (Mentions / Updates / Extends / Derives /
-              Contradicts / PartOf). Direction icons distinguish
+              section (Updates / Extends / Derives / Contradicts /
+              PartOf). Direction icons distinguish
               outgoing (→) from incoming (←). Hover an edge for
               the shared_entities + reason metadata the LLM linker
               wrote at save time. */}
