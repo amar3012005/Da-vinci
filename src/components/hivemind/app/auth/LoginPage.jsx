@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow } from 'lucide-react';
+import { Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow, Mail } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 import { clearInvitationContext, loadInvitationContext, saveInvitationContext } from './invitation-session';
@@ -89,6 +89,29 @@ export default function LoginPage() {
   const { isAuthenticated, isUnreachable, loading, login, org, needsOnboarding } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const localPreviewLogin = window.location.hostname === 'next.preview.singulancelabs.com'
+    || process.env.REACT_APP_LOCAL_PREVIEW_AUTH === 'true';
+  const [previewEmail, setPreviewEmail] = useState('');
+  const [previewEmailState, setPreviewEmailState] = useState({ busy: false, message: '', error: false });
+
+  const requestPreviewSignIn = async (event) => {
+    event.preventDefault();
+    const email = previewEmail.trim().toLowerCase();
+    if (!email) return;
+    setPreviewEmailState({ busy: true, message: '', error: false });
+    try {
+      const returnTo = returnToFromState
+        || `${window.location.origin}/hivemind/app/overview?auth=callback`;
+      const result = await apiClient.requestLocalPreviewSignIn(email, returnTo);
+      setPreviewEmailState({ busy: false, message: result?.message || 'Check your email for the one-time sign-in link.', error: false });
+    } catch (error) {
+      setPreviewEmailState({
+        busy: false,
+        message: error?.response?.data?.error || 'Unable to send the preview sign-in email.',
+        error: true,
+      });
+    }
+  };
 
   // If the user landed on /login via ProtectedRoute (e.g. clicked an invite link
   // /hivemind/join/<slug>/<token> while signed out), preserve that path as the
@@ -489,19 +512,49 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* Primary: Google */}
-                  <button
-                    onClick={() => login({ provider: 'google', returnTo: returnToFromState || undefined })}
-                    disabled={loading}
-                    className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]"
-                  >
-                    {loading ? <Loader2 size={16} className="animate-spin text-white/60" /> : (
-                      <span className="w-6 h-6 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={14} /></span>
-                    )}
-                    Continue with Google
-                  </button>
-                  {/* Visible provider roadmap — Google is the only live identity path. */}
-                  <div className="flex items-center gap-2 mt-2.5">
+                  {localPreviewLogin ? (
+                    <form onSubmit={requestPreviewSignIn} className="space-y-3">
+                      <label className="block text-[10px] font-mono uppercase tracking-[0.16em] text-[#737373]" htmlFor="preview-sign-in-email">
+                        Approved preview email
+                      </label>
+                      <input
+                        id="preview-sign-in-email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={previewEmail}
+                        onChange={(event) => setPreviewEmail(event.target.value)}
+                        placeholder="you@company.com"
+                        className="w-full h-12 rounded-[6px] border border-[#d4d0ca] bg-white px-3 text-[13px] text-[#0a0a0a] outline-none focus:border-[#117dff]"
+                      />
+                      <button
+                        type="submit"
+                        disabled={previewEmailState.busy || !previewEmail.trim()}
+                        className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]"
+                      >
+                        {previewEmailState.busy ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+                        Email one-time sign-in link
+                      </button>
+                      {previewEmailState.message && (
+                        <p role="status" className={`text-[11px] leading-5 ${previewEmailState.error ? 'text-[#dc2626]' : 'text-[#16a34a]'}`}>
+                          {previewEmailState.message}
+                        </p>
+                      )}
+                    </form>
+                  ) : (
+                    <button
+                      onClick={() => login({ provider: 'google', returnTo: returnToFromState || undefined })}
+                      disabled={loading}
+                      className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]"
+                    >
+                      {loading ? <Loader2 size={16} className="animate-spin text-white/60" /> : (
+                        <span className="w-6 h-6 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={14} /></span>
+                      )}
+                      Continue with Google
+                    </button>
+                  )}
+                  {/* Visible provider roadmap is production-only. */}
+                  {!localPreviewLogin && <div className="flex items-center gap-2 mt-2.5">
                     <ComingSoonProvider label="Microsoft">
                       <MicrosoftIcon size={15} />
                       <span className="text-[12px] font-medium">Microsoft</span>
@@ -510,7 +563,7 @@ export default function LoginPage() {
                       <AppleIcon size={16} />
                       <span className="text-[12px] font-medium">Apple</span>
                     </ComingSoonProvider>
-                  </div>
+                  </div>}
 
                   {/* Enterprise SSO stays visible without allowing an unavailable redirect. */}
                   <button
