@@ -87,7 +87,7 @@ class HiveMindApiClient {
       (error) => {
         if (isPlanLimitError(error)) {
           emitPlanLimit(extractPlanLimit(error));
-        } else if (isServiceError(error)) {
+        } else if (isServiceError(error) && error?.config?.suppressServiceError !== true) {
           // 5xx / network outage → global toast so it never fails silently.
           emitServiceError(extractServiceError(error));
         }
@@ -1555,7 +1555,10 @@ class HiveMindApiClient {
   // ─── Core: Health ────────────────────────────────────────────
 
   async health() {
-    const { data } = await this.controlPlane.get('/v1/proxy/health');
+    const { data } = await this.controlPlane.get('/v1/proxy/health', {
+      // TopBar confirms repeated failures before displaying Offline.
+      suppressServiceError: true,
+    });
     return data;
   }
 
@@ -2315,6 +2318,9 @@ class HiveMindApiClient {
     const { data } = await this.controlPlane.get('/v1/proxy/knowledge/status', {
       params: { job_id: jobId },
       timeout: 15000,
+      // This durable loop retries transient failures. One missed poll is not a
+      // user-action failure and must not raise a global outage notification.
+      suppressServiceError: true,
     });
     return data;
   }

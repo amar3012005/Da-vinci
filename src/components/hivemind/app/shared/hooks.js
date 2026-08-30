@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import apiClient from './api-client';
+import { nextHealthObservation } from './connectivity';
 
 /**
  * Generic data fetching hook
@@ -78,14 +79,19 @@ export function useDebounce(value, delay = 300) {
  */
 export function useHealthStatus(interval = 30000) {
   const [healthy, setHealthy] = useState(null);
+  const failures = useRef(0);
 
   useEffect(() => {
     const check = async () => {
       try {
         await apiClient.health();
-        setHealthy(true);
+        const next = nextHealthObservation(failures.current, true);
+        failures.current = next.failures;
+        setHealthy(next.healthy);
       } catch {
-        setHealthy(false);
+        const next = nextHealthObservation(failures.current, false);
+        failures.current = next.failures;
+        if (next.healthy === false) setHealthy(false);
       }
     };
     check();
