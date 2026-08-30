@@ -190,6 +190,14 @@ class HiveMindApiClient {
     return `${this.controlPlane.defaults.baseURL}/auth/google${qs ? `?${qs}` : ''}`;
   }
 
+  async requestLocalPreviewSignIn(email, returnTo) {
+    const { data } = await this.controlPlane.post('/auth/local-preview/request', {
+      email,
+      return_to: returnTo,
+    });
+    return data;
+  }
+
   getRegisterUrl(returnTo, idpHint, signupTicket) {
     const params = new URLSearchParams();
     if (returnTo) params.set('return_to', returnTo);
