@@ -3658,7 +3658,13 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const deadEndLine = lines.find(l => l.t === 'line' && l.kind === 'dead_end');
   const reactions = lines.filter(l => l.t === 'react' && l.agreement !== 'abstain');
   const rosterEvent = [...lines].reverse().find(l => l.t === 'roster_evaluated');
-  const agentActivations = lines.filter(l => l.t === 'agent_activated');
+  const agentActivations = (() => {
+    const byAgent = {};
+    lines.filter(l => l.t === 'agent_activated').forEach((event) => {
+      byAgent[event.agent_instance_id || event.agent || event.name] = event;
+    });
+    return Object.values(byAgent);
+  })();
   const assignmentEvents = lines.filter(l => l.t === 'work_order');
   const assignmentStarts = lines.filter(l => l.t === 'agent_assignment_started');
   const toolReceipts = lines.filter(l => l.t === 'agent_tool_receipt');
