@@ -198,6 +198,32 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getEmailIdentityConfig() {
+    const { data } = await this.controlPlane.get('/auth/email/config');
+    return data;
+  }
+
+  async startEmailSignIn({ email, returnTo, intent = 'auto', turnstileToken = '' }) {
+    const { data } = await this.controlPlane.post('/auth/email/start', {
+      email, return_to: returnTo, intent, turnstile_token: turnstileToken,
+    });
+    return data;
+  }
+
+  async verifyEmailSignIn({ challengeId, code, linkToken }) {
+    const { data } = await this.controlPlane.post('/auth/email/verify', {
+      challenge_id: challengeId, ...(code ? { code } : {}), ...(linkToken ? { link_token: linkToken } : {}),
+    });
+    return data;
+  }
+
+  async resendEmailSignIn({ challengeId, turnstileToken = '' }) {
+    const { data } = await this.controlPlane.post('/auth/email/resend', {
+      challenge_id: challengeId, turnstile_token: turnstileToken,
+    });
+    return data;
+  }
+
   getRegisterUrl(returnTo, idpHint, signupTicket) {
     const params = new URLSearchParams();
     if (returnTo) params.set('return_to', returnTo);
