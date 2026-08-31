@@ -2390,6 +2390,7 @@ class HiveMindApiClient {
     const formData = new FormData();
     formData.append('file', file);
     if (options.tags) formData.append('tags', options.tags);
+    if (options.hint) formData.append('hint', options.hint);
     if (options.containerTag) formData.append('containerTag', options.containerTag);
     if (options.targetScope) formData.append('targetScope', options.targetScope);
     // The upload route reads targetScope + projectId/projectIds for scope; it does
@@ -2524,25 +2525,22 @@ class HiveMindApiClient {
     throw new Error('Ingestion timed out');
   }
 
-  // ─── Core: Image Ingestion (Groq vision pipeline) ─────────────
-  // Single .jpg / .png / .webp → classify + extract via Groq Llama 4 Scout,
-  // then route through the same ingest pipeline as text memories.
+  // ─── Core: Durable Image Ingestion ────────────────────────────
+  // Images use the same admitted job + polling lifecycle as documents, while
+  // Core routes mediaKind=image to Gemini vision and one canonical memory.
   // Hint is an optional "what is this" string the user types at upload to
   // bias the classifier (e.g. "Saturn receipt from Tuesday").
   async uploadImage(file, options = {}) {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (options.hint) formData.append('hint', options.hint);
-    if (options.projectId) formData.append('projectId', options.projectId);
-    const { data } = await this.controlPlane.post('/v1/proxy/ingest/image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 120000,
-      maxBodyLength: 25 * 1024 * 1024,
-      maxContentLength: 25 * 1024 * 1024,
-      onUploadProgress: options.onUploadProgress,
-      signal: options.signal,
+    const result = await this.uploadDocument(file, {
+      ...options,
+      ingestMode: 'both',
+      ...(options.projectId ? { targetScope: 'project', projectId: options.projectId } : {}),
     });
-    return data;
+    return {
+      ...result,
+      memory_id: result.documentId || null,
+      memory_ids: result.documentId ? [result.documentId] : [],
+    };
   }
 
   // ─── Core: Enterprise Upload ────────────────────────────────
