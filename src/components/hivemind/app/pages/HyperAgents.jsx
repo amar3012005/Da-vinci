@@ -29,7 +29,7 @@ import {
   ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
   Copy, Download, Power, Pause, Play, Square,
-  ContactRound, Bot, Link2,
+  ContactRound, Bot, Link2, Monitor, Camera,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -3672,6 +3672,75 @@ function VisualArtifactModal({ artifact, onClose }) {
   );
 }
 
+function AgentBrowserWorkspace({ receipts = [] }) {
+  const [companionState, setCompanionState] = useState('idle');
+  const groupCurrentTab = useCallback(() => {
+    const requestId = `hm-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    setCompanionState('waiting');
+    const timer = window.setTimeout(() => {
+      window.removeEventListener('message', receive);
+      setCompanionState('missing');
+    }, 1500);
+    function receive(event) {
+      if (event.source !== window || event.origin !== window.location.origin
+          || event.data?.source !== 'singulance-companion' || event.data?.requestId !== requestId) return;
+      window.clearTimeout(timer);
+      window.removeEventListener('message', receive);
+      setCompanionState(event.data?.ok ? 'grouped' : 'missing');
+    }
+    window.addEventListener('message', receive);
+    window.postMessage({ source: 'singulance-app', version: 1, type: 'HM_GROUP_CURRENT_TAB', requestId }, window.location.origin);
+  }, []);
+  const browserReceipts = receipts.filter((event) => event?.adapter === 'cloudflare_browser');
+  if (!browserReceipts.length) return null;
+  const latest = browserReceipts[browserReceipts.length - 1];
+  const receipt = latest.provider_receipt || {};
+  const tabs = Array.isArray(receipt.tabs) ? receipt.tabs : [];
+  const liveViewUrl = /^https:\/\//i.test(String(receipt.live_view_url || ''))
+    ? receipt.live_view_url : null;
+  const ok = String(latest.status || receipt.status || '').toLowerCase() === 'completed';
+  return (
+    <section className="mt-2 overflow-hidden rounded-md border border-sky-200 bg-sky-50/40" aria-label="HIVEMIND browser workspace">
+      <div className="flex flex-wrap items-center gap-2 border-b border-sky-200 bg-white px-3 py-2">
+        <Monitor size={13} className="text-sky-700" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-950">HIVEMIND browser</span>
+        <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[9px] text-sky-700">{tabs.length || 1} tab{(tabs.length || 1) === 1 ? '' : 's'}</span>
+        <span className={`ml-auto text-[9px] font-medium ${ok ? 'text-emerald-700' : 'text-amber-700'}`}>
+          {ok ? 'Evidence captured' : 'Evidence needs repair'}
+        </span>
+      </div>
+      <div className="space-y-2 px-3 py-2.5">
+        <div className="min-w-0">
+          <div className="truncate text-[10.5px] font-medium text-[#34302c]">{receipt.title || receipt.url || 'Rendered page'}</div>
+          {receipt.url && <a href={receipt.url} target="_blank" rel="noreferrer" className="block truncate text-[9.5px] text-sky-700 hover:underline">{receipt.url}</a>}
+          {receipt.invalid_reason && <div className="mt-1 text-[9.5px] text-amber-800">{receipt.invalid_reason}</div>}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {liveViewUrl && (
+            <a href={liveViewUrl} target="_blank" rel="noreferrer" className="inline-flex h-7 items-center gap-1.5 rounded bg-sky-700 px-2.5 text-[9.5px] font-semibold text-white hover:bg-sky-800">
+              <Eye size={11} />Watch live
+            </a>
+          )}
+          {receipt.screenshot?.sha256 && <span className="inline-flex items-center gap-1 text-[9px] text-[#716b64]"><Camera size={10} />Screenshot verified</span>}
+          {receipt.captured_at && <span className="text-[9px] text-[#8a847d]">{new Date(receipt.captured_at).toLocaleString()}</span>}
+          <button type="button" onClick={groupCurrentTab} disabled={companionState === 'waiting'} className="ml-auto inline-flex h-7 items-center gap-1.5 rounded border border-sky-200 bg-white px-2.5 text-[9.5px] font-semibold text-sky-800 hover:bg-sky-50 disabled:opacity-50">
+            <FolderOpen size={11} />{companionState === 'grouped' ? 'Added to HIVEMIND' : companionState === 'missing' ? 'Install browser companion' : 'Keep in HIVEMIND group'}
+          </button>
+        </div>
+        {tabs.length > 1 && (
+          <div className="flex gap-1 overflow-x-auto pb-0.5">
+            {tabs.slice(0, 12).map((tab, index) => (
+              <span key={tab.id || index} title={tab.url || ''} className="max-w-44 shrink-0 truncate rounded border border-sky-100 bg-white px-2 py-1 text-[9px] text-[#5f5953]">
+                {tab.title || tab.url || `Tab ${index + 1}`}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function TurnView({ turn, participants: participantsProp, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag, onRunNextTask }) {
   // Normalise participants to an ARRAY once. This component used it both as an
   // array ((participants || []).find, line ~3009) and as an object
@@ -4069,6 +4138,7 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
                 <span>{receipt.agent || 'Agent'} verified {receipt.adapter || 'tool'} execution</span>
               </div>
             ))}
+            <AgentBrowserWorkspace receipts={toolReceipts} />
             {agentRunBlocked && (
               <div className="mt-2 rounded border border-red-200 bg-red-50 px-2.5 py-2 text-[10px] text-red-800">
                 <div className="font-semibold">Run blocked — no legacy report was substituted</div>
