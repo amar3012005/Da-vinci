@@ -119,7 +119,9 @@ export default function WebsitePreview({ image, source, website, company, taglin
       src={src}
       alt={`${company || domain || 'Company'} website preview`}
       className={`w-full ${compact ? PREVIEW_ASPECT : 'aspect-video'} object-contain bg-white`}
-      loading="lazy"
+      loading="eager"
+      fetchPriority="high"
+      decoding="async"
       onError={() => setFailed(true)}
     />
   ) : (

@@ -199,7 +199,7 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
               </div>
             </motion.div>
           ) : (
-            <motion.div key="system" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[1080px] text-center">
+            <motion.div key="system" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="relative top-10 w-full max-w-[1080px] text-center sm:top-12">
               <div className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#cce8ff]">Your AI company architecture</div>
               <h1 className="mt-3 text-[clamp(1.65rem,3vw,3rem)] font-medium tracking-[-0.035em] text-white font-['Space_Grotesk']">One intelligence. Three interfaces.</h1>
               <div className="relative mx-auto mt-9 w-[min(82vw,1020px)]">
