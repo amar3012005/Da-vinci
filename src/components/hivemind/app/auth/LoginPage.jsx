@@ -151,7 +151,7 @@ export default function LoginPage() {
     setEmailState({ busy: true, message: '', error: false });
     try {
       const result = await apiClient.verifyEmailSignIn({ challengeId: emailChallenge, code, linkToken });
-      window.location.assign(result.redirect_to || '/hivemind/app/overview?auth=callback');
+      window.location.assign(result.redirect_to || emailConfig.default_redirect_to || `${window.location.origin}/hivemind/app/overview?auth=callback`);
     } catch (error) {
       setEmailState({ busy: false, message: error?.response?.data?.error || 'The code is invalid or expired.', error: true });
       setEmailCode('');
@@ -161,7 +161,6 @@ export default function LoginPage() {
   useEffect(() => {
     apiClient.getEmailIdentityConfig().then((config) => {
       setEmailConfig(config);
-      if (config.email_only) setEmailView((view) => view === 'methods' ? 'email' : view);
     }).catch(() => setEmailConfig({ mode: 'off', enabled: false, email_only: false, turnstile_site_key: null })).finally(() => setEmailConfigLoaded(true));
     const fragment = new URLSearchParams(window.location.hash.slice(1));
     const challenge = fragment.get('email_challenge');
