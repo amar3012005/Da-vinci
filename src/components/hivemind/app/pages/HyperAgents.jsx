@@ -3798,11 +3798,17 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   })();
   const assignmentEvents = lines.filter(l => l.t === 'work_order');
   const assignmentStarts = lines.filter(l => l.t === 'agent_assignment_started');
+  const assignmentHeartbeats = lines.filter(l => l.t === 'agent_assignment_heartbeat');
   const toolReceipts = lines.filter(l => l.t === 'agent_tool_receipt');
   const agentRunBlocked = [...lines].reverse().find(l => l.t === 'agent_run_blocked');
   const isGrokRuntime = Boolean(
-    rosterEvent || agentActivations.length || assignmentStarts.length || toolReceipts.length || agentRunBlocked,
+    rosterEvent || agentActivations.length || assignmentStarts.length
+      || assignmentHeartbeats.length || toolReceipts.length || agentRunBlocked,
   );
+  const latestAgentActivity = [...lines].reverse().find(l => [
+    'agent_assignment_started', 'agent_assignment_heartbeat', 'agent_tool_started',
+    'agent_tool_receipt', 'agent_assignment_completed',
+  ].includes(l.t));
   const latestAssignments = (() => {
     const byKey = {};
     assignmentEvents.forEach((event, index) => {
@@ -4100,6 +4106,12 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
             <Bot size={13} className="text-violet-600" />
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[#3f3a35]">Agent execution</span>
             <span className="text-[9px] font-mono text-[#8a847d]">{rosterEvent?.runtime_mode || 'durable'}</span>
+            {latestAgentActivity && !seal && (
+              <span className="inline-flex items-center gap-1 text-[9px] text-violet-700">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500" />
+                live · {latestAgentActivity.agent || 'agent'} {latestAgentActivity.phase || 'working'}
+              </span>
+            )}
             <span className="ml-auto text-[9px] text-[#8a847d]">
               {agentActivations.length} active · {toolReceipts.length} verified {toolReceipts.length === 1 ? 'receipt' : 'receipts'}
             </span>
