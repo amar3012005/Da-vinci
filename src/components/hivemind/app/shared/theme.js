@@ -70,10 +70,13 @@ export const shadows = {
 // FE is hosted on Vercel at hivemind.davinciai.eu — Vercel does NOT proxy
 // /v1/* to the control plane, so a same-origin request resolves to Vercel's
 // SPA fallback and returns 404/405. Always hit the api host explicitly.
+const IS_PREVIEW_HOST = typeof window !== 'undefined'
+  && window.location.hostname === 'next.preview.singulancelabs.com';
+
 export const API_DEFAULTS = {
   controlPlaneBase:
-    process.env.REACT_APP_CONTROL_PLANE_URL ||
+    (IS_PREVIEW_HOST ? 'https://preview-api.singulancelabs.com' : process.env.REACT_APP_CONTROL_PLANE_URL) ||
     'https://api.hivemind.davinciai.eu:8040',
   coreApiBase:
-    process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050',
+    (IS_PREVIEW_HOST ? 'https://preview.singulancelabs.com' : process.env.REACT_APP_CORE_API_URL) || 'https://core.hivemind.davinciai.eu:8050',
 };
