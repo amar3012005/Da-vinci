@@ -190,6 +190,40 @@ class HiveMindApiClient {
     return `${this.controlPlane.defaults.baseURL}/auth/google${qs ? `?${qs}` : ''}`;
   }
 
+  async requestLocalPreviewSignIn(email, returnTo) {
+    const { data } = await this.controlPlane.post('/auth/local-preview/request', {
+      email,
+      return_to: returnTo,
+    });
+    return data;
+  }
+
+  async getEmailIdentityConfig() {
+    const { data } = await this.controlPlane.get('/auth/email/config');
+    return data;
+  }
+
+  async startEmailSignIn({ email, returnTo, intent = 'auto', turnstileToken = '' }) {
+    const { data } = await this.controlPlane.post('/auth/email/start', {
+      email, return_to: returnTo, intent, turnstile_token: turnstileToken,
+    });
+    return data;
+  }
+
+  async verifyEmailSignIn({ challengeId, code, linkToken }) {
+    const { data } = await this.controlPlane.post('/auth/email/verify', {
+      challenge_id: challengeId, ...(code ? { code } : {}), ...(linkToken ? { link_token: linkToken } : {}),
+    });
+    return data;
+  }
+
+  async resendEmailSignIn({ challengeId, turnstileToken = '' }) {
+    const { data } = await this.controlPlane.post('/auth/email/resend', {
+      challenge_id: challengeId, turnstile_token: turnstileToken,
+    });
+    return data;
+  }
+
   getRegisterUrl(returnTo, idpHint, signupTicket) {
     const params = new URLSearchParams();
     if (returnTo) params.set('return_to', returnTo);
@@ -943,6 +977,24 @@ class HiveMindApiClient {
 
   async getHyperTurn(roomId, turnId) {
     const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/turns/${turnId}`);
+    return data;
+  }
+
+  async controlHyperTurn(roomId, turnId, action, message = '') {
+    const { data } = await this.controlPlane.post(
+      `/v1/hyper-rooms/${roomId}/turns/${turnId}/control`,
+      { action, ...(message ? { message } : {}) },
+    );
+    return data;
+  }
+
+  async listHyperAgentRoutines(roomId) {
+    const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/routines`);
+    return data;
+  }
+
+  async createHyperAgentRoutine(roomId, payload) {
+    const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/routines`, payload);
     return data;
   }
 
