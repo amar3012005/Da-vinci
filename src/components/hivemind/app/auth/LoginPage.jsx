@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow } from 'lucide-react';
+import { Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow, Mail } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 import { clearInvitationContext, loadInvitationContext, saveInvitationContext } from './invitation-session';
@@ -85,10 +85,97 @@ const PERSONAL_PLANS = [
   },
 ];
 
+function EmailTurnstile({ siteKey, onToken }) {
+  const host = useRef(null);
+  useEffect(() => {
+    if (!siteKey || !host.current) return undefined;
+    let widgetId;
+    const render = () => {
+      if (!window.turnstile || !host.current || widgetId !== undefined) return;
+      widgetId = window.turnstile.render(host.current, {
+        sitekey: siteKey, action: 'email_auth', appearance: 'interaction-only',
+        callback: onToken, 'expired-callback': () => onToken(''), 'error-callback': () => onToken(''),
+      });
+    };
+    let script = document.querySelector('script[data-singulance-turnstile]');
+    if (!script) {
+      script = document.createElement('script'); script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true; script.defer = true; script.dataset.singulanceTurnstile = 'true'; document.head.appendChild(script);
+    }
+    script.addEventListener('load', render); render();
+    return () => { script.removeEventListener('load', render); if (widgetId !== undefined) window.turnstile?.remove(widgetId); };
+  }, [siteKey, onToken]);
+  return siteKey ? <div ref={host} className="min-h-[1px]" aria-label="Bot verification" /> : null;
+}
+
 export default function LoginPage() {
   const { isAuthenticated, isUnreachable, loading, login, org, needsOnboarding } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [emailConfig, setEmailConfig] = useState({ mode: 'off', enabled: false, email_only: false, turnstile_site_key: null });
+  const [emailConfigLoaded, setEmailConfigLoaded] = useState(false);
+  const [emailView, setEmailView] = useState('methods');
+  const [emailAddress, setEmailAddress] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [emailChallenge, setEmailChallenge] = useState('');
+  const [emailLinkToken, setEmailLinkToken] = useState('');
+  const [emailIntent, setEmailIntent] = useState('auto');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [emailState, setEmailState] = useState({ busy: false, message: '', error: false });
+  const emailEnabled = emailConfig.enabled;
+  const emailOnly = emailConfig.email_only;
+
+  const requestEmailSignIn = async (event) => {
+    event.preventDefault();
+    const email = emailAddress.trim().toLowerCase();
+    if (!email) return;
+    setEmailState({ busy: true, message: '', error: false });
+    try {
+      const returnTo = returnToFromState
+        || `${window.location.origin}/hivemind/app/overview?auth=callback`;
+      const result = await apiClient.startEmailSignIn({ email, returnTo, intent: emailIntent, turnstileToken });
+      setEmailChallenge(result.challenge_id);
+      setEmailView('code');
+      setEmailState({ busy: false, message: result?.message || 'Check your email for the sign-in code.', error: false });
+    } catch (error) {
+      setEmailState({
+        busy: false,
+        message: error?.response?.data?.error || 'Unable to start email sign-in.',
+        error: true,
+      });
+    }
+  };
+
+  const verifyEmail = async ({ code = emailCode, linkToken = emailLinkToken } = {}) => {
+    if (!emailChallenge || (!code && !linkToken)) return;
+    setEmailState({ busy: true, message: '', error: false });
+    try {
+      const result = await apiClient.verifyEmailSignIn({ challengeId: emailChallenge, code, linkToken });
+      window.location.assign(result.redirect_to || '/hivemind/app/overview?auth=callback');
+    } catch (error) {
+      setEmailState({ busy: false, message: error?.response?.data?.error || 'The code is invalid or expired.', error: true });
+      setEmailCode('');
+    }
+  };
+
+  useEffect(() => {
+    apiClient.getEmailIdentityConfig().then((config) => {
+      setEmailConfig(config);
+      if (config.email_only) setEmailView((view) => view === 'methods' ? 'email' : view);
+    }).catch(() => setEmailConfig({ mode: 'off', enabled: false, email_only: false, turnstile_site_key: null })).finally(() => setEmailConfigLoaded(true));
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const challenge = fragment.get('email_challenge');
+    const token = fragment.get('email_token');
+    if (challenge && token) {
+      setEmailChallenge(challenge); setEmailLinkToken(token); setEmailView('link_confirm');
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (emailCode.length === 6 && emailView === 'code' && !emailState.busy) verifyEmail({ code: emailCode, linkToken: '' });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emailCode]);
 
   // If the user landed on /login via ProtectedRoute (e.g. clicked an invite link
   // /hivemind/join/<slug>/<token> while signed out), preserve that path as the
@@ -489,19 +576,57 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* Primary: Google */}
-                  <button
-                    onClick={() => login({ provider: 'google', returnTo: returnToFromState || undefined })}
-                    disabled={loading}
-                    className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]"
-                  >
-                    {loading ? <Loader2 size={16} className="animate-spin text-white/60" /> : (
-                      <span className="w-6 h-6 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={14} /></span>
-                    )}
-                    Continue with Google
-                  </button>
-                  {/* Visible provider roadmap — Google is the only live identity path. */}
-                  <div className="flex items-center gap-2 mt-2.5">
+                  {emailEnabled && emailView === 'methods' && (
+                    <button onClick={() => setEmailView('email')} className="w-full h-12 mb-2.5 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
+                      <Mail size={16} /> Continue with Email
+                    </button>
+                  )}
+                  {emailEnabled && emailView === 'email' && (
+                    <form onSubmit={requestEmailSignIn} className="space-y-3">
+                      <label className="block text-[10px] font-mono uppercase tracking-[0.16em] text-[#737373]" htmlFor="email-sign-in-address">Email address</label>
+                      <input id="email-sign-in-address" type="email" autoComplete="email" inputMode="email" required autoFocus value={emailAddress} onChange={(event) => setEmailAddress(event.target.value)} placeholder="name@company.com" className="w-full h-12 rounded-[6px] border border-[#d4d0ca] bg-white px-3 text-[15px] text-[#0a0a0a] outline-none focus:border-[#117dff]" />
+                      <EmailTurnstile siteKey={emailConfig.turnstile_site_key} onToken={setTurnstileToken} />
+                      <button type="submit" disabled={emailState.busy || !emailAddress.trim()} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
+                        {emailState.busy ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />} Send sign-in code
+                      </button>
+                      {!emailOnly && <button type="button" onClick={() => setEmailView('methods')} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Back to other sign-in methods</button>}
+                    </form>
+                  )}
+                  {emailEnabled && emailView === 'code' && (
+                    <div className="space-y-3">
+                      <label className="block text-[10px] font-mono uppercase tracking-[0.16em] text-[#737373]" htmlFor="email-sign-in-code">Enter the 6-digit code</label>
+                      <input id="email-sign-in-code" type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={6} value={emailCode} onChange={(event) => setEmailCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className="w-full h-14 rounded-[6px] border border-[#d4d0ca] bg-white px-3 text-center text-[24px] tracking-[0.45em] font-mono text-[#0a0a0a] outline-none focus:border-[#117dff]" />
+                      <button type="button" onClick={() => verifyEmail()} disabled={emailState.busy || emailCode.length !== 6} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] disabled:opacity-60 text-white font-semibold rounded-[6px] uppercase tracking-[0.08em]">
+                        {emailState.busy ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />} Verify and continue
+                      </button>
+                      <button type="button" onClick={async () => { await apiClient.resendEmailSignIn({ challengeId: emailChallenge, turnstileToken }); setEmailState({ busy: false, error: false, message: 'If the challenge is active, a new code is on its way.' }); }} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Resend code</button>
+                      <button type="button" onClick={() => { setEmailView('email'); setEmailCode(''); }} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Use another email</button>
+                    </div>
+                  )}
+                  {emailView === 'link_confirm' && (
+                    <div className="space-y-3">
+                      <p className="text-[13px] leading-relaxed text-[#525252]">Confirm this browser to finish signing in. Opening the email link alone never authenticates you.</p>
+                      <button type="button" onClick={() => verifyEmail({ code: '', linkToken: emailLinkToken })} disabled={emailState.busy} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] disabled:opacity-60 text-white font-semibold rounded-[6px] uppercase tracking-[0.08em]">
+                        {emailState.busy ? <Loader2 size={16} className="animate-spin" /> : <Shield size={16} />} Confirm and continue
+                      </button>
+                    </div>
+                  )}
+                  {emailState.message && <p role="status" className={`mt-3 text-[11px] leading-5 ${emailState.error ? 'text-[#dc2626]' : 'text-[#16a34a]'}`}>{emailState.message}</p>}
+
+                  {emailConfigLoaded && !emailOnly && emailView === 'methods' && (
+                    <button
+                      onClick={() => login({ provider: 'google', returnTo: returnToFromState || undefined })}
+                      disabled={loading}
+                      className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]"
+                    >
+                      {loading ? <Loader2 size={16} className="animate-spin text-white/60" /> : (
+                        <span className="w-6 h-6 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={14} /></span>
+                      )}
+                      Continue with Google
+                    </button>
+                  )}
+                  {/* Visible provider roadmap is production-only. */}
+                  {emailConfigLoaded && !emailOnly && emailView === 'methods' && <div className="flex items-center gap-2 mt-2.5">
                     <ComingSoonProvider label="Microsoft">
                       <MicrosoftIcon size={15} />
                       <span className="text-[12px] font-medium">Microsoft</span>
@@ -510,10 +635,9 @@ export default function LoginPage() {
                       <AppleIcon size={16} />
                       <span className="text-[12px] font-medium">Apple</span>
                     </ComingSoonProvider>
-                  </div>
+                  </div>}
 
-                  {/* Enterprise SSO stays visible without allowing an unavailable redirect. */}
-                  <button
+                  {emailConfigLoaded && !emailOnly && emailView === 'methods' && <button
                     type="button"
                     disabled
                     aria-label="Enterprise SSO — coming soon"
@@ -522,7 +646,7 @@ export default function LoginPage() {
                     <Shield size={14} className="text-[#a3a3a3]" />
                     Enterprise SSO · EU Sovereign
                     <span className="text-[9px] font-mono normal-case tracking-normal text-[#a3a3a3]">Coming soon</span>
-                  </button>
+                  </button>}
 
                   {/* trust line */}
                   <div className="flex items-center justify-center gap-2 mt-4 px-3 py-2 rounded-[6px] bg-[#f0fdf4] border border-[#bbf7d0]">
@@ -531,14 +655,14 @@ export default function LoginPage() {
                   </div>
 
                   {/* Create New Account */}
-                  <div className="text-center mt-5">
+                  {emailView === 'methods' && <div className="text-center mt-5">
                     <p className="text-[13px] text-[#737373]">
                       New here?{' '}
-                      <button onClick={() => setShowOnboarding(true)} className="text-[#117dff] font-semibold hover:underline">
+                      <button onClick={() => { if (emailEnabled) { setEmailIntent('register'); setEmailView('email'); } else setShowOnboarding(true); }} className="text-[#117dff] font-semibold hover:underline">
                         Create your HIVEMIND
                       </button>
                     </p>
-                  </div>
+                  </div>}
 
                   {/* Divider */}
                   <div className="flex items-center gap-3 my-5">
