@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "SINGULANCE Browser Companion",
+  "version": "0.1.0",
+  "description": "Keeps user-approved SINGULANCE work in a dedicated HIVEMIND tab group.",
+  "permissions": ["tabs", "tabGroups", "storage", "sidePanel"],
+  "host_permissions": [
+    "https://next.singulancelabs.com/*",
+    "https://next.preview.singulancelabs.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_scripts": [{
+    "matches": [
+      "https://next.singulancelabs.com/*",
+      "https://next.preview.singulancelabs.com/*",
+      "http://localhost/*",
+      "http://127.0.0.1/*"
+    ],
+    "js": ["content.js"],
+    "run_at": "document_start"
+  }],
+  "side_panel": { "default_path": "sidepanel.html" },
+  "action": { "default_title": "Open HIVEMIND browser workspace" }
+}
