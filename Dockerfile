@@ -6,6 +6,7 @@ COPY package*.json ./
 RUN npm ci --legacy-peer-deps --no-audit --no-fund 2>/dev/null || npm install --legacy-peer-deps --no-audit --no-fund
 COPY . .
 ENV GENERATE_SOURCEMAP=false
+ENV DISABLE_ESLINT_PLUGIN=true
 # Bake the SINGULANCE control-plane + core URLs at build time. CRA inlines REACT_APP_* envs into the
 # bundle; without these, theme.js falls back to the hardcoded davinciai host and the whole OAuth flow
 # (login → redirect) routes through davinciai instead of singulancelabs. Overridable via --build-arg.
