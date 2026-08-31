@@ -1177,6 +1177,7 @@ function RoomThread({ roomId, onArchived }) {
   const [activeTurnId, setActiveTurnId] = useState(null);
   const [runtimeControlBusy, setRuntimeControlBusy] = useState('');
   const [runtimePaused, setRuntimePaused] = useState(false);
+  const [, setRuntimeRealtime] = useState('fallback');
   const [steeringDraft, setSteeringDraft] = useState('');
   // A server may intentionally preserve the client-generated turn id. Track
   // confirmation separately so releasing the pending-id latch always starts
@@ -1896,6 +1897,67 @@ function RoomThread({ roomId, onArchived }) {
   // once the server had actually persisted the turn. This ref tracks which id is
   // still unconfirmed so the effect can wait for the real one.
   const pendingTurnIdRef = useRef(null);
+
+  // Cloudflare Room Agent realtime channel. It complements the authoritative
+  // SSE/poll path below: WebSocket gives immediate presence/events and
+  // automatically reconnects with a fresh short-lived room ticket; SSE and DB
+  // polling remain the compatibility and recovery fallbacks.
+  useEffect(() => {
+    if (!activeTurnId || activeTurnId === pendingTurnIdRef.current) return undefined;
+    let stopped = false;
+    let socket = null;
+    let retryTimer = null;
+    let retryAttempt = 0;
+
+    const connect = async () => {
+      try {
+        const realtime = await apiClient.getHyperRoomRealtime(roomId);
+        if (stopped || !realtime?.websocket_url) return;
+        socket = new WebSocket(realtime.websocket_url);
+        socket.onopen = () => {
+          retryAttempt = 0;
+          setRuntimeRealtime('connected');
+          try { socket.send(JSON.stringify({ type: 'ping' })); } catch { /* noop */ }
+        };
+        socket.onmessage = (message) => {
+          try {
+            const envelope = JSON.parse(message.data);
+            if (envelope?.type !== 'event' || !envelope.event) return;
+            const event = envelope.event;
+            setLiveLines(previous => mergeLiveEvents(previous, [event]));
+            if (event.t === 'seal' && !sealedRef.current) {
+              sealedRef.current = true;
+              Promise.resolve(load({ quiet: true })).finally(() => {
+                setActiveTurnId(null);
+                setSubmitting(false);
+              });
+            }
+          } catch { /* ignore malformed Agent protocol messages */ }
+        };
+        socket.onerror = () => setRuntimeRealtime('fallback');
+        socket.onclose = () => {
+          socket = null;
+          if (stopped) return;
+          setRuntimeRealtime('reconnecting');
+          retryAttempt += 1;
+          retryTimer = setTimeout(connect, Math.min(10000, 500 * (2 ** Math.min(5, retryAttempt))));
+        };
+      } catch {
+        if (stopped) return;
+        setRuntimeRealtime('fallback');
+        retryAttempt += 1;
+        retryTimer = setTimeout(connect, Math.min(10000, 500 * (2 ** Math.min(5, retryAttempt))));
+      }
+    };
+
+    connect();
+    return () => {
+      stopped = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      try { socket?.close(1000, 'turn changed'); } catch { /* noop */ }
+      setRuntimeRealtime('fallback');
+    };
+  }, [activeTurnId, roomId, load, mergeLiveEvents, streamEpoch]);
 
   // SSE subscription while a turn is live
   useEffect(() => {
