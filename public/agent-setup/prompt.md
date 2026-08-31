@@ -30,11 +30,21 @@ From a terminal, first check whether ICARUS is already available:
 icarus --version
 ```
 
-If it is not installed, install only from the official public installer:
+If it is not installed, use the installer that matches the shell actually running the commands:
+
+**macOS, Linux, or WSL** (a WSL terminal reports `Linux` for `uname -s`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.sh | bash
 ```
+
+**Native Windows PowerShell** (not Git Bash, and not WSL):
+
+```powershell
+irm https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.ps1 | iex
+```
+
+Do not run the POSIX installer from a native Windows shell and do not switch environments halfway through setup. The release installer downloads the platform binary and validates it with `icarus --version`; it should not require Node.js or Rust on a supported release platform. If that version preflight truly fails, report the platform and exact error rather than manually creating `.icarus` state or treating a missing Node toolchain as the root cause.
 
 If it is installed, leave a working version in place unless the user asks to update it. An explicit update is:
 
@@ -56,12 +66,20 @@ Both registration and initialization are idempotent. If MCP registration changed
 
 ## 4. Use ICARUS correctly after setup
 
-ICARUS is primarily a durable, local project-memory filesystem:
+ICARUS is primarily a durable, local project-memory filesystem. Saving and local lexical recall work without an LLM key, embedding key, or remote provider; vectors and reranking are optional ranking improvements:
 
 1. Recall only relevant prior decisions, bugs, refactors, and code explanations before a non-trivial change.
 2. Keep only task-relevant evidence in working context.
 3. Save confirmed decisions, invariants, root causes, durable patch lessons, and verification facts after the work is complete.
 4. On later sessions, recall that saved knowledge instead of reconstructing it from scratch.
+
+Use precise durable tags so other agents can distinguish the kind of knowledge they recovered:
+
+- `memory:fact` — current verified state;
+- `memory:decision` — a choice, rationale, and rejected alternative;
+- `memory:instruction` — a standing project rule;
+- `memory:event` — a completed incident, release, or significant regression;
+- `memory:task` — short-lived handoff state only; remove or supersede it when the task closes.
 
 Do **not** build a graph, create a governed task, call `icarus_context_get`, or run `icarus doctor` merely because a session begins.
 
