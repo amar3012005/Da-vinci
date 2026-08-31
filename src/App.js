@@ -21,6 +21,7 @@ const PrivacySecurity = React.lazy(() => import('./components/PrivacySecurity'))
 const CookiePolicy = React.lazy(() => import('./components/CookiePolicy'));
 
 const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davinciai.eu';
+const HIVEMIND_PREVIEW_HOST = 'next.preview.singulancelabs.com';
 const PLATFORM_ADMIN_HOST = 'admin.hivemind.singulancelabs.com';
 
 // PRODUCT_HOST — this domain serves the WHOLE product on ONE host (singulancelabs.com):
@@ -68,6 +69,7 @@ function App() {
   const isHivemindHost =
     typeof window !== 'undefined' && (
       window.location.hostname === HIVEMIND_SITE_HOST ||
+      window.location.hostname === HIVEMIND_PREVIEW_HOST ||
       window.location.protocol === 'file:'
     );
 

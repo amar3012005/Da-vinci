@@ -81,6 +81,7 @@
     "build:cloudflare": "npm run build && node scripts/prune-cloudflare-assets.mjs",
     "deploy:cloudflare": "npx wrangler deploy --keep-vars --strict",
     "test:ai-discovery": "node --test scripts/ai-discovery-contract.test.mjs",
+    "test:preview-host": "node --test scripts/preview-host-isolation-contract.test.mjs",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "type-check": "tsc --noEmit"
