@@ -3,7 +3,7 @@ import { API_DEFAULTS } from './theme';
 import { isPlanLimitError, extractPlanLimit, emitPlanLimit } from './planLimit';
 import { isServiceError, extractServiceError, emitServiceError } from './serviceError';
 import { productActionDecision } from './product-access';
-import { hasIngestModeMismatch, hasMemoryGenerationFailure, normalizeIngestMode, responseIngestMode } from './knowledge-ingest-contract';
+import { hasIngestModeMismatch, hasMemoryGenerationFailure, ingestFailureDetails, normalizeIngestMode, responseIngestMode } from './knowledge-ingest-contract';
 
 const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
 
@@ -2515,8 +2515,9 @@ class HiveMindApiClient {
         };
       }
       if (st.status === 'failed') {
-        const error = new Error(st.error || 'Ingestion failed');
-        error.code = 'INGEST_FAILED';
+        const failure = ingestFailureDetails(st);
+        const error = new Error(failure.message);
+        error.code = failure.code;
         throw error;
       }
     }

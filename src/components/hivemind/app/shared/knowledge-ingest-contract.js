@@ -36,6 +36,16 @@ export function hasMemoryGenerationFailure(response) {
     || response?.evidence_only_reason === 'promotion_failed';
 }
 
+export function ingestFailureDetails(response) {
+  const value = response?.error;
+  return {
+    message: typeof value === 'string'
+      ? value
+      : value?.message || response?.error_message || 'Ingestion failed',
+    code: value?.code || 'INGEST_FAILED',
+  };
+}
+
 export function documentIngestState({ ingestMode, evidenceOnly, memoryGenerationFailed, processing = false } = {}) {
   if (processing) return 'Processing';
   if (memoryGenerationFailed === true) return 'Memory generation failed';
