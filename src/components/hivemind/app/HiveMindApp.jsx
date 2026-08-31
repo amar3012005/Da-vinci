@@ -24,6 +24,8 @@ const MobileProfile = React.lazy(() => import('./mobile/pages/MobileProfile'));
 const MobileMemoryGraph = React.lazy(() => import('./mobile/pages/MobileMemoryGraph'));
 const Memories = React.lazy(() => import('./pages/Memories'));
 const MeetingNotes = React.lazy(() => import('./pages/MeetingNotes'));
+const MeetingAuthorization = React.lazy(() => import('./pages/MeetingAuthorization'));
+const MeetingPrivacySettings = React.lazy(() => import('./pages/MeetingPrivacySettings'));
 const ApiKeys = React.lazy(() => import('./pages/ApiKeys'));
 const Connectors = React.lazy(() => import('./pages/Connectors'));
 const Profile = React.lazy(() => import('./pages/Profile'));
@@ -128,6 +130,7 @@ export default function HiveMindApp() {
         {/* Public developer docs — no auth */}
         <Route path="docs" element={<PageSuspense><DocsPage /></PageSuspense>} />
         <Route path="cli-verified" element={<CliVerified />} />
+        <Route path="meeting-consent" element={<PageSuspense><MeetingAuthorization /></PageSuspense>} />
         <Route path="platform-admin" element={<PageSuspense><PlatformAdmin /></PageSuspense>} />
         {/* Mobile dedicated chat — no AppShell chrome, full screen */}
         <Route
@@ -221,6 +224,7 @@ export default function HiveMindApp() {
           <Route path="overview" element={<PageSuspense><Overview /></PageSuspense>} />
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
+          <Route path="meeting-privacy" element={<PageSuspense><MeetingPrivacySettings /></PageSuspense>} />
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
           <Route path="connectors" element={<PageSuspense><Connectors /></PageSuspense>} />
           <Route path="profile" element={<PageSuspense><Profile /></PageSuspense>} />

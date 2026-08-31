@@ -160,8 +160,9 @@ export function QuickRecorderProvider({ children }) {
   const [error, setError] = useState(null);
   const [startedAtLabel, setStartedAtLabel] = useState('');
   // config
-  const [participants, setParticipants] = useState([]);
+  const [participants, setParticipants] = useState([]); // { name, email }; v2 requires a verifiable address
   const [pName, setPName] = useState('');
+  const [pEmail, setPEmail] = useState('');
   const [scope, setScope] = useState('personal');
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState(null);
@@ -186,6 +187,7 @@ export function QuickRecorderProvider({ children }) {
   const segPromisesRef = useRef([]);
   const pendingSegRef = useRef(new Map()); // idx → text, windows not yet confirmed server-side
   const sessionIdRef = useRef(null);
+  const v2AdmissionRef = useRef(null);
   const langRef = useRef(null);
   const finalizingRef = useRef(false);
   const segTimerRef = useRef(null);
@@ -235,6 +237,19 @@ export function QuickRecorderProvider({ children }) {
   }, [persistSegment]);
 
   const transcribeSegment = useCallback((idx, blob) => {
+    const durableV2 = /workflow_v2:(workflow|full)/.test(String(v2AdmissionRef.current?.orchestration_mode || ''));
+    if (durableV2 && sessionIdRef.current) {
+      const p = apiClient.core.post(`/api/meetings/sessions/${sessionIdRef.current}/audio/${idx}`, blob, {
+        headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 180000,
+      }).then(async () => {
+        // A durable R2 receipt, not an STT response, is the browser's boundary.
+        await idbTakeChunks(sessionIdRef.current, idx);
+      }).catch((error) => {
+        throw error;
+      });
+      segPromisesRef.current.push(p);
+      return;
+    }
     const names = cfgRef.current.participants.join(', ');
     const hint = [cfgRef.current.notes, names ? `Participants: ${names}` : ''].filter(Boolean).join(' — ').slice(0, 800);
     const p = apiClient.core.post(`/api/meetings/transcribe?diarize=false&prompt=${encodeURIComponent(hint)}`, blob, {
@@ -289,6 +304,41 @@ export function QuickRecorderProvider({ children }) {
     if (savedSession) writeRecovery({ ...savedSession, finalizing: true, elapsed });
     try {
       await Promise.allSettled(segPromisesRef.current);
+      const durableV2 = /workflow_v2:(workflow|full)/.test(String(v2AdmissionRef.current?.orchestration_mode || ''));
+      if (durableV2 && sessionIdRef.current) {
+        const failedUploads = (await Promise.allSettled(segPromisesRef.current)).filter((result) => result.status === 'rejected');
+        if (failedUploads.length) throw new Error(`${failedUploads.length} audio segment upload(s) are not durably acknowledged.`);
+        setStatus('analyzing');
+        const queued = await apiClient.core.post(`/api/meetings/sessions/${sessionIdRef.current}/finalize`, {
+          expected_segment_count: segIdxRef.current,
+          notes: cfg.notes || null,
+          participants: cfg.participants,
+          scope: cfg.scope,
+          project_id: cfg.scope === 'project' ? cfg.projectId : null,
+          duration_sec: elapsed,
+        }, { timeout: 60000 });
+        if (![200, 202].includes(queued.status)) throw new Error('Meeting finalization was not accepted.');
+        // Workflow owns retries after this point. Poll only for presentation;
+        // closing the browser cannot interrupt processing.
+        for (let attempt = 0; attempt < 90; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          const current = await apiClient.core.get(`/api/meetings/sessions/${sessionIdRef.current}`);
+          const session = current.data?.session || current.data;
+          if (session?.status === 'failed') throw new Error(session.failure_detail || 'Meeting processing failed and is recoverable.');
+          if (session?.status === 'ready' && session.finalized_meeting_id) {
+            const meeting = await apiClient.core.get(`/api/meetings/${session.finalized_meeting_id}`);
+            const row = meeting.data?.meeting || {};
+            setMeetingId(session.finalized_meeting_id);
+            setTranscript(row.transcript || '');
+            setInsights(row.insights || null);
+            setIngested(Boolean(row.source_memory_id));
+            writeRecovery(null); await idbClear(sessionIdRef.current);
+            setStatus('done'); emitUsageChanged(); return;
+          }
+        }
+        setError('Meeting processing continues safely in the background. It will appear in Past meetings when ready.');
+        setStatus('done'); return;
+      }
       // Last-chance flush of any window whose durable write never confirmed —
       // idempotent upsert makes this safe even if it already landed.
       flushPendingSegments();
@@ -382,13 +432,11 @@ export function QuickRecorderProvider({ children }) {
   }, [status]);
 
   const start = useCallback(async () => {
-    cfgRef.current = { participants: participants.slice(0, 12), scope, projectId, notes, autoSave, captureMode };
+    const participantNames = participants.map((participant) => participant.name);
+    cfgRef.current = { participants: participantNames.slice(0, 12), scope, projectId, notes, autoSave, captureMode };
     setError(null); setElapsed(0); setCollapsed(false);
     segIdxRef.current = 0; segChunksRef.current = []; segPromisesRef.current = [];
     segTextsRef.current = {}; langRef.current = null; finalizingRef.current = false;
-    const displayPromise = captureMode === 'tab' && navigator.mediaDevices?.getDisplayMedia
-      ? navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-      : null;
     try {
       if (navigator.storage?.persist) await navigator.storage.persist();
       if (navigator.storage?.estimate) {
@@ -403,16 +451,46 @@ export function QuickRecorderProvider({ children }) {
     } catch { /* browser storage checks are best-effort */ }
     let allowance = -1;
     try {
-      const admission = await apiClient.core.post('/api/meetings/sessions', { consent: true });
-      sessionIdRef.current = admission.data?.session_id || null;
-      allowance = Number(admission.data?.remaining_seconds ?? -1);
+      if (!v2AdmissionRef.current) {
+        const requestedPurposes = ['record_audio', 'transcribe_and_summarize', ...(autoSave ? ['promote_to_hivemind_memory'] : [])];
+        const organizer = user?.email ? [{ user_id: user.id, email: user.email, display_name: user.displayName || user.name || user.email }] : [];
+        const admission = await apiClient.core.post('/api/meetings/sessions', {
+          consent: true,
+          participants: [...organizer, ...participants.map((participant) => ({ email: participant.email, display_name: participant.name }))],
+          purposes: requestedPurposes,
+          expected_segment_ms: SEGMENT_MS,
+        });
+        sessionIdRef.current = admission.data?.session_id || null;
+        allowance = Number(admission.data?.remaining_seconds ?? -1);
+        if (String(admission.data?.orchestration_mode || '').startsWith('workflow_v2:')) {
+          v2AdmissionRef.current = admission.data;
+          setRemainingSeconds(allowance);
+          setStatus('authorization');
+          setError(`Waiting for participant authorization (${admission.data.accepted_authorizations || 0}/${admission.data.required_authorizations || 0}). Invitations were sent by email.`);
+          return;
+        }
+      } else {
+        allowance = Number(v2AdmissionRef.current?.remaining_seconds ?? -1);
+        const auth = await apiClient.core.get(`/api/meetings/sessions/${sessionIdRef.current}/authorizations`);
+        if (auth.data?.authorization_status !== 'ready_to_record') {
+          setStatus('authorization');
+          setError(`Waiting for participant authorization (${auth.data?.accepted_authorizations || 0}/${auth.data?.required_authorizations || 0}).`);
+          return;
+        }
+        cfgRef.current.autoSave = cfgRef.current.autoSave === true && auth.data?.memory_promotion_authorized === true;
+        await apiClient.core.post(`/api/meetings/sessions/${sessionIdRef.current}/start`, {});
+      }
       setRemainingSeconds(allowance);
     } catch (e) {
-      if (displayPromise) displayPromise.then((stream) => stream.getTracks().forEach((track) => track.stop())).catch(() => {});
       setError(e?.response?.data?.message || e?.response?.data?.error || 'Unable to start a meeting.');
-      setStatus('error');
+      setStatus(v2AdmissionRef.current ? 'authorization' : 'error');
       return;
     }
+    // Browser capture permission is requested only after authoritative
+    // READY_TO_RECORD; no audio exists while participant authorization is pending.
+    const displayPromise = captureMode === 'tab' && navigator.mediaDevices?.getDisplayMedia
+      ? navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+      : null;
     let mic;
     try {
       mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
@@ -463,7 +541,7 @@ export function QuickRecorderProvider({ children }) {
       if (recRef.current && recRef.current.state === 'recording') recRef.current.stop();
     }, SEGMENT_MS);
     clockRef.current = setInterval(() => setElapsed((x) => x + 1), 1000);
-  }, [participants, scope, projectId, notes, autoSave, captureMode, org?.id, user?.id, cleanup, rollSegment, writeRecovery]);
+  }, [participants, scope, projectId, notes, autoSave, captureMode, org?.id, user?.id, user?.email, user?.displayName, user?.name, cleanup, rollSegment, writeRecovery]);
 
   const stop = useCallback(() => {
     finalizingRef.current = true;
@@ -618,7 +696,8 @@ export function QuickRecorderProvider({ children }) {
     writeRecovery(null);
     if (sessionIdRef.current) idbClear(sessionIdRef.current);
     setStatus('idle'); setError(null); setCollapsed(false);
-    setParticipants([]); setPName(''); setScope('personal'); setProjectId(null); setNotes('');
+    setParticipants([]); setPName(''); setPEmail(''); setScope('personal'); setProjectId(null); setNotes('');
+    v2AdmissionRef.current = null;
     setCaptureMode('mic'); setAutoSave(true); setRemainingSeconds(-1);
     setPaused(false);
     setInsights(null); setMeetingId(null); setTranscript(''); setIngested(false); setIngesting(false);
@@ -634,9 +713,11 @@ export function QuickRecorderProvider({ children }) {
   const mob = isMobile();
 
   const addParticipant = () => {
-    const n = pName.trim();
-    if (n && !participants.includes(n)) setParticipants((p) => [...p, n].slice(0, 12));
-    setPName('');
+    const name = pName.trim(); const email = pEmail.trim().toLowerCase();
+    if (name && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !participants.some((participant) => participant.email === email)) {
+      setParticipants((current) => [...current, { name, email }].slice(0, 12));
+    }
+    setPName(''); setPEmail('');
   };
 
   /* ── Collapsed chip — mobile: top-right BELOW the navbar; desktop: bottom-center */
@@ -703,7 +784,7 @@ export function QuickRecorderProvider({ children }) {
             <button onClick={() => setCollapsed(true)} title="Collapse"
               className="w-7 h-7 grid place-items-center rounded-lg text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#faf9f4]"><Minimize2 size={14} /></button>
           )}
-          {(status === 'config' || status === 'error') && (
+          {(status === 'config' || status === 'authorization' || status === 'error') && (
             <button onClick={dismiss} title="Close"
               className="w-7 h-7 grid place-items-center rounded-lg text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#faf9f4]"><X size={14} /></button>
           )}
@@ -715,7 +796,7 @@ export function QuickRecorderProvider({ children }) {
         <span className="text-[26px] font-semibold text-[#b9b5ae] ml-2 tabular-nums">{(recording || busy ? startedAtLabel : atNow()).split(' ').slice(1).join(' ')}</span>
       </div>
 
-      {status === 'config' && (
+      {(status === 'config' || status === 'authorization') && (
         <>
           <div className="flex items-center gap-1.5 mt-3">
             {stepDefs.map((s, i) => (
@@ -730,20 +811,24 @@ export function QuickRecorderProvider({ children }) {
           <div className="mt-3 min-h-[120px]">
             {step === 0 && (
               <div>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.35fr_auto] gap-2">
                   <input value={pName} onChange={(e) => setPName(e.target.value)}
+                    placeholder="Participant name"
+                    className="flex-1 px-3 py-2 rounded-[8px] border border-[#e3e0db] bg-[#faf9f4] text-[13px] outline-none focus:border-[#117dff]" />
+                  <input value={pEmail} onChange={(e) => setPEmail(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') addParticipant(); }}
-                    placeholder="Add participant name…"
+                    placeholder="Email for authorization"
+                    type="email"
                     className="flex-1 px-3 py-2 rounded-[8px] border border-[#e3e0db] bg-[#faf9f4] text-[13px] outline-none focus:border-[#117dff]" />
                   <button onClick={addParticipant} className="px-3 py-2 rounded-[8px] bg-[#117dff] text-white text-[12px] font-semibold">Add</button>
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-2.5">
-                  {participants.map((n) => (
-                    <span key={n} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#faf9f4] border border-[#e3e0db] text-[12px]">
-                      {n}<button onClick={() => setParticipants((p) => p.filter((x) => x !== n))} className="text-[#a3a3a3] hover:text-[#dc2626]"><X size={11} /></button>
+                  {participants.map((participant) => (
+                    <span key={participant.email} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#faf9f4] border border-[#e3e0db] text-[12px]">
+                      {participant.name} · {participant.email}<button onClick={() => setParticipants((current) => current.filter((item) => item.email !== participant.email))} className="text-[#a3a3a3] hover:text-[#dc2626]"><X size={11} /></button>
                     </span>
                   ))}
-                  {!participants.length && <span className="text-[11px] text-[#a3a3a3]">Optional — names help label speakers + spell them right.</span>}
+                  {!participants.length && <span className="text-[11px] text-[#a3a3a3]">Add every participant so each person can authorize recording before capture begins.</span>}
                 </div>
               </div>
             )}
@@ -805,9 +890,9 @@ export function QuickRecorderProvider({ children }) {
                 Next <ChevronRight size={14} />
               </button>
             ) : (
-              <button onClick={start} disabled={scope === 'project' && !projectId}
+              <button onClick={start} disabled={(scope === 'project' && !projectId) || (!user?.email && !participants.length)}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[8px] bg-[#117dff] text-white text-[12px] font-semibold disabled:opacity-40">
-                <Mic size={13} /> Start meeting
+                <Mic size={13} /> {status === 'authorization' ? 'Check authorizations' : 'Start meeting'}
               </button>
             )}
           </div>
