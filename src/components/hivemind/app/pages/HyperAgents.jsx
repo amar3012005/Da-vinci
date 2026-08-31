@@ -29,7 +29,7 @@ import {
   ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
   Copy, Download, Power, Pause, Play, Square,
-  ContactRound,
+  ContactRound, Bot, Link2,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -3657,6 +3657,23 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   // looping or shipping a fabricated result. Rendered as a distinct banner.
   const deadEndLine = lines.find(l => l.t === 'line' && l.kind === 'dead_end');
   const reactions = lines.filter(l => l.t === 'react' && l.agreement !== 'abstain');
+  const rosterEvent = [...lines].reverse().find(l => l.t === 'roster_evaluated');
+  const agentActivations = lines.filter(l => l.t === 'agent_activated');
+  const assignmentEvents = lines.filter(l => l.t === 'work_order');
+  const assignmentStarts = lines.filter(l => l.t === 'agent_assignment_started');
+  const toolReceipts = lines.filter(l => l.t === 'agent_tool_receipt');
+  const agentRunBlocked = [...lines].reverse().find(l => l.t === 'agent_run_blocked');
+  const isGrokRuntime = Boolean(
+    rosterEvent || agentActivations.length || assignmentStarts.length || toolReceipts.length || agentRunBlocked,
+  );
+  const latestAssignments = (() => {
+    const byKey = {};
+    assignmentEvents.forEach((event, index) => {
+      const key = event.id || event.order_key || event.step_id || `${event.agent || event.owner || 'agent'}-${index}`;
+      byKey[key] = event;
+    });
+    return Object.values(byKey);
+  })();
   // Multi-round debate: collect all revises + validates (was single).
   const revises = lines.filter(l => l.t === 'revise');
   const validates = lines.filter(l => l.t === 'validate');
@@ -3914,15 +3931,18 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
           lead/reactors and the SSE stream catches up. */}
       {!seal && !errorLine && !router && liveLines && (
         <div className="text-[10px] text-[#a3a3a3] font-mono pl-2">
-          → selecting lead and reactors…
+          → {isGrokRuntime ? 'evaluating agent roster…' : 'selecting lead and reactors…'}
         </div>
       )}
 
       {router && (
         <div className="text-[10px] text-[#a3a3a3] font-mono pl-2">
           → lead: <span className="text-[#525252]">{router.lead}</span>
-          {(router.reactors || []).length > 0 && (
+          {!isGrokRuntime && (router.reactors || []).length > 0 && (
             <> · reactors: <span className="text-[#525252]">{router.reactors.join(', ')}</span></>
+          )}
+          {isGrokRuntime && agentActivations.length > 0 && (
+            <> · active agents: <span className="text-[#525252]">{agentActivations.map(a => a.name || a.agent).filter(Boolean).join(', ')}</span></>
           )}
           {router.t === 'router_bootstrap' && (
             <span className="ml-2 px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 text-[9px] uppercase tracking-wider">
@@ -3935,6 +3955,60 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
             </span>
           )}
         </div>
+      )}
+
+      {isGrokRuntime && (
+        <section className="overflow-hidden rounded-md border border-[#d8d3cc] bg-white" aria-label="Agent execution">
+          <div className="flex flex-wrap items-center gap-2 border-b border-[#e8e4de] bg-[#f8f7f4] px-3 py-2">
+            <Bot size={13} className="text-violet-600" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#3f3a35]">Agent execution</span>
+            <span className="text-[9px] font-mono text-[#8a847d]">{rosterEvent?.runtime_mode || 'durable'}</span>
+            <span className="ml-auto text-[9px] text-[#8a847d]">
+              {agentActivations.length} active · {toolReceipts.length} verified {toolReceipts.length === 1 ? 'receipt' : 'receipts'}
+            </span>
+          </div>
+          <div className="space-y-1.5 px-3 py-2.5">
+            {latestAssignments.map((assignment, index) => {
+              const status = String(assignment.status || 'assigned').toLowerCase();
+              const ok = status === 'completed' || status === 'submitted';
+              const bad = ['failed', 'blocked', 'cancelled'].includes(status);
+              return (
+                <div key={assignment.id || assignment.step_id || index} className="flex items-start gap-2 text-[10px]">
+                  {ok ? <CheckCheck size={12} className="mt-px shrink-0 text-emerald-600" />
+                    : bad ? <AlertTriangle size={12} className="mt-px shrink-0 text-red-600" />
+                      : <Loader2 size={12} className={`mt-px shrink-0 text-violet-600 ${!seal ? 'animate-spin' : ''}`} />}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-[#34302c]">{assignment.title || assignment.step_id || 'Agent assignment'}</div>
+                    <div className="text-[#7b756e]">
+                      {assignment.owner || assignment.name || assignment.agent || 'Agent'} · {status.replaceAll('_', ' ')}
+                    </div>
+                    {(bad && (assignment.text || assignment.error)) && (
+                      <div className="mt-0.5 text-red-700">{assignment.error || assignment.text}</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {latestAssignments.length === 0 && assignmentStarts.map((assignment, index) => (
+              <div key={`${assignment.work_order_id || assignment.work_order_key}-${index}`} className="flex items-center gap-2 text-[10px] text-[#5f5953]">
+                <Loader2 size={12} className={`${!seal ? 'animate-spin' : ''} text-violet-600`} />
+                <span>{assignment.agent || 'Agent'} · {assignment.work_order_key || 'working'}</span>
+              </div>
+            ))}
+            {toolReceipts.map((receipt, index) => (
+              <div key={receipt.action_key || index} className="ml-5 flex items-center gap-1.5 text-[9.5px] text-emerald-700">
+                <Link2 size={10} />
+                <span>{receipt.agent || 'Agent'} verified {receipt.adapter || 'tool'} execution</span>
+              </div>
+            ))}
+            {agentRunBlocked && (
+              <div className="mt-2 rounded border border-red-200 bg-red-50 px-2.5 py-2 text-[10px] text-red-800">
+                <div className="font-semibold">Run blocked — no legacy report was substituted</div>
+                {(agentRunBlocked.gaps || []).map((gap, index) => <div key={index} className="mt-0.5">• {gap}</div>)}
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {(ontology || workforceAssessment || flybyProposal || simulationPhases.length > 0 || simulationClaims.length > 0) && (
@@ -4015,7 +4089,7 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         />
       )}
 
-      {reactions.length > 0 && (
+      {!isGrokRuntime && reactions.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[#737373] pl-1">
             <MessageCircle size={11} className="text-violet-500" />
