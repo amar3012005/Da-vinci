@@ -946,6 +946,24 @@ class HiveMindApiClient {
     return data;
   }
 
+  async controlHyperTurn(roomId, turnId, action, message = '') {
+    const { data } = await this.controlPlane.post(
+      `/v1/hyper-rooms/${roomId}/turns/${turnId}/control`,
+      { action, ...(message ? { message } : {}) },
+    );
+    return data;
+  }
+
+  async listHyperAgentRoutines(roomId) {
+    const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/routines`);
+    return data;
+  }
+
+  async createHyperAgentRoutine(roomId, payload) {
+    const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/routines`, payload);
+    return data;
+  }
+
   async getHyperRoomArtifacts(roomId, { type = 'all', limit = 200 } = {}) {
     const qs = new URLSearchParams({ type, limit: String(limit) }).toString();
     const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/artifacts?${qs}`);
