@@ -525,15 +525,38 @@ function IcarusDocs() {
       <section id="selfhost-install" className="mt-12">
         <Eyebrow>02 · INSTALL</Eyebrow>
         <H2 id="selfhost-install">Install</H2>
-        <CodeBlock label="terminal · one-liner">{`curl -fsSL https://raw.githubusercontent.com/${ICARUS_REPO}/main/install.sh | bash`}</CodeBlock>
-        <P>Installs the toolchain if missing, builds the native addon, installs the <Mono>mneme</Mono> CLI to <Mono>~/.mneme</Mono>. Manual build:</P>
+        <CodeBlock label="macOS · Linux · WSL">{`curl -fsSL https://raw.githubusercontent.com/${ICARUS_REPO}/main/install.sh | bash`}</CodeBlock>
+        <CodeBlock label="native Windows PowerShell">{`irm https://raw.githubusercontent.com/${ICARUS_REPO}/main/install.ps1 | iex`}</CodeBlock>
+        <P>Supported platforms download and checksum-verify one self-contained <Mono>icarus</Mono> binary; Node.js and Rust are not required. Use the POSIX command in WSL, and the PowerShell command only from native Windows.</P>
+        <P>Manual source build is for unsupported platforms or contributors:</P>
         <CodeBlock label="terminal · manual">{`git clone https://github.com/${ICARUS_REPO}
 cd ICARUS/crate/mneme-node && npm install && npx napi build --release`}</CodeBlock>
       </section>
 
+      {/* ── Memory-first agents ── */}
+      <section id="selfhost-agent-memory" className="mt-12">
+        <Eyebrow>03 · AGENT MEMORY</Eyebrow>
+        <H2 id="selfhost-agent-memory">Use ICARUS as the agent&apos;s long-term project memory</H2>
+        <P>
+          The default workflow is small and local: retrieve a narrow slice of prior project knowledge before a meaningful change, then persist only the result that would be costly or risky to rediscover. No LLM key, embedding provider, or remote reranker is needed for that memory loop; local lexical recall remains available by default.
+        </P>
+        <CodeBlock label="repository root">{`icarus mcp install codex
+icarus harness init --agent codex --repo .
+
+# The agent then uses MCP tools such as:
+# icarus_recall, icarus_save_memory, icarus_log_decision,
+# icarus_recall_bugs, icarus_why_code, and icarus_test_coverage.`}</CodeBlock>
+        <P>
+          Save current facts, decisions, standing instructions, and significant completed events with explicit tags: <Mono>memory:fact</Mono>, <Mono>memory:decision</Mono>, <Mono>memory:instruction</Mono>, and <Mono>memory:event</Mono>. Use <Mono>memory:task</Mono> only for short-lived handoffs, then remove or supersede it when the task closes. Never save credentials, raw customer data, or routine transcripts.
+        </P>
+        <P>
+          The harness is complementary: initialize it once per repository, but use its full governed lifecycle only for high-risk work such as production, security, tenant, billing, migration, destructive, or major-refactor changes. Normal investigation and code work continue with memory plus ordinary repository inspection if graph or harness services are unavailable.
+        </P>
+      </section>
+
       {/* ── Quickstart ── */}
       <section id="selfhost-quickstart" className="mt-12">
-        <Eyebrow>03 · QUICKSTART</Eyebrow>
+        <Eyebrow>04 · QUICKSTART</Eyebrow>
         <H2 id="selfhost-quickstart">Quickstart</H2>
         <P>One Rust core, two language bindings — same on-disk format, identical behavior. Pick one:</P>
         <FrameworkTabs tabs={[
@@ -559,10 +582,10 @@ hits = store.recall(embed("ui settings"), top_k=5)  # [MnemeHit(slot_id, score, 
           },
           {
             label: 'CLI',
-            code: `mneme ingest <dir> --org acme     # extract + embed + store a folder of docs
-mneme recall "your question" --org acme
-mneme compact --org acme
-mneme status`,
+            code: `icarus ingest <dir> --org acme     # extract + store a folder of docs
+icarus recall "your question" --org acme
+icarus compact --org acme
+icarus status`,
           },
         ]} />
       </section>
