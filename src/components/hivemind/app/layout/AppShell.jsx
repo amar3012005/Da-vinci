@@ -19,6 +19,7 @@ import { PLAN_LIMIT_EVENT } from '../shared/planLimit';
 import ServiceErrorToast from '../components/ServiceErrorToast';
 import CallContractModal from '../components/CallContractModal';
 import ProductAccessModal from '../components/ProductAccessModal';
+import { NEW_WORKSPACE_LANDING, RETURNING_USER_LANDING } from '../shared/routes';
 
 /**
  * PlanLimitGate — listens for the global 'hm:plan-limit' window event
@@ -197,11 +198,12 @@ export default function AppShell() {
   }, [needsOnboarding, gate, location.search]);
 
   const finishGate = () => {
+    let isNew = false;
+    try { isNew = sessionStorage.getItem('hm_new_user') === '1'; } catch { /* noop */ }
     try { sessionStorage.removeItem('hm_new_user'); } catch { /* noop */ }
-    // Every subscription includes BRAIN, so post-login always lands on its
-    // overview. Product entitlements are applied only when the user chooses OS
-    // or VOICE; auth callbacks never strand a BRAIN-only user behind a gate.
-    navigate('/hivemind/app/overview', { replace: true });
+    // A newly-created workspace starts with company onboarding. Returning
+    // users keep the stable BRAIN overview landing.
+    navigate(isNew ? NEW_WORKSPACE_LANDING : RETURNING_USER_LANDING, { replace: true });
     setGate('done');
   };
   // Self-host gate: the workspace opens only after the control plane confirms

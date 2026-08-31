@@ -621,7 +621,7 @@ function CommercialManager() {
     setError("");
     setNotice("");
     try {
-      const result = await apiClient.createPlatformEnterpriseInvitation({
+      await apiClient.createPlatformEnterpriseInvitation({
         ...enterpriseInvitationForm,
         max_invites: Number(enterpriseInvitationForm.max_invites),
         monthly_credits: Number(enterpriseInvitationForm.monthly_credits),
@@ -635,11 +635,11 @@ function CommercialManager() {
             ).toISOString()
           : undefined,
       });
-      setOneTimeInvitationCode(result.code || "");
-      setOneTimeInvitationId(result.invitation?.id || "");
+      setOneTimeInvitationCode("");
+      setOneTimeInvitationId("");
       setOneTimeInvitationUrl("");
       setNotice(
-        "Enterprise invitation created as a draft. Copy the recovery code now, then use Send to review and deliver the invitation.",
+        "Enterprise invitation created as a draft. Use Send to review the email and generate its secure link and recovery code.",
       );
       setEnterpriseInvitationForm({
         ...enterpriseInvitationForm,
