@@ -988,6 +988,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getHyperRoomRealtime(roomId) {
+    const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/realtime`);
+    return data;
+  }
+
   async listHyperAgentRoutines(roomId) {
     const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/routines`);
     return data;
