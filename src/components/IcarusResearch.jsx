@@ -60,6 +60,31 @@ const AgentOnboardingPill = () => {
   );
 };
 
+const ThesisLicenseNotice = () => (
+  <aside className="mt-14 border-t pt-8" style={{ borderColor: BORDER }} aria-label="Thesis license">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+      <div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#77746d]">Thesis license</div>
+        <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#54514b]">
+          The ICARUS v1 thesis is licensed under{' '}
+          <a className="font-medium text-[#0a0a0a] underline decoration-[#FF5229]/70 underline-offset-4 hover:text-[#FF5229]" href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">Creative Commons Attribution 4.0 International</a>{' '}
+          (CC BY 4.0). You may share and adapt it with appropriate attribution. The ICARUS software remains{' '}
+          <a className="font-medium text-[#0a0a0a] underline decoration-[#FF5229]/70 underline-offset-4 hover:text-[#FF5229]" href="https://github.com/amar3012005/ICARUS/blob/main/LICENSE" target="_blank" rel="noreferrer">Apache-2.0</a>.
+        </p>
+      </div>
+      <a
+        className="shrink-0 self-start rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[#3a3833] no-underline transition-colors hover:border-[#0a0a0a] hover:text-[#0a0a0a]"
+        style={{ borderColor: BORDER }}
+        href="https://github.com/amar3012005/ICARUS/blob/main/THESIS-LICENSE.md"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Read license
+      </a>
+    </div>
+  </aside>
+);
+
 const useMotionOk = () => {
   const [ok, setOk] = useState(false);
   useEffect(() => {
@@ -380,6 +405,7 @@ const IcarusResearch = () => {
       <div key={version} className="animate-[icarusFade_.45s_ease]">
         {version === 'v1' ? <V1Body motionOk={motionOk} /> : <V2Body motionOk={motionOk} />}
       </div>
+      <ThesisLicenseNotice />
       <style>{`@keyframes icarusFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }`}</style>
     </NewsArticleLayout>
   );
