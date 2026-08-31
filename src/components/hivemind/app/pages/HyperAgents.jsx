@@ -28,7 +28,7 @@ import {
   UserPlus, LogOut, ExternalLink, Brain, FileText, Boxes, Paperclip,
   ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
-  Copy, Download, Power,
+  Copy, Download, Power, Pause, Play, Square,
   ContactRound,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -1175,6 +1175,9 @@ function RoomThread({ roomId, onArchived }) {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [activeTurnId, setActiveTurnId] = useState(null);
+  const [runtimeControlBusy, setRuntimeControlBusy] = useState('');
+  const [runtimePaused, setRuntimePaused] = useState(false);
+  const [steeringDraft, setSteeringDraft] = useState('');
   // A server may intentionally preserve the client-generated turn id. Track
   // confirmation separately so releasing the pending-id latch always starts
   // the live SSE/poll lifecycle, even when the id itself has not changed.
@@ -2420,6 +2423,25 @@ function RoomThread({ roomId, onArchived }) {
     }
   }
 
+  async function handleRuntimeControl(action) {
+    if (!activeTurnId || runtimeControlBusy) return;
+    if (action === 'cancel' && !window.confirm(t('hyperAgents.confirmCancelAgentRun', 'Cancel this agent run? Completed external actions cannot be undone.'))) return;
+    setRuntimeControlBusy(action);
+    setError(null);
+    try {
+      await apiClient.controlHyperTurn(roomId, activeTurnId, action, action === 'steer' ? steeringDraft.trim() : '');
+      if (action === 'pause') setRuntimePaused(true);
+      if (action === 'resume') setRuntimePaused(false);
+      if (action === 'steer') setSteeringDraft('');
+      if (action === 'cancel') { setActiveTurnId(null); setSubmitting(false); }
+      setStreamEpoch(epoch => epoch + 1);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setRuntimeControlBusy('');
+    }
+  }
+
   async function handleParticipantsChange(participantIds) {
     try {
       const resp = await apiClient.updateHyperRoom(roomId, { participant_ids: participantIds });
@@ -2951,6 +2973,22 @@ function RoomThread({ roomId, onArchived }) {
           </div>
         )}
 
+        {activeTurnId && !String(activeTurnId).startsWith('pending-') && (
+          <div className="border-b border-[#dedbd6] bg-white px-4 py-2" aria-label="Active agent controls">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[9px] font-mono uppercase tracking-[0.12em] text-violet-700">Agents working</span>
+              <button type="button" disabled={Boolean(runtimeControlBusy)} onClick={() => handleRuntimeControl(runtimePaused ? 'resume' : 'pause')} className="inline-flex h-7 items-center gap-1 border border-[#d8d3cc] px-2 text-[9px] font-semibold disabled:opacity-40">
+                {runtimePaused ? <Play size={11} /> : <Pause size={11} />} {runtimePaused ? 'Resume' : 'Pause'}
+              </button>
+              <button type="button" disabled={Boolean(runtimeControlBusy)} onClick={() => handleRuntimeControl('cancel')} className="inline-flex h-7 items-center gap-1 border border-red-200 bg-red-50 px-2 text-[9px] font-semibold text-red-700 disabled:opacity-40">
+                <Square size={10} /> Cancel
+              </button>
+              <input value={steeringDraft} onChange={(event) => setSteeringDraft(event.target.value)} maxLength={4000} placeholder="Redirect the active agents…" className="h-7 min-w-[180px] flex-1 border border-[#d8d3cc] px-2 text-[10px] outline-none focus:border-violet-400" />
+              <button type="button" disabled={!steeringDraft.trim() || Boolean(runtimeControlBusy)} onClick={() => handleRuntimeControl('steer')} className="inline-flex h-7 items-center gap-1 bg-violet-700 px-2.5 text-[9px] font-semibold text-white disabled:opacity-40"><Send size={10} /> Steer</button>
+            </div>
+          </div>
+        )}
+
         {/* Thread */}
         <div ref={scrollRef} onScroll={onThreadScroll} className={`flex-1 min-h-0 overflow-y-auto bg-[#fbfaf7] ${isHqRoom ? 'px-4 py-4' : 'px-4 py-4 space-y-4'}`}>
           {showRoomIntro && !isSeoRoom && !isHqRoom && (
@@ -3071,6 +3109,7 @@ function RoomThread({ roomId, onArchived }) {
           {!isHqRoom && turns.map(turn => (
             <div key={turn.id} className="space-y-2">
               {turn.runtimePlaybookRunId ? <div className="flex items-center justify-between border border-[#dedbd6] bg-white px-3 py-2 text-[9px] text-[#625f58]" aria-label="Runtime lifecycle phase"><span className="font-mono uppercase tracking-[0.12em]">Runtime · {String(turn.runtimeStageId || 'phase').replaceAll('_', ' ')}</span><span className="font-mono">checkpoint {turn.runtimeCheckpointSequence || '-'} · attempt {turn.runtimeAttempt || 1}</span></div> : null}
+              {Array.isArray(turn.activeAgents) && turn.activeAgents.length > 0 ? <div className="flex flex-wrap items-center gap-1.5 border border-violet-200 bg-violet-50 px-3 py-2" aria-label="Active persistent agents"><span className="mr-1 text-[9px] font-mono uppercase tracking-[0.12em] text-violet-700">{String(turn.grokRuntimeMode || 'persistent agents').replaceAll('_', ' ')}</span>{turn.activeAgents.map((agent) => <span key={agent.agent_instance_id || agent.employee_slug} className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-white px-2 py-0.5 text-[9px] text-violet-800"><span className={`h-1.5 w-1.5 rounded-full ${agent.status === 'complete' ? 'bg-emerald-500' : agent.status === 'waiting' ? 'bg-amber-500' : 'bg-violet-500'}`} />{agent.employee_slug || agent.role || 'agent'} · {agent.status}</span>)}</div> : null}
             <TurnView
               turn={turn}
               participants={participantBySlug}
