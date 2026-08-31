@@ -8,6 +8,7 @@
  */
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import {
   Mic, Square, Loader2, FileText, ListChecks, Lightbulb, CheckCircle2,
   HelpCircle, Save, AlertTriangle, Sparkles, Users, Clock, ArrowUpRight,
@@ -771,6 +772,7 @@ export default function MeetingNotes() {
           <p className="text-[12px] text-[#737373] mt-1">{t('meetingnotes.subtitle', 'Record, transcribe and extract insights — saved straight into your memory.')}</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link to="/hivemind/app/meeting-privacy" className="rounded-lg border border-[#e3e0db] bg-white px-3 py-2 text-[11px] font-semibold text-[#525252]">Privacy policy</Link>
           <UsageTracker resource="meetingMinutes" />
           <ClockChip />
         </div>
