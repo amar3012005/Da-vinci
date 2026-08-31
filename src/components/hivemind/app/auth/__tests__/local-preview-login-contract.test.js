@@ -8,5 +8,6 @@ test('preview hostname uses one-time email login rather than Google', () => {
   expect(login).toContain("window.location.hostname === 'next.preview.singulancelabs.com'");
   expect(login).toContain('Email one-time sign-in link');
   expect(login).toContain('localPreviewLogin ?');
+  expect(login).toContain('!localPreviewLogin && <button');
   expect(client).toContain("'/auth/local-preview/request'");
 });

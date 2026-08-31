@@ -565,8 +565,8 @@ export default function LoginPage() {
                     </ComingSoonProvider>
                   </div>}
 
-                  {/* Enterprise SSO stays visible without allowing an unavailable redirect. */}
-                  <button
+                  {/* Preview has exactly one authentication method: the email link above. */}
+                  {!localPreviewLogin && <button
                     type="button"
                     disabled
                     aria-label="Enterprise SSO — coming soon"
@@ -575,7 +575,7 @@ export default function LoginPage() {
                     <Shield size={14} className="text-[#a3a3a3]" />
                     Enterprise SSO · EU Sovereign
                     <span className="text-[9px] font-mono normal-case tracking-normal text-[#a3a3a3]">Coming soon</span>
-                  </button>
+                  </button>}
 
                   {/* trust line */}
                   <div className="flex items-center justify-center gap-2 mt-4 px-3 py-2 rounded-[6px] bg-[#f0fdf4] border border-[#bbf7d0]">
