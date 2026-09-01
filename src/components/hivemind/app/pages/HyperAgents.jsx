@@ -45,7 +45,6 @@ import CampaignProgressDashboard from '../hyperagents/campaigns/CampaignProgress
 import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
-import RuntimeWaitlistModal from './RuntimeWaitlistModal';
 import {
   CAMPAIGN_INTELLIGENCE_V2,
   CampaignConnectionsRail,
@@ -248,9 +247,7 @@ export default function HyperAgents() {
       const m = p.match(/\/employees\/rooms\/([0-9a-f-]{36})/i);
       if (m) return { mode: 'thread', roomId: m[1] };
       if (/\/employees\/agents/.test(p)) return { mode: 'roster', roomId: null };
-      // Runtime remains routable for the future, but is deliberately presented
-      // as a product preview until the autonomous lifecycle is enabled.
-      if (/\/employees\/runtime/.test(p)) return { mode: 'hero', roomId: null, preview: 'runtime' };
+      if (/\/employees\/runtime/.test(p)) return { mode: 'runtime', roomId: null };
       if (/\/employees\/leads/.test(p)) return { mode: 'leads', roomId: null };
       if (/\/employees\/campaigns/.test(p)) return { mode: 'campaigns', roomId: null };
       return { mode: 'hero', roomId: null };
@@ -259,7 +256,6 @@ export default function HyperAgents() {
   const _init = _parsePath();
   const [activeRoomId, setActiveRoomId] = useState(_init.roomId);
   const [viewMode, setViewMode] = useState(_init.mode);
-  const [comingSoon, setComingSoon] = useState(_init.preview || null);
   const goMode = useCallback((mode, roomId, query = {}) => {
     setViewMode(mode);
     if (roomId !== undefined) setActiveRoomId(roomId);
@@ -275,17 +271,6 @@ export default function HyperAgents() {
     if (query.campaign) params.set('campaign', query.campaign);
     navigate(`${url}${params.size ? `?${params.toString()}` : ''}`, { replace: true });
   }, [navigate]);
-  const openComingSoon = useCallback((feature) => setComingSoon(feature), []);
-
-  // A direct Runtime URL should land on the stable company dashboard while
-  // retaining the same preview the Runtime rail button opens.
-  useEffect(() => {
-    if (_init.preview !== 'runtime') return;
-    navigate('/hivemind/app/employees/mycompany', { replace: true });
-    // This only reflects the mount-time URL; navigation is intentionally not
-    // repeated after in-app state updates.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   // Canonicalize the bare /employees URL to /employees/mycompany (keep ?onboard=1).
   useEffect(() => {
     if (/\/employees\/?$/.test(window.location.pathname)) {
@@ -514,7 +499,7 @@ export default function HyperAgents() {
           </button>
           <button
             type="button"
-            onClick={() => openComingSoon('runtime')}
+            onClick={() => goMode('runtime', null)}
             className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#bcd0ef]"
           >
             <Power size={13} className="text-[#185bcc]" />
@@ -531,7 +516,7 @@ export default function HyperAgents() {
           {/* YOUR CAMPAIGNS — standalone paid media workspace, outside rooms. */}
           <button
             type="button"
-            onClick={() => openComingSoon('social')}
+            onClick={() => goMode('campaigns', null)}
             className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#e3e0db]"
           >
             <Megaphone size={13} className="text-[#c2410c]" />
@@ -729,83 +714,12 @@ export default function HyperAgents() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {comingSoon === 'runtime' ? (
-          <RuntimeWaitlistModal onClose={() => setComingSoon(null)} />
-        ) : comingSoon ? (
-          <OperatingSystemComingSoonModal
-            feature={comingSoon}
-            onClose={() => setComingSoon(null)}
-          />
-        ) : null}
-      </AnimatePresence>
-
       {error && (
         <div className="absolute top-3 right-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[11px] text-red-700">
           {error}
         </div>
       )}
     </div>
-  );
-}
-
-function OperatingSystemComingSoonModal({ feature, onClose }) {
-  const isSocial = feature === 'social';
-  const Icon = isSocial ? Megaphone : Power;
-  const eyebrow = isSocial ? 'HIVEMIND SOCIAL' : 'HIVEMIND RUNTIME';
-  const title = isSocial ? 'Social Media is coming soon' : 'Runtime is coming soon';
-  const description = isSocial
-    ? 'Let HIVEMIND handle your social media end to end: strategy, content, approvals, and publishing across Instagram, LinkedIn, X, and the channels your company uses.'
-    : 'Let HIVEMIND Runtime handle your whole company: understand its context, coordinate the work, and carry out governed actions with your approval.';
-
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#101828]/35 p-4 backdrop-blur-[2px]"
-      onMouseDown={onClose}
-    >
-      <motion.section
-        initial={{ opacity: 0, y: 14, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 14, scale: 0.98 }}
-        transition={{ duration: 0.18, ease: 'easeOut' }}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="operating-system-coming-soon-title"
-        className="w-full max-w-[460px] rounded-[10px] border border-[#e3e0db] bg-white p-5 shadow-[0_28px_90px_rgba(12,38,84,0.24)]"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#117dff]/10 text-[#117dff]">
-              <Icon size={18} />
-            </span>
-            <div>
-              <p className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em] text-[#117dff]">{eyebrow}</p>
-              <h2 id="operating-system-coming-soon-title" className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-[#0a0a0a]">{title}</h2>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-md text-[#737373] hover:bg-[#faf9f4] hover:text-[#0a0a0a]" aria-label="Close coming soon preview">
-            <X size={16} />
-          </button>
-        </div>
-        <p className="mt-5 text-[13px] leading-6 text-[#525252]">{description}</p>
-        <p className="mt-4 border-l-2 border-[#117dff] pl-3 text-[11px] leading-5 text-[#737373]">Preview only — nothing will be connected, published, or run from this screen yet.</p>
-        <div className="mt-6 flex justify-end border-t border-[#e3e0db] pt-4">
-          <button type="button" onClick={onClose} className="rounded-lg bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#262626]">Close</button>
-        </div>
-      </motion.section>
-    </motion.div>
   );
 }
 
