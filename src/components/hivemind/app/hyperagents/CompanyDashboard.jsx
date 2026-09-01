@@ -172,7 +172,7 @@ const RUNTIME_FOCUSES = [
   { id: 'fundraising', label: 'Fundraising', detail: 'Prepare evidence, narrative, and investor work.' },
 ];
 
-export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime, showRuntimeInvite = true }) {
+export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime, showRuntimeInvite = true, runtimeInviteVersion = 'v1' }) {
   const { t } = useTranslation('dashboard');
   const [state, setState] = useState(null); // {company, employees, hq_room_id}
   const [loading, setLoading] = useState(true);
@@ -189,7 +189,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   const [runtimeError, setRuntimeError] = useState('');
   const dayZeroReportRequested = useRef(false);
   const runtimeCompanyReady = Boolean(state?.onboarded && state?.company?.company);
-  const runtimeInviteStorageKey = `hm_runtime_invite:${state?.hq_room_id || state?.company?.company || 'company'}`;
+  const runtimeInviteStorageKey = `hm_runtime_invite:${runtimeInviteVersion}:${state?.hq_room_id || state?.company?.company || 'company'}`;
 
   const doRerun = async () => {
     if (resetting) return;

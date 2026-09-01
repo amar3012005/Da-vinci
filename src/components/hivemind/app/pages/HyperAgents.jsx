@@ -142,6 +142,11 @@ const DOMAIN_ROOMS = [
   { key: 'design', label: 'Design', icon: LayoutGrid, color: '#be185d', desc: 'User flows, interaction systems, and accessibility.' },
   { key: 'legal_finance', label: 'Legal & Finance', icon: Scale, color: '#4a3550', desc: 'Contracts, compliance, financial analysis, and controls.' },
 ];
+
+const RUNTIME_INTRO_CANARY = Object.freeze({
+  userId: 'b457c254-38a0-4c43-8280-b026f1a78b04',
+  orgId: 'f0cb77ef-e62b-4f8c-a1da-066611fc3b36',
+});
 const domainRoomDefinition = (key) => DOMAIN_ROOMS.find((domain) => domain.key === key) || DOMAIN_ROOMS[0];
 
 const DOMAIN_ROOM_STAGES = {
@@ -360,6 +365,8 @@ export default function HyperAgents() {
     () => domainHomeRooms.find((room) => (room.room_tag || room.roomTag || 'general') === 'general') || null,
     [domainHomeRooms],
   );
+  const showRuntimeIntro = user?.id === RUNTIME_INTRO_CANARY.userId
+    && org?.id === RUNTIME_INTRO_CANARY.orgId;
   const agentHomeRooms = useMemo(
     () => domainHomeRooms.filter((room) => room.id !== hqRoom?.id),
     [domainHomeRooms, hqRoom?.id],
@@ -651,7 +658,9 @@ export default function HyperAgents() {
             }}
             onShowRoster={() => goMode('roster')}
             onOpenLeads={() => goMode('leads', null)}
-            showRuntimeInvite={false}
+            onOpenRuntime={() => goMode('runtime', null)}
+            showRuntimeInvite={showRuntimeIntro}
+            runtimeInviteVersion="canary-20260901"
           />
         ) : viewMode === 'runtime' && hqRoom ? (
           <RoomThread
