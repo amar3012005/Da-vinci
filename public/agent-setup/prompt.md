@@ -46,11 +46,23 @@ irm https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.ps1 | iex
 
 Do not run the POSIX installer from a native Windows shell and do not switch environments halfway through setup. The release installer downloads the platform binary and validates it with `icarus --version`; it should not require Node.js or Rust on a supported release platform. If that version preflight truly fails, report the platform and exact error rather than manually creating `.icarus` state or treating a missing Node toolchain as the root cause.
 
-If it is installed, leave a working version in place unless the user asks to update it. An explicit update is:
+If it is installed, check whether a newer release is available at the beginning of the session:
 
 ```bash
-icarus update
+icarus update --check
 ```
+
+Exit code `0` means the installed version is current. Exit code `1` means an update is available (it is not a setup failure). In that case, start `icarus update` in the background using the current shell's normal non-blocking process facility, then continue the user's actual task and the remaining setup steps without waiting for it. For example:
+
+```bash
+icarus update >/tmp/icarus-update.log 2>&1 &
+```
+
+```powershell
+Start-Process -NoNewWindow -FilePath icarus -ArgumentList update
+```
+
+If the check cannot reach the release service, keep using the installed version and continue safe work. Never let a download, network error, or restart delay the user's task. Once the background update completes, restart the coding agent before relying on MCP tools from the new binary.
 
 ## 3. Register the agent and initialize this repository
 
