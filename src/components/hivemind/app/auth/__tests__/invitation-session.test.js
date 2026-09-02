@@ -32,6 +32,16 @@ test('retains personal invitation links but drops expired credentials', () => {
   expect(loadInvitationContext(target, Date.parse('2026-08-13T00:00:00.000Z'))).toBeNull();
 });
 
+test('retains a partner referral and its exact attributed offer', () => {
+  const target = storage();
+  saveInvitationContext({ kind: 'referral', credential: 'campaign.version.signature', preview: {
+    referrer: { display_name: 'Wolfgang' }, offer: { account_type: 'personal', plan: 'pro', trial_days: 21, monthly_credits: 5000 },
+  } }, target);
+  expect(loadInvitationContext(target)).toMatchObject({ kind: 'referral', credential: 'campaign.version.signature', preview: {
+    referrer: { display_name: 'Wolfgang' }, offer: { plan: 'pro', trial_days: 21, monthly_credits: 5000 },
+  } });
+});
+
 test('clear removes invitation context after admission exchange', () => {
   const target = storage();
   saveInvitationContext({ kind: 'personal', credential: 'personal-link-token' }, target);

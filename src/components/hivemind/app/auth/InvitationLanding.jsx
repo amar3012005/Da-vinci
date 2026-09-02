@@ -11,8 +11,9 @@ export default function InvitationLanding() {
   const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const enterpriseToken = params.get('enterprise_invite') || '';
   const personalToken = params.get('personal_invite') || '';
-  const kind = enterpriseToken ? 'enterprise' : personalToken ? 'personal' : null;
-  const credential = enterpriseToken || personalToken;
+  const referralToken = params.get('referral_token') || '';
+  const kind = enterpriseToken ? 'enterprise' : personalToken ? 'personal' : referralToken ? 'referral' : null;
+  const credential = enterpriseToken || personalToken || referralToken;
   const [preview, setPreview] = useState(null);
   const [status, setStatus] = useState(kind ? 'loading' : 'invalid');
 
@@ -21,7 +22,9 @@ export default function InvitationLanding() {
     let cancelled = false;
     const request = kind === 'enterprise'
       ? apiClient.previewEnterpriseInvitation(credential)
-      : apiClient.previewPersonalInvitation(credential);
+      : kind === 'personal'
+        ? apiClient.previewPersonalInvitation(credential)
+        : apiClient.previewPartnerReferral(credential, true);
     request
       .then(({ invitation }) => {
         if (cancelled) return;
@@ -37,7 +40,7 @@ export default function InvitationLanding() {
       kind,
       credential,
       preview,
-      expires_at: preview?.invitation_expires_at,
+      expires_at: preview?.invitation_expires_at || preview?.offer?.expires_at,
     });
     if (!saved) {
       setStatus('storage_unavailable');
@@ -47,6 +50,9 @@ export default function InvitationLanding() {
   };
 
   const isEnterprise = kind === 'enterprise';
+  const isReferral = kind === 'referral';
+  const referralName = preview?.referrer?.display_name || 'A trusted partner';
+  const referralEnterprise = isReferral && preview?.offer?.account_type !== 'personal';
   const selfHosted = preview?.hosting_mode === 'self_host';
   const companyName = preview?.company_name || 'your company';
   const companyHeadline = companyName.toUpperCase();
@@ -69,15 +75,17 @@ export default function InvitationLanding() {
             {status === 'invalid' && <div className="mt-12"><p className="font-mono text-[10px] uppercase tracking-[0.2em] text-red-600">Invitation unavailable</p><h1 className="mt-3 text-3xl font-semibold">This invitation cannot be used.</h1><p className="mt-3 text-sm leading-6 text-[#676971]">It may have expired, been revoked, or already been redeemed. Ask your Singulance contact for a new invitation.</p></div>}
             {status === 'storage_unavailable' && <div className="mt-12"><p className="font-mono text-[10px] uppercase tracking-[0.2em] text-red-600">Browser storage unavailable</p><h1 className="mt-3 text-3xl font-semibold">Enable session storage to continue.</h1><p className="mt-3 text-sm leading-6 text-[#676971]">HIVEMIND uses temporary browser storage to carry your verified invitation safely through account setup.</p></div>}
             {status === 'ready' && <>
-              <p className="mt-10 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#117dff]">{isEnterprise ? 'Enterprise invitation' : 'Private invitation'}</p>
-              <h1 className="mt-4 max-w-xl text-[36px] font-semibold leading-[0.98] tracking-[-0.055em] sm:text-[52px]">{isEnterprise ? <>RUN {companyHeadline}<br />AS AN AI COMPANY.</> : 'YOUR HIVEMIND IS READY.'}</h1>
-              <p className="mt-6 max-w-md text-[15px] leading-7 text-[#525252]">{isEnterprise ? `${companyName} now has a secure entry point into a company memory and AI workforce that can grow with the people inside it.` : 'A private second brain that connects your knowledge, work, meetings, and agents.'}</p>
+              <p className="mt-10 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#117dff]">{isReferral ? `Invited by ${referralName}` : isEnterprise ? 'Enterprise invitation' : 'Private invitation'}</p>
+              <h1 className="mt-4 max-w-xl text-[36px] font-semibold leading-[0.98] tracking-[-0.055em] sm:text-[52px]">{isReferral ? <>AWAKEN YOUR<br />HIVEMIND.</> : isEnterprise ? <>RUN {companyHeadline}<br />AS AN AI COMPANY.</> : 'YOUR HIVEMIND IS READY.'}</h1>
+              <p className="mt-6 max-w-md text-[15px] leading-7 text-[#525252]">{isReferral ? (preview?.welcome_message || `${referralName} opened this private HIVEMIND experience for you.`) : isEnterprise ? `${companyName} now has a secure entry point into a company memory and AI workforce that can grow with the people inside it.` : 'A private second brain that connects your knowledge, work, meetings, and agents.'}</p>
               <div className="mt-8 space-y-3 border-y border-[#eae7e1] py-5 text-[13px]">
-                <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> <strong>{isEnterprise ? 'Enterprise workspace' : 'Personal workspace'}</strong></p>
+                <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> <strong>{isReferral ? `${preview?.offer?.trial_days} days free` : isEnterprise ? 'Enterprise workspace' : 'Personal workspace'}</strong></p>
+                {isReferral && <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> {Number(preview?.offer?.monthly_credits || 0).toLocaleString()} credits every month</p>}
+                {isReferral && preview?.offer?.discount?.percent_off && <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> {preview.offer.discount.percent_off}% off after your trial</p>}
                 {isEnterprise && <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> {selfHosted ? 'Self-hosted sovereign infrastructure' : 'Singulance-managed infrastructure'}</p>}
                 <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> Setup choices are secured by this invitation</p>
               </div>
-              <button onClick={checkIn} className="mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-[4px] bg-[#117dff] text-sm font-semibold text-white transition-colors hover:bg-[#0066e0]">Enter your workspace <ArrowRight size={16} /></button>
+              <button onClick={checkIn} className="mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-[4px] bg-[#117dff] text-sm font-semibold text-white transition-colors hover:bg-[#0066e0]">Accept {isReferral ? `${referralName}'s invitation` : 'invitation'} <ArrowRight size={16} /></button>
               <p className="mt-3 text-center text-[10px] text-[#a3a3a3]">The invitation will be retained only for this browser session.</p>
             </>}
           </div>
@@ -85,8 +93,8 @@ export default function InvitationLanding() {
             <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#117dff]/15 blur-3xl" />
             <div>
               <p className="relative font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[#22d3ee]">Access profile</p>
-              <div className="relative mt-12 flex h-16 w-16 items-center justify-center border border-white/15 bg-white/[0.04]">{isEnterprise ? <Building2 size={29} /> : <UserRound size={29} />}</div>
-              <h2 className="relative mt-7 text-[29px] font-semibold leading-tight tracking-[-0.03em]">{isEnterprise ? (selfHosted ? 'Enterprise, self-hosted.' : 'Enterprise, managed.') : 'Personal memory.'}</h2>
+              <div className="relative mt-12 flex h-16 w-16 items-center justify-center border border-white/15 bg-white/[0.04]">{isEnterprise || referralEnterprise ? <Building2 size={29} /> : <UserRound size={29} />}</div>
+              <h2 className="relative mt-7 text-[29px] font-semibold leading-tight tracking-[-0.03em]">{isReferral ? `${preview?.offer?.plan || 'Free'} access, prepared for you.` : isEnterprise ? (selfHosted ? 'Enterprise, self-hosted.' : 'Enterprise, managed.') : 'Personal memory.'}</h2>
               <p className="relative mt-4 max-w-sm text-[14px] leading-7 text-white/55">{isEnterprise ? (selfHosted ? 'Your organization operates its memory infrastructure. Your invitation opens the company operating layer.' : 'Singulance hosts and operates your workspace. Your invitation opens the company operating layer.') : 'Designed for individual use and private memory.'}</p>
             </div>
             <div className="relative mt-10 flex items-center gap-2 border-t border-white/10 pt-5 font-mono text-[9px] uppercase tracking-[0.18em] text-white/45"><Cloud size={13} /> Invitation verified server-side</div>

@@ -233,12 +233,13 @@ class HiveMindApiClient {
     return `${this.controlPlane.defaults.baseURL}/auth/register${qs ? `?${qs}` : ''}`;
   }
 
-  async requestSignupAdmission({ accountType, invitationCode, enterpriseInvitationToken = null, personalInvitationToken = null }) {
+  async requestSignupAdmission({ accountType, invitationCode, enterpriseInvitationToken = null, personalInvitationToken = null, referralToken = null }) {
     const { data } = await this.controlPlane.post('/auth/signup-admission', {
       account_type: accountType,
       invitation_code: invitationCode,
       ...(enterpriseInvitationToken ? { enterprise_invitation_token: enterpriseInvitationToken } : {}),
       ...(personalInvitationToken ? { personal_invitation_token: personalInvitationToken } : {}),
+      ...(referralToken ? { referral_token: referralToken } : {}),
     });
     return data;
   }
@@ -250,6 +251,11 @@ class HiveMindApiClient {
 
   async previewPersonalInvitation(token) {
     const { data } = await this.controlPlane.get('/auth/personal-invitations/preview', { params: { token } });
+    return data;
+  }
+
+  async previewPartnerReferral(token, recordVisit = false) {
+    const { data } = await this.controlPlane.get('/v1/referral-invitations/preview', { params: { token, ...(recordVisit ? { record_visit: 1 } : {}) } });
     return data;
   }
 
@@ -1545,6 +1551,21 @@ class HiveMindApiClient {
 
   async revokePlatformReferralCampaign(id) {
     const { data } = await this.controlPlane.post(`/admin/api/platform/referral-campaigns/${id}/revoke`);
+    return data;
+  }
+
+  async listPartnerReferralCampaigns() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/partner-referrals');
+    return data;
+  }
+
+  async createPartnerReferralCampaign(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/partner-referrals', payload);
+    return data;
+  }
+
+  async partnerReferralAction(id, action) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/partner-referrals/${id}/${action}`);
     return data;
   }
 

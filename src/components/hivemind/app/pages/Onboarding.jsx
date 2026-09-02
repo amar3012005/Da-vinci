@@ -94,7 +94,7 @@ export default function OnboardingFlow() {
       : 'free';
     const signupTicket = `${saved.signup_ticket || ''}`.trim();
     setReferralCode(String(saved.referral_code || '').trim().toUpperCase());
-    if (isEnt && !saved.enterprise_invitation) {
+    if (isEnt && !saved.enterprise_invitation && !saved.referral_token) {
       // Account setup belongs on the login surface, never inside /app.
       window.location.replace('/hivemind/login?create=1&onboarding_error=missing_enterprise_code');
       return;
@@ -108,10 +108,11 @@ export default function OnboardingFlow() {
         const created = await createOrg({
           name,
           slug: isEnt ? deriveSlug(saved.hivemind_name || name) : undefined,
-          plan: isEnt ? 'enterprise' : 'free',
+          plan: saved.referral_token ? selectedPlan : (isEnt ? 'enterprise' : 'free'),
           deployment: dep,
           signup_ticket: signupTicket,
           referralCode: String(saved.referral_code || '').trim() || undefined,
+          referralToken: String(saved.referral_token || '').trim() || undefined,
         });
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
@@ -122,7 +123,7 @@ export default function OnboardingFlow() {
           window.setTimeout(() => { window.location.href = NEW_WORKSPACE_LANDING; }, 2400);
           return;
         }
-        if (!isEnt && selectedPlan !== 'free') {
+        if (!saved.referral_token && !isEnt && selectedPlan !== 'free') {
           try { sessionStorage.removeItem('hivemind_post_signup_upgrade'); } catch { /* ignore */ }
           window.location.href = `/hivemind/app/billing?upgrade=${selectedPlan}&source=signup`;
           return;

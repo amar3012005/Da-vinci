@@ -260,6 +260,8 @@ export default function LoginPage() {
   // memory until the server exchanges it for a signed signup admission.
   const [appliedEnterpriseInvitationToken, setAppliedEnterpriseInvitationToken] = useState(null);
   const [appliedPersonalInvitationToken, setAppliedPersonalInvitationToken] = useState(null);
+  const [appliedReferralToken, setAppliedReferralToken] = useState(null);
+  const [referralInvitation, setReferralInvitation] = useState(null);
   const [invitationLockedKind, setInvitationLockedKind] = useState(null);
   const [loadingEnterpriseInvitation, setLoadingEnterpriseInvitation] = useState(false);
   const [referralCode, setReferralCode] = useState('');
@@ -307,16 +309,24 @@ export default function LoginPage() {
     const context = loadInvitationContext();
     if (!context) return;
     setShowOnboarding(true);
-    setInvitationLockedKind(context.kind);
-    setAccountType(context.kind);
+    const resolvedKind = context.kind === 'referral'
+      ? (context.preview?.offer?.account_type === 'personal' ? 'personal' : 'enterprise')
+      : context.kind;
+    setInvitationLockedKind(resolvedKind);
+    setAccountType(resolvedKind);
     setOnboardingStep(1);
     if (context.kind === 'enterprise') {
       setAppliedEnterpriseInvitationToken(context.credential);
       setEnterpriseInvitation(context.preview || null);
       setHostingChoice(context.preview?.hosting_mode === 'self_host' ? 'self_hosted' : 'managed');
       setEnterpriseName((value) => value || context.preview?.workspace_name || context.preview?.company_name || '');
-    } else {
+    } else if (context.kind === 'personal') {
       setAppliedPersonalInvitationToken(context.credential);
+    } else {
+      setAppliedReferralToken(context.credential);
+      setReferralInvitation(context.preview || null);
+      setSelectedPlan(context.preview?.offer?.plan || 'free');
+      setHostingChoice(context.preview?.offer?.hosting_mode === 'self_host' ? 'self_hosted' : 'managed');
     }
   }, [wantsCreate]);
 
@@ -393,7 +403,7 @@ export default function LoginPage() {
   const handleCreateAccount = async (provider = 'google') => {
     setCreateError('');
     const accessCode = accountType === 'personal' ? personalInvitationCode.trim() : enterpriseAccessCode.trim();
-    const invitationTokenReady = accountType === 'enterprise' ? appliedEnterpriseInvitationToken : appliedPersonalInvitationToken;
+    const invitationTokenReady = appliedReferralToken || (accountType === 'enterprise' ? appliedEnterpriseInvitationToken : appliedPersonalInvitationToken);
     if (!accessCode && !invitationTokenReady) {
       setCreateError(accountType === 'personal' ? 'Enter the invitation code to continue.' : 'Enter the Enterprise access code to continue.');
       return;
@@ -405,6 +415,7 @@ export default function LoginPage() {
         invitationCode: accessCode,
         enterpriseInvitationToken: appliedEnterpriseInvitationToken,
         personalInvitationToken: appliedPersonalInvitationToken,
+        referralToken: appliedReferralToken,
       });
     } catch {
       setCreateError('This invitation is unavailable.');
@@ -418,13 +429,14 @@ export default function LoginPage() {
       deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
       ...(accountType === 'personal' ? { selected_plan: selectedPlan || 'free' } : {}),
       ...(accountType === 'personal' ? { referral_code: referralCode.trim() || null } : {}),
+      ...(appliedReferralToken ? { referral_token: appliedReferralToken, selected_plan: referralInvitation?.offer?.plan || selectedPlan || 'free', referral_invitation: referralInvitation } : {}),
       ...(admission.invitation ? { enterprise_invitation: admission.invitation } : {}),
       signup_ticket: admission.signup_ticket,
     };
     // Save onboarding data for post-auth pickup
     try {
       localStorage.setItem('hivemind_onboarding', JSON.stringify(onboardingIntent));
-      if (accountType === 'personal' && selectedPlan && selectedPlan !== 'free') {
+      if (!appliedReferralToken && accountType === 'personal' && selectedPlan && selectedPlan !== 'free') {
         sessionStorage.setItem('hivemind_post_signup_upgrade', selectedPlan);
       } else {
         sessionStorage.removeItem('hivemind_post_signup_upgrade');
@@ -451,8 +463,8 @@ export default function LoginPage() {
     }
   };
 
-  const enterpriseAdmissionReady = Boolean(appliedEnterpriseInvitationToken || enterpriseAccessCode.trim());
-  const personalAdmissionReady = Boolean(appliedPersonalInvitationToken || personalInvitationCode.trim());
+  const enterpriseAdmissionReady = Boolean(appliedReferralToken || appliedEnterpriseInvitationToken || enterpriseAccessCode.trim());
+  const personalAdmissionReady = Boolean(appliedReferralToken || appliedPersonalInvitationToken || personalInvitationCode.trim());
 
   const resetOnboarding = () => {
     setShowOnboarding(false);
@@ -466,6 +478,8 @@ export default function LoginPage() {
     setEnterpriseAccessCode('');
     setAppliedEnterpriseInvitationToken(null);
     setAppliedPersonalInvitationToken(null);
+    setAppliedReferralToken(null);
+    setReferralInvitation(null);
     setInvitationLockedKind(null);
     setEnterpriseInvitation(null);
     setPersonalInvitationCode('');
@@ -723,13 +737,13 @@ export default function LoginPage() {
                         </div>
                         <h2 className="text-[24px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">How will you use HIVEMIND?</h2>
                         <p className="text-[13px] text-[#737373] mt-1.5">Choose the workspace that fits you. You can grow into Enterprise anytime.</p>
-                        {invitationLockedKind && <p className="mt-3 rounded-[6px] border border-[#117dff]/20 bg-[#117dff]/[0.05] px-3 py-2 text-[11px] text-[#3b6da3]">Your verified invitation has reserved the {invitationLockedKind === 'enterprise' ? 'Enterprise' : 'Personal'} path. The other account type is unavailable for this setup.</p>}
+                        {invitationLockedKind && <p className="mt-3 rounded-[6px] border border-[#117dff]/20 bg-[#117dff]/[0.05] px-3 py-2 text-[11px] text-[#3b6da3]">{referralInvitation ? `${referralInvitation.referrer?.display_name} invited you: ${referralInvitation.offer?.trial_days} days free · ${Number(referralInvitation.offer?.monthly_credits || 0).toLocaleString()} monthly credits.` : `Your verified invitation has reserved the ${invitationLockedKind === 'enterprise' ? 'Enterprise' : 'Personal'} path. The other account type is unavailable for this setup.`}</p>}
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           disabled={invitationLockedKind === 'enterprise'}
-                          onClick={() => { if (invitationLockedKind !== 'enterprise') { setAccountType('personal'); setOnboardingStep(2); } }}
+                          onClick={() => { if (invitationLockedKind !== 'enterprise') { setAccountType('personal'); setOnboardingStep(referralInvitation ? 3 : 2); } }}
                           className={`p-4 rounded-[10px] border transition-all text-left group flex flex-col bg-white ${invitationLockedKind === 'enterprise' ? 'cursor-not-allowed border-[#eceae6] opacity-35' : accountType === 'personal' ? 'border-[#117dff] ring-1 ring-[#117dff]/20' : 'border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm'}`}
                         >
                           <div className="w-10 h-10 rounded-[8px] bg-blue-50 border border-blue-100 flex items-center justify-center mb-3">
@@ -748,7 +762,7 @@ export default function LoginPage() {
 
                         <button
                           disabled={invitationLockedKind === 'personal'}
-                          onClick={() => { if (invitationLockedKind !== 'personal') { setAccountType('enterprise'); if (!enterpriseInvitation) setHostingChoice(null); setOnboardingStep(2); } }}
+                          onClick={() => { if (invitationLockedKind !== 'personal') { setAccountType('enterprise'); if (!enterpriseInvitation && !referralInvitation) setHostingChoice(null); setOnboardingStep(referralInvitation ? 3 : 2); } }}
                           className={`relative p-4 rounded-[10px] border transition-all text-left group flex flex-col bg-white ${invitationLockedKind === 'personal' ? 'cursor-not-allowed border-[#eceae6] opacity-35' : accountType === 'enterprise' ? 'border-[#0a0a0a] ring-1 ring-[#0a0a0a]/10' : 'border-[#e3e0db] hover:border-[#0a0a0a] hover:shadow-sm'}`}
                         >
                           <div className="w-10 h-10 rounded-[8px] bg-[#f3f1ec] border border-[#e3e0db] flex items-center justify-center mb-3">
@@ -845,13 +859,13 @@ export default function LoginPage() {
                       <div>
                         <label className={LABEL_CLS}>Invitation code</label>
                         <input
-                          value={appliedPersonalInvitationToken ? 'Secure invitation applied' : personalInvitationCode}
+                          value={appliedPersonalInvitationToken || appliedReferralToken ? 'Secure invitation applied' : personalInvitationCode}
                           onChange={e => setPersonalInvitationCode(e.target.value)}
                           placeholder="Enter your invitation code"
                           maxLength={128}
                           autoComplete="off"
-                          readOnly={Boolean(appliedPersonalInvitationToken)}
-                          className={`${INPUT_CLS} font-mono ${appliedPersonalInvitationToken ? 'bg-[#f3f8ff] text-[#117dff]' : ''}`}
+                          readOnly={Boolean(appliedPersonalInvitationToken || appliedReferralToken)}
+                          className={`${INPUT_CLS} font-mono ${appliedPersonalInvitationToken || appliedReferralToken ? 'bg-[#f3f8ff] text-[#117dff]' : ''}`}
                         />
                         <p className="text-[11px] text-[#a3a3a3] mt-1">Personal workspaces are currently available by invitation.</p>
                       </div>
@@ -1006,7 +1020,7 @@ export default function LoginPage() {
                         <label className={LABEL_CLS}>Your Enterprise HIVEMIND</label>
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${(enterpriseName || 'company').toLowerCase().replace(/\s+/g, '')}_hivemind`} className={INPUT_CLS} />
                       </div>
-                      {!enterpriseInvitation && <div>
+                      {!enterpriseInvitation && !referralInvitation && <div>
                         <label className={LABEL_CLS}>Enterprise access code</label>
                         <input
                           value={enterpriseAccessCode}
