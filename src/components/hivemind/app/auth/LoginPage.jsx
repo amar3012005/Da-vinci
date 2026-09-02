@@ -58,6 +58,17 @@ function DotGrid() {
 const INPUT_CLS = "w-full px-3.5 py-2.5 rounded-[6px] border border-[#e3e0db] bg-white text-[#0a0a0a] text-[13px] focus:outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]/20 transition-all";
 const LABEL_CLS = "text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5";
 
+function ReferralTrustBanner({ invitation }) {
+  if (!invitation?.referrer?.display_name) return null;
+  const name = invitation.referrer.display_name;
+  const days = invitation.offer?.trial_days;
+  const credits = Number(invitation.offer?.monthly_credits || 0).toLocaleString();
+  return <div className="mb-5 flex items-start gap-3 rounded-[8px] border border-[#117dff]/20 bg-[#117dff]/[0.045] px-3 py-3">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#117dff]/25 bg-white text-[11px] font-semibold text-[#117dff]" aria-label={`${name} Humation avatar`}>{name.slice(0, 1).toUpperCase()}</div>
+    <div><p className="font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-[#117dff]">Invited by {name}</p><p className="mt-1 text-[11px] leading-relaxed text-[#3b6da3]">{name} trusts HIVEMIND and opened this verified path for you. {days} days free · {credits} monthly credits.</p></div>
+  </div>;
+}
+
 const PERSONAL_PLANS = [
   {
     id: 'free', name: 'Free', product: 'BRAIN + OS + VOICE', price: '€0', cadence: '/mo',
@@ -727,6 +738,7 @@ export default function LoginPage() {
                           : 'Workspace creation did not complete. Review the details and try again.'}
                     </div>
                   )}
+                  <ReferralTrustBanner invitation={referralInvitation} />
 
                   {/* Step 1: Choose path */}
                   {onboardingStep === 1 && (

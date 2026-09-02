@@ -364,6 +364,7 @@ function CommercialManager() {
     monthly_credits: 20000,
     invitation_expires_at: "",
     welcome_message: "",
+    language: "en",
     private_notes: "",
   });
   const [oneTimeInvitationCode, setOneTimeInvitationCode] = useState("");
@@ -1633,6 +1634,7 @@ function CommercialManager() {
             />
             <input required type="email" placeholder="Referrer email" value={referralForm.referrer_email} onChange={(e) => setReferralForm({ ...referralForm, referrer_email: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" />
             <input placeholder="Internal campaign name (optional)" value={referralForm.internal_name} onChange={(e) => setReferralForm({ ...referralForm, internal_name: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" />
+            <select value={referralForm.language} onChange={(e) => setReferralForm({ ...referralForm, language: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" aria-label="Invitation language"><option value="en">English</option><option value="de">Deutsch</option></select>
             <input
               type="number"
               min="1"
@@ -1738,11 +1740,11 @@ function CommercialManager() {
                   </p>
                   <button type="button" onClick={() => navigator.clipboard.writeText(campaign.invitation_url).then(() => setNotice("Invitation link copied."))} className="mt-2 text-xs font-medium text-[#117dff]">Copy share link</button>
                 </div>
-                <div className="flex gap-2"><button type="button" onClick={() => apiClient.partnerReferralAction(campaign.campaign_id, "preview").then((result) => setReferralPreview(result.rendered)).catch((err) => setError(err.response?.data?.error || err.message))} className="border border-[#d8d6cf] px-3 py-1.5">Preview</button><button type="button" disabled={campaign.status !== "active"} onClick={() => apiClient.partnerReferralAction(campaign.campaign_id, "send").then(() => { setNotice(`Invitation sent to ${campaign.referrer_email_hint}.`); load(); }).catch((err) => setError(err.response?.data?.error || err.message))} className="bg-[#117dff] px-3 py-1.5 text-white disabled:opacity-50">Send</button><button type="button" disabled={campaign.status !== "active"} onClick={() => apiClient.partnerReferralAction(campaign.campaign_id, "revoke").then(load).catch((err) => setError(err.response?.data?.error || err.message))} className="border border-[#d8d6cf] px-3 py-1.5 disabled:opacity-50">Revoke</button></div>
+                <div className="flex gap-2"><button type="button" onClick={() => apiClient.partnerReferralAction(campaign.campaign_id, "preview").then((result) => setReferralPreview({ ...result.rendered, campaign })).catch((err) => setError(err.response?.data?.error || err.message))} className="border border-[#d8d6cf] px-3 py-1.5">Preview</button><button type="button" disabled={campaign.status !== "active"} onClick={() => apiClient.partnerReferralAction(campaign.campaign_id, "preview").then((result) => setReferralPreview({ ...result.rendered, campaign, approve: true })).catch((err) => setError(err.response?.data?.error || err.message))} className="bg-[#117dff] px-3 py-1.5 text-white disabled:opacity-50">Send</button><button type="button" disabled={campaign.status !== "active"} onClick={() => apiClient.partnerReferralAction(campaign.campaign_id, "revoke").then(load).catch((err) => setError(err.response?.data?.error || err.message))} className="border border-[#d8d6cf] px-3 py-1.5 disabled:opacity-50">Revoke</button></div>
               </div>
             ))}
           </div>
-          {referralPreview && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-5" onMouseDown={() => setReferralPreview(null)}><div className="h-[80vh] w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><div className="flex items-center justify-between border-b p-3"><strong>{referralPreview.subject}</strong><button onClick={() => setReferralPreview(null)}><X size={18}/></button></div><iframe title="Partner invitation preview" sandbox="" srcDoc={referralPreview.html} className="h-[calc(80vh-50px)] w-full border-0"/></div></div>}
+          {referralPreview && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-5" onMouseDown={() => setReferralPreview(null)}><div className="h-[80vh] w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><div className="flex items-center justify-between border-b p-3"><strong>{referralPreview.subject}</strong><div className="flex items-center gap-2">{referralPreview.approve && <button type="button" onClick={() => apiClient.partnerReferralAction(referralPreview.campaign.campaign_id, "send").then(() => { setNotice(`Invitation sent to ${referralPreview.campaign.referrer_email_hint}.`); setReferralPreview(null); load(); }).catch((err) => setError(err.response?.data?.error || err.message))} className="rounded-[6px] bg-[#117dff] px-3 py-1.5 text-xs font-medium text-white">Approve & send</button>}<button onClick={() => setReferralPreview(null)}><X size={18}/></button></div></div><iframe title="Partner invitation preview" sandbox="" srcDoc={referralPreview.html} className="h-[calc(80vh-50px)] w-full border-0"/></div></div>}
         </>
       )}
       {tab === "pilots" && (
