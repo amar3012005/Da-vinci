@@ -1,21 +1,22 @@
 {
-  "short_name": "Da'vinci AI",
-  "name": "Da'vinci Solutions — AI Enterprise Systems",
-  "description": "AI-powered enterprise automation. TARA conversational AI and HIVEMIND sovereign memory engine for business operations.",
+  "short_name": "SINGULANCE",
+  "name": "SINGULANCE — HIVEMIND",
+  "description": "SINGULANCE HIVEMIND — the sovereign memory engine for AI companies.",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "singulance-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     },
     {
-      "src": "logo.jpeg",
-      "type": "image/jpeg",
+      "src": "singulance-mark-192.png",
+      "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "logo.jpeg",
-      "type": "image/jpeg",
+      "src": "singulance-mark-512.png",
+      "type": "image/png",
       "sizes": "512x512"
     }
   ],
