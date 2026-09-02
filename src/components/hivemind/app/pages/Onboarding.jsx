@@ -34,6 +34,15 @@ function deriveSlug(name) {
     .slice(0, 40);
 }
 
+function queueMobileAwakening() {
+  if (typeof window === 'undefined') return;
+  const isMobile = window.matchMedia?.('(max-width: 768px)').matches
+    || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+  if (isMobile) {
+    try { window.localStorage.setItem('hm.mobile_awakening_pending', '1'); } catch { /* private mode */ }
+  }
+}
+
 export default function OnboardingFlow() {
   const { t } = useTranslation('dashboard');
   const { user, createOrg, logout } = useAuth();
@@ -114,6 +123,7 @@ export default function OnboardingFlow() {
           referralCode: String(saved.referral_code || '').trim() || undefined,
           referralToken: String(saved.referral_token || '').trim() || undefined,
         });
+        queueMobileAwakening();
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
         if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }
@@ -177,6 +187,7 @@ export default function OnboardingFlow() {
         enterprise_access_code: mode === 'enterprise' ? enterpriseAccessCode : undefined,
         referralCode: (referralCode || '').trim() || undefined,
       });
+      queueMobileAwakening();
       try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
       // Self-host → show the 2-step setup (clone+run, mint key) instead of going straight to dashboard.
       if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
