@@ -547,6 +547,9 @@ icarus harness init --agent codex --repo .
 # icarus_recall, icarus_save_memory, icarus_log_decision,
 # icarus_recall_bugs, icarus_why_code, and icarus_test_coverage.`}</CodeBlock>
         <P>
+          At the start of a session, agents run <Mono>icarus update --check</Mono>. If a newer version exists, they start <Mono>icarus update</Mono> in the background and continue the user&apos;s task; downloading, network failures, and the eventual restart must never block safe work. Restart the agent only after that background update finishes so its MCP process can use the new binary.
+        </P>
+        <P>
           Save current facts, decisions, standing instructions, and significant completed events with explicit tags: <Mono>memory:fact</Mono>, <Mono>memory:decision</Mono>, <Mono>memory:instruction</Mono>, and <Mono>memory:event</Mono>. Use <Mono>memory:task</Mono> only for short-lived handoffs, then remove or supersede it when the task closes. Never save credentials, raw customer data, or routine transcripts.
         </P>
         <P>
