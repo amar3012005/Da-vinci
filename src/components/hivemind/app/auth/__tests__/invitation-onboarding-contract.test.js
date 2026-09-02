@@ -7,6 +7,7 @@ test('invitation route and locked onboarding paths stay wired together', () => {
   const landing = fs.readFileSync(path.resolve(__dirname, '../InvitationLanding.jsx'), 'utf8');
   const platformAdmin = fs.readFileSync(path.resolve(__dirname, '../../pages/PlatformAdmin.jsx'), 'utf8');
   expect(app).toContain('path="invite"');
+  expect(app).toContain('path="app/invite"');
   expect(landing).toContain("Accept {isReferral ? `${referralName}'s invitation` : 'invitation'}");
   expect(landing).toContain("params.get('referral_token')");
   expect(landing).toContain('previewPartnerReferral(credential, true)');

@@ -124,6 +124,9 @@ export default function HiveMindApp() {
       <Routes>
         <Route path="login" element={<LoginPage />} />
         <Route path="invite" element={<InvitationLanding />} />
+        {/* Compatibility for partner links issued before the public invite path
+            was corrected. This must remain outside ProtectedRoute. */}
+        <Route path="app/invite" element={<InvitationLanding />} />
         <Route path="approve/:token" element={<RuntimeApprovalPage />} />
         {/* Public developer docs — no auth */}
         <Route path="docs" element={<PageSuspense><DocsPage /></PageSuspense>} />
