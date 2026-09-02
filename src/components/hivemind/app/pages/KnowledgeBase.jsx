@@ -221,9 +221,9 @@ function getDocHashTag(doc) {
 // Dependency-free PDF page count — no pdfjs, no worker, no bundle cost.
 // Reads the page tree straight from the bytes: prefers the /Pages root
 // /Count, falls back to counting /Type /Page leaf objects. Returns null when
-// it genuinely cannot tell (object-stream / compressed PDFs) so the caller
-// treats it as "unknown" (→ 1), never as zero. Scan is byte-capped so a huge
-// PDF never janks the main thread.
+// it genuinely cannot tell (object-stream / compressed PDFs); upload admission
+// rejects that PDF because the browser cannot safely enforce the page cap.
+// Scan is byte-capped so a huge PDF never janks the main thread.
 async function countPdfPages(file) {
   try {
     const SCAN_CAP = 12 * 1024 * 1024; // page tree/catalog is near the head+tail
@@ -252,16 +252,6 @@ async function countPdfPages(file) {
     const leaves = (s.match(/\/Type\s*\/Page(?![a-zA-Z])/g) || []).length;
     return leaves > 0 ? leaves : null;
   } catch { return null; }
-}
-
-// Plan "pages" an upload will consume, mirroring the backend estimate
-// (upload-service._estimatePages): image → 1, pdf → real page count,
-// every other document → 1 pre-parse (real count settles server-side).
-async function estimateFilePages(file) {
-  const ext = (file?.name?.split('.').pop() || '').toLowerCase();
-  if (IMAGE_EXTS.has(ext) || /^image\//.test(file?.type || '')) return 1;
-  if (ext === 'pdf') { const n = await countPdfPages(file); return n && n > 0 ? n : 1; }
-  return 1;
 }
 
 function pendingFileKey(file) { return `${file.name}::${file.size}`; }
@@ -1008,8 +998,12 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
 // machine string, not something a person can act on. Map them to what the user
 // should DO. Everything else falls through to the server's own message, which is
 // already written for humans on the validation paths.
-export const KB_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+// Keep the browser admission limit intentionally smaller than the server's
+// compatibility limit. This gives users an immediate, actionable error rather
+// than accepting a large batch that the ingestion service cannot process well.
+export const KB_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 export const KB_MIN_UPLOAD_BYTES = 32;
+export const KB_MAX_PDF_PAGES = 100;
 
 function friendlyUploadError(err) {
   const st = err?.response?.status;
@@ -1037,6 +1031,23 @@ function preflightRejectReason(file) {
   if (size < KB_MIN_UPLOAD_BYTES) return 'This file is too small to contain readable content.';
   if (size > KB_MAX_UPLOAD_BYTES) {
     return `Too large — the limit is ${Math.round(KB_MAX_UPLOAD_BYTES / (1024 * 1024))} MB. Split the file and upload the parts.`;
+  }
+  return null;
+}
+
+function isPdfFile(file) {
+  return (file?.name?.split('.').pop() || '').toLowerCase() === 'pdf'
+    || file?.type === 'application/pdf';
+}
+
+function pdfPageRejectReason(pageCount) {
+  // A client-side page limit is only useful when it is enforceable. Reject an
+  // unreadable page tree rather than silently treating it as a one-page PDF.
+  if (!Number.isInteger(pageCount) || pageCount < 1) {
+    return 'Unable to verify this PDF\'s page count. Please upload a readable PDF with 100 pages or fewer.';
+  }
+  if (pageCount > KB_MAX_PDF_PAGES) {
+    return `Too many pages — the limit is ${KB_MAX_PDF_PAGES} pages per PDF. Split the file and upload the parts.`;
   }
   return null;
 }
@@ -1090,7 +1101,6 @@ export default function KnowledgeBase() {
   const [bulkSelected, setBulkSelected] = useState(new Map());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const fileInputRef = useRef(null);
-  const folderInputRef = useRef(null);
   const typedImportRef = useRef(null);
   // Per-document relationship summaries: { <docId>: { total, byType, cluster_size } }
   const [relSummaries, setRelSummaries] = useState({});
@@ -1368,8 +1378,7 @@ export default function KnowledgeBase() {
     const sizes = files.map((f) => f.size || 0).sort((a, b) => a - b);
     const median = sizes[Math.floor(sizes.length / 2)];
     if (median < 5 * 1024 * 1024) return Math.min(4, files.length); // <5MB → up to 4
-    if (median < 30 * 1024 * 1024) return Math.min(2, files.length); // 5-30MB → 2
-    return 1; // >30MB → 1 (heavy parse + bandwidth)
+    return Math.min(2, files.length); // 5-10MB → 2
   }, []);
 
   const handleFiles = useCallback(async (files, { targetScope = 'organization', project = null, ingestMode = 'both' } = {}) => {
@@ -1389,12 +1398,8 @@ export default function KnowledgeBase() {
         }]);
         return;
       }
-      // This gate said 100 MB while the server rejects at 50 MB — verified live:
-      // a 60 MB upload returns 413 {"error":"payload_too_large","max_bytes":52428800}.
-      // So anything between 50 and 100 MB uploaded in FULL, over the wire, before
-      // being refused — minutes of the user's time spent to be told no, and the
-      // raw string "payload_too_large" was what they saw. Now the client gate
-      // matches the server contract and also catches empty/undersized files.
+      // Defensive second admission check for callers that do not pass through
+      // the file picker. The normal picker has already applied the same rule.
       const rejectReason = preflightRejectReason(file);
       if (rejectReason) {
         setUploads((prev) => [...prev, {
@@ -1448,6 +1453,20 @@ export default function KnowledgeBase() {
       setUploads((prev) => prev.map((u) =>
         u.id === uploadEntry.id ? { ...u, status: 'uploading', error: undefined } : u
       ));
+
+      // Final browser-side admission check. The picker normally performs this
+      // before the scope dialog, but keeping it beside the network boundary
+      // prevents a future caller from bypassing the 10 MB / 100-page policy.
+      let admissionError = preflightRejectReason(file);
+      if (!admissionError && isPdfFile(file)) {
+        admissionError = pdfPageRejectReason(await countPdfPages(file));
+      }
+      if (admissionError) {
+        setUploads((prev) => prev.map((u) => (u.id === uploadEntry.id ? {
+          ...u, status: 'error', _completedAt: Date.now(), error: admissionError,
+        } : u)));
+        return;
+      }
 
       // ── Dedup is DB-authoritative, never browser-cache ──
       // Duplicate detection lives in the BACKEND: it sha256's the bytes and
@@ -1839,9 +1858,41 @@ export default function KnowledgeBase() {
     });
   }, [setUploads]);
 
-  const queueFilesForUpload = useCallback((files) => {
+  const queueFilesForUpload = useCallback(async (files) => {
     if (!files?.length) return;
-    setPendingFiles(files);
+    // Validate all browser-enforceable limits before opening the scope dialog.
+    // Nothing rejected here can enter the upload pool or reach the API.
+    const nowBase = Date.now();
+    const checked = await Promise.all(files.map(async (file, idx) => {
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      if (!ACCEPTED_EXTS.includes(ext)) {
+        return { file, idx, error: `Unsupported file type: .${ext}` };
+      }
+      const sizeError = preflightRejectReason(file);
+      if (sizeError) return { file, idx, error: sizeError };
+
+      const pageCount = isPdfFile(file) ? await countPdfPages(file) : 1;
+      const pageError = isPdfFile(file) ? pdfPageRejectReason(pageCount) : null;
+      return { file, idx, pageCount, error: pageError };
+    }));
+    const rejected = checked.filter((item) => item.error);
+    if (rejected.length) {
+      setUploads((prev) => [...prev, ...rejected.map(({ file, idx, error }) => ({
+        id: nowBase + idx + Math.random(),
+        filename: file.name,
+        status: 'error',
+        ingestMode: 'both',
+        error,
+      }))]);
+    }
+    const accepted = checked.filter((item) => !item.error);
+    if (!accepted.length) return;
+
+    const acceptedFiles = accepted.map(({ file }) => file);
+    setPendingFiles(acceptedFiles);
+    setPendingPageCounts(Object.fromEntries(accepted.map(({ file, pageCount }) => [
+      pendingFileKey(file), pageCount,
+    ])));
     setSelectedProject('');
     setSelectedIngestMode('both');
     // Default to org-wide for admins (upload once, whole org sees it); everyone
@@ -1885,17 +1936,8 @@ export default function KnowledgeBase() {
       setSelectedScope(isAdmin ? 'organization' : 'personal');
     }
     setScopeModalOpen(true);
-    // Estimate plan pages per file in the browser (PDF → real count, image /
-    // other → 1) so the modal can show the cost and block an over-limit batch
-    // before uploading. Runs async — the modal renders "…" until each lands.
-    const seed = {};
-    for (const f of files) seed[pendingFileKey(f)] = 'counting';
-    setPendingPageCounts(seed);
-    files.forEach((f) => {
-      estimateFilePages(f)
-        .then((n) => setPendingPageCounts((prev) => ({ ...prev, [pendingFileKey(f)]: n })))
-        .catch(() => setPendingPageCounts((prev) => ({ ...prev, [pendingFileKey(f)]: 1 })));
-    });
+    // Page counts were verified before the modal opened, so its quota display
+    // is ready immediately rather than briefly showing an unknown estimate.
   }, [org?.role, user?.orgRole, user?.role, activeProjectId, teamProjects]);
 
   // Drop one file from the pending batch (the modal's per-row ✕). Lets a user
@@ -2108,19 +2150,6 @@ export default function KnowledgeBase() {
             e.target.value = '';
           }}
         />
-        <input
-          ref={folderInputRef}
-          type="file"
-          // @ts-ignore — non-standard HTML5 attrs for folder picker
-          webkitdirectory=""
-          directory=""
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
-            e.target.value = '';
-          }}
-        />
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -2134,17 +2163,10 @@ export default function KnowledgeBase() {
         >
           <Upload size={32} className={`mx-auto mb-3 ${dragActive ? 'text-[#117dff]' : 'text-[#d4d0ca]'}`} />
           <p className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-1">
-            {t('knowledgebase.dropZoneLabel', 'Drop files or folder here, or click to upload')}
+            {t('knowledgebase.dropZoneLabel', 'Drop files here, or click to upload')}
           </p>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); folderInputRef.current?.click(); }}
-            className="mt-2 text-[11px] text-[#117dff] hover:text-[#0a5fcc] underline underline-offset-2"
-          >
-            {t('knowledgebase.pickFolder', 'Pick a folder instead')}
-          </button>
           <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk'] mt-2">
-            {t('knowledgebase.acceptedFormats', 'PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · PNG · JPG · TIFF · MP3 · WAV — max 100MB per file')}
+            {t('knowledgebase.acceptedFormats', 'PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · PNG · JPG · TIFF · MP3 · WAV — max 10 MB per file; PDFs up to 100 pages')}
           </p>
           {/* Two-tier ingestion: sections index synchronously (searchable in
               seconds, no LLM in the request); facts + relations distill in a
