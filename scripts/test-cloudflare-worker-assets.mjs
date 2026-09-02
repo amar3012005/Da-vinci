@@ -1,9 +1,33 @@
 import assert from 'node:assert/strict';
 import worker from '../cloudflare/worker.mjs';
 
-function envReturning(response) {
-  return { ASSETS: { fetch: async () => response } };
+function envReturning(response, flagValue = false) {
+  return {
+    ASSETS: { fetch: async () => response },
+    FLAGS: { getBooleanValue: async () => flagValue },
+  };
 }
+
+const enabledFlag = await worker.fetch(
+  new Request('https://admin.hivemind.singulancelabs.com/__hivemind/feature-flags/partner-referrals'),
+  envReturning(new Response('unused'), true),
+);
+assert.equal(enabledFlag.status, 200);
+assert.equal(enabledFlag.headers.get('cache-control'), 'no-store');
+assert.deepEqual(await enabledFlag.json(), {
+  key: 'partner_referrals_v1',
+  enabled: true,
+  source: 'cloudflare-flagship',
+});
+
+const unavailableFlag = await worker.fetch(
+  new Request('https://admin.hivemind.singulancelabs.com/__hivemind/feature-flags/partner-referrals'),
+  {
+    ASSETS: { fetch: async () => new Response('unused') },
+    FLAGS: { getBooleanValue: async () => { throw new Error('unavailable'); } },
+  },
+);
+assert.equal((await unavailableFlag.json()).enabled, false);
 
 const missingAsset = await worker.fetch(
   new Request('https://next.singulancelabs.com/static/js/missing.chunk.js'),

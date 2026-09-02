@@ -1,6 +1,8 @@
 const STATIC_ASSET_PREFIX = '/static/';
 const AGENT_SETUP_PREFIX = '/agent-setup/';
 const DISCOVERY_PATHS = new Set(['/robots.txt', '/llms.txt', '/llms-full.txt', '/sitemap.xml']);
+const PARTNER_REFERRALS_FLAG_PATH = '/__hivemind/feature-flags/partner-referrals';
+const PARTNER_REFERRALS_FLAG_KEY = 'partner_referrals_v1';
 const PUBLIC_MARKETING_HOSTS = new Set([
   'singulancelabs.com',
   'www.singulancelabs.com',
@@ -57,9 +59,38 @@ function missingAssetResponse() {
   });
 }
 
+async function partnerReferralsFlagResponse(request, env) {
+  let enabled = false;
+  try {
+    enabled = await env.FLAGS.getBooleanValue(PARTNER_REFERRALS_FLAG_KEY, false, {
+      environment: 'production',
+      surface: 'hivemind-web',
+      hostname: hostname(request),
+    });
+  } catch {
+    // The public gate fails closed if Flagship cannot be evaluated.
+  }
+
+  return new Response(JSON.stringify({
+    key: PARTNER_REFERRALS_FLAG_KEY,
+    enabled: enabled === true,
+    source: 'cloudflare-flagship',
+  }), {
+    headers: {
+      'cache-control': 'no-store',
+      'content-type': 'application/json; charset=utf-8',
+      'x-robots-tag': 'noindex, nofollow, noarchive, nosnippet',
+    },
+  });
+}
+
 export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
+
+    if (pathname === PARTNER_REFERRALS_FLAG_PATH) {
+      return partnerReferralsFlagResponse(request, env);
+    }
 
     // The same Worker powers the public marketing hostname and authenticated
     // application hostnames. Never advertise private hosts through discovery

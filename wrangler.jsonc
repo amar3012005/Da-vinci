@@ -13,6 +13,12 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   },
+  "flagship": [
+    {
+      "binding": "FLAGS",
+      "app_id": "2e89fbd3-7496-459b-a507-f1017d444dd9"
+    }
+  ],
   "routes": [
     {
       "pattern": "singulancelabs.com",
