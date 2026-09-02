@@ -13,6 +13,9 @@ test('email identity mode controls one shared OTP UI for preview and production'
   expect(login).toContain('autoComplete="one-time-code"');
   expect(login).toContain('Opening the email link alone never authenticates you');
   expect(login).toContain('emailOnly');
+  expect(login).toContain("useState('login')");
+  expect(login).toContain("handleCreateAccount('email')");
+  expect(login).toContain('signupTicket: emailIntent === \'register\' ? emailSignupTicket : \'\'');
   expect(client).toContain("'/auth/email/start'");
   expect(client).toContain("'/auth/email/verify'");
   expect(client).toContain("'/auth/email/resend'");

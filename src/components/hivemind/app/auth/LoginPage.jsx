@@ -130,7 +130,9 @@ export default function LoginPage() {
   const [emailCode, setEmailCode] = useState('');
   const [emailChallenge, setEmailChallenge] = useState('');
   const [emailLinkToken, setEmailLinkToken] = useState('');
-  const [emailIntent, setEmailIntent] = useState('auto');
+  const [emailIntent, setEmailIntent] = useState('login');
+  const [emailSignupTicket, setEmailSignupTicket] = useState('');
+  const [emailReturnTo, setEmailReturnTo] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const [emailState, setEmailState] = useState({ busy: false, message: '', error: false });
   const emailEnabled = emailConfig.enabled;
@@ -142,9 +144,12 @@ export default function LoginPage() {
     if (!email) return;
     setEmailState({ busy: true, message: '', error: false });
     try {
-      const returnTo = returnToFromState
+      const returnTo = emailReturnTo || returnToFromState
         || `${window.location.origin}/hivemind/app/overview?auth=callback`;
-      const result = await apiClient.startEmailSignIn({ email, returnTo, intent: emailIntent, turnstileToken });
+      const result = await apiClient.startEmailSignIn({
+        email, returnTo, intent: emailIntent, turnstileToken,
+        signupTicket: emailIntent === 'register' ? emailSignupTicket : '',
+      });
       setEmailChallenge(result.challenge_id);
       setEmailView('code');
       setEmailState({ busy: false, message: result?.message || 'Check your email for the sign-in code.', error: false });
@@ -462,6 +467,14 @@ export default function LoginPage() {
     const intentFragment = encodeURIComponent(JSON.stringify(onboardingIntent));
     const returnTo = returnToFromState
       || `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true#onboarding=${intentFragment}`;
+    if (provider === 'email') {
+      setEmailIntent('register');
+      setEmailSignupTicket(admission.signup_ticket);
+      setEmailReturnTo(returnTo);
+      setEmailView('email');
+      setShowOnboarding(false);
+      return;
+    }
     if (provider === 'zitadel') {
       // Zitadel with prompt=create → shows registration screen
       window.location.href = apiClient.getRegisterUrl(returnTo, undefined, admission.signup_ticket);
@@ -483,6 +496,9 @@ export default function LoginPage() {
     setAccountType(null);
     setSelectedPlan(null);
     setHostingChoice(null);
+    setEmailIntent('login');
+    setEmailSignupTicket('');
+    setEmailReturnTo('');
     setUserName('');
     setEnterpriseName('');
     setHivemindName('');
@@ -890,6 +906,13 @@ export default function LoginPage() {
                         <span className="w-5 h-5 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={12} /></span>
                         Continue with Google
                       </button>
+                      {emailEnabled && <button
+                        onClick={() => handleCreateAccount('email')}
+                        disabled={!userName.trim() || !personalAdmissionReady}
+                        className="w-full h-11 rounded-[6px] bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border border-[#e3e0db] flex items-center justify-center gap-2"
+                      >
+                        <Mail size={14} className="text-[#117dff]" /> Continue with Email
+                      </button>}
                       <div className="flex items-center gap-2">
                         <ComingSoonProvider label="Microsoft">
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
@@ -1063,6 +1086,13 @@ export default function LoginPage() {
                         <span className="w-5 h-5 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={12} /></span>
                         Continue with Google
                       </button>
+                      {emailEnabled && <button
+                        onClick={() => handleCreateAccount('email')}
+                        disabled={loadingEnterpriseInvitation || !userName.trim() || !enterpriseName.trim() || !enterpriseAdmissionReady}
+                        className="w-full h-12 rounded-[6px] bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border border-[#e3e0db] flex items-center justify-center gap-2"
+                      >
+                        <Mail size={15} className="text-[#117dff]" /> Continue with Email
+                      </button>}
                       <div className="flex items-center gap-2">
                         <ComingSoonProvider label="Microsoft">
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>

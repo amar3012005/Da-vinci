@@ -203,9 +203,10 @@ class HiveMindApiClient {
     return data;
   }
 
-  async startEmailSignIn({ email, returnTo, intent = 'auto', turnstileToken = '' }) {
+  async startEmailSignIn({ email, returnTo, intent = 'login', turnstileToken = '', signupTicket = '' }) {
     const { data } = await this.controlPlane.post('/auth/email/start', {
       email, return_to: returnTo, intent, turnstile_token: turnstileToken,
+      ...(signupTicket ? { signup_ticket: signupTicket } : {}),
     });
     return data;
   }
