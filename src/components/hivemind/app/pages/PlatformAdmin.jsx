@@ -351,6 +351,7 @@ function CommercialManager() {
   const [redemptions, setRedemptions] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [referralCampaigns, setReferralCampaigns] = useState([]);
+  const [partnerReferralsEnabled, setPartnerReferralsEnabled] = useState(false);
   const [enterpriseInvitations, setEnterpriseInvitations] = useState([]);
   const [enterpriseInvitationForm, setEnterpriseInvitationForm] = useState({
     company_name: "",
@@ -457,6 +458,7 @@ function CommercialManager() {
       setPilots(nextPilots.pilots || []);
       setRedemptions(nextRedemptions.redemptions || []);
       setOrganizations(nextOrganizations.organizations || []);
+      setPartnerReferralsEnabled(nextReferralCampaigns.enabled === true);
       setReferralCampaigns(nextReferralCampaigns.campaigns || []);
       setEnterpriseInvitations(nextEnterpriseInvitations.invitations || []);
     } catch (err) {
@@ -1615,7 +1617,21 @@ function CommercialManager() {
         </section>
       )}
       {tab === "referrals" && (
-        <>
+        !partnerReferralsEnabled ? (
+          <section className="mt-5 border border-[#d8d6cf] bg-[#faf9f4] p-5">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#737373]">
+              Feature flag off
+            </p>
+            <h3 className="mt-2 text-lg font-semibold text-[#161616]">
+              Partner invitations are safely disabled.
+            </h3>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#737373]">
+              The release is installed, but campaign creation, delivery, public
+              invitation links, and redemption remain unavailable until the
+              server runtime flag is enabled.
+            </p>
+          </section>
+        ) : <>
           <p className="mt-5 text-sm text-[#737373]">
             Create a named, shareable invitation for any trusted partner. The
             landing page, signup admission, trial, credits, and optional Stripe
