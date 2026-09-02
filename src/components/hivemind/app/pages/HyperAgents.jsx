@@ -2524,90 +2524,6 @@ function RoomThread({ roomId, onArchived }) {
             <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
               {t('hyperAgents.participantsTurns', '{{pCount}} participant{{pPlural}} · {{tCount}} turn{{tPlural}}', { pCount: participants.length, pPlural: participants.length !== 1 ? 's' : '', tCount: turns.length, tPlural: turns.length !== 1 ? 's' : '' })}
             </div>
-            {!archived && !isCampaignRoom && !isHqRoom && (
-              <div className="mt-1 inline-flex items-center gap-1.5">
-                <span className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.quality', 'Quality')}</span>
-                <div className="inline-flex rounded-lg border border-[#e3e0db] overflow-hidden">
-                  {[
-                    ['auto', t('hyperAgents.qAuto', 'Auto'), t('hyperAgents.qAutoHint', 'Multi-model: cheap gather + debate, strong 120b synthesis. Best value (~⅓ cost).')],
-                    ['best', t('hyperAgents.qBest', 'Best'), t('hyperAgents.qBestHint', 'All gpt-oss-120b — maximum rigor, higher cost.')],
-                  ].map(([val, label, hint]) => {
-                    const on = (room.quality_mode || 'auto') === val;
-                    return (
-                      <button
-                        key={val} type="button" onClick={() => setQualityMode(val)} title={hint}
-                        className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${on ? 'bg-[#117dff] text-white' : 'bg-white text-[#737373] hover:text-[#117dff]'}`}
-                      >
-                        {label}{val === 'auto' && on ? ' ⚡' : ''}
-                      </button>
-                    );
-                  })}
-                </div>
-                {/* Additional Population-Sim toggle — opt-in; default off leaves the main flow untouched. */}
-                <span className="ml-2 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.simLbl', 'Pop-sim')}</span>
-                <button
-                  type="button"
-                  onClick={() => setSimMode((room.sim_mode || 'off') !== 'on')}
-                  title={t('hyperAgents.simHint', 'Additional: simulate a population of stakeholder voices and fold their report into the answer. Adds ~10s. Off = normal room.')}
-                  className={`px-2 py-0.5 rounded-lg border text-[10px] font-medium transition-colors ${(room.sim_mode || 'off') === 'on' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-[#737373] border-[#e3e0db] hover:text-violet-600'}`}
-                >
-                  {(room.sim_mode || 'off') === 'on' ? '👥 On' : 'Off'}
-                </button>
-                {(room.sim_mode || 'off') === 'on' && (
-                  <span className="inline-flex items-center gap-1.5" title={t('hyperAgents.simAgentsHint', 'Number of simulated voices (10–100)')}>
-                    <input
-                      type="range" min={10} max={100} step={5}
-                      value={room.sim_agents || 24}
-                      onChange={e => setRoom(p => ({ ...p, sim_agents: +e.target.value }))}
-                      onMouseUp={e => apiClient.updateHyperRoom(roomId, { sim_agents: +e.target.value }).catch(() => {})}
-                      onTouchEnd={e => apiClient.updateHyperRoom(roomId, { sim_agents: +e.target.value }).catch(() => {})}
-                      className="w-24 accent-violet-600 cursor-pointer"
-                    />
-                    <span className="text-[10px] font-mono text-violet-600 w-10 text-right">{(room.sim_agents || 24)} voices</span>
-                  </span>
-                )}
-                {/* Self-evolving employees — opt-in; default off. On = employees learn a playbook
-                    from each turn's outcome and apply it next turn (better over time in THIS room). */}
-                <span className="ml-2 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.evoLbl', 'Self-evolve')}</span>
-                <button
-                  type="button"
-                  onClick={() => setEvoMode((room.evo_mode || 'off') !== 'on')}
-                  title={t('hyperAgents.evoHint', 'Additional: after each turn, employees reflect the outcome into a private playbook and recall it next turn — they get sharper at this room over time. Off = static employees.')}
-                  className={`px-2 py-0.5 rounded-lg border text-[10px] font-medium transition-colors ${(room.evo_mode || 'off') === 'on' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-[#737373] border-[#e3e0db] hover:text-emerald-600'}`}
-                >
-                  {(room.evo_mode || 'off') === 'on' ? '🧬 On' : 'Off'}
-                </button>
-                {(() => {
-                  const pb = room.evo_playbooks || {};
-                  const n = Object.values(pb).reduce((a, v) => a + (Array.isArray(v) ? v.length : 0), 0);
-                  if (!n) return null;
-                  return (
-                    <button type="button" onClick={() => setShowEvo(true)}
-                      title={t('hyperAgents.evoLearnedHint', 'See what each employee has learned in this room')}
-                      className="text-[10px] font-mono text-emerald-700 hover:text-emerald-900 underline decoration-dotted">
-                      {t('hyperAgents.evoLearned', 'learned ({{n}})', { n })}
-                    </button>
-                  );
-                })()}
-                {(() => {
-                  const jr = Array.isArray(room.room_journal) ? room.room_journal : (Array.isArray(room.evo_journal) ? room.evo_journal : []);
-                  if (!jr.length) return null;
-                  return (
-                    <button type="button" onClick={() => setShowJournal(true)}
-                      title={t('hyperAgents.journalHint', "The room's memory of prior turns — what was asked, decided, and who argued what")}
-                      className="ml-1 text-[10px] font-mono text-[#117dff] hover:text-[#0a5fd0] underline decoration-dotted">
-                      {t('hyperAgents.journalLink', '🧠 memory ({{n}})', { n: jr.length })}
-                    </button>
-                  );
-                })()}
-                {/* Swarm Instructions — per-room custom directives the director obeys on top of defaults */}
-                <button type="button" onClick={() => { setSwarmDraft(room.swarm_instructions || ''); setShowSwarm(true); }}
-                  title={t('hyperAgents.swarmHint', "Custom instructions the director follows on top of all defaults — e.g. ‘no Gaps to confirm’, ‘no mermaid’")}
-                  className="ml-1 text-[10px] font-mono text-[#7c3aed] hover:text-[#5b21b6] underline decoration-dotted">
-                  {t('hyperAgents.swarmLink', '📋 instructions')}{(room.swarm_instructions || '').trim() ? ' •' : ''}
-                </button>
-              </div>
-            )}
             {showJournal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowJournal(false)}>
                 <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[86vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -3167,6 +3083,77 @@ function RoomThread({ roomId, onArchived }) {
           ))}
           {!isHqRoom && participants.length === 0 && (
             <p className="text-[11px] text-[#a3a3a3]">{t('hyperAgents.noAgentsYet', 'No agents yet. Add one to start.')}</p>
+          )}
+          {!isHqRoom && !archived && !isCampaignRoom && (
+            <section className="mt-4 border-t border-[#e3e0db] pt-4" aria-label={t('hyperAgents.roomControls', 'Room controls')}>
+              <div className="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.14em] text-[#117dff]">
+                <Gauge size={11} /> {t('hyperAgents.roomControls', 'Room controls')}
+              </div>
+              <h3 className="mt-1 text-[14px] font-semibold text-[#171717]">{t('hyperAgents.tuneThisRoom', 'Tune this room')}</h3>
+              <div className="mt-3 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => { setSwarmDraft(room.swarm_instructions || ''); setShowSwarm(true); }}
+                  title={t('hyperAgents.swarmHint', "Custom instructions the director follows on top of all defaults — e.g. ‘no Gaps to confirm’, ‘no mermaid’")}
+                  className="group flex w-full items-center gap-2.5 rounded-[6px] border border-[#e3e0db] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#117dff] hover:bg-[#f7fbff]"
+                >
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-[4px] bg-[#117dff]/10 text-[#117dff]"><ClipboardCheck size={13} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[11px] font-semibold text-[#171717]">{t('hyperAgents.swarmLink', 'Room instructions')}</span>
+                    <span className="block truncate text-[9px] text-[#737373]">{(room.swarm_instructions || '').trim() ? t('hyperAgents.instructionsCustom', 'Custom instructions active') : t('hyperAgents.instructionsDefault', 'Use the room defaults')}</span>
+                  </span>
+                  <ArrowUpRight size={12} className="shrink-0 text-[#a3a3a3] transition-colors group-hover:text-[#117dff]" />
+                </button>
+                {(() => {
+                  const journal = Array.isArray(room.room_journal) ? room.room_journal : (Array.isArray(room.evo_journal) ? room.evo_journal : []);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setShowJournal(true)}
+                      title={t('hyperAgents.journalHint', "The room's memory of prior turns — what was asked, decided, and who argued what")}
+                      className="group flex w-full items-center gap-2.5 rounded-[6px] border border-[#e3e0db] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#117dff] hover:bg-[#f7fbff]"
+                    >
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-[4px] bg-[#117dff]/10 text-[#117dff]"><Brain size={13} /></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[11px] font-semibold text-[#171717]">{t('hyperAgents.roomMemory', 'Room memory')}</span>
+                        <span className="block text-[9px] text-[#737373]">{t('hyperAgents.memoryTurns', '{{count}} saved turn{{plural}}', { count: journal.length, plural: journal.length === 1 ? '' : 's' })}</span>
+                      </span>
+                      <ArrowUpRight size={12} className="shrink-0 text-[#a3a3a3] transition-colors group-hover:text-[#117dff]" />
+                    </button>
+                  );
+                })()}
+                <div className="rounded-[6px] border border-[#e3e0db] bg-white px-3 py-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-[4px] bg-[#117dff]/10 text-[#117dff]"><Gauge size={13} /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-semibold text-[#171717]">{t('hyperAgents.quality', 'Quality')}</div>
+                      <div className="text-[9px] text-[#737373]">{t('hyperAgents.qualityDetail', 'Choose how deeply the team works.')}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2.5 grid grid-cols-2 overflow-hidden rounded-[5px] border border-[#e3e0db]">
+                    {[
+                      ['auto', t('hyperAgents.qAuto', 'Auto'), t('hyperAgents.qAutoHint', 'Multi-model: cheap gather + debate, strong 120b synthesis. Best value (~⅓ cost).')],
+                      ['best', t('hyperAgents.qBest', 'Best'), t('hyperAgents.qBestHint', 'All gpt-oss-120b — maximum rigor, higher cost.')],
+                    ].map(([value, label, hint]) => {
+                      const selected = (room.quality_mode || 'auto') === value;
+                      return <button key={value} type="button" onClick={() => setQualityMode(value)} title={hint} className={`h-7 text-[10px] font-semibold transition-colors ${selected ? 'bg-[#117dff] text-white' : 'bg-white text-[#737373] hover:bg-[#f7fbff] hover:text-[#117dff]'}`}>{label}{value === 'auto' && selected ? ' ⚡' : ''}</button>;
+                    })}
+                  </div>
+                  <div className="mt-3 space-y-2 border-t border-[#eeeae4] pt-2.5">
+                    <button type="button" onClick={() => setSimMode((room.sim_mode || 'off') !== 'on')} title={t('hyperAgents.simHint', 'Additional: simulate a population of stakeholder voices and fold their report into the answer. Adds ~10s. Off = normal room.')} className="flex w-full items-center justify-between gap-3 text-left">
+                      <span><span className="block text-[10px] font-medium text-[#262626]">{t('hyperAgents.simLbl', 'Population simulation')}</span><span className="block text-[8.5px] text-[#737373]">{t('hyperAgents.simShortDetail', 'Add stakeholder voices')}</span></span>
+                      <span className={`rounded-[4px] border px-1.5 py-0.5 text-[9px] font-medium ${(room.sim_mode || 'off') === 'on' ? 'border-[#117dff] bg-[#117dff] text-white' : 'border-[#e3e0db] bg-[#faf9f4] text-[#737373]'}`}>{(room.sim_mode || 'off') === 'on' ? t('common.on', 'On') : t('common.off', 'Off')}</span>
+                    </button>
+                    {(room.sim_mode || 'off') === 'on' && <label className="block" title={t('hyperAgents.simAgentsHint', 'Number of simulated voices (10–100)')}><span className="mb-1 flex justify-between text-[8.5px] font-mono text-[#737373]"><span>{t('hyperAgents.simAgents', 'Simulated voices')}</span><span>{room.sim_agents || 24}</span></span><input type="range" min={10} max={100} step={5} value={room.sim_agents || 24} onChange={event => setRoom(current => ({ ...current, sim_agents: +event.target.value }))} onMouseUp={event => apiClient.updateHyperRoom(roomId, { sim_agents: +event.target.value }).catch(() => {})} onTouchEnd={event => apiClient.updateHyperRoom(roomId, { sim_agents: +event.target.value }).catch(() => {})} className="w-full accent-[#117dff]" /></label>}
+                    <button type="button" onClick={() => setEvoMode((room.evo_mode || 'off') !== 'on')} title={t('hyperAgents.evoHint', 'Additional: after each turn, employees reflect the outcome into a private playbook and recall it next turn — they get sharper at this room over time. Off = static employees.')} className="flex w-full items-center justify-between gap-3 text-left">
+                      <span><span className="block text-[10px] font-medium text-[#262626]">{t('hyperAgents.evoLbl', 'Self-evolve')}</span><span className="block text-[8.5px] text-[#737373]">{t('hyperAgents.evoShortDetail', 'Retain room-specific lessons')}</span></span>
+                      <span className={`rounded-[4px] border px-1.5 py-0.5 text-[9px] font-medium ${(room.evo_mode || 'off') === 'on' ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-[#e3e0db] bg-[#faf9f4] text-[#737373]'}`}>{(room.evo_mode || 'off') === 'on' ? t('common.on', 'On') : t('common.off', 'Off')}</span>
+                    </button>
+                    {(() => { const playbooks = room.evo_playbooks || {}; const learned = Object.values(playbooks).reduce((total, lessons) => total + (Array.isArray(lessons) ? lessons.length : 0), 0); return learned ? <button type="button" onClick={() => setShowEvo(true)} className="text-[9px] font-mono text-emerald-700 hover:text-emerald-900 underline decoration-dotted">{t('hyperAgents.evoLearned', 'learned ({{n}})', { n: learned })}</button> : null; })()}
+                  </div>
+                </div>
+              </div>
+            </section>
           )}
           {isHqRoom && <HqRuntimeRail baselineReady={Boolean(growthBaseline)} />}
           {isSeoRoom && <SeoRoomProgress
