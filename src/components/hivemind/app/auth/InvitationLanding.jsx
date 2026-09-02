@@ -81,7 +81,7 @@ export default function InvitationLanding() {
               <div className="mt-8 space-y-3 border-y border-[#eae7e1] py-5 text-[13px]">
                 <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> <strong>{isReferral ? `${preview?.offer?.trial_days} days free` : isEnterprise ? 'Enterprise workspace' : 'Personal workspace'}</strong></p>
                 {isReferral && <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> {Number(preview?.offer?.monthly_credits || 0).toLocaleString()} credits every month</p>}
-                {isReferral && preview?.offer?.discount?.percent_off && <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> {preview.offer.discount.percent_off}% off after your trial</p>}
+                {isReferral && <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> No payment method is required to begin</p>}
                 {isEnterprise && <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> {selfHosted ? 'Self-hosted sovereign infrastructure' : 'Singulance-managed infrastructure'}</p>}
                 <p className="flex items-center gap-2"><Check size={15} className="text-[#117dff]" /> Setup choices are secured by this invitation</p>
               </div>

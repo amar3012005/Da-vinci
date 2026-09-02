@@ -417,19 +417,12 @@ function CommercialManager() {
     referrer_display_name: "",
     referrer_email: "",
     internal_name: "",
-    code: "",
-    account_type: "personal",
-    base_plan: "free",
+    account_type: "enterprise_managed",
+    base_plan: "plus",
     trial_days: 14,
-    monthly_credits: 500,
-    discount_kind: "percentage",
-    discount_percent: 20,
-    discount_amount_cents: "",
-    discount_currency: "EUR",
-    discount_duration: "once",
-    duration_in_months: 3,
+    monthly_credits: 2000,
     fallback_action: "free",
-    max_redemptions: "",
+    max_redemptions: 10,
     ends_at: "",
     welcome_message: "",
   });
@@ -589,20 +582,8 @@ function CommercialManager() {
     try {
       const payload = {
         ...referralForm,
-        code: referralForm.code || undefined,
         trial_days: Number(referralForm.trial_days),
         monthly_credits: Number(referralForm.monthly_credits),
-        duration_in_months: Number(referralForm.duration_in_months),
-        discount_kind: referralForm.discount_kind,
-        ...(referralForm.discount_kind === "percentage"
-          ? { discount_percent: Number(referralForm.discount_percent) }
-          : {}),
-        ...(referralForm.discount_kind === "fixed"
-          ? {
-              discount_amount_cents: Number(referralForm.discount_amount_cents),
-              discount_currency: referralForm.discount_currency,
-            }
-          : {}),
         max_redemptions: referralForm.max_redemptions
           ? Number(referralForm.max_redemptions)
           : undefined,
@@ -611,8 +592,8 @@ function CommercialManager() {
           : undefined,
       };
       const result = await apiClient.createPartnerReferralCampaign(payload);
-      setNotice(`Partner invitation ready${result.generated_code ? ` · code ${result.generated_code}` : ""}: ${result.campaign.invitation_url}`);
-      setReferralForm({ ...referralForm, referrer_display_name: "", referrer_email: "", internal_name: "", code: "" });
+      setNotice(`Partner trial invitation ready: ${result.campaign.invitation_url}`);
+      setReferralForm({ ...referralForm, referrer_display_name: "", referrer_email: "", internal_name: "" });
       await load();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -1634,8 +1615,8 @@ function CommercialManager() {
         ) : <>
           <p className="mt-5 text-sm text-[#737373]">
             Create a named, shareable invitation for any trusted partner. The
-            landing page, signup admission, trial, credits, and optional Stripe
-            discount remain bound to the same server-verified offer.
+            landing page, signup admission, trial, and credits remain bound to
+            the same server-verified offer. No card or Stripe checkout is used.
           </p>
           <form
             onSubmit={submitReferralCampaign}
@@ -1653,17 +1634,6 @@ function CommercialManager() {
             <input required type="email" placeholder="Referrer email" value={referralForm.referrer_email} onChange={(e) => setReferralForm({ ...referralForm, referrer_email: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" />
             <input placeholder="Internal campaign name (optional)" value={referralForm.internal_name} onChange={(e) => setReferralForm({ ...referralForm, internal_name: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" />
             <input
-              placeholder="Code (blank generates one)"
-              value={referralForm.code}
-              onChange={(e) =>
-                setReferralForm({
-                  ...referralForm,
-                  code: e.target.value.toUpperCase(),
-                })
-              }
-              className="border border-[#d8d6cf] px-3 py-2"
-            />
-            <input
               type="number"
               min="1"
               max="365"
@@ -1679,12 +1649,14 @@ function CommercialManager() {
             />
             <select
               value={referralForm.base_plan}
-              onChange={(e) =>
+              onChange={(e) => {
+                const creditsByPlan = { free: 500, plus: 2000, pro: 5000, scale: 10000 };
                 setReferralForm({
                   ...referralForm,
                   base_plan: e.target.value,
-                })
-              }
+                  monthly_credits: creditsByPlan[e.target.value],
+                });
+              }}
               className="border border-[#d8d6cf] px-3 py-2"
               aria-label="Trial plan"
             >
@@ -1722,73 +1694,11 @@ function CommercialManager() {
               className="border border-[#d8d6cf] px-3 py-2"
               aria-label="Monthly credits"
             />
-            <select
-              value={referralForm.discount_kind}
-              onChange={(e) =>
-                setReferralForm({
-                  ...referralForm,
-                  discount_kind: e.target.value,
-                })
-              }
-              className="border border-[#d8d6cf] px-3 py-2"
-              aria-label="Discount type"
-            >
-              <option value="none">No discount</option>
-              <option value="percentage">Percentage off</option>
-              <option value="fixed">Fixed amount off</option>
-            </select>
-            {referralForm.discount_kind === "percentage" && (
-              <input
-                type="number"
-                min="1"
-                max="100"
-                placeholder="Percent off (default 20)"
-                value={referralForm.discount_percent}
-                onChange={(e) =>
-                  setReferralForm({
-                    ...referralForm,
-                    discount_percent: e.target.value,
-                  })
-                }
-                className="border border-[#d8d6cf] px-3 py-2"
-              />
-            )}
-            {referralForm.discount_kind === "fixed" && (
-              <>
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="Amount off (minor units, e.g. cents)"
-                  value={referralForm.discount_amount_cents}
-                  onChange={(e) =>
-                    setReferralForm({
-                      ...referralForm,
-                      discount_amount_cents: e.target.value,
-                    })
-                  }
-                  className="border border-[#d8d6cf] px-3 py-2"
-                />
-                <input
-                  placeholder="Currency (e.g. EUR)"
-                  value={referralForm.discount_currency}
-                  onChange={(e) =>
-                    setReferralForm({
-                      ...referralForm,
-                      discount_currency: e.target.value.toUpperCase(),
-                    })
-                  }
-                  className="border border-[#d8d6cf] px-3 py-2"
-                  maxLength={3}
-                />
-              </>
-            )}
-            {referralForm.discount_kind !== "none" && <select value={referralForm.discount_duration} onChange={(e) => setReferralForm({ ...referralForm, discount_duration: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" aria-label="Discount duration"><option value="once">First invoice</option><option value="repeating">Several months</option><option value="forever">Forever</option></select>}
-            {referralForm.discount_kind !== "none" && referralForm.discount_duration === "repeating" && <input type="number" min="1" max="36" value={referralForm.duration_in_months} onChange={(e) => setReferralForm({ ...referralForm, duration_in_months: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" aria-label="Discount duration in months" />}
             <select value={referralForm.fallback_action} onChange={(e) => setReferralForm({ ...referralForm, fallback_action: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" aria-label="Plan after trial"><option value="free">Free after trial</option><option value="manual_review">Manual review before expiry</option></select>
             <input
               type="number"
               min="1"
-              placeholder="Max redemptions (blank = unlimited)"
+              placeholder="Partner activations (for example 10)"
               value={referralForm.max_redemptions}
               onChange={(e) =>
                 setReferralForm({
@@ -1809,7 +1719,7 @@ function CommercialManager() {
             />
             <textarea placeholder="Personal welcome message (optional)" value={referralForm.welcome_message} onChange={(e) => setReferralForm({ ...referralForm, welcome_message: e.target.value })} className="border border-[#d8d6cf] px-3 py-2 md:col-span-2" rows={2}/>
             <button className="bg-[#117dff] px-3 py-2 font-medium text-white">
-              Create partner experience
+              Create card-free partner trial
             </button>
           </form>
           <div className="mt-5 divide-y divide-[#e5e2dc]">
@@ -1824,7 +1734,7 @@ function CommercialManager() {
                     {campaign.status} · {campaign.accepted_count} accepted · {campaign.visit_count} visits
                   </span>
                   <p className="mt-1 text-xs text-[#737373]">
-                    {campaign.offer.trial_days} days free · {Number(campaign.offer.monthly_credits).toLocaleString()} credits/month · {campaign.offer.plan} · sent {when(campaign.last_sent_at)}
+                    {campaign.offer.trial_days} days free · {Number(campaign.offer.monthly_credits).toLocaleString()} credits/month · {campaign.offer.plan} · {campaign.offer.remaining_activations == null ? "unlimited activations" : `${campaign.offer.remaining_activations} activations left`} · sent {when(campaign.last_sent_at)}
                   </p>
                   <button type="button" onClick={() => navigator.clipboard.writeText(campaign.invitation_url).then(() => setNotice("Invitation link copied."))} className="mt-2 text-xs font-medium text-[#117dff]">Copy share link</button>
                 </div>
