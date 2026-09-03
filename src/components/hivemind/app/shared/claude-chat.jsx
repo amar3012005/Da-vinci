@@ -160,6 +160,7 @@ function ContinuationChoices({ continuation, onContinue }) {
       if (!toolkit) throw new Error('No app to connect');
       const data = await apiClient.createComposioConnectLink(toolkit, {
         callbackUrl: `${window.location.origin}/hivemind/app/connectors?composio_connected=${encodeURIComponent(toolkit)}`,
+        toolkitMeta: { composioManagedAuthSchemes: ['OAUTH2'], noAuth: false },
       });
       const url = httpConnectUrl(data?.redirect_url || data?.redirectUrl);
       if (!url) throw new Error('No OAuth URL returned for this app');
@@ -171,7 +172,7 @@ function ContinuationChoices({ continuation, onContinue }) {
       }
     } catch (error) {
       if (authWindow && !authWindow.closed) authWindow.close();
-      setConnectError(error?.message || 'Could not open Gmail connection');
+      setConnectError(error?.response?.data?.error || error?.message || 'Could not open Gmail connection');
     } finally {
       setConnecting(false);
     }
