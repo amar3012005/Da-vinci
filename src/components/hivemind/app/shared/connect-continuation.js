@@ -12,6 +12,12 @@ export function isConnectOpenOption(option) {
   return option.id === 'connect' || option.open_url === true || Boolean(option.href);
 }
 
+export function httpConnectUrl(value) {
+  const url = String(value || '').trim();
+  if (!/^https:\/\//i.test(url)) return null;
+  return url;
+}
+
 export function connectBanner(request = {}, logos = {}) {
   const toolkit = connectToolkitOf(request);
   const logo = request.logo_url

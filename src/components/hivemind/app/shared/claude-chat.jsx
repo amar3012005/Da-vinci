@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import apiClient from './api-client';
 import { BRAND_LOGOS } from './connectors-catalog';
-import { connectBanner, connectToolkitOf, isConnectOpenOption } from './connect-continuation';
+import { connectBanner, connectToolkitOf, httpConnectUrl, isConnectOpenOption } from './connect-continuation';
 
 function connectorKey(event) {
   const raw = String(event?.tool_groups?.[0] || event?.tool || event?.name || '').toLowerCase();
@@ -149,20 +149,28 @@ function ContinuationChoices({ continuation, onContinue }) {
     const toolkit = connectToolkitOf(request, option);
     setConnectError('');
     setConnecting(true);
-    const authWindow = window.open('about:blank', '_blank', 'noopener,noreferrer');
+    const known = httpConnectUrl(option.href) || httpConnectUrl(request.redirect_url);
+    if (known) {
+      window.open(known, '_blank', 'noopener,noreferrer');
+      setConnecting(false);
+      return;
+    }
+    const authWindow = window.open('about:blank', '_blank');
     try {
-      let url = option.href || request.redirect_url || null;
-      if (!url && toolkit) {
-        const data = await apiClient.createComposioConnectLink(toolkit, {
-          callbackUrl: `${window.location.origin}/hivemind/app/connectors?composio_connected=${encodeURIComponent(toolkit)}`,
-        });
-        url = data?.redirect_url || data?.redirectUrl || null;
-      }
+      if (!toolkit) throw new Error('No app to connect');
+      const data = await apiClient.createComposioConnectLink(toolkit, {
+        callbackUrl: `${window.location.origin}/hivemind/app/connectors?composio_connected=${encodeURIComponent(toolkit)}`,
+      });
+      const url = httpConnectUrl(data?.redirect_url || data?.redirectUrl);
       if (!url) throw new Error('No OAuth URL returned for this app');
-      if (authWindow) authWindow.location.replace(url);
-      else window.open(url, '_blank', 'noopener,noreferrer');
+      if (authWindow && !authWindow.closed) {
+        authWindow.opener = null;
+        authWindow.location.replace(url);
+      } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     } catch (error) {
-      if (authWindow) authWindow.close();
+      if (authWindow && !authWindow.closed) authWindow.close();
       setConnectError(error?.message || 'Could not open Gmail connection');
     } finally {
       setConnecting(false);
