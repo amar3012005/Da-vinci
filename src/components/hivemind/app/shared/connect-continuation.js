@@ -1,5 +1,23 @@
 /** Pure helpers for chat Connect-pause UI. No React. */
 
+export const COMPOSIO_CONNECT_EVENT = 'hivemind:composio-connected';
+export const COMPOSIO_CONNECT_CHANNEL = 'hivemind-composio-connect';
+
+export function composioCallbackUrl(origin, toolkit) {
+  const url = new URL('/hivemind/app/connect/composio/callback', String(origin || 'https://localhost'));
+  if (toolkit) url.searchParams.set('composio_toolkit', toolkit);
+  return url.toString();
+}
+
+export function isComposioConnectSuccess(payload, toolkit) {
+  if (!payload || payload.type !== COMPOSIO_CONNECT_EVENT) return false;
+  const got = String(payload.toolkit || '').toLowerCase();
+  if (toolkit && got && got !== String(toolkit).toLowerCase()) return false;
+  const status = String(payload.status || '').toLowerCase();
+  return status === 'success' || status === 'connected' || Boolean(payload.connectedAccountId);
+}
+
+
 export function connectToolkitOf(request = {}, option = {}) {
   return String(request.toolkit || request.provider || option.toolkit || '')
     .trim()

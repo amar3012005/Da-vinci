@@ -47,6 +47,7 @@ const TeamProjects = React.lazy(() => import('./pages/TeamProjects'));
 const JoinOrg = React.lazy(() => import('./pages/JoinOrg'));
 const ClaudeCodeConnectCallback = React.lazy(() => import('./pages/ClaudeCodeConnectCallback'));
 const McpConnectCallback = React.lazy(() => import('./pages/McpConnectCallback'));
+const ComposioConnectCallback = React.lazy(() => import('./pages/ComposioConnectCallback'));
 const AuditLog = React.lazy(() => import('./pages/AuditLog'));
 const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
 const AdminSso = React.lazy(() => import('./pages/AdminSso'));
@@ -259,6 +260,7 @@ export default function HiveMindApp() {
           <Route path="hermes" element={<PageSuspense><HermesAgents /></PageSuspense>} />
           <Route path="connect/claude-code/callback" element={<PageSuspense><ClaudeCodeConnectCallback /></PageSuspense>} />
           <Route path="connect/mcp/callback" element={<PageSuspense><McpConnectCallback /></PageSuspense>} />
+          <Route path="connect/composio/callback" element={<PageSuspense><ComposioConnectCallback /></PageSuspense>} />
           {/* Unknown /hivemind/app/* child (stray OAuth redirect_uri like
               /app/callback, typos) → overview instead of a blank Outlet. */}
           <Route path="*" element={<Navigate to="overview" replace />} />

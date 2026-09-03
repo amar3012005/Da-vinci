@@ -12,7 +12,15 @@ import {
 } from 'lucide-react';
 import apiClient from './api-client';
 import { BRAND_LOGOS } from './connectors-catalog';
-import { connectBanner, connectToolkitOf, httpConnectUrl, isConnectOpenOption } from './connect-continuation';
+import {
+  COMPOSIO_CONNECT_CHANNEL,
+  composioCallbackUrl,
+  connectBanner,
+  connectToolkitOf,
+  httpConnectUrl,
+  isComposioConnectSuccess,
+  isConnectOpenOption,
+} from './connect-continuation';
 
 function connectorKey(event) {
   const raw = String(event?.tool_groups?.[0] || event?.tool || event?.name || '').toLowerCase();
@@ -139,33 +147,47 @@ function ContinuationChoices({ continuation, onContinue }) {
   const [values, setValues] = useState({});
   const [connectError, setConnectError] = useState('');
   const [connecting, setConnecting] = useState(false);
+  const [connected, setConnected] = useState(false);
   const request = continuation?.requests?.[0];
   const options = Array.isArray(request?.options) ? request.options : [];
   const fields = Array.isArray(request?.fields) ? request.fields : [];
+  const banner = request?.kind === 'connect_account' ? connectBanner(request, BRAND_LOGOS) : null;
+  useEffect(() => {
+    const toolkit = banner?.toolkit;
+    const onPayload = (payload) => {
+      if (isComposioConnectSuccess(payload, toolkit)) setConnected(true);
+    };
+    const onWindow = (event) => {
+      if (event.origin !== window.location.origin) return;
+      onPayload(event.data);
+    };
+    window.addEventListener('message', onWindow);
+    let channel;
+    try {
+      channel = new BroadcastChannel(COMPOSIO_CONNECT_CHANNEL);
+      channel.onmessage = (event) => onPayload(event.data);
+    } catch { /* ignore */ }
+    return () => {
+      window.removeEventListener('message', onWindow);
+      try { channel?.close(); } catch { /* ignore */ }
+    };
+  }, [banner?.toolkit]);
   if ((!options.length && !fields.length) || !onContinue) return null;
   const fieldsComplete = fields.every((field) => !field.required || String(values[field.name] || '').trim());
-  const banner = request?.kind === 'connect_account' ? connectBanner(request, BRAND_LOGOS) : null;
   const openConnect = async (option) => {
     const toolkit = connectToolkitOf(request, option);
     setConnectError('');
     setConnecting(true);
-    const known = httpConnectUrl(option.href) || httpConnectUrl(request.redirect_url);
-    if (known) {
-      window.open(known, '_blank', 'noopener,noreferrer');
-      setConnecting(false);
-      return;
-    }
     const authWindow = window.open('about:blank', '_blank');
     try {
       if (!toolkit) throw new Error('No app to connect');
       const data = await apiClient.createComposioConnectLink(toolkit, {
-        callbackUrl: `${window.location.origin}/hivemind/app/connectors?composio_connected=${encodeURIComponent(toolkit)}`,
+        callbackUrl: composioCallbackUrl(window.location.origin, toolkit),
         toolkitMeta: { composioManagedAuthSchemes: ['OAUTH2'], noAuth: false },
       });
       const url = httpConnectUrl(data?.redirect_url || data?.redirectUrl);
       if (!url) throw new Error('No OAuth URL returned for this app');
       if (authWindow && !authWindow.closed) {
-        authWindow.opener = null;
         authWindow.location.replace(url);
       } else {
         window.open(url, '_blank', 'noopener,noreferrer');
@@ -183,8 +205,14 @@ function ContinuationChoices({ continuation, onContinue }) {
         <div className="mb-3 flex items-center gap-3 border border-[#e5dfd6] bg-[#faf8f4] px-3 py-2.5">
           {banner.logo ? <img src={banner.logo} alt="" className="h-8 w-8 shrink-0" /> : null}
           <div>
-            <div className="text-[13px] font-semibold text-[#1a1a17]">Connect {banner.name}</div>
-            <div className="text-[12px] text-[#5f5b54]">Authorize in a new tab, then continue this request.</div>
+            <div className="text-[13px] font-semibold text-[#1a1a17]">
+                {connected ? `${banner.name} connected` : `Connect ${banner.name}`}
+              </div>
+            <div className="text-[12px] text-[#5f5b54]">
+                {connected
+                  ? 'Connected. Continue this request from the paused step.'
+                  : 'Authorize in a new tab. You will return here when it succeeds.'}
+              </div>
           </div>
         </div>
       ) : null}
