@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import apiClient from './api-client';
 import { BRAND_LOGOS } from './connectors-catalog';
+import { connectBanner, connectToolkitOf, isConnectOpenOption } from './connect-continuation';
 
 function connectorKey(event) {
   const raw = String(event?.tool_groups?.[0] || event?.tool || event?.name || '').toLowerCase();
@@ -136,15 +137,51 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
 function ContinuationChoices({ continuation, onContinue }) {
   const [selected, setSelected] = useState(null);
   const [values, setValues] = useState({});
+  const [connectError, setConnectError] = useState('');
+  const [connecting, setConnecting] = useState(false);
   const request = continuation?.requests?.[0];
   const options = Array.isArray(request?.options) ? request.options : [];
   const fields = Array.isArray(request?.fields) ? request.fields : [];
   if ((!options.length && !fields.length) || !onContinue) return null;
   const fieldsComplete = fields.every((field) => !field.required || String(values[field.name] || '').trim());
+  const banner = request?.kind === 'connect_account' ? connectBanner(request, BRAND_LOGOS) : null;
+  const openConnect = async (option) => {
+    const toolkit = connectToolkitOf(request, option);
+    setConnectError('');
+    setConnecting(true);
+    const authWindow = window.open('about:blank', '_blank', 'noopener,noreferrer');
+    try {
+      let url = option.href || request.redirect_url || null;
+      if (!url && toolkit) {
+        const data = await apiClient.createComposioConnectLink(toolkit, {
+          callbackUrl: `${window.location.origin}/hivemind/app/connectors?composio_connected=${encodeURIComponent(toolkit)}`,
+        });
+        url = data?.redirect_url || data?.redirectUrl || null;
+      }
+      if (!url) throw new Error('No OAuth URL returned for this app');
+      if (authWindow) authWindow.location.replace(url);
+      else window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      if (authWindow) authWindow.close();
+      setConnectError(error?.message || 'Could not open Gmail connection');
+    } finally {
+      setConnecting(false);
+    }
+  };
   return (
     <div className="mt-5">
+      {banner ? (
+        <div className="mb-3 flex items-center gap-3 border border-[#e5dfd6] bg-[#faf8f4] px-3 py-2.5">
+          {banner.logo ? <img src={banner.logo} alt="" className="h-8 w-8 shrink-0" /> : null}
+          <div>
+            <div className="text-[13px] font-semibold text-[#1a1a17]">Connect {banner.name}</div>
+            <div className="text-[12px] text-[#5f5b54]">Authorize in a new tab, then continue this request.</div>
+          </div>
+        </div>
+      ) : null}
       <div className="text-[14px] font-semibold text-[#1a1a17]">I need your input to continue</div>
       <div className="mt-1 text-[13px] leading-relaxed text-[#5f5b54]">{request.prompt || 'Choose one of the options below. I will continue from the paused step without repeating completed work.'}</div>
+      {connectError ? <div className="mt-2 text-[12px] text-[#b42318]">{connectError}</div> : null}
       {fields.length > 0 && (
         <div className="mt-3 space-y-3">
           {fields.map((field) => (
@@ -163,16 +200,17 @@ function ContinuationChoices({ continuation, onContinue }) {
       )}
       <div className="mt-3 flex flex-wrap gap-2">
         {options.map((option) => (
-          <button key={option.id} type="button" disabled={selected != null}
+          <button key={option.id} type="button" disabled={selected != null || connecting}
             onClick={() => {
-              if (option.href || option.open_url) {
-                if (option.href) window.open(option.href, '_blank', 'noopener,noreferrer');
+              if (isConnectOpenOption(option)) {
+                openConnect(option);
                 return;
               }
               setSelected(option.id);
               onContinue(continuation, request, option);
             }}
-            className="rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] font-medium text-[#30302d] hover:border-[#117dff] hover:text-[#0066e0] disabled:opacity-50">
+            className="inline-flex items-center gap-2 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] font-medium text-[#30302d] hover:border-[#117dff] hover:text-[#0066e0] disabled:opacity-50">
+            {isConnectOpenOption(option) && banner?.logo ? <img src={banner.logo} alt="" className="h-4 w-4" /> : null}
             {option.label}
           </button>
         ))}
