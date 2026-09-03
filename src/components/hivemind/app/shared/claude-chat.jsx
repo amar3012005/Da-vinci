@@ -164,7 +164,14 @@ function ContinuationChoices({ continuation, onContinue }) {
       <div className="mt-3 flex flex-wrap gap-2">
         {options.map((option) => (
           <button key={option.id} type="button" disabled={selected != null}
-            onClick={() => { setSelected(option.id); onContinue(continuation, request, option); }}
+            onClick={() => {
+              if (option.href || option.open_url) {
+                if (option.href) window.open(option.href, '_blank', 'noopener,noreferrer');
+                return;
+              }
+              setSelected(option.id);
+              onContinue(continuation, request, option);
+            }}
             className="rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] font-medium text-[#30302d] hover:border-[#117dff] hover:text-[#0066e0] disabled:opacity-50">
             {option.label}
           </button>
