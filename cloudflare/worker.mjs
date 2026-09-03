@@ -3,6 +3,8 @@ const AGENT_SETUP_PREFIX = '/agent-setup/';
 const DISCOVERY_PATHS = new Set(['/robots.txt', '/llms.txt', '/llms-full.txt', '/sitemap.xml']);
 const PARTNER_REFERRALS_FLAG_PATH = '/__hivemind/feature-flags/partner-referrals';
 const PARTNER_REFERRALS_FLAG_KEY = 'partner_referrals_v1';
+const USE_TOOLS_UNIFIED_DAG_FLAG_PATH = '/__hivemind/feature-flags/use-tools-unified-dag';
+const USE_TOOLS_UNIFIED_DAG_FLAG_KEY = 'USE_TOOLS_UNIFIED_DAG';
 const PUBLIC_MARKETING_HOSTS = new Set([
   'singulancelabs.com',
   'www.singulancelabs.com',
@@ -59,20 +61,20 @@ function missingAssetResponse() {
   });
 }
 
-async function partnerReferralsFlagResponse(request, env) {
+async function booleanFlagshipResponse(request, env, key) {
   let enabled = false;
   try {
-    enabled = await env.FLAGS.getBooleanValue(PARTNER_REFERRALS_FLAG_KEY, false, {
+    enabled = await env.FLAGS.getBooleanValue(key, false, {
       environment: 'production',
       surface: 'hivemind-web',
       hostname: hostname(request),
     });
   } catch {
-    // The public gate fails closed if Flagship cannot be evaluated.
+    // Public gates fail closed if Flagship cannot be evaluated.
   }
 
   return new Response(JSON.stringify({
-    key: PARTNER_REFERRALS_FLAG_KEY,
+    key,
     enabled: enabled === true,
     source: 'cloudflare-flagship',
   }), {
@@ -84,12 +86,19 @@ async function partnerReferralsFlagResponse(request, env) {
   });
 }
 
+async function partnerReferralsFlagResponse(request, env) {
+  return booleanFlagshipResponse(request, env, PARTNER_REFERRALS_FLAG_KEY);
+}
+
 export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
 
     if (pathname === PARTNER_REFERRALS_FLAG_PATH) {
       return partnerReferralsFlagResponse(request, env);
+    }
+    if (pathname === USE_TOOLS_UNIFIED_DAG_FLAG_PATH) {
+      return booleanFlagshipResponse(request, env, USE_TOOLS_UNIFIED_DAG_FLAG_KEY);
     }
 
     // The same Worker powers the public marketing hostname and authenticated
