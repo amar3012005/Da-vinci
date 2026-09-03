@@ -1428,6 +1428,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getPlatformUserLifecycle(userId) {
+    const { data } = await this.controlPlane.get(`/admin/api/platform/users/${encodeURIComponent(userId)}/lifecycle`);
+    return data;
+  }
+
   async listPlatformLogs() {
     const { data } = await this.controlPlane.get('/admin/api/platform/logs');
     return data;

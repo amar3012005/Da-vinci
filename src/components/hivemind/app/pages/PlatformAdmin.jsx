@@ -1915,6 +1915,9 @@ export default function PlatformAdmin() {
   const [logs, setLogs] = useState(emptyLogs);
   const [logsOpen, setLogsOpen] = useState(false);
   const [logView, setLogView] = useState("mixed");
+  const [lifecycle, setLifecycle] = useState(null);
+  const [lifecycleLoading, setLifecycleLoading] = useState(false);
+  const [lifecycleError, setLifecycleError] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -1950,6 +1953,20 @@ export default function PlatformAdmin() {
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setLoading(false);
+    }
+  };
+
+  const openLifecycle = async (user) => {
+    setLifecycle({ user: { id: user.id, email: user.email, display_name: user.displayName || null }, organizations: [], totals: null });
+    setLifecycleLoading(true);
+    setLifecycleError("");
+    try {
+      const result = await apiClient.getPlatformUserLifecycle(user.id);
+      setLifecycle(result.lifecycle);
+    } catch (err) {
+      setLifecycleError(err.response?.data?.error || err.message || "Lifecycle data is unavailable.");
+    } finally {
+      setLifecycleLoading(false);
     }
   };
 
@@ -2081,6 +2098,7 @@ export default function PlatformAdmin() {
               <th>Organizations</th>
               <th>Last seen</th>
               <th>Status</th>
+              <th className="pr-3">Lifecycle</th>
             </tr>
           </thead>
           <tbody>
@@ -2105,6 +2123,15 @@ export default function PlatformAdmin() {
                 <td>{user.organization_count}</td>
                 <td>{when(user.lastActiveAt)}</td>
                 <td>{user.active ? "Active" : "Sleeping"}</td>
+                <td className="pr-3">
+                  <button
+                    type="button"
+                    onClick={() => openLifecycle(user)}
+                    className="rounded-[6px] border border-[#d8d6cf] px-2.5 py-1.5 text-xs font-medium text-[#303030] hover:border-[#117dff] hover:text-[#117dff]"
+                  >
+                    Lifecycle
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -2148,6 +2175,49 @@ export default function PlatformAdmin() {
                 ? activeLogs.join("\n")
                 : "Waiting for logs..."}
             </pre>
+          </section>
+        </div>
+      )}
+      {lifecycle && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/45 p-0 sm:items-center sm:justify-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="lifecycle-title">
+          <button type="button" aria-label="Close lifecycle" onClick={() => setLifecycle(null)} className="absolute inset-0 cursor-default" />
+          <section className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-[#faf9f4] shadow-2xl sm:max-w-3xl sm:rounded-2xl">
+            <header className="sticky top-0 z-10 flex items-start justify-between border-b border-[#e3e0db] bg-[#faf9f4]/95 px-5 py-4 backdrop-blur">
+              <div>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[#117dff]">User lifecycle</p>
+                <h2 id="lifecycle-title" className="mt-1 text-lg font-semibold text-[#111]">{lifecycle.user.display_name || lifecycle.user.email}</h2>
+                <p className="text-xs text-[#737373]">{lifecycle.user.email}</p>
+              </div>
+              <button type="button" onClick={() => setLifecycle(null)} className="rounded-[6px] p-2 text-[#525252] hover:bg-[#f0eee8]" aria-label="Close lifecycle"><X size={18} /></button>
+            </header>
+            <div className="p-5">
+              {lifecycleLoading ? <p className="text-sm text-[#737373]">Loading lifecycle records…</p> : lifecycleError ? <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{lifecycleError}</p> : <>
+                <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                  {[
+                    ["Organizations", lifecycle.totals?.organizations || 0],
+                    ["Awakened", lifecycle.totals?.awakened || 0],
+                    ["Lifecycle events", lifecycle.totals?.lifecycle_count || 0],
+                    ["Completed", lifecycle.totals?.completed || 0],
+                    ["Needs attention", (lifecycle.totals?.in_progress || 0) + (lifecycle.totals?.failed || 0)],
+                  ].map(([label, value]) => <div key={label} className="rounded-xl border border-[#e3e0db] bg-white p-3"><p className="text-[11px] text-[#737373]">{label}</p><p className="mt-1 text-xl font-semibold text-[#111]">{value}</p></div>)}
+                </div>
+                {!lifecycle.organizations.length ? <p className="rounded-lg border border-[#e3e0db] bg-white p-4 text-sm text-[#737373]">This user does not belong to an active organization.</p> : <div className="space-y-3">
+                  {lifecycle.organizations.map((organization) => (
+                    <article key={organization.organization_id} className="rounded-xl border border-[#e3e0db] bg-white p-4">
+                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                      <div><h3 className="font-semibold text-[#111]">{organization.organization_name}</h3><p className="mt-1 text-xs text-[#737373]">{organization.awakened_at ? `${organization.days_since_awakening} days since awakening · ${when(organization.awakened_at)}` : "Not awakened yet"}</p></div>
+                      <span className="w-fit rounded-full bg-[#f3f1ec] px-2.5 py-1 text-[11px] font-medium text-[#525252]">{organization.lifecycle_counts.completed} complete · {organization.lifecycle_counts.total} recorded</span>
+                    </div>
+                    {!organization.episodes.length ? <p className="mt-3 text-sm text-[#737373]">No lifecycle records have been created for this organization.</p> : <ol className="mt-4 space-y-2">
+                      {organization.episodes.map((episode) => (
+                        <li key={episode.day} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#efede8] pt-2 text-sm"><span className="font-medium text-[#252525]">{episode.label}</span><span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${episode.status === "sent" || episode.status === "completed" || episode.status === "awakened" ? "bg-emerald-50 text-emerald-700" : episode.status === "failed" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>{episode.status}</span>{episode.occurred_at && <span className="w-full text-xs text-[#737373] sm:w-auto">{when(episode.occurred_at)}</span>}</li>
+                      ))}
+                    </ol>}
+                    </article>
+                  ))}
+                </div>}
+              </>}
+            </div>
           </section>
         </div>
       )}
