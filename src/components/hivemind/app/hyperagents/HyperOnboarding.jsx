@@ -385,7 +385,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
   const companyName = result?.company || (websiteUrl.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || 'Your company').toUpperCase();
 
   return (
-    <div className="flex flex-col gap-3 h-[calc(100vh-6.5rem)] min-h-[560px] overflow-hidden">
+    <div className="flex h-[calc(100dvh-6.5rem)] min-h-0 flex-col gap-3 overflow-hidden">
       {/* ── Top build-log strip (Polsia position, day-mode styling) ── */}
       <div className="shrink-0">
         <div className="flex items-center gap-2 mb-1.5 px-0.5">
@@ -393,13 +393,13 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           <span className="text-[11px] font-semibold text-[#525252] font-['Space_Grotesk']">{t('hyperOnboarding.buildLog', 'Build log')}</span>
           <span className="text-[10px] font-mono text-[#a3a3a3] ml-auto">{lines.length} steps</span>
         </div>
-        <div className={done ? 'h-[58px]' : 'h-[128px]'}>
+        <div className={done ? 'h-[58px]' : 'h-[clamp(68px,13vh,112px)]'}>
           <OnboardingTerminal lines={lines} done={done} error={error} />
         </div>
       </div>
 
       {/* ── Dashboard ── */}
-      <div className="flex-1 min-w-0 overflow-y-auto lg:overflow-hidden pr-1">
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto pr-1">
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-start gap-2.5">
             <SingulanceMark size={26} className="mt-0.5 flex-shrink-0" />
@@ -430,6 +430,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
               tagline={p.tagline}
               loading={Boolean(result?.screenshot_pending) || (!done && !result?.screenshot)}
               compact
+              contentClassName="lg:h-[clamp(220px,31vh,380px)] lg:aspect-auto"
               className="w-full shadow-[0_12px_36px_rgba(10,10,10,0.06)]"
             />
           </div>
@@ -492,15 +493,6 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           </div>
         </div>
 
-        <AnimatePresence>
-          {done && (
-            <motion.button initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              onClick={() => setAwakeningOpen(true)}
-              className="mt-3 w-full flex items-center justify-center gap-2 bg-[#0a0a0a] hover:bg-[#262626] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors">
-              {t('hyperOnboarding.enterHivemind', 'Enter your HIVEMIND')} <ArrowRight size={15} />
-            </motion.button>
-          )}
-        </AnimatePresence>
         {error && (
           <div className="mt-4 flex items-center justify-between bg-red-50 border border-red-200 rounded-xl px-4 py-3">
             <span className="text-[12.5px] text-[#dc2626] font-mono">{error}</span>
@@ -510,6 +502,24 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {done && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="shrink-0 border-t border-[#e3e0db] bg-[#faf9f4]/95 pt-2 backdrop-blur-sm"
+          >
+            <button
+              type="button"
+              onClick={() => setAwakeningOpen(true)}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0a0a0a] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#262626]"
+            >
+              {t('hyperOnboarding.enterHivemind', 'Enter your HIVEMIND')} <ArrowRight size={15} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {awakeningOpen && (

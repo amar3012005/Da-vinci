@@ -99,14 +99,15 @@ function WebsiteAnalysisParticles() {
 // use this same contained ratio so captures never stretch across the page.
 const PREVIEW_ASPECT = 'aspect-[16/10]';
 
-export default function WebsitePreview({ image, source, website, company, tagline, loading = false, compact = false, className = '' }) {
+export default function WebsitePreview({ image, source, website, company, tagline, loading = false, compact = false, className = '', contentClassName = '' }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [image]);
   const src = useMemo(() => previewSrc(image), [image]);
   const domain = websiteLabel(website);
   const hasRealImage = Boolean(src && !failed);
+  const dimensions = `${compact ? PREVIEW_ASPECT : 'aspect-video'} ${contentClassName}`;
   const content = loading && !hasRealImage ? (
-    <div className={`relative w-full ${compact ? PREVIEW_ASPECT : 'aspect-video'} overflow-hidden bg-[#eef0f2]`}>
+    <div className={`relative w-full ${dimensions} overflow-hidden bg-[#eef0f2]`}>
       <WebsiteAnalysisParticles />
       <div className="absolute inset-0 grid place-items-center">
         <span className="rounded-[6px] border border-[#cfd3d7] bg-white/85 px-2.5 py-1 text-[9.5px] font-mono uppercase text-[#52565a] backdrop-blur-sm">
@@ -118,14 +119,14 @@ export default function WebsitePreview({ image, source, website, company, taglin
     <img
       src={src}
       alt={`${company || domain || 'Company'} website preview`}
-      className={`w-full ${compact ? PREVIEW_ASPECT : 'aspect-video'} object-contain bg-white`}
+      className={`w-full ${dimensions} object-contain bg-white`}
       loading="eager"
       fetchPriority="high"
       decoding="async"
       onError={() => setFailed(true)}
     />
   ) : (
-    <div className={`relative w-full ${compact ? PREVIEW_ASPECT : 'aspect-video'} overflow-hidden bg-[#f4f6f8] px-5 py-4 flex flex-col justify-between`}>
+    <div className={`relative w-full ${dimensions} overflow-hidden bg-[#f4f6f8] px-5 py-4 flex flex-col justify-between`}>
       <div className="relative z-[1] flex items-start justify-between gap-3">
         <div className="w-9 h-9 rounded-[8px] bg-[#0a0a0a] text-white grid place-items-center">
           <Globe size={17} />
