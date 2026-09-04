@@ -66,9 +66,7 @@ export function liveReasoningRows(events = []) {
     }
     const tool = event?.tool || event?.name;
     if (tool && ['tool_selected', 'tool_started', 'tool_call', 'tool_completed', 'tool_result'].includes(type)) {
-      const args = normalizedArguments(event?.arguments);
-      const existingKey = [...rows.keys()].reverse().find((key) => key.startsWith(`tool:${tool}:`));
-      const key = args ? `tool:${tool}:${args.slice(0, 180)}` : (existingKey || `tool:${tool}:default`);
+      const key = `tool:${tool}`;
       const previous = rows.get(key) || {};
       const completed = type === 'tool_completed' || type === 'tool_result';
       rows.set(key, {
