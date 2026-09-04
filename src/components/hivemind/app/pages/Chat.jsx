@@ -445,6 +445,7 @@ export function ChatPanel({ isOpen, onClose }) {
           language: lang2,
           stream: true,
           router: 'tool',
+          use_tools: true,
           scope: chatScopeMode,
           ...((chatScopeMode === 'project' && (chatScope || activeProjectId))
             ? { project_id: chatScope || activeProjectId, project_ids: [chatScope || activeProjectId] }
@@ -559,7 +560,11 @@ export function ChatPanel({ isOpen, onClose }) {
     if (loading) return;
     const idx = messages.findIndex((m) => m.id === assistantMsg.id);
     for (let i = idx - 1; i >= 0; i--) {
-      if (messages[i].role === 'user') { sendText(messages[i].content); return; }
+      if (messages[i].role !== 'user') continue;
+      const content = String(messages[i].content || '').trim();
+      if (/^(Youtube|YouTube|Gmail|Github|GitHub|Notion|Slack|Linkedin|LinkedIn)$/i.test(content)) continue;
+      sendText(content);
+      return;
     }
   }, [loading, messages, sendText]);
 

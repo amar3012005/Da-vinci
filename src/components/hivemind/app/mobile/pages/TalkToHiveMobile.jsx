@@ -769,7 +769,11 @@ export default function TalkToHiveMobile() {
     const currentMessages = messagesRef.current;
     const idx = currentMessages.findIndex((m) => m.id === assistantMsg.id);
     for (let i = idx - 1; i >= 0; i--) {
-      if (currentMessages[i].role === 'user') { sendTextRef.current?.(currentMessages[i].content); return; }
+      if (currentMessages[i].role !== 'user') continue;
+      const content = String(currentMessages[i].content || '').trim();
+      if (/^(Youtube|YouTube|Gmail|Github|GitHub|Notion|Slack|Linkedin|LinkedIn)$/i.test(content)) continue;
+      sendTextRef.current?.(content);
+      return;
     }
   }, []);
 

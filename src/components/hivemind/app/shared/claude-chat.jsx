@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, ChevronRight, FileText, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
-  AlertTriangle, Loader2, ChevronDown, Brain, Sparkles, CornerDownRight,
+  AlertTriangle, Loader2, ChevronDown, Brain, Sparkles, CornerDownRight, Pencil,
 } from 'lucide-react';
 import apiClient from './api-client';
 import { BRAND_LOGOS } from './connectors-catalog';
@@ -446,8 +446,8 @@ function pendingActionToDraft(action) {
   return {
     id: action?.id,
     provider: action?.provider,
-    toolName: action?.toolName || action?.tool_name,
-    toolArgs: action?.toolArgs || action?.tool_args || {},
+    toolName: action?.toolName || action?.tool_name || action?.tool,
+    toolArgs: action?.toolArgs || action?.tool_args || action?.args || {},
     status: action?.status || 'draft',
     preview: action?.preview || null,
   };
@@ -510,6 +510,8 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
   const suppliedActions = Array.isArray(pendingActions) ? pendingActions : EMPTY_PENDING_ACTIONS;
   const [drafts, setDrafts] = useState(() => suppliedActions.map(pendingActionToDraft));
   const [busy, setBusy] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [edit, setEdit] = useState({ to: '', subject: '', body: '' });
   useEffect(() => {
     const ids = Array.isArray(draftIds) && draftIds.length
       ? draftIds : suppliedActions.map((action) => action.id).filter(Boolean);
@@ -530,8 +532,38 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
     try {
       const { data } = await apiClient.controlPlane.post(`/v1/proxy/pending-writes/${id}/${action}`, {});
       setDrafts(prev => prev.map(d => d.id === id ? (data?.draft || { ...d, status: data?.status || d.status }) : d));
+      setEditingId(null);
     } catch (err) {
       setDrafts(prev => prev.map(d => d.id === id ? { ...d, status: 'failed', errorMsg: err?.message } : d));
+    } finally { setBusy(null); }
+  };
+  const startEdit = (draft) => {
+    const presentation = draftPresentation(draft);
+    setEditingId(draft.id);
+    setEdit({
+      to: presentation.to || '',
+      subject: presentation.subject || '',
+      body: presentation.body || '',
+    });
+  };
+  const saveEdit = async (id) => {
+    setBusy(id);
+    try {
+      const tool_args = {
+        to: edit.to.trim(),
+        recipient_email: edit.to.trim(),
+        subject: edit.subject,
+        body: edit.body,
+      };
+      const { data } = await apiClient.controlPlane.patch(`/v1/proxy/pending-writes/${id}`, { tool_args });
+      const updated = data?.draft || null;
+      setDrafts((prev) => prev.map((row) => {
+        if (row.id !== id) return row;
+        return updated || { ...row, toolArgs: { ...(row.toolArgs || {}), ...tool_args } };
+      }));
+      setEditingId(null);
+    } catch (err) {
+      setDrafts((prev) => prev.map((row) => row.id === id ? { ...row, errorMsg: err?.message } : row));
     } finally { setBusy(null); }
   };
   if (drafts.length === 0) return null;
@@ -544,17 +576,43 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
         const failed = d.status === 'failed';
         const pending = d.status === 'draft';
         const executing = d.status === 'approved';
+        const editing = editingId === d.id;
         return (
           <section key={d.id} className={`text-[13px] ${cancelled ? 'opacity-60' : ''}`}>
-            <h3 className="text-[15px] font-semibold text-[#1a1a17]">{actionHeading(presentation)}</h3>
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="text-[15px] font-semibold text-[#1a1a17]">{actionHeading(presentation)}</h3>
+              {pending && presentation.kind === 'email' && (
+                <button
+                  type="button"
+                  onClick={() => (editing ? setEditingId(null) : startEdit(d))}
+                  className={`w-8 h-8 grid place-items-center border transition-colors ${editing ? 'bg-[#117dff] border-[#117dff] text-white' : 'border-[#e3e0db] text-[#737373] hover:text-[#0a0a0a] hover:bg-[#faf9f4]'}`}
+                  aria-label={editing ? 'Close editor' : 'Edit draft'}
+                  title="Edit draft"
+                >
+                  <Pencil size={14} />
+                </button>
+              )}
+            </div>
             {pending && <p className="mt-1 text-[12.5px] leading-relaxed text-[#73706a]">Nothing has been executed yet. Review the exact details below, then approve or cancel.</p>}
             {presentation.kind === 'email' ? (
               <div className="mt-4 space-y-3 text-[#353535]">
-                <div><strong className="font-semibold text-[#1a1a17]">To:</strong> <span className="break-all">{presentation.to || 'Not provided'}</span></div>
-                <div><strong className="font-semibold text-[#1a1a17]">Subject:</strong> {presentation.subject || 'No subject'}</div>
+                <div>
+                  <strong className="font-semibold text-[#1a1a17]">To:</strong>{' '}
+                  {editing
+                    ? <input value={edit.to} onChange={(e) => setEdit((prev) => ({ ...prev, to: e.target.value }))} className="mt-1 w-full border border-[#e3e0db] bg-white px-2.5 py-1.5 text-[13px] text-[#1a1a17] focus:border-[#117dff]/40 focus:outline-none" />
+                    : <span className="break-all">{presentation.to || 'Not provided'}</span>}
+                </div>
+                <div>
+                  <strong className="font-semibold text-[#1a1a17]">Subject:</strong>{' '}
+                  {editing
+                    ? <input value={edit.subject} onChange={(e) => setEdit((prev) => ({ ...prev, subject: e.target.value }))} className="mt-1 w-full border border-[#e3e0db] bg-white px-2.5 py-1.5 text-[13px] text-[#1a1a17] focus:border-[#117dff]/40 focus:outline-none" />
+                    : presentation.subject || 'No subject'}
+                </div>
                 <div>
                   <div className="font-semibold text-[#1a1a17]">Message</div>
-                  <div className="mt-1 max-h-96 overflow-y-auto whitespace-pre-wrap break-words text-[13.5px] leading-[1.65]">{presentation.body || 'No message body provided.'}</div>
+                  {editing
+                    ? <textarea value={edit.body} onChange={(e) => setEdit((prev) => ({ ...prev, body: e.target.value }))} rows={12} className="mt-1 w-full border border-[#e3e0db] bg-[#faf9f4] px-2.5 py-2 text-[13px] leading-[1.65] text-[#1a1a17] focus:border-[#117dff]/40 focus:bg-white focus:outline-none" />
+                    : <div className="mt-1 max-h-96 overflow-y-auto whitespace-pre-wrap break-words text-[13.5px] leading-[1.65]">{presentation.body || 'No message body provided.'}</div>}
                 </div>
               </div>
             ) : (
@@ -572,13 +630,20 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
             )}
             {pending && (
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <button onClick={() => act(d.id, 'approve')} disabled={busy === d.id}
-                  className="rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#262626] disabled:opacity-50">
-                  {busy === d.id ? 'Working…' : actionButtonLabel(presentation)}
-                </button>
-                <button onClick={() => act(d.id, 'cancel')} disabled={busy === d.id}
+                {editing ? (
+                  <button onClick={() => saveEdit(d.id)} disabled={busy === d.id}
+                    className="rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#262626] disabled:opacity-50">
+                    {busy === d.id ? 'Saving…' : 'Save edits'}
+                  </button>
+                ) : (
+                  <button onClick={() => act(d.id, 'approve')} disabled={busy === d.id}
+                    className="rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#262626] disabled:opacity-50">
+                    {busy === d.id ? 'Working…' : actionButtonLabel(presentation)}
+                  </button>
+                )}
+                <button onClick={() => (editing ? setEditingId(null) : act(d.id, 'cancel'))} disabled={busy === d.id}
                   className="rounded-[4px] border border-[#bdb8b0] bg-transparent px-4 py-2 text-[12px] font-medium text-[#525252] hover:border-[#77716a] disabled:opacity-50">
-                  Cancel
+                  {editing ? 'Discard edits' : 'Cancel'}
                 </button>
               </div>
             )}
