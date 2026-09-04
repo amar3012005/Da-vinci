@@ -194,7 +194,7 @@ function ContinuationChoices({ continuation, onContinue }) {
       }
     } catch (error) {
       if (authWindow && !authWindow.closed) authWindow.close();
-      setConnectError(error?.response?.data?.error || error?.message || 'Could not open Gmail connection');
+      setConnectError(error?.response?.data?.error || error?.message || 'Could not open the connection');
     } finally {
       setConnecting(false);
     }
@@ -235,7 +235,7 @@ function ContinuationChoices({ continuation, onContinue }) {
           ))}
         </div>
       )}
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {options.map((option) => (
           <button key={option.id} type="button" disabled={selected != null || connecting}
             onClick={() => {
@@ -246,7 +246,7 @@ function ContinuationChoices({ continuation, onContinue }) {
               setSelected(option.id);
               onContinue(continuation, request, option);
             }}
-            className="inline-flex items-center gap-2 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] font-medium text-[#30302d] hover:border-[#117dff] hover:text-[#0066e0] disabled:opacity-50">
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2.5 text-[13px] font-medium text-[#30302d] hover:border-[#117dff] hover:text-[#0066e0] disabled:opacity-50 sm:w-auto sm:min-h-0 sm:py-2 sm:text-[12px]">
             {isConnectOpenOption(option) && banner?.logo ? <img src={banner.logo} alt="" className="h-4 w-4" /> : null}
             {option.label}
           </button>
@@ -257,7 +257,7 @@ function ContinuationChoices({ continuation, onContinue }) {
               setSelected('field-input');
               onContinue(continuation, request, { id: 'field-input', label: 'Continue', values });
             }}
-            className="rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#262626] disabled:opacity-40">
+            className="min-h-11 w-full rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#262626] disabled:opacity-40 sm:min-h-0 sm:w-auto sm:py-2 sm:text-[12px]">
             Continue
           </button>
         )}
