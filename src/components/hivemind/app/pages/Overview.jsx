@@ -42,7 +42,6 @@ import { emitUsageChanged } from '../shared/useUsage';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/upload-store';
-import SingulanceMark from '../shared/SingulanceMark';
 // Reuse Web Studio's research-report toolkit rather than hand-rolling a
 // second implementation — same "view in Chrome" tab, same in-app preview
 // modal + save-to-HIVEMIND flow, same job-title derivation.
@@ -985,7 +984,7 @@ function OverviewChat({ inputRef }) {
         steps: Array.isArray(chatData.steps) ? chatData.steps : [],
         gaps: Array.isArray(chatData.gaps) ? chatData.gaps : [],
         follow_ups: Array.isArray(chatData.follow_ups) ? chatData.follow_ups : [],
-        orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
+        orchestration_events: streamedEvents.filter((event) => ['orchestration_step', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
         continuation: chatData.continuation || null,
         draft_ids: Array.isArray(chatData.draft_ids) ? chatData.draft_ids : [],
         pending_actions: Array.isArray(chatData.pending_actions) ? chatData.pending_actions : [],
@@ -1076,7 +1075,7 @@ function OverviewChat({ inputRef }) {
         steps: data.steps || [], draft_ids: data.draft_ids || [], sources: data.sources || [],
         pending_actions: data.pending_actions || [],
         follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
-        orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
+        orchestration_events: streamedEvents.filter((event) => ['orchestration_step', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
         continuation: data.continuation || null,
       }]);
     } catch (error) {
@@ -1575,14 +1574,14 @@ export default function Overview() {
   // Feature launcher — Overview is the entrance to every surface. The chat
   // entry focuses the inline composer (the chat lives on this page now).
   const FEATURES = [
-    { key: 'chat',      icon: Sparkles,  label: t('overview.feat.chat', 'Talk to HIVE'),        hint: t('overview.feat.chatHint', 'Ask HIVE anything and get answers grounded in your company memory.'), onClick: () => chatInputRef.current?.focus() },
-    { key: 'rooms',     icon: Users,     label: t('overview.feat.rooms', 'HyperAgents Rooms'),  hint: t('overview.feat.roomsHint', 'Bring AI specialists together to plan, challenge, and execute work.'), onClick: () => navigate('../employees') },
-    { key: 'workspace', icon: Building2, label: t('overview.feat.workspace', 'Workspace'),       hint: t('overview.feat.workspaceHint', 'Manage your team, projects, access, and company settings.'), onClick: () => navigate('../workspace') },
-    { key: 'knowledge', icon: BookOpen,  label: t('overview.feat.knowledge', 'Knowledge Base'),  hint: t('overview.feat.knowledgeHint', 'Upload any type of document and let HIVEMIND remember it forever.'), onClick: () => navigate('../knowledge') },
-    { key: 'graph',     icon: Network,   label: t('overview.feat.graph', 'Memory Graph'),        hint: t('overview.feat.graphHint', 'Explore how memories, people, decisions, and evidence connect over time.'), onClick: () => navigate('../graph') },
-    { key: 'swarm',     icon: Boxes,     label: t('overview.feat.swarm', 'Swarm'),               hint: t('overview.feat.swarmHint', 'Run specialized AI agents together across complex company work.'), onClick: () => navigate('../swarm') },
-    { key: 'connectors',icon: Cable,     label: t('overview.feat.connectors', 'Connectors'),     hint: t('overview.feat.connectorsHint', 'Connect the tools your company already uses and keep their knowledge in sync.'), onClick: () => navigate('../connectors') },
-    { key: 'web',       icon: Globe,     label: t('overview.feat.web', 'Web Intelligence'),      hint: t('overview.feat.webHint', 'Research the live web and turn trusted findings into durable company knowledge.'), onClick: () => navigate('../web') },
+    { key: 'chat',      icon: Sparkles,  label: t('overview.feat.chat', 'Talk to HIVE'),        hint: t('overview.feat.chatHint', 'Ask your second brain anything'), onClick: () => chatInputRef.current?.focus(), primary: true },
+    { key: 'rooms',     icon: Users,     label: t('overview.feat.rooms', 'HyperAgents Rooms'),  hint: t('overview.feat.roomsHint', 'Multi-agent collaboration rooms'), onClick: () => navigate('../employees') },
+    { key: 'workspace', icon: Building2, label: t('overview.feat.workspace', 'Workspace'),       hint: t('overview.feat.workspaceHint', 'Team, members & projects'),     onClick: () => navigate('../workspace') },
+    { key: 'knowledge', icon: BookOpen,  label: t('overview.feat.knowledge', 'Knowledge Base'),  hint: t('overview.feat.knowledgeHint', 'Upload & manage documents'),    onClick: () => navigate('../knowledge') },
+    { key: 'graph',     icon: Network,   label: t('overview.feat.graph', 'Memory Graph'),        hint: t('overview.feat.graphHint', '3D map of your memories'),         onClick: () => navigate('../graph') },
+    { key: 'swarm',     icon: Boxes,     label: t('overview.feat.swarm', 'Swarm'),               hint: t('overview.feat.swarmHint', 'Digital employees & agents'),      onClick: () => navigate('../swarm') },
+    { key: 'connectors',icon: Cable,     label: t('overview.feat.connectors', 'Connectors'),     hint: t('overview.feat.connectorsHint', 'Link Slack, Gmail, Notion…'), onClick: () => navigate('../connectors') },
+    { key: 'web',       icon: Globe,     label: t('overview.feat.web', 'Web Intelligence'),      hint: t('overview.feat.webHint', 'Research & live web recall'),        onClick: () => navigate('../web') },
   ];
 
   return (
@@ -1600,9 +1599,9 @@ export default function Overview() {
         transition={{ duration: 0.35 }}
         className="mb-6 bg-white border border-[#e3e0db] rounded-[10px] px-4 py-3 flex items-center gap-4 flex-wrap"
       >
-        {/* Brand mark only — the overview status bar stays intentionally quiet. */}
-        <div className="flex flex-shrink-0" aria-label="SINGULANCE">
-          <SingulanceMark size={36} />
+        {/* Badge */}
+        <div className="w-9 h-9 rounded-xl bg-[#0a0a0a] flex items-center justify-center flex-shrink-0">
+          <Hexagon size={18} className="text-white" />
         </div>
 
         {/* Live clock */}
@@ -1643,34 +1642,35 @@ export default function Overview() {
         </div>
       </motion.div>
 
-      {/* Feature launcher — borderless actions with translated use cases. */}
-      <div className="relative z-20 mb-6">
+      {/* Feature launcher — compact console tabs */}
+      <div className="mb-6">
         <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.18em] mb-2 ml-1">{t('overview.launch', 'Launch')}</p>
         <motion.div
           variants={stagger}
           initial="hidden"
           animate="show"
-          className="flex flex-wrap items-center gap-x-5 gap-y-3 overflow-visible"
+          className="flex flex-wrap gap-2"
         >
-          {FEATURES.map((f, index) => {
+          {FEATURES.map((f) => {
             const Icon = f.icon;
             return (
               <motion.button
                 key={f.key}
                 variants={fadeUp}
                 onClick={f.onClick}
-                aria-label={`${f.label}: ${f.hint}`}
-                className="group relative flex items-center gap-1.5 py-1 text-xs font-semibold text-[#0a0a0a] transition-colors hover:text-[#117dff] focus-visible:text-[#117dff] focus-visible:outline-none"
+                title={f.hint}
+                className={`group flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+                  f.primary
+                    ? 'bg-[#117dff] border-[#117dff] text-white shadow-[0_2px_8px_rgba(17,125,255,0.28)] hover:shadow-[0_3px_12px_rgba(17,125,255,0.4)]'
+                    : 'bg-white border-[#e3e0db] text-[#0a0a0a] hover:border-[#117dff]/40 hover:bg-[#f7f6f2]'
+                }`}
               >
-                <Icon size={15} className="text-[#117dff] flex-shrink-0" />
-                <span>{f.label}</span>
-                <span
-                  role="tooltip"
-                  className={`pointer-events-none absolute top-[calc(100%+8px)] z-30 w-60 border border-[#e3e0db] bg-white px-3 py-2.5 text-left text-[11px] font-normal leading-[1.5] text-[#525252] opacity-0 shadow-sm transition-all duration-150 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 ${index >= FEATURES.length - 2 ? 'right-0' : 'left-0'}`}
-                >
-                  <span className="block text-[10px] font-semibold text-[#0a0a0a] mb-0.5">{f.label}</span>
-                  {f.hint}
+                <span className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  f.primary ? 'bg-white/20' : 'bg-[#117dff]/10'
+                }`}>
+                  <Icon size={13} className={f.primary ? 'text-white' : 'text-[#117dff]'} />
                 </span>
+                {f.label}
               </motion.button>
             );
           })}

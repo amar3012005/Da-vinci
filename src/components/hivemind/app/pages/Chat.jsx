@@ -431,6 +431,7 @@ export function ChatPanel({ isOpen, onClose }) {
     const wireMessage = trimmed;
 
     try {
+      const streamedEvents = [];
       setAgentEvents([{ id: `${Date.now()}-plan`, type: 'plan' }]);
       const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
       const chatRes = await fetch(chatUrl, {
@@ -472,7 +473,9 @@ export function ChatPanel({ isOpen, onClose }) {
               setMessages((prev) => prev.filter((item) => item.id !== streamingId));
               return;
             }
-            setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-5));
+            const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
+            streamedEvents.push(next);
+            setAgentEvents([...streamedEvents]);
           })) || {}
         : await chatRes.json();
 
@@ -486,6 +489,8 @@ export function ChatPanel({ isOpen, onClose }) {
         steps: Array.isArray(data.steps) ? data.steps : [],
         draft_ids: Array.isArray(data.draft_ids) ? data.draft_ids : [],
         pending_actions: Array.isArray(data.pending_actions) ? data.pending_actions : [],
+        orchestration_events: streamedEvents.filter((event) => ['orchestration_step', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
+        continuation: data.continuation || null,
         trace: data.trace || null,
         project_choice: data.project_choice || null,
         scopes_found: Array.isArray(data.scopes_found) ? data.scopes_found : [],
@@ -533,7 +538,7 @@ export function ChatPanel({ isOpen, onClose }) {
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `Resume failed (${response.status})`);
       const data = (response.headers.get('content-type') || '').includes('text/event-stream')
-        ? (await readChatStream(response, (event) => setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-8)))) || {}
+        ? (await readChatStream(response, (event) => setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }]))) || {}
         : await response.json();
       setMessages((prev) => [...prev, {
         id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',

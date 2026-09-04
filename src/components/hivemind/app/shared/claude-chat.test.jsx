@@ -15,3 +15,13 @@ test('collapses lifecycle duplicates while preserving distinct tool calls and re
   expect(rows[1]).toMatchObject({ tool: 'evidence_rank', detail: 'Ranks 1–5 of 15' });
   expect(rows[2]).toMatchObject({ tool: 'next_evidence_hop', detail: 'Ranks 6–10 of 15' });
 });
+
+test('live rows keep github and gmail tool names from streamed events', () => {
+  const rows = liveReasoningRows([
+    { type: 'tool_started', name: 'GITHUB_LIST_REPOS' },
+    { type: 'tool_result', name: 'GITHUB_LIST_REPOS', result_summary: 'amar/HIVEMIND' },
+    { type: 'orchestration_step', step_id: 's2', index: 1, tool: 'GMAIL_CREATE_EMAIL_DRAFT', phase: 'draft_created', detail: 'draft to rama — not sent' },
+  ]);
+  expect(rows.some((row) => row.tool === 'GITHUB_LIST_REPOS' && row.phase === 'completed')).toBe(true);
+  expect(rows.some((row) => row.tool === 'GMAIL_CREATE_EMAIL_DRAFT')).toBe(true);
+});

@@ -682,7 +682,7 @@ export default function TalkToHiveMobile() {
         draft_ids: Array.isArray(data.draft_ids) ? data.draft_ids : [],
         pending_actions: Array.isArray(data.pending_actions) ? data.pending_actions : [],
         trace: data.trace || null,
-        orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
+        orchestration_events: streamedEvents.filter((event) => ['orchestration_step', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
         continuation: data.continuation || null,
         project_choice: data.project_choice || null,
         // Scope provenance — which tier(s) the answer's memories came from
@@ -753,7 +753,7 @@ export default function TalkToHiveMobile() {
         steps: data.steps || [], draft_ids: data.draft_ids || [], sources: data.sources || [],
         pending_actions: data.pending_actions || [],
         follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
-        orchestration_events: streamedEvents.filter((event) => event.type === 'orchestration_step'),
+        orchestration_events: streamedEvents.filter((event) => ['orchestration_step', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
         continuation: data.continuation || null,
       }]);
     } catch (error) {
