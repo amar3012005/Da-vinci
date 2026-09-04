@@ -160,6 +160,7 @@ function ContinuationChoices({ continuation, onContinue }) {
   const resumeRequest = { ...request, step_index: request?.step_index ?? 0 };
   const fieldsComplete = fields.every((field) => !field.required || String(values[field.name] || '').trim());
   const banner = request?.kind === 'connect_account' ? connectBanner(request, BRAND_LOGOS) : null;
+  const enableTools = request?.kind === 'enable_tools';
   const continueWith = (option) => {
     if (selectedRef.current || !onContinue) return;
     selectedRef.current = option.id;
@@ -225,6 +226,12 @@ function ContinuationChoices({ continuation, onContinue }) {
             <div className="text-[13px] font-semibold text-[#1a1a17]">Connect {banner.name}</div>
             <div className="text-[12px] text-[#5f5b54]">Authorize in a new tab, then continue this request.</div>
           </div>
+        </div>
+      ) : null}
+      {enableTools ? (
+        <div className="mb-3 border border-[#e5dfd6] bg-[#faf8f4] px-3 py-2.5">
+          <div className="text-[13px] font-semibold text-[#1a1a17]">Enable tools for this request</div>
+          <div className="text-[12px] text-[#5f5b54]">Turn on connected apps and I will continue the same query. Drafts stay for your approval.</div>
         </div>
       ) : null}
       <div className="text-[14px] font-semibold text-[#1a1a17]">I need your input to continue</div>

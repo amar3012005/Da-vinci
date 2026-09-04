@@ -8,6 +8,9 @@ const USE_TOOLS_UNIFIED_DAG_FLAG_KEY = 'USE_TOOLS_UNIFIED_DAG';
 const USE_TOOLS_DURABLE_AGENT_FLAG_PATH = '/__hivemind/feature-flags/use-tools-durable-agent';
 const USE_TOOLS_DURABLE_AGENT_FLAGSHIP_KEY = 'use-tools-durable-agent';
 const USE_TOOLS_DURABLE_AGENT_ENV_KEY = 'USE_TOOLS_DURABLE_AGENT';
+const ENABLE_TOOLS_HITL_FLAG_PATH = '/__hivemind/feature-flags/enable-tools-hitl';
+const ENABLE_TOOLS_HITL_FLAGSHIP_KEY = 'enable-tools-hitl';
+const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const PUBLIC_MARKETING_HOSTS = new Set([
   'singulancelabs.com',
   'www.singulancelabs.com',
@@ -102,6 +105,36 @@ export default {
     }
     if (pathname === USE_TOOLS_UNIFIED_DAG_FLAG_PATH) {
       return booleanFlagshipResponse(request, env, USE_TOOLS_UNIFIED_DAG_FLAG_KEY);
+    }
+    if (pathname === ENABLE_TOOLS_HITL_FLAG_PATH) {
+      let enabled = false;
+      try {
+        enabled = await env.FLAGS.getBooleanValue(ENABLE_TOOLS_HITL_FLAGSHIP_KEY, false, {
+          environment: 'production',
+          surface: 'hivemind-web',
+          hostname: hostname(request),
+        });
+        if (enabled !== true) {
+          enabled = await env.FLAGS.getBooleanValue(ENABLE_TOOLS_HITL_ENV_KEY, false, {
+            environment: 'production',
+            surface: 'hivemind-web',
+            hostname: hostname(request),
+          });
+        }
+      } catch {
+        // Public gates fail closed if Flagship cannot be evaluated.
+      }
+      return new Response(JSON.stringify({
+        key: ENABLE_TOOLS_HITL_FLAGSHIP_KEY,
+        enabled: enabled === true,
+        source: 'cloudflare-flagship',
+      }), {
+        headers: {
+          'cache-control': 'no-store',
+          'content-type': 'application/json; charset=utf-8',
+          'x-robots-tag': 'noindex, nofollow, noarchive, nosnippet',
+        },
+      });
     }
     if (pathname === USE_TOOLS_DURABLE_AGENT_FLAG_PATH) {
       let enabled = false;

@@ -8,6 +8,22 @@ function envReturning(response, flagValue = false) {
   };
 }
 
+const enableToolsHitl = await worker.fetch(
+  new Request('https://admin.hivemind.singulancelabs.com/__hivemind/feature-flags/enable-tools-hitl'),
+  {
+    ASSETS: { fetch: async () => new Response('unused') },
+    FLAGS: {
+      getBooleanValue: async (key) => key === 'enable-tools-hitl',
+    },
+  },
+);
+assert.equal(enableToolsHitl.status, 200);
+assert.deepEqual(await enableToolsHitl.json(), {
+  key: 'enable-tools-hitl',
+  enabled: true,
+  source: 'cloudflare-flagship',
+});
+
 const enabledFlag = await worker.fetch(
   new Request('https://admin.hivemind.singulancelabs.com/__hivemind/feature-flags/partner-referrals'),
   envReturning(new Response('unused'), true),

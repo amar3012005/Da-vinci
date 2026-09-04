@@ -729,16 +729,18 @@ export default function TalkToHiveMobile() {
   const continueOrchestration = useCallback(async (continuation, request, option) => {
     if (loading || requestInFlightRef.current) return;
     requestInFlightRef.current = true;
+    if (request?.kind === 'enable_tools' && option?.id === 'enable') setUseTools(true);
     setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: option.label }]);
     setLoading(true);
     const streamedEvents = [];
     setAgentEvents([]);
     try {
       const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
+      const enableTools = request?.kind === 'enable_tools' ? option?.id === 'enable' : true;
       const response = await fetch(chatUrl, {
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: option.label, stream: true, use_tools: true,
+          message: option.label, stream: true, use_tools: enableTools,
           continuation_token: continuation.token,
           continuation_response: { step_index: request.step_index ?? 0, option_id: option.id, value: option.value, values: option.values },
         }),

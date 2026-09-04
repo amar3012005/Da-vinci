@@ -529,7 +529,7 @@ export function ChatPanel({ isOpen, onClose }) {
       const response = await fetch(chatUrl, {
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: option.label, stream: true, use_tools: true,
+          message: option.label, stream: true, use_tools: request?.kind === 'enable_tools' ? option?.id === 'enable' : true,
           continuation_token: continuation.token,
           continuation_response: {
             step_index: request.step_index ?? 0, option_id: option.id,
