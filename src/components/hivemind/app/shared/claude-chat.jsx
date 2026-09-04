@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, ChevronRight, FileText, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
-  AlertTriangle, Loader2, ChevronDown, Brain, Sparkles, CornerDownRight,
+  AlertTriangle, Loader2, ChevronDown, Brain, Sparkles, CornerDownRight, Pencil,
 } from 'lucide-react';
 import apiClient from './api-client';
 import { BRAND_LOGOS } from './connectors-catalog';
@@ -528,10 +528,43 @@ function actionSuccessLabel(presentation) {
 // One governed approval card shared by desktop and mobile. The chat response
 // supplies exact immutable arguments immediately; the list request refreshes
 // authoritative status when available.
+function DraftField({ label, value, editing, onEdit, onChange, onSave, multiline }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <strong className="font-semibold text-[#1a1a17]">{label}</strong>
+        {!editing && (
+          <button type="button" onClick={onEdit} className="text-[#73706a] hover:text-[#117dff]" aria-label={`Edit ${label}`}>
+            <Pencil size={13} />
+          </button>
+        )}
+      </div>
+      {editing ? (
+        <div className="mt-1">
+          {multiline ? (
+            <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={8}
+              className="w-full border-0 border-b border-[#bdb8b0] bg-transparent py-1 text-[13.5px] leading-[1.65] text-[#1a1a17] outline-none focus:border-[#117dff]" />
+          ) : (
+            <input value={value} onChange={(event) => onChange(event.target.value)}
+              className="w-full border-0 border-b border-[#bdb8b0] bg-transparent py-1 text-[13px] text-[#1a1a17] outline-none focus:border-[#117dff]" />
+          )}
+          <button type="button" onClick={onSave} className="mt-1 text-[12px] font-medium text-[#117dff]">Save</button>
+        </div>
+      ) : (
+        <div className={`mt-1 break-words text-[13.5px] leading-[1.65] ${multiline ? 'max-h-96 overflow-y-auto whitespace-pre-wrap' : 'break-all'}`}>
+          {value || 'Not provided'}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MobileDraftCards({ draftIds, pendingActions }) {
   const suppliedActions = Array.isArray(pendingActions) ? pendingActions : EMPTY_PENDING_ACTIONS;
   const [drafts, setDrafts] = useState(() => suppliedActions.map(pendingActionToDraft));
   const [busy, setBusy] = useState(null);
+  const [editing, setEditing] = useState({});
+  const [editValues, setEditValues] = useState({});
   useEffect(() => {
     const ids = Array.isArray(draftIds) && draftIds.length
       ? draftIds : suppliedActions.map((action) => action.id).filter(Boolean);
@@ -547,6 +580,22 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
     })();
     return () => { cancelled = true; };
   }, [draftIds, suppliedActions]);
+  const saveField = async (draft, field, value) => {
+    const args = { ...(draft.toolArgs || {}) };
+    if (field === 'to') {
+      args.to = value;
+      args.recipient_email = value;
+    } else if (field === 'subject') args.subject = value;
+    else args.body = value;
+    setBusy(draft.id);
+    try {
+      const { data } = await apiClient.controlPlane.patch(`/v1/proxy/pending-writes/${draft.id}`, { tool_args: args });
+      setDrafts((prev) => prev.map((row) => (row.id === draft.id ? (data?.draft || { ...row, toolArgs: args }) : row)));
+      setEditing((prev) => ({ ...prev, [`${draft.id}:${field}`]: false }));
+    } catch (err) {
+      setDrafts((prev) => prev.map((row) => (row.id === draft.id ? { ...row, errorMsg: err?.response?.data?.error || err.message } : row)));
+    } finally { setBusy(null); }
+  };
   const act = async (id, action) => {
     setBusy(id);
     try {
@@ -572,12 +621,21 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
             {pending && <p className="mt-1 text-[12.5px] leading-relaxed text-[#73706a]">Nothing has been executed yet. Review the exact details below, then approve or cancel.</p>}
             {presentation.kind === 'email' ? (
               <div className="mt-4 space-y-3 text-[#353535]">
-                <div><strong className="font-semibold text-[#1a1a17]">To:</strong> <span className="break-all">{presentation.to || 'Not provided'}</span></div>
-                <div><strong className="font-semibold text-[#1a1a17]">Subject:</strong> {presentation.subject || 'No subject'}</div>
-                <div>
-                  <div className="font-semibold text-[#1a1a17]">Message</div>
-                  <div className="mt-1 max-h-96 overflow-y-auto whitespace-pre-wrap break-words text-[13.5px] leading-[1.65]">{presentation.body || 'No message body provided.'}</div>
-                </div>
+                <DraftField label="To" value={editValues[`${d.id}:to`] ?? presentation.to}
+                  editing={editing[`${d.id}:to`]} multiline={false}
+                  onEdit={() => { setEditing((prev) => ({ ...prev, [`${d.id}:to`]: true })); setEditValues((prev) => ({ ...prev, [`${d.id}:to`]: presentation.to })); }}
+                  onChange={(value) => setEditValues((prev) => ({ ...prev, [`${d.id}:to`]: value }))}
+                  onSave={() => saveField(d, 'to', editValues[`${d.id}:to`])} />
+                <DraftField label="Subject" value={editValues[`${d.id}:subject`] ?? presentation.subject}
+                  editing={editing[`${d.id}:subject`]} multiline={false}
+                  onEdit={() => { setEditing((prev) => ({ ...prev, [`${d.id}:subject`]: true })); setEditValues((prev) => ({ ...prev, [`${d.id}:subject`]: presentation.subject })); }}
+                  onChange={(value) => setEditValues((prev) => ({ ...prev, [`${d.id}:subject`]: value }))}
+                  onSave={() => saveField(d, 'subject', editValues[`${d.id}:subject`])} />
+                <DraftField label="Message" value={editValues[`${d.id}:body`] ?? presentation.body}
+                  editing={editing[`${d.id}:body`]} multiline
+                  onEdit={() => { setEditing((prev) => ({ ...prev, [`${d.id}:body`]: true })); setEditValues((prev) => ({ ...prev, [`${d.id}:body`]: presentation.body })); }}
+                  onChange={(value) => setEditValues((prev) => ({ ...prev, [`${d.id}:body`]: value }))}
+                  onSave={() => saveField(d, 'body', editValues[`${d.id}:body`])} />
               </div>
             ) : (
               <div className="mt-4 space-y-3 text-[#353535]">
