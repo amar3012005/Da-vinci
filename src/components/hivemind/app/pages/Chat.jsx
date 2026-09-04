@@ -532,7 +532,7 @@ export function ChatPanel({ isOpen, onClose }) {
           message: option.label, stream: true, use_tools: true,
           continuation_token: continuation.token,
           continuation_response: {
-            step_index: request.step_index, option_id: option.id,
+            step_index: request.step_index ?? 0, option_id: option.id,
             value: option.value, values: option.values,
           },
         }),

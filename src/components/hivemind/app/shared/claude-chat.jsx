@@ -4,7 +4,7 @@
 // pill (StepsDisclosure), sources pill, copy/retry/vote action row, draft
 // approval cards, project-choice saver, and the live Thinking tool animation.
 // Extracted from mobile TalkToHiveMobile (the reference implementation).
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, ChevronRight, FileText, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
@@ -12,7 +12,15 @@ import {
 } from 'lucide-react';
 import apiClient from './api-client';
 import { BRAND_LOGOS } from './connectors-catalog';
-import { connectBanner, connectToolkitOf, httpConnectUrl, isConnectOpenOption } from './connect-continuation';
+import {
+  COMPOSIO_CONNECT_CHANNEL,
+  composioCallbackUrl,
+  connectBanner,
+  connectToolkitOf,
+  httpConnectUrl,
+  isComposioConnectSuccess,
+  isConnectOpenOption,
+} from './connect-continuation';
 
 function connectorKey(event) {
   const raw = String(event?.tool_groups?.[0] || event?.tool || event?.name || '').toLowerCase();
@@ -145,33 +153,58 @@ function ContinuationChoices({ continuation, onContinue }) {
   const [values, setValues] = useState({});
   const [connectError, setConnectError] = useState('');
   const [connecting, setConnecting] = useState(false);
+  const selectedRef = useRef(null);
   const request = continuation?.requests?.[0];
   const options = Array.isArray(request?.options) ? request.options : [];
   const fields = Array.isArray(request?.fields) ? request.fields : [];
-  if ((!options.length && !fields.length) || !onContinue) return null;
+  const resumeRequest = { ...request, step_index: request?.step_index ?? 0 };
   const fieldsComplete = fields.every((field) => !field.required || String(values[field.name] || '').trim());
   const banner = request?.kind === 'connect_account' ? connectBanner(request, BRAND_LOGOS) : null;
+  const continueWith = (option) => {
+    if (selectedRef.current || !onContinue) return;
+    selectedRef.current = option.id;
+    setSelected(option.id);
+    onContinue(continuation, resumeRequest, option);
+  };
+  useEffect(() => {
+    if (!banner?.toolkit || !onContinue) return undefined;
+    const onPayload = (payload) => {
+      if (!isComposioConnectSuccess(payload, banner.toolkit)) return;
+      const connected = options.find((option) => option.id === 'connected');
+      if (connected) continueWith(connected);
+    };
+    const onWindowMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+      onPayload(event.data);
+    };
+    window.addEventListener('message', onWindowMessage);
+    let channel = null;
+    try {
+      channel = new BroadcastChannel(COMPOSIO_CONNECT_CHANNEL);
+      channel.onmessage = (event) => onPayload(event.data);
+    } catch { /* BroadcastChannel unsupported */ }
+    return () => {
+      window.removeEventListener('message', onWindowMessage);
+      try { channel?.close(); } catch { /* ignore */ }
+    };
+  }, [banner?.toolkit, continuation, onContinue, options]);
+  if ((!options.length && !fields.length) || !onContinue) return null;
   const openConnect = async (option) => {
     const toolkit = connectToolkitOf(request, option);
     setConnectError('');
     setConnecting(true);
-    const known = httpConnectUrl(option.href) || httpConnectUrl(request.redirect_url);
-    if (known) {
-      window.open(known, '_blank', 'noopener,noreferrer');
-      setConnecting(false);
-      return;
-    }
     const authWindow = window.open('about:blank', '_blank');
     try {
       if (!toolkit) throw new Error('No app to connect');
       const data = await apiClient.createComposioConnectLink(toolkit, {
-        callbackUrl: `${window.location.origin}/hivemind/app/connectors?composio_connected=${encodeURIComponent(toolkit)}`,
+        callbackUrl: composioCallbackUrl(window.location.origin, toolkit),
         toolkitMeta: { composioManagedAuthSchemes: ['OAUTH2'], noAuth: false },
-      });
-      const url = httpConnectUrl(data?.redirect_url || data?.redirectUrl);
+      }).catch(() => null);
+      const url = httpConnectUrl(data?.redirect_url || data?.redirectUrl)
+        || httpConnectUrl(option.href)
+        || httpConnectUrl(request.redirect_url);
       if (!url) throw new Error('No OAuth URL returned for this app');
       if (authWindow && !authWindow.closed) {
-        authWindow.opener = null;
         authWindow.location.replace(url);
       } else {
         window.open(url, '_blank', 'noopener,noreferrer');
@@ -221,8 +254,7 @@ function ContinuationChoices({ continuation, onContinue }) {
                 openConnect(option);
                 return;
               }
-              setSelected(option.id);
-              onContinue(continuation, request, option);
+              continueWith(option);
             }}
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2.5 text-[13px] font-medium text-[#30302d] hover:border-[#117dff] hover:text-[#0066e0] disabled:opacity-50 sm:w-auto sm:min-h-0 sm:py-2 sm:text-[12px]">
             {isConnectOpenOption(option) && banner?.logo ? <img src={banner.logo} alt="" className="h-4 w-4" /> : null}
@@ -232,8 +264,7 @@ function ContinuationChoices({ continuation, onContinue }) {
         {fields.length > 0 && (
           <button type="button" disabled={selected != null || !fieldsComplete}
             onClick={() => {
-              setSelected('field-input');
-              onContinue(continuation, request, { id: 'field-input', label: 'Continue', values });
+              continueWith({ id: 'field-input', label: 'Continue', values });
             }}
             className="min-h-11 w-full rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#262626] disabled:opacity-40 sm:min-h-0 sm:w-auto sm:py-2 sm:text-[12px]">
             Continue

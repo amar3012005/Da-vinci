@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { COMPOSIO_CONNECT_CHANNEL, COMPOSIO_CONNECT_EVENT } from '../shared/connect-continuation';
+import { COMPOSIO_CONNECT_CHANNEL, parseComposioCallbackSearch } from '../shared/connect-continuation';
 
 /**
  * Lands here after Composio OAuth (new tab). Notifies the original chat tab
@@ -8,12 +8,8 @@ import { COMPOSIO_CONNECT_CHANNEL, COMPOSIO_CONNECT_EVENT } from '../shared/conn
  */
 export default function ComposioConnectCallback() {
   const [params] = useSearchParams();
-  const payload = useMemo(() => ({
-    type: COMPOSIO_CONNECT_EVENT,
-    toolkit: params.get('composio_toolkit') || params.get('toolkit') || '',
-    status: params.get('status') || (params.get('connected_account_id') ? 'success' : 'unknown'),
-    connectedAccountId: params.get('connected_account_id') || '',
-  }), [params]);
+  const payload = useMemo(() => parseComposioCallbackSearch(params), [params]);
+  const name = String(payload.toolkit || 'app').replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
   useEffect(() => {
     try {
@@ -26,7 +22,7 @@ export default function ComposioConnectCallback() {
     } catch { /* BroadcastChannel unsupported */ }
     const timer = window.setTimeout(() => {
       if (window.opener && !window.opener.closed) window.close();
-    }, 400);
+    }, 800);
     return () => window.clearTimeout(timer);
   }, [payload]);
 
@@ -34,12 +30,12 @@ export default function ComposioConnectCallback() {
   return (
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 px-6 text-center">
       <div className="text-[16px] font-semibold text-[#1a1a17]">
-        {ok ? 'Gmail connected' : 'Connection returned'}
+        {ok ? `${name} connected` : 'Connection returned'}
       </div>
       <div className="text-[13px] text-[#5f5b54]">
         {ok
-          ? 'This tab can close. Continue the request in Singulance.'
-          : 'Return to the chat tab and click continue if the banner has not updated.'}
+          ? 'This tab can close. The chat tab will continue the request.'
+          : 'Return to the chat tab and click “I’ve connected” if the banner has not updated.'}
       </div>
     </div>
   );

@@ -9,6 +9,22 @@ export function composioCallbackUrl(origin, toolkit) {
   return url.toString();
 }
 
+export function parseComposioCallbackSearch(searchParams) {
+  const get = (key) => {
+    if (searchParams && typeof searchParams.get === 'function') return searchParams.get(key);
+    if (searchParams && typeof searchParams === 'object') return searchParams[key] ?? null;
+    return null;
+  };
+  const connectedAccountId = get('connectedAccountId') || get('connected_account_id') || '';
+  const status = get('status') || (connectedAccountId ? 'success' : '');
+  return {
+    type: COMPOSIO_CONNECT_EVENT,
+    toolkit: get('composio_toolkit') || get('toolkit') || get('appName') || get('app_name') || '',
+    status,
+    connectedAccountId,
+  };
+}
+
 export function isComposioConnectSuccess(payload, toolkit) {
   if (!payload || payload.type !== COMPOSIO_CONNECT_EVENT) return false;
   const got = String(payload.toolkit || '').toLowerCase();
