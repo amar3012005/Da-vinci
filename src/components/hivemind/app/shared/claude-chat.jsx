@@ -4,7 +4,7 @@
 // pill (StepsDisclosure), sources pill, copy/retry/vote action row, draft
 // approval cards, project-choice saver, and the live Thinking tool animation.
 // Extracted from mobile TalkToHiveMobile (the reference implementation).
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, ChevronRight, FileText, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
@@ -21,6 +21,8 @@ import {
   isComposioConnectSuccess,
   isConnectOpenOption,
 } from './connect-continuation';
+
+const MarkdownMessage = lazy(() => import('./MarkdownMessage'));
 
 function connectorKey(event) {
   const raw = String(event?.tool_groups?.[0] || event?.tool || event?.name || '').toLowerCase();
@@ -744,6 +746,7 @@ export function StepsDisclosure({ steps }) {
 // Claude-style assistant turn: NO bubble. Reasoning pill → serif answer on the
 // canvas → Sources pill → copy / retry / thumbs action row.
 export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFollowUp }) {
+  const progressive = (msg.harness_version || msg.execution?.harness_version) === 'progressive-v1';
   const [showSources, setShowSources] = useState(false);
   const [copied, setCopied] = useState(false);
   const [vote, setVote] = useState(null);
@@ -773,9 +776,9 @@ export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFol
 
       <div
         className={`text-[16.5px] leading-[1.7] break-words space-y-2 ${msg.error ? 'text-[#b91c1c]' : 'text-[#1a1a17]'}`}
-        style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+        style={progressive ? undefined : { fontFamily: 'Georgia, "Times New Roman", serif' }}
       >
-        {renderMarkdownMobile(msg.content)}
+        {progressive ? <Suspense fallback={<div className="whitespace-pre-wrap">{msg.content}</div>}><MarkdownMessage>{msg.content}</MarkdownMessage></Suspense> : renderMarkdownMobile(msg.content)}
       </div>
 
       {Array.isArray(msg.scopes_found) && msg.scopes_found.length > 0 && (

@@ -13,7 +13,7 @@ import remarkGfm from 'remark-gfm';
 export default function MarkdownMessage({ children, className = '' }) {
   const text = typeof children === 'string' ? children : String(children ?? '');
   return (
-    <div className={`hm-md ${className}`}>
+    <div dir="auto" className={`hm-md min-w-0 leading-[1.75] ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -31,11 +31,12 @@ export default function MarkdownMessage({ children, className = '' }) {
           td: ({ node, ...props }) => (
             <td {...props} className="border border-[#e3e0db] px-2 py-1 align-top" />
           ),
-          code: ({ node, inline, ...props }) => (
-            inline
-              ? <code {...props} className="bg-[#f3f1ec] rounded px-1 py-0.5 text-[12px] font-mono" />
-              : <code {...props} className="block bg-[#f3f1ec] rounded-md p-2.5 text-[12px] font-mono overflow-x-auto" />
-          ),
+          // react-markdown v9 does not supply `inline`. A pre owns fenced
+          // block layout; code remains inline in paragraphs and list items.
+          code: ({ node, className = '', ...props }) => <code {...props} className={`bg-[#f3f1ec] rounded px-1 py-0.5 text-[0.85em] font-mono ${className}`} />,
+          pre: ({ node, ...props }) => <pre {...props} className="my-3 rounded-[10px] border border-[#e3e0db] bg-[#f3f1ec] p-3 text-[13px] leading-relaxed overflow-x-auto [&>code]:p-0 [&>code]:bg-transparent" />,
+          blockquote: ({ node, ...props }) => <blockquote {...props} className="my-3 border-l-2 border-[#d4d0ca] pl-4 text-[#737373]" />,
+          img: ({ node, alt }) => <span className="text-[#737373]">{alt || ''}</span>,
           ul: ({ node, ...props }) => <ul {...props} className="list-disc pl-5 my-1.5 space-y-0.5" />,
           ol: ({ node, ...props }) => <ol {...props} className="list-decimal pl-5 my-1.5 space-y-0.5" />,
           h1: ({ node, children, ...props }) => <h1 {...props} className="text-[15px] font-bold mt-2 mb-1">{children}</h1>,

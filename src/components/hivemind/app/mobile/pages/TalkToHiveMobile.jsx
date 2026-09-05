@@ -678,6 +678,8 @@ export default function TalkToHiveMobile() {
         sources: (data.sources || []).map(s => ({ ...s, title: s.title || (s.content || '').slice(0, 60) })),
         model: MODELS.find((m) => m.id === selectedModel)?.label || selectedModel,
         usage: data.usage || null,
+        harness_version: data.harness_version || data.execution?.harness_version || null,
+        execution: data.execution || null,
         steps: Array.isArray(data.steps) ? data.steps : [],
         draft_ids: Array.isArray(data.draft_ids) ? data.draft_ids : [],
         pending_actions: Array.isArray(data.pending_actions) ? data.pending_actions : [],
@@ -753,6 +755,8 @@ export default function TalkToHiveMobile() {
       setMessages((prev) => [...prev, {
         id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
         steps: data.steps || [], draft_ids: data.draft_ids || [], sources: data.sources || [],
+        harness_version: data.harness_version || data.execution?.harness_version || null,
+        execution: data.execution || null,
         pending_actions: data.pending_actions || [],
         follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
         orchestration_events: streamedEvents.filter((event) => ['orchestration_step', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),

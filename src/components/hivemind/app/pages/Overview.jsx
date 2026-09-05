@@ -984,6 +984,8 @@ function OverviewChat({ inputRef }) {
         steps: Array.isArray(chatData.steps) ? chatData.steps : [],
         gaps: Array.isArray(chatData.gaps) ? chatData.gaps : [],
         follow_ups: Array.isArray(chatData.follow_ups) ? chatData.follow_ups : [],
+        harness_version: chatData.harness_version || chatData.execution?.harness_version || null,
+        execution: chatData.execution || null,
         orchestration_events: streamedEvents.filter((event) => ['orchestration_step', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
         continuation: chatData.continuation || null,
         draft_ids: Array.isArray(chatData.draft_ids) ? chatData.draft_ids : [],
@@ -1077,6 +1079,8 @@ function OverviewChat({ inputRef }) {
         steps: data.steps || [], draft_ids: data.draft_ids || [], sources: data.sources || [],
         pending_actions: data.pending_actions || [],
         follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
+        harness_version: data.harness_version || data.execution?.harness_version || null,
+        execution: data.execution || null,
         orchestration_events: streamedEvents.filter((event) => ['orchestration_step', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
         continuation: data.continuation || null,
       }]);

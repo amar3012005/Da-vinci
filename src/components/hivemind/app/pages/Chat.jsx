@@ -487,6 +487,8 @@ export function ChatPanel({ isOpen, onClose }) {
         sources: (data.sources || []).map(s => ({ ...s, title: s.title || (s.content || '').slice(0, 60) })),
         model: MODELS.find((m) => m.id === selectedModel)?.label || selectedModel,
         usage: data.usage || null,
+        harness_version: data.harness_version || data.execution?.harness_version || null,
+        execution: data.execution || null,
         steps: Array.isArray(data.steps) ? data.steps : [],
         draft_ids: Array.isArray(data.draft_ids) ? data.draft_ids : [],
         pending_actions: Array.isArray(data.pending_actions) ? data.pending_actions : [],
@@ -544,6 +546,8 @@ export function ChatPanel({ isOpen, onClose }) {
       setMessages((prev) => [...prev, {
         id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
         steps: data.steps || [], draft_ids: data.draft_ids || [], pending_actions: data.pending_actions || [],
+        harness_version: data.harness_version || data.execution?.harness_version || null,
+        execution: data.execution || null,
         sources: data.sources || [], continuation: data.continuation || null,
         follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
       }]);
