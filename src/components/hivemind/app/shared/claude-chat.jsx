@@ -11,6 +11,7 @@ import {
   AlertTriangle, Loader2, ChevronDown, Brain, Sparkles, CornerDownRight, Pencil,
 } from 'lucide-react';
 import apiClient from './api-client';
+import { progressiveDraftFields, parseProgressiveDraftFields } from './progressive-draft-fields';
 import { BRAND_LOGOS } from './connectors-catalog';
 import {
   COMPOSIO_CONNECT_CHANNEL,
@@ -505,13 +506,15 @@ function firstDraftArg(args, names) {
 }
 
 export function draftPresentation(draft) {
+  const fields = progressiveDraftFields(draft);
+  if (fields) return { kind: 'generic', editable: true, fields };
   const args = draft?.toolArgs || {};
   const tool = String(draft?.toolName || '').toLowerCase();
   const email = tool.includes('gmail') || tool.includes('email');
   if (!email) return {
     kind: 'generic',
     fields: Object.entries(args)
-      .filter(([name]) => name !== '_composio_slug')
+      .filter(([name]) => !name.startsWith('_'))
       .map(([name, value]) => ({
         name: String(name).replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
         value: typeof value === 'string' ? value : JSON.stringify(value, null, 2),
@@ -580,6 +583,10 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
   const startEdit = (draft) => {
     const presentation = draftPresentation(draft);
     setEditingId(draft.id);
+    if (presentation.editable) {
+      setEdit(Object.fromEntries(presentation.fields.map(field => [field.key, field.value])));
+      return;
+    }
     setEdit({
       to: presentation.to || '',
       subject: presentation.subject || '',
@@ -589,7 +596,8 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
   const saveEdit = async (id) => {
     setBusy(id);
     try {
-      const tool_args = {
+      const presentation = draftPresentation(drafts.find(d => d.id === id));
+      const tool_args = presentation.editable ? parseProgressiveDraftFields(presentation.fields, edit) : {
         to: edit.to.trim(),
         recipient_email: edit.to.trim(),
         subject: edit.subject,
@@ -621,7 +629,7 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
           <section key={d.id} className={`text-[13px] ${cancelled ? 'opacity-60' : ''}`}>
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-[15px] font-semibold text-[#1a1a17]">{actionHeading(presentation)}</h3>
-              {pending && presentation.kind === 'email' && (
+              {pending && (presentation.kind === 'email' || presentation.editable) && (
                 <button
                   type="button"
                   onClick={() => (editing ? setEditingId(null) : startEdit(d))}
@@ -658,14 +666,24 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
             ) : (
               <div className="mt-4 space-y-3 text-[#353535]">
                 {presentation.fields.map((field) => (
-                  <div key={field.name}>
-                    <div className="font-semibold text-[#1a1a17]">{field.name}</div>
-                    <div className="mt-1 max-h-72 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed">{field.value}</div>
+                  <div key={field.key || field.name}>
+                    <label className="block font-semibold text-[#1a1a17]">
+                      {field.name}{field.required ? ' *' : ''}
+                      {editing && presentation.editable && (
+                        <textarea value={edit[field.key] ?? ''} onChange={event => setEdit(prev => ({ ...prev, [field.key]: event.target.value }))}
+                          rows={['object', 'array', 'json'].includes(field.type) ? 5 : 2}
+                          className="mt-1 block w-full rounded-[6px] border border-[#e3e0db] bg-white px-2.5 py-2 text-[13px] font-normal leading-relaxed focus:border-[#117dff] focus:outline-none"
+                          aria-label={field.name} />
+                      )}
+                    </label>
+                    {editing && field.description && <p className="mt-1 text-[11px] text-[#737373]">{field.description}</p>}
+                    {editing && ['object', 'array', 'json', 'boolean'].includes(field.type) && <p className="text-[11px] text-[#737373]">{field.type === 'boolean' ? 'Enter true or false.' : 'Edit as JSON.'}</p>}
+                    {!editing && <div className="mt-1 max-h-72 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed">{field.value}</div>}
                   </div>
                 ))}
               </div>
             )}
-            {failed && d.errorMsg && (
+            {(failed || editing) && d.errorMsg && (
               <div className="mt-1.5 text-[11.5px] text-red-700">Error: {d.errorMsg}</div>
             )}
             {pending && (
