@@ -1,5 +1,23 @@
 import { liveReasoningRows } from './claude-chat';
 
+test.each(['error', 'failed', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval'])('progressive %s receipts never become completed', (status) => {
+  const [row] = liveReasoningRows([
+    { type: 'tool_started', name: 'agent', harness_version: 'progressive-v1' },
+    { type: 'tool_result', name: 'agent', status, summary: 'Receipt-backed status' },
+  ]);
+  expect(row).toMatchObject({ phase: status, detail: 'Receipt-backed status' });
+});
+
+test('progressive terminal status remains truthful without summary', () => {
+  const [row] = liveReasoningRows([{ type: 'tool_result', name: 'agent', harness_version: 'progressive-v1', status: 'waiting_approval' }]);
+  expect(row).toMatchObject({ phase: 'waiting_approval', detail: 'waiting approval' });
+});
+
+test('legacy result defaults are unchanged', () => {
+  const [row] = liveReasoningRows([{ type: 'tool_result', name: 'agent', status: 'error' }]);
+  expect(row).toMatchObject({ phase: 'completed', detail: 'Completed' });
+});
+
 test('collapses lifecycle duplicates while preserving distinct tool calls and recall hops', () => {
   const events = [
     { type: 'tool_selected', name: 'hivemind_recall', arguments: { query: 'company' } },

@@ -80,12 +80,16 @@ export function liveReasoningRows(events = []) {
       const key = `tool:${tool}`;
       const previous = rows.get(key) || {};
       const completed = type === 'tool_completed' || type === 'tool_result';
+      const progressive = event.harness_version === 'progressive-v1' || previous.harness_version === 'progressive-v1';
+      const phase = progressive && event.status ? event.status : completed ? 'completed' : 'started';
       rows.set(key, {
         ...previous,
         ...event,
         tool,
-        phase: completed ? 'completed' : 'started',
-        detail: completed
+        phase,
+        detail: progressive
+          ? (event.result_summary || event.detail || event.summary || String(phase).replace(/_/g, ' '))
+          : completed
           ? (event?.result_summary || event?.detail || 'Completed')
           : (event?.detail || 'Working…'),
       });
@@ -138,7 +142,7 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
                   <code className="max-w-full break-all rounded-[4px] bg-[#e8f0ff] px-1.5 py-0.5 font-mono text-[11.5px] text-[#1764d8]">
                     {row.tool || row.label || row.operation || 'Working'}
                   </code>
-                  <span className={row.phase === 'needs_input' ? 'text-[#a16207]' : complete ? 'text-[#329044]' : 'text-[#77736c]'}>
+                  <span className={['error', 'failed', 'cancelled'].includes(row.phase) ? 'text-[#b91c1c]' : ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval'].includes(row.phase) ? 'text-[#a16207]' : complete ? 'text-[#329044]' : 'text-[#77736c]'}>
                     → {row.detail || (row.phase === 'started' ? 'Working…' : String(row.phase || '').replace(/_/g, ' '))}
                   </span>
                 </div>
