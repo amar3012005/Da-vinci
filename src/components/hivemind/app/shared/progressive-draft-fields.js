@@ -1,9 +1,14 @@
 const reserved = new Set(['user_id', 'userid', 'org_id', 'connected_account_id', 'entity_id', 'session_id', 'metadata', '__proto__', 'constructor', 'prototype']);
+const governedHarnesses = new Set(['progressive-v1', 'langgraph-native-v1']);
+
+export function isGovernedHarness(value) {
+  return governedHarnesses.has(String(value || ''));
+}
 
 export function progressiveDraftFields(draft) {
   const args = draft?.toolArgs || {};
   const schema = args._input_schema;
-  if (args._harness_version !== 'progressive-v1' || !schema?.properties) return null;
+  if (!isGovernedHarness(args._harness_version) || !schema?.properties) return null;
   return Object.entries(schema.properties).filter(([key]) => !key.startsWith('_') && !reserved.has(key.toLowerCase())).map(([key, field]) => ({
     key, name: field.title || key.replace(/_/g, ' '),
     type: typeof field.type === 'string' ? field.type : 'json',

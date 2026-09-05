@@ -26,6 +26,12 @@ test('only flagged schema-backed drafts become generic editable forms', () => {
   expect(draftPresentation({ ...draft, toolName: 'GMAIL_SEND_EMAIL' }).kind).toBe('generic');
 });
 
+test('native LangGraph drafts use the same schema-backed governed editor', () => {
+  const nativeDraft = { ...draft, toolArgs: { ...draft.toolArgs, _harness_version: 'langgraph-native-v1' } };
+  expect(draftPresentation(nativeDraft).editable).toBe(true);
+  expect(progressiveDraftFields(nativeDraft).map(field => field.key)).toEqual(['title', 'count', 'published', 'blocks']);
+});
+
 test('edited values retain primitive and nested JSON types without authority metadata', () => {
   expect(parseProgressiveDraftFields(progressiveDraftFields(draft), { title: 'Neu', count: '3', published: 'true', blocks: '[{"text":"Hallo"}]', org_id: 'attacker' }))
     .toEqual({ title: 'Neu', count: 3, published: true, blocks: [{ text: 'Hallo' }] });

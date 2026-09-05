@@ -43,3 +43,13 @@ test('live rows keep github and gmail tool names from streamed events', () => {
   expect(rows.some((row) => row.tool === 'GITHUB_LIST_REPOS' && row.phase === 'completed')).toBe(true);
   expect(rows.some((row) => row.tool === 'GMAIL_CREATE_EMAIL_DRAFT')).toBe(true);
 });
+
+test('native LangGraph states remain visible and truthful in the timeline', () => {
+  const rows = liveReasoningRows([
+    { type: 'agent_state', state: 'context_loaded', run_id: 'run-1' },
+    { type: 'agent_state', state: 'awaiting_connection', run_id: 'run-1' },
+    { type: 'agent_state', state: 'resumed', run_id: 'run-1' },
+  ]);
+  expect(rows.map((row) => row.phase)).toEqual(['context_loaded', 'awaiting_connection', 'resumed']);
+  expect(rows[1]).toMatchObject({ tool: 'agent', detail: 'awaiting connection' });
+});

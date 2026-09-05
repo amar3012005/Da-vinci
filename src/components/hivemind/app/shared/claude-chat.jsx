@@ -4,14 +4,14 @@
 // pill (StepsDisclosure), sources pill, copy/retry/vote action row, draft
 // approval cards, project-choice saver, and the live Thinking tool animation.
 // Extracted from mobile TalkToHiveMobile (the reference implementation).
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, ChevronRight, FileText, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
   AlertTriangle, Loader2, ChevronDown, Brain, Sparkles, CornerDownRight, Pencil,
 } from 'lucide-react';
 import apiClient from './api-client';
-import { progressiveDraftFields, parseProgressiveDraftFields } from './progressive-draft-fields';
+import { isGovernedHarness, progressiveDraftFields, parseProgressiveDraftFields } from './progressive-draft-fields';
 import { BRAND_LOGOS } from './connectors-catalog';
 import {
   COMPOSIO_CONNECT_CHANNEL,
@@ -58,18 +58,20 @@ function reasoningRows(events = [], fallbackSteps = []) {
   }));
 }
 
-function normalizedArguments(value) {
-  if (!value) return '';
-  if (typeof value === 'string') {
-    try { return JSON.stringify(JSON.parse(value)); } catch { return value.trim(); }
-  }
-  try { return JSON.stringify(value); } catch { return String(value); }
-}
-
 export function liveReasoningRows(events = []) {
   const rows = new Map();
   for (const event of events || []) {
     const type = event?.type;
+    if (type === 'agent_state' && event.state) {
+      const state = String(event.state);
+      rows.set(`state:${state}`, {
+        ...event,
+        tool: 'agent',
+        phase: state,
+        detail: state.replace(/_/g, ' '),
+      });
+      continue;
+    }
     if (type === 'orchestration_step') {
       const key = `step:${event.step_id ?? event.index}`;
       rows.set(key, event);
@@ -80,7 +82,7 @@ export function liveReasoningRows(events = []) {
       const key = `tool:${tool}`;
       const previous = rows.get(key) || {};
       const completed = type === 'tool_completed' || type === 'tool_result';
-      const progressive = event.harness_version === 'progressive-v1' || previous.harness_version === 'progressive-v1';
+      const progressive = isGovernedHarness(event.harness_version) || isGovernedHarness(previous.harness_version);
       const phase = progressive && event.status ? event.status : completed ? 'completed' : 'started';
       rows.set(key, {
         ...previous,
@@ -131,7 +133,7 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
               : toolkitSlug ? `https://logos.composio.dev/api/${encodeURIComponent(toolkitSlug)}` : null;
             const complete = ['completed', 'draft_created'].includes(row.phase);
             return (
-              <div key={row.step_id || row.index} className="flex min-w-0 items-start gap-2.5 text-[12px] leading-5">
+              <div key={row.step_id || `${row.type || 'row'}:${row.state || row.tool || row.index}`} className="flex min-w-0 items-start gap-2.5 text-[12px] leading-5">
                 <span className="mt-1 flex h-3.5 w-3.5 shrink-0 items-center justify-center">
                   {logo ? <img src={logo} alt="" className="h-3.5 w-3.5" />
                     : isNative ? <Brain size={13} className="text-[#117dff]" />
@@ -162,18 +164,17 @@ function ContinuationChoices({ continuation, onContinue }) {
   const [connecting, setConnecting] = useState(false);
   const selectedRef = useRef(null);
   const request = continuation?.requests?.[0];
-  const options = Array.isArray(request?.options) ? request.options : [];
+  const options = useMemo(() => (Array.isArray(request?.options) ? request.options : []), [request?.options]);
   const fields = Array.isArray(request?.fields) ? request.fields : [];
-  const resumeRequest = { ...request, step_index: request?.step_index ?? 0 };
   const fieldsComplete = fields.every((field) => !field.required || String(values[field.name] || '').trim());
   const banner = request?.kind === 'connect_account' ? connectBanner(request, BRAND_LOGOS) : null;
   const enableTools = request?.kind === 'enable_tools';
-  const continueWith = (option) => {
+  const continueWith = useCallback((option) => {
     if (selectedRef.current || !onContinue) return;
     selectedRef.current = option.id;
     setSelected(option.id);
-    onContinue(continuation, resumeRequest, option);
-  };
+    onContinue(continuation, { ...request, step_index: request?.step_index ?? 0 }, option);
+  }, [continuation, onContinue, request]);
   useEffect(() => {
     if (!banner?.toolkit || !onContinue) return undefined;
     const onPayload = (payload) => {
@@ -195,7 +196,7 @@ function ContinuationChoices({ continuation, onContinue }) {
       window.removeEventListener('message', onWindowMessage);
       try { channel?.close(); } catch { /* ignore */ }
     };
-  }, [banner?.toolkit, continuation, onContinue, options]);
+  }, [banner?.toolkit, continueWith, onContinue, options]);
   if ((!options.length && !fields.length) || !onContinue) return null;
   const openConnect = async (option) => {
     const toolkit = connectToolkitOf(request, option);
@@ -768,7 +769,7 @@ export function StepsDisclosure({ steps }) {
 // Claude-style assistant turn: NO bubble. Reasoning pill → serif answer on the
 // canvas → Sources pill → copy / retry / thumbs action row.
 export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFollowUp }) {
-  const progressive = (msg.harness_version || msg.execution?.harness_version) === 'progressive-v1';
+  const progressive = isGovernedHarness(msg.harness_version || msg.execution?.harness_version);
   const [showSources, setShowSources] = useState(false);
   const [copied, setCopied] = useState(false);
   const [vote, setVote] = useState(null);

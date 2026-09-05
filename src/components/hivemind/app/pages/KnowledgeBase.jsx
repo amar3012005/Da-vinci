@@ -1938,7 +1938,7 @@ export default function KnowledgeBase() {
     setScopeModalOpen(true);
     // Page counts were verified before the modal opened, so its quota display
     // is ready immediately rather than briefly showing an unknown estimate.
-  }, [org?.role, user?.orgRole, user?.role, activeProjectId, teamProjects]);
+  }, [org?.role, user?.orgRole, user?.role, activeProjectId, teamProjects, setUploads]);
 
   // Drop one file from the pending batch (the modal's per-row ✕). Lets a user
   // trim an over-limit batch back under quota without cancelling everything.

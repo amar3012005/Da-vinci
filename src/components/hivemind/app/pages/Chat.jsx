@@ -492,7 +492,7 @@ export function ChatPanel({ isOpen, onClose }) {
         steps: Array.isArray(data.steps) ? data.steps : [],
         draft_ids: Array.isArray(data.draft_ids) ? data.draft_ids : [],
         pending_actions: Array.isArray(data.pending_actions) ? data.pending_actions : [],
-        orchestration_events: streamedEvents.filter((event) => ['orchestration_step', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
+        orchestration_events: streamedEvents.filter((event) => ['agent_state', 'orchestration_step', 'tool_start', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
         continuation: data.continuation || null,
         trace: data.trace || null,
         project_choice: data.project_choice || null,
@@ -526,6 +526,7 @@ export function ChatPanel({ isOpen, onClose }) {
     setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: option.label }]);
     setLoading(true);
     setAgentEvents([]);
+    const streamedEvents = [];
     try {
       const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
       const response = await fetch(chatUrl, {
@@ -541,7 +542,11 @@ export function ChatPanel({ isOpen, onClose }) {
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `Resume failed (${response.status})`);
       const data = (response.headers.get('content-type') || '').includes('text/event-stream')
-        ? (await readChatStream(response, (event) => setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }]))) || {}
+        ? (await readChatStream(response, (event) => {
+            const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
+            streamedEvents.push(next);
+            setAgentEvents([...streamedEvents]);
+          })) || {}
         : await response.json();
       setMessages((prev) => [...prev, {
         id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
@@ -549,6 +554,7 @@ export function ChatPanel({ isOpen, onClose }) {
         harness_version: data.harness_version || data.execution?.harness_version || null,
         execution: data.execution || null,
         sources: data.sources || [], continuation: data.continuation || null,
+        orchestration_events: streamedEvents.filter((event) => ['agent_state', 'orchestration_step', 'tool_start', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
         follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
       }]);
     } catch (error) {
