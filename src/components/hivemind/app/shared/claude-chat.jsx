@@ -144,7 +144,7 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
                   <code className="max-w-full break-all rounded-[4px] bg-[#e8f0ff] px-1.5 py-0.5 font-mono text-[11.5px] text-[#1764d8]">
                     {row.tool || row.label || row.operation || 'Working'}
                   </code>
-                  <span className={['error', 'failed', 'cancelled'].includes(row.phase) ? 'text-[#b91c1c]' : ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval'].includes(row.phase) ? 'text-[#a16207]' : complete ? 'text-[#329044]' : 'text-[#77736c]'}>
+                  <span className={['error', 'failed', 'cancelled'].includes(row.phase) ? 'text-[#b91c1c]' : ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval', 'awaiting_provider_event'].includes(row.phase) ? 'text-[#a16207]' : complete ? 'text-[#329044]' : 'text-[#77736c]'}>
                     → {row.detail || (row.phase === 'started' ? 'Working…' : String(row.phase || '').replace(/_/g, ' '))}
                   </span>
                 </div>
@@ -205,13 +205,21 @@ function ContinuationChoices({ continuation, onContinue }) {
     const authWindow = window.open('about:blank', '_blank');
     try {
       if (!toolkit) throw new Error('No app to connect');
-      const data = await apiClient.createComposioConnectLink(toolkit, {
-        callbackUrl: composioCallbackUrl(window.location.origin, toolkit),
-        toolkitMeta: { composioManagedAuthSchemes: ['OAUTH2'], noAuth: false },
-      }).catch(() => null);
-      const url = httpConnectUrl(data?.redirect_url || data?.redirectUrl)
-        || httpConnectUrl(option.href)
+      // Governed runs receive a session-bound link from
+      // COMPOSIO_MANAGE_CONNECTIONS. Reusing it preserves the exact user,
+      // session, and callback that the paused LangGraph checkpoint owns.
+      let url = httpConnectUrl(option.href)
         || httpConnectUrl(request.redirect_url);
+      // Compatibility only for older continuation records created before the
+      // governed Meta Tool connection contract. New graph runs never take this
+      // branch.
+      if (!url) {
+        const data = await apiClient.createComposioConnectLink(toolkit, {
+          callbackUrl: composioCallbackUrl(window.location.origin, toolkit),
+          toolkitMeta: { composioManagedAuthSchemes: ['OAUTH2'], noAuth: false },
+        }).catch(() => null);
+        url = httpConnectUrl(data?.redirect_url || data?.redirectUrl);
+      }
       if (!url) throw new Error('No OAuth URL returned for this app');
       if (authWindow && !authWindow.closed) {
         authWindow.location.replace(url);
