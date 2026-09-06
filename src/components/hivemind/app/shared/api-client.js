@@ -1039,6 +1039,36 @@ class HiveMindApiClient {
     return data;
   }
 
+  async listOperatingRooms() {
+    const { data } = await this.controlPlane.get('/v1/operating-rooms');
+    return data?.rooms || [];
+  }
+
+  async createOperatingRoom(payload) {
+    const { data } = await this.controlPlane.post('/v1/operating-rooms', payload);
+    return data?.room;
+  }
+
+  async getOperatingRoom(roomId) {
+    const { data } = await this.controlPlane.get(`/v1/operating-rooms/${encodeURIComponent(roomId)}`);
+    return data?.room;
+  }
+
+  async joinOperatingRoom(roomId) {
+    const { data } = await this.controlPlane.post(`/v1/operating-rooms/${encodeURIComponent(roomId)}/join`, {});
+    return data;
+  }
+
+  async appendOperatingRoomTranscript(roomId, text) {
+    const { data } = await this.controlPlane.post(`/v1/operating-rooms/${encodeURIComponent(roomId)}/transcript`, { text });
+    return data;
+  }
+
+  async closeOperatingRoom(roomId) {
+    const { data } = await this.controlPlane.post(`/v1/operating-rooms/${encodeURIComponent(roomId)}/close`, {});
+    return data?.room;
+  }
+
   async listTaraVoices(provider) {
     const { data } = await this.controlPlane.get(`/v1/tara/voices?provider=${encodeURIComponent(provider)}`);
     return data;

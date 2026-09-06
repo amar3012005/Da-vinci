@@ -5,6 +5,9 @@
   "homepage": "/",
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
+    "@cloudflare/realtimekit": "^2.0.2",
+    "@cloudflare/realtimekit-react": "^2.0.2",
+    "@cloudflare/realtimekit-react-ui": "^2.0.2",
     "@humation/assets-humation-1": "^1.0.1",
     "@humation/react": "^1.0.1",
     "@nangohq/frontend": "^0.70.3",
