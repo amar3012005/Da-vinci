@@ -147,6 +147,7 @@ const RUNTIME_INTRO_CANARY = Object.freeze({
   userId: 'b457c254-38a0-4c43-8280-b026f1a78b04',
   orgId: 'f0cb77ef-e62b-4f8c-a1da-066611fc3b36',
 });
+const OPERATING_ROOMS_V1 = process.env.REACT_APP_OPERATING_ROOMS_V1 === 'true';
 const domainRoomDefinition = (key) => DOMAIN_ROOMS.find((domain) => domain.key === key) || DOMAIN_ROOMS[0];
 
 const DOMAIN_ROOM_STAGES = {
@@ -512,6 +513,14 @@ export default function HyperAgents() {
             <Power size={13} className="text-[#185bcc]" />
             Runtime
           </button>
+          {OPERATING_ROOMS_V1 && <button
+            type="button"
+            onClick={() => navigate('/hivemind/app/employees/operating-rooms')}
+            className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#bcd0ef]"
+          >
+            <PhoneCall size={13} className="text-[#117dff]" />
+            Operating Rooms
+          </button>}
           {/* YOUR LEADS — outreach progress board (Notion-style). */}
           <button
             onClick={() => goMode('leads', null)}
