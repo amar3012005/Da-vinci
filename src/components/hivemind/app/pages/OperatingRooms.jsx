@@ -14,7 +14,6 @@ function RoomCall({ roomId }) {
   const [error, setError] = useState('');
   const [closing, setClosing] = useState(false);
   const recognitionRef = useRef(null);
-  const spokenRef = useRef(new Set());
   const transcriptIdsRef = useRef(new Set());
 
   const askHivemind = useCallback(async (event) => {
@@ -43,18 +42,21 @@ function RoomCall({ roomId }) {
     if (!response.ok) throw new Error(data.error || `HIVEMIND response failed (${response.status})`);
     const answer = String(data.response || data.answer || '').trim();
     if (!answer) throw new Error('HIVEMIND returned an empty room response');
-    await meeting?.chat?.sendTextMessage?.(`HIVEMIND · ${answer}`);
+    await meeting?.participants?.broadcastMessage?.('hivemind.response.v1', {
+      room_id: roomId,
+      turn_id: event.turn.id,
+      answer,
+    });
     return answer;
-  }, [meeting, room?.name]);
+  }, [meeting, room?.name, roomId]);
 
   const submitTranscript = useCallback(async (text) => {
     const event = await apiClient.appendOperatingRoomTranscript(roomId, text);
     if (event.addressed_to_hivemind) {
       setStatus(`HIVEMIND heard ${event.turn.speaker_name} and is considering the room context…`);
       try {
-        const answer = await askHivemind(event);
+        await askHivemind(event);
         setStatus(`HIVEMIND answered ${event.turn.speaker_name}`);
-        if ('speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(answer));
       } catch (cause) {
         setStatus(cause.message || 'HIVEMIND could not answer this turn');
       }
@@ -126,21 +128,6 @@ function RoomCall({ roomId }) {
     try { recognition.start(); recognitionRef.current = recognition; } catch (_) {}
     return () => { recognition.onend = null; recognition.stop(); };
   }, [meeting, selfParticipant, submitTranscript]);
-
-  useEffect(() => {
-    if (!meeting?.chat?.on) return undefined;
-    const onChat = ({ action, message }) => {
-      const text = String(message?.message || '');
-      if (action !== 'add' || !text.startsWith('HIVEMIND · ') || spokenRef.current.has(message?.id)) return;
-      spokenRef.current.add(message?.id);
-      // The originating browser already speaks immediately; other browsers
-      // speak the same server-grounded answer when RealtimeKit fans it out.
-      if (message?.userId === meeting?.self?.userId) return;
-      if ('speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(text.slice(11)));
-    };
-    meeting.chat.on('chatUpdate', onChat);
-    return () => meeting.chat.off?.('chatUpdate', onChat);
-  }, [meeting]);
 
   if (error) return <div className="min-h-[70vh] grid place-items-center bg-[#faf9f4] p-6"><div className="max-w-lg border border-red-200 bg-white p-6"><h2 className="font-['Space_Grotesk'] text-xl font-semibold">Room connection failed</h2><p className="mt-2 text-sm text-[#625f58]">{error}</p><button className="mt-5 text-sm text-[#117dff]" onClick={() => navigate('/hivemind/app/employees/operating-rooms')}>Back to rooms</button></div></div>;
 
