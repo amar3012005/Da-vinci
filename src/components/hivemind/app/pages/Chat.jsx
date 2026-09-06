@@ -26,6 +26,7 @@ import {
 import apiClient from '../shared/api-client';
 import SingulanceMark from '../shared/SingulanceMark';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
+import { getOrCreateChatThreadId, resetChatThreadId } from '../shared/chat-thread-id';
 import useDictation from '../shared/useDictation';
 import { useTeamContext } from '../shared/team-context';
 import { useQuickRecorder } from '../shared/QuickRecorderProvider';
@@ -333,6 +334,7 @@ export function ChatPanel({ isOpen, onClose }) {
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
+  const [useTools, setUseTools] = useState(false);
   // Chat recall scope — 'all' (default: everything accessible), 'organization',
   // 'personal', or 'project'. Mirrors TalkToHiveMobile / Overview.jsx exactly.
   const [chatScope, setChatScope] = useState(activeProjectId || null);
@@ -352,6 +354,7 @@ export function ChatPanel({ isOpen, onClose }) {
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
+  const conversationThreadIdRef = useRef(null);
 
   const fetchProjects = useCallback(async () => {
     if (!org?.id) { setProjects([]); setProjectsError(null); return; }
@@ -382,6 +385,8 @@ export function ChatPanel({ isOpen, onClose }) {
   const handleClear = useCallback(() => {
     setMessages([]);
     clearPersistedMessages();
+    resetChatThreadId(localStorage, storageKey());
+    conversationThreadIdRef.current = null;
   }, []);
 
   // Push-to-talk dictation — same Groq Whisper path as AI Meeting Notes.
@@ -445,7 +450,9 @@ export function ChatPanel({ isOpen, onClose }) {
           language: lang2,
           stream: true,
           router: 'tool',
-          use_tools: true,
+          use_tools: useTools,
+          thread_id: conversationThreadIdRef.current || (conversationThreadIdRef.current = getOrCreateChatThreadId(localStorage, storageKey())),
+          history_turns: 6,
           scope: chatScopeMode,
           ...((chatScopeMode === 'project' && (chatScope || activeProjectId))
             ? { project_id: chatScope || activeProjectId, project_ids: [chatScope || activeProjectId] }
@@ -512,7 +519,7 @@ export function ChatPanel({ isOpen, onClose }) {
       setLoading(false);
       setAgentEvents([]);
     }
-  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId]);
+  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools]);
 
   const sendMessage = useCallback(() => sendText(), [sendText]);
 
@@ -790,6 +797,17 @@ export function ChatPanel({ isOpen, onClose }) {
                     </div>
                   )}
                 </div>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={useTools}
+                  onClick={() => setUseTools((value) => !value)}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${useTools ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:bg-white'}`}
+                  title="Use connected apps"
+                >
+                  <Boxes size={12} /> Apps
+                </button>
 
                 {messages.length > 0 && (
                   <button

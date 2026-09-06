@@ -55,6 +55,7 @@ import {
 // mobile + desktop Overview + sidebar).
 import { UserBubble, AiBubble, Thinking } from '../../shared/claude-chat';
 import apiClient from '../../shared/api-client';
+import { getOrCreateChatThreadId, resetChatThreadId } from '../../shared/chat-thread-id';
 import MobileShell from '../MobileShell';
 import SingulanceMark from '../../shared/SingulanceMark';
 // Same Web Studio research-report toolkit Overview.jsx reuses — one
@@ -438,6 +439,7 @@ export default function TalkToHiveMobile() {
   // on Send/Retry from opening two streams before `loading` has rendered.
   const requestInFlightRef = useRef(false);
   const messagesRef = useRef(messages);
+  const conversationThreadIdRef = useRef(null);
   const sendTextRef = useRef(null);
 
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -631,6 +633,8 @@ export default function TalkToHiveMobile() {
           // Keep mobile on the same grounded tool-routing path as desktop chat.
           router: 'tool',
           use_tools: useTools,
+          thread_id: conversationThreadIdRef.current || (conversationThreadIdRef.current = getOrCreateChatThreadId(localStorage, storageKey())),
+          history_turns: 6,
           // Recall scope from the chat selector: personal | organization (all) | project.
           scope: chatScopeMode,
           ...((chatScopeMode === 'project' && (chatScope || activeProjectId))
@@ -917,6 +921,8 @@ export default function TalkToHiveMobile() {
     setSelectedToolkits([]);
     setAgentEvents([]);
     try { localStorage.removeItem(storageKey()); } catch {}
+    resetChatThreadId(localStorage, storageKey());
+    conversationThreadIdRef.current = null;
   };
 
   const currentModel = MODELS.find((m) => m.id === selectedModel) || MODELS[0];

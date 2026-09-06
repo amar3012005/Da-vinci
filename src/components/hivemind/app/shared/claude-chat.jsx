@@ -568,6 +568,23 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
   const [busy, setBusy] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [edit, setEdit] = useState({ to: '', subject: '', body: '' });
+  const refreshDraftStatus = async (id) => {
+    const { data } = await apiClient.controlPlane.get('/v1/proxy/pending-writes?limit=10');
+    const draft = (data?.drafts || []).find((row) => row.id === id);
+    if (draft) setDrafts((prev) => prev.map((row) => row.id === id ? draft : row));
+    return draft || null;
+  };
+  const waitForDraftSettlement = async (id, initial) => {
+    let draft = initial;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const status = draft?.status;
+      const terminal = status === 'sent' || status === 'cancelled' || status === 'failed' || status === 'expired';
+      if (terminal || status === 'draft') return draft;
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      draft = await refreshDraftStatus(id);
+    }
+    return draft;
+  };
   useEffect(() => {
     const ids = Array.isArray(draftIds) && draftIds.length
       ? draftIds : suppliedActions.map((action) => action.id).filter(Boolean);
@@ -576,9 +593,9 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await apiClient.controlPlane.get('/v1/proxy/pending-writes?limit=10').catch(() => ({ data: null }));
-        const matched = (data?.drafts || []).filter(d => ids.includes(d.id));
-        if (!cancelled && matched.length) setDrafts(matched);
+        const refreshed = await Promise.all(ids.map((id) => refreshDraftStatus(id).catch(() => null)));
+        const matched = refreshed.filter(Boolean);
+        if (!cancelled && matched.length) setDrafts((prev) => prev.map((row) => matched.find((item) => item.id === row.id) || row));
       } catch {}
     })();
     return () => { cancelled = true; };
@@ -587,10 +604,20 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
     setBusy(id);
     try {
       const { data } = await apiClient.controlPlane.post(`/v1/proxy/pending-writes/${id}/${action}`, {});
-      setDrafts(prev => prev.map(d => d.id === id ? (data?.draft || { ...d, status: data?.status || d.status }) : d));
+      const accepted = data?.draft || drafts.find((row) => row.id === id) || { id, status: data?.status };
+      setDrafts(prev => prev.map(d => d.id === id ? { ...d, ...accepted, status: accepted.status || data?.status || d.status, errorMsg: null } : d));
+      await waitForDraftSettlement(id, accepted);
       setEditingId(null);
     } catch (err) {
-      setDrafts(prev => prev.map(d => d.id === id ? { ...d, status: 'failed', errorMsg: err?.message } : d));
+      // The POST may have reached Core even when the browser lost the response.
+      // Reconcile the persisted draft instead of retrying a governed write.
+      const persisted = await refreshDraftStatus(id).catch(() => null);
+      if (!persisted || persisted.status === 'draft') {
+        const errorMsg = err?.response?.data?.error || err?.message || 'Could not confirm this action. Please try again.';
+        setDrafts(prev => prev.map(d => d.id === id ? { ...d, errorMsg } : d));
+      } else {
+        await waitForDraftSettlement(id, persisted).catch(() => null);
+      }
     } finally { setBusy(null); }
   };
   const startEdit = (draft) => {

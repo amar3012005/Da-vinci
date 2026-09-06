@@ -34,6 +34,7 @@ import {
   X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { getOrCreateChatThreadId, resetChatThreadId } from '../shared/chat-thread-id';
 import { QRCodeSVG } from 'qrcode.react';
 import { userScopedKey } from '../shared/user-storage';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
@@ -743,6 +744,7 @@ function OverviewChat({ inputRef }) {
   const [loading, setLoading] = useState(false);
   const [agentEvents, setAgentEvents] = useState([]);
   const threadRef = useRef(null);
+  const conversationThreadIdRef = useRef(null);
 
   // Knowledge upload from the composer — same scope-popup + pipeline as the
   // KB page; progress renders in the drop-up strip above the composer.
@@ -929,6 +931,8 @@ function OverviewChat({ inputRef }) {
         // The endpoint and its response contract remain unchanged.
         router: 'tool',
         use_tools: useTools,
+        thread_id: conversationThreadIdRef.current || (conversationThreadIdRef.current = getOrCreateChatThreadId(window.sessionStorage, chatStoreKey())),
+        history_turns: 6,
         ...(effProjectId ? { project_id: effProjectId, project_ids: [effProjectId] } : {}),
         }),
       });
@@ -1321,7 +1325,7 @@ function OverviewChat({ inputRef }) {
           <div className="flex items-center gap-2">
             {messages.length > 0 && (
               <button
-                onClick={() => { setMessages([]); try { window.sessionStorage.removeItem(chatStoreKey()); } catch { /* noop */ } }}
+                onClick={() => { setMessages([]); try { window.sessionStorage.removeItem(chatStoreKey()); resetChatThreadId(window.sessionStorage, chatStoreKey()); conversationThreadIdRef.current = null; } catch { /* noop */ } }}
                 className="text-[11px] text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors"
               >
                 {t('overview.chat.clear', 'Clear')}
