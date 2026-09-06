@@ -1064,6 +1064,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async respondToOperatingRoomTurn(roomId, turnId) {
+    const { data } = await this.controlPlane.post(`/v1/operating-rooms/${encodeURIComponent(roomId)}/respond`, { turn_id: turnId }, {timeout:180000});
+    return data;
+  }
+
   async closeOperatingRoom(roomId) {
     const { data } = await this.controlPlane.post(`/v1/operating-rooms/${encodeURIComponent(roomId)}/close`, {});
     return data?.room;
