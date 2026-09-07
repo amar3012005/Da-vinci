@@ -101,7 +101,7 @@ function RoomCall({ roomId }) {
           roomName: joined.room_name,
           defaults: { audio: true, video: false },
         });
-        setStatus('Live · say “HIVEMIND” or “TARA” to address the facilitator');
+        setStatus('Live · speak naturally — no wake word needed');
       } catch (cause) {
         if (active) setError(cause?.response?.data?.message || cause.message || 'Unable to join this room');
       }
@@ -157,14 +157,14 @@ function RoomCall({ roomId }) {
         <div className="min-h-[45vh] flex-1">{meeting ? <RtkMeeting meeting={meeting} mode="fill" /> : <div className="grid h-full place-items-center text-sm text-white/70"><Waves className="mb-3 animate-pulse text-[#117dff]" size={32} />{status}</div>}</div>
         <aside className="w-full overflow-y-auto border-t border-white/10 bg-[#141414] p-4 text-white lg:w-80 lg:border-l lg:border-t-0">
           <div className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-semibold"><Waves size={16} className="text-[#117dff]"/> HIVEMIND · TARA</span><span className="font-mono text-xs text-white/50">{Math.floor(elapsed/60)}:{String(elapsed%60).padStart(2,'0')}</span></div>
-          <p className="mt-2 text-xs text-white/60" aria-live="polite">{room?.facilitator_activity==='speaking'?'Speaking to the room':room?.facilitator_activity==='thinking'?'Considering the room discussion':'Listening · say “HIVEMIND” to bring me in'}</p>
+          <p className="mt-2 text-xs text-white/60" aria-live="polite">{room?.facilitator_activity==='speaking'?'Speaking to the room':room?.facilitator_activity==='thinking'?'Considering the room discussion':'Listening · speak naturally, no wake word needed'}</p>
           <h3 className="mt-6 text-xs font-semibold uppercase tracking-wider text-white/50">Our goal</h3><p className="mt-2 text-sm">{room?.goal}</p>
           <div className="mt-5 flex items-center justify-between"><h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/50"><ListChecks size={14}/> Shared agenda</h3>{['owner','admin'].includes(selfParticipant?.role)&&<button className="text-xs text-blue-400" onClick={()=>{setAgendaDraft((room?.agenda||[]).join('\n'));setEditingAgenda(!editingAgenda);}}>Edit</button>}</div>
           {editingAgenda?<form onSubmit={async e=>{e.preventDefault();try{const {data}=await apiClient.controlPlane.post(`/v1/operating-rooms/${roomId}/agenda`,{agenda:agendaDraft.split('\n')});setRoom(data.room);setEditingAgenda(false);}catch(cause){setStatus(cause.message);}}}><textarea aria-label="Shared agenda, one topic per line" value={agendaDraft} onChange={e=>setAgendaDraft(e.target.value)} rows={4} className="mt-2 w-full rounded border border-white/20 bg-black p-2 text-sm"/><button className="mt-2 rounded bg-blue-600 px-3 py-1 text-xs">Save agenda</button></form>:<ol className="mt-2 space-y-2 text-sm">{(room?.agenda?.length?room.agenda:['Understand the current situation','Discuss priorities and open questions','Agree next actions']).map((item,i)=><li key={i}><span className="mr-2 text-white/40">{i+1}.</span>{item}</li>)}</ol>}
           {room?.session_brief?.summary&&<><h3 className="mt-5 text-xs font-semibold uppercase tracking-wider text-white/50">Discussion so far</h3><p className="mt-2 text-xs leading-relaxed text-white/80">{room.session_brief.summary}</p></>}
           {room?.session_brief?.open_items?.length>0&&<><h3 className="mt-5 text-xs font-semibold uppercase tracking-wider text-white/50">Still open</h3><ul className="mt-2 space-y-2 text-xs">{room.session_brief.open_items.map((item,i)=><li key={i}>{item.text}</li>)}</ul></>}
           {(room?.recent_responses||[]).slice(-2).map(item=><div key={item.turn_id} className="mt-4 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3"><p className="text-xs text-blue-300">HIVEMIND → {item.addressed_name}</p><p className="mt-2 text-sm leading-relaxed">{item.answer}</p></div>)}
-          <form className="mt-5 flex gap-2" onSubmit={e=>{e.preventDefault();if(request.trim()){enqueueTranscript(`HIVEMIND, ${request.trim()}`);setRequest('');}}}><input aria-label="Ask HIVEMIND in this room" placeholder="Ask HIVEMIND…" value={request} onChange={e=>setRequest(e.target.value)} className="min-w-0 flex-1 rounded border border-white/20 bg-black px-3 py-2 text-sm"/><button aria-label="Send to HIVEMIND" disabled={!request.trim()} className="rounded bg-blue-600 p-2 disabled:opacity-40"><Send size={16}/></button></form>
+          <form className="mt-5 flex gap-2" onSubmit={e=>{e.preventDefault();if(request.trim()){enqueueTranscript(request.trim());setRequest('');}}}><input aria-label="Ask HIVEMIND in this room" placeholder="Ask HIVEMIND…" value={request} onChange={e=>setRequest(e.target.value)} className="min-w-0 flex-1 rounded border border-white/20 bg-black px-3 py-2 text-sm"/><button aria-label="Send to HIVEMIND" disabled={!request.trim()} className="rounded bg-blue-600 p-2 disabled:opacity-40"><Send size={16}/></button></form>
         </aside>
       </div>
     </div>
