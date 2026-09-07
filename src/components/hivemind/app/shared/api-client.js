@@ -6,6 +6,27 @@ import { productActionDecision } from './product-access';
 import { hasIngestModeMismatch, hasMemoryGenerationFailure, ingestFailureDetails, normalizeIngestMode, responseIngestMode } from './knowledge-ingest-contract';
 
 const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
+const PLATFORM_ADMIN_HOST = 'admin.hivemind.singulancelabs.com';
+const PLATFORM_ADMIN_ENVIRONMENT_KEY = 'hivemind_platform_admin_environment';
+const PLATFORM_ADMIN_BASES = Object.freeze({
+  production: Object.freeze({
+    controlPlane: 'https://api.singulancelabs.com',
+    core: 'https://core.singulancelabs.com',
+  }),
+  dev: Object.freeze({
+    controlPlane: 'https://api.dev.next.singulancelabs.com',
+    core: 'https://core.dev.next.singulancelabs.com',
+  }),
+});
+
+function selectedPlatformAdminEnvironment() {
+  if (typeof window === 'undefined' || window.location.hostname !== PLATFORM_ADMIN_HOST) return null;
+  try {
+    return window.localStorage.getItem(PLATFORM_ADMIN_ENVIRONMENT_KEY) === 'dev' ? 'dev' : 'production';
+  } catch {
+    return 'production';
+  }
+}
 
 /**
  * HIVEMIND API Client
@@ -29,15 +50,19 @@ const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
 
 class HiveMindApiClient {
   constructor() {
+    this._platformAdminEnvironment = selectedPlatformAdminEnvironment();
+    const platformAdminBases = this._platformAdminEnvironment
+      ? PLATFORM_ADMIN_BASES[this._platformAdminEnvironment]
+      : null;
     this.controlPlane = axios.create({
-      baseURL: API_DEFAULTS.controlPlaneBase,
+      baseURL: platformAdminBases?.controlPlane || API_DEFAULTS.controlPlaneBase,
       withCredentials: true,
       timeout: 60000, // Increased from 10s to 60s for long-running operations like research
       headers: { 'Content-Type': 'application/json' },
     });
 
     this.core = axios.create({
-      baseURL: API_DEFAULTS.coreApiBase,
+      baseURL: platformAdminBases?.core || API_DEFAULTS.coreApiBase,
       timeout: 15000,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -57,6 +82,20 @@ class HiveMindApiClient {
     this._attachProductAccessInterceptor(this.core);
 
     this.loadStoredApiKey();
+  }
+
+  getPlatformAdminEnvironment() {
+    return this._platformAdminEnvironment || 'production';
+  }
+
+  setPlatformAdminEnvironment(environment) {
+    const next = environment === 'dev' ? 'dev' : 'production';
+    if (typeof window === 'undefined' || window.location.hostname !== PLATFORM_ADMIN_HOST) return;
+    window.localStorage.setItem(PLATFORM_ADMIN_ENVIRONMENT_KEY, next);
+    // A hard reload cancels every request and clears all React state. This is
+    // intentional: an admin screen must never render data fetched from one
+    // environment while sending mutations to the other.
+    window.location.reload();
   }
 
   setProductAccessPlan(planId) {
