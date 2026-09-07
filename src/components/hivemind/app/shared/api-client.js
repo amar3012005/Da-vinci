@@ -10,10 +10,12 @@ const PLATFORM_ADMIN_HOST = 'admin.hivemind.singulancelabs.com';
 const PLATFORM_ADMIN_ENVIRONMENT_KEY = 'hivemind_platform_admin_environment';
 const PLATFORM_ADMIN_BASES = Object.freeze({
   production: Object.freeze({
+    frontend: 'https://next.singulancelabs.com',
     controlPlane: 'https://api.singulancelabs.com',
     core: 'https://core.singulancelabs.com',
   }),
   dev: Object.freeze({
+    frontend: 'https://dev.next.singulancelabs.com',
     controlPlane: 'https://api.dev.next.singulancelabs.com',
     core: 'https://core.dev.next.singulancelabs.com',
   }),
@@ -86,6 +88,16 @@ class HiveMindApiClient {
 
   getPlatformAdminEnvironment() {
     return this._platformAdminEnvironment || 'production';
+  }
+
+  getPlatformAdminFrontendUrl(path = '') {
+    const environment = this.getPlatformAdminEnvironment();
+    const base = PLATFORM_ADMIN_BASES[environment].frontend;
+    return `${base}${String(path || '').startsWith('/') ? path : `/${path}`}`;
+  }
+
+  _controlPlaneBaseUrl() {
+    return String(this.controlPlane.defaults.baseURL || API_DEFAULTS.controlPlaneBase).replace(/\/$/, '');
   }
 
   setPlatformAdminEnvironment(environment) {
@@ -187,6 +199,14 @@ class HiveMindApiClient {
   }
 
   setCoreBaseUrl(url) {
+    // The Platform Admin environment is a hard routing latch. Bootstrap data
+    // from either environment must never redirect later Core calls across it.
+    if (this._platformAdminEnvironment) {
+      const selected = PLATFORM_ADMIN_BASES[this._platformAdminEnvironment].core;
+      this._coreBaseUrl = selected;
+      this.core.defaults.baseURL = selected;
+      return;
+    }
     // Guard against the control-plane returning a docker-internal hostname
     // (http://hm-core:3000) — browsers can't resolve that and CSP would
     // block it anyway. Force-fallback to the publicly resolvable default.
@@ -517,7 +537,7 @@ class HiveMindApiClient {
   }
 
   hqEventStreamUrl(after = '0') {
-    const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
+    const base = this._controlPlaneBaseUrl();
     return `${base}/v1/hq/events/stream?after=${encodeURIComponent(after)}`;
   }
 
@@ -1185,14 +1205,14 @@ class HiveMindApiClient {
 
   // SSE — caller manages EventSource lifecycle, we just expose URL.
   hyperTurnStreamUrl(roomId, turnId) {
-    const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
+    const base = this._controlPlaneBaseUrl();
     return `${base}/v1/hyper-rooms/${roomId}/turns/${turnId}/stream`;
   }
 
   hyperArtifactAssetUrl(path) {
     const value = String(path || '');
     if (!value.startsWith('/v1/hyper-artifacts/')) return '';
-    return `${API_DEFAULTS.controlPlaneBase.replace(/\/$/, '')}${value}`;
+    return `${this._controlPlaneBaseUrl()}${value}`;
   }
 
   async getHyperArtifact(path) {
@@ -3278,7 +3298,7 @@ class HiveMindApiClient {
 
   /** Absolute URL to a run's HTML view (authed via session cookie on navigation). */
   hermesRunHtmlUrl(agentId, jobId) {
-    const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
+    const base = this._controlPlaneBaseUrl();
     return `${base}/hermes/agents/${encodeURIComponent(agentId)}/runs/${encodeURIComponent(jobId)}/html`;
   }
 
