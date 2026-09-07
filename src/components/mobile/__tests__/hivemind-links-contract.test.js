@@ -20,3 +20,9 @@ test('mobile homepage HIVEMIND links stay within the dev environment', () => {
     origin: 'https://dev.next.singulancelabs.com',
   })).toBe('https://dev.next.singulancelabs.com/hivemind');
 });
+
+test('the primary Run your company CTA opens the overview', () => {
+  const hero = fs.readFileSync(path.resolve(__dirname, '../MobileHero.jsx'), 'utf8');
+
+  expect(hero).toContain("href={hivemindHref('/app/overview')}");
+});

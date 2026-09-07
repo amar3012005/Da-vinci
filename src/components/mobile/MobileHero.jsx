@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { COVER_LQIP } from './three/coverLqip';
 import HeroCtas from './HeroCtas';
-import { HIVEMIND_URL } from './hivemindLinks';
+import { hivemindHref } from './hivemindLinks';
 
 const HeroScene = lazy(() => import('./three/HeroScene'));
 const CinematicPlate = lazy(() => import('./three/CinematicPlate'));
@@ -59,7 +59,7 @@ const BannerLockup = () => (
       <span className="absolute -bottom-px -left-px h-3 w-3 border-b-2 border-l-2 border-white" />
       <span className="absolute -bottom-px -right-px h-3 w-3 border-b-2 border-r-2 border-white" />
       <a
-        href={HIVEMIND_URL}
+        href={hivemindHref('/app/overview')}
         aria-label="Run your AI company. Enter Hivemind."
         className="flex h-full w-full cursor-pointer items-center justify-center font-mono text-[10px] font-semibold uppercase tracking-[0.26em] text-white no-underline transition-[letter-spacing,opacity] duration-300 hover:opacity-80 sm:text-xs sm:tracking-[0.34em] sm:hover:tracking-[0.38em]"
       >
