@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import UpdateBanner from './components/hivemind/UpdateBanner';
 import MobileHomepage from './components/mobile/MobileHomepage';
 import CookieConsent from './components/CookieConsent';
+import { isUnifiedProductHost } from './config/productHosts';
 
 // Hivemind
 const HivemindRedirect = React.lazy(() => import('./components/hivemind/HivemindRedirect'));
@@ -29,7 +30,9 @@ const PLATFORM_ADMIN_HOST = 'admin.hivemind.singulancelabs.com';
 //   /hivemind/app  → HIVEMIND dashboard (HiveMindApp), served locally — never redirected away
 // Default false preserves the legacy davinciai multi-subdomain split (marketing host vs the
 // dedicated hivemind.davinciai.eu subdomain), so the Vercel deploy is unaffected.
-const PRODUCT_HOST = process.env.REACT_APP_PRODUCT_HOST === 'true';
+const PRODUCT_HOST = isUnifiedProductHost(
+  typeof window !== 'undefined' ? window.location.hostname : '',
+);
 
 /**
  * Hard-redirect any /hivemind* hit on a non-HIVEMIND host (e.g. singulancelabs.com,
