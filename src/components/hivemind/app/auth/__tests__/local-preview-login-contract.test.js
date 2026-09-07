@@ -21,4 +21,7 @@ test('email identity mode controls one shared OTP UI for preview and production'
   expect(client).toContain("'/auth/email/resend'");
   expect(theme).toContain("window.location.hostname === 'next.preview.singulancelabs.com'");
   expect(theme).toContain('https://preview-api.singulancelabs.com');
+  expect(theme).toContain("window.location.hostname === 'dev.next.singulancelabs.com'");
+  expect(theme).toContain('https://api.dev.next.singulancelabs.com');
+  expect(theme).toContain('https://core.dev.next.singulancelabs.com');
 });

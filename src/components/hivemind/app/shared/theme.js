@@ -72,11 +72,18 @@ export const shadows = {
 // SPA fallback and returns 404/405. Always hit the api host explicitly.
 const IS_PREVIEW_HOST = typeof window !== 'undefined'
   && window.location.hostname === 'next.preview.singulancelabs.com';
+const IS_DEV_HOST = typeof window !== 'undefined'
+  && window.location.hostname === 'dev.next.singulancelabs.com';
 
 export const API_DEFAULTS = {
   controlPlaneBase:
-    (IS_PREVIEW_HOST ? 'https://preview-api.singulancelabs.com' : process.env.REACT_APP_CONTROL_PLANE_URL) ||
+    (IS_DEV_HOST
+      ? 'https://api.dev.next.singulancelabs.com'
+      : (IS_PREVIEW_HOST ? 'https://preview-api.singulancelabs.com' : process.env.REACT_APP_CONTROL_PLANE_URL)) ||
     'https://api.hivemind.davinciai.eu:8040',
   coreApiBase:
-    (IS_PREVIEW_HOST ? 'https://preview.singulancelabs.com' : process.env.REACT_APP_CORE_API_URL) || 'https://core.hivemind.davinciai.eu:8050',
+    (IS_DEV_HOST
+      ? 'https://core.dev.next.singulancelabs.com'
+      : (IS_PREVIEW_HOST ? 'https://preview.singulancelabs.com' : process.env.REACT_APP_CORE_API_URL)) ||
+    'https://core.hivemind.davinciai.eu:8050',
 };
