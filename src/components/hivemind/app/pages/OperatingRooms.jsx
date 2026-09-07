@@ -61,19 +61,35 @@ function RoomCall({ roomId }) {
   }, [askHivemind, roomId]);
 
   const enqueueTranscript = useCallback((text,id=crypto.randomUUID())=>{
-    if(pendingRef.current.has(id)) return;
-    pendingRef.current.set(id,{text,attempt:0});
+    // Realtime transcription emits several final fragments for one spoken
+    // thought. They are captions, not independent requests to the facilitator.
+    // Hold a short silence window and send one settled utterance.
+    const key='local-utterance';
+    const previous=pendingRef.current.get(key);
+    if(previous){
+      clearTimeout(previous.timer);
+      previous.cancelled=true;
+    }
+    const prior=String(previous?.text||'').trim();
+    const next=String(text||'').trim();
+    const merged=!prior || next.startsWith(prior) ? next : prior.startsWith(next) ? prior : `${prior} ${next}`.trim();
+    const item={text:merged,id,attempt:0,cancelled:false,timer:null};
+    pendingRef.current.set(key,item);
     const run = async()=>{
-      const item=pendingRef.current.get(id); if(!item) return;
-      try { await submitTranscript(text,id); pendingRef.current.delete(id); }
+      if(item.cancelled || pendingRef.current.get(key)!==item) return;
+      try { await submitTranscript(item.text,item.id); if(pendingRef.current.get(key)===item) pendingRef.current.delete(key); }
       catch(cause) {
+        if(item.cancelled || pendingRef.current.get(key)!==item) return;
         item.attempt+=1;
         const busy=cause?.response?.data?.error==='operating_room_busy';
-        if(item.attempt<(busy?60:4)) item.timer=setTimeout(run,busy?3000:1000*item.attempt);
-        else {pendingRef.current.delete(id);setStatus('Transcript could not be saved. Please repeat or use the room message box.');}
+        // A superseded turn is intentionally discarded. Never resurrect an
+        // old thought after the participant has continued speaking.
+        const stale=cause?.response?.data?.error==='operating_room_turn_superseded';
+        if(!stale && item.attempt<(busy?3:4)) item.timer=setTimeout(run,busy?350:1000*item.attempt);
+        else if(pendingRef.current.get(key)===item) {pendingRef.current.delete(key);if(!stale)setStatus('Transcript could not be saved. Please repeat or use the room message box.');}
       }
     };
-    run();
+    item.timer=setTimeout(run,800);
   },[submitTranscript]);
 
   const closeRoom = async () => {
