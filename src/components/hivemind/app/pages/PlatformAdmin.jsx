@@ -2033,7 +2033,7 @@ export default function PlatformAdmin() {
       return;
     }
     if (target === "chat") {
-      window.location.assign("https://next.singulancelabs.com/hivemind/m/chat");
+      window.location.assign(apiClient.getPlatformAdminFrontendUrl("/hivemind/m/chat"));
       return;
     }
     document.getElementById("admin-commercial")?.scrollIntoView({ behavior: "smooth", block: "start" });

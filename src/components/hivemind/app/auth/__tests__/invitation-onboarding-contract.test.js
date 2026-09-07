@@ -28,7 +28,11 @@ test('platform admin environment switch latches the complete API surface', () =>
   expect(apiClient).toContain("core: 'https://core.singulancelabs.com'");
   expect(apiClient).toContain("controlPlane: 'https://api.dev.next.singulancelabs.com'");
   expect(apiClient).toContain("core: 'https://core.dev.next.singulancelabs.com'");
+  expect(apiClient).toContain("frontend: 'https://dev.next.singulancelabs.com'");
+  expect(apiClient).toContain('if (this._platformAdminEnvironment)');
+  expect(apiClient).toContain('this._controlPlaneBaseUrl()');
   expect(apiClient).toContain('window.location.reload()');
   expect(platformAdmin).toContain('Switch the entire admin console to Production?');
   expect(platformAdmin).toContain('<EnvironmentToggle environment={environment} onChange={changeEnvironment} />');
+  expect(platformAdmin).toContain('apiClient.getPlatformAdminFrontendUrl("/hivemind/m/chat")');
 });
