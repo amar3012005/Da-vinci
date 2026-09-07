@@ -120,7 +120,7 @@ function EmailTurnstile({ siteKey, onToken }) {
 }
 
 export default function LoginPage() {
-  const { isAuthenticated, isUnreachable, loading, login, org, needsOnboarding } = useAuth();
+  const { isAuthenticated, isUnreachable, loading, login, org, user, needsOnboarding } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [emailConfig, setEmailConfig] = useState({ mode: 'off', enabled: false, email_only: false, turnstile_site_key: null });
@@ -283,6 +283,14 @@ export default function LoginPage() {
   const [referralCode, setReferralCode] = useState('');
   const [personalInvitationCode, setPersonalInvitationCode] = useState('');
   const [createError, setCreateError] = useState('');
+
+  // Provider identity is only a convenience prefill. The field stays editable,
+  // and the value submitted by the user becomes canonical during org creation.
+  useEffect(() => {
+    if (!wantsCreate || userName.trim()) return;
+    const providerName = String(user?.display_name || user?.displayName || user?.name || '').trim();
+    if (providerName && !/^guest(?:\s+mode)?$/i.test(providerName)) setUserName(providerName);
+  }, [wantsCreate, user, userName]);
   const onboardingError = useMemo(
     () => new URLSearchParams(location.search).get('onboarding_error'),
     [location.search]
