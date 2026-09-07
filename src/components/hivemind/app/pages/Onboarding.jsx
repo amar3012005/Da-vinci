@@ -116,6 +116,8 @@ export default function OnboardingFlow() {
       try {
         const created = await createOrg({
           name,
+          user_name: String(saved.name || '').trim(),
+          hivemind_name: String(saved.hivemind_name || '').trim(),
           slug: isEnt ? deriveSlug(saved.hivemind_name || name) : undefined,
           plan: saved.referral_token ? selectedPlan : (isEnt ? 'enterprise' : 'free'),
           deployment: dep,
