@@ -20,3 +20,15 @@ test('invitation route and locked onboarding paths stay wired together', () => {
   expect(login).toContain('personalInvitationToken: appliedPersonalInvitationToken');
   expect(login).toContain('enterpriseInvitation.hosting_mode');
 });
+
+test('platform admin environment switch latches the complete API surface', () => {
+  const platformAdmin = fs.readFileSync(path.resolve(__dirname, '../../pages/PlatformAdmin.jsx'), 'utf8');
+  const apiClient = fs.readFileSync(path.resolve(__dirname, '../../shared/api-client.js'), 'utf8');
+  expect(apiClient).toContain("controlPlane: 'https://api.singulancelabs.com'");
+  expect(apiClient).toContain("core: 'https://core.singulancelabs.com'");
+  expect(apiClient).toContain("controlPlane: 'https://api.dev.next.singulancelabs.com'");
+  expect(apiClient).toContain("core: 'https://core.dev.next.singulancelabs.com'");
+  expect(apiClient).toContain('window.location.reload()');
+  expect(platformAdmin).toContain('Switch the entire admin console to Production?');
+  expect(platformAdmin).toContain('<EnvironmentToggle environment={environment} onChange={changeEnvironment} />');
+});

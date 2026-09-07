@@ -19,6 +19,33 @@ const seconds = (value) =>
   value
     ? `${Math.floor(value / 3600)}h ${Math.floor((value % 3600) / 60)}m`
     : "Unavailable";
+
+function EnvironmentToggle({ environment, onChange, compact = false }) {
+  return (
+    <div className={`flex items-center gap-2 ${compact ? "" : "rounded-[10px] border border-[#e3e0db] bg-white px-3 py-2"}`}>
+      {!compact && <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[#737373]">Environment</span>}
+      <div className="flex rounded-[7px] border border-[#e3e0db] bg-[#f3f1ec] p-0.5" role="group" aria-label="Platform environment">
+        {[['dev', 'Dev'], ['production', 'Production']].map(([id, label]) => {
+          const active = environment === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(id)}
+              className={`rounded-[5px] px-2.5 py-1 text-[11px] font-semibold transition-colors ${active
+                ? id === 'production' ? 'bg-[#0a0a0a] text-white' : 'bg-[#117dff] text-white'
+                : 'text-[#525252] hover:bg-white'}`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      <span className={`h-2 w-2 rounded-full ${environment === 'production' ? 'bg-emerald-500' : 'bg-amber-500'}`} aria-hidden="true" />
+    </div>
+  );
+}
 // The backend (normalizeAccountProfile, billing/promotion-service.js) rejects
 // any account_type + storage_mode pairing outside this exact set — but the
 // old promotions form showed all three storage_mode options regardless of
@@ -1909,6 +1936,7 @@ function AdminNavigation({ activeItem, mobileOpen, onClose, onNavigate }) {
 }
 
 export default function PlatformAdmin() {
+  const [environment] = useState(() => apiClient.getPlatformAdminEnvironment());
   const [passcode, setPasscode] = useState("");
   const [data, setData] = useState(null);
   const [metrics, setMetrics] = useState(null);
@@ -1922,6 +1950,12 @@ export default function PlatformAdmin() {
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [activeItem, setActiveItem] = useState("overview");
+
+  const changeEnvironment = (next) => {
+    if (next === environment) return;
+    if (next === 'production' && !window.confirm('Switch the entire admin console to Production? All following actions will affect live customer data.')) return;
+    apiClient.setPlatformAdminEnvironment(next);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -2009,6 +2043,7 @@ export default function PlatformAdmin() {
   if (!data)
     return (
       <main className="min-h-screen bg-[#faf9f4] px-5 py-10 sm:flex sm:items-center sm:justify-center">
+        <div className="fixed right-4 top-4"><EnvironmentToggle environment={environment} onChange={changeEnvironment} /></div>
         <section className="mx-auto w-full max-w-md rounded-[10px] border border-[#e3e0db] bg-white p-5 sm:p-7">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">HIVEMIND · Platform control</p>
           <h1 className="mt-2 font-['Space_Grotesk'] text-[26px] font-semibold text-[#0a0a0a]">Admin unlock</h1>
@@ -2046,7 +2081,7 @@ export default function PlatformAdmin() {
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[#e3e0db] bg-[#faf9f4]/95 px-4 backdrop-blur lg:hidden">
         <button type="button" onClick={() => setMobileNavOpen(true)} className="rounded-[6px] p-1.5 text-[#525252] hover:bg-[#f3f1ec]" aria-label="Open admin navigation"><Menu size={20} /></button>
         <p className="font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">HIVEMIND Admin</p>
-        <button type="button" onClick={() => navigateAdmin("invitations")} className="rounded-[6px] bg-[#117dff] px-2.5 py-1.5 text-[11px] font-semibold text-white">Invite</button>
+        <EnvironmentToggle environment={environment} onChange={changeEnvironment} compact />
       </header>
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-8 lg:px-8">
       <div id="admin-overview" className="mb-6 flex flex-col gap-3 scroll-mt-20 sm:flex-row sm:items-center sm:justify-between">
@@ -2056,7 +2091,8 @@ export default function PlatformAdmin() {
             {data.total} users · active within 30 days
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <EnvironmentToggle environment={environment} onChange={changeEnvironment} />
           <button
             onClick={() => setLogsOpen(true)}
             className="rounded-lg bg-[#111827] text-white px-3 py-2 text-sm"
