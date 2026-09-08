@@ -47,6 +47,7 @@ import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/up
 // second implementation — same "view in Chrome" tab, same in-app preview
 // modal + save-to-HIVEMIND flow, same job-title derivation.
 import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './WebStudio';
+import HarnessChatSurface from './HarnessChatSurface';
 
 // ─── Animation variants ──────────────────────────────────────────
 
@@ -1688,7 +1689,7 @@ export default function Overview() {
       </div>
 
       {/* The HIVE chat — the Overview centerpiece */}
-      <OverviewChat inputRef={chatInputRef} />
+      <HarnessChatSurface legacy={<OverviewChat inputRef={chatInputRef} />} />
 
       {/* Mobile QR promo — one bottom-right corner widget, desktop-only
           (mobile visitors never reach this page — see the redirect effect
