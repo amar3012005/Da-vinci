@@ -5,6 +5,12 @@
   "workers_dev": true,
   "preview_urls": true,
   "main": "./cloudflare/worker.mjs",
+  "services": [
+    {
+      "binding": "HARNESS_CHAT",
+      "service": "hivemind-harness-chat-preview"
+    }
+  ],
   "assets": {
     "directory": "./build",
     "binding": "ASSETS",
