@@ -1487,6 +1487,9 @@ function LegacyOverview() {
   // /hivemind/m/chat which is a full-screen Talk-to-HIVE.
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // Preview Overview launches the responsive full-page Harness application;
+    // it must not race the legacy mobile chat redirect.
+    if (window.location.hostname === 'next.preview.singulancelabs.com') return;
     // Detect phones either by narrow viewport OR by UA — catches the
     // "Request Desktop Site" case where the viewport widens beyond 768px
     // but the device is still a phone.
