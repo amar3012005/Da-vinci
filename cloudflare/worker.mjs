@@ -11,6 +11,8 @@ const USE_TOOLS_DURABLE_AGENT_ENV_KEY = 'USE_TOOLS_DURABLE_AGENT';
 const ENABLE_TOOLS_HITL_FLAG_PATH = '/__hivemind/feature-flags/enable-tools-hitl';
 const ENABLE_TOOLS_HITL_FLAGSHIP_KEY = 'enable-tools-hitl';
 const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
+const HARNESS_OVERVIEW_PATH = '/hivemind/app/v1/overview';
+const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
 const PUBLIC_MARKETING_HOSTS = new Set([
   'singulancelabs.com',
   'www.singulancelabs.com',
@@ -67,6 +69,68 @@ function missingAssetResponse() {
   });
 }
 
+function hasHarnessSession(request) {
+  return /(?:^|;\s*)dsh-auth-[A-Za-z0-9_-]+=/.test(request.headers.get('cookie') || '');
+}
+
+function hasHarnessAdmission(request) {
+  return new RegExp(`(?:^|;\\s*)${HARNESS_ADMISSION_COOKIE}=1(?:;|$)`).test(request.headers.get('cookie') || '');
+}
+
+function isHarnessRuntimePath(pathname) {
+  return pathname === '/api/hivemind/embed/exchange';
+}
+
+function isHarnessDocumentOrAsset(request, pathname) {
+  if (!hasHarnessSession(request) || !hasHarnessAdmission(request)) return false;
+  return pathname === HARNESS_OVERVIEW_PATH
+    || pathname.startsWith('/assets/')
+    || pathname === '/favicon.svg'
+    || pathname === '/manifest.webmanifest';
+}
+
+async function harnessResponse(request, env) {
+  if (!env.HARNESS_CHAT || typeof env.HARNESS_CHAT.fetch !== 'function') {
+    return new Response('HIVE-MIND chat is temporarily unavailable', {
+      status: 503,
+      headers: { 'cache-control': 'no-store', 'content-type': 'text/plain; charset=utf-8' },
+    });
+  }
+  const pathname = new URL(request.url).pathname;
+  const upstreamRequest = pathname === '/api/hivemind/embed/exchange'
+    ? new Request(request, { redirect: 'manual' })
+    : request;
+  const response = await env.HARNESS_CHAT.fetch(upstreamRequest);
+  if (pathname === '/api/hivemind/embed/exchange' && (response.ok || response.status === 303)) {
+    const headers = new Headers(response.headers);
+    headers.append('set-cookie', `${HARNESS_ADMISSION_COOKIE}=1; Path=/; Max-Age=3600; Secure; HttpOnly; SameSite=Strict`);
+    if (response.status === 303) headers.set('location', HARNESS_OVERVIEW_PATH);
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  }
+  const runnerRejectedPrincipal = pathname === HARNESS_OVERVIEW_PATH && (
+    response.status === 401
+    || response.status === 403
+    || ((response.headers.get('content-type') || '').startsWith('text/plain')
+      && (await response.clone().text()).trim() === 'HIVE-MIND authentication required')
+  );
+  if (runnerRejectedPrincipal) {
+    const fallback = await env.ASSETS.fetch(request);
+    const headers = new Headers(fallback.headers);
+    headers.append('set-cookie', `${HARNESS_ADMISSION_COOKIE}=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Strict`);
+    return new Response(fallback.body, { status: fallback.status, statusText: fallback.statusText, headers });
+  }
+  if (pathname !== HARNESS_OVERVIEW_PATH || !isHtml(response)) return response;
+  const html = (await response.text())
+    .replaceAll('href="./manifest.webmanifest"', 'href="/manifest.webmanifest"')
+    .replaceAll('href="./favicon.svg"', 'href="/favicon.svg"')
+    .replaceAll('src="./assets/', 'src="/assets/')
+    .replaceAll('href="./assets/', 'href="/assets/');
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  headers.set('cache-control', 'private, no-store');
+  return new Response(html, { status: response.status, statusText: response.statusText, headers });
+}
+
 async function booleanFlagshipResponse(request, env, key) {
   let enabled = false;
   try {
@@ -99,6 +163,21 @@ async function partnerReferralsFlagResponse(request, env) {
 export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
+
+    if (pathname.startsWith('/hivemind/app/login')) {
+      return Response.redirect(new URL('/hivemind/login', request.url), 302);
+    }
+    if (/^\/hivemind\/app\/overview(?:\/overview)+\/?$/u.test(pathname)) {
+      return Response.redirect(new URL('/hivemind/app/overview', request.url), 302);
+    }
+
+    // Admitted users receive the complete native Harness SPA at Overview.
+    // Only Harness-owned runtime routes are delegated; all other Da-vinci
+    // pages and assets remain unchanged.
+    if (isHarnessRuntimePath(pathname) || isHarnessDocumentOrAsset(request, pathname)
+      || (hasHarnessAdmission(request) && (pathname === '/api/remote.mux' || pathname.startsWith('/api/hivemind/') || pathname.startsWith('/plugins/')))) {
+      return noIndex(await harnessResponse(request, env));
+    }
 
     if (pathname === PARTNER_REFERRALS_FLAG_PATH) {
       return partnerReferralsFlagResponse(request, env);
