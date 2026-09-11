@@ -43,12 +43,18 @@ import apiClient from '../shared/api-client';
 import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
 
+export function filterCapabilityItems(items, capabilities = {}) {
+  return (items || [])
+    .filter((item) => !item.capability || capabilities[item.capability]?.enabled !== false)
+    .map((item) => ({ ...item, children: item.children ? filterCapabilityItems(item.children, capabilities) : item.children }));
+}
+
 /** Build nav sections, conditionally including admin items. Filtered by activeSection. */
-function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection = 'hivemind' }) {
+function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection = 'hivemind', capabilities = {} }) {
   const tt = (k, def) => t(`sidebar.${k}`, { defaultValue: def });
   const advancedItems = [
     // Agent Swarm + Engine hidden for now (kept routable, just off the sidebar).
-    { to: '/hivemind/app/mcp',        icon: Server,       label: tt('mcpServer', 'MCP Server') },
+    { to: '/hivemind/app/mcp',        icon: Server,       label: tt('mcpServer', 'MCP Server'), capability: 'mcp' },
     { to: '/hivemind/app/keys',       icon: Key,          label: tt('apiKeys', 'API Keys') },
     { to: '/hivemind/app/evaluation', icon: FlaskConical, label: tt('evaluation', 'Evaluation') },
   ];
@@ -107,11 +113,11 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
     {
       label: tt('groups.yourBrain', 'Your Brain'),
       items: [
-        { to: '/hivemind/app/connectors', icon: Cable,    label: tt('connectors',  'Connectors') },
-        { to: '/hivemind/app/memories',   icon: Brain,    label: tt('memories',    'Memories') },
-        { to: '/hivemind/app/meeting-notes', icon: Mic,   label: tt('meetingNotes', 'AI Meeting Notes') },
-        { to: '/hivemind/app/graph',      icon: Network,  label: tt('graphMain',   'Memory Graph') },
-        { to: '/hivemind/app/knowledge',  icon: BookOpen, label: tt('knowledge',   'Knowledge Base') },
+        { to: '/hivemind/app/connectors', icon: Cable,    label: tt('connectors',  'Connectors'), capability: 'connectors' },
+        { to: '/hivemind/app/memories',   icon: Brain,    label: tt('memories',    'Memories'), capability: 'memories' },
+        { to: '/hivemind/app/meeting-notes', icon: Mic,   label: tt('meetingNotes', 'AI Meeting Notes'), capability: 'meeting_notes' },
+        { to: '/hivemind/app/graph',      icon: Network,  label: tt('graphMain',   'Memory Graph'), capability: 'graph' },
+        { to: '/hivemind/app/knowledge',  icon: BookOpen, label: tt('knowledge',   'Knowledge Base'), capability: 'knowledge' },
       ],
     },
     {
@@ -149,6 +155,7 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [showWebAdmin, setShowWebAdmin] = useState(false);
+  const [brainCapabilities, setBrainCapabilities] = useState(null);
   const { usage } = useUsage();
 
   // Probe admin access once on mount
@@ -156,6 +163,16 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
     apiClient.getWebAdminMetrics()
       .then(() => setShowWebAdmin(true))
       .catch(() => setShowWebAdmin(false));
+  }, []);
+
+  // One capability read gates page mounting; it is not a polling loop. Keep
+  // existing stable surfaces visible if the capability endpoint is degraded.
+  useEffect(() => {
+    let active = true;
+    apiClient.getBrainCapabilities()
+      .then((capabilities) => { if (active) setBrainCapabilities(capabilities); })
+      .catch(() => { if (active) setBrainCapabilities({}); });
+    return () => { active = false; };
   }, []);
 
   // Listen for hivemind:close-sidebar and hivemind:open-sidebar events
@@ -172,7 +189,9 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
     };
   }, []);
 
-  const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection });
+  const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection, capabilities: brainCapabilities || {} })
+    .map((section) => ({ ...section, items: filterCapabilityItems(section.items, brainCapabilities || {}) }))
+    .filter((section) => section.items?.length);
   const planLabel = org?.plan
     ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })
     : t('sidebar.planLabel.free', { defaultValue: 'Free Plan' });

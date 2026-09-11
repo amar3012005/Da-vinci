@@ -90,14 +90,25 @@ class HiveMindApiClient {
     return this._platformAdminEnvironment || 'production';
   }
 
+<<<<<<< HEAD
   getPlatformAdminFrontendUrl(path = '') {
     const environment = this.getPlatformAdminEnvironment();
     const base = PLATFORM_ADMIN_BASES[environment].frontend;
     return `${base}${String(path || '').startsWith('/') ? path : `/${path}`}`;
   }
 
+  async getBrainCapabilities() {
+    const { data } = await this.core.get('/api/brain/capabilities');
+    return data?.capabilities || {};
+  }
+
   _controlPlaneBaseUrl() {
     return String(this.controlPlane.defaults.baseURL || API_DEFAULTS.controlPlaneBase).replace(/\/$/, '');
+=======
+  async getBrainCapabilities() {
+    const { data } = await this.core.get('/api/brain/capabilities');
+    return data?.capabilities || {};
+>>>>>>> 05aee283 (feat(hivemind): gate Brain navigation by capabilities)
   }
 
   setPlatformAdminEnvironment(environment) {
