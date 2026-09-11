@@ -143,11 +143,10 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
   ];
 }
 
-export default function Sidebar({ activeSection = 'hivemind' }) {
+export default function Sidebar({ activeSection = 'hivemind', collapsed = false, onCollapsedChange }) {
   const { t } = useTranslation('dashboard');
   const { logout, org, user } = useAuth();
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
   const [showWebAdmin, setShowWebAdmin] = useState(false);
   const { usage } = useUsage();
 
@@ -156,20 +155,6 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
     apiClient.getWebAdminMetrics()
       .then(() => setShowWebAdmin(true))
       .catch(() => setShowWebAdmin(false));
-  }, []);
-
-  // Listen for hivemind:close-sidebar and hivemind:open-sidebar events
-  useEffect(() => {
-    const handleClose = () => setCollapsed(true);
-    const handleOpen = () => setCollapsed(false);
-
-    window.addEventListener('hivemind:close-sidebar', handleClose);
-    window.addEventListener('hivemind:open-sidebar', handleOpen);
-
-    return () => {
-      window.removeEventListener('hivemind:close-sidebar', handleClose);
-      window.removeEventListener('hivemind:open-sidebar', handleOpen);
-    };
   }, []);
 
   const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection });
@@ -216,7 +201,10 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
           )}
         </div>
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          type="button"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+          onClick={() => onCollapsedChange?.(!collapsed)}
           className="p-1 rounded-md hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors flex-shrink-0"
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -242,7 +230,7 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
                 const pathOnly = item.to.split('?')[0];
                 const isActive =
                   location.pathname === pathOnly ||
-                  (pathOnly !== '/hivemind/app/overview' && location.pathname.startsWith(pathOnly));
+                  location.pathname.startsWith(`${pathOnly}/`);
                 const hasChildren = item.children && item.children.length > 0;
 
                 return (

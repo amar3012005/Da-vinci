@@ -277,7 +277,7 @@ export default function AppShell() {
   // Overview embeds the HIVE chat as the page centerpiece — the floating
   // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
   // every other page keeps the FAB.
-  const onOverview = /\/hivemind\/app(\/overview)?\/?$/.test(location.pathname);
+  const onOverview = /\/hivemind\/app(?:\/overview(?:\/.*)?)?\/?$/.test(location.pathname);
   const onMeetingNotes = /\/hivemind\/app\/meeting-notes\/?$/.test(location.pathname);
 
   // Track sidebar state for dynamic margin
@@ -337,7 +337,9 @@ export default function AppShell() {
     <QuickRecorderProvider>
     <TeamProvider>
       <div className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
-        {!compactViewport && !graphFullscreen && !hyperFullscreen && <Sidebar activeSection={activeSection} />}
+        {!compactViewport && !graphFullscreen && !hyperFullscreen && (
+          <Sidebar activeSection={activeSection} collapsed={sidebarCollapsed} onCollapsedChange={setSidebarCollapsed} />
+        )}
         <div
           className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen ? 'sidebar-content-expanded' : ''}`}
           style={{ marginLeft: (compactViewport || graphFullscreen || hyperFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '260px' }}

@@ -11,8 +11,9 @@ const USE_TOOLS_DURABLE_AGENT_ENV_KEY = 'USE_TOOLS_DURABLE_AGENT';
 const ENABLE_TOOLS_HITL_FLAG_PATH = '/__hivemind/feature-flags/enable-tools-hitl';
 const ENABLE_TOOLS_HITL_FLAGSHIP_KEY = 'enable-tools-hitl';
 const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
-const HARNESS_OVERVIEW_PATH = '/hivemind/app/v1/overview';
+const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
+const HARNESS_RETURN_COOKIE = 'hm_harness_return';
 const PUBLIC_MARKETING_HOSTS = new Set([
   'singulancelabs.com',
   'www.singulancelabs.com',
@@ -81,9 +82,35 @@ function isHarnessRuntimePath(pathname) {
   return pathname === '/api/hivemind/embed/exchange';
 }
 
+function harnessDocumentPath(pathname) {
+  if (pathname === HARNESS_OVERVIEW_PATH || pathname === `${HARNESS_OVERVIEW_PATH}/new`) return pathname;
+  if (!pathname.startsWith(`${HARNESS_OVERVIEW_PATH}/session/`)) return null;
+  const encoded = pathname.slice(`${HARNESS_OVERVIEW_PATH}/session/`.length);
+  if (!encoded || encoded.includes('/') || encoded.length > 512) return null;
+  try {
+    const sessionId = decodeURIComponent(encoded);
+    return sessionId && !sessionId.includes('/') && sessionId.length <= 256 ? pathname : null;
+  } catch { return null; }
+}
+
+function canonicalHarnessDocumentPath(pathname) {
+  const exact = harnessDocumentPath(pathname);
+  if (exact !== null) return exact;
+  const prefix = `${HARNESS_OVERVIEW_PATH}/session/`;
+  if (!pathname.startsWith(prefix)) return null;
+  const [encoded, ...suffix] = pathname.slice(prefix.length).split('/');
+  if (!encoded || suffix.length === 0 || suffix.some(segment => segment !== 'overview')) return null;
+  return harnessDocumentPath(`${prefix}${encoded}`);
+}
+
+function cookieValue(request, name) {
+  const match = (request.headers.get('cookie') || '').match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? match[1] : null;
+}
+
 function isHarnessDocumentOrAsset(request, pathname) {
   if (!hasHarnessSession(request) || !hasHarnessAdmission(request)) return false;
-  return pathname === HARNESS_OVERVIEW_PATH
+  return harnessDocumentPath(pathname) !== null
     || pathname.startsWith('/assets/')
     || pathname === '/favicon.svg'
     || pathname === '/manifest.webmanifest';
@@ -104,10 +131,16 @@ async function harnessResponse(request, env) {
   if (pathname === '/api/hivemind/embed/exchange' && (response.ok || response.status === 303)) {
     const headers = new Headers(response.headers);
     headers.append('set-cookie', `${HARNESS_ADMISSION_COOKIE}=1; Path=/; Max-Age=3600; Secure; HttpOnly; SameSite=Strict`);
-    if (response.status === 303) headers.set('location', HARNESS_OVERVIEW_PATH);
+    headers.append('set-cookie', `${HARNESS_RETURN_COOKIE}=; Path=/api/hivemind/embed/exchange; Max-Age=0; Secure; HttpOnly; SameSite=Strict`);
+    const requested = cookieValue(request, HARNESS_RETURN_COOKIE);
+    let destination = HARNESS_OVERVIEW_PATH;
+    if (requested) {
+      try { destination = harnessDocumentPath(decodeURIComponent(requested)) || HARNESS_OVERVIEW_PATH; } catch { /* fail closed */ }
+    }
+    if (response.status === 303) headers.set('location', destination);
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
   }
-  const runnerRejectedPrincipal = pathname === HARNESS_OVERVIEW_PATH && (
+  const runnerRejectedPrincipal = harnessDocumentPath(pathname) !== null && (
     response.status === 401
     || response.status === 403
     || ((response.headers.get('content-type') || '').startsWith('text/plain')
@@ -119,7 +152,7 @@ async function harnessResponse(request, env) {
     headers.append('set-cookie', `${HARNESS_ADMISSION_COOKIE}=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Strict`);
     return new Response(fallback.body, { status: fallback.status, statusText: fallback.statusText, headers });
   }
-  if (pathname !== HARNESS_OVERVIEW_PATH || !isHtml(response)) return response;
+  if (harnessDocumentPath(pathname) === null || !isHtml(response)) return response;
   const html = (await response.text())
     .replaceAll('href="./manifest.webmanifest"', 'href="/manifest.webmanifest"')
     .replaceAll('href="./favicon.svg"', 'href="/favicon.svg"')
@@ -167,15 +200,22 @@ export default {
     if (pathname.startsWith('/hivemind/app/login')) {
       return Response.redirect(new URL('/hivemind/login', request.url), 302);
     }
+    const canonicalHarnessPath = canonicalHarnessDocumentPath(pathname);
+    if (canonicalHarnessPath !== null && canonicalHarnessPath !== pathname) {
+      return Response.redirect(new URL(canonicalHarnessPath, request.url), 302);
+    }
     if (/^\/hivemind\/app\/overview(?:\/overview)+\/?$/u.test(pathname)) {
-      return Response.redirect(new URL('/hivemind/app/overview', request.url), 302);
+      return Response.redirect(new URL(HARNESS_OVERVIEW_PATH, request.url), 302);
+    }
+    if (pathname === '/hivemind/app/v1/overview') {
+      return Response.redirect(new URL(HARNESS_OVERVIEW_PATH, request.url), 302);
     }
 
     // Admitted users receive the complete native Harness SPA at Overview.
     // Only Harness-owned runtime routes are delegated; all other Da-vinci
     // pages and assets remain unchanged.
     if (isHarnessRuntimePath(pathname) || isHarnessDocumentOrAsset(request, pathname)
-      || (hasHarnessAdmission(request) && (pathname === '/api/remote.mux' || pathname.startsWith('/api/hivemind/') || pathname.startsWith('/plugins/')))) {
+      || (hasHarnessAdmission(request) && (pathname.startsWith('/api/') || pathname.startsWith('/plugins/')))) {
       return noIndex(await harnessResponse(request, env));
     }
 
@@ -254,6 +294,12 @@ export default {
     }
 
     const response = await env.ASSETS.fetch(request);
+
+    if (!hasHarnessAdmission(request) && harnessDocumentPath(pathname) !== null && isHtml(response)) {
+      const headers = new Headers(response.headers);
+      headers.append('set-cookie', `${HARNESS_RETURN_COOKIE}=${encodeURIComponent(pathname)}; Path=/api/hivemind/embed/exchange; Max-Age=300; Secure; HttpOnly; SameSite=Strict`);
+      return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+    }
 
     // SPA fallback must never turn a missing executable asset into index.html.
     if ((pathname.startsWith(STATIC_ASSET_PREFIX) || pathname.startsWith(AGENT_SETUP_PREFIX)) && isHtml(response)) {
