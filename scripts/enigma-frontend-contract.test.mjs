@@ -7,6 +7,7 @@ const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const packageJson = JSON.parse(read('package.json'));
 const buildScript = read('scripts/build-cloudflare.mjs');
 const config = read('wrangler.enigma.jsonc');
+const links = read('src/components/mobile/hivemindLinks.js');
 
 test('Enigma build has isolated public origins', () => {
   assert.match(packageJson.scripts['build:cloudflare:enigma'], /HIVEMIND_FRONTEND_ENVIRONMENT=enigma/);
@@ -21,4 +22,9 @@ test('Enigma Worker exposes only the Enigma frontend hostname', () => {
   assert.match(config, /"pattern": "dev\.next\.singulancelabs\.com"/);
   assert.match(config, /"FLAGSHIP_ENVIRONMENT": "dev"/);
   assert.doesNotMatch(config, /"pattern": "next\.singulancelabs\.com"/);
+});
+
+test('cover-page HIVEMIND links follow the current browser origin', () => {
+  assert.match(links, /window\.location\.origin/);
+  assert.match(links, /HIVEMIND_URL = `\$\{HIVEMIND_SITE_URL\.replace/);
 });
