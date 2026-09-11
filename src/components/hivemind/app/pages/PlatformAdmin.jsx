@@ -1540,6 +1540,24 @@ function CommercialManager() {
                   {invitationDetail.invitation.recipient_email} ·{" "}
                   {invitationDetail.invitation.status}
                 </p>
+                <section className="mt-4 rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-3">
+                  <h4 className="text-sm font-semibold text-[#252525]">Activation timeline</h4>
+                  {!(invitationDetail.activation || []).length ? (
+                    <p className="mt-2 text-xs text-[#737373]">No activation lifecycle has started. A record appears only after a successful invitation delivery.</p>
+                  ) : (
+                    <ol className="mt-2 space-y-2">
+                      {invitationDetail.activation.map((entry) => (
+                        <li key={entry.id} className="border-t border-[#e3e0db] pt-2 text-xs text-[#525252] first:border-t-0 first:pt-0">
+                          <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-[#252525]">{entry.label}</strong><span className="rounded-full bg-white px-2 py-0.5 font-medium">{entry.stage}</span></div>
+                          <p className="mt-1">Started {when(entry.created_at)} · {entry.reminder_count || 0} reminder{entry.reminder_count === 1 ? "" : "s"}</p>
+                          {entry.last_reminder_at && <p>Last reminder {when(entry.last_reminder_at)}</p>}
+                          {entry.next_reminder_at && <p>Next eligible reminder {when(entry.next_reminder_at)}</p>}
+                          {entry.stopped_at && <p>Stopped {when(entry.stopped_at)}{entry.stop_reason ? ` · ${entry.stop_reason}` : ""}</p>}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </section>
                 <div className="mt-4 divide-y">
                   {(invitationDetail.audit || []).map((entry) => (
                     <div key={entry.id} className="py-2 text-xs text-[#525252]">
@@ -2228,15 +2246,17 @@ export default function PlatformAdmin() {
             </header>
             <div className="p-5">
               {lifecycleLoading ? <p className="text-sm text-[#737373]">Loading lifecycle records…</p> : lifecycleError ? <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{lifecycleError}</p> : <>
-                <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-6">
                   {[
                     ["Organizations", lifecycle.totals?.organizations || 0],
                     ["Awakened", lifecycle.totals?.awakened || 0],
+                    ["Pre-Day 0", lifecycle.totals?.activation_count || 0],
                     ["Lifecycle events", lifecycle.totals?.lifecycle_count || 0],
                     ["Completed", lifecycle.totals?.completed || 0],
                     ["Needs attention", (lifecycle.totals?.in_progress || 0) + (lifecycle.totals?.failed || 0)],
                   ].map(([label, value]) => <div key={label} className="rounded-xl border border-[#e3e0db] bg-white p-3"><p className="text-[11px] text-[#737373]">{label}</p><p className="mt-1 text-xl font-semibold text-[#111]">{value}</p></div>)}
                 </div>
+                {(lifecycle.activation || []).length > 0 && <section className="mb-5 rounded-xl border border-[#e3e0db] bg-white p-4"><h3 className="font-semibold text-[#111]">Before Day 0</h3><ol className="mt-3 space-y-2">{lifecycle.activation.map((entry) => <li key={entry.id} className="border-t border-[#efede8] pt-2 text-sm first:border-t-0 first:pt-0"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium text-[#252525]">{entry.label}</span><span className="rounded-full bg-[#f3f1ec] px-2 py-0.5 text-[11px] font-medium text-[#525252]">{entry.stage}</span></div><p className="mt-1 text-xs text-[#737373]">Started {when(entry.created_at)} · {entry.reminder_count || 0} reminder{entry.reminder_count === 1 ? "" : "s"}</p>{entry.last_reminder_at && <p className="text-xs text-[#737373]">Last reminder {when(entry.last_reminder_at)}</p>}{entry.next_reminder_at && <p className="text-xs text-[#737373]">Next eligible reminder {when(entry.next_reminder_at)}</p>}{entry.stopped_at && <p className="text-xs text-[#737373]">Stopped {when(entry.stopped_at)}{entry.stop_reason ? ` · ${entry.stop_reason}` : ""}</p>}</li>)}</ol></section>}
                 {!lifecycle.organizations.length ? <p className="rounded-lg border border-[#e3e0db] bg-white p-4 text-sm text-[#737373]">This user does not belong to an active organization.</p> : <div className="space-y-3">
                   {lifecycle.organizations.map((organization) => (
                     <article key={organization.organization_id} className="rounded-xl border border-[#e3e0db] bg-white p-4">
