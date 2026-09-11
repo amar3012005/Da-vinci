@@ -125,7 +125,7 @@ async function harnessResponse(request, env) {
   }
   const pathname = new URL(request.url).pathname;
   const documentUrl = new URL(request.url);
-  if (harnessDocumentPath(pathname) !== null) documentUrl.pathname = '/index.html';
+  if (harnessDocumentPath(pathname) !== null) documentUrl.pathname = '/';
   const upstreamRequest = harnessDocumentPath(pathname) !== null
     ? new Request(documentUrl, request)
     : pathname === '/api/hivemind/embed/exchange'

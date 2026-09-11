@@ -17,7 +17,7 @@ test('admitted session routes serve the Harness document', async () => {
     return new Response('<!doctype html><script src="./assets/index.js"></script>', { headers: { 'content-type': 'text/html' } });
   }));
   assert.equal(response.status, 200);
-  assert.equal(path, '/index.html');
+  assert.equal(path, '/');
   assert.match(await response.text(), /src="\/assets\/index\.js"/);
 });
 
