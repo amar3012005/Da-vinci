@@ -88,6 +88,11 @@ class HiveMindApiClient {
     return this._platformAdminEnvironment || 'production';
   }
 
+  async getBrainCapabilities() {
+    const { data } = await this.core.get('/api/brain/capabilities');
+    return data?.capabilities || {};
+  }
+
   setPlatformAdminEnvironment(environment) {
     const next = environment === 'dev' ? 'dev' : 'production';
     if (typeof window === 'undefined' || window.location.hostname !== PLATFORM_ADMIN_HOST) return;
