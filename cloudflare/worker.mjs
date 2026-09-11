@@ -124,7 +124,11 @@ async function harnessResponse(request, env) {
     });
   }
   const pathname = new URL(request.url).pathname;
-  const upstreamRequest = pathname === '/api/hivemind/embed/exchange'
+  const documentUrl = new URL(request.url);
+  if (harnessDocumentPath(pathname) !== null) documentUrl.pathname = '/index.html';
+  const upstreamRequest = harnessDocumentPath(pathname) !== null
+    ? new Request(documentUrl, request)
+    : pathname === '/api/hivemind/embed/exchange'
     ? new Request(request, { redirect: 'manual' })
     : request;
   const response = await env.HARNESS_CHAT.fetch(upstreamRequest);
