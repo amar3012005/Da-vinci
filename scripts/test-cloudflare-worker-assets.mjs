@@ -24,6 +24,22 @@ assert.deepEqual(await enableToolsHitl.json(), {
   source: 'cloudflare-flagship',
 });
 
+const enigmaFlagContext = [];
+await worker.fetch(
+  new Request('https://dev.next.singulancelabs.com/__hivemind/feature-flags/partner-referrals'),
+  {
+    ASSETS: { fetch: async () => new Response('unused') },
+    FLAGS: { getBooleanValue: async (_key, _fallback, context) => { enigmaFlagContext.push(context); return false; } },
+    FLAGSHIP_ENVIRONMENT: 'dev',
+    FLAGSHIP_SURFACE: 'hivemind-web-enigma',
+  },
+);
+assert.deepEqual(enigmaFlagContext, [{
+  environment: 'dev',
+  surface: 'hivemind-web-enigma',
+  hostname: 'dev.next.singulancelabs.com',
+}]);
+
 const enabledFlag = await worker.fetch(
   new Request('https://admin.hivemind.singulancelabs.com/__hivemind/feature-flags/partner-referrals'),
   envReturning(new Response('unused'), true),

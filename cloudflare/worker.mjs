@@ -25,6 +25,14 @@ function hostname(request) {
   return (host ? host.split(':')[0] : new URL(request.url).hostname).toLowerCase();
 }
 
+function flagshipContext(request, env) {
+  return {
+    environment: env.FLAGSHIP_ENVIRONMENT || 'production',
+    surface: env.FLAGSHIP_SURFACE || 'hivemind-web',
+    hostname: hostname(request),
+  };
+}
+
 function noIndex(response) {
   const headers = new Headers(response.headers);
   headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
@@ -70,11 +78,7 @@ function missingAssetResponse() {
 async function booleanFlagshipResponse(request, env, key) {
   let enabled = false;
   try {
-    enabled = await env.FLAGS.getBooleanValue(key, false, {
-      environment: 'production',
-      surface: 'hivemind-web',
-      hostname: hostname(request),
-    });
+    enabled = await env.FLAGS.getBooleanValue(key, false, flagshipContext(request, env));
   } catch {
     // Public gates fail closed if Flagship cannot be evaluated.
   }
@@ -109,17 +113,9 @@ export default {
     if (pathname === ENABLE_TOOLS_HITL_FLAG_PATH) {
       let enabled = false;
       try {
-        enabled = await env.FLAGS.getBooleanValue(ENABLE_TOOLS_HITL_FLAGSHIP_KEY, false, {
-          environment: 'production',
-          surface: 'hivemind-web',
-          hostname: hostname(request),
-        });
+        enabled = await env.FLAGS.getBooleanValue(ENABLE_TOOLS_HITL_FLAGSHIP_KEY, false, flagshipContext(request, env));
         if (enabled !== true) {
-          enabled = await env.FLAGS.getBooleanValue(ENABLE_TOOLS_HITL_ENV_KEY, false, {
-            environment: 'production',
-            surface: 'hivemind-web',
-            hostname: hostname(request),
-          });
+          enabled = await env.FLAGS.getBooleanValue(ENABLE_TOOLS_HITL_ENV_KEY, false, flagshipContext(request, env));
         }
       } catch {
         // Public gates fail closed if Flagship cannot be evaluated.
@@ -139,17 +135,9 @@ export default {
     if (pathname === USE_TOOLS_DURABLE_AGENT_FLAG_PATH) {
       let enabled = false;
       try {
-        enabled = await env.FLAGS.getBooleanValue(USE_TOOLS_DURABLE_AGENT_FLAGSHIP_KEY, false, {
-          environment: 'production',
-          surface: 'hivemind-web',
-          hostname: hostname(request),
-        });
+        enabled = await env.FLAGS.getBooleanValue(USE_TOOLS_DURABLE_AGENT_FLAGSHIP_KEY, false, flagshipContext(request, env));
         if (enabled !== true) {
-          enabled = await env.FLAGS.getBooleanValue(USE_TOOLS_DURABLE_AGENT_ENV_KEY, false, {
-            environment: 'production',
-            surface: 'hivemind-web',
-            hostname: hostname(request),
-          });
+          enabled = await env.FLAGS.getBooleanValue(USE_TOOLS_DURABLE_AGENT_ENV_KEY, false, flagshipContext(request, env));
         }
       } catch {
         // Public gates fail closed if Flagship cannot be evaluated.

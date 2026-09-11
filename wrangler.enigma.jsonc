@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "hivemind-web-enigma",
+  "compatibility_date": "2026-09-11",
+  "workers_dev": true,
+  "preview_urls": true,
+  "main": "./cloudflare/worker.mjs",
+  "build": {
+    "command": "npm run build:cloudflare:enigma"
+  },
+  "assets": {
+    "directory": "./build",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "flagship": [
+    {
+      "binding": "FLAGS",
+      "app_id": "2e89fbd3-7496-459b-a507-f1017d444dd9"
+    }
+  ],
+  "vars": {
+    "FLAGSHIP_ENVIRONMENT": "dev",
+    "FLAGSHIP_SURFACE": "hivemind-web-enigma"
+  },
+  "routes": [
+    {
+      "pattern": "dev.next.singulancelabs.com",
+      "custom_domain": true
+    }
+  ]
+}
