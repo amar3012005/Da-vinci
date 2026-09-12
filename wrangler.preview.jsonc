@@ -15,7 +15,7 @@
     "directory": "./build",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/plugins/*", "/assets/*", "/hivemind/app/overview", "/hivemind/app/overview/*"]
+    "run_worker_first": ["/api/*", "/plugins/*", "/assets/*", "/__hivemind/*", "/hivemind/app/overview", "/hivemind/app/overview/*"]
   },
   "routes": [
     {

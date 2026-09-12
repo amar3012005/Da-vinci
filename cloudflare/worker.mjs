@@ -11,6 +11,7 @@ const USE_TOOLS_DURABLE_AGENT_ENV_KEY = 'USE_TOOLS_DURABLE_AGENT';
 const ENABLE_TOOLS_HITL_FLAG_PATH = '/__hivemind/feature-flags/enable-tools-hitl';
 const ENABLE_TOOLS_HITL_FLAGSHIP_KEY = 'enable-tools-hitl';
 const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
+const HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
 const HARNESS_RETURN_COOKIE = 'hm_harness_return';
@@ -223,6 +224,13 @@ export default {
       const response = await harnessResponse(request, env);
       if ((request.headers.get('upgrade') || '').toLowerCase() === 'websocket') return response;
       return noIndex(response);
+    }
+
+    // next.preview is the sole public HIVE application authority. The Harness
+    // Worker remains an internal service binding, including flag evaluation;
+    // Control Plane must not depend on a second public chat hostname.
+    if (pathname === HARNESS_CHAT_FLAG_PATH) {
+      return noIndex(await harnessResponse(request, env));
     }
 
     if (pathname === PARTNER_REFERRALS_FLAG_PATH) {

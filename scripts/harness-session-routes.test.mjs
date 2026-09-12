@@ -108,6 +108,19 @@ test('native RPC authentication is enforced by Harness, never SPA HTML', async (
   assert.equal(await response.text(), 'Unauthorized');
 });
 
+test('Harness feature evaluation stays on the canonical next.preview authority', async () => {
+  let forwarded;
+  const response = await worker.fetch(new Request(`${origin}/__hivemind/feature-flags/harness-chat`), environment(async (request) => {
+    forwarded = new URL(request.url);
+    return Response.json({ enabled: true, source: 'cloudflare-flagship' });
+  }));
+
+  assert.equal(response.status, 200);
+  assert.equal(forwarded.origin, origin);
+  assert.equal(forwarded.pathname, '/__hivemind/feature-flags/harness-chat');
+  assert.deepEqual(await response.json(), { enabled: true, source: 'cloudflare-flagship' });
+});
+
 test('WebSocket upgrade response retains the original transport object', async () => {
   const upgraded = { status: 101, webSocket: {} };
   const response = await worker.fetch(new Request(`${origin}/api/remote.mux`, {
