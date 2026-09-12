@@ -176,7 +176,21 @@ function RoomLobby() {
   const [rooms, setRooms] = useState([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
-  useEffect(() => { apiClient.listOperatingRooms().then(setRooms).catch((e) => setError(e?.response?.data?.message || e.message)); }, []);
+  const [enabled, setEnabled] = useState(null);
+  useEffect(() => {
+    let active = true;
+    apiClient.getBrainCapabilities()
+      .then((capabilities) => { if (active) setEnabled(capabilities?.operating_rooms?.enabled === true); })
+      .catch(() => { if (active) setEnabled(false); });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    if (enabled !== true) return;
+    apiClient.listOperatingRooms().then(setRooms).catch((e) => setError(e?.response?.data?.message || e.message));
+  }, [enabled]);
+  if (enabled === false) {
+    return <div className="min-h-full bg-[#faf9f4] px-5 py-8 md:px-10"><div className="mx-auto max-w-2xl border border-[#e3e0db] bg-white rounded-[10px] p-6"><div className="font-mono text-[11px] uppercase tracking-wider text-[#a3a3a3]">Employees · live collaboration</div><h1 className="mt-2 font-['Space_Grotesk'] text-[24px] font-semibold text-[#0a0a0a]">Operating Rooms</h1><p className="mt-2 text-[12px] leading-5 text-[#737373]">This feature is not enabled for this workspace yet. It stays hidden until its tenant rollout and verified voice services are both ready.</p><button className="mt-5 rounded-[6px] bg-[#0a0a0a] px-3 py-2 text-[12px] text-white hover:bg-[#262626]" onClick={() => navigate('/hivemind/app/employees/mycompany')}>Back to Your Company</button></div></div>;
+  }
   const create = async () => {
     setCreating(true); setError('');
     try {
