@@ -676,6 +676,8 @@ export default function HyperAgents() {
             onShowRoster={() => goMode('roster')}
             onOpenLeads={() => goMode('leads', null)}
             onOpenRuntime={() => goMode('runtime', null)}
+            onOpenOperatingRooms={() => navigate('/hivemind/app/employees/operating-rooms')}
+            operatingRoomsEnabled={operatingRoomsEnabled}
             showRuntimeInvite={showRuntimeIntro}
             runtimeInviteVersion="canary-20260901"
           />

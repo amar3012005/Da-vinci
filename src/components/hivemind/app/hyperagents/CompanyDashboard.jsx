@@ -172,7 +172,7 @@ const RUNTIME_FOCUSES = [
   { id: 'fundraising', label: 'Fundraising', detail: 'Prepare evidence, narrative, and investor work.' },
 ];
 
-export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime, showRuntimeInvite = true, runtimeInviteVersion = 'v1' }) {
+export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime, onOpenOperatingRooms, operatingRoomsEnabled = false, showRuntimeInvite = true, runtimeInviteVersion = 'v1' }) {
   const { t } = useTranslation('dashboard');
   const [state, setState] = useState(null); // {company, employees, hq_room_id}
   const [loading, setLoading] = useState(true);
@@ -406,6 +406,13 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {operatingRoomsEnabled ? <button
+            type="button"
+            onClick={onOpenOperatingRooms}
+            className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#0f6fde] border border-[#117dff]/30 rounded-lg px-3 py-1.5 bg-[#117dff]/5 hover:bg-[#117dff]/10 transition-colors"
+          >
+            <Phone size={12} /> Operating Rooms
+          </button> : null}
           <button onClick={onShowRoster}
             className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#525252] hover:text-[#0a0a0a] border border-[#e3e0db] rounded-lg px-3 py-1.5 bg-white hover:bg-[#faf9f4] transition-colors">
             <LayoutGrid size={12} /> {t('hyperDash.agents', 'Agents')}
