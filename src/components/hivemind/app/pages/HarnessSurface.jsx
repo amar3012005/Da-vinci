@@ -17,8 +17,12 @@ function executeExternalScript(src) {
     const script = document.createElement('script');
     script.src = src;
     script.async = false;
-    script.addEventListener('load', () => { script.remove(); resolve(); }, { once: true });
-    script.addEventListener('error', () => { script.remove(); reject(new Error(`Could not load Harness module: ${src}`)); }, { once: true });
+    script.dataset.dshNativeScript = src;
+    script.addEventListener('load', () => { resolve(); }, { once: true });
+    script.addEventListener('error', () => {
+      script.remove();
+      reject(new Error(`Could not load Harness module: ${src}`));
+    }, { once: true });
     document.head.append(script);
   });
 }
@@ -47,7 +51,10 @@ function loadHarnessStylesheet(href) {
 /** Execute the typed Harness boot table exactly as its static worker does. */
 async function applyHarnessInjections(rows) {
   if (!Array.isArray(rows)) throw new Error('Harness returned an invalid boot graph.');
-  const ready = window.__DSH_BOOT_READY__ || deferred();
+  // A native document gets a fresh readiness barrier and executes every boot
+  // script on every navigation. SPA remounts must preserve that contract too:
+  // HTTP caching may reuse bytes, but script execution must never be skipped.
+  const ready = deferred();
   window.__DSH_BOOT_READY__ = ready;
   try {
     for (const row of rows) {
@@ -140,6 +147,11 @@ export default function HarnessSurface() {
       if (styles.length === 0) throw new Error('Harness returned no native styles.');
       await Promise.all(styles.map(loadHarnessStylesheet));
       if (cancelled) return;
+      const controlPlaneBase = String(apiClient.controlPlane.defaults.baseURL || '').replace(/\/$/, '');
+      window.__HIVEMIND_DICTATION_ENDPOINT__ = `${controlPlaneBase}/v1/proxy/meetings/transcribe`;
+      window.__HIVEMIND_DELETE_SESSION__ = async (sessionId) => {
+        await apiClient.controlPlane.delete(`/v1/harness-chat/sessions/${encodeURIComponent(sessionId)}`);
+      };
       await applyHarnessInjections(boot.injections);
       if (cancelled) return;
       window.__DSH_EMBED_REQUEST__ = request;
@@ -157,6 +169,8 @@ export default function HarnessSurface() {
       cancelled = true;
       request.cancelled = true;
       if (window.__DSH_EMBED_REQUEST__ === request) window.__DSH_EMBED_REQUEST__ = undefined;
+      window.__HIVEMIND_DICTATION_ENDPOINT__ = undefined;
+      window.__HIVEMIND_DELETE_SESSION__ = undefined;
       const app = window.__DSH_EMBED_APP__;
       window.__DSH_EMBED_APP__ = undefined;
       if (app) void app.dispose();

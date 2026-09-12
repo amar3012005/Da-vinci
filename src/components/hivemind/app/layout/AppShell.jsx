@@ -248,6 +248,7 @@ export default function AppShell() {
   }, [isSelfHost, shGate]);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [compactTopbar, setCompactTopbar] = useState(false);
   const [compactViewport, setCompactViewport] = useState(() => (
     typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
   ));
@@ -301,6 +302,15 @@ export default function AppShell() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    fetch('/__hivemind/feature-flags/ui-shell', { credentials: 'include', cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('flag unavailable')))
+      .then((value) => { if (active) setCompactTopbar(value?.variation === 'compact'); })
+      .catch(() => { /* Full chrome is the fail-safe fallback. */ });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)');
     const handleChange = (event) => setCompactViewport(event.matches);
     setCompactViewport(media.matches);
@@ -348,8 +358,8 @@ export default function AppShell() {
           className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen ? 'sidebar-content-expanded' : ''}`}
           style={{ marginLeft: (compactViewport || graphFullscreen || hyperFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '260px' }}
         >
-          {!graphFullscreen && <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />}
-          <main className={graphFullscreen ? "flex-1 overflow-hidden" : onOverview && window.location.hostname === 'next.preview.singulancelabs.com' ? "h-[calc(100dvh-56px)] min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          <TopBar compact={compactTopbar} activeSection={activeSection} onSectionChange={handleSectionChange} />
+          <main className={graphFullscreen ? "h-[calc(100dvh-56px)] overflow-hidden" : onOverview && window.location.hostname === 'next.preview.singulancelabs.com' ? "h-[calc(100dvh-56px)] min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>

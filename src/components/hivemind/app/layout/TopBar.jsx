@@ -66,44 +66,46 @@ const SECTION_TITLES = {
   tara: 'TARA',
 };
 
-export default function TopBar({ activeSection = 'hivemind', onSectionChange }) {
+export default function TopBar({ activeSection = 'hivemind', onSectionChange, compact = false }) {
   const location = useLocation();
   const navigate = useNavigate();
   const healthy = useHealthStatus();
 
-  const title = pageTitles[location.pathname] || SECTION_TITLES[activeSection] || 'HIVEMIND';
-  const description = pageDescriptions[location.pathname] || '';
+  const pagePath = location.pathname.startsWith('/hivemind/app/overview/')
+    ? '/hivemind/app/overview' : location.pathname;
+  const title = pageTitles[pagePath] || SECTION_TITLES[activeSection] || 'HIVEMIND';
+  const description = pageDescriptions[pagePath] || '';
 
   const { t } = useTranslation('dashboard');
   // Translate page title/description via topbar.pages.<routeSlug> keys when present.
-  const routeSlug = (location.pathname || '').replace(/^\/+/, '').replace(/\//g, '.') || 'home';
+  const routeSlug = (pagePath || '').replace(/^\/+/, '').replace(/\//g, '.') || 'home';
   const tTitle = t(`topbar.titles.${routeSlug}`, { defaultValue: title });
   const tDesc = description ? t(`topbar.descriptions.${routeSlug}`, { defaultValue: description }) : '';
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-center border-b border-[#e3e0db] bg-[#faf9f4]/90 px-3 backdrop-blur-xl md:justify-between md:px-6">
       {/* Left: Title + Description + Team switcher */}
-      <div className="hidden min-w-0 items-center gap-4 lg:flex">
-        <button
+      <div className="absolute left-3 flex min-w-0 items-center gap-3 md:static md:gap-4">
+        {!compact && <button
           type="button"
           onClick={() => navigate('/hivemind/app/overview')}
           className="shrink-0 border-0 bg-transparent p-0"
           aria-label="SINGULANCE overview"
         >
           <SingulanceBrand variant="light" markSize={28} />
-        </button>
-        <span className="h-7 w-px shrink-0 bg-[#e3e0db]" aria-hidden="true" />
-        <div>
+        </button>}
+        {!compact && <span className="h-7 w-px shrink-0 bg-[#e3e0db]" aria-hidden="true" />}
+        <div className="min-w-0">
           <h1 className="text-[#0a0a0a] text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
             {tTitle}
           </h1>
           {tDesc && (
-            <p className="text-[#a3a3a3] text-[11px] mt-0.5">
+            <p className="hidden text-[#a3a3a3] text-[11px] mt-0.5 lg:block">
               {tDesc}
             </p>
           )}
         </div>
-        <TeamSwitcher />
+        {!compact && <TeamSwitcher />}
       </div>
 
       {/* Section Toggle */}
@@ -127,7 +129,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
       {/* Right: Actions */}
       <div className="absolute right-3 flex items-center gap-2 md:static">
         {/* Global Search */}
-        <button
+        {!compact && <button
           onClick={() => navigate('/hivemind/app/memories')}
           className="hidden md:flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] hover:border-[#d4d0ca] text-[#a3a3a3] hover:text-[#525252] transition-all text-xs"
         >
@@ -136,16 +138,16 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
           <kbd className="hidden md:inline text-[10px] font-mono text-[#a3a3a3] bg-[#eae7e1] rounded px-1 py-0.5 ml-4">
             /
           </kbd>
-        </button>
+        </button>}
 
         {/* Docs */}
-        <a
+        {!compact && <a
           href="/hivemind/docs"
           className="hidden md:flex items-center justify-center w-8 h-8 rounded-[6px] hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors"
           title="Documentation"
         >
           <BookOpen size={15} />
-        </a>
+        </a>}
 
         {/* Durable lifecycle + workspace notification center. */}
         <WorkspaceNotifications />

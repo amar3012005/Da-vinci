@@ -12,6 +12,7 @@ const ENABLE_TOOLS_HITL_FLAG_PATH = '/__hivemind/feature-flags/enable-tools-hitl
 const ENABLE_TOOLS_HITL_FLAGSHIP_KEY = 'enable-tools-hitl';
 const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
+const UI_SHELL_FLAG_PATH = '/__hivemind/feature-flags/ui-shell';
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
 const HARNESS_RETURN_COOKIE = 'hm_harness_return';
@@ -229,12 +230,16 @@ export default {
     // next.preview is the sole public HIVE application authority. The Harness
     // Worker remains an internal service binding, including flag evaluation;
     // Control Plane must not depend on a second public chat hostname.
-    if (pathname === HARNESS_CHAT_FLAG_PATH) {
+    if (pathname === HARNESS_CHAT_FLAG_PATH || pathname === UI_SHELL_FLAG_PATH) {
       return noIndex(await harnessResponse(request, env));
     }
 
     if (pathname === PARTNER_REFERRALS_FLAG_PATH) {
       return partnerReferralsFlagResponse(request, env);
+    }
+    if (pathname === '/manifest.webmanifest') {
+      const manifestUrl = new URL('/manifest.json', request.url);
+      return env.ASSETS.fetch(new Request(manifestUrl, request));
     }
     if (pathname === USE_TOOLS_UNIFIED_DAG_FLAG_PATH) {
       return booleanFlagshipResponse(request, env, USE_TOOLS_UNIFIED_DAG_FLAG_KEY);
