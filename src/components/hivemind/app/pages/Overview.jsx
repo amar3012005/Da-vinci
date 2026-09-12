@@ -48,6 +48,7 @@ import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/up
 // modal + save-to-HIVEMIND flow, same job-title derivation.
 import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './WebStudio';
 import HarnessChatSurface from './HarnessChatSurface';
+import HarnessSurface from './HarnessSurface';
 
 // ─── Animation variants ──────────────────────────────────────────
 
@@ -1452,6 +1453,13 @@ function MobileQrCorner({ open, onToggle, onDismiss }) {
 // ─── Main component ──────────────────────────────────────────────
 
 export default function Overview() {
+  if (window.location.hostname === 'next.preview.singulancelabs.com') {
+    return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
+  }
+  return <LegacyOverview />;
+}
+
+function LegacyOverview() {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   // First-visit guided tour — glass overlay + arrows to each sidebar page.

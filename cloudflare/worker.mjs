@@ -79,7 +79,8 @@ function hasHarnessAdmission(request) {
 }
 
 function isHarnessRuntimePath(pathname) {
-  return pathname === '/api/hivemind/embed/exchange';
+  return pathname.startsWith('/api/') || pathname.startsWith('/plugins/')
+    || pathname.startsWith('/assets/');
 }
 
 function harnessDocumentPath(pathname) {
@@ -216,12 +217,12 @@ export default {
       return Response.redirect(new URL(HARNESS_OVERVIEW_PATH, request.url), 302);
     }
 
-    // Admitted users receive the complete native Harness SPA at Overview.
-    // Only Harness-owned runtime routes are delegated; all other Da-vinci
-    // pages and assets remain unchanged.
-    if (isHarnessRuntimePath(pathname) || isHarnessDocumentOrAsset(request, pathname)
-      || (hasHarnessAdmission(request) && (pathname.startsWith('/api/') || pathname.startsWith('/plugins/')))) {
-      return noIndex(await harnessResponse(request, env));
+    // Da-vinci owns every application document, including session deep links.
+    // The embedded native Harness client owns its runtime and plugin assets.
+    if (isHarnessRuntimePath(pathname)) {
+      const response = await harnessResponse(request, env);
+      if ((request.headers.get('upgrade') || '').toLowerCase() === 'websocket') return response;
+      return noIndex(response);
     }
 
     if (pathname === PARTNER_REFERRALS_FLAG_PATH) {

@@ -11,7 +11,7 @@ function environment(harnessFetch) {
   };
 }
 
-test('admitted opaque session routes serve the native Harness document', async () => {
+test('admitted session deep links retain the Da-vinci document and embedded mount', async () => {
   let forwarded;
   const env = environment(async (request) => {
     forwarded = new URL(request.url).pathname;
@@ -23,8 +23,8 @@ test('admitted opaque session routes serve the native Harness document', async (
     headers: { cookie: 'dsh-auth-main=value; hm_harness_admitted=1' },
   }), env);
   assert.equal(response.status, 200);
-  assert.equal(forwarded, '/hivemind/app/overview/session/session-opaque');
-  assert.match(await response.text(), /src="\/assets\/index\.js"/);
+  assert.equal(forwarded, undefined);
+  assert.match(await response.text(), /Da-vinci/);
 });
 
 test('a deep link survives the one-shot admission exchange', async () => {
@@ -94,16 +94,24 @@ test('admitted native unary RPCs are delegated to Harness', async () => {
   assert.deepEqual(forwarded, { path: '/api/session/create', method: 'POST' });
 });
 
-test('generic API traffic without Harness admission stays on Da-vinci', async () => {
+test('native RPC authentication is enforced by Harness, never SPA HTML', async () => {
   let calls = 0;
-  const env = environment(async () => { calls += 1; return new Response('Harness'); });
+  const env = environment(async () => { calls += 1; return new Response('Unauthorized', { status: 401 }); });
   const response = await worker.fetch(new Request(`${origin}/api/session/create`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ request: {} }),
   }), env);
 
-  assert.equal(response.status, 200);
-  assert.equal(calls, 0);
-  assert.match(await response.text(), /Da-vinci/);
+  assert.equal(response.status, 401);
+  assert.equal(calls, 1);
+  assert.equal(await response.text(), 'Unauthorized');
+});
+
+test('WebSocket upgrade response retains the original transport object', async () => {
+  const upgraded = { status: 101, webSocket: {} };
+  const response = await worker.fetch(new Request(`${origin}/api/remote.mux`, {
+    headers: { upgrade: 'websocket' },
+  }), environment(async () => upgraded));
+  assert.equal(response, upgraded);
 });
