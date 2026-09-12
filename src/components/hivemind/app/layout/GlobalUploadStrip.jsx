@@ -57,7 +57,7 @@ export default function GlobalUploadStrip() {
   // Don't double up — KB has its own inline strip, and Overview shows the
   // compact drop-up above its chat composer.
   if (location.pathname.startsWith(KB_ROUTE)) return null;
-  if (/\/hivemind\/app(\/overview)?\/?$/.test(location.pathname)) return null;
+  if (/\/hivemind\/app(?:\/overview(?:\/.*)?)?\/?$/.test(location.pathname)) return null;
   if (!uploads || uploads.length === 0) return null;
 
   const inFlight = uploads.filter((u) => u.status === 'uploading' || u.status === 'queued').length;
