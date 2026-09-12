@@ -3,7 +3,8 @@ import { AlertTriangle, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 
-const HARNESS_OVERVIEW_PATH = '/';
+const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
+const HARNESS_EXCHANGE_PATH = '/api/hivemind/embed/exchange';
 
 function validBootstrap(data) {
   const mode = data?.mode;
@@ -12,23 +13,31 @@ function validBootstrap(data) {
   if (typeof data?.ticket !== 'string' || !data.ticket) {
     throw new Error('Harness chat did not issue a connection ticket.');
   }
-  if (typeof data?.embed_url !== 'string' || !data.embed_url) throw new Error('Harness chat did not provide its application URL.');
-  return { mode, ticket: data.ticket, embedUrl: data.embed_url, receipt: data?.flag_receipt || null };
+  return { mode, ticket: data.ticket, receipt: data?.flag_receipt || null };
 }
 
-function harnessHandoffUrl(embedUrl, ticket) {
-  const target = new URL(embedUrl);
-  const loopback = target.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(target.hostname);
-  const trusted = target.protocol === 'https:' && ['chat.preview.singulancelabs.com', 'chat.singulancelabs.com'].includes(target.hostname);
-  if (!trusted && !loopback) throw new Error('Harness chat returned an untrusted application URL.');
-  target.pathname = '/auth/callback';
-  target.search = '';
-  target.hash = new URLSearchParams({ ticket, request_id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}` }).toString();
-  return target.toString();
+function canonicalHarnessDestination(url) {
+  const target = new URL(url, window.location.origin);
+  if (target.origin !== window.location.origin) return HARNESS_OVERVIEW_PATH;
+  if (target.pathname === HARNESS_OVERVIEW_PATH || target.pathname === `${HARNESS_OVERVIEW_PATH}/new`) {
+    return `${target.pathname}${target.search}${target.hash}`;
+  }
+  if (/^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(target.pathname)) {
+    return `${target.pathname}${target.search}${target.hash}`;
+  }
+  return HARNESS_OVERVIEW_PATH;
 }
 
-function navigateHarnessTicket(embedUrl, ticket) {
-  window.location.replace(harnessHandoffUrl(embedUrl, ticket));
+async function navigateHarnessTicket(ticket) {
+  const requestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+  const response = await fetch(HARNESS_EXCHANGE_PATH, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ticket, request_id: requestId }),
+  });
+  if (!response.ok) throw new Error('Could not establish the secure Harness session.');
+  window.location.replace(canonicalHarnessDestination(response.url || window.location.href));
 }
 
 /** Admission stays in Da-vinci; the admitted result is the complete native
@@ -43,11 +52,11 @@ export default function HarnessChatSurface({ legacy }) {
 
   useEffect(() => () => { mountedRef.current = false; }, []);
 
-  const openHarness = useCallback((embedUrl, ticket) => {
+  const openHarness = useCallback(async (ticket) => {
     setConnecting(true);
     setNotice(null);
     try {
-      navigateHarnessTicket(embedUrl, ticket);
+      await navigateHarnessTicket(ticket);
     } catch (error) {
       if (!mountedRef.current) return;
       setConnecting(false);
@@ -63,7 +72,7 @@ export default function HarnessChatSurface({ legacy }) {
       const next = validBootstrap(response?.data);
       setMode(next.mode);
       if (next.mode === 'harness' || (next.mode === 'preview' && activatePreview)) {
-        await openHarness(next.embedUrl, next.ticket);
+        await openHarness(next.ticket);
       }
     } catch (error) {
       if (!mountedRef.current) return;
@@ -109,4 +118,4 @@ export default function HarnessChatSurface({ legacy }) {
   );
 }
 
-export { HARNESS_OVERVIEW_PATH, harnessHandoffUrl, navigateHarnessTicket, validBootstrap };
+export { HARNESS_EXCHANGE_PATH, HARNESS_OVERVIEW_PATH, canonicalHarnessDestination, navigateHarnessTicket, validBootstrap };
