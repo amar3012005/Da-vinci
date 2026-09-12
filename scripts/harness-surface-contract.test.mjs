@@ -19,5 +19,6 @@ test('native composer dictation reuses the authenticated mobile transcription tr
   assert.match(surface, /window\.__HIVEMIND_TRANSCRIBE_AUDIO__ = transcribeAudio/);
   assert.match(surface, /apiClient\.core\.post\(/);
   assert.match(surface, /\/api\/meetings\/transcribe\?diarize=false/);
+  assert.match(surface, /baseURL: window\.location\.origin/);
   assert.doesNotMatch(surface, /__HIVEMIND_DICTATION_ENDPOINT__/);
 });

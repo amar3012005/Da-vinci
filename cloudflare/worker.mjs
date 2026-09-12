@@ -14,6 +14,7 @@ const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const UI_SHELL_FLAG_PATH = '/__hivemind/feature-flags/ui-shell';
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
+const MEETING_TRANSCRIBE_PATH = '/api/meetings/transcribe';
 const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
 const HARNESS_RETURN_COOKIE = 'hm_harness_return';
 const PUBLIC_MARKETING_HOSTS = new Set([
@@ -172,6 +173,32 @@ async function harnessResponse(request, env) {
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
 }
 
+async function meetingTranscriptionResponse(request, env) {
+  // The native Harness composer reuses the exact Core endpoint used by mobile
+  // chat and AI Meeting Notes. Keeping the browser request same-origin avoids
+  // CORS; this Worker does not select or duplicate the speech model.
+  const configuredOrigin = String(env.HIVEMIND_CORE_ORIGIN || '');
+  let coreOrigin;
+  try {
+    coreOrigin = new URL(configuredOrigin);
+  } catch {
+    return new Response('HIVE-MIND transcription is temporarily unavailable', {
+      status: 503,
+      headers: { 'cache-control': 'no-store', 'content-type': 'text/plain; charset=utf-8' },
+    });
+  }
+  if (coreOrigin.protocol !== 'https:') {
+    return new Response('HIVE-MIND transcription is temporarily unavailable', {
+      status: 503,
+      headers: { 'cache-control': 'no-store', 'content-type': 'text/plain; charset=utf-8' },
+    });
+  }
+  const upstream = new URL(request.url);
+  upstream.protocol = coreOrigin.protocol;
+  upstream.host = coreOrigin.host;
+  return fetch(new Request(upstream, request));
+}
+
 async function booleanFlagshipResponse(request, env, key) {
   let enabled = false;
   try {
@@ -217,6 +244,12 @@ export default {
     }
     if (pathname === '/hivemind/app/v1/overview') {
       return Response.redirect(new URL(HARNESS_OVERVIEW_PATH, request.url), 302);
+    }
+
+    // This exact endpoint belongs to HIVE Core, not the embedded Harness RPC
+    // namespace. Route it before the broad native `/api/*` boundary.
+    if (pathname === MEETING_TRANSCRIBE_PATH) {
+      return noIndex(await meetingTranscriptionResponse(request, env));
     }
 
     // Da-vinci owns every application document, including session deep links.

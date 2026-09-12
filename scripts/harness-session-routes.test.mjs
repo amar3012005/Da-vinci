@@ -7,6 +7,7 @@ const origin = 'https://next.preview.singulancelabs.com';
 function environment(harnessFetch) {
   return {
     HARNESS_CHAT: { fetch: harnessFetch },
+    HIVEMIND_CORE_ORIGIN: 'https://preview.singulancelabs.com',
     ASSETS: { fetch: async () => new Response('<!doctype html><div>Da-vinci</div>', { headers: { 'content-type': 'text/html' } }) },
   };
 }
@@ -25,6 +26,17 @@ test('admitted session deep links retain the Da-vinci document and embedded moun
   assert.equal(response.status, 200);
   assert.equal(forwarded, undefined);
   assert.match(await response.text(), /Da-vinci/);
+});
+
+test('dictation fails closed when its canonical Core origin is not configured', async () => {
+  const env = environment(async () => {
+    throw new Error('transcription must not be dispatched to Harness');
+  });
+  delete env.HIVEMIND_CORE_ORIGIN;
+  const response = await worker.fetch(new Request(`${origin}/api/meetings/transcribe`, {
+    method: 'POST', body: new Uint8Array([1]),
+  }), env);
+  assert.equal(response.status, 503);
 });
 
 test('a deep link survives the one-shot admission exchange', async () => {
@@ -106,6 +118,37 @@ test('native RPC authentication is enforced by Harness, never SPA HTML', async (
   assert.equal(response.status, 401);
   assert.equal(calls, 1);
   assert.equal(await response.text(), 'Unauthorized');
+});
+
+test('dictation stays same-origin in the browser and reaches the canonical Core transcription endpoint', async () => {
+  const originalFetch = globalThis.fetch;
+  let forwarded;
+  globalThis.fetch = async (request) => {
+    forwarded = request;
+    return Response.json({ text: 'hello from Core' });
+  };
+  try {
+    const response = await worker.fetch(new Request(`${origin}/api/meetings/transcribe?diarize=false`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer browser-api-key',
+        'content-type': 'audio/webm',
+      },
+      body: new Uint8Array([1, 2, 3]),
+    }), environment(async () => {
+      throw new Error('transcription must not be dispatched to Harness');
+    }));
+
+    assert.equal(response.status, 200);
+    assert.equal(new URL(forwarded.url).origin, 'https://preview.singulancelabs.com');
+    assert.equal(new URL(forwarded.url).pathname, '/api/meetings/transcribe');
+    assert.equal(forwarded.method, 'POST');
+    assert.equal(forwarded.headers.get('authorization'), 'Bearer browser-api-key');
+    assert.equal(forwarded.headers.get('content-type'), 'audio/webm');
+    assert.deepEqual(new Uint8Array(await forwarded.arrayBuffer()), new Uint8Array([1, 2, 3]));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('Harness feature evaluation stays on the canonical next.preview authority', async () => {

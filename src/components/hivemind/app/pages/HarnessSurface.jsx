@@ -154,7 +154,15 @@ export default function HarnessSurface() {
         const { data } = await apiClient.core.post(
           `/api/meetings/transcribe?diarize=false&prompt=${encodeURIComponent('Spoken message to an AI assistant.')}`,
           blob,
-          { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 120000 },
+          {
+            // Keep the browser on the authenticated application origin. The
+            // preview Worker forwards this one canonical endpoint to Core,
+            // avoiding CORS while preserving Core's Meeting Notes STT route,
+            // provider, model selection, and API-key headers.
+            baseURL: window.location.origin,
+            headers: { 'Content-Type': blob.type || 'audio/webm' },
+            timeout: 120000,
+          },
         );
         return String(data?.text || data?.transcript || '').trim();
       };
