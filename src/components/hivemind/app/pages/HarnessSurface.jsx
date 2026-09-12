@@ -147,8 +147,18 @@ export default function HarnessSurface() {
       if (styles.length === 0) throw new Error('Harness returned no native styles.');
       await Promise.all(styles.map(loadHarnessStylesheet));
       if (cancelled) return;
-      const controlPlaneBase = String(apiClient.controlPlane.defaults.baseURL || '').replace(/\/$/, '');
-      window.__HIVEMIND_DICTATION_ENDPOINT__ = `${controlPlaneBase}/v1/proxy/meetings/transcribe`;
+      // Reuse the exact authenticated speech-to-text transport used by
+      // /hivemind/m/chat and AI Meeting Notes. The native Harness composer owns
+      // draft state; Da-vinci owns only the authenticated audio transport.
+      const transcribeAudio = async (blob) => {
+        const { data } = await apiClient.core.post(
+          `/api/meetings/transcribe?diarize=false&prompt=${encodeURIComponent('Spoken message to an AI assistant.')}`,
+          blob,
+          { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 120000 },
+        );
+        return String(data?.text || data?.transcript || '').trim();
+      };
+      window.__HIVEMIND_TRANSCRIBE_AUDIO__ = transcribeAudio;
       window.__HIVEMIND_DELETE_SESSION__ = async (sessionId) => {
         await apiClient.controlPlane.delete(`/v1/harness-chat/sessions/${encodeURIComponent(sessionId)}`);
       };
@@ -169,7 +179,7 @@ export default function HarnessSurface() {
       cancelled = true;
       request.cancelled = true;
       if (window.__DSH_EMBED_REQUEST__ === request) window.__DSH_EMBED_REQUEST__ = undefined;
-      window.__HIVEMIND_DICTATION_ENDPOINT__ = undefined;
+      window.__HIVEMIND_TRANSCRIBE_AUDIO__ = undefined;
       window.__HIVEMIND_DELETE_SESSION__ = undefined;
       const app = window.__DSH_EMBED_APP__;
       window.__DSH_EMBED_APP__ = undefined;

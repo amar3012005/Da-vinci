@@ -14,3 +14,10 @@ test('browser HTTP caching remains enabled for immutable Harness assets', () => 
   assert.match(surface, /script\.src = src/);
   assert.match(surface, /link\[data-dsh-native-style=/);
 });
+
+test('native composer dictation reuses the authenticated mobile transcription transport', () => {
+  assert.match(surface, /window\.__HIVEMIND_TRANSCRIBE_AUDIO__ = transcribeAudio/);
+  assert.match(surface, /apiClient\.core\.post\(/);
+  assert.match(surface, /\/api\/meetings\/transcribe\?diarize=false/);
+  assert.doesNotMatch(surface, /__HIVEMIND_DICTATION_ENDPOINT__/);
+});
