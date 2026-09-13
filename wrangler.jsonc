@@ -19,6 +19,10 @@
       "app_id": "2e89fbd3-7496-459b-a507-f1017d444dd9"
     }
   ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "RUNNER_ORIGIN": "https://harness-chat-origin.singulancelabs.com"
+  },
   "routes": [
     {
       "pattern": "singulancelabs.com",
