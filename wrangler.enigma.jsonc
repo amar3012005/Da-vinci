@@ -5,13 +5,20 @@
   "workers_dev": true,
   "preview_urls": true,
   "main": "./cloudflare/worker.mjs",
+  "services": [
+    {
+      "binding": "HARNESS_CHAT",
+      "service": "hivemind-harness-chat-enigma"
+    }
+  ],
   "build": {
     "command": "npm run build:cloudflare:enigma"
   },
   "assets": {
     "directory": "./build",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/plugins/*", "/assets/*", "/__hivemind/*", "/manifest.webmanifest", "/hivemind/app/overview", "/hivemind/app/overview/*"]
   },
   "flagship": [
     {
@@ -20,6 +27,7 @@
     }
   ],
   "vars": {
+    "HIVEMIND_CORE_ORIGIN": "https://core.dev.next.singulancelabs.com",
     "FLAGSHIP_ENVIRONMENT": "dev",
     "FLAGSHIP_SURFACE": "hivemind-web-enigma"
   },
