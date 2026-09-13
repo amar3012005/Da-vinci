@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../shared/api-client';
+import './HarnessSurface.css';
 
 const HARNESS_BOOT_PATH = '/api/hivemind/boot';
 const HARNESS_SESSION_PATH = '/api/hivemind/session/establish';

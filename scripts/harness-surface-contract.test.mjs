@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const surface = readFileSync(new URL('../src/components/hivemind/app/pages/HarnessSurface.jsx', import.meta.url), 'utf8');
+const surfaceCss = readFileSync(new URL('../src/components/hivemind/app/pages/HarnessSurface.css', import.meta.url), 'utf8');
 const shell = readFileSync(new URL('../src/components/hivemind/app/layout/AppShell.jsx', import.meta.url), 'utf8');
 const connectors = readFileSync(new URL('../src/components/hivemind/app/pages/Connectors.jsx', import.meta.url), 'utf8');
 
@@ -21,8 +22,16 @@ test('browser HTTP caching remains enabled for immutable Harness assets', () => 
 });
 
 test('the Overview route owns the full available HIVE viewport in every environment', () => {
-  assert.match(shell, /onOverview \? "h-\[calc\(100dvh-56px\)\] min-h-0 overflow-hidden"/);
+  assert.match(shell, /!onOverview && <TopBar/);
+  assert.match(shell, /onOverview \? "h-dvh min-h-0 overflow-hidden"/);
   assert.doesNotMatch(shell, /onOverview && window\.location\.hostname/);
+});
+
+test('the HIVE session rail reserves a non-overlapping lane beside the conversation', () => {
+  assert.match(surface, /import '\.\/HarnessSurface\.css'/);
+  assert.match(surfaceCss, /aside\[aria-label='HIVE chat sessions'\] \+ div/);
+  assert.match(surfaceCss, /margin-left: 244px/);
+  assert.match(surfaceCss, /@media \(max-width: 760px\)/);
 });
 
 test('Connectors and Composio can use the complete HIVE content width', () => {

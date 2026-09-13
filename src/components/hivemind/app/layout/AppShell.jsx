@@ -358,8 +358,8 @@ export default function AppShell() {
           className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen ? 'sidebar-content-expanded' : ''}`}
           style={{ marginLeft: (compactViewport || graphFullscreen || hyperFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '260px' }}
         >
-          <TopBar compact={compactTopbar} activeSection={activeSection} onSectionChange={handleSectionChange} />
-          <main className={graphFullscreen ? "h-[calc(100dvh-56px)] overflow-hidden" : onOverview ? "h-[calc(100dvh-56px)] min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          {!onOverview && <TopBar compact={compactTopbar} activeSection={activeSection} onSectionChange={handleSectionChange} />}
+          <main className={graphFullscreen ? "h-[calc(100dvh-56px)] overflow-hidden" : onOverview ? "h-dvh min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>

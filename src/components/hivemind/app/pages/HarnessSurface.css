@@ -1,0 +1,24 @@
+/* HIVE owns the outer application chrome. The native session rail remains
+   projected inside Harness, so reserve a real lane for it instead of letting
+   it float over the active conversation. Semantic attributes keep this rule
+   independent of Harness CSS-module hashes. */
+html[data-dsh-mode='hivemind-chat']
+  [data-hivemind-harness-surface]
+  aside[aria-label='HIVE chat sessions'] {
+  width: 220px;
+}
+
+html[data-dsh-mode='hivemind-chat']
+  [data-hivemind-harness-surface]
+  aside[aria-label='HIVE chat sessions'] + div {
+  box-sizing: border-box;
+  margin-left: 244px;
+}
+
+@media (max-width: 760px) {
+  html[data-dsh-mode='hivemind-chat']
+    [data-hivemind-harness-surface]
+    aside[aria-label='HIVE chat sessions'] + div {
+    margin-left: 0;
+  }
+}
