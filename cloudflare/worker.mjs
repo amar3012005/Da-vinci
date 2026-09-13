@@ -99,13 +99,10 @@ async function proxyHarnessRunner(request, env) {
   const headers = new Headers(request.headers);
   headers.set('x-forwarded-host', incoming.host);
   headers.set('x-forwarded-proto', incoming.protocol.slice(0, -1));
-  // The Worker-to-runner hop is internal. Preserve the original public
-  // authority for ticket/cookie validation while expressing same-origin JSON
-  // calls with the runner's origin on that hop.
-  const contentType = (headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
-  const parentNavigation = incoming.pathname === '/api/hivemind/embed/exchange'
-    && contentType === 'application/x-www-form-urlencoded';
-  if (!parentNavigation && headers.get('origin') === incoming.origin) headers.set('origin', target.origin);
+  // The runner validates the browser's public same-origin tuple against the
+  // forwarded authority.  Preserve Origin exactly as received: rewriting it
+  // to the private tunnel hostname makes a valid native ticket exchange look
+  // cross-origin and causes the runner to reject it.
   return fetch(new Request(target, {
     method: request.method,
     headers,
