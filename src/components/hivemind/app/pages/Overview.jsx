@@ -47,6 +47,8 @@ import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/up
 // second implementation — same "view in Chrome" tab, same in-app preview
 // modal + save-to-HIVEMIND flow, same job-title derivation.
 import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './WebStudio';
+import HarnessChatSurface from './HarnessChatSurface';
+import HarnessSurface from './HarnessSurface';
 
 // ─── Animation variants ──────────────────────────────────────────
 
@@ -1451,6 +1453,16 @@ function MobileQrCorner({ open, onToggle, onDismiss }) {
 // ─── Main component ──────────────────────────────────────────────
 
 export default function Overview() {
+  // Do not select Harness by hostname: Enigma and main share this build and
+  // use the server-side feature flag at admission. Only an explicit admitted
+  // route mounts the native client; the overview root retains legacy fallback.
+  if (/^\/hivemind\/app\/overview\/(?:new|session\/[^/]+)$/u.test(window.location.pathname)) {
+    return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
+  }
+  return <LegacyOverview />;
+}
+
+function LegacyOverview() {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   // First-visit guided tour — glass overlay + arrows to each sidebar page.
@@ -1475,6 +1487,9 @@ export default function Overview() {
   // /hivemind/m/chat which is a full-screen Talk-to-HIVE.
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // Preview Overview launches the responsive full-page Harness application;
+    // it must not race the legacy mobile chat redirect.
+    if (window.location.hostname === 'next.preview.singulancelabs.com') return;
     // Detect phones either by narrow viewport OR by UA — catches the
     // "Request Desktop Site" case where the viewport widens beyond 768px
     // but the device is still a phone.
@@ -1688,7 +1703,7 @@ export default function Overview() {
       </div>
 
       {/* The HIVE chat — the Overview centerpiece */}
-      <OverviewChat inputRef={chatInputRef} />
+      <HarnessChatSurface legacy={<OverviewChat inputRef={chatInputRef} />} />
 
       {/* Mobile QR promo — one bottom-right corner widget, desktop-only
           (mobile visitors never reach this page — see the redirect effect

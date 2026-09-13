@@ -5,6 +5,15 @@
   "workers_dev": true,
   "preview_urls": true,
   "main": "./cloudflare/worker.mjs",
+  "vars": {
+    "HIVEMIND_CORE_ORIGIN": "https://core.singulancelabs.com"
+  },
+  "services": [
+    {
+      "binding": "HARNESS_CHAT",
+      "service": "hivemind-harness-chat"
+    }
+  ],
   "build": {
     "command": "node scripts/assert-cloudflare-main-release.mjs && npm run build:cloudflare"
   },

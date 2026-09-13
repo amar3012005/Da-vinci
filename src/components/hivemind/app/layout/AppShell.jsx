@@ -248,6 +248,7 @@ export default function AppShell() {
   }, [isSelfHost, shGate]);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [compactTopbar, setCompactTopbar] = useState(false);
   const [compactViewport, setCompactViewport] = useState(() => (
     typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
   ));
@@ -277,7 +278,7 @@ export default function AppShell() {
   // Overview embeds the HIVE chat as the page centerpiece — the floating
   // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
   // every other page keeps the FAB.
-  const onOverview = /\/hivemind\/app(\/overview)?\/?$/.test(location.pathname);
+  const onOverview = /\/hivemind\/app(?:\/overview(?:\/.*)?)?\/?$/.test(location.pathname);
   const onMeetingNotes = /\/hivemind\/app\/meeting-notes\/?$/.test(location.pathname);
 
   // Track sidebar state for dynamic margin
@@ -298,6 +299,15 @@ export default function AppShell() {
       window.removeEventListener('hivemind:open-sidebar', handleExpand);
       window.removeEventListener('hivemind:open-chat', handleOpenChat);
     };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/__hivemind/feature-flags/ui-shell', { credentials: 'include', cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('flag unavailable')))
+      .then((value) => { if (active) setCompactTopbar(value?.variation === 'compact'); })
+      .catch(() => { /* Full chrome is the fail-safe fallback. */ });
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -337,13 +347,19 @@ export default function AppShell() {
     <QuickRecorderProvider>
     <TeamProvider>
       <div className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
-        {!compactViewport && !graphFullscreen && !hyperFullscreen && <Sidebar activeSection={activeSection} />}
+        {!compactViewport && !graphFullscreen && !hyperFullscreen && (
+          <Sidebar
+            activeSection={activeSection}
+            collapsed={sidebarCollapsed}
+            onCollapsedChange={setSidebarCollapsed}
+          />
+        )}
         <div
           className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen ? 'sidebar-content-expanded' : ''}`}
           style={{ marginLeft: (compactViewport || graphFullscreen || hyperFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '260px' }}
         >
-          {!graphFullscreen && <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />}
-          <main className={graphFullscreen ? "flex-1 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          <TopBar compact={compactTopbar} activeSection={activeSection} onSectionChange={handleSectionChange} />
+          <main className={graphFullscreen ? "h-[calc(100dvh-56px)] overflow-hidden" : onOverview && window.location.hostname === 'next.preview.singulancelabs.com' ? "h-[calc(100dvh-56px)] min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>

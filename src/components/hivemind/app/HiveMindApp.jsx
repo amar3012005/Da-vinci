@@ -222,8 +222,9 @@ export default function HiveMindApp() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="overview" replace />} />
-          <Route path="overview" element={<PageSuspense><Overview /></PageSuspense>} />
+          <Route index element={<Navigate to="/hivemind/app/overview" replace />} />
+          <Route path="new-session" element={<Navigate to="/hivemind/app/overview/new" replace />} />
+          <Route path="overview/*" element={<PageSuspense><Overview /></PageSuspense>} />
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
@@ -266,7 +267,7 @@ export default function HiveMindApp() {
           <Route path="connect/composio/callback" element={<PageSuspense><ComposioConnectCallback /></PageSuspense>} />
           {/* Unknown /hivemind/app/* child (stray OAuth redirect_uri like
               /app/callback, typos) → overview instead of a blank Outlet. */}
-          <Route path="*" element={<Navigate to="overview" replace />} />
+          <Route path="*" element={<Navigate to="/hivemind/app/overview" replace />} />
         </Route>
 
         {/* Fallback */}

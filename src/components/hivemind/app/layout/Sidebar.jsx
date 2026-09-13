@@ -17,7 +17,6 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   Globe,
   Server,
   Network,
@@ -149,11 +148,14 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
   ];
 }
 
-export default function Sidebar({ activeSection = 'hivemind' }) {
+export default function Sidebar({
+  activeSection = 'hivemind',
+  collapsed = false,
+  onCollapsedChange,
+}) {
   const { t } = useTranslation('dashboard');
   const { logout, org, user } = useAuth();
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
   const [showWebAdmin, setShowWebAdmin] = useState(false);
   const [brainCapabilities, setBrainCapabilities] = useState(null);
   const { usage } = useUsage();
@@ -195,7 +197,6 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
   const planLabel = org?.plan
     ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })
     : t('sidebar.planLabel.free', { defaultValue: 'Free Plan' });
-  const isPaid = org?.plan && ['pro', 'enterprise', 'team', 'business'].includes(org.plan);
   const tt = (k, def) => t(`sidebar.${k}`, { defaultValue: def });
   const accountItems = [
     { to: '/hivemind/app/profile',  icon: User,       label: tt('profile',  'Profile') },
@@ -235,7 +236,10 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
           )}
         </div>
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          type="button"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+          onClick={() => onCollapsedChange?.(!collapsed)}
           className="p-1 rounded-md hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors flex-shrink-0"
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -261,7 +265,7 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
                 const pathOnly = item.to.split('?')[0];
                 const isActive =
                   location.pathname === pathOnly ||
-                  (pathOnly !== '/hivemind/app/overview' && location.pathname.startsWith(pathOnly));
+                  location.pathname.startsWith(`${pathOnly}/`);
                 const hasChildren = item.children && item.children.length > 0;
 
                 return (
@@ -398,39 +402,11 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
                       {item.label}
                     </span>
                   )}
-                  {!collapsed && item.label === 'Billing' && (
-                    <span className="relative z-10 ml-auto text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded">
-                      PRO
-                    </span>
-                  )}
                 </NavLink>
               );
             })}
           </div>
         </div>
-
-        {/* Upgrade Banner — hidden for paid plans */}
-        {!collapsed && !isPaid && (
-          <div className="mx-2.5 mb-2">
-            <div className="bg-[#117dff]/[0.04] border border-[#117dff]/10 rounded-xl p-3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <Sparkles size={14} className="text-[#117dff]" />
-                <span className="text-[#0a0a0a] text-xs font-semibold">
-                  Upgrade to Pro
-                </span>
-              </div>
-              <p className="text-[#a3a3a3] text-[10px] leading-relaxed mb-2.5">
-                Unlock unlimited memories, priority support, and advanced connectors.
-              </p>
-              <NavLink
-                to="/hivemind/app/billing"
-                className="block text-center text-[11px] font-semibold uppercase tracking-[0.075em] bg-[#117dff] text-white rounded-[4px] py-1.5 hover:bg-[#0066e0] transition-colors"
-              >
-                View Plans
-              </NavLink>
-            </div>
-          </div>
-        )}
 
         {/* User + Logout */}
         <div className="p-2.5 border-t border-[#e3e0db]">
