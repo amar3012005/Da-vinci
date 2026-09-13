@@ -223,7 +223,11 @@ export default function HiveMindApp() {
           }
         >
           <Route index element={<Navigate to="overview" replace />} />
-          <Route path="overview" element={<PageSuspense><Overview /></PageSuspense>} />
+          {/* Native Harness owns explicit overview session URLs.  The wildcard
+              keeps `/overview/new` and `/overview/session/:id` inside this
+              route instead of falling through to the relative catch-all,
+              which otherwise recursively appends `overview`. */}
+          <Route path="overview/*" element={<PageSuspense><Overview /></PageSuspense>} />
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
