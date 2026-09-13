@@ -80,12 +80,17 @@ function constantTimeBearer(request, secret) {
 }
 
 function isHarnessRunnerRoute(pathname) {
-  // Keep the HIVE Worker authoritative for its own app/API surface.  These are
-  // the complete native Harness browser routes and nothing else.
+  // Keep the HIVE Worker authoritative for its own app/API surface. Native
+  // Harness owns the generic session controller and the dynamic Cordis
+  // inspection namespace; treating only the initial ticket routes as native
+  // leaves a successfully booted client unable to create its first session.
+  // Do not proxy the broad `/api/*` namespace: HIVE's own APIs remain local.
   return pathname === '/api/hivemind/embed/exchange'
     || pathname === '/api/hivemind/session/establish'
     || pathname === '/api/hivemind/boot'
     || pathname === '/api/remote.mux'
+    || pathname.startsWith('/api/session/')
+    || pathname.startsWith('/api/dynamicCordisRunner/')
     || pathname.startsWith('/plugins/')
     || pathname.startsWith('/assets/');
 }
