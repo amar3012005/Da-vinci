@@ -1,32 +1,41 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
-import { Search, BookOpen, UserPlus, BrainCircuit, Orbit, AudioWaveform } from 'lucide-react';
+import { UserPlus, BrainCircuit, Orbit, AudioWaveform } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import TeamSwitcher from './TeamSwitcher';
 import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
-import SingulanceBrand from '../shared/SingulanceBrand';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
   '/hivemind/app/memories': 'Memories',
+  '/hivemind/app/meeting-notes': 'AI Meeting Notes',
   '/hivemind/app/keys': 'API Keys',
   '/hivemind/app/connectors': 'Connectors',
   '/hivemind/app/profile': 'Profile',
   '/hivemind/app/evaluation': 'Evaluation',
   '/hivemind/app/settings': 'Settings',
   '/hivemind/app/billing': 'Billing',
+  '/hivemind/app/usage': 'Usage',
   '/hivemind/app/web': 'Web Studio',
   '/hivemind/app/mcp': 'MCP Server',
   '/hivemind/app/graph': 'Memory Graph',
+  '/hivemind/app/graph-2d': 'Memory Graph',
+  '/hivemind/app/brain': 'Cognitive Layer',
+  '/hivemind/app/deep-research': 'Deep Research',
   '/hivemind/app/engine': 'Engine Intelligence',
+  '/hivemind/app/knowledge': 'Knowledge Base',
+  '/hivemind/app/swarm': 'Agent Swarm',
+  '/hivemind/app/governance': 'Swarm Governance',
+  '/hivemind/app/tara': 'TARA Voice',
   '/hivemind/app/team/members': 'Team Members',
   '/hivemind/app/team/projects': 'Team Projects',
   '/hivemind/app/audit': 'Audit Log',
   '/hivemind/app/admin/users': 'Org Members',
   '/hivemind/app/admin/sso': 'SSO Configuration',
   '/hivemind/app/employees': 'Hyper Agents',
+  '/hivemind/app/employees/operating-rooms': 'Operating Rooms',
+  '/hivemind/app/employees/roster': 'Agent Roster',
   '/hivemind/app/workspace': 'Workspace Admin',
   '/hivemind/app/hermes': 'Hermes Agents',
 };
@@ -34,22 +43,33 @@ const pageTitles = {
 const pageDescriptions = {
   '/hivemind/app/overview': 'Your memory engine at a glance',
   '/hivemind/app/memories': 'Browse and manage stored knowledge',
+  '/hivemind/app/meeting-notes': 'Record, transcribe, and ground meetings in your company memory',
   '/hivemind/app/keys': 'Manage API authentication keys',
   '/hivemind/app/connectors': 'Connect data sources and AI clients',
   '/hivemind/app/profile': 'Your memory footprint and context',
   '/hivemind/app/evaluation': 'Test retrieval quality',
   '/hivemind/app/settings': 'Workspace configuration',
   '/hivemind/app/billing': 'Manage your plan and usage',
+  '/hivemind/app/usage': 'Track workspace consumption and limits',
   '/hivemind/app/web': 'Ask the web or paste a URL — auto-routed to search or crawl, results stream into memory',
   '/hivemind/app/mcp': '22 MCP tools — memory, web intelligence, coding intelligence, and bi-temporal time travel — with setup guides',
   '/hivemind/app/graph': 'Explore connections between memories — semantic clusters, temporal decay, and relationship traversal',
+  '/hivemind/app/graph-2d': 'Explore memory entities and relationships in two dimensions',
+  '/hivemind/app/brain': 'Configure how your company Brain organizes and reasons over knowledge',
+  '/hivemind/app/deep-research': 'Run governed, memory-grounded research',
   '/hivemind/app/engine': 'SOTA memory engine — cognitive framing, temporal queries, swarm reasoning, and Byzantine consensus',
+  '/hivemind/app/knowledge': 'Upload and manage authoritative company documents',
+  '/hivemind/app/swarm': 'Coordinate multiple governed agents on one objective',
+  '/hivemind/app/governance': 'Inspect policies, approvals, and agent execution boundaries',
+  '/hivemind/app/tara': 'Configure your governed real-time voice agent',
   '/hivemind/app/team/members': 'Invite, review, and manage members of the active team',
   '/hivemind/app/team/projects': 'Organize shared memory streams into projects within the active team',
   '/hivemind/app/audit': 'Immutable trail of every mutating action — SOC2 + GDPR ready',
   '/hivemind/app/admin/users': 'Org-wide roles, deactivation, and invite management',
   '/hivemind/app/admin/sso': 'SAML routing + SCIM provisioning for enterprise SSO',
   '/hivemind/app/employees': 'Hyper Agents — autonomous brains with HIVEMIND memory + Slack access',
+  '/hivemind/app/employees/operating-rooms': 'Run persistent multi-agent company rooms',
+  '/hivemind/app/employees/roster': 'Create and manage your installed AI workforce',
   '/hivemind/app/workspace': 'Members, teams, projects, invitations, audit and SSO — all in one place',
   '/hivemind/app/hermes': 'Hermes Agents — per-tenant task agents with run history and approval flows',
 };
@@ -66,13 +86,22 @@ const SECTION_TITLES = {
   tara: 'TARA',
 };
 
-export default function TopBar({ activeSection = 'hivemind', onSectionChange, compact = false }) {
+const PAGE_PREFIXES = [
+  ['/hivemind/app/overview', '/hivemind/app/overview'],
+  ['/hivemind/app/employees/operating-rooms', '/hivemind/app/employees/operating-rooms'],
+  ['/hivemind/app/employees', '/hivemind/app/employees'],
+  ['/hivemind/app/team/members', '/hivemind/app/team/members'],
+  ['/hivemind/app/team/projects', '/hivemind/app/team/projects'],
+];
+
+export default function TopBar({ activeSection = 'hivemind', onSectionChange }) {
   const location = useLocation();
   const navigate = useNavigate();
   const healthy = useHealthStatus();
 
-  const pagePath = location.pathname.startsWith('/hivemind/app/overview/')
-    ? '/hivemind/app/overview' : location.pathname;
+  const pagePath = pageTitles[location.pathname]
+    ? location.pathname
+    : PAGE_PREFIXES.find(([prefix]) => location.pathname.startsWith(`${prefix}/`))?.[1] || location.pathname;
   const title = pageTitles[pagePath] || SECTION_TITLES[activeSection] || 'HIVEMIND';
   const description = pageDescriptions[pagePath] || '';
 
@@ -83,18 +112,10 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, co
   const tDesc = description ? t(`topbar.descriptions.${routeSlug}`, { defaultValue: description }) : '';
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-center border-b border-[#e3e0db] bg-[#faf9f4]/90 px-3 backdrop-blur-xl md:justify-between md:px-6">
-      {/* Left: Title + Description + Team switcher */}
-      <div className="absolute left-3 flex min-w-0 items-center gap-3 md:static md:gap-4">
-        {!compact && <button
-          type="button"
-          onClick={() => navigate('/hivemind/app/overview')}
-          className="shrink-0 border-0 bg-transparent p-0"
-          aria-label="SINGULANCE overview"
-        >
-          <SingulanceBrand variant="light" markSize={28} />
-        </button>}
-        {!compact && <span className="h-7 w-px shrink-0 bg-[#e3e0db]" aria-hidden="true" />}
+    <header className="pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center bg-transparent px-3 md:px-6">
+      {/* Left: route-aware page identity. Branding and team selection live in
+          the persistent sidebar, so they are intentionally not duplicated. */}
+      <div className="pointer-events-auto min-w-0 justify-self-start">
         <div className="min-w-0">
           <h1 className="text-[#0a0a0a] text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
             {tTitle}
@@ -105,20 +126,18 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, co
             </p>
           )}
         </div>
-        {!compact && <TeamSwitcher />}
       </div>
 
       {/* Section Toggle */}
-      <div className="relative">
-        <div className="flex h-9 items-stretch border border-[#d4d0ca] bg-white/55 p-[2px] shadow-[0_8px_24px_rgba(10,10,10,0.045)] backdrop-blur-xl" style={{ clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)' }}>
+      <div className="pointer-events-auto relative justify-self-center">
+        <div className="flex h-10 items-stretch overflow-hidden rounded-[10px] border border-[#d4d0ca] bg-white shadow-[0_8px_20px_rgba(10,10,10,0.10)]">
           {SECTIONS.map((s, index) => {
             const active = activeSection === s.key;
             const Icon = s.icon;
             return (
-              <button key={s.key} onClick={() => onSectionChange?.(s.key)} className={`relative flex min-w-[68px] items-center justify-center gap-1.5 border-[#e3e0db] px-2.5 text-[9px] font-semibold tracking-[0.1em] transition-all duration-300 font-['Space_Grotesk'] sm:min-w-[86px] sm:px-4 sm:text-[10px] ${index ? 'border-l' : ''} ${active ? 'bg-[#0a0a0a] text-white' : 'text-[#8d8d8d] hover:bg-white/80 hover:text-[#0a0a0a]'}`}>
-                <Icon size={13} strokeWidth={1.5} className={active ? (s.key === 'hyperagents' ? 'animate-[spin_5s_linear_infinite] text-[#7db8ff]' : 'animate-pulse text-[#7db8ff]') : ''} />
+              <button key={s.key} onClick={() => onSectionChange?.(s.key)} className={`relative flex min-w-[72px] items-center justify-center gap-2 border-[#e3e0db] px-3 text-[10px] font-semibold tracking-[0.08em] transition-colors font-['Space_Grotesk'] sm:min-w-[104px] sm:px-5 ${index ? 'border-l' : ''} ${active ? 'bg-[#0a0a0a] text-white' : 'bg-white text-[#525252] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]'}`}>
+                <Icon size={15} strokeWidth={1.75} className={active ? 'text-white' : 'text-[#0a0a0a]'} />
                 <span>{s.label}</span>
-                {active && <span className="absolute inset-x-3 bottom-0 h-px bg-[#117dff] shadow-[0_0_8px_#117dff]" />}
               </button>
             );
           })}
@@ -127,28 +146,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, co
       </div>
 
       {/* Right: Actions */}
-      <div className="absolute right-3 flex items-center gap-2 md:static">
-        {/* Global Search */}
-        {!compact && <button
-          onClick={() => navigate('/hivemind/app/memories')}
-          className="hidden md:flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] hover:border-[#d4d0ca] text-[#a3a3a3] hover:text-[#525252] transition-all text-xs"
-        >
-          <Search size={13} />
-          <span className="hidden md:inline">{t('topbar.searchMemories', 'Search memories...')}</span>
-          <kbd className="hidden md:inline text-[10px] font-mono text-[#a3a3a3] bg-[#eae7e1] rounded px-1 py-0.5 ml-4">
-            /
-          </kbd>
-        </button>}
-
-        {/* Docs */}
-        {!compact && <a
-          href="/hivemind/docs"
-          className="hidden md:flex items-center justify-center w-8 h-8 rounded-[6px] hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors"
-          title="Documentation"
-        >
-          <BookOpen size={15} />
-        </a>}
-
+      <div className="pointer-events-auto flex items-center gap-2 justify-self-end">
         {/* Durable lifecycle + workspace notification center. */}
         <WorkspaceNotifications />
 

@@ -5,6 +5,7 @@ import test from 'node:test';
 const surface = readFileSync(new URL('../src/components/hivemind/app/pages/HarnessSurface.jsx', import.meta.url), 'utf8');
 const surfaceCss = readFileSync(new URL('../src/components/hivemind/app/pages/HarnessSurface.css', import.meta.url), 'utf8');
 const shell = readFileSync(new URL('../src/components/hivemind/app/layout/AppShell.jsx', import.meta.url), 'utf8');
+const topbar = readFileSync(new URL('../src/components/hivemind/app/layout/TopBar.jsx', import.meta.url), 'utf8');
 const connectors = readFileSync(new URL('../src/components/hivemind/app/pages/Connectors.jsx', import.meta.url), 'utf8');
 
 test('every SPA remount replays the native Harness boot graph', () => {
@@ -22,9 +23,23 @@ test('browser HTTP caching remains enabled for immutable Harness assets', () => 
 });
 
 test('the Overview route owns the full available HIVE viewport in every environment', () => {
-  assert.match(shell, /!onOverview && <TopBar/);
-  assert.match(shell, /onOverview \? "h-dvh min-h-0 overflow-hidden"/);
+  assert.match(shell, /<TopBar activeSection=/);
+  assert.match(shell, /onOverview \? "h-\[calc\(100dvh-56px\)\] min-h-0 overflow-hidden"/);
   assert.doesNotMatch(shell, /onOverview && window\.location\.hostname/);
+});
+
+test('one persistent top bar keeps route identity, product switcher, and actions separated', () => {
+  assert.match(topbar, /grid-cols-\[minmax\(0,1fr\)_auto_minmax\(0,1fr\)\]/);
+  assert.match(topbar, /justify-self-start/);
+  assert.match(topbar, /justify-self-center/);
+  assert.match(topbar, /justify-self-end/);
+  assert.match(topbar, /rounded-\[10px\].*shadow-\[0_8px_20px/);
+  assert.match(topbar, /pointer-events-none sticky top-0/);
+  assert.match(topbar, /bg-transparent/);
+  assert.doesNotMatch(topbar, /border-b border-\[#e3e0db\]/);
+  assert.doesNotMatch(topbar, /backdrop-blur-xl/);
+  assert.doesNotMatch(topbar, /<TeamSwitcher/);
+  assert.doesNotMatch(topbar, /Search memories/);
 });
 
 test('the HIVE session rail reserves a non-overlapping lane beside the conversation', () => {
