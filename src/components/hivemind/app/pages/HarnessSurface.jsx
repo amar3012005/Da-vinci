@@ -5,6 +5,7 @@ const HARNESS_BOOT_PATH = '/api/hivemind/boot';
 const HARNESS_SESSION_PATH = '/api/hivemind/session/establish';
 const HARNESS_SHELL_PATH = '/assets/harness-shell.js';
 const HARNESS_LIVENESS_INTERVAL_MS = 5000;
+const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 
 function deferred() {
   let resolve;
@@ -112,8 +113,13 @@ function LoadingSurface() {
   );
 }
 
-async function establishHarnessSession() {
-  const { data: admission } = await apiClient.controlPlane.post('/v1/harness-chat/bootstrap', {});
+function isFreshHarnessRoute() {
+  return window.location.pathname === `${HARNESS_OVERVIEW_PATH}/new`;
+}
+
+async function establishHarnessSession({ fresh = false } = {}) {
+  const path = fresh ? '/v1/harness-chat/new-session' : '/v1/harness-chat/bootstrap';
+  const { data: admission } = await apiClient.controlPlane.post(path, {});
   if (admission?.mode !== 'harness' && admission?.mode !== 'preview') {
     throw new Error('Harness chat is not admitted for this account yet.');
   }
@@ -163,7 +169,7 @@ export default function HarnessSurface() {
     };
 
     const start = async () => {
-      await establishHarnessSession();
+      await establishHarnessSession({ fresh: isFreshHarnessRoute() });
       const bootResponse = await fetch(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
       if (!bootResponse.ok) throw new Error('Harness did not accept the authenticated browser session.');
       const boot = await bootResponse.json();
