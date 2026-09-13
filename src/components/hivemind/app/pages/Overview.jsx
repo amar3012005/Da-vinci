@@ -1453,7 +1453,10 @@ function MobileQrCorner({ open, onToggle, onDismiss }) {
 // ─── Main component ──────────────────────────────────────────────
 
 export default function Overview() {
-  if (window.location.hostname === 'next.preview.singulancelabs.com') {
+  // Do not select Harness by hostname: Enigma and main share this build and
+  // use the server-side feature flag at admission. Only an explicit admitted
+  // route mounts the native client; the overview root retains legacy fallback.
+  if (/^\/hivemind\/app\/overview\/(?:new|session\/[^/]+)$/u.test(window.location.pathname)) {
     return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
   }
   return <LegacyOverview />;

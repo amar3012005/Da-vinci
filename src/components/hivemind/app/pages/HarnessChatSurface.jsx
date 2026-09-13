@@ -28,7 +28,7 @@ function canonicalHarnessDestination(url) {
   return HARNESS_OVERVIEW_PATH;
 }
 
-async function navigateHarnessTicket(ticket) {
+async function navigateHarnessTicket(ticket, destination) {
   const requestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
   const response = await fetch(HARNESS_EXCHANGE_PATH, {
     method: 'POST',
@@ -37,7 +37,7 @@ async function navigateHarnessTicket(ticket) {
     body: JSON.stringify({ ticket, request_id: requestId }),
   });
   if (!response.ok) throw new Error('Could not establish the secure Harness session.');
-  window.location.replace(canonicalHarnessDestination(response.url || window.location.href));
+  window.location.replace(canonicalHarnessDestination(destination || response.url || window.location.href));
 }
 
 /** Admission stays in Da-vinci; the admitted result is the complete native
@@ -56,7 +56,10 @@ export default function HarnessChatSurface({ legacy }) {
     setConnecting(true);
     setNotice(null);
     try {
-      await navigateHarnessTicket(ticket);
+      // The overview root is the flag-controlled launcher.  After a successful
+      // exchange, land on the explicit native route so an enabled account
+      // mounts Harness while a disabled account remains on the legacy root.
+      await navigateHarnessTicket(ticket, `${HARNESS_OVERVIEW_PATH}/new`);
     } catch (error) {
       if (!mountedRef.current) return;
       setConnecting(false);
