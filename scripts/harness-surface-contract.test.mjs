@@ -22,3 +22,11 @@ test('native composer dictation reuses the authenticated mobile transcription tr
   assert.match(surface, /baseURL: window\.location\.origin/);
   assert.doesNotMatch(surface, /__HIVEMIND_DICTATION_ENDPOINT__/);
 });
+
+test('an open native chat re-establishes admission after a runner restart invalidates its session', () => {
+  assert.match(surface, /method: 'HEAD', credentials: 'include', cache: 'no-store'/);
+  assert.match(surface, /response\.status !== 401 && response\.status !== 403/);
+  assert.match(surface, /await establishHarnessSession\(\);\s*if \(!cancelled\) window\.location\.reload\(\)/);
+  assert.match(surface, /HARNESS_LIVENESS_INTERVAL_MS = 5000/);
+  assert.match(surface, /document\.visibilityState === 'hidden'/);
+});

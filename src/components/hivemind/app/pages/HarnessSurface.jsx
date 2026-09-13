@@ -4,6 +4,7 @@ import apiClient from '../shared/api-client';
 const HARNESS_BOOT_PATH = '/api/hivemind/boot';
 const HARNESS_SESSION_PATH = '/api/hivemind/session/establish';
 const HARNESS_SHELL_PATH = '/assets/harness-shell.js';
+const HARNESS_LIVENESS_INTERVAL_MS = 5000;
 
 function deferred() {
   let resolve;
@@ -111,6 +112,21 @@ function LoadingSurface() {
   );
 }
 
+async function establishHarnessSession() {
+  const { data: admission } = await apiClient.controlPlane.post('/v1/harness-chat/bootstrap', {});
+  if (admission?.mode !== 'harness' && admission?.mode !== 'preview') {
+    throw new Error('Harness chat is not admitted for this account yet.');
+  }
+  if (typeof admission.ticket !== 'string' || admission.ticket.length === 0) {
+    throw new Error('Harness admission did not return a session ticket.');
+  }
+  const established = await fetch(HARNESS_SESSION_PATH, {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ticket: admission.ticket, request_id: crypto.randomUUID() }),
+  });
+  if (!established.ok) throw new Error('Could not establish the secure Harness session.');
+}
+
 /**
  * Direct host for the complete native Harness browser graph. Da-vinci owns
  * only placement and HIVE authentication; the mounted client owns sessions,
@@ -124,21 +140,30 @@ export default function HarnessSurface() {
     const mount = mountRef.current;
     if (!mount) return undefined;
     let cancelled = false;
+    let recovering = false;
+    let livenessTimer;
     const request = { container: mount, cancelled: false };
 
+    const recoverExpiredSession = async () => {
+      if (cancelled || recovering || document.visibilityState === 'hidden') return;
+      try {
+        const response = await fetch(HARNESS_BOOT_PATH, {
+          method: 'HEAD', credentials: 'include', cache: 'no-store',
+        });
+        if (response.status !== 401 && response.status !== 403) return;
+        recovering = true;
+        await establishHarnessSession();
+        if (!cancelled) window.location.reload();
+      } catch {
+        // A transient network outage remains owned by native Harness recovery.
+        // Only an authoritative expired-session response triggers re-admission.
+      } finally {
+        recovering = false;
+      }
+    };
+
     const start = async () => {
-      const { data: admission } = await apiClient.controlPlane.post("/v1/harness-chat/bootstrap", {});
-      if (admission?.mode !== 'harness' && admission?.mode !== 'preview') {
-        throw new Error('Harness chat is not admitted for this account yet.');
-      }
-      if (typeof admission.ticket !== 'string' || admission.ticket.length === 0) {
-        throw new Error('Harness admission did not return a session ticket.');
-      }
-      const established = await fetch(HARNESS_SESSION_PATH, {
-        method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ticket: admission.ticket, request_id: crypto.randomUUID() }),
-      });
-      if (!established.ok) throw new Error('Could not establish the secure Harness session.');
+      await establishHarnessSession();
       const bootResponse = await fetch(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
       if (!bootResponse.ok) throw new Error('Harness did not accept the authenticated browser session.');
       const boot = await bootResponse.json();
@@ -176,7 +201,12 @@ export default function HarnessSurface() {
       // A unique module URL makes a later visit to Overview mount again while
       // all hashed Harness chunks stay cached by the browser.
       await import(/* webpackIgnore: true */ `${HARNESS_SHELL_PATH}?mount=${encodeURIComponent(crypto.randomUUID())}`);
-      if (!cancelled) setState({ phase: 'ready', message: null });
+      if (!cancelled) {
+        setState({ phase: 'ready', message: null });
+        livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);
+        window.addEventListener('online', recoverExpiredSession);
+        document.addEventListener('visibilitychange', recoverExpiredSession);
+      }
     };
 
     start().catch((error) => {
@@ -185,6 +215,9 @@ export default function HarnessSurface() {
 
     return () => {
       cancelled = true;
+      if (livenessTimer !== undefined) window.clearInterval(livenessTimer);
+      window.removeEventListener('online', recoverExpiredSession);
+      document.removeEventListener('visibilitychange', recoverExpiredSession);
       request.cancelled = true;
       if (window.__DSH_EMBED_REQUEST__ === request) window.__DSH_EMBED_REQUEST__ = undefined;
       window.__HIVEMIND_TRANSCRIBE_AUDIO__ = undefined;
