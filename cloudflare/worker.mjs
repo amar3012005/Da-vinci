@@ -235,6 +235,9 @@ export default {
     if (pathname.startsWith('/hivemind/app/login')) {
       return Response.redirect(new URL('/hivemind/login', request.url), 302);
     }
+    if (pathname === '/hivemind/app/new-session') {
+      return Response.redirect(new URL(`${HARNESS_OVERVIEW_PATH}/new`, request.url), 302);
+    }
     const canonicalHarnessPath = canonicalHarnessDocumentPath(pathname);
     if (canonicalHarnessPath !== null && canonicalHarnessPath !== pathname) {
       return Response.redirect(new URL(canonicalHarnessPath, request.url), 302);

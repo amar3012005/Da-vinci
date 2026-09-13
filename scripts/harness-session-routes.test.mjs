@@ -77,6 +77,15 @@ test('repeated Overview suffixes are reduced to the canonical session URL', asyn
   assert.equal(response.headers.get('location'), `${origin}${target}`);
 });
 
+test('legacy new-session links reach the native Harness new-session route', async () => {
+  const response = await worker.fetch(new Request(`${origin}/hivemind/app/new-session`), environment(async () => {
+    throw new Error('redirect must happen before Harness dispatch');
+  }));
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.get('location'), `${origin}/hivemind/app/overview/new`);
+});
+
 test('unknown session suffixes are not treated as recoverable Harness routes', async () => {
   let calls = 0;
   const response = await worker.fetch(new Request(`${origin}/hivemind/app/overview/session/session-opaque/settings`, {

@@ -223,6 +223,7 @@ export default function HiveMindApp() {
           }
         >
           <Route index element={<Navigate to="/hivemind/app/overview" replace />} />
+          <Route path="new-session" element={<Navigate to="/hivemind/app/overview/new" replace />} />
           <Route path="overview/*" element={<PageSuspense><Overview /></PageSuspense>} />
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
