@@ -6,6 +6,7 @@ const HARNESS_SESSION_PATH = '/api/hivemind/session/establish';
 const HARNESS_SHELL_PATH = '/assets/harness-shell.js';
 const HARNESS_LIVENESS_INTERVAL_MS = 5000;
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
+const RELEASE_REVISION_PATTERN = /^[A-Za-z0-9_-]{8,128}$/;
 
 function deferred() {
   let resolve;
@@ -117,6 +118,32 @@ function isFreshHarnessRoute() {
   return window.location.pathname === `${HARNESS_OVERVIEW_PATH}/new`;
 }
 
+function harnessReleaseRevision(styles) {
+  for (const href of styles) {
+    if (typeof href !== 'string') continue;
+    try {
+      const filename = new URL(href, window.location.origin).pathname.split('/').pop() || '';
+      const revision = filename.replace(/\.(?:css|js)$/i, '');
+      if (RELEASE_REVISION_PATTERN.test(revision)) return revision;
+    } catch {
+      // Ignore malformed optional style URLs; loading them will report the
+      // authoritative error through loadHarnessStylesheet.
+    }
+  }
+  return null;
+}
+
+function harnessShellModuleUrl(styles) {
+  const revision = harnessReleaseRevision(styles);
+  const cacheablePath = revision
+    ? `${HARNESS_SHELL_PATH}?rev=${encodeURIComponent(revision)}`
+    : HARNESS_SHELL_PATH;
+  // The fragment creates a new module-map identity for every SPA mount, but is
+  // not sent over HTTP. The browser therefore re-executes the shell while
+  // reusing the private, release-addressed response bytes from its cache.
+  return `${cacheablePath}#mount=${encodeURIComponent(crypto.randomUUID())}`;
+}
+
 async function establishHarnessSession({ fresh = false } = {}) {
   const path = fresh ? '/v1/harness-chat/new-session' : '/v1/harness-chat/bootstrap';
   const { data: admission } = await apiClient.controlPlane.post(path, {});
@@ -204,9 +231,7 @@ export default function HarnessSurface() {
       await applyHarnessInjections(boot.injections);
       if (cancelled) return;
       window.__DSH_EMBED_REQUEST__ = request;
-      // A unique module URL makes a later visit to Overview mount again while
-      // all hashed Harness chunks stay cached by the browser.
-      await import(/* webpackIgnore: true */ `${HARNESS_SHELL_PATH}?mount=${encodeURIComponent(crypto.randomUUID())}`);
+      await import(/* webpackIgnore: true */ harnessShellModuleUrl(styles));
       if (!cancelled) {
         setState({ phase: 'ready', message: null });
         livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);

@@ -359,7 +359,7 @@ export default function AppShell() {
           style={{ marginLeft: (compactViewport || graphFullscreen || hyperFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '260px' }}
         >
           <TopBar compact={compactTopbar} activeSection={activeSection} onSectionChange={handleSectionChange} />
-          <main className={graphFullscreen ? "h-[calc(100dvh-56px)] overflow-hidden" : onOverview && window.location.hostname === 'next.preview.singulancelabs.com' ? "h-[calc(100dvh-56px)] min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          <main className={graphFullscreen ? "h-[calc(100dvh-56px)] overflow-hidden" : onOverview ? "h-[calc(100dvh-56px)] min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>

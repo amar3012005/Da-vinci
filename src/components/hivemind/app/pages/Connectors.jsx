@@ -4292,7 +4292,7 @@ export default function Connectors() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full max-w-none space-y-6">
       <PageWalkthrough pageKey="connectors" steps={CONNECTORS_STEPS} />
       {/* Toast Notification */}
       <AnimatePresence>
