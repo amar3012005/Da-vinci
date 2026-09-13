@@ -34,6 +34,8 @@ import { useApiQuery } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/upload-store';
+import HarnessChatSurface from './HarnessChatSurface';
+import HarnessSurface from './HarnessSurface';
 
 // ─── Animation variants ──────────────────────────────────────────
 
@@ -1134,6 +1136,16 @@ function OverviewChat({ inputRef }) {
 // ─── Main component ──────────────────────────────────────────────
 
 export default function Overview() {
+  // Do not select Harness by hostname: Enigma and main share this build and
+  // use the server-side feature flag at admission. Only an explicit admitted
+  // route mounts the native client; the overview root retains legacy fallback.
+  if (/^\/hivemind\/app\/overview\/(?:new|session\/[^/]+)$/u.test(window.location.pathname)) {
+    return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
+  }
+  return <LegacyOverview />;
+}
+
+function LegacyOverview() {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   // First-visit guided tour — glass overlay + arrows to each sidebar page.
@@ -1358,7 +1370,7 @@ export default function Overview() {
       </div>
 
       {/* The HIVE chat — the Overview centerpiece */}
-      <OverviewChat inputRef={chatInputRef} />
+      <HarnessChatSurface legacy={<OverviewChat inputRef={chatInputRef} />} />
     </div>
   );
 }
