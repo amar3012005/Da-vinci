@@ -161,6 +161,17 @@ export default function Sidebar({
       .catch(() => setShowWebAdmin(false));
   }, []);
 
+  useEffect(() => {
+    const close = () => onCollapsedChange?.(true);
+    const open = () => onCollapsedChange?.(false);
+    window.addEventListener('hivemind:close-sidebar', close);
+    window.addEventListener('hivemind:open-sidebar', open);
+    return () => {
+      window.removeEventListener('hivemind:close-sidebar', close);
+      window.removeEventListener('hivemind:open-sidebar', open);
+    };
+  }, [onCollapsedChange]);
+
   const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection });
   const planLabel = org?.plan
     ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })

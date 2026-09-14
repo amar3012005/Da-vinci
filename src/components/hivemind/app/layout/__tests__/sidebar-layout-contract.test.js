@@ -11,5 +11,7 @@ test('the app shell and sidebar share one collapse state', () => {
   expect(shell).toContain('onCollapsedChange={setSidebarCollapsed}');
   expect(shell).toContain("sidebarCollapsed ? '68px' : '260px'");
   expect(sidebar).toContain('onClick={() => onCollapsedChange?.(!collapsed)}');
+  expect(sidebar).toContain('const handleClose = () => onCollapsedChange?.(true);');
+  expect(sidebar).toContain('const handleOpen = () => onCollapsedChange?.(false);');
   expect(sidebar).not.toContain('const [collapsed, setCollapsed]');
 });
