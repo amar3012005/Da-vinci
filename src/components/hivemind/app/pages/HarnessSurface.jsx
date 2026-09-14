@@ -17,6 +17,14 @@ export function harnessShellUrl(rows) {
   return `${HARNESS_SHELL_PATH}?rev=${encodeURIComponent(revision)}`;
 }
 
+/** Extract the revision that owns the in-page native module graph. */
+export function harnessBootRevision(rows) {
+  const graph = Array.isArray(rows)
+    ? rows.find((row) => row?.kind === 'global' && row?.name === '__DSH_BOOT__')?.value
+    : null;
+  return typeof graph?.rev === 'string' && graph.rev.length > 0 ? graph.rev : null;
+}
+
 function deferred() {
   let resolve;
   let reject;
@@ -63,9 +71,8 @@ function loadHarnessStylesheet(href) {
 /** Execute the typed Harness boot table exactly as its static worker does. */
 async function applyHarnessInjections(rows) {
   if (!Array.isArray(rows)) throw new Error('Harness returned an invalid boot graph.');
-  // A native document gets a fresh readiness barrier and executes every boot
-  // script on every navigation. SPA remounts must preserve that contract too:
-  // HTTP caching may reuse bytes, but script execution must never be skipped.
+  // One document installs one signed boot graph. Same-revision SPA remounts
+  // reuse the live module system; a new revision gets a full document reload.
   const ready = deferred();
   window.__DSH_BOOT_READY__ = ready;
   try {
@@ -184,6 +191,15 @@ export default function HarnessSurface() {
       if (!bootResponse.ok) throw new Error('Harness did not accept the authenticated browser session.');
       const boot = await bootResponse.json();
       if (cancelled) return;
+      const bootRevision = harnessBootRevision(boot.injections);
+      if (bootRevision === null) {
+        throw new Error('Harness returned a boot graph without a release revision.');
+      }
+      const installedRevision = window.__HIVE_HARNESS_BOOT_REV__;
+      if (typeof installedRevision === 'string' && installedRevision !== bootRevision) {
+        window.location.reload();
+        return;
+      }
       const styles = Array.isArray(boot.styles) ? boot.styles : [];
       if (styles.length === 0) throw new Error('Harness returned no native styles.');
       await Promise.all(styles.map(loadHarnessStylesheet));
@@ -212,7 +228,10 @@ export default function HarnessSurface() {
         await apiClient.controlPlane.delete(`/v1/harness-chat/sessions/${encodeURIComponent(sessionId)}`);
       };
       const shellUrl = harnessShellUrl(boot.injections);
-      await applyHarnessInjections(boot.injections);
+      if (installedRevision !== bootRevision) {
+        await applyHarnessInjections(boot.injections);
+        window.__HIVE_HARNESS_BOOT_REV__ = bootRevision;
+      }
       if (cancelled) return;
       window.__DSH_EMBED_REQUEST__ = request;
       // The module URL changes only when the authenticated Harness release

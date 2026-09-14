@@ -8,10 +8,12 @@ const shell = readFileSync(new URL('../src/components/hivemind/app/layout/AppShe
 const topbar = readFileSync(new URL('../src/components/hivemind/app/layout/TopBar.jsx', import.meta.url), 'utf8');
 const connectors = readFileSync(new URL('../src/components/hivemind/app/pages/Connectors.jsx', import.meta.url), 'utf8');
 
-test('every SPA remount replays the native Harness boot graph', () => {
-  assert.doesNotMatch(surface, /harnessScriptLoads/);
+test('same-release SPA remounts reuse one signed native Harness boot graph', () => {
   assert.match(surface, /function executeExternalScript\(src\) \{\s*return new Promise/);
   assert.match(surface, /const ready = deferred\(\);\s*window\.__DSH_BOOT_READY__ = ready/);
+  assert.match(surface, /window\.__HIVE_HARNESS_BOOT_REV__ = bootRevision/);
+  assert.match(surface, /installedRevision !== bootRevision/);
+  assert.match(surface, /window\.location\.reload\(\);/);
 });
 
 test('browser HTTP caching remains enabled for immutable Harness assets', () => {
