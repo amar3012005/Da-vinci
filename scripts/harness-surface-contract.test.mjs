@@ -18,7 +18,8 @@ test('browser HTTP caching remains enabled for immutable Harness assets', () => 
   assert.match(surface, /script\.src = src/);
   assert.match(surface, /link\[data-dsh-native-style=/);
   assert.match(surface, /HARNESS_SHELL_PATH\}\?rev=/);
-  assert.match(surface, /#mount=\$\{encodeURIComponent\(crypto\.randomUUID\(\)\)\}/);
+  assert.match(surface, /graph\?\.rev/);
+  assert.doesNotMatch(surface, /#mount=/);
   assert.doesNotMatch(surface, /HARNESS_SHELL_PATH\}\?mount=/);
 });
 
