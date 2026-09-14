@@ -179,8 +179,8 @@ export default function Sidebar({
 
   // Listen for hivemind:close-sidebar and hivemind:open-sidebar events
   useEffect(() => {
-    const handleClose = () => setCollapsed(true);
-    const handleOpen = () => setCollapsed(false);
+    const handleClose = () => onCollapsedChange?.(true);
+    const handleOpen = () => onCollapsedChange?.(false);
 
     window.addEventListener('hivemind:close-sidebar', handleClose);
     window.addEventListener('hivemind:open-sidebar', handleOpen);
@@ -189,7 +189,7 @@ export default function Sidebar({
       window.removeEventListener('hivemind:close-sidebar', handleClose);
       window.removeEventListener('hivemind:open-sidebar', handleOpen);
     };
-  }, []);
+  }, [onCollapsedChange]);
 
   const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection, capabilities: brainCapabilities || {} })
     .map((section) => ({ ...section, items: filterCapabilityItems(section.items, brainCapabilities || {}) }))
