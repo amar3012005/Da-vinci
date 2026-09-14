@@ -7,6 +7,15 @@ const HARNESS_SHELL_PATH = '/assets/harness-shell.js';
 const HARNESS_LIVENESS_INTERVAL_MS = 5000;
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 
+/** Resolve one release-stable module URL from the authenticated boot graph. */
+export function harnessShellUrl(rows) {
+  const graph = Array.isArray(rows)
+    ? rows.find((row) => row?.kind === 'global' && row?.name === '__DSH_BOOT__')?.value
+    : null;
+  const revision = typeof graph?.rev === 'string' && graph.rev.length > 0 ? graph.rev : 'current';
+  return `${HARNESS_SHELL_PATH}?rev=${encodeURIComponent(revision)}`;
+}
+
 function deferred() {
   let resolve;
   let reject;
@@ -200,12 +209,16 @@ export default function HarnessSurface() {
       window.__HIVEMIND_DELETE_SESSION__ = async (sessionId) => {
         await apiClient.controlPlane.delete(`/v1/harness-chat/sessions/${encodeURIComponent(sessionId)}`);
       };
+      const shellUrl = harnessShellUrl(boot.injections);
       await applyHarnessInjections(boot.injections);
       if (cancelled) return;
       window.__DSH_EMBED_REQUEST__ = request;
-      // A unique module URL makes a later visit to Overview mount again while
-      // all hashed Harness chunks stay cached by the browser.
-      await import(/* webpackIgnore: true */ `${HARNESS_SHELL_PATH}?mount=${encodeURIComponent(crypto.randomUUID())}`);
+      // The module URL changes only when the authenticated Harness release
+      // graph changes. Re-entering Overview reuses the parsed module and calls
+      // its explicit mount entry instead of downloading ~500 KiB again.
+      const shell = await import(/* webpackIgnore: true */ shellUrl);
+      if (window.__DSH_EMBED_APP__ === undefined) await shell.mount();
+      else await shell.initialMount;
       if (!cancelled) {
         setState({ phase: 'ready', message: null });
         livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);
