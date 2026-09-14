@@ -19,8 +19,22 @@
 
 export const SERVICE_ERROR_EVENT = 'hm:service-error';
 
+/**
+ * Route changes, component disposal, and explicit AbortController use all
+ * cancel in-flight requests. Those are expected lifecycle outcomes, not
+ * outages; surfacing them globally creates a false "Network connection lost"
+ * toast while the next screen is already loading normally.
+ */
+export function isRequestCancellation(err) {
+  return err?.code === 'ERR_CANCELED'
+    || err?.name === 'CanceledError'
+    || err?.name === 'AbortError'
+    || err?.__CANCEL__ === true;
+}
+
 /** True for a 5xx server error or a network/timeout failure (no response). */
 export function isServiceError(err) {
+  if (isRequestCancellation(err)) return false;
   const status = err?.response?.status;
   if (typeof status === 'number') return status >= 500 && status <= 599;
   // No response but a request was made → network error / timeout / CORS / DNS.

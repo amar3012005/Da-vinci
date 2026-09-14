@@ -3,7 +3,7 @@ jest.mock('../../shared/api-client', () => ({
   default: { controlPlane: {}, core: {} },
 }));
 
-import { harnessShellUrl } from '../HarnessSurface';
+import { harnessBootRevision, harnessShellUrl } from '../HarnessSurface';
 
 describe('HarnessSurface module cache', () => {
   it('keys the native shell by the release graph instead of a random mount id', () => {
@@ -14,5 +14,11 @@ describe('HarnessSurface module cache', () => {
 
   it('uses one stable fallback when an older runner omits a graph revision', () => {
     expect(harnessShellUrl([])).toBe('/assets/harness-shell.js?rev=current');
+  });
+
+  it('uses the boot revision as the in-page module-system identity', () => {
+    const rows = [{ kind: 'global', name: '__DSH_BOOT__', value: { rev: 'release-abc' } }];
+    expect(harnessBootRevision(rows)).toBe('release-abc');
+    expect(harnessBootRevision([])).toBeNull();
   });
 });
