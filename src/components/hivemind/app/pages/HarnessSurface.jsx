@@ -218,9 +218,15 @@ export default function HarnessSurface() {
       // The module URL changes only when the authenticated Harness release
       // graph changes. Re-entering Overview reuses the parsed module and calls
       // its explicit mount entry instead of downloading ~500 KiB again.
-      const shell = await import(/* webpackIgnore: true */ shellUrl);
-      if (window.__DSH_EMBED_APP__ === undefined) await shell.mount();
-      else await shell.initialMount;
+      await import(/* webpackIgnore: true */ shellUrl);
+      if (window.__DSH_EMBED_APP__ === undefined) {
+        if (typeof window.__DSH_EMBED_MOUNT__ !== 'function') {
+          throw new Error('Harness shell did not publish its remount capability.');
+        }
+        await window.__DSH_EMBED_MOUNT__();
+      } else {
+        await window.__DSH_EMBED_INITIAL_MOUNT__;
+      }
       if (!cancelled) {
         setState({ phase: 'ready', message: null });
         livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);
