@@ -94,4 +94,16 @@ assert.equal(servedSpa.headers.get('content-type'), 'text/html');
 assert.match(servedSpa.headers.get('x-robots-tag'), /noindex/);
 assert.equal(await servedSpa.text(), '<!doctype html>');
 
+for (const path of ['/hivemind/app/overview', '/hivemind/app/overview/new', '/hivemind/app/overview/session/session-parity']) {
+  let runnerCalls = 0;
+  const response = await worker.fetch(new Request(`https://next.singulancelabs.com${path}`, {
+    headers: { cookie: 'hm_harness_admitted=1; dsh-auth-test=opaque' },
+  }), {
+    ASSETS: { fetch: async () => new Response('<html>HIVE shell</html>', { headers: { 'content-type': 'text/html' } }) },
+    HARNESS_CHAT: { fetch: async () => { runnerCalls += 1; return new Response('standalone'); } },
+  });
+  assert.equal(await response.text(), '<html>HIVE shell</html>');
+  assert.equal(runnerCalls, 0, `admitted ${path} must retain the embedding host`);
+}
+
 console.log('cloudflare static asset boundary: ok');

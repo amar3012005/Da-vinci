@@ -11,7 +11,7 @@ function environment(harnessFetch) {
   };
 }
 
-test('admitted opaque session routes serve the native Harness document', async () => {
+test('admitted opaque session routes retain the Da-vinci embedding document', async () => {
   let forwarded;
   const env = environment(async (request) => {
     forwarded = new URL(request.url).pathname;
@@ -23,8 +23,8 @@ test('admitted opaque session routes serve the native Harness document', async (
     headers: { cookie: 'dsh-auth-main=value; hm_harness_admitted=1' },
   }), env);
   assert.equal(response.status, 200);
-  assert.equal(forwarded, '/');
-  assert.match(await response.text(), /src="\/assets\/index\.js"/);
+  assert.equal(forwarded, undefined);
+  assert.match(await response.text(), /Da-vinci/);
 });
 
 test('a deep link survives the one-shot admission exchange', async () => {

@@ -120,8 +120,10 @@ function cookieValue(request, name) {
 
 function isHarnessDocumentOrAsset(request, pathname) {
   if (!hasHarnessSession(request) || !hasHarnessAdmission(request)) return false;
-  return harnessDocumentPath(pathname) !== null
-    || pathname.startsWith('/assets/')
+  // Overview documents always belong to Da-vinci, including admitted reloads.
+  // The host mounts Harness into its chat seat; standalone runner HTML would
+  // replace the HIVE sidebar, header, and embedding configuration.
+  return pathname.startsWith('/assets/')
     || pathname === '/favicon.svg'
     || pathname === '/manifest.webmanifest';
 }
