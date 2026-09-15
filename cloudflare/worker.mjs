@@ -14,6 +14,9 @@ const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const HIVE_HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const HIVE_HARNESS_CHAT_FLAG_KEY = 'hivemind_harness_chat_v1';
 const HIVE_HARNESS_MODES = new Set(['legacy', 'preview', 'harness']);
+const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
+const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
+const HARNESS_RETURN_COOKIE = 'hm_harness_return';
 const PUBLIC_MARKETING_HOSTS = new Set([
   'singulancelabs.com',
   'www.singulancelabs.com',
@@ -79,6 +82,50 @@ function constantTimeBearer(request, secret) {
   return mismatch === 0;
 }
 
+function hasHarnessSession(request) {
+  return /(?:^|;\s*)dsh-auth-[A-Za-z0-9_-]+=/.test(request.headers.get('cookie') || '');
+}
+
+function hasHarnessAdmission(request) {
+  return new RegExp(`(?:^|;\\s*)${HARNESS_ADMISSION_COOKIE}=1(?:;|$)`).test(request.headers.get('cookie') || '');
+}
+
+function harnessDocumentPath(pathname) {
+  if (pathname === HARNESS_OVERVIEW_PATH || pathname === `${HARNESS_OVERVIEW_PATH}/new`) return pathname;
+  if (!pathname.startsWith(`${HARNESS_OVERVIEW_PATH}/session/`)) return null;
+  const encoded = pathname.slice(`${HARNESS_OVERVIEW_PATH}/session/`.length);
+  if (!encoded || encoded.includes('/') || encoded.length > 512) return null;
+  try {
+    const sessionId = decodeURIComponent(encoded);
+    return sessionId && !sessionId.includes('/') && sessionId.length <= 256 ? pathname : null;
+  } catch {
+    return null;
+  }
+}
+
+function canonicalHarnessDocumentPath(pathname) {
+  const exact = harnessDocumentPath(pathname);
+  if (exact !== null) return exact;
+  const prefix = `${HARNESS_OVERVIEW_PATH}/session/`;
+  if (!pathname.startsWith(prefix)) return null;
+  const [encoded, ...suffix] = pathname.slice(prefix.length).split('/');
+  if (!encoded || suffix.length === 0 || suffix.some(segment => segment !== 'overview')) return null;
+  return harnessDocumentPath(`${prefix}${encoded}`);
+}
+
+function cookieValue(request, name) {
+  const match = (request.headers.get('cookie') || '').match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? match[1] : null;
+}
+
+function isHarnessDocumentOrAsset(request, pathname) {
+  if (!hasHarnessSession(request) || !hasHarnessAdmission(request)) return false;
+  return harnessDocumentPath(pathname) !== null
+    || pathname.startsWith('/assets/')
+    || pathname === '/favicon.svg'
+    || pathname === '/manifest.webmanifest';
+}
+
 function isHarnessRunnerRoute(pathname) {
   // Keep the HIVE Worker authoritative for its own app/API surface. Native
   // Harness owns the generic session controller and the dynamic Cordis
@@ -96,6 +143,9 @@ function isHarnessRunnerRoute(pathname) {
 }
 
 async function proxyHarnessRunner(request, env) {
+  if (env.HARNESS_CHAT && typeof env.HARNESS_CHAT.fetch === 'function') {
+    return env.HARNESS_CHAT.fetch(request);
+  }
   if (!env.RUNNER_ORIGIN) {
     return Response.json({ error: 'runner_unavailable' }, { status: 503, headers: { 'cache-control': 'no-store' } });
   }
@@ -119,6 +169,54 @@ async function proxyHarnessRunner(request, env) {
     credentials: 'include',
     redirect: 'manual',
   }));
+}
+
+async function harnessResponse(request, env) {
+  const pathname = new URL(request.url).pathname;
+  const documentUrl = new URL(request.url);
+  if (harnessDocumentPath(pathname) !== null) documentUrl.pathname = '/';
+  const upstreamRequest = harnessDocumentPath(pathname) !== null
+    ? new Request(documentUrl, request)
+    : pathname === '/api/hivemind/embed/exchange'
+      ? new Request(request, { redirect: 'manual' })
+      : request;
+  const response = await proxyHarnessRunner(upstreamRequest, env);
+
+  if (pathname === '/api/hivemind/embed/exchange' && (response.ok || response.status === 303)) {
+    const headers = new Headers(response.headers);
+    headers.append('set-cookie', `${HARNESS_ADMISSION_COOKIE}=1; Path=/; Max-Age=3600; Secure; HttpOnly; SameSite=Strict`);
+    headers.append('set-cookie', `${HARNESS_RETURN_COOKIE}=; Path=/api/hivemind/embed/exchange; Max-Age=0; Secure; HttpOnly; SameSite=Strict`);
+    const requested = cookieValue(request, HARNESS_RETURN_COOKIE);
+    let destination = HARNESS_OVERVIEW_PATH;
+    if (requested) {
+      try { destination = harnessDocumentPath(decodeURIComponent(requested)) || HARNESS_OVERVIEW_PATH; } catch { /* fail closed */ }
+    }
+    if (response.status === 303) headers.set('location', destination);
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  }
+
+  const runnerRejectedPrincipal = harnessDocumentPath(pathname) !== null && (
+    response.status === 401
+    || response.status === 403
+    || ((response.headers.get('content-type') || '').startsWith('text/plain')
+      && (await response.clone().text()).trim() === 'HIVE-MIND authentication required')
+  );
+  if (runnerRejectedPrincipal) {
+    const fallback = await env.ASSETS.fetch(request);
+    const headers = new Headers(fallback.headers);
+    headers.append('set-cookie', `${HARNESS_ADMISSION_COOKIE}=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Strict`);
+    return new Response(fallback.body, { status: fallback.status, statusText: fallback.statusText, headers });
+  }
+  if (harnessDocumentPath(pathname) === null || !isHtml(response)) return response;
+  const html = (await response.text())
+    .replaceAll('href="./manifest.webmanifest"', 'href="/manifest.webmanifest"')
+    .replaceAll('href="./favicon.svg"', 'href="/favicon.svg"')
+    .replaceAll('src="./assets/', 'src="/assets/')
+    .replaceAll('href="./assets/', 'href="/assets/');
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  headers.set('cache-control', 'private, no-store');
+  return new Response(html, { status: response.status, statusText: response.statusText, headers });
 }
 
 async function harnessChatFlagResponse(request, env) {
@@ -181,11 +279,29 @@ export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
 
+    if (pathname.startsWith('/hivemind/app/login')) {
+      return Response.redirect(new URL('/hivemind/login', request.url), 302);
+    }
+    const canonicalHarnessPath = canonicalHarnessDocumentPath(pathname);
+    if (canonicalHarnessPath !== null && canonicalHarnessPath !== pathname) {
+      return Response.redirect(new URL(canonicalHarnessPath, request.url), 302);
+    }
+    if (/^\/hivemind\/app\/overview(?:\/overview)+\/?$/u.test(pathname)) {
+      return Response.redirect(new URL(HARNESS_OVERVIEW_PATH, request.url), 302);
+    }
+    if (pathname === '/hivemind/app/v1/overview') {
+      return Response.redirect(new URL(HARNESS_OVERVIEW_PATH, request.url), 302);
+    }
+
     if (pathname === HIVE_HARNESS_CHAT_FLAG_PATH) {
       if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
       return harnessChatFlagResponse(request, env);
     }
-    if (isHarnessRunnerRoute(pathname)) return proxyHarnessRunner(request, env);
+    if (pathname === '/api/hivemind/embed/exchange'
+      || isHarnessDocumentOrAsset(request, pathname)
+      || (hasHarnessAdmission(request) && isHarnessRunnerRoute(pathname))) {
+      return noIndex(await harnessResponse(request, env));
+    }
 
     if (pathname === PARTNER_REFERRALS_FLAG_PATH) {
       return partnerReferralsFlagResponse(request, env);
@@ -262,6 +378,14 @@ export default {
     }
 
     const response = await env.ASSETS.fetch(request);
+
+    // Preserve an unauthenticated Overview deep link through the one-shot
+    // admission exchange. It is navigation intent only, never authorization.
+    if (!hasHarnessAdmission(request) && harnessDocumentPath(pathname) !== null && isHtml(response)) {
+      const headers = new Headers(response.headers);
+      headers.append('set-cookie', `${HARNESS_RETURN_COOKIE}=${encodeURIComponent(pathname)}; Path=/api/hivemind/embed/exchange; Max-Age=300; Secure; HttpOnly; SameSite=Strict`);
+      return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+    }
 
     // SPA fallback must never turn a missing executable asset into index.html.
     if ((pathname.startsWith(STATIC_ASSET_PREFIX) || pathname.startsWith(AGENT_SETUP_PREFIX)) && isHtml(response)) {

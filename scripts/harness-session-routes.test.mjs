@@ -23,7 +23,7 @@ test('admitted opaque session routes serve the native Harness document', async (
     headers: { cookie: 'dsh-auth-main=value; hm_harness_admitted=1' },
   }), env);
   assert.equal(response.status, 200);
-  assert.equal(forwarded, '/hivemind/app/overview/session/session-opaque');
+  assert.equal(forwarded, '/');
   assert.match(await response.text(), /src="\/assets\/index\.js"/);
 });
 
