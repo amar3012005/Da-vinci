@@ -116,10 +116,9 @@ test('remote runner transport preserves public browser Origin', async () => {
     return Response.json({ ok: true });
   };
   try {
-    await worker.fetch(new Request(`${origin}/api/session/create`, {
-      method: 'POST',
+    await worker.fetch(new Request(`${origin}/api/session/list`, {
+      method: 'GET',
       headers: { cookie: 'hm_harness_admitted=1', origin, 'content-type': 'application/json' },
-      body: '{}',
     }), { RUNNER_ORIGIN: 'https://harness-chat-origin.singulancelabs.com' });
     assert.equal(new URL(forwarded.url).host, 'harness-chat-origin.singulancelabs.com');
     assert.equal(forwarded.headers.get('origin'), origin);
