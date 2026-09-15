@@ -118,12 +118,43 @@ async function applyHarnessInjections(rows) {
   }
 }
 
-function LoadingSurface() {
+export const HARNESS_BOOT_STAGES = [
+  'Securing your session',
+  'Loading your workspace',
+  'Preparing the native chat',
+  'Restoring your conversation',
+];
+
+/**
+ * A compact, milestone-driven boot indicator. Unlike a timer-based progress
+ * bar, each advance corresponds to a completed browser or runner boundary.
+ */
+export function LoadingSurface({ stage = 0 }) {
+  const safeStage = Math.max(0, Math.min(stage, HARNESS_BOOT_STAGES.length - 1));
+  const completed = safeStage + 1;
+  const width = 20;
+  const filled = Math.round((completed / HARNESS_BOOT_STAGES.length) * width);
+  const bar = `${'█'.repeat(filled)}${'░'.repeat(width - filled)}`;
   return (
-    <div className="h-full min-h-[420px] grid place-items-center bg-[#faf9f4]" aria-live="polite">
-      <div className="flex items-center gap-3 text-[13px] text-[#737373]">
-        <span className="h-5 w-5 rounded-full border-2 border-[#dbeafe] border-t-[#117dff] animate-spin" />
-        <span>Opening your HIVE-MIND workspace…</span>
+    <div className="h-full min-h-[420px] grid place-items-center bg-[#faf9f4] px-6" aria-live="polite">
+      <div className="w-[300px] max-w-full rounded-2xl border border-[#ece9e2] bg-white/80 px-6 py-5 shadow-[0_10px_30px_rgba(20,20,20,0.04)]">
+        <div className="flex items-center justify-between text-[11px] font-mono text-[#8b857d]">
+          <span>hive-mind</span>
+          <span className="tabular-nums">{completed}/{HARNESS_BOOT_STAGES.length}</span>
+        </div>
+        <div
+          role="progressbar"
+          aria-label="Opening HIVE-MIND workspace"
+          aria-valuemin={0}
+          aria-valuemax={HARNESS_BOOT_STAGES.length}
+          aria-valuenow={completed}
+          className="mt-2 font-mono text-[13px] leading-none tracking-tight text-[#117dff]"
+          style={{ animation: 'hm-harness-tqdm-shimmer 1.6s ease-in-out infinite' }}
+        >
+          {bar}
+        </div>
+        <p className="mt-3 text-[13px] font-medium text-[#252525]">{HARNESS_BOOT_STAGES[safeStage]}</p>
+        <p className="mt-1 text-[11px] text-[#8b857d]">Opening your HIVE-MIND workspace</p>
       </div>
     </div>
   );
@@ -156,7 +187,7 @@ async function establishHarnessSession({ fresh = false } = {}) {
  */
 export default function HarnessSurface() {
   const mountRef = useRef(null);
-  const [state, setState] = useState({ phase: 'loading', message: null });
+  const [state, setState] = useState({ phase: 'loading', stage: 0, message: null });
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -165,6 +196,9 @@ export default function HarnessSurface() {
     let recovering = false;
     let livenessTimer;
     const request = { container: mount, cancelled: false };
+    const setLoadingStage = (stage) => {
+      if (!cancelled) setState({ phase: 'loading', stage, message: null });
+    };
 
     const recoverExpiredSession = async () => {
       if (cancelled || recovering || document.visibilityState === 'hidden') return;
@@ -186,6 +220,7 @@ export default function HarnessSurface() {
 
     const start = async () => {
       await establishHarnessSession({ fresh: isFreshHarnessRoute() });
+      setLoadingStage(1);
       const bootResponse = await fetch(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
       if (!bootResponse.ok) throw new Error('Harness did not accept the authenticated browser session.');
       const boot = await bootResponse.json();
@@ -202,6 +237,7 @@ export default function HarnessSurface() {
       const styles = Array.isArray(boot.styles) ? boot.styles : [];
       if (styles.length === 0) throw new Error('Harness returned no native styles.');
       await Promise.all(styles.map(loadHarnessStylesheet));
+      setLoadingStage(2);
       if (cancelled) return;
       // Reuse the exact authenticated speech-to-text transport used by
       // /hivemind/m/chat and AI Meeting Notes. The native Harness composer owns
@@ -233,6 +269,7 @@ export default function HarnessSurface() {
       }
       if (cancelled) return;
       window.__DSH_EMBED_REQUEST__ = request;
+      setLoadingStage(3);
       // The module URL changes only when the authenticated Harness release
       // graph changes. Re-entering Overview reuses the parsed module and calls
       // its explicit mount entry instead of downloading ~500 KiB again.
@@ -246,7 +283,7 @@ export default function HarnessSurface() {
         await window.__DSH_EMBED_INITIAL_MOUNT__;
       }
       if (!cancelled) {
-        setState({ phase: 'ready', message: null });
+        setState({ phase: 'ready', stage: HARNESS_BOOT_STAGES.length - 1, message: null });
         livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);
         window.addEventListener('online', recoverExpiredSession);
         document.addEventListener('visibilitychange', recoverExpiredSession);
@@ -254,7 +291,7 @@ export default function HarnessSurface() {
     };
 
     start().catch((error) => {
-      if (!cancelled) setState({ phase: 'error', message: error instanceof Error ? error.message : 'Could not open Harness chat.' });
+      if (!cancelled) setState({ phase: 'error', stage: 0, message: error instanceof Error ? error.message : 'Could not open Harness chat.' });
     });
 
     return () => {
@@ -284,7 +321,7 @@ export default function HarnessSurface() {
   }
 
   return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface>
-    {state.phase === 'loading' && <div className="absolute inset-0 z-10"><LoadingSurface /></div>}
+    {state.phase === 'loading' && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} /></div>}
     <div ref={mountRef} className="h-full min-h-0" />
   </div>;
 }
