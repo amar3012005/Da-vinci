@@ -15,6 +15,11 @@ html[data-dsh-mode='hivemind-chat']
   margin-left: 244px;
 }
 
+@keyframes hm-harness-tqdm-shimmer {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 1; }
+}
+
 @media (max-width: 760px) {
   html[data-dsh-mode='hivemind-chat']
     [data-hivemind-harness-surface]
