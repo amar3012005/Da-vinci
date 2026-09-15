@@ -31,10 +31,8 @@ test('native session establishment reaches the runner before an admission cookie
     worker,
     /pathname === '\/api\/hivemind\/embed\/exchange'\s*\n\s*\|\| pathname === '\/api\/hivemind\/session\/establish'/u,
   );
-  assert.match(
-    worker,
-    /incoming\.pathname === '\/api\/hivemind\/embed\/exchange'\s*\n\s*\|\| incoming\.pathname === '\/api\/hivemind\/session\/establish'/u,
-  );
+  assert.match(worker, /const runner = new URL\(env\.RUNNER_ORIGIN\)/u);
+  assert.match(worker, /new Request\(request, \{/u);
   assert.match(
     worker,
     /pathname === '\/api\/hivemind\/session\/establish' && response\.ok/u,
@@ -43,4 +41,6 @@ test('native session establishment reaches the runner before an admission cookie
     worker,
     /hasHarnessAdmission\(request\) && isHarnessRunnerRoute\(pathname\)/u,
   );
+  assert.match(worker, /resolveOverride: runner\.hostname/u);
+  assert.doesNotMatch(worker, /headers\.set\('origin', target\.origin\)/u);
 });

@@ -150,27 +150,23 @@ async function proxyHarnessRunner(request, env) {
     return Response.json({ error: 'runner_unavailable' }, { status: 503, headers: { 'cache-control': 'no-store' } });
   }
   const incoming = new URL(request.url);
-  const target = new URL(`${incoming.pathname}${incoming.search}`, env.RUNNER_ORIGIN);
+  const runner = new URL(env.RUNNER_ORIGIN);
   const headers = new Headers(request.headers);
   headers.set('x-forwarded-host', incoming.host);
   headers.set('x-forwarded-proto', incoming.protocol.slice(0, -1));
-  // Admission validates the forwarded public authority, so both ticket entry
-  // points must retain the browser Origin. Native Harness API and WebSocket
-  // requests are then authenticated by the runner's own Host/Origin fence;
-  // present the runner authority for those paths while retaining the public
-  // authority in x-forwarded-host for audit and ticket validation.
-  const preservesPublicOrigin = incoming.pathname === '/api/hivemind/embed/exchange'
-    || incoming.pathname === '/api/hivemind/session/establish';
-  if (!preservesPublicOrigin && headers.has('origin')) {
-    headers.set('origin', target.origin);
-  }
-  return fetch(new Request(target, {
+  // The native Cordis connection binds its browser credential to the public
+  // Host. Keep that authority intact for *every* runner API (including native
+  // session creation) while Cloudflare resolves the TCP destination to the
+  // private runner hostname. `resolveOverride` is intentionally same-zone.
+  const upstream = new Request(request, {
     method: request.method,
     headers,
     body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+    ...(request.method === 'GET' || request.method === 'HEAD' ? {} : { duplex: 'half' }),
     credentials: 'include',
     redirect: 'manual',
-  }));
+  });
+  return fetch(upstream, { cf: { resolveOverride: runner.hostname } });
 }
 
 async function harnessResponse(request, env) {
