@@ -32,9 +32,18 @@ export function isRequestCancellation(err) {
     || err?.__CANCEL__ === true;
 }
 
+/**
+ * Some embedded and extension-managed browser contexts deliberately deny
+ * storage access. That is neither a failed HTTP request nor an application
+ * outage, so it must not be translated into the global network-error toast.
+ */
+export function isExpectedBrowserContextError(err) {
+  return /access to storage is not allowed from this context/i.test(String(err?.message || ''));
+}
+
 /** True for a 5xx server error or a network/timeout failure (no response). */
 export function isServiceError(err) {
-  if (isRequestCancellation(err)) return false;
+  if (isRequestCancellation(err) || isExpectedBrowserContextError(err)) return false;
   const status = err?.response?.status;
   if (typeof status === 'number') return status >= 500 && status <= 599;
   // No response but a request was made → network error / timeout / CORS / DNS.

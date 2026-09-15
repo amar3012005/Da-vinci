@@ -1,4 +1,4 @@
-import { isRequestCancellation, isServiceError } from '../serviceError';
+import { isExpectedBrowserContextError, isRequestCancellation, isServiceError } from '../serviceError';
 
 describe('service error classification', () => {
   it.each([
@@ -14,5 +14,14 @@ describe('service error classification', () => {
   it('retains genuine network and server failures', () => {
     expect(isServiceError({ request: {} })).toBe(true);
     expect(isServiceError({ response: { status: 503 } })).toBe(true);
+  });
+
+  it('does not turn browser storage restrictions into a network outage', () => {
+    const error = {
+      request: {},
+      message: 'Access to storage is not allowed from this context.',
+    };
+    expect(isExpectedBrowserContextError(error)).toBe(true);
+    expect(isServiceError(error)).toBe(false);
   });
 });
