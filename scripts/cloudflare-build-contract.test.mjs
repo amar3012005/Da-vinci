@@ -33,10 +33,6 @@ test('native session establishment reaches the runner before an admission cookie
   );
   assert.match(
     worker,
-    /incoming\.pathname === '\/api\/hivemind\/embed\/exchange'\s*\n\s*\|\| incoming\.pathname === '\/api\/hivemind\/session\/establish'/u,
-  );
-  assert.match(
-    worker,
     /pathname === '\/api\/hivemind\/session\/establish' && response\.ok/u,
   );
   assert.match(

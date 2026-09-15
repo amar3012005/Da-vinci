@@ -13,7 +13,12 @@ const ENABLE_TOOLS_HITL_FLAGSHIP_KEY = 'enable-tools-hitl';
 const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const HIVE_HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const HIVE_HARNESS_CHAT_FLAG_KEY = 'hivemind_harness_chat_v1';
-const HIVE_HARNESS_MODES = new Set(['legacy', 'preview', 'harness']);
+// One rollout decides the conversation engine for a user.  "legacy" stays
+// on the existing LangGraph/LangChain orchestrator; "harness" enables the
+// native Cordis surface.  Do not add an intermediate browser-visible mode:
+// it creates a third state that can leave a user on a native route without a
+// valid native admission.
+const HIVE_HARNESS_MODES = new Set(['legacy', 'harness']);
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
 const HARNESS_RETURN_COOKIE = 'hm_harness_return';
