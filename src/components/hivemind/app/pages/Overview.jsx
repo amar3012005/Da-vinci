@@ -1703,19 +1703,17 @@ function LegacyOverview() {
       </div>
 
       {/* The HIVE chat — the Overview centerpiece */}
-      <HarnessChatSurface legacy={<>
-        <OverviewChat inputRef={chatInputRef} />
+      <HarnessChatSurface legacy={<OverviewChat inputRef={chatInputRef} />} />
 
-        {/* Mobile QR promo — one bottom-right corner widget, desktop-only
-            (mobile visitors never reach this page — see the redirect effect
-            above). Tapping it slides the QR up inside the same card instead
-            of opening a separate popup. */}
-        <AnimatePresence>
-          {!qrCardDismissed && (
-            <MobileQrCorner open={qrOpen} onToggle={() => setQrOpen((v) => !v)} onDismiss={dismissQrCard} />
-          )}
-        </AnimatePresence>
-      </>} />
+      {/* Mobile QR promo — one bottom-right corner widget, desktop-only
+          (mobile visitors never reach this page — see the redirect effect
+          above). Tapping it slides the QR up inside the same card instead
+          of opening a separate popup. */}
+      <AnimatePresence>
+        {!qrCardDismissed && (
+          <MobileQrCorner open={qrOpen} onToggle={() => setQrOpen((v) => !v)} onDismiss={dismissQrCard} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,12 +1,10 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
-import { Search, BookOpen, UserPlus, BrainCircuit, Orbit, AudioWaveform } from 'lucide-react';
+import { UserPlus, BrainCircuit, Orbit, AudioWaveform } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import TeamSwitcher from './TeamSwitcher';
 import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
-import SingulanceBrand from '../shared/SingulanceBrand';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -66,57 +64,57 @@ const SECTION_TITLES = {
   tara: 'TARA',
 };
 
+const PAGE_PREFIXES = [
+  ['/hivemind/app/overview', '/hivemind/app/overview'],
+  ['/hivemind/app/employees/operating-rooms', '/hivemind/app/employees/operating-rooms'],
+  ['/hivemind/app/employees', '/hivemind/app/employees'],
+  ['/hivemind/app/team/members', '/hivemind/app/team/members'],
+  ['/hivemind/app/team/projects', '/hivemind/app/team/projects'],
+];
+
 export default function TopBar({ activeSection = 'hivemind', onSectionChange }) {
   const location = useLocation();
   const navigate = useNavigate();
   const healthy = useHealthStatus();
 
-  const title = pageTitles[location.pathname] || SECTION_TITLES[activeSection] || 'HIVEMIND';
-  const description = pageDescriptions[location.pathname] || '';
+  const pagePath = pageTitles[location.pathname]
+    ? location.pathname
+    : PAGE_PREFIXES.find(([prefix]) => location.pathname.startsWith(`${prefix}/`))?.[1] || location.pathname;
+  const title = pageTitles[pagePath] || SECTION_TITLES[activeSection] || 'HIVEMIND';
+  const description = pageDescriptions[pagePath] || '';
 
   const { t } = useTranslation('dashboard');
   // Translate page title/description via topbar.pages.<routeSlug> keys when present.
-  const routeSlug = (location.pathname || '').replace(/^\/+/, '').replace(/\//g, '.') || 'home';
+  const routeSlug = (pagePath || '').replace(/^\/+/, '').replace(/\//g, '.') || 'home';
   const tTitle = t(`topbar.titles.${routeSlug}`, { defaultValue: title });
   const tDesc = description ? t(`topbar.descriptions.${routeSlug}`, { defaultValue: description }) : '';
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-center border-b border-[#e3e0db] bg-[#faf9f4]/90 px-3 backdrop-blur-xl md:justify-between md:px-6">
-      {/* Left: Title + Description + Team switcher */}
-      <div className="hidden min-w-0 items-center gap-4 lg:flex">
-        <button
-          type="button"
-          onClick={() => navigate('/hivemind/app/overview')}
-          className="shrink-0 border-0 bg-transparent p-0"
-          aria-label="SINGULANCE overview"
-        >
-          <SingulanceBrand variant="light" markSize={28} />
-        </button>
-        <span className="h-7 w-px shrink-0 bg-[#e3e0db]" aria-hidden="true" />
-        <div>
+    <header className="pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center bg-transparent px-3 md:px-6">
+      {/* Branding and team selection live in the persistent HIVE sidebar. */}
+      <div className="pointer-events-auto min-w-0 justify-self-start">
+        <div className="min-w-0">
           <h1 className="text-[#0a0a0a] text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
             {tTitle}
           </h1>
           {tDesc && (
-            <p className="text-[#a3a3a3] text-[11px] mt-0.5">
+            <p className="hidden text-[#a3a3a3] text-[11px] mt-0.5 lg:block">
               {tDesc}
             </p>
           )}
         </div>
-        <TeamSwitcher />
       </div>
 
       {/* Section Toggle */}
-      <div className="relative">
-        <div className="flex h-9 items-stretch border border-[#d4d0ca] bg-white/55 p-[2px] shadow-[0_8px_24px_rgba(10,10,10,0.045)] backdrop-blur-xl" style={{ clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)' }}>
+      <div className="pointer-events-auto relative justify-self-center">
+        <div className="flex h-10 items-stretch overflow-hidden rounded-[10px] border border-[#d4d0ca] bg-white shadow-[0_8px_20px_rgba(10,10,10,0.10)]">
           {SECTIONS.map((s, index) => {
             const active = activeSection === s.key;
             const Icon = s.icon;
             return (
-              <button key={s.key} onClick={() => onSectionChange?.(s.key)} className={`relative flex min-w-[68px] items-center justify-center gap-1.5 border-[#e3e0db] px-2.5 text-[9px] font-semibold tracking-[0.1em] transition-all duration-300 font-['Space_Grotesk'] sm:min-w-[86px] sm:px-4 sm:text-[10px] ${index ? 'border-l' : ''} ${active ? 'bg-[#0a0a0a] text-white' : 'text-[#8d8d8d] hover:bg-white/80 hover:text-[#0a0a0a]'}`}>
-                <Icon size={13} strokeWidth={1.5} className={active ? (s.key === 'hyperagents' ? 'animate-[spin_5s_linear_infinite] text-[#7db8ff]' : 'animate-pulse text-[#7db8ff]') : ''} />
+              <button key={s.key} onClick={() => onSectionChange?.(s.key)} className={`relative flex min-w-[72px] items-center justify-center gap-2 border-[#e3e0db] px-3 text-[10px] font-semibold tracking-[0.08em] transition-colors font-['Space_Grotesk'] sm:min-w-[104px] sm:px-5 ${index ? 'border-l' : ''} ${active ? 'bg-[#0a0a0a] text-white' : 'bg-white text-[#525252] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]'}`}>
+                <Icon size={15} strokeWidth={1.75} className={active ? 'text-white' : 'text-[#0a0a0a]'} />
                 <span>{s.label}</span>
-                {active && <span className="absolute inset-x-3 bottom-0 h-px bg-[#117dff] shadow-[0_0_8px_#117dff]" />}
               </button>
             );
           })}
@@ -125,28 +123,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
       </div>
 
       {/* Right: Actions */}
-      <div className="absolute right-3 flex items-center gap-2 md:static">
-        {/* Global Search */}
-        <button
-          onClick={() => navigate('/hivemind/app/memories')}
-          className="hidden md:flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] hover:border-[#d4d0ca] text-[#a3a3a3] hover:text-[#525252] transition-all text-xs"
-        >
-          <Search size={13} />
-          <span className="hidden md:inline">{t('topbar.searchMemories', 'Search memories...')}</span>
-          <kbd className="hidden md:inline text-[10px] font-mono text-[#a3a3a3] bg-[#eae7e1] rounded px-1 py-0.5 ml-4">
-            /
-          </kbd>
-        </button>
-
-        {/* Docs */}
-        <a
-          href="/hivemind/docs"
-          className="hidden md:flex items-center justify-center w-8 h-8 rounded-[6px] hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors"
-          title="Documentation"
-        >
-          <BookOpen size={15} />
-        </a>
-
+      <div className="pointer-events-auto flex items-center gap-2 justify-self-end">
         {/* Durable lifecycle + workspace notification center. */}
         <WorkspaceNotifications />
 
