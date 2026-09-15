@@ -32,6 +32,10 @@ function hostname(request) {
 }
 
 function noIndex(response) {
+  // A Cloudflare WebSocket upgrade carries a socket on the Response itself.
+  // Reconstructing it as an ordinary HTTP response drops that socket. There is
+  // no indexable document on this transport: preserve the native upgrade.
+  if (response.status === 101) return response;
   const headers = new Headers(response.headers);
   headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });

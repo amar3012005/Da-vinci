@@ -127,3 +127,12 @@ test('remote runner transport preserves public browser Origin', async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test('native WebSocket upgrades are returned without losing their socket', async () => {
+  const upgrade = { status: 101, webSocket: {}, headers: new Headers() };
+  const response = await worker.fetch(new Request(`${origin}/api/remote.mux`, {
+    headers: { cookie: 'hm_harness_admitted=1', upgrade: 'websocket', origin },
+  }), environment(async () => upgrade));
+  assert.equal(response, upgrade);
+  assert.equal(response.webSocket, upgrade.webSocket);
+});
