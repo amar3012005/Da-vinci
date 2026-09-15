@@ -141,6 +141,7 @@ function isHarnessRunnerRoute(pathname) {
   return pathname === '/api/hivemind/embed/exchange'
     || pathname === '/api/hivemind/session/establish'
     || pathname === '/api/hivemind/boot'
+    || pathname === '/api/hivemind/projects'
     || pathname === '/api/remote.mux'
     || pathname.startsWith('/api/session/')
     || pathname.startsWith('/api/dynamicCordisRunner/')
