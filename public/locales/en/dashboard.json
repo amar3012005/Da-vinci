@@ -1180,6 +1180,25 @@
     "workspaceName": "Workspace Name"
   },
   "overview": {
+    "launch": "Launch",
+    "feat": {
+      "chat": "Talk to HIVE",
+      "chatHint": "Ask HIVE anything and get answers grounded in your company memory.",
+      "rooms": "HyperAgents Rooms",
+      "roomsHint": "Bring AI specialists together to plan, challenge, and execute work.",
+      "workspace": "Workspace",
+      "workspaceHint": "Manage your team, projects, access, and company settings.",
+      "knowledge": "Knowledge Base",
+      "knowledgeHint": "Upload any type of document and let HIVEMIND remember it forever.",
+      "graph": "Memory Graph",
+      "graphHint": "Explore how memories, people, decisions, and evidence connect over time.",
+      "swarm": "Swarm",
+      "swarmHint": "Run specialized AI agents together across complex company work.",
+      "connectors": "Connectors",
+      "connectorsHint": "Connect the tools your company already uses and keep their knowledge in sync.",
+      "web": "Web Intelligence",
+      "webHint": "Research the live web and turn trusted findings into durable company knowledge."
+    },
     "askMe": "Ask Me Anything",
     "askPlaceholder": "Ask HIVE anything…",
     "browseMemories": "Browse Memories",

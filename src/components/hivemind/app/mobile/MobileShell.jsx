@@ -9,6 +9,9 @@ import {
 import { useAuth } from '../auth/AuthProvider';
 import SingulanceSplash from './SingulanceSplash';
 import SingulanceMark from '../shared/SingulanceMark';
+import SingulanceBrand from '../shared/SingulanceBrand';
+import { useUsage } from '../shared/useUsage';
+import CreditBalance from '../shared/CreditBalance';
 
 const SPLASH_FLAG = 'hm_m_splashed';
 
@@ -40,6 +43,11 @@ export default function MobileShell({ children, rightAction = null, title = null
   const location = useLocation();
   const { user, org, logout } = useAuth() || {};
   const [drawer, setDrawer] = useState(false);
+  const [showAwakening, setShowAwakening] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return window.localStorage.getItem('hm.mobile_awakening_pending') === '1'; } catch { return false; }
+  });
+  const { usage } = useUsage();
 
   // SINGULANCE onboarding splash — plays once per device, and again right
   // after a QR scan (?from=dashboard). Decided synchronously on first render so
@@ -69,6 +77,10 @@ export default function MobileShell({ children, rightAction = null, title = null
   useEffect(() => { setDrawer(false); }, [location.pathname]);
 
   const firstName = (user?.name || user?.email || 'there').split(/[\s@]/)[0];
+  const dismissAwakening = () => {
+    setShowAwakening(false);
+    try { window.localStorage.removeItem('hm.mobile_awakening_pending'); } catch { /* private mode */ }
+  };
 
   return (
     <div
@@ -76,6 +88,19 @@ export default function MobileShell({ children, rightAction = null, title = null
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       {showSplash && <SingulanceSplash onDone={finishSplash} />}
+      {showAwakening && !showSplash && (
+        <div className="absolute inset-0 z-[90] flex items-end bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Awaken your AI company">
+          <section className="w-full rounded-[18px] border border-[#e3e0db] bg-white p-5 shadow-xl">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#117dff]">HIVEMIND · FIRST MOVE</p>
+            <h2 className="mt-2 font-['Space_Grotesk'] text-[25px] font-semibold leading-tight text-[#0a0a0a]">It’s time to awaken your AI company.</h2>
+            <p className="mt-2 text-[13px] leading-6 text-[#525252]">Your company brain is ready. Open the desktop workspace to meet your HyperAgents and make your first move.</p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button type="button" onClick={dismissAwakening} className="h-10 rounded-[6px] border border-[#e3e0db] text-[12px] font-medium text-[#525252]">Stay in chat</button>
+              <button type="button" onClick={() => { dismissAwakening(); navigate('/hivemind/app/employees/mycompany?desktop=1'); }} className="h-10 rounded-[6px] bg-[#117dff] text-[12px] font-semibold text-white">Open desktop setup</button>
+            </div>
+          </section>
+        </div>
+      )}
       {/* ── Top chrome: full bar by default, or a floating standalone hamburger
              (bareHeader) — the page owns its own top-right controls then. ── */}
       {bareHeader ? (
@@ -106,9 +131,9 @@ export default function MobileShell({ children, rightAction = null, title = null
           >
             <AlignLeft size={22} strokeWidth={2} />
           </button>
-          {title && (
-            <div className="text-[15px] font-semibold font-['Space_Grotesk'] absolute left-1/2 -translate-x-1/2">{title}</div>
-          )}
+          <div className="absolute left-1/2 -translate-x-1/2">
+            <SingulanceBrand variant="light" markSize={24} />
+          </div>
           <div className="w-11 h-11 grid place-items-center">{rightAction}</div>
         </header>
       )}
@@ -142,8 +167,7 @@ export default function MobileShell({ children, rightAction = null, title = null
           >
             <div className="h-14 px-4 flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
-                <SingulanceMark size={18} className="flex-shrink-0" />
-                <span className="text-[14px] font-semibold font-['Space_Grotesk'] truncate">HIVEMIND</span>
+                <SingulanceBrand variant="light" markSize={25} />
               </div>
               <button onClick={() => setDrawer(false)} className="w-10 h-10 rounded-full grid place-items-center active:bg-[#ece9e2]" aria-label="Close menu">
                 <X size={19} />
@@ -155,6 +179,7 @@ export default function MobileShell({ children, rightAction = null, title = null
                 {firstName}
               </div>
               {org?.name && <div className="text-[11.5px] text-[#737373] truncate mt-0.5">{org.name}</div>}
+              <CreditBalance credits={usage?.credits} inline className="mt-1" />
             </div>
 
             <nav className="flex-1 overflow-y-auto px-2.5">

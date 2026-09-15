@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SingulanceMark from '../shared/SingulanceMark';
+import SingulanceBrand from '../shared/SingulanceBrand';
 import {
   LayoutDashboard,
   Brain,
@@ -39,6 +40,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
+import { useUsage } from '../shared/useUsage';
+import CreditBalance from '../shared/CreditBalance';
 
 /** Build nav sections, conditionally including admin items. Filtered by activeSection. */
 function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection = 'hivemind' }) {
@@ -146,6 +149,7 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [showWebAdmin, setShowWebAdmin] = useState(false);
+  const { usage } = useUsage();
 
   // Probe admin access once on mount
   useEffect(() => {
@@ -191,9 +195,11 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
       {/* Logo */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-[#e3e0db]">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#117dff]/10 flex items-center justify-center flex-shrink-0">
-            <SingulanceMark size={18} />
-          </div>
+          {collapsed ? (
+            <SingulanceMark size={24} />
+          ) : (
+            <SingulanceBrand variant="light" markSize={27} />
+          )}
           {!collapsed && (
             <motion.div
               initial={{ opacity: 0, width: 0 }}
@@ -201,12 +207,9 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
               exit={{ opacity: 0, width: 0 }}
               className="flex flex-col overflow-hidden"
             >
-              <span className="text-[#0a0a0a] text-[13px] font-semibold tracking-wide font-['Space_Grotesk'] whitespace-nowrap">
-                {activeSection === 'hyperagents' ? 'HyperAgents' : activeSection === 'tara' ? 'TARA' : 'HIVEMIND'}
-              </span>
               {org && (
                 <span className="text-[#a3a3a3] text-[10px] font-mono truncate max-w-[140px]">
-                  {org.name || org.slug || org.id?.slice(0, 8)}
+                  {activeSection === 'hyperagents' ? 'HYPERAGENTS' : activeSection === 'tara' ? 'TARA' : 'HIVEMIND'} · {org.name || org.slug || org.id?.slice(0, 8)}
                 </span>
               )}
             </motion.div>
@@ -325,6 +328,11 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
 
       {/* Fixed bottom: Account nav + upgrade banner + user/logout */}
       <div className="flex-shrink-0 border-t border-[#e3e0db]">
+        {collapsed && (
+          <div className="pt-2">
+            <CreditBalance credits={usage?.credits} compact collapsed />
+          </div>
+        )}
         {/* Account section */}
         <div className="px-2.5 pt-2.5 pb-1">
           {!collapsed && (
@@ -414,13 +422,14 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
                   {(user.display_name || user.email || 'U')[0].toUpperCase()}
                 </span>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-[#0a0a0a] text-xs truncate">
                   {user.display_name || user.email || 'User'}
                 </p>
                 <p className="text-[#a3a3a3] text-[10px] font-mono truncate">
                   {planLabel}
                 </p>
+                <CreditBalance credits={usage?.credits} inline />
               </div>
             </div>
           )}

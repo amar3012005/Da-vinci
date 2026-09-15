@@ -1,5 +1,5 @@
-# Da'vinci Solutions Security Contact
-Contact: mailto:admin@da-vinci.ai
-Expires: 2027-03-22T00:00:00.000Z
-Preferred-Languages: en
-Canonical: https://www.davinciai.eu/.well-known/security.txt
+Contact: mailto:security@singulancelabs.com
+Canonical: https://singulancelabs.com/.well-known/security.txt
+Policy: https://singulancelabs.com/security
+Preferred-Languages: en, de
+Expires: 2027-08-27T00:00:00.000Z

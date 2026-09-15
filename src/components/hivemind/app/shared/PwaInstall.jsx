@@ -24,6 +24,16 @@ import { Download, X, Share, Plus } from 'lucide-react';
 const HIVE_MANIFEST = '/hivemind-manifest.json';
 const DISMISS_KEY = 'hive:pwa-dismissed';
 
+// Some embedded and privacy-restricted browsers expose localStorage but throw
+// when it is read. PWA affordances must remain optional in those contexts.
+function isDismissed() {
+  try {
+    return window.localStorage.getItem(DISMISS_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 function isIOSDevice() {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || '';
@@ -68,7 +78,7 @@ export default function PwaInstall() {
     const onBIP = (e) => {
       e.preventDefault();
       setDeferred(e);
-      if (localStorage.getItem(DISMISS_KEY) !== '1') setShowBanner(true);
+      if (!isDismissed()) setShowBanner(true);
     };
     const onInstalled = () => { setDeferred(null); setShowBanner(false); };
     window.addEventListener('beforeinstallprompt', onBIP);
@@ -82,7 +92,7 @@ export default function PwaInstall() {
   // iOS has no event — show the banner proactively (once, undismissed).
   useEffect(() => {
     if (standalone || !ios) return;
-    if (localStorage.getItem(DISMISS_KEY) !== '1') setShowBanner(true);
+    if (!isDismissed()) setShowBanner(true);
   }, [ios, standalone]);
 
   const triggerInstall = useCallback(async () => {

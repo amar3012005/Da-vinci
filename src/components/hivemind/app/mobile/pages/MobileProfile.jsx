@@ -17,6 +17,7 @@ import apiClient from '../../shared/api-client';
 import { useApiQuery } from '../../shared/hooks';
 import { useAuth } from '../../auth/AuthProvider';
 import WorkspaceAccessCard from '../../shared/WorkspaceAccessCard';
+import CreditBalance from '../../shared/CreditBalance';
 import MobileShell from '../MobileShell';
 
 const CATEGORIES = ['static', 'dynamic', 'preference', 'goal'];
@@ -468,6 +469,7 @@ export default function MobileProfile() {
       <div className="px-4 pt-2 pb-10 space-y-3">
         <AccountHeaderCard user={user} org={org} plan={statsData?.plan} stats={statsData} profileFacts={facts} onSignOut={logout} />
         <WorkspaceAccessCard billing={billing} compact />
+        <CreditBalance credits={billing?.usage_summary?.credits} />
         <OrganizationContextCard org={org} user={user} />
         <ProfileFactsCard facts={facts} onRefresh={refetchProfiles} />
         <DataPrivacyCard />

@@ -4,14 +4,26 @@
 // pill (StepsDisclosure), sources pill, copy/retry/vote action row, draft
 // approval cards, project-choice saver, and the live Thinking tool animation.
 // Extracted from mobile TalkToHiveMobile (the reference implementation).
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, ChevronRight, FileText, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
-  AlertTriangle, Loader2, ChevronDown, Brain, Sparkles,
+  AlertTriangle, Loader2, ChevronDown, Brain, Sparkles, CornerDownRight, Pencil,
 } from 'lucide-react';
 import apiClient from './api-client';
+import { isGovernedHarness, progressiveDraftFields, parseProgressiveDraftFields } from './progressive-draft-fields';
 import { BRAND_LOGOS } from './connectors-catalog';
+import {
+  COMPOSIO_CONNECT_CHANNEL,
+  composioCallbackUrl,
+  connectBanner,
+  connectToolkitOf,
+  httpConnectUrl,
+  isComposioConnectSuccess,
+  isConnectOpenOption,
+} from './connect-continuation';
+
+const MarkdownMessage = lazy(() => import('./MarkdownMessage'));
 
 function connectorKey(event) {
   const raw = String(event?.tool_groups?.[0] || event?.tool || event?.name || '').toLowerCase();
@@ -26,30 +38,40 @@ function connectorKey(event) {
 }
 
 function reasoningRows(events = [], fallbackSteps = []) {
-  const canonical = events.filter((event) => event?.type === 'orchestration_step');
-  if (canonical.length) {
-    const byStep = new Map();
-    canonical.forEach((event) => byStep.set(event.step_id || event.index, event));
-    return [...byStep.values()].sort((a, b) => Number(a.index) - Number(b.index));
+  const live = liveReasoningRows(events);
+  if (live.length) {
+    return live.map((row, index) => ({
+      ...row,
+      index: row.index ?? index,
+      tool: row.tool || row.name || row.slug,
+      phase: row.phase || row.status || 'completed',
+      detail: row.detail || row.result_summary || row.summary || String(row.phase || row.status || '').replace(/_/g, ' '),
+    }));
   }
   return (fallbackSteps || []).map((step, index) => ({
-    ...step, index, phase: step.status || 'completed', label: step.operation || step.tool || 'Step',
-    detail: step.summary || step.result_summary || '',
+    ...step,
+    index,
+    phase: step.status || step.phase || 'completed',
+    tool: step.tool || step.slug || step.operation || step.kind,
+    label: step.tool || step.slug || step.operation || step.kind || 'Step',
+    detail: step.summary || step.result_summary || step.detail || String(step.status || '').replace(/_/g, ' '),
   }));
-}
-
-function normalizedArguments(value) {
-  if (!value) return '';
-  if (typeof value === 'string') {
-    try { return JSON.stringify(JSON.parse(value)); } catch { return value.trim(); }
-  }
-  try { return JSON.stringify(value); } catch { return String(value); }
 }
 
 export function liveReasoningRows(events = []) {
   const rows = new Map();
   for (const event of events || []) {
     const type = event?.type;
+    if (type === 'agent_state' && event.state) {
+      const state = String(event.state);
+      rows.set(`state:${state}`, {
+        ...event,
+        tool: 'agent',
+        phase: state,
+        detail: state.replace(/_/g, ' '),
+      });
+      continue;
+    }
     if (type === 'orchestration_step') {
       const key = `step:${event.step_id ?? event.index}`;
       rows.set(key, event);
@@ -57,17 +79,19 @@ export function liveReasoningRows(events = []) {
     }
     const tool = event?.tool || event?.name;
     if (tool && ['tool_selected', 'tool_started', 'tool_call', 'tool_completed', 'tool_result'].includes(type)) {
-      const args = normalizedArguments(event?.arguments);
-      const existingKey = [...rows.keys()].reverse().find((key) => key.startsWith(`tool:${tool}:`));
-      const key = args ? `tool:${tool}:${args.slice(0, 180)}` : (existingKey || `tool:${tool}:default`);
+      const key = `tool:${tool}`;
       const previous = rows.get(key) || {};
       const completed = type === 'tool_completed' || type === 'tool_result';
+      const progressive = isGovernedHarness(event.harness_version) || isGovernedHarness(previous.harness_version);
+      const phase = progressive && event.status ? event.status : completed ? 'completed' : 'started';
       rows.set(key, {
         ...previous,
         ...event,
         tool,
-        phase: completed ? 'completed' : 'started',
-        detail: completed
+        phase,
+        detail: progressive
+          ? (event.result_summary || event.detail || event.summary || String(phase).replace(/_/g, ' '))
+          : completed
           ? (event?.result_summary || event?.detail || 'Completed')
           : (event?.detail || 'Working…'),
       });
@@ -109,7 +133,7 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
               : toolkitSlug ? `https://logos.composio.dev/api/${encodeURIComponent(toolkitSlug)}` : null;
             const complete = ['completed', 'draft_created'].includes(row.phase);
             return (
-              <div key={row.step_id || row.index} className="flex min-w-0 items-start gap-2.5 text-[12px] leading-5">
+              <div key={row.step_id || `${row.type || 'row'}:${row.state || row.tool || row.index}`} className="flex min-w-0 items-start gap-2.5 text-[12px] leading-5">
                 <span className="mt-1 flex h-3.5 w-3.5 shrink-0 items-center justify-center">
                   {logo ? <img src={logo} alt="" className="h-3.5 w-3.5" />
                     : isNative ? <Brain size={13} className="text-[#117dff]" />
@@ -120,7 +144,7 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
                   <code className="max-w-full break-all rounded-[4px] bg-[#e8f0ff] px-1.5 py-0.5 font-mono text-[11.5px] text-[#1764d8]">
                     {row.tool || row.label || row.operation || 'Working'}
                   </code>
-                  <span className={row.phase === 'needs_input' ? 'text-[#a16207]' : complete ? 'text-[#329044]' : 'text-[#77736c]'}>
+                  <span className={['error', 'failed', 'cancelled'].includes(row.phase) ? 'text-[#b91c1c]' : ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval', 'awaiting_provider_event'].includes(row.phase) ? 'text-[#a16207]' : complete ? 'text-[#329044]' : 'text-[#77736c]'}>
                     → {row.detail || (row.phase === 'started' ? 'Working…' : String(row.phase || '').replace(/_/g, ' '))}
                   </span>
                 </div>
@@ -136,15 +160,99 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
 function ContinuationChoices({ continuation, onContinue }) {
   const [selected, setSelected] = useState(null);
   const [values, setValues] = useState({});
+  const [connectError, setConnectError] = useState('');
+  const [connecting, setConnecting] = useState(false);
+  const selectedRef = useRef(null);
   const request = continuation?.requests?.[0];
-  const options = Array.isArray(request?.options) ? request.options : [];
+  const options = useMemo(() => (Array.isArray(request?.options) ? request.options : []), [request?.options]);
   const fields = Array.isArray(request?.fields) ? request.fields : [];
-  if ((!options.length && !fields.length) || !onContinue) return null;
   const fieldsComplete = fields.every((field) => !field.required || String(values[field.name] || '').trim());
+  const banner = request?.kind === 'connect_account' ? connectBanner(request, BRAND_LOGOS) : null;
+  const enableTools = request?.kind === 'enable_tools';
+  const continueWith = useCallback((option) => {
+    if (selectedRef.current || !onContinue) return;
+    selectedRef.current = option.id;
+    setSelected(option.id);
+    onContinue(continuation, { ...request, step_index: request?.step_index ?? 0 }, option);
+  }, [continuation, onContinue, request]);
+  useEffect(() => {
+    if (!banner?.toolkit || !onContinue) return undefined;
+    const onPayload = (payload) => {
+      if (!isComposioConnectSuccess(payload, banner.toolkit)) return;
+      const connected = options.find((option) => option.id === 'connected');
+      if (connected) continueWith(connected);
+    };
+    const onWindowMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+      onPayload(event.data);
+    };
+    window.addEventListener('message', onWindowMessage);
+    let channel = null;
+    try {
+      channel = new BroadcastChannel(COMPOSIO_CONNECT_CHANNEL);
+      channel.onmessage = (event) => onPayload(event.data);
+    } catch { /* BroadcastChannel unsupported */ }
+    return () => {
+      window.removeEventListener('message', onWindowMessage);
+      try { channel?.close(); } catch { /* ignore */ }
+    };
+  }, [banner?.toolkit, continueWith, onContinue, options]);
+  if ((!options.length && !fields.length) || !onContinue) return null;
+  const openConnect = async (option) => {
+    const toolkit = connectToolkitOf(request, option);
+    setConnectError('');
+    setConnecting(true);
+    const authWindow = window.open('about:blank', '_blank');
+    try {
+      if (!toolkit) throw new Error('No app to connect');
+      // Governed runs receive a session-bound link from
+      // COMPOSIO_MANAGE_CONNECTIONS. Reusing it preserves the exact user,
+      // session, and callback that the paused LangGraph checkpoint owns.
+      let url = httpConnectUrl(option.href)
+        || httpConnectUrl(request.redirect_url);
+      // Compatibility only for older continuation records created before the
+      // governed Meta Tool connection contract. New graph runs never take this
+      // branch.
+      if (!url) {
+        const data = await apiClient.createComposioConnectLink(toolkit, {
+          callbackUrl: composioCallbackUrl(window.location.origin, toolkit),
+          toolkitMeta: { composioManagedAuthSchemes: ['OAUTH2'], noAuth: false },
+        }).catch(() => null);
+        url = httpConnectUrl(data?.redirect_url || data?.redirectUrl);
+      }
+      if (!url) throw new Error('No OAuth URL returned for this app');
+      if (authWindow && !authWindow.closed) {
+        authWindow.location.replace(url);
+      } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (error) {
+      if (authWindow && !authWindow.closed) authWindow.close();
+      setConnectError(error?.response?.data?.error || error?.message || 'Could not open the connection');
+    } finally {
+      setConnecting(false);
+    }
+  };
   return (
     <div className="mt-5">
+      {banner ? (
+        <div className="mb-3 flex items-center gap-3 border border-[#e5dfd6] bg-[#faf8f4] px-3 py-2.5">
+          {banner.logo ? <img src={banner.logo} alt="" className="h-8 w-8 shrink-0" /> : null}
+          <div>
+            <div className="text-[13px] font-semibold text-[#1a1a17]">Connect {banner.name}</div>
+            <div className="text-[12px] text-[#5f5b54]">Authorize in a new tab, then continue this request.</div>
+          </div>
+        </div>
+      ) : null}
+      {enableTools ? (
+        <div className="mb-3 border border-[#e5dfd6] bg-[#faf8f4] px-3 py-2.5">
+          <div className="text-[13px] font-semibold text-[#1a1a17]">Enable tools for this request</div>
+          <div className="text-[12px] text-[#5f5b54]">Turn on connected apps and I will continue the same query. Drafts stay for your approval.</div>
+        </div>
+      ) : null}
       <div className="text-[14px] font-semibold text-[#1a1a17]">I need your input to continue</div>
       <div className="mt-1 text-[13px] leading-relaxed text-[#5f5b54]">{request.prompt || 'Choose one of the options below. I will continue from the paused step without repeating completed work.'}</div>
+      {connectError ? <div className="mt-2 text-[12px] text-[#b42318]">{connectError}</div> : null}
       {fields.length > 0 && (
         <div className="mt-3 space-y-3">
           {fields.map((field) => (
@@ -161,21 +269,27 @@ function ContinuationChoices({ continuation, onContinue }) {
           ))}
         </div>
       )}
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {options.map((option) => (
-          <button key={option.id} type="button" disabled={selected != null}
-            onClick={() => { setSelected(option.id); onContinue(continuation, request, option); }}
-            className="rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2 text-[12px] font-medium text-[#30302d] hover:border-[#117dff] hover:text-[#0066e0] disabled:opacity-50">
+          <button key={option.id} type="button" disabled={selected != null || connecting}
+            onClick={() => {
+              if (isConnectOpenOption(option)) {
+                openConnect(option);
+                return;
+              }
+              continueWith(option);
+            }}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[4px] border border-[#bdb8b0] bg-transparent px-3.5 py-2.5 text-[13px] font-medium text-[#30302d] hover:border-[#117dff] hover:text-[#0066e0] disabled:opacity-50 sm:w-auto sm:min-h-0 sm:py-2 sm:text-[12px]">
+            {isConnectOpenOption(option) && banner?.logo ? <img src={banner.logo} alt="" className="h-4 w-4" /> : null}
             {option.label}
           </button>
         ))}
         {fields.length > 0 && (
           <button type="button" disabled={selected != null || !fieldsComplete}
             onClick={() => {
-              setSelected('field-input');
-              onContinue(continuation, request, { id: 'field-input', label: 'Continue', values });
+              continueWith({ id: 'field-input', label: 'Continue', values });
             }}
-            className="rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#262626] disabled:opacity-40">
+            className="min-h-11 w-full rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#262626] disabled:opacity-40 sm:min-h-0 sm:w-auto sm:py-2 sm:text-[12px]">
             Continue
           </button>
         )}
@@ -386,8 +500,8 @@ function pendingActionToDraft(action) {
   return {
     id: action?.id,
     provider: action?.provider,
-    toolName: action?.toolName || action?.tool_name,
-    toolArgs: action?.toolArgs || action?.tool_args || {},
+    toolName: action?.toolName || action?.tool_name || action?.tool,
+    toolArgs: action?.toolArgs || action?.tool_args || action?.args || {},
     status: action?.status || 'draft',
     preview: action?.preview || null,
   };
@@ -405,13 +519,15 @@ function firstDraftArg(args, names) {
 }
 
 export function draftPresentation(draft) {
+  const fields = progressiveDraftFields(draft);
+  if (fields) return { kind: 'generic', editable: true, fields };
   const args = draft?.toolArgs || {};
   const tool = String(draft?.toolName || '').toLowerCase();
   const email = tool.includes('gmail') || tool.includes('email');
   if (!email) return {
     kind: 'generic',
     fields: Object.entries(args)
-      .filter(([name]) => name !== '_composio_slug')
+      .filter(([name]) => !name.startsWith('_'))
       .map(([name, value]) => ({
         name: String(name).replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
         value: typeof value === 'string' ? value : JSON.stringify(value, null, 2),
@@ -450,6 +566,25 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
   const suppliedActions = Array.isArray(pendingActions) ? pendingActions : EMPTY_PENDING_ACTIONS;
   const [drafts, setDrafts] = useState(() => suppliedActions.map(pendingActionToDraft));
   const [busy, setBusy] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [edit, setEdit] = useState({ to: '', subject: '', body: '' });
+  const refreshDraftStatus = async (id) => {
+    const { data } = await apiClient.controlPlane.get('/v1/proxy/pending-writes?limit=10');
+    const draft = (data?.drafts || []).find((row) => row.id === id);
+    if (draft) setDrafts((prev) => prev.map((row) => row.id === id ? draft : row));
+    return draft || null;
+  };
+  const waitForDraftSettlement = async (id, initial) => {
+    let draft = initial;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const status = draft?.status;
+      const terminal = status === 'sent' || status === 'cancelled' || status === 'failed' || status === 'expired';
+      if (terminal || status === 'draft') return draft;
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      draft = await refreshDraftStatus(id);
+    }
+    return draft;
+  };
   useEffect(() => {
     const ids = Array.isArray(draftIds) && draftIds.length
       ? draftIds : suppliedActions.map((action) => action.id).filter(Boolean);
@@ -458,9 +593,9 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await apiClient.controlPlane.get('/v1/proxy/pending-writes?limit=10').catch(() => ({ data: null }));
-        const matched = (data?.drafts || []).filter(d => ids.includes(d.id));
-        if (!cancelled && matched.length) setDrafts(matched);
+        const refreshed = await Promise.all(ids.map((id) => refreshDraftStatus(id).catch(() => null)));
+        const matched = refreshed.filter(Boolean);
+        if (!cancelled && matched.length) setDrafts((prev) => prev.map((row) => matched.find((item) => item.id === row.id) || row));
       } catch {}
     })();
     return () => { cancelled = true; };
@@ -469,9 +604,54 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
     setBusy(id);
     try {
       const { data } = await apiClient.controlPlane.post(`/v1/proxy/pending-writes/${id}/${action}`, {});
-      setDrafts(prev => prev.map(d => d.id === id ? (data?.draft || { ...d, status: data?.status || d.status }) : d));
+      const accepted = data?.draft || drafts.find((row) => row.id === id) || { id, status: data?.status };
+      setDrafts(prev => prev.map(d => d.id === id ? { ...d, ...accepted, status: accepted.status || data?.status || d.status, errorMsg: null } : d));
+      await waitForDraftSettlement(id, accepted);
+      setEditingId(null);
     } catch (err) {
-      setDrafts(prev => prev.map(d => d.id === id ? { ...d, status: 'failed', errorMsg: err?.message } : d));
+      // The POST may have reached Core even when the browser lost the response.
+      // Reconcile the persisted draft instead of retrying a governed write.
+      const persisted = await refreshDraftStatus(id).catch(() => null);
+      if (!persisted || persisted.status === 'draft') {
+        const errorMsg = err?.response?.data?.error || err?.message || 'Could not confirm this action. Please try again.';
+        setDrafts(prev => prev.map(d => d.id === id ? { ...d, errorMsg } : d));
+      } else {
+        await waitForDraftSettlement(id, persisted).catch(() => null);
+      }
+    } finally { setBusy(null); }
+  };
+  const startEdit = (draft) => {
+    const presentation = draftPresentation(draft);
+    setEditingId(draft.id);
+    if (presentation.editable) {
+      setEdit(Object.fromEntries(presentation.fields.map(field => [field.key, field.value])));
+      return;
+    }
+    setEdit({
+      to: presentation.to || '',
+      subject: presentation.subject || '',
+      body: presentation.body || '',
+    });
+  };
+  const saveEdit = async (id) => {
+    setBusy(id);
+    try {
+      const presentation = draftPresentation(drafts.find(d => d.id === id));
+      const tool_args = presentation.editable ? parseProgressiveDraftFields(presentation.fields, edit) : {
+        to: edit.to.trim(),
+        recipient_email: edit.to.trim(),
+        subject: edit.subject,
+        body: edit.body,
+      };
+      const { data } = await apiClient.controlPlane.patch(`/v1/proxy/pending-writes/${id}`, { tool_args });
+      const updated = data?.draft || null;
+      setDrafts((prev) => prev.map((row) => {
+        if (row.id !== id) return row;
+        return updated || { ...row, toolArgs: { ...(row.toolArgs || {}), ...tool_args } };
+      }));
+      setEditingId(null);
+    } catch (err) {
+      setDrafts((prev) => prev.map((row) => row.id === id ? { ...row, errorMsg: err?.message } : row));
     } finally { setBusy(null); }
   };
   if (drafts.length === 0) return null;
@@ -484,41 +664,84 @@ export function MobileDraftCards({ draftIds, pendingActions }) {
         const failed = d.status === 'failed';
         const pending = d.status === 'draft';
         const executing = d.status === 'approved';
+        const editing = editingId === d.id;
         return (
           <section key={d.id} className={`text-[13px] ${cancelled ? 'opacity-60' : ''}`}>
-            <h3 className="text-[15px] font-semibold text-[#1a1a17]">{actionHeading(presentation)}</h3>
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="text-[15px] font-semibold text-[#1a1a17]">{actionHeading(presentation)}</h3>
+              {pending && (presentation.kind === 'email' || presentation.editable) && (
+                <button
+                  type="button"
+                  onClick={() => (editing ? setEditingId(null) : startEdit(d))}
+                  className={`w-8 h-8 grid place-items-center border transition-colors ${editing ? 'bg-[#117dff] border-[#117dff] text-white' : 'border-[#e3e0db] text-[#737373] hover:text-[#0a0a0a] hover:bg-[#faf9f4]'}`}
+                  aria-label={editing ? 'Close editor' : 'Edit draft'}
+                  title="Edit draft"
+                >
+                  <Pencil size={14} />
+                </button>
+              )}
+            </div>
             {pending && <p className="mt-1 text-[12.5px] leading-relaxed text-[#73706a]">Nothing has been executed yet. Review the exact details below, then approve or cancel.</p>}
             {presentation.kind === 'email' ? (
               <div className="mt-4 space-y-3 text-[#353535]">
-                <div><strong className="font-semibold text-[#1a1a17]">To:</strong> <span className="break-all">{presentation.to || 'Not provided'}</span></div>
-                <div><strong className="font-semibold text-[#1a1a17]">Subject:</strong> {presentation.subject || 'No subject'}</div>
+                <div>
+                  <strong className="font-semibold text-[#1a1a17]">To:</strong>{' '}
+                  {editing
+                    ? <input value={edit.to} onChange={(e) => setEdit((prev) => ({ ...prev, to: e.target.value }))} className="mt-1 w-full border border-[#e3e0db] bg-white px-2.5 py-1.5 text-[13px] text-[#1a1a17] focus:border-[#117dff]/40 focus:outline-none" />
+                    : <span className="break-all">{presentation.to || 'Not provided'}</span>}
+                </div>
+                <div>
+                  <strong className="font-semibold text-[#1a1a17]">Subject:</strong>{' '}
+                  {editing
+                    ? <input value={edit.subject} onChange={(e) => setEdit((prev) => ({ ...prev, subject: e.target.value }))} className="mt-1 w-full border border-[#e3e0db] bg-white px-2.5 py-1.5 text-[13px] text-[#1a1a17] focus:border-[#117dff]/40 focus:outline-none" />
+                    : presentation.subject || 'No subject'}
+                </div>
                 <div>
                   <div className="font-semibold text-[#1a1a17]">Message</div>
-                  <div className="mt-1 max-h-96 overflow-y-auto whitespace-pre-wrap break-words text-[13.5px] leading-[1.65]">{presentation.body || 'No message body provided.'}</div>
+                  {editing
+                    ? <textarea value={edit.body} onChange={(e) => setEdit((prev) => ({ ...prev, body: e.target.value }))} rows={12} className="mt-1 w-full border border-[#e3e0db] bg-[#faf9f4] px-2.5 py-2 text-[13px] leading-[1.65] text-[#1a1a17] focus:border-[#117dff]/40 focus:bg-white focus:outline-none" />
+                    : <div className="mt-1 max-h-96 overflow-y-auto whitespace-pre-wrap break-words text-[13.5px] leading-[1.65]">{presentation.body || 'No message body provided.'}</div>}
                 </div>
               </div>
             ) : (
               <div className="mt-4 space-y-3 text-[#353535]">
                 {presentation.fields.map((field) => (
-                  <div key={field.name}>
-                    <div className="font-semibold text-[#1a1a17]">{field.name}</div>
-                    <div className="mt-1 max-h-72 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed">{field.value}</div>
+                  <div key={field.key || field.name}>
+                    <label className="block font-semibold text-[#1a1a17]">
+                      {field.name}{field.required ? ' *' : ''}
+                      {editing && presentation.editable && (
+                        <textarea value={edit[field.key] ?? ''} onChange={event => setEdit(prev => ({ ...prev, [field.key]: event.target.value }))}
+                          rows={['object', 'array', 'json'].includes(field.type) ? 5 : 2}
+                          className="mt-1 block w-full rounded-[6px] border border-[#e3e0db] bg-white px-2.5 py-2 text-[13px] font-normal leading-relaxed focus:border-[#117dff] focus:outline-none"
+                          aria-label={field.name} />
+                      )}
+                    </label>
+                    {editing && field.description && <p className="mt-1 text-[11px] text-[#737373]">{field.description}</p>}
+                    {editing && ['object', 'array', 'json', 'boolean'].includes(field.type) && <p className="text-[11px] text-[#737373]">{field.type === 'boolean' ? 'Enter true or false.' : 'Edit as JSON.'}</p>}
+                    {!editing && <div className="mt-1 max-h-72 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed">{field.value}</div>}
                   </div>
                 ))}
               </div>
             )}
-            {failed && d.errorMsg && (
+            {(failed || editing) && d.errorMsg && (
               <div className="mt-1.5 text-[11.5px] text-red-700">Error: {d.errorMsg}</div>
             )}
             {pending && (
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <button onClick={() => act(d.id, 'approve')} disabled={busy === d.id}
-                  className="rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#262626] disabled:opacity-50">
-                  {busy === d.id ? 'Working…' : actionButtonLabel(presentation)}
-                </button>
-                <button onClick={() => act(d.id, 'cancel')} disabled={busy === d.id}
+                {editing ? (
+                  <button onClick={() => saveEdit(d.id)} disabled={busy === d.id}
+                    className="rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#262626] disabled:opacity-50">
+                    {busy === d.id ? 'Saving…' : 'Save edits'}
+                  </button>
+                ) : (
+                  <button onClick={() => act(d.id, 'approve')} disabled={busy === d.id}
+                    className="rounded-[4px] border border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#262626] disabled:opacity-50">
+                    {busy === d.id ? 'Working…' : actionButtonLabel(presentation)}
+                  </button>
+                )}
+                <button onClick={() => (editing ? setEditingId(null) : act(d.id, 'cancel'))} disabled={busy === d.id}
                   className="rounded-[4px] border border-[#bdb8b0] bg-transparent px-4 py-2 text-[12px] font-medium text-[#525252] hover:border-[#77716a] disabled:opacity-50">
-                  Cancel
+                  {editing ? 'Discard edits' : 'Cancel'}
                 </button>
               </div>
             )}
@@ -580,12 +803,17 @@ export function StepsDisclosure({ steps }) {
 
 // Claude-style assistant turn: NO bubble. Reasoning pill → serif answer on the
 // canvas → Sources pill → copy / retry / thumbs action row.
-export function AiBubble({ msg, onRetry, onContinue }) {
+export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFollowUp }) {
+  const progressive = isGovernedHarness(msg.harness_version || msg.execution?.harness_version);
   const [showSources, setShowSources] = useState(false);
   const [copied, setCopied] = useState(false);
   const [vote, setVote] = useState(null);
   const hasSteps = Array.isArray(msg.steps) && msg.steps.length > 0;
   const hasSources = Array.isArray(msg.sources) && msg.sources.length > 0;
+  const followUps = [...new Set((Array.isArray(msg.follow_ups) ? msg.follow_ups : [])
+    .filter((item) => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean))].slice(0, 3);
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(msg.content || ''); setCopied(true); setTimeout(() => setCopied(false), 1500); }
@@ -606,9 +834,9 @@ export function AiBubble({ msg, onRetry, onContinue }) {
 
       <div
         className={`text-[16.5px] leading-[1.7] break-words space-y-2 ${msg.error ? 'text-[#b91c1c]' : 'text-[#1a1a17]'}`}
-        style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+        style={progressive ? undefined : { fontFamily: 'Georgia, "Times New Roman", serif' }}
       >
-        {renderMarkdownMobile(msg.content)}
+        {progressive ? <Suspense fallback={<div className="whitespace-pre-wrap">{msg.content}</div>}><MarkdownMessage>{msg.content}</MarkdownMessage></Suspense> : renderMarkdownMobile(msg.content)}
       </div>
 
       {Array.isArray(msg.scopes_found) && msg.scopes_found.length > 0 && (
@@ -687,17 +915,52 @@ export function AiBubble({ msg, onRetry, onContinue }) {
         </div>
       )}
 
-      {msg.project_choice && <MobileProjectChoice choice={msg.project_choice} />}
+      {!msg.error && followUps.length > 0 && (
+        <div className="mt-3 border-t border-[#e3e0db]" aria-label="Suggested follow-up questions">
+          {followUps.map((question) => (
+            <button
+              key={question}
+              type="button"
+              onClick={() => onFollowUp?.(question)}
+              className="group flex w-full items-start gap-3 border-b border-[#ece9e2] px-1 py-3 text-left text-[13.5px] leading-5 text-[#3d3d3a] transition-colors hover:bg-[#faf9f4] active:bg-[#f3f1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#117dff]/40"
+            >
+              <CornerDownRight size={16} className="mt-0.5 shrink-0 text-[#8a8577] transition-colors group-hover:text-[#117dff]" />
+              <span>{question}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {msg.project_choice && (
+        <MobileProjectChoice
+          choice={msg.project_choice}
+          savedScope={msg.project_choice?.saved_scope}
+          onSaved={(label) => onProjectChoiceSaved?.(msg.id, label)}
+        />
+      )}
     </div>
   );
 }
 
-// Project picker (mobile) — Org-wide + each project; click → silent scoped save.
-export function MobileProjectChoice({ choice }) {
-  const [saved, setSaved] = useState(null);
+// Scope picker (mobile) — the server returns a prepared canonical memory plus
+// explicit destinations. A click completes that prepared save directly; it does
+// not re-send the original statement and risk a second ambiguous planner turn.
+//
+// `savedScope`/`onSaved` persist the choice onto the message object itself
+// (via the caller's messages state, not just local component state) — this
+// component previously kept "saved" as local state only, so anything that
+// re-rendered the surrounding message from scratch (streaming continuing,
+// a page reload restoring chat from localStorage, etc.) lost the confirmed
+// state and the option buttons reappeared as if nothing had been chosen.
+export function MobileProjectChoice({ choice, savedScope, onSaved }) {
+  const [saved, setSaved] = useState(savedScope || null);
+  useEffect(() => { if (savedScope && savedScope !== saved) setSaved(savedScope); }, [savedScope]); // eslint-disable-line react-hooks/exhaustive-deps
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const projects = choice?.projects || [];
+  const scopeOptions = Array.isArray(choice?.scope_options) && choice.scope_options.length
+    ? choice.scope_options
+    : [{ scope: 'personal', label: 'Personal' }, { scope: 'organization', label: 'Organization' }];
   const draft = choice?.draft || null;
   if (!draft) return null;
   const save = async (label, extra) => {
@@ -709,6 +972,7 @@ export function MobileProjectChoice({ choice }) {
         memory_type: draft.memory_type || 'fact', ...extra,
       });
       setSaved(label);
+      onSaved?.(label);
     } catch (e) { setErr(e.response?.data?.error || e.message); }
     finally { setBusy(false); }
   };
@@ -719,7 +983,11 @@ export function MobileProjectChoice({ choice }) {
       <div className="text-[14px] font-semibold text-[#1a1a17]">Choose where to save this memory</div>
       <div className="mt-1 text-[12.5px] leading-relaxed text-[#737373]">The memory is prepared but has not been saved. Choose its scope to finish.</div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={() => save('Org-wide', { scope: 'organization' })} disabled={busy} className={btn}>🌐 Org-wide</button>
+        {scopeOptions.map((option) => (
+          <button key={option.scope} type="button" onClick={() => save(option.label || option.scope, { scope: option.scope })} disabled={busy} className={btn}>
+            {option.label || option.scope}
+          </button>
+        ))}
         {projects.map((p) => (
           <button key={p.id} type="button" onClick={() => save(p.name, { project_id: p.id })} disabled={busy} className={btn}>{p.name}</button>
         ))}

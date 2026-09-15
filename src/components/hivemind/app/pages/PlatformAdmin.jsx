@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Activity, BarChart3, ChevronRight, Eye, EyeOff, FileText, Gift, LayoutDashboard, Mail, Menu, MessageCircle, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
 import apiClient from "../shared/api-client";
 import AccessApplicationsPanel from "./AccessApplicationsPanel";
 
@@ -18,6 +19,33 @@ const seconds = (value) =>
   value
     ? `${Math.floor(value / 3600)}h ${Math.floor((value % 3600) / 60)}m`
     : "Unavailable";
+
+function EnvironmentToggle({ environment, onChange, compact = false }) {
+  return (
+    <div className={`flex items-center gap-2 ${compact ? "" : "rounded-[10px] border border-[#e3e0db] bg-white px-3 py-2"}`}>
+      {!compact && <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[#737373]">Environment</span>}
+      <div className="flex rounded-[7px] border border-[#e3e0db] bg-[#f3f1ec] p-0.5" role="group" aria-label="Platform environment">
+        {[['dev', 'Dev'], ['production', 'Production']].map(([id, label]) => {
+          const active = environment === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(id)}
+              className={`rounded-[5px] px-2.5 py-1 text-[11px] font-semibold transition-colors ${active
+                ? id === 'production' ? 'bg-[#0a0a0a] text-white' : 'bg-[#117dff] text-white'
+                : 'text-[#525252] hover:bg-white'}`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      <span className={`h-2 w-2 rounded-full ${environment === 'production' ? 'bg-emerald-500' : 'bg-amber-500'}`} aria-hidden="true" />
+    </div>
+  );
+}
 // The backend (normalizeAccountProfile, billing/promotion-service.js) rejects
 // any account_type + storage_mode pairing outside this exact set — but the
 // old promotions form showed all three storage_mode options regardless of
@@ -43,6 +71,7 @@ const PLAN_DETAILS = {
   enterprise: "Managed or self-hosted",
 };
 const CAP_LABELS = {
+  monthlyCredits: "Monthly credits",
   maxMemories: "Memory capacity",
   llmTokensPerDay: "LLM tokens per day",
   llmTokensPerMonth: "LLM tokens per month",
@@ -290,27 +319,52 @@ function ModelPolicyPanel() {
 function AiCostsPanel() {
   const [costs, setCosts] = useState(null);
   const [message, setMessage] = useState("");
-  const load = async () => {
+  const [period, setPeriod] = useState("month");
+  const [query, setQuery] = useState("");
+  const queryRef = useRef("");
+  const [selected, setSelected] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [detailMessage, setDetailMessage] = useState("");
+  const load = useCallback(async () => {
     setMessage("");
-    try { setCosts(await apiClient.getPlatformAiCosts()); }
+    try { setCosts(await apiClient.getPlatformAiCosts({ q: queryRef.current, period })); }
     catch (error) { setMessage(error.response?.data?.error || error.message); }
+  }, [period]);
+  useEffect(() => { load(); }, [load]);
+  const openDetail = async (account) => {
+    setSelected(account); setDetail(null); setDetailMessage("");
+    try { setDetail(await apiClient.getPlatformAiCostDetail(account.id, { period })); }
+    catch (error) { setDetailMessage(error.response?.data?.error || error.message); }
   };
-  useEffect(() => { load(); }, []);
   if (!costs) return <section className="mt-5 rounded-[10px] border border-[#e3e0db] bg-white p-4 text-sm text-[#737373]">{message || "Loading AI costs…"}</section>;
+  const totals = costs.totals || {};
+  const credits = (account) => account.credits?.included == null ? "Custom" : `${Number(account.credits?.remaining || 0).toLocaleString()} / ${Number(account.credits?.included || 0).toLocaleString()}`;
   return (
-    <section className="mt-5 rounded-[10px] border border-[#e3e0db] bg-white p-4">
+    <section className="mt-5">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">AI usage ledger</p><h3 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Cumulative cost by user</h3>
-          <p className="mt-1 text-xs text-[#737373]">Token usage and model pricing are accumulated across HIVE-MIND inference calls.</p></div>
-        <div className="text-right"><p className="text-xs text-[#737373]">Cumulative platform spend</p><p className="font-['Space_Grotesk'] text-2xl font-bold tabular-nums text-[#0a0a0a]">{usdFromMicros(costs.total_cost_micros)}</p><p className="text-[11px] text-[#737373]">Unattributed system work: {usdFromMicros(costs.unattributed_cost_micros)} · {costs.unattributed_calls || 0} calls</p></div>
+        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">Credits & cost intelligence</p><h3 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Platform usage, attributed to billing accounts</h3>
+          <p className="mt-1 max-w-2xl text-xs text-[#737373]">Credits are derived once from settled product activity. Provider costs and raw tokens remain independently auditable, so an internal planner or reranker never consumes a customer credit twice.</p></div>
+        <div className="flex items-center gap-2"><select value={period} onChange={(e) => setPeriod(e.target.value)} className="rounded-lg border border-[#e3e0db] bg-white px-3 py-2 text-xs"><option value="month">This month</option><option value="last_30_days">Last 30 days</option><option value="all">All time</option></select><button onClick={load} className="rounded-lg border border-[#e3e0db] px-3 py-2 text-xs hover:border-[#0a0a0a]">Refresh</button></div>
       </div>
-      <div className="overflow-auto rounded-[10px] border border-[#e3e0db]"><table className="w-full text-sm"><thead><tr className="border-b border-[#e3e0db] bg-[#faf9f4] text-left text-[10px] uppercase tracking-wider text-[#737373]"><th className="p-3">User</th><th>Calls</th><th>Input</th><th>Output</th><th>Cached</th><th>Cumulative cost</th><th>Last call</th></tr></thead>
-        <tbody>{(costs.users || []).map((user) => <tr key={user.id} className="border-b border-[#eae7e1] hover:bg-[#faf9f4]"><td className="p-3"><div>{user.display_name || 'Unnamed'}</div><div className="text-xs text-[#737373]">{user.email}</div></td><td>{user.calls}</td><td>{Number(user.prompt_tokens||0).toLocaleString()}</td><td>{Number(user.completion_tokens||0).toLocaleString()}</td><td>{Number(user.cached_prompt_tokens||0).toLocaleString()}</td><td className="font-semibold">{usdFromMicros(user.total_cost_micros)}</td><td>{when(user.last_call_at)}</td></tr>)}</tbody></table></div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-[#737373]">Unpriced calls remain visible with zero estimated cost. Historical events keep their original pricing snapshot.</p><button onClick={load} className="rounded-[6px] border border-[#e3e0db] px-3 py-1.5 text-xs text-[#525252] hover:border-[#0a0a0a]">Refresh costs</button></div>
+      <div className="mb-3 grid gap-3 md:grid-cols-5"><Metric label="Provider spend" value={usdFromMicros(totals.total_cost_micros)} /><Metric label="Raw input tokens" value={Number(totals.prompt_tokens || 0).toLocaleString()} /><Metric label="Raw output tokens" value={Number(totals.completion_tokens || 0).toLocaleString()} /><Metric label="Credits remaining" value={Number(totals.credits_remaining || 0).toLocaleString()} /><Metric label="Credits consumed" value={Number(totals.credits_used || 0).toLocaleString()} /></div>
+      <div className="mb-3 flex gap-2"><input value={query} onChange={(e) => { queryRef.current = e.target.value; setQuery(e.target.value); }} onKeyDown={(e) => { if (e.key === 'Enter') load(); }} placeholder="Find a workspace or billing account" className="w-full max-w-sm rounded-lg border border-[#e3e0db] bg-white px-3 py-2 text-sm"/><button onClick={load} className="rounded-lg bg-[#117dff] px-4 py-2 text-sm font-medium text-white">Search</button></div>
+      <div className="overflow-auto rounded-[10px] border border-[#e3e0db] bg-white"><table className="w-full min-w-[1050px] text-sm"><thead><tr className="border-b border-[#e3e0db] bg-[#faf9f4] text-left text-[10px] uppercase tracking-wider text-[#737373]"><th className="p-3">Billing account</th><th>Plan / access</th><th>Credits remaining</th><th>Usage by service</th><th>LLM tokens</th><th>Provider cost</th><th>Last inference</th><th /></tr></thead>
+        <tbody>{(costs.accounts || []).map((account) => <tr key={account.id} className="border-b border-[#eae7e1] hover:bg-[#faf9f4]"><td className="p-3"><div className="font-medium text-[#0a0a0a]">{account.name}</div><div className="text-xs text-[#737373]">{account.owner?.display_name || account.owner?.email || account.account_type} · {account.hosting_mode}</div></td><td><div className="capitalize font-medium">{account.effective_plan}</div><div className="text-xs text-[#737373]">{account.subscription_status || (account.trial_ends_at ? 'trial' : 'not subscribed')}</div></td><td><div className="font-semibold tabular-nums">{credits(account)}</div><div className="text-xs text-[#737373]">{Number(account.credits?.used || 0).toLocaleString()} used</div></td><td><div className="flex max-w-[250px] flex-wrap gap-1">{(account.product_usage || []).slice(0,3).map((item) => <span key={item.key} className="rounded-full bg-[#f5f4f0] px-2 py-0.5 text-[11px]">{item.label}: {item.quantity}</span>)}{!(account.product_usage || []).length && <span className="text-xs text-[#737373]">No settled activity</span>}</div></td><td>{Number(account.ai?.prompt_tokens || 0).toLocaleString()}<span className="text-[#a3a3a3]"> / </span>{Number(account.ai?.completion_tokens || 0).toLocaleString()}</td><td className="font-semibold tabular-nums">{usdFromMicros(account.ai?.total_cost_micros)}</td><td>{when(account.ai?.last_call_at)}</td><td className="p-2 pr-3 text-right"><button onClick={() => openDetail(account)} className="rounded-lg border border-[#e3e0db] px-3 py-1.5 text-xs hover:border-[#0a0a0a]">Inspect</button></td></tr>)}</tbody></table></div>
+      <p className="mt-3 text-xs text-[#737373]">Policy {costs.policy_version}. Credits shown here are the current transparent product-unit projection; model costs are immutable price snapshots. Any unmetered legacy feature remains visible in raw spend but is not silently charged as a credit.</p>
       {message && <p className="mt-3 text-xs text-red-700">{message}</p>}
+      {selected && <div className="fixed inset-0 z-[100] flex justify-end bg-black/20" role="dialog" aria-modal="true" aria-label="Billing account detail" onMouseDown={() => setSelected(null)}><aside className="h-full w-full max-w-2xl overflow-y-auto border-l border-[#e3e0db] bg-[#faf9f4] p-5 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}><div className="mb-5 flex items-start justify-between"><div><p className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">Billing account ledger</p><h3 className="mt-1 text-2xl font-semibold">{selected.name}</h3><p className="mt-1 text-sm text-[#737373]">{selected.owner?.email || 'No billing owner recorded'} · {selected.effective_plan}</p></div><button onClick={() => setSelected(null)} className="rounded-lg border border-[#e3e0db] px-3 py-1.5 text-xs">Close</button></div>{!detail && <p className="py-12 text-sm text-[#737373]">{detailMessage || 'Loading attribution…'}</p>}{detail && <div className="space-y-5"><div className="grid grid-cols-3 gap-2"><Metric label="Included credits" value={selected.credits?.included == null ? 'Custom' : Number(selected.credits.included).toLocaleString()} /><Metric label="Consumed" value={Number(selected.credits?.used || 0).toLocaleString()} /><Metric label="Remaining" value={selected.credits?.remaining == null ? 'Custom' : Number(selected.credits.remaining).toLocaleString()} /></div><LedgerSection title="Credit-bearing product activity" rows={detail.attribution?.product_events || []} columns={[['metric','Metric'],['source','Source'],['ingest_mode','Mode'],['quantity','Quantity'],['events','Events'],['last_used_at','Last activity']]} /><LedgerSection title="Model and provider spend" rows={detail.attribution?.by_model || []} columns={[['use_case','Use case'],['served_model','Model'],['provider','Provider'],['prompt_tokens','Input'],['completion_tokens','Output'],['total_cost_micros','Cost']]} moneyColumns={['total_cost_micros']} /><LedgerSection title="User attribution" rows={detail.attribution?.by_user || []} columns={[['display_name','User'],['email','Email'],['calls','Calls'],['prompt_tokens','Input'],['completion_tokens','Output'],['total_cost_micros','Cost'],['last_call_at','Last call']]} moneyColumns={['total_cost_micros']} /></div>}</aside></div>}
     </section>
   );
 }
+
+function Metric({ label, value }) { return <div className="rounded-[10px] border border-[#e3e0db] bg-white p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-[#737373]">{label}</p><p className="mt-1 font-['Space_Grotesk'] text-xl font-bold tabular-nums text-[#0a0a0a]">{value}</p></div>; }
+function LedgerSection({ title, rows, columns, moneyColumns = [] }) { return <section className="rounded-[10px] border border-[#e3e0db] bg-white"><h4 className="border-b border-[#e3e0db] px-4 py-3 text-sm font-semibold">{title}</h4><div className="overflow-auto"><table className="w-full min-w-[600px] text-xs"><thead><tr className="bg-[#faf9f4] text-left uppercase tracking-wider text-[#737373]">{columns.map(([, label]) => <th key={label} className="px-3 py-2">{label}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <tr key={index} className="border-t border-[#f0ede8]">{columns.map(([key]) => <td key={key} className="max-w-[200px] truncate px-3 py-2">{moneyColumns.includes(key) ? usdFromMicros(row[key]) : key.endsWith('_at') ? when(row[key]) : String(row[key] ?? '—')}</td>)}</tr>) : <tr><td colSpan={columns.length} className="px-3 py-4 text-[#737373]">No activity in this period.</td></tr>}</tbody></table></div></section>; }
+
+const COMMERCIAL_TABS = [
+  ["plans", "Plans"], ["models", "Models"], ["ai_costs", "AI Costs"],
+  ["promotions", "Promotions"], ["invitations", "Invitations"], ["email", "Email"],
+  ["referrals", "Referral codes"], ["pilots", "Pilot organizations"], ["redemptions", "Redemptions"],
+];
 
 function CommercialManager() {
   const [tab, setTab] = useState("plans");
@@ -324,6 +378,7 @@ function CommercialManager() {
   const [redemptions, setRedemptions] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [referralCampaigns, setReferralCampaigns] = useState([]);
+  const [partnerReferralsEnabled, setPartnerReferralsEnabled] = useState(false);
   const [enterpriseInvitations, setEnterpriseInvitations] = useState([]);
   const [enterpriseInvitationForm, setEnterpriseInvitationForm] = useState({
     company_name: "",
@@ -332,8 +387,11 @@ function CommercialManager() {
     account_type: "enterprise_managed",
     storage_mode: "hybrid",
     onboarding_days: 14,
+    max_invites: 0,
+    monthly_credits: 20000,
     invitation_expires_at: "",
     welcome_message: "",
+    language: "en",
     private_notes: "",
   });
   const [oneTimeInvitationCode, setOneTimeInvitationCode] = useState("");
@@ -350,10 +408,20 @@ function CommercialManager() {
     useState(false);
   const [invitationSending, setInvitationSending] = useState(false);
   const [extendInvitation, setExtendInvitation] = useState(null);
+  const [editingInvitationInvites, setEditingInvitationInvites] = useState(null);
   const [emailForm, setEmailForm] = useState({
-    template_id: "welcome_signup",
-    to: "",
-    name: "",
+    template_id: "custom",
+    recipients: "",
+    sender_local: "welcome",
+    sender_domain: "admin.singulancelabs.com",
+    from_name: "Singulance",
+    subject: "",
+    body: "",
+    visual: true,
+  });
+  const [emailCapabilities, setEmailCapabilities] = useState({
+    templates: [{ id: "custom", label: "Custom message" }, { id: "welcome_signup", label: "Welcome to HIVEMIND" }, { id: "welcome_login", label: "Welcome back to HIVEMIND" }],
+    sender_domains: ["admin.singulancelabs.com", "runtime.singulancelabs.com", "founder.singulancelabs.com"],
   });
   const [emailPreview, setEmailPreview] = useState(null);
   const [emailPreviewing, setEmailPreviewing] = useState(false);
@@ -373,26 +441,20 @@ function CommercialManager() {
     limits_json: "{}",
     restrict_email: "",
   });
-  // One code configures BOTH phases of an enterprise signup: onboarding (a
-  // fixed grace window, default 2 weeks) and runway (the recurring phase
-  // after it, monthly by default) — see ReferralCampaign in schema.prisma /
-  // buildReferralOffer in billing/entitlements.js. Distinct from the
-  // Promotions tab above: this is what the signup page's "Partner referral
-  // code" field actually redeems against.
   const [referralForm, setReferralForm] = useState({
-    name: "",
-    code: "",
-    onboarding_days: 14,
-    onboarding_plan: "enterprise",
-    runway_plan: "enterprise",
-    runway_interval_months: 1,
-    discount_kind: "percentage",
-    discount_percent: 20,
-    discount_amount_cents: "",
-    discount_currency: "EUR",
-    max_redemptions: "",
+    referrer_display_name: "",
+    referrer_email: "",
+    internal_name: "",
+    account_type: "enterprise_managed",
+    base_plan: "plus",
+    trial_days: 14,
+    monthly_credits: 2000,
+    fallback_action: "free",
+    max_redemptions: 10,
     ends_at: "",
+    welcome_message: "",
   });
+  const [referralPreview, setReferralPreview] = useState(null);
   const load = async () => {
     try {
       const [
@@ -409,7 +471,7 @@ function CommercialManager() {
         apiClient.listPlatformPilots(),
         apiClient.listPlatformRedemptions(),
         apiClient.listPlatformOrganizations(),
-        apiClient.listPlatformReferralCampaigns(),
+        apiClient.listPartnerReferralCampaigns(),
         apiClient.listPlatformEnterpriseInvitations(),
       ]);
       setPlans(nextPlans.plans || []);
@@ -417,7 +479,8 @@ function CommercialManager() {
       setPilots(nextPilots.pilots || []);
       setRedemptions(nextRedemptions.redemptions || []);
       setOrganizations(nextOrganizations.organizations || []);
-      setReferralCampaigns(nextReferralCampaigns.referral_campaigns || []);
+      setPartnerReferralsEnabled(nextReferralCampaigns.enabled === true);
+      setReferralCampaigns(nextReferralCampaigns.campaigns || []);
       setEnterpriseInvitations(nextEnterpriseInvitations.invitations || []);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -546,22 +609,9 @@ function CommercialManager() {
     setNotice("");
     try {
       const payload = {
-        name: referralForm.name,
-        code: referralForm.code || undefined,
-        onboarding_days: Number(referralForm.onboarding_days),
-        onboarding_plan: referralForm.onboarding_plan,
-        runway_plan: referralForm.runway_plan,
-        runway_interval_months: Number(referralForm.runway_interval_months),
-        discount_kind: referralForm.discount_kind,
-        ...(referralForm.discount_kind === "percentage"
-          ? { discount_percent: Number(referralForm.discount_percent) }
-          : {}),
-        ...(referralForm.discount_kind === "fixed"
-          ? {
-              discount_amount_cents: Number(referralForm.discount_amount_cents),
-              discount_currency: referralForm.discount_currency,
-            }
-          : {}),
+        ...referralForm,
+        trial_days: Number(referralForm.trial_days),
+        monthly_credits: Number(referralForm.monthly_credits),
         max_redemptions: referralForm.max_redemptions
           ? Number(referralForm.max_redemptions)
           : undefined,
@@ -569,9 +619,9 @@ function CommercialManager() {
           ? new Date(referralForm.ends_at).toISOString()
           : undefined,
       };
-      const result = await apiClient.createPlatformReferralCampaign(payload);
-      setNotice(`Referral code live: ${result.referral_campaign.code}`);
-      setReferralForm({ ...referralForm, name: "", code: "" });
+      const result = await apiClient.createPartnerReferralCampaign(payload);
+      setNotice(`Partner trial invitation ready: ${result.campaign.invitation_url}`);
+      setReferralForm({ ...referralForm, referrer_display_name: "", referrer_email: "", internal_name: "" });
       await load();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -582,8 +632,10 @@ function CommercialManager() {
     setError("");
     setNotice("");
     try {
-      const result = await apiClient.createPlatformEnterpriseInvitation({
+      await apiClient.createPlatformEnterpriseInvitation({
         ...enterpriseInvitationForm,
+        max_invites: Number(enterpriseInvitationForm.max_invites),
+        monthly_credits: Number(enterpriseInvitationForm.monthly_credits),
         hosting_mode:
           enterpriseInvitationForm.account_type === "enterprise_self_hosted"
             ? "self_host"
@@ -594,17 +646,19 @@ function CommercialManager() {
             ).toISOString()
           : undefined,
       });
-      setOneTimeInvitationCode(result.code || "");
-      setOneTimeInvitationId(result.invitation?.id || "");
+      setOneTimeInvitationCode("");
+      setOneTimeInvitationId("");
       setOneTimeInvitationUrl("");
       setNotice(
-        "Enterprise invitation created as a draft. Copy the recovery code now, then use Send to review and deliver the invitation.",
+        "Enterprise invitation created as a draft. Use Send to review the email and generate its secure link and recovery code.",
       );
       setEnterpriseInvitationForm({
         ...enterpriseInvitationForm,
         company_name: "",
         workspace_name: "",
         recipient_email: "",
+        max_invites: 0,
+        monthly_credits: 20000,
         welcome_message: "",
         private_notes: "",
       });
@@ -717,6 +771,8 @@ function CommercialManager() {
           ? "Invitation revoked."
           : action === "extend"
             ? "Invitation expiry updated."
+            : action === "update-max-invites"
+              ? "Team invitation allowance updated and applied to the active tenant."
             : "Invitation updated.",
       );
       await load();
@@ -736,6 +792,10 @@ function CommercialManager() {
       setEmailPreviewing(false);
     }
   };
+  useEffect(() => {
+    if (tab !== "email") return;
+    apiClient.getPlatformEmailTemplates().then(setEmailCapabilities).catch(() => {});
+  }, [tab]);
   const sendEmail = async (event) => {
     event.preventDefault();
     setError("");
@@ -744,7 +804,7 @@ function CommercialManager() {
     try {
       const result = await apiClient.sendPlatformEmail(emailForm);
       setNotice(
-        `Email accepted by ${result.provider || "the configured provider"}${result.delivery_status ? ` (${result.delivery_status})` : ""}.`,
+        `${result.sent || 0} of ${result.total || 0} email${result.total === 1 ? "" : "s"} accepted by ${result.provider || "the configured provider"}${result.delivery_status ? ` (${result.delivery_status})` : ""}.`,
       );
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -752,19 +812,16 @@ function CommercialManager() {
       setEmailSending(false);
     }
   };
-  const tabs = [
-    ["plans", "Plans"],
-    ["models", "Models"],
-    ["ai_costs", "AI Costs"],
-    ["promotions", "Promotions"],
-    ["invitations", "Invitations"],
-    ["email", "Email"],
-    ["referrals", "Referral codes"],
-    ["pilots", "Pilot organizations"],
-    ["redemptions", "Redemptions"],
-  ];
+  useEffect(() => {
+    const selectTab = (event) => {
+      const requested = event.detail?.tab;
+      if (COMMERCIAL_TABS.some(([id]) => id === requested)) setTab(requested);
+    };
+    window.addEventListener("platform-admin:navigate", selectTab);
+    return () => window.removeEventListener("platform-admin:navigate", selectTab);
+  }, []);
   return (
-    <section className="mb-6 border-y border-[#dfddd5] py-5">
+    <section id="admin-commercial" className="mb-6 border-y border-[#dfddd5] py-5 scroll-mt-20">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#737373]">
@@ -785,12 +842,12 @@ function CommercialManager() {
           Refresh
         </button>
       </div>
-      <nav className="mt-5 flex flex-wrap gap-2 border-b border-[#dfddd5] pb-3">
-        {tabs.map(([id, label]) => (
+      <nav className="mt-5 flex gap-1 overflow-x-auto border-b border-[#dfddd5] pb-0 [-webkit-overflow-scrolling:touch]">
+        {COMMERCIAL_TABS.map(([id, label]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`px-3 py-1.5 text-sm ${tab === id ? "border-b-2 border-[#117dff] font-semibold text-[#161616]" : "text-[#737373]"}`}
+            className={`shrink-0 px-3 py-2 text-[12px] ${tab === id ? "border-b-2 border-[#117dff] font-semibold text-[#161616]" : "text-[#737373]"}`}
           >
             {label}
           </button>
@@ -1166,8 +1223,8 @@ function CommercialManager() {
           <div className="mt-5 max-w-4xl">
             <p className="mb-3 text-sm text-[#737373]">
               One invitation creates one enterprise owner workspace. It starts a
-              14-day unlimited onboarding period; the owner then chooses a paid
-              Runway configuration.
+              14-day Scale-equivalent onboarding period; choose how many
+              additional teammates that tenant may invite.
             </p>
             <form
               onSubmit={submitEnterpriseInvitation}
@@ -1267,6 +1324,46 @@ function CommercialManager() {
                 className="border border-[#d8d6cf] px-3 py-2"
                 aria-label="Onboarding days"
               />
+              <label className="text-sm text-[#525252]">
+                Additional team invites
+                <input
+                  type="number"
+                  min="0"
+                  max="10000"
+                  value={enterpriseInvitationForm.max_invites}
+                  onChange={(e) =>
+                    setEnterpriseInvitationForm({
+                      ...enterpriseInvitationForm,
+                      max_invites: e.target.value,
+                    })
+                  }
+                  className="mt-1 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"
+                  aria-label="Additional team invites"
+                />
+                <span className="mt-1 block text-xs text-[#737373]">
+                  0 means owner-only. This can be changed later and applies to the tenant immediately.
+                </span>
+              </label>
+              <label className="text-sm text-[#525252]">
+                Shared onboarding credits
+                <input
+                  type="number"
+                  min="-1"
+                  max="100000000"
+                  value={enterpriseInvitationForm.monthly_credits}
+                  onChange={(e) =>
+                    setEnterpriseInvitationForm({
+                      ...enterpriseInvitationForm,
+                      monthly_credits: e.target.value,
+                    })
+                  }
+                  className="mt-1 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"
+                  aria-label="Shared onboarding credits"
+                />
+                <span className="mt-1 block text-xs text-[#737373]">
+                  One organization-wide pool shared by every teammate. Use -1 only for unlimited credits; onboarding has no separate daily or service caps.
+                </span>
+              </label>
               <p className="self-center text-sm leading-5 text-[#737373]">
                 Creates a draft only. Review the rendered email before sending
                 from <strong className="font-medium text-[#161616]">welcome@admin.singulancelabs.com</strong>.
@@ -1340,6 +1437,8 @@ function CommercialManager() {
                     {invitation.entitlement
                       ? `${invitation.entitlement.status} until ${when(invitation.entitlement.ends_at)}`
                       : "Not redeemed"}
+                    {" · "}{invitation.max_invites || 0} additional team invite{Number(invitation.max_invites || 0) === 1 ? "" : "s"}
+                    {" · "}{Number(invitation.onboarding_monthly_credits) === -1 ? "unlimited credits" : `${Number(invitation.onboarding_monthly_credits || 0).toLocaleString()} shared credits`}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1348,6 +1447,18 @@ function CommercialManager() {
                     className="border border-[#d8d6cf] px-2 py-1"
                   >
                     History
+                  </button>
+                  <button
+                    onClick={() => setEditingInvitationInvites({
+                      id: invitation.id,
+                      companyName: invitation.company_name,
+                      maxInvites: invitation.max_invites || 0,
+                      monthlyCredits: invitation.onboarding_monthly_credits,
+                      activeTenant: Boolean(invitation.entitlement?.grant_id),
+                    })}
+                    className="border border-[#d8d6cf] px-2 py-1"
+                  >
+                    Team & credits
                   </button>
                   {["draft", "sent"].includes(invitation.status) && (
                     <>
@@ -1429,6 +1540,24 @@ function CommercialManager() {
                   {invitationDetail.invitation.recipient_email} ·{" "}
                   {invitationDetail.invitation.status}
                 </p>
+                <section className="mt-4 rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-3">
+                  <h4 className="text-sm font-semibold text-[#252525]">Activation timeline</h4>
+                  {!(invitationDetail.activation || []).length ? (
+                    <p className="mt-2 text-xs text-[#737373]">No activation lifecycle has started. A record appears only after a successful invitation delivery.</p>
+                  ) : (
+                    <ol className="mt-2 space-y-2">
+                      {invitationDetail.activation.map((entry) => (
+                        <li key={entry.id} className="border-t border-[#e3e0db] pt-2 text-xs text-[#525252] first:border-t-0 first:pt-0">
+                          <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-[#252525]">{entry.label}</strong><span className="rounded-full bg-white px-2 py-0.5 font-medium">{entry.stage}</span></div>
+                          <p className="mt-1">Started {when(entry.created_at)} · {entry.reminder_count || 0} reminder{entry.reminder_count === 1 ? "" : "s"}</p>
+                          {entry.last_reminder_at && <p>Last reminder {when(entry.last_reminder_at)}</p>}
+                          {entry.next_reminder_at && <p>Next eligible reminder {when(entry.next_reminder_at)}</p>}
+                          {entry.stopped_at && <p>Stopped {when(entry.stopped_at)}{entry.stop_reason ? ` · ${entry.stop_reason}` : ""}</p>}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </section>
                 <div className="mt-4 divide-y">
                   {(invitationDetail.audit || []).map((entry) => (
                     <div key={entry.id} className="py-2 text-xs text-[#525252]">
@@ -1459,149 +1588,81 @@ function CommercialManager() {
               </form>
             </div>
           )}
+          {editingInvitationInvites && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+              <form onSubmit={async (event) => {
+                event.preventDefault();
+                await invitationAction(editingInvitationInvites.id, "update-max-invites", {
+                  max_invites: Number(editingInvitationInvites.maxInvites),
+                  monthly_credits: Number(editingInvitationInvites.monthlyCredits),
+                });
+                setEditingInvitationInvites(null);
+              }} className="w-full max-w-md bg-white p-5 shadow-xl">
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">Onboarding allocation</p>
+                <h3 className="mt-2 text-lg font-semibold text-[#161616]">{editingInvitationInvites.companyName}</h3>
+                <p className="mt-2 text-sm leading-5 text-[#525252]">Set the number of additional people this tenant can invite. The owner is already included, so 0 means owner-only.</p>
+                <label className="mt-5 block text-sm font-medium text-[#525252]">Maximum additional invites<input required type="number" min="0" max="10000" value={editingInvitationInvites.maxInvites} onChange={(event) => setEditingInvitationInvites({ ...editingInvitationInvites, maxInvites: event.target.value })} className="mt-2 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"/></label>
+                <label className="mt-4 block text-sm font-medium text-[#525252]">Shared monthly credits<input required type="number" min="-1" max="100000000" value={editingInvitationInvites.monthlyCredits} onChange={(event) => setEditingInvitationInvites({ ...editingInvitationInvites, monthlyCredits: event.target.value })} className="mt-2 w-full border border-[#d8d6cf] px-3 py-2 text-[#161616]"/><span className="mt-1 block text-xs font-normal text-[#737373]">Shared by all users. Use -1 only for unlimited credits.</span></label>
+                {editingInvitationInvites.activeTenant && <p className="mt-2 text-xs text-[#737373]">Saving publishes a new entitlement version for this active tenant immediately.</p>}
+                <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setEditingInvitationInvites(null)} className="border border-[#d8d6cf] px-3 py-2">Cancel</button><button className="bg-[#117dff] px-3 py-2 font-medium text-white">Save allocation</button></div>
+              </form>
+            </div>
+          )}
         </>
       )}
       {tab === "email" && (
-        <section className="mt-5 overflow-hidden border border-[#d8d6cf] bg-white font-['Space_Grotesk']">
-          <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
-            <form onSubmit={sendEmail} className="p-6 sm:p-8">
-              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-[#117dff]">
-                Transactional email
-              </p>
-              <h3 className="mt-3 text-2xl font-semibold tracking-normal text-[#0a0a0a]">
-                Send a polished welcome
-              </h3>
-              <p className="mt-2 max-w-md text-sm leading-6 text-[#737373]">
-                From{" "}
-                <strong className="font-medium text-[#0a0a0a]">
-                  welcome@admin.singulancelabs.com
-                </strong>
-                . Use Invitations for secure enterprise activation links and
-                recovery codes.
-              </p>
-              <div className="mt-7 space-y-4">
-                <label className="block">
-                  <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[#737373]">
-                    Template
-                  </span>
-                  <select
-                    value={emailForm.template_id}
-                    onChange={(event) => {
-                      setEmailForm({
-                        ...emailForm,
-                        template_id: event.target.value,
-                      });
-                      setEmailPreview(null);
-                    }}
-                    className="mt-2 w-full rounded-[6px] border border-[#d8d6cf] bg-white px-3 py-3 text-sm text-[#0a0a0a] outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]"
-                  >
-                    <option value="welcome_signup">Welcome to HIVEMIND</option>
-                    <option value="welcome_login">
-                      Welcome back to HIVEMIND
-                    </option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[#737373]">
-                    Recipient email
-                  </span>
-                  <input
-                    required
-                    type="email"
-                    value={emailForm.to}
-                    onChange={(event) => {
-                      setEmailForm({ ...emailForm, to: event.target.value });
-                      setEmailPreview(null);
-                    }}
-                    placeholder="owner@company.com"
-                    className="mt-2 w-full rounded-[6px] border border-[#d8d6cf] px-3 py-3 text-sm text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3] focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]"
-                  />
-                </label>
-                <label className="block">
-                  <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[#737373]">
-                    Recipient name
-                  </span>
-                  <input
-                    value={emailForm.name}
-                    onChange={(event) => {
-                      setEmailForm({ ...emailForm, name: event.target.value });
-                      setEmailPreview(null);
-                    }}
-                    placeholder="Optional"
-                    className="mt-2 w-full rounded-[6px] border border-[#d8d6cf] px-3 py-3 text-sm text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3] focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]"
-                  />
-                </label>
+        <section className="mt-5 overflow-hidden rounded-[10px] border border-[#e3e0db] bg-white">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e0db] bg-[#faf9f4] px-4 py-3">
+            <div className="flex items-center gap-2"><Mail size={15} className="text-[#117dff]"/><div><h3 className="text-[14px] font-semibold text-[#0a0a0a]">New message</h3><p className="text-[10px] text-[#a3a3a3]">Cloudflare Email Sending · authenticated platform operation</p></div></div>
+            <label className="flex items-center gap-2 text-[11px] font-medium text-[#525252]">
+              {emailForm.visual ? <Eye size={13}/> : <EyeOff size={13}/>} Visual template
+              <button type="button" role="switch" aria-checked={emailForm.visual} onClick={() => { setEmailForm({ ...emailForm, visual: !emailForm.visual }); setEmailPreview(null); }} className={`relative h-5 w-9 rounded-full transition-colors ${emailForm.visual ? "bg-[#117dff]" : "bg-[#e3e0db]"}`}><span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${emailForm.visual ? "translate-x-[18px]" : "translate-x-0.5"}`}/></button>
+            </label>
+          </header>
+          <div className="grid min-h-[680px] lg:grid-cols-[minmax(420px,0.9fr)_minmax(500px,1.1fr)]">
+            <form onSubmit={sendEmail} className="flex min-h-0 flex-col border-r border-[#e3e0db]">
+              <div className="space-y-0 px-4 pt-3">
+                <div className="grid grid-cols-[64px_1fr] items-center border-b border-[#eae7e1] py-2"><span className="text-[11px] text-[#737373]">From</span><div className="grid grid-cols-[minmax(90px,.65fr)_minmax(180px,1fr)] gap-2"><input required value={emailForm.sender_local} onChange={(event) => { setEmailForm({ ...emailForm, sender_local: event.target.value }); setEmailPreview(null); }} placeholder="amar" className="min-w-0 rounded-[6px] border border-[#e3e0db] px-2.5 py-2 text-[12px] outline-none focus:border-[#117dff]"/><select value={emailForm.sender_domain} onChange={(event) => { setEmailForm({ ...emailForm, sender_domain: event.target.value }); setEmailPreview(null); }} className="min-w-0 rounded-[6px] border border-[#e3e0db] bg-white px-2 py-2 text-[11px] outline-none focus:border-[#117dff]">{emailCapabilities.sender_domains.map((domain) => <option key={domain} value={domain}>@{domain}</option>)}</select></div></div>
+                <div className="grid grid-cols-[64px_1fr] items-center border-b border-[#eae7e1] py-2"><span className="text-[11px] text-[#737373]">Name</span><input value={emailForm.from_name} onChange={(event) => { setEmailForm({ ...emailForm, from_name: event.target.value }); setEmailPreview(null); }} placeholder="Singulance" className="border-0 px-0 py-2 text-[12px] outline-none"/></div>
+                <div className="grid grid-cols-[64px_1fr] items-start border-b border-[#eae7e1] py-2"><span className="pt-2 text-[11px] text-[#737373]">To</span><textarea required rows={2} value={emailForm.recipients} onChange={(event) => { setEmailForm({ ...emailForm, recipients: event.target.value }); setEmailPreview(null); }} placeholder="person@company.com, another@company.com" className="resize-none border-0 px-0 py-2 text-[12px] leading-5 outline-none"/><span className="col-start-2 text-[9px] text-[#a3a3a3]">Separate recipients with commas, spaces, semicolons, or new lines · maximum 200</span></div>
+                <div className="grid grid-cols-[64px_1fr] items-center border-b border-[#eae7e1] py-2"><span className="text-[11px] text-[#737373]">Template</span><select value={emailForm.template_id} onChange={(event) => { setEmailForm({ ...emailForm, template_id: event.target.value }); setEmailPreview(null); }} className="border-0 bg-white px-0 py-2 text-[12px] outline-none">{emailCapabilities.templates.map((template) => <option key={template.id} value={template.id}>{template.label}</option>)}</select></div>
+                {emailForm.template_id === "custom" ? <>
+                  <div className="grid grid-cols-[64px_1fr] items-center border-b border-[#eae7e1] py-2"><span className="text-[11px] text-[#737373]">Subject</span><input required value={emailForm.subject} onChange={(event) => { setEmailForm({ ...emailForm, subject: event.target.value }); setEmailPreview(null); }} placeholder="Subject" className="border-0 px-0 py-2 text-[12px] font-medium outline-none"/></div>
+                  <textarea required value={emailForm.body} onChange={(event) => { setEmailForm({ ...emailForm, body: event.target.value }); setEmailPreview(null); }} placeholder="Write your message…" className="min-h-[320px] w-full resize-none border-0 px-0 py-5 text-[13px] leading-6 text-[#0a0a0a] outline-none"/>
+                </> : <div className="min-h-[360px] py-6"><p className="text-[12px] leading-5 text-[#737373]">This server-owned lifecycle template preserves its approved subject, copy, links, and responsive visual treatment. Preview it before sending.</p></div>}
               </div>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={previewEmail}
-                  disabled={emailPreviewing}
-                  className="border border-[#0a0a0a] px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[#0a0a0a] disabled:opacity-50"
-                >
-                  {emailPreviewing ? "Rendering..." : "Preview email"}
-                </button>
-                <button
-                  disabled={emailSending}
-                  className="bg-[#117dff] px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-white disabled:opacity-50"
-                >
-                  {emailSending ? "Sending..." : "Send email"}
-                </button>
-              </div>
+              <footer className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-[#e3e0db] bg-[#faf9f4] px-4 py-3"><span className="text-[10px] text-[#a3a3a3]">Sender domains are restricted server-side to verified Cloudflare domains.</span><div className="flex gap-2"><button type="button" onClick={previewEmail} disabled={emailPreviewing} className="rounded-[6px] border border-[#d4d0ca] bg-white px-3 py-2 text-[11px] font-medium text-[#525252] disabled:opacity-50">{emailPreviewing ? "Rendering…" : "Preview"}</button><button disabled={emailSending} className="flex items-center gap-1.5 rounded-[6px] bg-[#117dff] px-4 py-2 text-[11px] font-semibold text-white hover:bg-[#0066e0] disabled:opacity-50"><Send size={12}/>{emailSending ? "Sending…" : "Send"}</button></div></footer>
             </form>
-            <div className="min-h-[480px] bg-[#0d0d0f] p-5 sm:p-7">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#24d2ed]">
-                    Message preview
-                  </p>
-                  <p className="mt-2 text-sm text-[#b5b5b9]">
-                    {emailPreview
-                      ? emailPreview.subject
-                      : "Render a server-owned template before sending."}
-                  </p>
-                </div>
-                <span className="border border-[#2f3035] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a9aaae]">
-                  Email v1
-                </span>
+            <aside className="min-w-0 bg-[#faf9f4] p-4 sm:p-5">
+              <div className="flex items-center justify-between"><div><p className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-[#117dff]">Inbox preview</p><p className="mt-1 text-[11px] text-[#737373]">Exact HTML/text prepared by the server</p></div><span className="rounded-full border border-[#e3e0db] bg-white px-2 py-1 font-mono text-[9px] text-[#737373]">{emailForm.visual ? "VISUAL" : "PLAIN TEXT"}</span></div>
+              <div className="mt-4 overflow-hidden rounded-[10px] border border-[#e3e0db] bg-white shadow-sm">
+                <div className="border-b border-[#eae7e1] px-4 py-3"><div className="truncate text-[13px] font-semibold text-[#0a0a0a]">{emailPreview?.subject || emailForm.subject || "Your subject appears here"}</div><div className="mt-2 flex gap-2 text-[10px] text-[#737373]"><span className="font-medium text-[#0a0a0a]">{emailForm.from_name || emailForm.sender_local}</span><span>&lt;{emailForm.sender_local}@{emailForm.sender_domain}&gt;</span></div><div className="mt-1 truncate text-[9px] text-[#a3a3a3]">to {emailPreview?.recipients?.join(", ") || emailForm.recipients || "recipient"}</div></div>
+                <div className="h-[535px] overflow-auto bg-white">{emailPreview ? (emailForm.visual ? <iframe title="Email preview" sandbox="" srcDoc={emailPreview.html} className="h-full min-h-[535px] w-full border-0 bg-white"/> : <pre className="whitespace-pre-wrap p-5 font-sans text-[12px] leading-6 text-[#0a0a0a]">{emailPreview.text}</pre>) : <div className="flex h-full items-center justify-center p-8 text-center"><div><Mail size={24} className="mx-auto text-[#d4d0ca]"/><p className="mt-3 text-[12px] font-medium text-[#525252]">Compose, then preview</p><p className="mt-1 text-[10px] text-[#a3a3a3]">Nothing is sent until you press Send.</p></div></div>}</div>
               </div>
-              <div className="mt-6 h-[380px] overflow-hidden border border-[#303138] bg-[#f8fafc] shadow-[0_14px_45px_rgba(0,0,0,0.25)]">
-                {emailPreview ? (
-                  <iframe
-                    title="Email preview"
-                    sandbox=""
-                    srcDoc={emailPreview.html}
-                    className="h-full w-full border-0 bg-white"
-                  />
-                ) : (
-                  <div className="flex h-full flex-col justify-between p-6">
-                    <div>
-                      <div className="h-1 w-12 bg-[#24d2ed]" />
-                      <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.18em] text-[#117dff]">
-                        HIVEMIND / System message
-                      </p>
-                      <h4 className="mt-4 text-2xl font-semibold text-[#0a0a0a]">
-                        Your welcome message will appear here.
-                      </h4>
-                    </div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#737373]">
-                      Preview uses the exact server template
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+            </aside>
           </div>
         </section>
       )}
       {tab === "referrals" && (
-        <>
+        !partnerReferralsEnabled ? (
+          <section className="mt-5 border border-[#d8d6cf] bg-[#faf9f4] p-5">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#737373]">
+              Feature flag off
+            </p>
+            <h3 className="mt-2 text-lg font-semibold text-[#161616]">
+              Partner invitations are safely disabled.
+            </h3>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#737373]">
+              The release is installed, but campaign creation, delivery, public
+              invitation links, and redemption remain unavailable until the
+              server runtime flag is enabled.
+            </p>
+          </section>
+        ) : <>
           <p className="mt-5 text-sm text-[#737373]">
-            One code drives both phases of an enterprise signup:{" "}
-            <strong>onboarding</strong> (a fixed grace window, default 2 weeks)
-            then <strong>runway</strong> (the ongoing phase, billed monthly by
-            default). Optionally attach a percentage-off or fixed-amount
-            discount.
+            Create a named, shareable invitation for any trusted partner. The
+            landing page, signup admission, trial, and credits remain bound to
+            the same server-verified offer. No card or Stripe checkout is used.
           </p>
           <form
             onSubmit={submitReferralCampaign}
@@ -1609,146 +1670,82 @@ function CommercialManager() {
           >
             <input
               required
-              placeholder="Partner / campaign name"
-              value={referralForm.name}
+              placeholder="Referrer name (for example Wolfgang)"
+              value={referralForm.referrer_display_name}
               onChange={(e) =>
-                setReferralForm({ ...referralForm, name: e.target.value })
+                setReferralForm({ ...referralForm, referrer_display_name: e.target.value })
               }
               className="border border-[#d8d6cf] px-3 py-2"
             />
-            <input
-              placeholder="Code (blank generates one)"
-              value={referralForm.code}
-              onChange={(e) =>
-                setReferralForm({
-                  ...referralForm,
-                  code: e.target.value.toUpperCase(),
-                })
-              }
-              className="border border-[#d8d6cf] px-3 py-2"
-            />
+            <input required type="email" placeholder="Referrer email" value={referralForm.referrer_email} onChange={(e) => setReferralForm({ ...referralForm, referrer_email: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" />
+            <input placeholder="Internal campaign name (optional)" value={referralForm.internal_name} onChange={(e) => setReferralForm({ ...referralForm, internal_name: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" />
+            <select value={referralForm.language} onChange={(e) => setReferralForm({ ...referralForm, language: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" aria-label="Invitation language"><option value="en">English</option><option value="de">Deutsch</option></select>
             <input
               type="number"
-              min="0"
-              max="90"
-              value={referralForm.onboarding_days}
+              min="1"
+              max="365"
+              value={referralForm.trial_days}
               onChange={(e) =>
                 setReferralForm({
                   ...referralForm,
-                  onboarding_days: e.target.value,
+                  trial_days: e.target.value,
                 })
               }
               className="border border-[#d8d6cf] px-3 py-2"
-              aria-label="Onboarding duration in days (default 14)"
+              aria-label="Free trial duration in days"
             />
             <select
-              value={referralForm.onboarding_plan}
-              onChange={(e) =>
+              value={referralForm.base_plan}
+              onChange={(e) => {
+                const creditsByPlan = { free: 500, plus: 2000, pro: 5000, scale: 10000 };
                 setReferralForm({
                   ...referralForm,
-                  onboarding_plan: e.target.value,
-                })
-              }
+                  base_plan: e.target.value,
+                  monthly_credits: creditsByPlan[e.target.value],
+                });
+              }}
               className="border border-[#d8d6cf] px-3 py-2"
-              aria-label="Onboarding plan"
+              aria-label="Trial plan"
             >
-              <option value="pro">Pro (onboarding)</option>
-              <option value="scale">Scale (onboarding)</option>
-              <option value="enterprise">Enterprise (onboarding)</option>
+              <option value="free">Free · 500 credits</option>
+              <option value="plus">Plus · 2,000 credits</option>
+              <option value="pro">Pro · 5,000 credits</option>
+              <option value="scale">Scale · 10,000 credits</option>
             </select>
             <select
-              value={referralForm.runway_plan}
+              value={referralForm.account_type}
               onChange={(e) =>
                 setReferralForm({
                   ...referralForm,
-                  runway_plan: e.target.value,
+                  account_type: e.target.value,
                 })
               }
               className="border border-[#d8d6cf] px-3 py-2"
-              aria-label="Runway plan"
+              aria-label="Account type"
             >
-              <option value="pro">Pro (runway)</option>
-              <option value="scale">Scale (runway)</option>
-              <option value="enterprise">Enterprise (runway)</option>
+              <option value="personal">Personal</option>
+              <option value="enterprise_managed">Enterprise managed</option>
+              <option value="enterprise_self_hosted">Enterprise self-hosted</option>
             </select>
             <input
               type="number"
               min="1"
-              max="12"
-              value={referralForm.runway_interval_months}
+              max="100000000"
+              value={referralForm.monthly_credits}
               onChange={(e) =>
                 setReferralForm({
                   ...referralForm,
-                  runway_interval_months: e.target.value,
+                  monthly_credits: e.target.value,
                 })
               }
               className="border border-[#d8d6cf] px-3 py-2"
-              aria-label="Runway billing interval in months (default 1 = monthly)"
+              aria-label="Monthly credits"
             />
-            <select
-              value={referralForm.discount_kind}
-              onChange={(e) =>
-                setReferralForm({
-                  ...referralForm,
-                  discount_kind: e.target.value,
-                })
-              }
-              className="border border-[#d8d6cf] px-3 py-2"
-              aria-label="Discount type"
-            >
-              <option value="none">No discount</option>
-              <option value="percentage">Percentage off</option>
-              <option value="fixed">Fixed amount off</option>
-            </select>
-            {referralForm.discount_kind === "percentage" && (
-              <input
-                type="number"
-                min="1"
-                max="100"
-                placeholder="Percent off (default 20)"
-                value={referralForm.discount_percent}
-                onChange={(e) =>
-                  setReferralForm({
-                    ...referralForm,
-                    discount_percent: e.target.value,
-                  })
-                }
-                className="border border-[#d8d6cf] px-3 py-2"
-              />
-            )}
-            {referralForm.discount_kind === "fixed" && (
-              <>
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="Amount off (minor units, e.g. cents)"
-                  value={referralForm.discount_amount_cents}
-                  onChange={(e) =>
-                    setReferralForm({
-                      ...referralForm,
-                      discount_amount_cents: e.target.value,
-                    })
-                  }
-                  className="border border-[#d8d6cf] px-3 py-2"
-                />
-                <input
-                  placeholder="Currency (e.g. EUR)"
-                  value={referralForm.discount_currency}
-                  onChange={(e) =>
-                    setReferralForm({
-                      ...referralForm,
-                      discount_currency: e.target.value.toUpperCase(),
-                    })
-                  }
-                  className="border border-[#d8d6cf] px-3 py-2"
-                  maxLength={3}
-                />
-              </>
-            )}
+            <select value={referralForm.fallback_action} onChange={(e) => setReferralForm({ ...referralForm, fallback_action: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" aria-label="Plan after trial"><option value="free">Free after trial</option><option value="manual_review">Manual review before expiry</option></select>
             <input
               type="number"
               min="1"
-              placeholder="Max redemptions (blank = unlimited)"
+              placeholder="Partner activations (for example 10)"
               value={referralForm.max_redemptions}
               onChange={(e) =>
                 setReferralForm({
@@ -1767,53 +1764,32 @@ function CommercialManager() {
               className="border border-[#d8d6cf] px-3 py-2"
               aria-label="Expires at"
             />
+            <textarea placeholder="Personal welcome message (optional)" value={referralForm.welcome_message} onChange={(e) => setReferralForm({ ...referralForm, welcome_message: e.target.value })} className="border border-[#d8d6cf] px-3 py-2 md:col-span-2" rows={2}/>
             <button className="bg-[#117dff] px-3 py-2 font-medium text-white">
-              Create referral code
+              Create card-free partner trial
             </button>
           </form>
           <div className="mt-5 divide-y divide-[#e5e2dc]">
             {referralCampaigns.map((campaign) => (
               <div
-                key={campaign.id}
+                key={campaign.campaign_id}
                 className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
               >
                 <div>
-                  <strong>{campaign.name}</strong>
+                  <strong>{campaign.referrer?.display_name}</strong>
                   <span className="ml-2 text-[#737373]">
-                    {campaign.code} · {campaign.active ? "active" : "revoked"} ·{" "}
-                    {campaign.redemption_count}/
-                    {campaign.max_redemptions ?? "unlimited"}
+                    {campaign.status} · {campaign.accepted_count} accepted · {campaign.visit_count} visits
                   </span>
                   <p className="mt-1 text-xs text-[#737373]">
-                    Onboarding {campaign.onboarding_days}d →{" "}
-                    {campaign.onboarding_plan}, then runway{" "}
-                    {campaign.runway_plan} every{" "}
-                    {campaign.runway_interval_months}mo
-                    {campaign.discount?.kind === "percentage"
-                      ? ` · ${campaign.discount.percent_off}% off`
-                      : campaign.discount?.kind === "fixed"
-                        ? ` · ${(campaign.discount.amount_off_cents / 100).toFixed(2)} ${campaign.discount.currency} off`
-                        : ""}{" "}
-                    · expires {when(campaign.ends_at)}
+                    {campaign.offer.trial_days} days free · {Number(campaign.offer.monthly_credits).toLocaleString()} credits/month · {campaign.offer.plan} · {campaign.offer.remaining_activations == null ? "unlimited activations" : `${campaign.offer.remaining_activations} activations left`} · sent {when(campaign.last_sent_at)}
                   </p>
+                  <button type="button" onClick={() => navigator.clipboard.writeText(campaign.invitation_url).then(() => setNotice("Invitation link copied."))} className="mt-2 text-xs font-medium text-[#117dff]">Copy share link</button>
                 </div>
-                <button
-                  disabled={!campaign.active}
-                  onClick={() =>
-                    apiClient
-                      .revokePlatformReferralCampaign(campaign.id)
-                      .then(load)
-                      .catch((err) =>
-                        setError(err.response?.data?.error || err.message),
-                      )
-                  }
-                  className="border border-[#d8d6cf] px-3 py-1.5 disabled:opacity-50"
-                >
-                  {campaign.active ? "Revoke" : "Revoked"}
-                </button>
+                <div className="flex gap-2"><button type="button" onClick={() => apiClient.partnerReferralAction(campaign.campaign_id, "preview").then((result) => setReferralPreview({ ...result.rendered, campaign })).catch((err) => setError(err.response?.data?.error || err.message))} className="border border-[#d8d6cf] px-3 py-1.5">Preview</button><button type="button" disabled={campaign.status !== "active"} onClick={() => apiClient.partnerReferralAction(campaign.campaign_id, "preview").then((result) => setReferralPreview({ ...result.rendered, campaign, approve: true })).catch((err) => setError(err.response?.data?.error || err.message))} className="bg-[#117dff] px-3 py-1.5 text-white disabled:opacity-50">Send</button><button type="button" disabled={campaign.status !== "active"} onClick={() => apiClient.partnerReferralAction(campaign.campaign_id, "revoke").then(load).catch((err) => setError(err.response?.data?.error || err.message))} className="border border-[#d8d6cf] px-3 py-1.5 disabled:opacity-50">Revoke</button></div>
               </div>
             ))}
           </div>
+          {referralPreview && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-5" onMouseDown={() => setReferralPreview(null)}><div className="h-[80vh] w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><div className="flex items-center justify-between border-b p-3"><strong>{referralPreview.subject}</strong><div className="flex items-center gap-2">{referralPreview.approve && <button type="button" onClick={() => apiClient.partnerReferralAction(referralPreview.campaign.campaign_id, "send").then(() => { setNotice(`Invitation sent to ${referralPreview.campaign.referrer_email_hint}.`); setReferralPreview(null); load(); }).catch((err) => setError(err.response?.data?.error || err.message))} className="rounded-[6px] bg-[#117dff] px-3 py-1.5 text-xs font-medium text-white">Approve & send</button>}<button onClick={() => setReferralPreview(null)}><X size={18}/></button></div></div><iframe title="Partner invitation preview" sandbox="" srcDoc={referralPreview.html} className="h-[calc(80vh-50px)] w-full border-0"/></div></div>}
         </>
       )}
       {tab === "pilots" && (
@@ -1926,16 +1902,78 @@ function CommercialManager() {
   );
 }
 
+const ADMIN_NAV_ITEMS = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "users", label: "Users", icon: Users },
+  { id: "plans", label: "Plans & credits", icon: BarChart3 },
+  { id: "promotions", label: "Promotions", icon: Gift },
+  { id: "invitations", label: "Invitations", icon: Send },
+  { id: "email", label: "Email", icon: FileText },
+  { id: "models", label: "AI policies", icon: Activity },
+  { id: "chat", label: "HIVE Chat", icon: MessageCircle },
+  { id: "logs", label: "Live logs", icon: ShieldCheck },
+];
+
+function AdminNavigation({ activeItem, mobileOpen, onClose, onNavigate }) {
+  const content = (
+    <>
+      <div className="flex h-14 items-center justify-between border-b border-[#e3e0db] px-4">
+        <div className="min-w-0">
+          <p className="font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">HIVEMIND Admin</p>
+          <p className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#a3a3a3]">Platform control</p>
+        </div>
+        <button type="button" onClick={onClose} className="rounded-[6px] p-1.5 text-[#737373] hover:bg-[#f3f1ec] hover:text-[#0a0a0a] lg:hidden" aria-label="Close admin navigation"><X size={18} /></button>
+      </div>
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#a3a3a3]">Operations</p>
+        {ADMIN_NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+          <button key={id} type="button" onClick={() => onNavigate(id)} className={`flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-2 text-left text-[13px] transition-colors ${activeItem === id ? "bg-[#f3f1ec] font-medium text-[#0a0a0a]" : "text-[#525252] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"}`}>
+            <Icon size={16} className={activeItem === id ? "text-[#117dff]" : "text-[#a3a3a3]"} />
+            {label}
+            <ChevronRight size={13} className="ml-auto text-[#a3a3a3]" />
+          </button>
+        ))}
+      </nav>
+      <div className="border-t border-[#e3e0db] p-3">
+        <button type="button" onClick={() => onNavigate("invitations")} className="flex w-full items-center justify-center gap-1.5 rounded-[6px] bg-[#117dff] px-3 py-2 text-[12px] font-semibold text-white hover:bg-[#0066e0]">
+          <Send size={14} /> New invitation
+        </button>
+        <button type="button" onClick={() => onNavigate("promotions")} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[6px] border border-[#e3e0db] px-3 py-2 text-[12px] font-medium text-[#525252] hover:bg-[#f3f1ec]">
+          <Tags size={14} /> New promotion
+        </button>
+      </div>
+    </>
+  );
+  return <>
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-[#e3e0db] bg-[#faf9f4] lg:flex">{content}</aside>
+    {mobileOpen && <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Admin navigation">
+      <button type="button" aria-label="Close navigation" onClick={onClose} className="absolute inset-0 bg-black/30" />
+      <aside className="relative flex h-full w-[min(84vw,320px)] flex-col bg-[#faf9f4] shadow-xl">{content}</aside>
+    </div>}
+  </>;
+}
+
 export default function PlatformAdmin() {
-  const [passkey, setPasskey] = useState("");
-  const [operatorName, setOperatorName] = useState("");
+  const [environment] = useState(() => apiClient.getPlatformAdminEnvironment());
+  const [passcode, setPasscode] = useState("");
   const [data, setData] = useState(null);
   const [metrics, setMetrics] = useState(null);
   const [logs, setLogs] = useState(emptyLogs);
   const [logsOpen, setLogsOpen] = useState(false);
   const [logView, setLogView] = useState("mixed");
+  const [lifecycle, setLifecycle] = useState(null);
+  const [lifecycleLoading, setLifecycleLoading] = useState(false);
+  const [lifecycleError, setLifecycleError] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [activeItem, setActiveItem] = useState("overview");
+
+  const changeEnvironment = (next) => {
+    if (next === environment) return;
+    if (next === 'production' && !window.confirm('Switch the entire admin console to Production? All following actions will affect live customer data.')) return;
+    apiClient.setPlatformAdminEnvironment(next);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -1961,12 +1999,26 @@ export default function PlatformAdmin() {
     setLoading(true);
     setError("");
     try {
-      await apiClient.unlockPlatformAdmin(passkey, operatorName);
-      setPasskey("");
+      await apiClient.unlockPlatformAdmin(passcode);
+      setPasscode("");
       await load();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setLoading(false);
+    }
+  };
+
+  const openLifecycle = async (user) => {
+    setLifecycle({ user: { id: user.id, email: user.email, display_name: user.displayName || null }, organizations: [], totals: null });
+    setLifecycleLoading(true);
+    setLifecycleError("");
+    try {
+      const result = await apiClient.getPlatformUserLifecycle(user.id);
+      setLifecycle(result.lifecycle);
+    } catch (err) {
+      setLifecycleError(err.response?.data?.error || err.message || "Lifecycle data is unavailable.");
+    } finally {
+      setLifecycleLoading(false);
     }
   };
 
@@ -1983,53 +2035,82 @@ export default function PlatformAdmin() {
     return () => clearInterval(timer);
   }, [data, logsOpen]);
 
+  const navigateAdmin = useCallback((target) => {
+    setActiveItem(target);
+    setMobileNavOpen(false);
+    if (target === "overview") {
+      document.getElementById("admin-overview")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (target === "users") {
+      document.getElementById("admin-users")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (target === "logs") {
+      setLogsOpen(true);
+      return;
+    }
+    if (target === "chat") {
+      window.location.assign(apiClient.getPlatformAdminFrontendUrl("/hivemind/m/chat"));
+      return;
+    }
+    document.getElementById("admin-commercial")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => window.dispatchEvent(new CustomEvent("platform-admin:navigate", { detail: { tab: target } })), 0);
+  }, []);
+
   if (!data)
     return (
-      <main className="max-w-md mx-auto py-20 px-5">
-        <h1 className="text-2xl font-bold mb-2">Platform Admin</h1>
-        <p className="text-sm text-[#737373] mb-6">
-          Commercial operations and diagnostics. Access expires after 15
-          minutes.
-        </p>
-        <form onSubmit={unlock} className="space-y-3">
-          <input
-            autoFocus
-            value={operatorName}
-            onChange={(e) => setOperatorName(e.target.value)}
-            placeholder="Operator name"
-            className="w-full border rounded-lg px-3 py-2"
-          />
+      <main className="min-h-screen bg-[#faf9f4] px-5 py-10 sm:flex sm:items-center sm:justify-center">
+        <div className="fixed right-4 top-4"><EnvironmentToggle environment={environment} onChange={changeEnvironment} /></div>
+        <section className="mx-auto w-full max-w-md rounded-[10px] border border-[#e3e0db] bg-white p-5 sm:p-7">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">HIVEMIND · Platform control</p>
+          <h1 className="mt-2 font-['Space_Grotesk'] text-[26px] font-semibold text-[#0a0a0a]">Admin unlock</h1>
+          <p className="mt-2 text-sm leading-6 text-[#737373]">Enter the six-digit platform passcode. Access expires after 15 minutes.</p>
+          <form onSubmit={unlock} className="mt-6 space-y-3">
           <input
             required
             type="password"
-            value={passkey}
-            onChange={(e) => setPasskey(e.target.value)}
-            placeholder="Admin passkey"
-            className="w-full border rounded-lg px-3 py-2"
+            value={passcode}
+            onChange={(e) => setPasscode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="••••••"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            aria-label="Platform admin passcode"
+            className="w-full rounded-[6px] border border-[#d8d6cf] px-3 py-3 text-center font-mono text-xl tracking-[0.45em] text-[#0a0a0a] outline-none placeholder:tracking-[0.45em] focus:border-[#117dff]"
           />
           <button
-            disabled={loading || !operatorName.trim()}
-            className="w-full rounded-lg bg-[#117dff] text-white py-2"
+            disabled={loading || passcode.length !== 6}
+            className="w-full rounded-[6px] bg-[#117dff] py-3 text-[13px] font-semibold text-white hover:bg-[#0066e0] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Unlocking..." : "Unlock"}
           </button>
           {error && <p className="text-sm text-red-600">{error}</p>}
-        </form>
+          </form>
+        </section>
       </main>
     );
 
   const s = data.summary || {};
   const activeLogs = logs[logView] || [];
   return (
-    <main className="max-w-7xl mx-auto py-10 px-5">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen bg-[#faf9f4] lg:pl-[232px]">
+      <AdminNavigation activeItem={activeItem} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onNavigate={navigateAdmin} />
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[#e3e0db] bg-[#faf9f4]/95 px-4 backdrop-blur lg:hidden">
+        <button type="button" onClick={() => setMobileNavOpen(true)} className="rounded-[6px] p-1.5 text-[#525252] hover:bg-[#f3f1ec]" aria-label="Open admin navigation"><Menu size={20} /></button>
+        <p className="font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">HIVEMIND Admin</p>
+        <EnvironmentToggle environment={environment} onChange={changeEnvironment} compact />
+      </header>
+      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-8 lg:px-8">
+      <div id="admin-overview" className="mb-6 flex flex-col gap-3 scroll-mt-20 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Platform Admin</h1>
           <p className="text-sm text-[#737373]">
             {data.total} users · active within 30 days
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <EnvironmentToggle environment={environment} onChange={changeEnvironment} />
           <button
             onClick={() => setLogsOpen(true)}
             className="rounded-lg bg-[#111827] text-white px-3 py-2 text-sm"
@@ -2060,7 +2141,7 @@ export default function PlatformAdmin() {
         ))}
       </div>
       <CapacityPanel metrics={metrics} />
-      <div className="border rounded-xl overflow-auto bg-white">
+      <div id="admin-users" className="overflow-x-auto rounded-[10px] border border-[#e3e0db] bg-white scroll-mt-20">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left bg-[#faf9f4]">
@@ -2071,6 +2152,7 @@ export default function PlatformAdmin() {
               <th>Organizations</th>
               <th>Last seen</th>
               <th>Status</th>
+              <th className="pr-3">Lifecycle</th>
             </tr>
           </thead>
           <tbody>
@@ -2095,6 +2177,15 @@ export default function PlatformAdmin() {
                 <td>{user.organization_count}</td>
                 <td>{when(user.lastActiveAt)}</td>
                 <td>{user.active ? "Active" : "Sleeping"}</td>
+                <td className="pr-3">
+                  <button
+                    type="button"
+                    onClick={() => openLifecycle(user)}
+                    className="rounded-[6px] border border-[#d8d6cf] px-2.5 py-1.5 text-xs font-medium text-[#303030] hover:border-[#117dff] hover:text-[#117dff]"
+                  >
+                    Lifecycle
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -2141,6 +2232,52 @@ export default function PlatformAdmin() {
           </section>
         </div>
       )}
-    </main>
+      {lifecycle && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/45 p-0 sm:items-center sm:justify-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="lifecycle-title">
+          <button type="button" aria-label="Close lifecycle" onClick={() => setLifecycle(null)} className="absolute inset-0 cursor-default" />
+          <section className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-[#faf9f4] shadow-2xl sm:max-w-3xl sm:rounded-2xl">
+            <header className="sticky top-0 z-10 flex items-start justify-between border-b border-[#e3e0db] bg-[#faf9f4]/95 px-5 py-4 backdrop-blur">
+              <div>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[#117dff]">User lifecycle</p>
+                <h2 id="lifecycle-title" className="mt-1 text-lg font-semibold text-[#111]">{lifecycle.user.display_name || lifecycle.user.email}</h2>
+                <p className="text-xs text-[#737373]">{lifecycle.user.email}</p>
+              </div>
+              <button type="button" onClick={() => setLifecycle(null)} className="rounded-[6px] p-2 text-[#525252] hover:bg-[#f0eee8]" aria-label="Close lifecycle"><X size={18} /></button>
+            </header>
+            <div className="p-5">
+              {lifecycleLoading ? <p className="text-sm text-[#737373]">Loading lifecycle records…</p> : lifecycleError ? <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{lifecycleError}</p> : <>
+                <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-6">
+                  {[
+                    ["Organizations", lifecycle.totals?.organizations || 0],
+                    ["Awakened", lifecycle.totals?.awakened || 0],
+                    ["Pre-Day 0", lifecycle.totals?.activation_count || 0],
+                    ["Lifecycle events", lifecycle.totals?.lifecycle_count || 0],
+                    ["Completed", lifecycle.totals?.completed || 0],
+                    ["Needs attention", (lifecycle.totals?.in_progress || 0) + (lifecycle.totals?.failed || 0)],
+                  ].map(([label, value]) => <div key={label} className="rounded-xl border border-[#e3e0db] bg-white p-3"><p className="text-[11px] text-[#737373]">{label}</p><p className="mt-1 text-xl font-semibold text-[#111]">{value}</p></div>)}
+                </div>
+                {(lifecycle.activation || []).length > 0 && <section className="mb-5 rounded-xl border border-[#e3e0db] bg-white p-4"><h3 className="font-semibold text-[#111]">Before Day 0</h3><ol className="mt-3 space-y-2">{lifecycle.activation.map((entry) => <li key={entry.id} className="border-t border-[#efede8] pt-2 text-sm first:border-t-0 first:pt-0"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium text-[#252525]">{entry.label}</span><span className="rounded-full bg-[#f3f1ec] px-2 py-0.5 text-[11px] font-medium text-[#525252]">{entry.stage}</span></div><p className="mt-1 text-xs text-[#737373]">Started {when(entry.created_at)} · {entry.reminder_count || 0} reminder{entry.reminder_count === 1 ? "" : "s"}</p>{entry.last_reminder_at && <p className="text-xs text-[#737373]">Last reminder {when(entry.last_reminder_at)}</p>}{entry.next_reminder_at && <p className="text-xs text-[#737373]">Next eligible reminder {when(entry.next_reminder_at)}</p>}{entry.stopped_at && <p className="text-xs text-[#737373]">Stopped {when(entry.stopped_at)}{entry.stop_reason ? ` · ${entry.stop_reason}` : ""}</p>}</li>)}</ol></section>}
+                {!lifecycle.organizations.length ? <p className="rounded-lg border border-[#e3e0db] bg-white p-4 text-sm text-[#737373]">This user does not belong to an active organization.</p> : <div className="space-y-3">
+                  {lifecycle.organizations.map((organization) => (
+                    <article key={organization.organization_id} className="rounded-xl border border-[#e3e0db] bg-white p-4">
+                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                      <div><h3 className="font-semibold text-[#111]">{organization.organization_name}</h3><p className="mt-1 text-xs text-[#737373]">{organization.awakened_at ? `${organization.days_since_awakening} days since awakening · ${when(organization.awakened_at)}` : "Not awakened yet"}</p></div>
+                      <span className="w-fit rounded-full bg-[#f3f1ec] px-2.5 py-1 text-[11px] font-medium text-[#525252]">{organization.lifecycle_counts.completed} complete · {organization.lifecycle_counts.total} recorded</span>
+                    </div>
+                    {!organization.episodes.length ? <p className="mt-3 text-sm text-[#737373]">No lifecycle records have been created for this organization.</p> : <ol className="mt-4 space-y-2">
+                      {organization.episodes.map((episode) => (
+                        <li key={episode.day} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#efede8] pt-2 text-sm"><span className="font-medium text-[#252525]">{episode.label}</span><span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${episode.status === "sent" || episode.status === "completed" || episode.status === "awakened" ? "bg-emerald-50 text-emerald-700" : episode.status === "failed" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>{episode.status}</span>{episode.occurred_at && <span className="w-full text-xs text-[#737373] sm:w-auto">{when(episode.occurred_at)}</span>}</li>
+                      ))}
+                    </ol>}
+                    </article>
+                  ))}
+                </div>}
+              </>}
+            </div>
+          </section>
+        </div>
+      )}
+      </main>
+    </div>
   );
 }

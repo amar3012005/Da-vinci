@@ -7,7 +7,7 @@ function availableStorage(storage) {
 }
 
 export function saveInvitationContext(context, storage) {
-  if (!['personal', 'enterprise'].includes(context?.kind) || !context?.credential) return false;
+  if (!['personal', 'enterprise', 'referral'].includes(context?.kind) || !context?.credential) return false;
   const target = availableStorage(storage);
   if (!target) return false;
   const record = {
@@ -30,7 +30,7 @@ export function loadInvitationContext(storage, now = Date.now()) {
   if (!target) return null;
   try {
     const record = JSON.parse(target.getItem(INVITATION_SESSION_KEY) || 'null');
-    if (!['personal', 'enterprise'].includes(record?.kind) || !record?.credential) return null;
+    if (!['personal', 'enterprise', 'referral'].includes(record?.kind) || !record?.credential) return null;
     const expiry = record.expires_at ? Date.parse(record.expires_at) : NaN;
     if (Number.isFinite(expiry) && expiry <= now) {
       target.removeItem(INVITATION_SESSION_KEY);

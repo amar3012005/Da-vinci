@@ -1,10 +1,12 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
-import { Search, BookOpen, UserPlus } from 'lucide-react';
+import { Search, BookOpen, UserPlus, BrainCircuit, Orbit, AudioWaveform } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import TeamSwitcher from './TeamSwitcher';
 import LangSwitcher from './LangSwitcher';
+import WorkspaceNotifications from './WorkspaceNotifications';
+import SingulanceBrand from '../shared/SingulanceBrand';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -53,9 +55,9 @@ const pageDescriptions = {
 };
 
 const SECTIONS = [
-  { key: 'hivemind', label: 'BRAIN' },
-  { key: 'hyperagents', label: 'Operating System' },
-  { key: 'tara', label: 'VOICE' },
+  { key: 'hivemind', label: 'BRAIN', icon: BrainCircuit },
+  { key: 'hyperagents', label: 'OS', icon: Orbit },
+  { key: 'tara', label: 'VOICE', icon: AudioWaveform },
 ];
 
 const SECTION_TITLES = {
@@ -82,6 +84,15 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
     <header className="sticky top-0 z-30 flex h-14 items-center justify-center border-b border-[#e3e0db] bg-[#faf9f4]/90 px-3 backdrop-blur-xl md:justify-between md:px-6">
       {/* Left: Title + Description + Team switcher */}
       <div className="hidden min-w-0 items-center gap-4 lg:flex">
+        <button
+          type="button"
+          onClick={() => navigate('/hivemind/app/overview')}
+          className="shrink-0 border-0 bg-transparent p-0"
+          aria-label="SINGULANCE overview"
+        >
+          <SingulanceBrand variant="light" markSize={28} />
+        </button>
+        <span className="h-7 w-px shrink-0 bg-[#e3e0db]" aria-hidden="true" />
         <div>
           <h1 className="text-[#0a0a0a] text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
             {tTitle}
@@ -96,28 +107,29 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
       </div>
 
       {/* Section Toggle */}
-      <div className="flex items-center h-8 bg-[#f3f1ec] rounded-lg border border-[#e3e0db] p-0.5">
-        {SECTIONS.map((s) => (
-          <button
-            key={s.key}
-            onClick={() => onSectionChange?.(s.key)}
-            className={`relative px-3.5 py-1 rounded-md text-[11px] font-semibold tracking-[0.04em] transition-all duration-150 font-['Space_Grotesk'] ${
-              activeSection === s.key
-                ? 'bg-white text-[#0a0a0a] shadow-sm'
-                : 'text-[#a3a3a3] hover:text-[#525252]'
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
+      <div className="relative">
+        <div className="flex h-9 items-stretch border border-[#d4d0ca] bg-white/55 p-[2px] shadow-[0_8px_24px_rgba(10,10,10,0.045)] backdrop-blur-xl" style={{ clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)' }}>
+          {SECTIONS.map((s, index) => {
+            const active = activeSection === s.key;
+            const Icon = s.icon;
+            return (
+              <button key={s.key} onClick={() => onSectionChange?.(s.key)} className={`relative flex min-w-[68px] items-center justify-center gap-1.5 border-[#e3e0db] px-2.5 text-[9px] font-semibold tracking-[0.1em] transition-all duration-300 font-['Space_Grotesk'] sm:min-w-[86px] sm:px-4 sm:text-[10px] ${index ? 'border-l' : ''} ${active ? 'bg-[#0a0a0a] text-white' : 'text-[#8d8d8d] hover:bg-white/80 hover:text-[#0a0a0a]'}`}>
+                <Icon size={13} strokeWidth={1.5} className={active ? (s.key === 'hyperagents' ? 'animate-[spin_5s_linear_infinite] text-[#7db8ff]' : 'animate-pulse text-[#7db8ff]') : ''} />
+                <span>{s.label}</span>
+                {active && <span className="absolute inset-x-3 bottom-0 h-px bg-[#117dff] shadow-[0_0_8px_#117dff]" />}
+              </button>
+            );
+          })}
+        </div>
+        <span className="pointer-events-none absolute left-full top-1/2 ml-1.5 -translate-y-1/2 font-mono text-[7px] uppercase tracking-[0.12em] text-[#a3a3a3] sm:ml-2 sm:text-[8px]">Soon</span>
       </div>
 
       {/* Right: Actions */}
-      <div className="hidden items-center gap-2 md:flex">
+      <div className="absolute right-3 flex items-center gap-2 md:static">
         {/* Global Search */}
         <button
           onClick={() => navigate('/hivemind/app/memories')}
-          className="flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] hover:border-[#d4d0ca] text-[#a3a3a3] hover:text-[#525252] transition-all text-xs"
+          className="hidden md:flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] hover:border-[#d4d0ca] text-[#a3a3a3] hover:text-[#525252] transition-all text-xs"
         >
           <Search size={13} />
           <span className="hidden md:inline">{t('topbar.searchMemories', 'Search memories...')}</span>
@@ -129,29 +141,32 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
         {/* Docs */}
         <a
           href="/hivemind/docs"
-          className="flex items-center justify-center w-8 h-8 rounded-[6px] hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors"
+          className="hidden md:flex items-center justify-center w-8 h-8 rounded-[6px] hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors"
           title="Documentation"
         >
           <BookOpen size={15} />
         </a>
+
+        {/* Durable lifecycle + workspace notification center. */}
+        <WorkspaceNotifications />
 
         {/* Invite your Team — ALWAYS visible on the main navbar, right next
             to the language toggle. Routes to the Workspace Admin members tab,
             which owns the full invite flow (email + link + channels). */}
         <button
           onClick={() => navigate('/hivemind/app/workspace?tab=members')}
-          className="flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#117dff] text-white hover:bg-[#0e6fe0] transition-all text-xs font-semibold"
+          className="hidden md:flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#117dff] text-white hover:bg-[#0e6fe0] transition-all text-xs font-semibold"
         >
           <UserPlus size={13} />
           <span className="hidden md:inline">{t('topbar.inviteTeam', 'Invite your Team')}</span>
         </button>
 
         {/* Language switcher */}
-        <LangSwitcher />
+        <div className="hidden md:block"><LangSwitcher /></div>
 
 
         {/* Health */}
-        <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db]">
+        <div className="hidden md:flex items-center gap-1.5 h-8 px-2.5 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db]">
           <div
             className={`w-1.5 h-1.5 rounded-full ${
               healthy === null

@@ -11,7 +11,7 @@
  * Hides itself entirely on KnowledgeBase to avoid duplication.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, ArrowUpRight } from 'lucide-react';
@@ -26,10 +26,17 @@ function fmtUpBytes(n) {
   return `${(n / 1024 / 1024).toFixed(1)}MB`;
 }
 
+function fmtElapsed(ms) {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(seconds / 60);
+  return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
 function statusBadge(u) {
-  if (u.status === 'success') return { icon: CheckCircle2, color: '#16a34a', label: 'Uploaded' };
+  if (u.status === 'success') return { icon: CheckCircle2, color: '#16a34a', label: u.message || 'Uploaded' };
+  if (u.status === 'limited') return { icon: AlertTriangle, color: '#b45309', label: 'Quota reached' };
   if (u.status === 'error' || u.status === 'cancelled') return { icon: AlertTriangle, color: '#dc2626', label: u.status === 'cancelled' ? 'Cancelled' : 'Failed' };
-  if (u.status === 'uploading') return { icon: Upload, color: '#117dff', label: u.stage === 'processing' ? 'processing' : `${u.progress || 0}%` };
+  if (u.status === 'uploading') return { icon: Upload, color: '#117dff', label: u.bytesDone ? (u.stageLabel || 'Processing') : `${u.progress || 0}%` };
   return { icon: Upload, color: '#a3a3a3', label: 'Queued' };
 }
 
@@ -38,6 +45,14 @@ export default function GlobalUploadStrip() {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [clockNow, setClockNow] = useState(Date.now());
+
+  useEffect(() => {
+    const active = uploads?.some((u) => u.status === 'uploading' || u.status === 'queued');
+    if (!active) return undefined;
+    const timer = setInterval(() => setClockNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [uploads]);
 
   // Don't double up — KB has its own inline strip, and Overview shows the
   // compact drop-up above its chat composer.
@@ -48,6 +63,7 @@ export default function GlobalUploadStrip() {
   const inFlight = uploads.filter((u) => u.status === 'uploading' || u.status === 'queued').length;
   const done = uploads.filter((u) => u.status === 'success').length;
   const failed = uploads.filter((u) => u.status === 'error' || u.status === 'cancelled').length;
+  const limited = uploads.filter((u) => u.status === 'limited').length;
   const allLanded = inFlight === 0;
 
   // Auto-prune confirmed rows after a while so the strip clears itself.
@@ -83,9 +99,9 @@ export default function GlobalUploadStrip() {
             <div className="text-[12.5px] font-semibold text-[#0a0a0a] leading-tight">
               {inFlight > 0
                 ? `Uploading ${inFlight} ${inFlight === 1 ? 'file' : 'files'}…`
-                : allLanded && failed === 0
+                : allLanded && failed === 0 && limited === 0
                   ? `${done} ${done === 1 ? 'upload' : 'uploads'} complete`
-                  : `${done} done · ${failed} failed`}
+                  : `${done} done · ${failed + limited} unavailable`}
             </div>
             <div className="text-[10.5px] text-[#8a8a8a] mt-0.5 font-mono">
               {inFlight > 0 ? "Don't close this tab" : 'Safe to leave — server processing'}
@@ -106,6 +122,8 @@ export default function GlobalUploadStrip() {
               <div className="max-h-[260px] overflow-y-auto px-2 py-2 space-y-1">
                 {visible.map((u) => {
                   const { icon: Icon, color, label } = statusBadge(u);
+                  const progress = u.bytesDone ? Number(u.serverProgress || 0) : Number(u.progress || 0);
+                  const elapsed = fmtElapsed(clockNow - Number(u.startedAt || clockNow));
                   return (
                     <div
                       key={u.id}
@@ -117,23 +135,30 @@ export default function GlobalUploadStrip() {
                           <span className="text-[11.5px] text-[#0a0a0a] font-medium truncate">{u.filename}</span>
                           <span className="text-[10px] font-mono flex-shrink-0" style={{ color }}>{label}</span>
                         </div>
+                        {u.ingestMode && (
+                          <div className="text-[9px] text-[#8a8a8a] font-mono mt-0.5">
+                            {u.ingestMode === 'evidence' ? 'Evidence only' : 'Memories + evidence'}
+                          </div>
+                        )}
                         {/* tqdm-style filling bar — determinate while uploading,
                             pulsing once bytes hit 100% and the server is parsing. */}
                         {u.status === 'uploading' && (
                           <>
                             <div className="mt-1 h-1.5 rounded-full bg-[#e3e0db] overflow-hidden">
-                              {u.stage === 'processing' ? (
-                                <div className="h-full bg-[#117dff] animate-pulse" style={{ width: '100%' }} />
-                              ) : (
-                                <div className="h-full bg-[#117dff] transition-all duration-300" style={{ width: `${u.progress || 0}%` }} />
-                              )}
+                              <div
+                                className={`h-full bg-[#117dff] transition-all duration-300 ${u.bytesDone && progress < 100 ? 'animate-pulse' : ''}`}
+                                style={{ width: `${Math.max(2, Math.min(100, progress))}%` }}
+                              />
                             </div>
                             <div className="text-[9px] text-[#a3a3a3] font-mono mt-0.5 truncate">
-                              {u.stage === 'processing'
-                                ? 'parsing on server (Docling)…'
-                                : `${u.progress || 0}%${u.bytesTotal ? ` · ${fmtUpBytes(u.bytesLoaded)}/${fmtUpBytes(u.bytesTotal)}` : ''}${u.etaSec != null ? ` · ${Math.ceil(u.etaSec)}s left` : ''}`}
+                              {u.bytesDone
+                                ? `${Math.round(progress)}/100 [${elapsed} elapsed] · ${u.stageLabel || 'Processing'}`
+                                : `${Math.round(progress)}/100 [${elapsed}${u.etaSec != null ? `<${fmtElapsed(u.etaSec * 1000)}` : ''}]${u.bytesTotal ? ` · ${fmtUpBytes(u.bytesLoaded)}/${fmtUpBytes(u.bytesTotal)}` : ''}${u.speedBps > 0 ? ` · ${fmtUpBytes(u.speedBps)}/s` : ''}`}
                             </div>
                           </>
+                        )}
+                        {u.status === 'limited' && u.error && (
+                          <div className="text-[9px] text-[#b45309] font-mono mt-0.5 leading-snug">{u.error}</div>
                         )}
                       </div>
                       <button

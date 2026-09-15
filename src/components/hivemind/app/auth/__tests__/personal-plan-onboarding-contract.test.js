@@ -29,6 +29,18 @@ test('first-time onboarding uses an edge-to-edge equal split instead of a boxed 
   expect(login).toContain("showOnboarding ? 'h-screen overflow-hidden p-0'");
   expect(login).toContain("showOnboarding ? 'h-full max-w-none m-0'");
   expect(login).toContain("showOnboarding ? 'h-full w-full border-0 rounded-none shadow-none'");
-  expect(login).toContain("h-full overflow-y-auto p-8 md:w-1/2");
-  expect(login).toContain("h-full md:w-1/2");
+  expect(login).toContain("h-full overflow-y-auto p-7 md:w-1/2");
+  expect(login).toContain("max-w-2xl flex-col justify-center");
+  expect(login).toContain("hidden md:flex bg-[#f8f7f2]");
+  expect(login).toContain('HIVEMIND PRODUCT LAYERS');
+  expect(login).toContain('Select a plan to preview your access');
+});
+
+test('login identifies the Singulance brand without the legacy hexagon mark', () => {
+  const login = read('../LoginPage.jsx');
+
+  expect(login).toContain('src="/images/singulance-orbit.png"');
+  expect(login).toContain('>SINGULANCE</h1>');
+  expect(login).toContain('HIVEMIND · MEMORY ENGINE');
+  expect(login).not.toContain('<Hexagon');
 });

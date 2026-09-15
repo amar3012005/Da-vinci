@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { Check, Copy } from 'lucide-react';
 import NewsArticleLayout, { H2, P, Table, FullBleed } from './research/NewsArticleLayout';
 import InteractiveByteSlot from './research/InteractiveByteSlot';
 
@@ -6,12 +7,91 @@ const IcarusHeroScene = lazy(() => import('./research/three/IcarusHeroScene'));
 
 const EMBER = '#FF5229';
 const BORDER = '#E4E3DE';
+const ICARUS_AGENT_SETUP_URL = 'https://icarus.singulancelabs.com/agent-setup/prompt.md';
+const ICARUS_AGENT_SETUP_PROMPT = `Fetch and follow the ICARUS coding-agent setup instructions at:
+
+${ICARUS_AGENT_SETUP_URL}
+
+Set up ICARUS for the current repository. Detect the coding agent, install ICARUS only if needed, register its MCP integration, initialize this repository, and verify the result. Do not create a graph, governed task, or upload project data unless the user’s actual task requires it. Use ICARUS primarily for targeted durable memory and recall; use the full harness only for high-risk changes such as production, security, tenant, billing, migration, destructive, or major-refactor work.`;
+
+const CODING_AGENT_LOGOS = [
+  { name: 'OpenAI Codex', src: '/agent-setup/icons/openai.svg' },
+  { name: 'Claude Code', src: '/agent-setup/icons/anthropic.svg' },
+  { name: 'Cursor', src: '/agent-setup/icons/cursor.svg' },
+];
+
+const AgentOnboardingPill = () => {
+  const [copied, setCopied] = useState(false);
+  const copySetupPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(ICARUS_AGENT_SETUP_PROMPT);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <div className="mx-auto flex w-full max-w-[460px] justify-center px-1">
+      <button
+        type="button"
+        onClick={copySetupPrompt}
+        aria-label="Copy the ICARUS coding-agent onboarding prompt"
+        className="group flex w-full items-center justify-between gap-2 rounded-full border border-white/60 bg-white px-3 py-2 text-left shadow-[0_2px_12px_rgba(0,0,0,0.2)] transition-all hover:border-white hover:shadow-md sm:px-4"
+      >
+        <span className="min-w-0 truncate font-['Space_Grotesk'] text-[13px] font-medium tracking-tight text-[#0a0a0a] sm:text-[15px]">Onboard your coding agent to ICARUS</span>
+        <span className="flex shrink-0 items-center gap-1 text-[#0a0a0a] sm:gap-1.5">
+          {CODING_AGENT_LOGOS.map((agent) => (
+            <img
+              key={agent.name}
+              src={agent.src}
+              alt={`${agent.name} logo`}
+              title={agent.name}
+              className="h-4 w-4 object-contain sm:h-[18px] sm:w-[18px]"
+            />
+          ))}
+          <span className={`ml-0.5 flex h-6 w-6 items-center justify-center rounded-[5px] border transition-colors sm:ml-1 ${copied ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252] group-hover:border-[#0a0a0a] group-hover:text-[#0a0a0a]'}`}>
+            {copied ? <Check size={13} strokeWidth={2.2} /> : <Copy size={13} />}
+          </span>
+        </span>
+      </button>
+      <span className="sr-only" aria-live="polite">{copied ? 'ICARUS agent setup prompt copied to clipboard.' : ''}</span>
+    </div>
+  );
+};
+
+const ThesisLicenseNotice = () => (
+  <aside className="mt-14 border-t pt-8" style={{ borderColor: BORDER }} aria-label="Thesis license">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+      <div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#77746d]">Thesis license</div>
+        <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#54514b]">
+          The ICARUS v1 thesis is licensed under{' '}
+          <a className="font-medium text-[#0a0a0a] underline decoration-[#FF5229]/70 underline-offset-4 hover:text-[#FF5229]" href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">Creative Commons Attribution 4.0 International</a>{' '}
+          (CC BY 4.0). You may share and adapt it with appropriate attribution. The ICARUS software remains{' '}
+          <a className="font-medium text-[#0a0a0a] underline decoration-[#FF5229]/70 underline-offset-4 hover:text-[#FF5229]" href="https://github.com/amar3012005/ICARUS/blob/main/LICENSE" target="_blank" rel="noreferrer">Apache-2.0</a>.
+        </p>
+      </div>
+      <a
+        className="shrink-0 self-start rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[#3a3833] no-underline transition-colors hover:border-[#0a0a0a] hover:text-[#0a0a0a]"
+        style={{ borderColor: BORDER }}
+        href="https://github.com/amar3012005/ICARUS/blob/main/THESIS-LICENSE.md"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Read license
+      </a>
+    </div>
+  </aside>
+);
 
 const useMotionOk = () => {
   const [ok, setOk] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    setOk(window.matchMedia('(min-width: 768px)').matches && !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const wide = window.matchMedia?.('(min-width: 768px)');
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    setOk(Boolean(wide?.matches && !reducedMotion?.matches));
   }, []);
   return ok;
 };
@@ -316,6 +396,7 @@ const IcarusResearch = () => {
       author="SINGULANCE Labs"
       heroImg={HERO_IMG}
       heroScene={motionOk ? <Suspense fallback={null}><IcarusHeroScene /></Suspense> : null}
+      heroAccessory={<AgentOnboardingPill />}
       seo={meta.seo}
       product={{ name: 'ICARUS', tag: '.amr format', desc: 'A memory filesystem for AI agents — one mmap’d file per tenant, no server.' }}
       highlights={meta.highlights}
@@ -324,6 +405,7 @@ const IcarusResearch = () => {
       <div key={version} className="animate-[icarusFade_.45s_ease]">
         {version === 'v1' ? <V1Body motionOk={motionOk} /> : <V2Body motionOk={motionOk} />}
       </div>
+      <ThesisLicenseNotice />
       <style>{`@keyframes icarusFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }`}</style>
     </NewsArticleLayout>
   );

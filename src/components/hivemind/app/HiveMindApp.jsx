@@ -47,11 +47,13 @@ const TeamProjects = React.lazy(() => import('./pages/TeamProjects'));
 const JoinOrg = React.lazy(() => import('./pages/JoinOrg'));
 const ClaudeCodeConnectCallback = React.lazy(() => import('./pages/ClaudeCodeConnectCallback'));
 const McpConnectCallback = React.lazy(() => import('./pages/McpConnectCallback'));
+const ComposioConnectCallback = React.lazy(() => import('./pages/ComposioConnectCallback'));
 const AuditLog = React.lazy(() => import('./pages/AuditLog'));
 const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
 const AdminSso = React.lazy(() => import('./pages/AdminSso'));
 const DigitalEmployees = React.lazy(() => import('./pages/DigitalEmployees'));
 const HyperAgents = React.lazy(() => import('./pages/HyperAgents'));
+const OperatingRooms = React.lazy(() => import('./pages/OperatingRooms'));
 const HermesAgents = React.lazy(() => import('./pages/HermesAgents'));
 const WorkspaceAdmin = React.lazy(() => import('./pages/WorkspaceAdmin'));
 const PlatformAdmin = React.lazy(() => import('./pages/PlatformAdmin'));
@@ -124,6 +126,9 @@ export default function HiveMindApp() {
       <Routes>
         <Route path="login" element={<LoginPage />} />
         <Route path="invite" element={<InvitationLanding />} />
+        {/* Compatibility for partner links issued before the public invite path
+            was corrected. This must remain outside ProtectedRoute. */}
+        <Route path="app/invite" element={<InvitationLanding />} />
         <Route path="approve/:token" element={<RuntimeApprovalPage />} />
         {/* Public developer docs — no auth */}
         <Route path="docs" element={<PageSuspense><DocsPage /></PageSuspense>} />
@@ -205,11 +210,7 @@ export default function HiveMindApp() {
         <Route path="m/characters" element={<Navigate to="m/connectors" replace />} />
         <Route
           path="join/:slug/:token"
-          element={
-            <ProtectedRoute>
-              <PageSuspense><JoinOrg /></PageSuspense>
-            </ProtectedRoute>
-          }
+          element={<PageSuspense><JoinOrg /></PageSuspense>}
         />
 
         {/* Protected dashboard */}
@@ -254,12 +255,15 @@ export default function HiveMindApp() {
           {/* HyperAgents owns a URL subtree (one route, no remounts):
               /employees/mycompany (hero) · /employees/leads · /employees/campaigns · /employees/agents (roster) ·
               /employees/rooms/:id (thread) · /employees (redirect→mycompany) */}
+          <Route path="employees/operating-rooms" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
+          <Route path="employees/operating-rooms/:roomId" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
           <Route path="employees/*" element={<PageSuspense><HyperAgents /></PageSuspense>} />
           {/* Legacy direct roster path — kept for back-compat */}
           <Route path="employees/roster" element={<PageSuspense><DigitalEmployees /></PageSuspense>} />
           <Route path="hermes" element={<PageSuspense><HermesAgents /></PageSuspense>} />
           <Route path="connect/claude-code/callback" element={<PageSuspense><ClaudeCodeConnectCallback /></PageSuspense>} />
           <Route path="connect/mcp/callback" element={<PageSuspense><McpConnectCallback /></PageSuspense>} />
+          <Route path="connect/composio/callback" element={<PageSuspense><ComposioConnectCallback /></PageSuspense>} />
           {/* Unknown /hivemind/app/* child (stray OAuth redirect_uri like
               /app/callback, typos) → overview instead of a blank Outlet. */}
           <Route path="*" element={<Navigate to="overview" replace />} />

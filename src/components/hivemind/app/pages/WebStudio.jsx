@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronUp, RefreshCw, Save, BookmarkPlus, CheckCircle2,
   RotateCcw, ExternalLink, Activity, Layers, TrendingUp, Zap, Info,
   ShieldAlert, ShieldCheck, Ban, FileText, Sparkles, Chrome, Eye,
+  SlidersHorizontal, Code2, Copy, Check,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -271,7 +272,7 @@ function buildResearchReportHtml(job, scopeOptions = []) {
 
 // Open the report in a new tab (same-origin via document.write so it can
 // postMessage the opener for the authenticated save).
-function openResearchReportTab(job, scopeOptions) {
+export function openResearchReportTab(job, scopeOptions) {
   const w = window.open('', '_blank');
   if (!w) return false; // popup blocked
   w.document.open(); w.document.write(buildResearchReportHtml(job, scopeOptions)); w.document.close();
@@ -600,9 +601,9 @@ export default function WebStudio() {
   );
 
   return (
-    <div className="font-['Space_Grotesk'] flex flex-col h-[calc(100vh-3.5rem-3rem)] max-w-[1100px] mx-auto -my-2">
+    <div className="font-['Space_Grotesk'] max-w-[1100px] mx-auto pb-10">
       {/* Header — compact, always visible */}
-      <header className="shrink-0 flex items-start justify-between gap-4 pb-2">
+      <header className="flex items-start justify-between gap-4 mb-5">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <Globe size={16} className="text-[#117dff]" />
@@ -621,11 +622,37 @@ export default function WebStudio() {
         <UsageRings usage={usage} monthly={monthly} />
       </header>
 
-      {/* Upper area — fills available space, scrolls when content overflows.
+      {/* Playground — mode selector + input pinned at the top, results grow below */}
+      <AnimatePresence>
+        {submitError && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="mb-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[12px] text-red-700"
+          >
+            <AlertTriangle size={13} />{submitError}
+            <button onClick={() => setSubmitError(null)} className="ml-auto text-red-400 hover:text-red-700">
+              <X size={13} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <PromptBar
+        prompt={prompt} setPrompt={setPrompt}
+        mode={detectedMode} forcedMode={forcedMode} setForcedMode={setForcedMode}
+        submitting={submitting} onSubmit={handleSubmit} onKey={handleKey}
+        depth={crawlDepth} setDepth={setCrawlDepth}
+        pageLimit={crawlPageLimit} setPageLimit={setCrawlPageLimit}
+        researchModel={researchModel} setResearchModel={setResearchModel}
+        citationFormat={citationFormat} setCitationFormat={setCitationFormat}
+        domainPolicy={domainPolicy} checkingPolicy={checkingPolicy}
+        locked={featureLocked}
+      />
+
+      {/* Results — grows below the playground, page itself scrolls (AppShell main).
           • Running research → live progress + streaming content
           • No active run → Past research toggle + (optional) drop-down list
           • Non-research jobs always show in their own compact list */}
-      <div className="flex-1 min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin]">
+      <div className="mt-6">
         {activeResearchJob ? (
           <LiveResearchPanel job={activeResearchJob} />
         ) : (
@@ -697,36 +724,6 @@ export default function WebStudio() {
             </AnimatePresence>
           </section>
         )}
-
-        <div className="h-3" />
-      </div>
-
-      {/* Fixed bottom chat bar */}
-      <div className="shrink-0 pt-2 border-t border-[#e3e0db] bg-[#faf9f4]">
-        <AnimatePresence>
-          {submitError && (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="mb-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[12px] text-red-700"
-            >
-              <AlertTriangle size={13} />{submitError}
-              <button onClick={() => setSubmitError(null)} className="ml-auto text-red-400 hover:text-red-700">
-                <X size={13} />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <PromptBar
-          prompt={prompt} setPrompt={setPrompt}
-          mode={detectedMode} forcedMode={forcedMode} setForcedMode={setForcedMode}
-          submitting={submitting} onSubmit={handleSubmit} onKey={handleKey}
-          depth={crawlDepth} setDepth={setCrawlDepth}
-          pageLimit={crawlPageLimit} setPageLimit={setCrawlPageLimit}
-          researchModel={researchModel} setResearchModel={setResearchModel}
-          citationFormat={citationFormat} setCitationFormat={setCitationFormat}
-          domainPolicy={domainPolicy} checkingPolicy={checkingPolicy}
-          locked={featureLocked}
-        />
       </div>
 
       {/* Detail modal — for non-research result drilldown */}
@@ -864,11 +861,16 @@ function PastResearchPanel({ jobs, onPick, onOpenReport, locked, savedByJob = {}
     <div className="h-full">
       {/* Guided start when there's nothing to show yet; otherwise the
           reports list is ALWAYS visible — no hidden dropdown to discover. */}
-      {jobs.length > 0 && (
+      {jobs.length > 0 ? (
         <div className="flex items-center gap-2 px-1 pb-2">
           <Sparkles size={14} className="text-blue-500" />
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">{t('webstudio.pastResearch', 'Research reports')}</span>
           <span className="text-[10px] font-mono text-[#a3a3a3]">{t('webstudio.reportCount', '{{count}} report', { count: jobs.length })}</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-1 pb-2">
+          <Sparkles size={14} className="text-blue-500" />
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">{t('webstudio.tryAnExample', 'Try an example')}</span>
         </div>
       )}
 
@@ -944,7 +946,7 @@ function PastResearchPanel({ jobs, onPick, onOpenReport, locked, savedByJob = {}
 
 /* ─── Past research preview modal (with one-click save) ──────────── */
 
-function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onOpenReport }) {
+export function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onOpenReport }) {
   const { t } = useTranslation('dashboard');
   const result = Array.isArray(job.results) ? job.results[0] : null;
   const title = deriveJobTitle(job, job.results || []);
@@ -1097,7 +1099,34 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onO
   );
 }
 
-/* ─── Prompt bar ───────────────────────────────────────────────────── */
+/* ─── Playground selector + prompt bar (Firecrawl-style, HIVEMIND brand) ── */
+
+// Category-grouped mode pills — one shared light-grey track, each pill wears
+// its own category label above it (DISCOVER / RESEARCH / CRAWL), the active
+// pill lifts to white with a thin border. Mirrors Firecrawl's Search/Scrape/
+// Parse/Map/Crawl selector, mapped onto HIVEMIND's three real web-intel
+// backends instead of inventing UI for endpoints that don't exist.
+const MODE_GROUPS = [
+  { id: 'search',   category: 'Discover', label: 'Search',   icon: Search },
+  { id: 'research', category: 'Research', label: 'Research', icon: Sparkles },
+  { id: 'crawl',    category: 'Crawl',    label: 'Crawl',    icon: LinkIcon },
+];
+
+// Honest "Get code" — the exact endpoint + payload PromptBar's own onSubmit
+// sends for the current mode, not a fabricated public API. Callers with API
+// keys can already hit /v1/proxy/web/* directly; this just shows them how.
+function buildCodeSnippet(mode, input, opts) {
+  const body = mode === 'crawl'
+    ? { urls: [input ? normalizeUrl(input) : 'https://example.com'], depth: opts.depth, page_limit: opts.pageLimit }
+    : mode === 'research'
+      ? { input: input || 'compare vector DBs for 1M-row RAG', model: opts.researchModel, citation_format: opts.citationFormat }
+      : { query: input || 'milvus vs qdrant benchmarks', limit: 10 };
+  const path = mode === 'crawl' ? '/v1/proxy/web/crawl/jobs' : mode === 'research' ? '/v1/proxy/web/research/jobs' : '/v1/proxy/web/search/jobs';
+  return `curl -X POST https://api.singulancelabs.com${path} \\
+  -H "Authorization: Bearer $HIVEMIND_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '${JSON.stringify(body, null, 2).replace(/\n/g, '\n  ')}'`;
+}
 
 function PromptBar({
   prompt, setPrompt, mode, forcedMode, setForcedMode,
@@ -1107,163 +1136,191 @@ function PromptBar({
   domainPolicy, checkingPolicy, locked,
 }) {
   const { t } = useTranslation('dashboard');
-  const ModeIcon = mode === 'crawl' ? LinkIcon
-    : mode === 'research' ? Sparkles
-    : Search;
-  const modeColor = mode === 'crawl' ? 'text-amber-500'
-    : mode === 'research' ? 'text-blue-500'
-    : 'text-[#117dff]';
-  const modeLabel = mode === 'crawl' ? t('webstudio.mode.crawl', 'Crawl mode')
-    : mode === 'research' ? t('webstudio.mode.research', 'Research mode')
-    : t('webstudio.mode.search', 'Search mode');
-  const modeHint = mode === 'crawl'
-    ? t('webstudio.modeHint.crawl', 'Auto-detected from URL · /search or /research to override')
-    : mode === 'research'
-      ? t('webstudio.modeHint.research', 'Tavily compiles multi-source report with citations · /search for raw results')
-      : t('webstudio.modeHint.search', 'Raw 10 results · /research for comprehensive report');
+  const [knobsOpen, setKnobsOpen] = useState(false);
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const active = MODE_GROUPS.find((g) => g.id === mode) || MODE_GROUPS[0];
+  const PrefixIcon = active.icon;
   const placeholder = mode === 'crawl'
-    ? t('webstudio.placeholder.crawl', 'Paste a URL to crawl…')
+    ? t('webstudio.placeholder.crawl', 'https://example.com')
     : mode === 'research'
       ? t('webstudio.placeholder.research', 'Research the web…  e.g. "compare vector DBs for 1M-row RAG"')
       : t('webstudio.placeholder.search', 'Search the web…  e.g. "milvus vs qdrant benchmarks"');
+  const startLabel = mode === 'crawl' ? t('webstudio.startCrawl', 'Start crawling')
+    : mode === 'research' ? t('webstudio.startResearch', 'Start research')
+    : t('webstudio.startSearch', 'Start searching');
 
-  // Explicit mode pills — replaces the old "click to cycle" mystery button.
-  const MODE_PILLS = [
-    { id: null,        label: t('webstudio.pill.auto', 'Auto'),      icon: null,     active: 'bg-[#0a0a0a] text-white' },
-    { id: 'research',  label: t('webstudio.pill.research', 'Research'), icon: Sparkles, active: 'bg-blue-500 text-white' },
-    { id: 'search',    label: t('webstudio.pill.search', 'Search'),  icon: Search,   active: 'bg-[#117dff] text-white' },
-    { id: 'crawl',     label: t('webstudio.pill.crawl', 'Crawl'),    icon: LinkIcon, active: 'bg-amber-500 text-white' },
-  ];
+  const snippet = useMemo(
+    () => buildCodeSnippet(mode, prompt.replace(/^\/(research|search|crawl)\s+/i, '').trim(), { depth, pageLimit, researchModel, citationFormat }),
+    [mode, prompt, depth, pageLimit, researchModel, citationFormat],
+  );
+  const copySnippet = () => {
+    navigator.clipboard?.writeText(snippet).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  };
 
   return (
-    <div className={`relative bg-white border ${locked ? 'border-red-200' : 'border-[#e3e0db]'} rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden`}>
-      {/* Mode indicator strip */}
-      <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
-        <ModeIcon size={12} className={modeColor} />
-        <span className="text-[10px] font-mono uppercase tracking-wider text-[#737373]">{modeLabel}</span>
+    <div>
+      {/* Category-grouped mode selector */}
+      <div className="flex items-center gap-3 mb-3">
+        <div className="inline-flex items-stretch gap-1 bg-[#f3f1ec] border border-[#e3e0db] rounded-2xl p-1.5">
+          {MODE_GROUPS.map((g) => {
+            const isActive = mode === g.id;
+            const GIcon = g.icon;
+            return (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => setForcedMode(g.id)}
+                className="flex flex-col items-start px-2"
+              >
+                <span className={`text-[9px] font-mono uppercase tracking-wider mb-1 px-1 ${isActive ? 'text-[#117dff]' : 'text-[#a3a3a3]'}`}>{g.category}</span>
+                <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] font-medium transition-colors ${
+                  isActive ? 'bg-white text-[#0a0a0a] shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-[#e3e0db]' : 'text-[#6b7280] hover:text-[#0a0a0a]'
+                }`}>
+                  <GIcon size={14} className={isActive ? 'text-[#117dff]' : 'text-[#a3a3a3]'} /> {g.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
         {forcedMode && (
-          <button onClick={() => setForcedMode(null)} className="text-[9px] font-mono text-[#a3a3a3] hover:text-[#0a0a0a]" title={t('webstudio.clearForcedMode', 'Clear forced mode')}>
-            {t('webstudio.forcedClear', '(forced — clear)')}
+          <button
+            onClick={() => setForcedMode(null)}
+            title={t('webstudio.clearForcedMode', 'Back to auto-detect (URL → crawl, text → research)')}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-[#e3e0db] bg-white text-[10.5px] font-medium text-[#737373] hover:text-[#0a0a0a] hover:border-[#d4d0ca] transition-colors self-center"
+          >
+            <RotateCcw size={10} /> {t('webstudio.backToAutoDetect', 'Auto-detect')}
           </button>
         )}
-        <span className="text-[9px] text-[#a3a3a3] ml-auto">{modeHint}</span>
       </div>
 
-      {/* Textarea */}
-      <textarea
-        value={prompt}
-        onChange={e => setPrompt(e.target.value)}
-        onKeyDown={onKey}
-        placeholder={placeholder}
-        rows={2}
-        disabled={locked}
-        className="w-full px-4 pt-1 pb-2 text-[14px] text-[#0a0a0a] placeholder:text-[#a3a3a3] bg-transparent border-0 resize-none focus:outline-none disabled:opacity-50"
-      />
-
-      {/* Research knobs — depth (model) + citation format */}
-      {mode === 'research' && (
-        <div className="px-4 py-2 border-t border-[#f3f1ec] flex flex-wrap items-center gap-3 text-[11px] text-[#525252]">
-          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3]">{t('webstudio.depth', 'depth')}</span>
-          <div className="flex items-center gap-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded-md p-0.5">
-            {['mini', 'auto', 'pro'].map(opt => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => setResearchModel(opt)}
-                className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase transition-colors ${
-                  researchModel === opt
-                    ? 'bg-blue-500 text-white'
-                    : 'text-[#525252] hover:bg-white'
-                }`}
-                title={opt === 'mini' ? t('webstudio.modelMiniTitle', 'Targeted, fast (single-angle)') : opt === 'pro' ? t('webstudio.modelProTitle', 'Comprehensive, multi-subtopic') : t('webstudio.modelAutoTitle', 'Auto-pick best for query')}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3] ml-2">{t('webstudio.cite', 'cite')}</span>
-          <select
-            value={citationFormat}
-            onChange={e => setCitationFormat(e.target.value)}
-            className="bg-[#faf9f4] border border-[#e3e0db] rounded px-2 py-0.5 text-[10px] font-mono"
-          >
-            <option value="numbered">numbered</option>
-            <option value="apa">apa</option>
-            <option value="mla">mla</option>
-            <option value="chicago">chicago</option>
-          </select>
-          <span className="ml-auto text-[10px] text-[#a3a3a3] font-mono">
-            {researchModel === 'pro' ? t('webstudio.proTiming', '~60-180s · multi-subtopic') : researchModel === 'mini' ? t('webstudio.miniTiming', '~15-40s · targeted') : t('webstudio.autoPicked', 'auto-picked')}
+      {/* Input card */}
+      <div className={`relative bg-white border ${locked ? 'border-red-200' : 'border-[#e3e0db]'} rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden`}>
+        <div className="flex items-center gap-2.5 px-4 py-3.5">
+          <span className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] text-[12px] font-mono text-[#a3a3a3] flex-shrink-0">
+            <PrefixIcon size={13} className="text-[#117dff]" />
+            {mode === 'crawl' ? 'https://' : mode.slice(0, 1).toUpperCase() + mode.slice(1)}
           </span>
+          <input
+            type="text"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={onKey}
+            placeholder={placeholder}
+            disabled={locked}
+            className="flex-1 min-w-0 text-[15px] text-[#0a0a0a] placeholder:text-[#a3a3a3] bg-transparent border-0 focus:outline-none disabled:opacity-50"
+          />
         </div>
-      )}
 
-      {/* Crawl knobs */}
-      {mode === 'crawl' && (
-        <div className="px-4 py-2 border-t border-[#f3f1ec] flex items-center gap-3 text-[11px] text-[#525252]">
-          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3]">{t('webstudio.depth', 'depth')}</span>
-          <input type="number" min={1} max={3} value={depth} onChange={e => setDepth(Math.max(1, Math.min(3, Number(e.target.value))))}
-            className="w-12 px-1.5 py-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded text-center font-mono" />
-          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3] ml-2">{t('webstudio.pages', 'pages')}</span>
-          <input type="number" min={1} max={50} value={pageLimit} onChange={e => setPageLimit(Math.max(1, Math.min(50, Number(e.target.value))))}
-            className="w-14 px-1.5 py-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded text-center font-mono" />
-          {checkingPolicy && <span className="ml-auto text-[10px] text-[#a3a3a3] flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> {t('webstudio.checkingDomain', 'checking domain…')}</span>}
-          {domainPolicy?.blocked && (
-            <span className="ml-auto text-[10px] text-red-600 flex items-center gap-1">
-              <Ban size={10} /> {t('webstudio.blocked', 'blocked: {{reason}}', { reason: domainPolicy.reason || t('webstudio.policyDenial', 'policy denial') })}
-            </span>
+        {/* Advanced knobs — disclosed by the sliders icon, not always-on chrome */}
+        <AnimatePresence>
+          {knobsOpen && mode === 'research' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-[#f3f1ec]">
+              <div className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-[11px] text-[#525252]">
+                <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3]">{t('webstudio.depth', 'depth')}</span>
+                <div className="flex items-center gap-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded-md p-0.5">
+                  {['mini', 'auto', 'pro'].map((opt) => (
+                    <button key={opt} type="button" onClick={() => setResearchModel(opt)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase transition-colors ${researchModel === opt ? 'bg-[#117dff] text-white' : 'text-[#525252] hover:bg-white'}`}
+                      title={opt === 'mini' ? t('webstudio.modelMiniTitle', 'Targeted, fast (single-angle)') : opt === 'pro' ? t('webstudio.modelProTitle', 'Comprehensive, multi-subtopic') : t('webstudio.modelAutoTitle', 'Auto-pick best for query')}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+                <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3] ml-2">{t('webstudio.cite', 'cite')}</span>
+                <select value={citationFormat} onChange={(e) => setCitationFormat(e.target.value)} className="bg-[#faf9f4] border border-[#e3e0db] rounded px-2 py-0.5 text-[10px] font-mono">
+                  <option value="numbered">numbered</option>
+                  <option value="apa">apa</option>
+                  <option value="mla">mla</option>
+                  <option value="chicago">chicago</option>
+                </select>
+                <span className="ml-auto text-[10px] text-[#a3a3a3] font-mono">
+                  {researchModel === 'pro' ? t('webstudio.proTiming', '~60-180s · multi-subtopic') : researchModel === 'mini' ? t('webstudio.miniTiming', '~15-40s · targeted') : t('webstudio.autoPicked', 'auto-picked')}
+                </span>
+              </div>
+            </motion.div>
           )}
-          {domainPolicy && !domainPolicy.blocked && (
-            <span className="ml-auto text-[10px] text-emerald-600 flex items-center gap-1">
-              <ShieldCheck size={10} /> {t('webstudio.allowed', 'allowed')}
-            </span>
+          {knobsOpen && mode === 'crawl' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-[#f3f1ec]">
+              <div className="px-4 py-2.5 flex items-center gap-3 text-[11px] text-[#525252]">
+                <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3]">{t('webstudio.depth', 'depth')}</span>
+                <input type="number" min={1} max={3} value={depth} onChange={(e) => setDepth(Math.max(1, Math.min(3, Number(e.target.value))))}
+                  className="w-12 px-1.5 py-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded text-center font-mono" />
+                <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3] ml-2">{t('webstudio.pages', 'pages')}</span>
+                <input type="number" min={1} max={50} value={pageLimit} onChange={(e) => setPageLimit(Math.max(1, Math.min(50, Number(e.target.value))))}
+                  className="w-14 px-1.5 py-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded text-center font-mono" />
+              </div>
+            </motion.div>
           )}
-        </div>
-      )}
+        </AnimatePresence>
 
-      {/* Footer */}
-      <div className="px-4 py-2 bg-[#faf9f4] border-t border-[#f3f1ec] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5 bg-white border border-[#e3e0db] rounded-lg p-0.5">
-            {MODE_PILLS.map((p) => {
-              const isActive = forcedMode === p.id;
-              const PIcon = p.icon;
-              return (
-                <button
-                  key={String(p.id)}
-                  onClick={() => setForcedMode(p.id)}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors ${
-                    isActive ? p.active : 'text-[#525252] hover:bg-[#f3f1ec]'
-                  }`}
-                  title={p.id === null ? t('webstudio.pill.autoTitle', 'Detect mode from input (URL → crawl, text → research)') : undefined}
-                >
-                  {PIcon && <PIcon size={10} />}
-                  {p.label}
-                </button>
-              );
-            })}
+        {/* Toolbar */}
+        <div className="px-3 py-2 bg-[#faf9f4] border-t border-[#f3f1ec] flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setKnobsOpen((v) => !v)}
+            className={`p-1.5 rounded-lg transition-colors ${knobsOpen ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#f3f1ec]'}`}
+            title={t('webstudio.advancedOptions', 'Advanced options')}
+          >
+            <SlidersHorizontal size={14} />
+          </button>
+
+          {mode === 'crawl' && (
+            checkingPolicy ? (
+              <span className="text-[10px] text-[#a3a3a3] flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> {t('webstudio.checkingDomain', 'checking domain…')}</span>
+            ) : domainPolicy?.blocked ? (
+              <span className="text-[10px] text-red-600 flex items-center gap-1"><Ban size={10} /> {t('webstudio.blocked', 'blocked: {{reason}}', { reason: domainPolicy.reason || t('webstudio.policyDenial', 'policy denial') })}</span>
+            ) : domainPolicy ? (
+              <span className="text-[10px] text-emerald-600 flex items-center gap-1"><ShieldCheck size={10} /> {t('webstudio.allowed', 'allowed')}</span>
+            ) : null
+          )}
+
+          <div className="ml-auto flex items-center gap-1.5">
+            <div className="relative">
+              <button type="button" onClick={() => setCodeOpen((v) => !v)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#e3e0db] bg-white text-[#525252] text-[11.5px] font-medium hover:border-[#d4d0ca] transition-colors">
+                <Code2 size={13} /> {t('webstudio.getCode', 'Get code')}
+              </button>
+              <AnimatePresence>
+                {codeOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                    className="absolute right-0 bottom-[calc(100%+8px)] w-[380px] bg-[#0a0a0a] border border-[#262626] rounded-xl shadow-[0_24px_60px_rgba(0,0,0,0.3)] p-3.5 z-20"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-[#8a8a8a]">{t('webstudio.curlExample', 'cURL — same endpoint this button calls')}</span>
+                      <button onClick={copySnippet} className="flex items-center gap-1 text-[10px] text-[#a3a3a3] hover:text-white">
+                        {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />} {copied ? t('webstudio.copied', 'Copied') : t('webstudio.copy', 'Copy')}
+                      </button>
+                    </div>
+                    <pre className="text-[10.5px] leading-relaxed text-[#d4d4d4] font-mono whitespace-pre-wrap break-all max-h-[220px] overflow-y-auto">{snippet}</pre>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <button
+              onClick={onSubmit}
+              disabled={!prompt.trim() || submitting || locked || (mode === 'crawl' && domainPolicy?.blocked)}
+              className="flex items-center gap-1.5 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed text-white text-[12.5px] font-semibold px-4 py-1.5 rounded-lg transition-colors"
+            >
+              {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+              {submitting ? t('webstudio.submitting', 'Submitting…') : startLabel}
+            </button>
           </div>
-          <span className="text-[10px] text-[#a3a3a3] hidden sm:inline">{t('webstudio.enterHint', 'Enter to send · Shift+Enter newline')}</span>
         </div>
-        <button
-          onClick={onSubmit}
-          disabled={!prompt.trim() || submitting || locked || (mode === 'crawl' && domainPolicy?.blocked)}
-          className="flex items-center gap-1.5 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 disabled:cursor-not-allowed text-white text-[12px] font-semibold px-3.5 py-1.5 rounded-lg transition-all"
-        >
-          {submitting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-          {submitting ? t('webstudio.submitting', 'Submitting') : t('webstudio.send', 'Send')}
-        </button>
+
+        {locked && (
+          <div className="absolute inset-0 bg-white/85 backdrop-blur-[1px] flex items-center justify-center">
+            <div className="text-center px-4">
+              <Lock size={22} className="text-red-500 mx-auto mb-2" />
+              <p className="text-[13px] font-semibold text-[#0a0a0a]">{t('webstudio.notEnabled', 'Web intelligence is not enabled')}</p>
+              <p className="text-[11px] text-[#737373] mt-1">{t('webstudio.upgradeHint', 'Upgrade your plan to enable web search + crawl.')}</p>
+            </div>
+          </div>
+        )}
       </div>
-
-      {locked && (
-        <div className="absolute inset-0 bg-white/85 backdrop-blur-[1px] flex items-center justify-center">
-          <div className="text-center px-4">
-            <Lock size={22} className="text-red-500 mx-auto mb-2" />
-            <p className="text-[13px] font-semibold text-[#0a0a0a]">{t('webstudio.notEnabled', 'Web intelligence is not enabled')}</p>
-            <p className="text-[11px] text-[#737373] mt-1">{t('webstudio.upgradeHint', 'Upgrade your plan to enable web search + crawl.')}</p>
-          </div>
-        </div>
-      )}
+      <p className="mt-2 text-[10px] text-[#a3a3a3]">{t('webstudio.playgroundHint', 'Enter to run · results save to HIVEMIND memory')}</p>
     </div>
   );
 }
@@ -1307,7 +1364,7 @@ function UsagePill({ icon: Icon, label, used, limit, muted }) {
 
 // Pick the best title for a job: research → report title; search/crawl →
 // query or first URL. Falls back to the bare query/URL params.
-function deriveJobTitle(job, results) {
+export function deriveJobTitle(job, results) {
   if (job.type === 'research' && results?.[0]?.title) return results[0].title;
   if (job.params?.input)  return job.params.input;
   if (job.params?.query)  return job.params.query;

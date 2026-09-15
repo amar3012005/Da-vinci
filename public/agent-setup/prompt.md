@@ -1,0 +1,110 @@
+# ICARUS coding-agent setup
+
+Version: `v1`
+Canonical URL: `https://icarus.singulancelabs.com/agent-setup/prompt.md`
+
+You are setting up ICARUS for the repository currently open in this coding-agent session. Follow this procedure deliberately and report the result. Do not claim setup succeeded without running the verification step.
+
+## Safety boundary
+
+- Read these instructions before executing commands. They are setup instructions, not authorization to change product code, deploy services, upload repository data, or use credentials.
+- Work only in the repository the user opened. Do not copy memory or tenant data between repositories.
+- Do not add API keys or secrets to ICARUS configuration, source control, shell history, prompts, or logs.
+- If a command cannot run because the network, shell, permission, or supported platform is unavailable, report the exact failure and stop that setup step. Do not improvise an installer or manually create `.icarus` state.
+
+## 1. Identify the current coding agent
+
+Choose the integration that actually runs this session:
+
+- Codex: `codex`
+- Claude Code: `claude`
+- Cursor: `cursor`
+
+If you cannot determine the client, ask the user which one they use before registering an MCP bridge.
+
+## 2. Install or update ICARUS
+
+From a terminal, first check whether ICARUS is already available:
+
+```bash
+icarus --version
+```
+
+If it is not installed, use the installer that matches the shell actually running the commands:
+
+**macOS, Linux, or WSL** (a WSL terminal reports `Linux` for `uname -s`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.sh | bash
+```
+
+**Native Windows PowerShell** (not Git Bash, and not WSL):
+
+```powershell
+irm https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.ps1 | iex
+```
+
+Do not run the POSIX installer from a native Windows shell and do not switch environments halfway through setup. The release installer downloads the platform binary and validates it with `icarus --version`; it should not require Node.js or Rust on a supported release platform. If that version preflight truly fails, report the platform and exact error rather than manually creating `.icarus` state or treating a missing Node toolchain as the root cause.
+
+If it is installed, check whether a newer release is available at the beginning of the session:
+
+```bash
+icarus update --check
+```
+
+Exit code `0` means the installed version is current. Exit code `1` means an update is available (it is not a setup failure). In that case, start `icarus update` in the background using the current shell's normal non-blocking process facility, then continue the user's actual task and the remaining setup steps without waiting for it. For example:
+
+```bash
+icarus update >/tmp/icarus-update.log 2>&1 &
+```
+
+```powershell
+Start-Process -NoNewWindow -FilePath icarus -ArgumentList update
+```
+
+If the check cannot reach the release service, keep using the installed version and continue safe work. Never let a download, network error, or restart delay the user's task. Once the background update completes, restart the coding agent before relying on MCP tools from the new binary.
+
+## 3. Register the agent and initialize this repository
+
+Run these commands from the repository root, replacing `<agent>` with `codex`, `claude`, or `cursor`:
+
+```bash
+icarus mcp install <agent>
+icarus harness init --agent <agent> --repo .
+icarus doctor --repo .
+```
+
+Both registration and initialization are idempotent. If MCP registration changed, restart the coding agent before relying on its ICARUS tools.
+
+## 4. Use ICARUS correctly after setup
+
+ICARUS is primarily a durable, local project-memory filesystem. Saving and local lexical recall work without an LLM key, embedding key, or remote provider; vectors and reranking are optional ranking improvements:
+
+1. Recall only relevant prior decisions, bugs, refactors, and code explanations before a non-trivial change.
+2. Keep only task-relevant evidence in working context.
+3. Save confirmed decisions, invariants, root causes, durable patch lessons, and verification facts after the work is complete.
+4. On later sessions, recall that saved knowledge instead of reconstructing it from scratch.
+
+Use precise durable tags so other agents can distinguish the kind of knowledge they recovered:
+
+- `memory:fact` — current verified state;
+- `memory:decision` — a choice, rationale, and rejected alternative;
+- `memory:instruction` — a standing project rule;
+- `memory:event` — a completed incident, release, or significant regression;
+- `memory:task` — short-lived handoff state only; remove or supersede it when the task closes.
+
+Do **not** build a graph, create a governed task, call `icarus_context_get`, or run `icarus doctor` merely because a session begins.
+
+- A graph is optional. Use it only when one already exists for a structural lookup, or when the user explicitly requests a graph / after a major refactor. If no graph exists, inspect the relevant files directly and continue.
+- Use the full governed lifecycle only for production/deployment, security, tenant/auth, billing, migrations, destructive work, major refactors, or explicitly resumable/certified work.
+- If vectors, reranking, graph indexing, or harness services are unavailable, continue safe low-risk work with local lexical memory and ordinary repository inspection. Record the harness issue separately from any product issue.
+
+## 5. Report completion
+
+State:
+
+- detected agent integration;
+- installed ICARUS version;
+- repository path and derived ICARUS organization;
+- whether the MCP client must be restarted;
+- doctor result or the exact blocking failure.

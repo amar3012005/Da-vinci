@@ -3,8 +3,32 @@ import { API_DEFAULTS } from './theme';
 import { isPlanLimitError, extractPlanLimit, emitPlanLimit } from './planLimit';
 import { isServiceError, extractServiceError, emitServiceError } from './serviceError';
 import { productActionDecision } from './product-access';
+import { hasIngestModeMismatch, hasMemoryGenerationFailure, ingestFailureDetails, normalizeIngestMode, responseIngestMode } from './knowledge-ingest-contract';
 
 const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
+const PLATFORM_ADMIN_HOST = 'admin.hivemind.singulancelabs.com';
+const PLATFORM_ADMIN_ENVIRONMENT_KEY = 'hivemind_platform_admin_environment';
+const PLATFORM_ADMIN_BASES = Object.freeze({
+  production: Object.freeze({
+    frontend: 'https://next.singulancelabs.com',
+    controlPlane: 'https://api.singulancelabs.com',
+    core: 'https://core.singulancelabs.com',
+  }),
+  dev: Object.freeze({
+    frontend: 'https://dev.next.singulancelabs.com',
+    controlPlane: 'https://api.dev.next.singulancelabs.com',
+    core: 'https://core.dev.next.singulancelabs.com',
+  }),
+});
+
+function selectedPlatformAdminEnvironment() {
+  if (typeof window === 'undefined' || window.location.hostname !== PLATFORM_ADMIN_HOST) return null;
+  try {
+    return window.localStorage.getItem(PLATFORM_ADMIN_ENVIRONMENT_KEY) === 'dev' ? 'dev' : 'production';
+  } catch {
+    return 'production';
+  }
+}
 
 /**
  * HIVEMIND API Client
@@ -28,15 +52,19 @@ const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
 
 class HiveMindApiClient {
   constructor() {
+    this._platformAdminEnvironment = selectedPlatformAdminEnvironment();
+    const platformAdminBases = this._platformAdminEnvironment
+      ? PLATFORM_ADMIN_BASES[this._platformAdminEnvironment]
+      : null;
     this.controlPlane = axios.create({
-      baseURL: API_DEFAULTS.controlPlaneBase,
+      baseURL: platformAdminBases?.controlPlane || API_DEFAULTS.controlPlaneBase,
       withCredentials: true,
       timeout: 60000, // Increased from 10s to 60s for long-running operations like research
       headers: { 'Content-Type': 'application/json' },
     });
 
     this.core = axios.create({
-      baseURL: API_DEFAULTS.coreApiBase,
+      baseURL: platformAdminBases?.core || API_DEFAULTS.coreApiBase,
       timeout: 15000,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -47,7 +75,7 @@ class HiveMindApiClient {
     this._apiKeyStorageKey = 'hivemind_core_api_key';
 
     // Global plan-limit detector: on any 402 (or 403/429) carrying the
-    // `plan_limit_exceeded` machine code, emit a window event so the single
+    // `plan_limit_exceeded` or `quota_reached` machine code, emit a window event so the single
     // <PlanLimitModal> mounted in AppShell can surface the upgrade prompt —
     // then re-reject so individual callers behave exactly as before.
     this._attachPlanLimitInterceptor(this.controlPlane);
@@ -56,6 +84,30 @@ class HiveMindApiClient {
     this._attachProductAccessInterceptor(this.core);
 
     this.loadStoredApiKey();
+  }
+
+  getPlatformAdminEnvironment() {
+    return this._platformAdminEnvironment || 'production';
+  }
+
+  getPlatformAdminFrontendUrl(path = '') {
+    const environment = this.getPlatformAdminEnvironment();
+    const base = PLATFORM_ADMIN_BASES[environment].frontend;
+    return `${base}${String(path || '').startsWith('/') ? path : `/${path}`}`;
+  }
+
+  _controlPlaneBaseUrl() {
+    return String(this.controlPlane.defaults.baseURL || API_DEFAULTS.controlPlaneBase).replace(/\/$/, '');
+  }
+
+  setPlatformAdminEnvironment(environment) {
+    const next = environment === 'dev' ? 'dev' : 'production';
+    if (typeof window === 'undefined' || window.location.hostname !== PLATFORM_ADMIN_HOST) return;
+    window.localStorage.setItem(PLATFORM_ADMIN_ENVIRONMENT_KEY, next);
+    // A hard reload cancels every request and clears all React state. This is
+    // intentional: an admin screen must never render data fetched from one
+    // environment while sending mutations to the other.
+    window.location.reload();
   }
 
   setProductAccessPlan(planId) {
@@ -86,7 +138,7 @@ class HiveMindApiClient {
       (error) => {
         if (isPlanLimitError(error)) {
           emitPlanLimit(extractPlanLimit(error));
-        } else if (isServiceError(error)) {
+        } else if (isServiceError(error) && error?.config?.suppressServiceError !== true) {
           // 5xx / network outage → global toast so it never fails silently.
           emitServiceError(extractServiceError(error));
         }
@@ -147,6 +199,14 @@ class HiveMindApiClient {
   }
 
   setCoreBaseUrl(url) {
+    // The Platform Admin environment is a hard routing latch. Bootstrap data
+    // from either environment must never redirect later Core calls across it.
+    if (this._platformAdminEnvironment) {
+      const selected = PLATFORM_ADMIN_BASES[this._platformAdminEnvironment].core;
+      this._coreBaseUrl = selected;
+      this.core.defaults.baseURL = selected;
+      return;
+    }
     // Guard against the control-plane returning a docker-internal hostname
     // (http://hm-core:3000) — browsers can't resolve that and CSP would
     // block it anyway. Force-fallback to the publicly resolvable default.
@@ -171,20 +231,57 @@ class HiveMindApiClient {
    * The control plane owns redirect_uri (for Zitadel).
    * The frontend owns return_to (for the browser flow after login).
    */
-  getLoginUrl(returnTo, idpHint) {
+  getLoginUrl(returnTo, idpHint, workspaceInviteToken) {
     const params = new URLSearchParams();
     if (returnTo) params.set('return_to', returnTo);
     if (idpHint) params.set('idp_hint', idpHint); // microsoft | apple | google — federated via ZITADEL
+    if (workspaceInviteToken) params.set('workspace_invite', workspaceInviteToken);
     const qs = params.toString();
     return `${this.controlPlane.defaults.baseURL}/auth/login${qs ? `?${qs}` : ''}`;
   }
 
-  getGoogleLoginUrl(returnTo, signupTicket) {
+  getGoogleLoginUrl(returnTo, signupTicket, workspaceInviteToken) {
     const params = new URLSearchParams();
     if (returnTo) params.set('return_to', returnTo);
     if (signupTicket) params.set('signup_ticket', signupTicket);
+    if (workspaceInviteToken) params.set('workspace_invite', workspaceInviteToken);
     const qs = params.toString();
     return `${this.controlPlane.defaults.baseURL}/auth/google${qs ? `?${qs}` : ''}`;
+  }
+
+  async requestLocalPreviewSignIn(email, returnTo) {
+    const { data } = await this.controlPlane.post('/auth/local-preview/request', {
+      email,
+      return_to: returnTo,
+    });
+    return data;
+  }
+
+  async getEmailIdentityConfig() {
+    const { data } = await this.controlPlane.get('/auth/email/config');
+    return data;
+  }
+
+  async startEmailSignIn({ email, returnTo, intent = 'login', turnstileToken = '', signupTicket = '' }) {
+    const { data } = await this.controlPlane.post('/auth/email/start', {
+      email, return_to: returnTo, intent, turnstile_token: turnstileToken,
+      ...(signupTicket ? { signup_ticket: signupTicket } : {}),
+    });
+    return data;
+  }
+
+  async verifyEmailSignIn({ challengeId, code, linkToken }) {
+    const { data } = await this.controlPlane.post('/auth/email/verify', {
+      challenge_id: challengeId, ...(code ? { code } : {}), ...(linkToken ? { link_token: linkToken } : {}),
+    });
+    return data;
+  }
+
+  async resendEmailSignIn({ challengeId, turnstileToken = '' }) {
+    const { data } = await this.controlPlane.post('/auth/email/resend', {
+      challenge_id: challengeId, turnstile_token: turnstileToken,
+    });
+    return data;
   }
 
   getRegisterUrl(returnTo, idpHint, signupTicket) {
@@ -196,12 +293,13 @@ class HiveMindApiClient {
     return `${this.controlPlane.defaults.baseURL}/auth/register${qs ? `?${qs}` : ''}`;
   }
 
-  async requestSignupAdmission({ accountType, invitationCode, enterpriseInvitationToken = null, personalInvitationToken = null }) {
+  async requestSignupAdmission({ accountType, invitationCode, enterpriseInvitationToken = null, personalInvitationToken = null, referralToken = null }) {
     const { data } = await this.controlPlane.post('/auth/signup-admission', {
       account_type: accountType,
       invitation_code: invitationCode,
       ...(enterpriseInvitationToken ? { enterprise_invitation_token: enterpriseInvitationToken } : {}),
       ...(personalInvitationToken ? { personal_invitation_token: personalInvitationToken } : {}),
+      ...(referralToken ? { referral_token: referralToken } : {}),
     });
     return data;
   }
@@ -213,6 +311,11 @@ class HiveMindApiClient {
 
   async previewPersonalInvitation(token) {
     const { data } = await this.controlPlane.get('/auth/personal-invitations/preview', { params: { token } });
+    return data;
+  }
+
+  async previewPartnerReferral(token, recordVisit = false) {
+    const { data } = await this.controlPlane.get('/v1/referral-invitations/preview', { params: { token, ...(recordVisit ? { record_visit: 1 } : {}) } });
     return data;
   }
 
@@ -434,7 +537,7 @@ class HiveMindApiClient {
   }
 
   hqEventStreamUrl(after = '0') {
-    const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
+    const base = this._controlPlaneBaseUrl();
     return `${base}/v1/hq/events/stream?after=${encodeURIComponent(after)}`;
   }
 
@@ -447,6 +550,19 @@ class HiveMindApiClient {
   /** Claim the one-time Day-0 report after Your Company has rendered. */
   async claimHyperCompanyDayZeroReport() {
     const { data } = await this.controlPlane.post('/v1/hyper/company/day0-report', {});
+    return data;
+  }
+
+  /** Persistent workspace notification stream used by the global navbar. */
+  async listWorkspaceNotifications({ limit = 20, unread = false } = {}) {
+    const { data } = await this.controlPlane.get('/v1/workspace/notifications', {
+      params: { limit, ...(unread ? { unread: true } : {}) },
+    });
+    return data;
+  }
+
+  async markWorkspaceNotificationRead(notificationId) {
+    const { data } = await this.controlPlane.post(`/v1/workspace/notifications/${encodeURIComponent(notificationId)}/read`, {});
     return data;
   }
 
@@ -930,6 +1046,24 @@ class HiveMindApiClient {
     return data;
   }
 
+  async controlHyperTurn(roomId, turnId, action, message = '') {
+    const { data } = await this.controlPlane.post(
+      `/v1/hyper-rooms/${roomId}/turns/${turnId}/control`,
+      { action, ...(message ? { message } : {}) },
+    );
+    return data;
+  }
+
+  async listHyperAgentRoutines(roomId) {
+    const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/routines`);
+    return data;
+  }
+
+  async createHyperAgentRoutine(roomId, payload) {
+    const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/routines`, payload);
+    return data;
+  }
+
   async getHyperRoomArtifacts(roomId, { type = 'all', limit = 200 } = {}) {
     const qs = new URLSearchParams({ type, limit: String(limit) }).toString();
     const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/artifacts?${qs}`);
@@ -962,6 +1096,41 @@ class HiveMindApiClient {
   async createTaraVoiceSession(payload) {
     const { data } = await this.controlPlane.post('/v1/tara/voice-sessions', payload);
     return data;
+  }
+
+  async listOperatingRooms() {
+    const { data } = await this.controlPlane.get('/v1/operating-rooms');
+    return data?.rooms || [];
+  }
+
+  async createOperatingRoom(payload) {
+    const { data } = await this.controlPlane.post('/v1/operating-rooms', payload);
+    return data?.room;
+  }
+
+  async getOperatingRoom(roomId) {
+    const { data } = await this.controlPlane.get(`/v1/operating-rooms/${encodeURIComponent(roomId)}`);
+    return data?.room;
+  }
+
+  async joinOperatingRoom(roomId) {
+    const { data } = await this.controlPlane.post(`/v1/operating-rooms/${encodeURIComponent(roomId)}/join`, {});
+    return data;
+  }
+
+  async appendOperatingRoomTranscript(roomId, text) {
+    const { data } = await this.controlPlane.post(`/v1/operating-rooms/${encodeURIComponent(roomId)}/transcript`, { text });
+    return data;
+  }
+
+  async respondToOperatingRoomTurn(roomId, turnId) {
+    const { data } = await this.controlPlane.post(`/v1/operating-rooms/${encodeURIComponent(roomId)}/respond`, { turn_id: turnId }, {timeout:180000});
+    return data;
+  }
+
+  async closeOperatingRoom(roomId) {
+    const { data } = await this.controlPlane.post(`/v1/operating-rooms/${encodeURIComponent(roomId)}/close`, {});
+    return data?.room;
   }
 
   async listTaraVoices(provider) {
@@ -1036,8 +1205,21 @@ class HiveMindApiClient {
 
   // SSE — caller manages EventSource lifecycle, we just expose URL.
   hyperTurnStreamUrl(roomId, turnId) {
-    const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
+    const base = this._controlPlaneBaseUrl();
     return `${base}/v1/hyper-rooms/${roomId}/turns/${turnId}/stream`;
+  }
+
+  hyperArtifactAssetUrl(path) {
+    const value = String(path || '');
+    if (!value.startsWith('/v1/hyper-artifacts/')) return '';
+    return `${this._controlPlaneBaseUrl()}${value}`;
+  }
+
+  async getHyperArtifact(path) {
+    const value = String(path || '');
+    if (!value.startsWith('/v1/hyper-artifacts/')) throw new Error('Invalid HyperRoom artifact path');
+    const { data } = await this.controlPlane.get(value, { responseType: 'text' });
+    return String(data || '');
   }
 
   // ─── Control Plane: Digital Employees ───────────────────────
@@ -1304,21 +1486,44 @@ class HiveMindApiClient {
   }
 
   /**
+   * Create a short-lived, single-use enrollment credential for the active
+   * self-hosted organization. Authentication comes from the browser session.
+   */
+  async createSelfHostBootstrap() {
+    const { data } = await this.controlPlane.post('/v1/selfhost/bootstrap');
+    return data;
+  }
+
+  /**
+   * Explicit, server-side allowlisted canary enrollment. This does not weaken
+   * the stable release gate; unauthorized organizations receive 403.
+   */
+  async createSelfHostCanaryBootstrap() {
+    const { data } = await this.controlPlane.post('/v1/selfhost/canary-bootstrap');
+    return data;
+  }
+
+  /**
    * Self-host connection status (polled during onboarding).
    * Returns { registered, reachable, kind?, transport? }
    */
   async selfHostStatus(apiKey) {
-    const { data } = await this.controlPlane.post('/v1/selfhost/status', { apiKey });
+    const { data } = await this.controlPlane.post('/v1/selfhost/status', apiKey ? { apiKey } : {});
     return data;
   }
 
-  async unlockPlatformAdmin(passkey, operatorName) {
-    const { data } = await this.controlPlane.post('/admin/api/platform/unlock', { passkey, operator_name: operatorName });
+  async unlockPlatformAdmin(passcode) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/unlock', { passcode });
     return data;
   }
 
   async listPlatformUsers({ q = '', limit = 200 } = {}) {
     const { data } = await this.controlPlane.get('/admin/api/platform/users', { params: { q, limit } });
+    return data;
+  }
+
+  async getPlatformUserLifecycle(userId) {
+    const { data } = await this.controlPlane.get(`/admin/api/platform/users/${encodeURIComponent(userId)}/lifecycle`);
     return data;
   }
 
@@ -1347,8 +1552,13 @@ class HiveMindApiClient {
     return data;
   }
 
-  async getPlatformAiCosts({ q = '', limit = 200 } = {}) {
-    const { data } = await this.controlPlane.get('/admin/api/platform/ai-costs', { params: { q, limit } });
+  async getPlatformAiCosts({ q = '', limit = 200, period = 'month' } = {}) {
+    const { data } = await this.controlPlane.get('/admin/api/platform/ai-costs', { params: { q, limit, period } });
+    return data;
+  }
+
+  async getPlatformAiCostDetail(orgId, { period = 'month' } = {}) {
+    const { data } = await this.controlPlane.get(`/admin/api/platform/ai-costs/${encodeURIComponent(orgId)}`, { params: { period } });
     return data;
   }
 
@@ -1419,6 +1629,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getPlatformEmailTemplates() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/email/templates');
+    return data;
+  }
+
   async sendPlatformEmail(payload) {
     const { data } = await this.controlPlane.post('/admin/api/platform/email/send', payload);
     return data;
@@ -1436,6 +1651,21 @@ class HiveMindApiClient {
 
   async revokePlatformReferralCampaign(id) {
     const { data } = await this.controlPlane.post(`/admin/api/platform/referral-campaigns/${id}/revoke`);
+    return data;
+  }
+
+  async listPartnerReferralCampaigns() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/partner-referrals');
+    return data;
+  }
+
+  async createPartnerReferralCampaign(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/partner-referrals', payload);
+    return data;
+  }
+
+  async partnerReferralAction(id, action) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/partner-referrals/${id}/${action}`);
     return data;
   }
 
@@ -1498,7 +1728,10 @@ class HiveMindApiClient {
   // ─── Core: Health ────────────────────────────────────────────
 
   async health() {
-    const { data } = await this.controlPlane.get('/v1/proxy/health');
+    const { data } = await this.controlPlane.get('/v1/proxy/health', {
+      // TopBar confirms repeated failures before displaying Offline.
+      suppressServiceError: true,
+    });
     return data;
   }
 
@@ -1649,6 +1882,11 @@ class HiveMindApiClient {
     const { data } = await this.controlPlane.post('/v1/proxy/evidence/search', { 
       query, ...params 
     });
+    return data;
+  }
+
+  async listEvidence(params = {}) {
+    const { data } = await this.controlPlane.get('/v1/proxy/evidence', { params });
     return data;
   }
 
@@ -2253,6 +2491,9 @@ class HiveMindApiClient {
     const { data } = await this.controlPlane.get('/v1/proxy/knowledge/status', {
       params: { job_id: jobId },
       timeout: 15000,
+      // This durable loop retries transient failures. One missed poll is not a
+      // user-action failure and must not raise a global outage notification.
+      suppressServiceError: true,
     });
     return data;
   }
@@ -2263,9 +2504,14 @@ class HiveMindApiClient {
   // ({ documentId, segmentCount, promotedCount }). Pass options.onStatus to
   // surface live stage/progress, options.signal to cancel.
   async uploadDocument(file, options = {}) {
+    // Capture the selected mode once. Every poll and terminal response is
+    // checked against this value so a later modal interaction cannot alter an
+    // in-flight file's intended pipeline.
+    const requestedIngestMode = normalizeIngestMode(options.ingestMode);
     const formData = new FormData();
     formData.append('file', file);
     if (options.tags) formData.append('tags', options.tags);
+    if (options.hint) formData.append('hint', options.hint);
     if (options.containerTag) formData.append('containerTag', options.containerTag);
     if (options.targetScope) formData.append('targetScope', options.targetScope);
     // The upload route reads targetScope + projectId/projectIds for scope; it does
@@ -2276,7 +2522,7 @@ class HiveMindApiClient {
     // Images already sent it, which is why they succeeded in the same batch.
     if (options.projectId) formData.append('projectId', options.projectId);
     if (options.primaryTeamId) formData.append('primaryTeamId', options.primaryTeamId);
-    formData.append('ingestMode', options.ingestMode === 'evidence' ? 'evidence' : 'both');
+    formData.append('ingestMode', requestedIngestMode);
     // force=true re-ingests past the same-scope duplicate gate (user approved the
     // "upload anyway" prompt shown on a 409 duplicate_document).
     if (options.force) formData.append('force', 'true');
@@ -2291,10 +2537,23 @@ class HiveMindApiClient {
       onUploadProgress: options.onUploadProgress,
       signal: options.signal,
     });
+    const startedMode = responseIngestMode(started);
+    if (hasIngestModeMismatch(requestedIngestMode, startedMode)) {
+      const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${startedMode}.`);
+      error.code = 'INGEST_MODE_MISMATCH';
+      throw error;
+    }
 
     // Back-compat: an older core (no async support) returns the sync result
     // directly (has documentId, no job_id) — pass it straight through.
-    if (!started?.job_id) return started;
+    if (!started?.job_id) {
+      if (hasIngestModeMismatch(requestedIngestMode, startedMode, { requireReturned: true })) {
+        const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${startedMode}.`);
+        error.code = 'INGEST_MODE_MISMATCH';
+        throw error;
+      }
+      return { ...started, ingestMode: startedMode };
+    }
 
     // 2. Poll status until terminal.
     const jobId = started.job_id;
@@ -2307,6 +2566,7 @@ class HiveMindApiClient {
     options.onQueued?.({ job_id: jobId });
     const deadline = Date.now() + (options.timeoutMs || 10 * 60 * 1000);
     const pollMs = options.pollMs || 2500;
+    let reportedMode = startedMode;
     // Terminal SUCCESS states. Keep this the single source of truth for "the job is done".
     const TERMINAL_OK = new Set(['ready', 'indexed', 'complete', 'completed']);
     while (Date.now() < deadline) {
@@ -2320,6 +2580,7 @@ class HiveMindApiClient {
       }
       const meta = st?.metadata || {};
       const counts = st?.counts || {};
+      const detail = st?.progress_detail || meta?.progress_detail || {};
       // Doc fields may arrive nested under `metadata` (in-memory tracker path)
       // or flat at the top level (durable-queue Redis mirror). Read both so a
       // queued upload still resolves a real documentId.
@@ -2327,11 +2588,24 @@ class HiveMindApiClient {
       const segs = meta.segmentCount ?? st.segmentCount ?? counts.segments;
       const promoted = meta.promotedCount ?? st.promotedCount ?? counts.memories;
       const candidates = meta.candidateCount ?? st.candidateCount ?? counts.candidates;
+      const returnedMode = responseIngestMode(st);
+      if (hasIngestModeMismatch(requestedIngestMode, returnedMode)) {
+        const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${returnedMode}.`);
+        error.code = 'INGEST_MODE_MISMATCH';
+        throw error;
+      }
+      if (returnedMode != null) reportedMode = returnedMode;
       if (options.onStatus) {
         options.onStatus({
           status: st.status, progress: st.progress, stage: meta.stage ?? st.stage,
           segments: segs ?? meta.segments, promoted: promoted ?? meta.promoted,
-          ingestMode: st.ingest_mode ?? meta.ingestMode,
+          processed: detail.processed ?? st.processed,
+          total: detail.total ?? st.total,
+          elapsedMs: detail.elapsed_ms,
+          startedAt: detail.started_at ?? st.started_at ?? st.created_at,
+          stageStartedAt: detail.stage_started_at,
+          timings: detail.timings_ms,
+          ingestMode: returnedMode ?? reportedMode ?? requestedIngestMode,
           evidenceOnly: st.evidence_only ?? meta.evidenceOnly,
           evidenceOnlyReason: st.evidence_only_reason ?? meta.evidenceOnlyReason,
         });
@@ -2345,43 +2619,49 @@ class HiveMindApiClient {
       // in-memory tracker), which is exactly how the two sides drifted apart. Accept both, and treat
       // any unrecognised terminal-looking state as terminal rather than hanging on it.
       if (TERMINAL_OK.has(st.status)) {
+        if (hasIngestModeMismatch(requestedIngestMode, reportedMode, { requireReturned: true })) {
+          const error = new Error(`Ingest mode mismatch: requested ${requestedIngestMode}, server returned ${reportedMode}.`);
+          error.code = 'INGEST_MODE_MISMATCH';
+          throw error;
+        }
         return {
           documentId: docId,
           segmentCount: segs,
           candidateCount: candidates,
           promotedCount: promoted,
-          ingestMode: st.ingest_mode ?? options.ingestMode ?? 'both',
+          ingestMode: reportedMode,
           evidenceOnly: st.evidence_only === true,
           evidenceOnlyReason: st.evidence_only_reason || null,
+          memoryGenerationFailed: hasMemoryGenerationFailure(st),
           job_id: jobId,
         };
       }
       if (st.status === 'failed') {
-        throw new Error(st.error || 'Ingestion failed');
+        const failure = ingestFailureDetails(st);
+        const error = new Error(failure.message);
+        error.code = failure.code;
+        throw error;
       }
     }
     throw new Error('Ingestion timed out');
   }
 
-  // ─── Core: Image Ingestion (Groq vision pipeline) ─────────────
-  // Single .jpg / .png / .webp → classify + extract via Groq Llama 4 Scout,
-  // then route through the same ingest pipeline as text memories.
+  // ─── Core: Durable Image Ingestion ────────────────────────────
+  // Images use the same admitted job + polling lifecycle as documents, while
+  // Core routes mediaKind=image to Gemini vision and one canonical memory.
   // Hint is an optional "what is this" string the user types at upload to
   // bias the classifier (e.g. "Saturn receipt from Tuesday").
   async uploadImage(file, options = {}) {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (options.hint) formData.append('hint', options.hint);
-    if (options.projectId) formData.append('projectId', options.projectId);
-    const { data } = await this.controlPlane.post('/v1/proxy/ingest/image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 120000,
-      maxBodyLength: 25 * 1024 * 1024,
-      maxContentLength: 25 * 1024 * 1024,
-      onUploadProgress: options.onUploadProgress,
-      signal: options.signal,
+    const result = await this.uploadDocument(file, {
+      ...options,
+      ingestMode: 'both',
+      ...(options.projectId ? { targetScope: 'project', projectId: options.projectId } : {}),
     });
-    return data;
+    return {
+      ...result,
+      memory_id: result.documentId || null,
+      memory_ids: result.documentId ? [result.documentId] : [],
+    };
   }
 
   // ─── Core: Enterprise Upload ────────────────────────────────
@@ -2602,6 +2882,11 @@ class HiveMindApiClient {
 
   async getMemoryRelations(memoryId) {
     const { data } = await this.controlPlane.get(`/v1/proxy/memories/${memoryId}/relationships`);
+    return data;
+  }
+
+  async getMemoryClaims(memoryId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/memories/${encodeURIComponent(memoryId)}/claims`);
     return data;
   }
 
@@ -3013,7 +3298,7 @@ class HiveMindApiClient {
 
   /** Absolute URL to a run's HTML view (authed via session cookie on navigation). */
   hermesRunHtmlUrl(agentId, jobId) {
-    const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
+    const base = this._controlPlaneBaseUrl();
     return `${base}/hermes/agents/${encodeURIComponent(agentId)}/runs/${encodeURIComponent(jobId)}/html`;
   }
 

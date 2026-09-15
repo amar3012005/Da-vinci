@@ -1,26 +1,81 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Sun, Moon, ArrowRight } from 'lucide-react';
+import { Menu, X, Sun, Moon, ArrowRight, ChevronDown, ArrowUpRight, Brain, Network, Mic2, Bot, ShieldCheck, BookOpen, Code2, Landmark, FileText, FlaskConical, Sparkles } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
 import { getMobileCopy } from './mobileCopy';
 import { HIVEMIND_URL, hivemindHref } from './hivemindLinks';
+import SingulanceBrand from '../hivemind/app/shared/SingulanceBrand';
+
+const PRODUCT_MENU = [
+  { title: 'HIVEMIND', label: 'BRAIN', description: 'Your company memory, with complete recall.', href: HIVEMIND_URL, icon: Brain },
+  { title: 'HIVEMIND', label: 'OS', description: 'The operating system for your AI company.', href: hivemindHref('/app/employees/mycompany'), icon: Network },
+  { title: 'HIVEMIND', label: 'VOICE', description: 'A voice that knows your business.', href: hivemindHref('/app/tara'), icon: Mic2 },
+  { title: 'HIVEMIND', label: 'RUNTIME', description: 'Autonomous work, built for the real world.', href: hivemindHref('/app/employees'), icon: Bot, soon: true },
+  { title: 'HIVEMIND', label: 'ICARUS', description: 'A memory filesystem for AI agents.', href: '/research/icarus', icon: ShieldCheck },
+];
+
+const MENU_CONTENT = {
+  Products: { eyebrow: 'THE SINGULANCE STACK', items: PRODUCT_MENU },
+  Solutions: {
+    eyebrow: 'WHAT SINGULANCE UNLOCKS',
+    items: [
+      { title: 'Sovereign intelligence', label: 'EU-READY', description: 'Memory and agents built for regulated organizations.', href: hivemindHref('#sovereignty'), icon: Landmark },
+      { title: 'Company memory', label: 'KNOWLEDGE', description: 'Turn documents and conversations into permanent context.', href: hivemindHref('#features'), icon: Brain },
+      { title: 'Digital workforce', label: 'HYPERAGENTS', description: 'Specialists that act from your company context.', href: hivemindHref('#hyperagents'), icon: Sparkles },
+    ],
+  },
+  Developers: {
+    eyebrow: 'BUILD WITH SINGULANCE',
+    items: [
+      { title: 'Developer docs', label: 'DOCUMENTATION', description: 'Integrate memory, agents, and tools into your workflow.', href: hivemindHref('/docs'), icon: BookOpen },
+      { title: 'MCP server', label: 'TOOLS', description: 'Give your coding environment governed company recall.', href: hivemindHref('/app/mcp'), icon: Code2 },
+      { title: 'ICARUS research', label: 'MEMORY SYSTEMS', description: 'Read the architecture behind durable agent memory.', href: '/research/icarus', icon: FlaskConical },
+    ],
+  },
+  Pricing: {
+    eyebrow: 'PLANS THAT SCALE WITH CONTEXT',
+    items: [
+      { title: 'Personal', label: 'START FREE', description: 'Build your second brain with HIVEMIND.', href: hivemindHref('#pricing'), icon: Brain },
+      { title: 'Teams', label: 'SHARED CONTEXT', description: 'Bring memory, agents, and your team together.', href: hivemindHref('#pricing'), icon: Network },
+      { title: 'Enterprise', label: 'SOVEREIGN', description: 'A governed operating layer for your organization.', href: hivemindHref('#pricing'), icon: Landmark },
+    ],
+  },
+  Docs: {
+    eyebrow: 'LEARN THE SYSTEM',
+    items: [
+      { title: 'Documentation', label: 'GUIDES', description: 'Set up HIVEMIND and begin with your company context.', href: hivemindHref('/docs'), icon: BookOpen },
+      { title: 'Research', label: 'PAPERS', description: 'Explore the ideas and systems behind SINGULANCE.', href: '/research', icon: FileText },
+      { title: 'Benchmark', label: 'EVALUATION', description: 'Inspect our recall and memory-system results.', href: '/benchmark', icon: FlaskConical },
+    ],
+  },
+  Research: {
+    eyebrow: 'FROM THE LAB',
+    items: [
+      { title: 'Research index', label: 'ALL PAPERS', description: 'The work behind our memory and agent systems.', href: '/research', icon: BookOpen },
+      { title: 'ICARUS', label: 'MEMORY FILESYSTEM', description: 'Durable memory storage for the agentic era.', href: '/research/icarus', icon: ShieldCheck },
+      { title: 'Benchmark', label: 'LONGMEMEVAL', description: 'Measured memory performance and methodology.', href: '/benchmark', icon: FlaskConical },
+    ],
+  },
+};
 
 const MobileNavigation = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [activeMenu, setActiveMenu] = useState(null);
+  const closeTimerRef = useRef(null);
   const navigate = useNavigate();
   const { isDark, toggle, locale, setLocale } = useTheme();
   const c = t(isDark);
   const copy = getMobileCopy(locale);
   const navLinks = [
-    { label: 'Platform', href: HIVEMIND_URL },
-    { label: copy.nav.links.solutions, sectionId: 'solutions' },
-    { label: 'Developers', href: hivemindHref('#developers') },
-    { label: 'Pricing', href: hivemindHref('#pricing') },
-    { label: 'Docs', href: hivemindHref('/docs') },
-    { label: './ ' + copy.nav.links.research, href: '/research' },
-    { label: './ Benchmark', href: '/benchmark' },
+    { label: 'Products', href: HIVEMIND_URL, menu: 'Products' },
+    { label: copy.nav.links.solutions, sectionId: 'solutions', menu: 'Solutions' },
+    { label: 'Developers', href: hivemindHref('#developers'), menu: 'Developers' },
+    { label: 'Pricing', href: hivemindHref('#pricing'), menu: 'Pricing' },
+    { label: 'Docs', href: hivemindHref('/docs'), menu: 'Docs' },
+    { label: copy.nav.links.research, href: '/research', menu: 'Research' },
+    { label: 'Benchmark', href: '/benchmark', menu: 'Research' },
   ];
   const mobileOnlyLinks = [...navLinks, { label: copy.nav.links.contact, sectionId: 'cta-section' }];
 
@@ -30,6 +85,8 @@ const MobileNavigation = () => {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => () => window.clearTimeout(closeTimerRef.current), []);
 
   useEffect(() => {
     if (mobileOpen) {
@@ -47,21 +104,37 @@ const MobileNavigation = () => {
 
   const handleNavClick = (item) => {
     setMobileOpen(false);
+    setActiveMenu(null);
     if (item.href) {
       if (item.href.startsWith('http')) window.location.assign(item.href);
       else navigate(item.href);
     } else if (item.sectionId) {
-      const el = document.getElementById(item.sectionId);
+      // On phone widths, MobileHomepage skips mounting the heavy sections
+      // (SubProducts/MobileAboutSection) that own these ids — fall back to
+      // the always-mounted footer's namesake anchor so the link still lands
+      // somewhere real instead of silently doing nothing.
+      const el = document.getElementById(item.sectionId) || document.getElementById(`${item.sectionId}-footer`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
+
+  const cancelMenuClose = () => window.clearTimeout(closeTimerRef.current);
+  const closeMenuSoon = () => {
+    cancelMenuClose();
+    closeTimerRef.current = window.setTimeout(() => setActiveMenu(null), 140);
+  };
+  const openMenu = (menu) => {
+    cancelMenuClose();
+    setActiveMenu(menu);
+  };
+  const activeContent = activeMenu ? MENU_CONTENT[activeMenu] : null;
 
   return (
     <>
       <nav className={`fixed top-0 inset-x-0 z-[100] transition-colors duration-500 ${scrolled || mobileOpen ? 'bg-[#05070f]/70 backdrop-blur-md border-b border-white/10' : 'bg-transparent border-b border-transparent'}`}>
         <div className={`max-w-[1200px] mx-auto border-x transition-colors duration-500 ${scrolled || mobileOpen ? 'border-white/10' : 'border-transparent'}`}>
           <div className="px-6 h-16 flex items-center justify-between">
-            {/* Logo — SINGULANCE wordmark */}
+            {/* Canonical dark-chrome SINGULANCE vector lockup. */}
             <button
               onClick={() => {
                 if (typeof window !== 'undefined' && window.location.pathname.startsWith('/test')) {
@@ -71,19 +144,25 @@ const MobileNavigation = () => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               className="flex items-center bg-transparent border-none cursor-pointer p-0"
+              aria-label="SINGULANCE home"
             >
-              <span className="text-white text-lg font-semibold tracking-[0.04em]">SINGULANCE</span>
+              <SingulanceBrand variant="dark" markSize={32} />
             </button>
 
             {/* Center Links — Desktop */}
-            <div className="hidden lg:flex items-center gap-5">
+            <div className="hidden lg:flex items-center gap-1" onMouseLeave={closeMenuSoon}>
               {navLinks.map((item) => (
                 <button
                   key={item.label}
                   onClick={() => handleNavClick(item)}
-                  className={`text-[13px] font-medium ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} transition-colors bg-transparent border-none cursor-pointer tracking-wide`}
+                  onMouseEnter={() => item.menu && openMenu(item.menu)}
+                  onFocus={() => item.menu && openMenu(item.menu)}
+                  aria-expanded={activeMenu === item.menu}
+                  className={`group flex items-center gap-1 border-0 border-b px-2 py-2 text-[13px] font-medium ${activeMenu === item.menu ? (isDark ? 'border-white/70 text-white' : 'border-black/60 text-[#0a0a0a]') : `border-transparent ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'}`} rounded-none bg-transparent shadow-none backdrop-blur-none transition-colors cursor-pointer tracking-wide`}
+                  style={{ borderRadius: 0, WebkitBackdropFilter: 'none' }}
                 >
                   {item.label}
+                  {item.menu && <ChevronDown size={13} className={`transition-transform ${activeMenu === item.menu ? 'rotate-180' : ''}`} />}
                 </button>
               ))}
             </div>
@@ -145,6 +224,37 @@ const MobileNavigation = () => {
           </div>
         </div>
       </nav>
+
+      {/* Desktop glass mega-menu. It shares the navbar hover boundary, so moving
+          from a link into its panel never closes it before a user can click. */}
+      <AnimatePresence>
+        {activeContent && (
+          <div
+            onMouseEnter={cancelMenuClose}
+            onMouseLeave={closeMenuSoon}
+            className="pointer-events-none fixed inset-x-0 top-16 z-[99] hidden lg:block"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: -18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="pointer-events-auto w-full overflow-hidden border-y border-white/[0.18] bg-[#080b10]/68 shadow-[0_30px_90px_rgba(0,0,0,0.34)] backdrop-blur-3xl"
+              style={{ WebkitBackdropFilter: 'blur(30px) saturate(155%)' }}
+            >
+              <div className="flex h-11 items-center justify-between border-b border-white/10 px-[clamp(2rem,6vw,8rem)]"><span className="font-mono text-[10px] font-semibold tracking-[0.2em] text-white/50">{activeContent.eyebrow}</span><span className="text-[11px] text-white/50">Explore the system <ArrowUpRight size={12} className="ml-1 inline" /></span></div>
+              <div className={`grid divide-x divide-white/10 px-[clamp(1rem,4vw,6rem)] ${activeContent.items.length === 5 ? 'grid-cols-5' : 'grid-cols-3'}`}>
+                {activeContent.items.map((item) => {
+                  const Icon = item.icon;
+                  return <a key={`${item.title}-${item.label}`} href={item.href} onClick={() => setActiveMenu(null)} className="group relative flex min-h-[238px] flex-col justify-between px-7 py-6 text-white no-underline transition-colors duration-300 hover:bg-white/[0.055]">
+                    <div className="relative flex items-center justify-between"><div className="flex items-center gap-2"><Icon size={17} className="text-[#62e6ff]" /><span className="text-[11px] font-semibold">{item.title}</span></div><ArrowUpRight size={14} className="text-white/45 group-hover:text-white" /></div>
+                    <div className="relative max-w-[15ch] font-['Space_Grotesk'] text-[clamp(18px,1.35vw,24px)] font-medium leading-[1.04] tracking-[-0.03em]">{item.description}</div>
+                    <div className="relative border-t border-white/10 pt-3 font-mono text-[9px] font-semibold tracking-[0.18em] text-[#62e6ff]">{item.label}{item.soon ? ' · LAUNCHING SOON' : ''}</div>
+                  </a>;
+                })}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Menu Overlay */}
       <AnimatePresence>

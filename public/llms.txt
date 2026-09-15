@@ -1,57 +1,70 @@
 # SINGULANCE
 
-> The AI operating layer for regulated Europe. Run your institution as an AI company.
+> The AI operating layer for regulated Europe: an AI workforce that runs inside organizational memory.
 
-SINGULANCE is a sovereign, GDPR-native AI workforce that runs inside an organization's memory. It is built for regulated European institutions (finance, healthcare, government, enterprise) that need autonomous AI which remembers, reasons, and acts — without sending data outside their walls.
+SINGULANCE builds AI products for organizations that need persistent memory,
+multi-agent coordination, voice interaction, and European data-residency
+options. Public information on this hostname may be indexed, cited, and used
+as retrieval input. It is not licensed for model training or fine-tuning.
 
-Slogan: "Beyond the horizon of intelligence." Tagline: "AI workforce that runs inside memory."
-
-Primary domain: https://singulancelabs.com (also served on https://davinciai.eu). Also known as: SINGULANCE AI, Singulance, Singulance AI.
+Primary domain: https://singulancelabs.com
+Alternate public domain: https://davinciai.eu
+Also known as: SINGULANCE AI, Singulance.
 
 ## Products
 
-- [TARA](https://singulancelabs.com/): Enterprise voice agent that reasons in real time (not a script that retrieves). Handles calls, lead qualification, appointment booking, and support with multilingual natural language understanding. Sub-500ms responses.
-- [HIVEMIND](https://singulancelabs.com/): Sovereign memory engine. Sub-50ms semantic recall across everything an organization knows. Graph-based knowledge storage, cross-agent memory sharing, MCP integration for AI assistants (Claude, etc.). GDPR / DPDP compliant data residency.
-- [HYPERAGENTS](https://singulancelabs.com/hivemind/app/employees): A swarm of digital employees — multiple AI agents that watch, decide, and act as one, coordinated and grounded in HIVEMIND memory, running inside the organization's own infrastructure.
-
-## Why SINGULANCE
-
-Today's AI is amnesiac: it dazzles for a session, then forgets. SINGULANCE solves the memory, continuity, and coordination problems so intelligence stops being a feature you rent and becomes a presence you keep — sovereign, sub-50ms, and compliant by design.
+- [TARA](https://singulancelabs.com/): Enterprise voice-agent product for calls, lead qualification, appointment booking, and support.
+- [HIVEMIND](https://singulancelabs.com/): Persistent organizational memory with semantic retrieval, graph-based knowledge, and MCP-compatible integration.
+- HYPERAGENTS: A coordinated digital workforce grounded in HIVEMIND memory. The product workspace is authenticated and intentionally not crawlable.
 
 ## Capabilities
 
-- Sovereign, GDPR/DPDP-compliant data residency — data stays in compliant EU infrastructure.
-- Sub-50ms semantic recall — retrieve by meaning, not keywords.
-- Graph-based memory — entities, relationships, and knowledge graphs persisted across sessions.
-- Cross-agent memory sharing — many agents share one memory cortex.
-- MCP integration — expose memory and tools to any MCP-compatible AI assistant.
-- Real-time reasoning voice — TARA processes intent, meaning, root problem, and optimal path in parallel.
-- Multi-agent coordination — HYPERAGENTS act as one autonomous digital workforce.
+- Semantic retrieval over organizational knowledge.
+- Graph-based memory and cross-agent context sharing.
+- MCP-compatible integration for AI assistants.
+- Voice-agent workflows and multilingual customer interactions.
+- Coordinated multi-agent operations for approved business workflows.
+- European deployment and data-residency options for regulated organizations.
 
-## Key Pages
+## Key public pages
 
-- [Homepage](https://singulancelabs.com/): Product overview and the SINGULANCE stack
-- [About](https://singulancelabs.com/about): Company information
-- [Research](https://singulancelabs.com/research): The SINGULANCE research lab
-- [Demo](https://singulancelabs.com/demo): Product demonstration
-- [Benchmark](https://singulancelabs.com/benchmark): Memory benchmark results
+- [Homepage](https://singulancelabs.com/): Product overview and the SINGULANCE stack.
+- [About](https://singulancelabs.com/about): Company information.
+- [Research](https://singulancelabs.com/research): Public research material.
+- [Demo](https://singulancelabs.com/demo): Product demonstration.
+- [Benchmark](https://singulancelabs.com/benchmark): Memory benchmark results.
+- [Security](https://singulancelabs.com/security): Security and privacy information.
+- [Sitemap](https://singulancelabs.com/sitemap.xml): Public page inventory.
+- [Crawl policy](https://singulancelabs.com/robots.txt): Public crawling and content-use policy.
 
 ## FAQ
 
 ### What is SINGULANCE?
-SINGULANCE is the AI operating layer for regulated Europe — a sovereign, GDPR-native AI workforce that runs inside an organization's memory, via three products: TARA (voice), HIVEMIND (sovereign memory), and HYPERAGENTS (agent swarm).
+
+SINGULANCE is an AI operating layer for regulated Europe, with TARA voice
+workflows, HIVEMIND persistent memory, and HYPERAGENTS multi-agent operations.
 
 ### What is HIVEMIND?
-HIVEMIND is SINGULANCE's sovereign memory engine with sub-50ms semantic recall, graph-based knowledge storage, cross-agent memory sharing, and MCP integration. GDPR / DPDP compliant.
+
+HIVEMIND is SINGULANCE's persistent organizational memory product. It provides
+semantic retrieval, graph-based knowledge, cross-agent context sharing, and
+MCP-compatible integration.
 
 ### What is TARA?
-TARA is SINGULANCE's enterprise voice agent that reasons in real time to handle calls, scheduling, and support with multilingual natural language understanding.
 
-### What is HYPERAGENTS?
-HYPERAGENTS is SINGULANCE's swarm of digital employees — AI agents that coordinate to watch, decide, and act as one, grounded in HIVEMIND memory.
+TARA is SINGULANCE's enterprise voice-agent product for calls, lead
+qualification, appointment scheduling, and support.
 
-### Is SINGULANCE GDPR compliant?
-Yes. SINGULANCE is sovereign and GDPR / DPDP compliant by design, with EU data residency, built for regulated European institutions.
+### What are HYPERAGENTS?
+
+HYPERAGENTS are coordinated digital employees grounded in HIVEMIND memory.
+
+## Crawling and content use
+
+- Public marketing, research, benchmark, and security pages may be indexed and cited.
+- Authenticated workspaces, invitations, APIs, admin surfaces, and preview hosts are not public sources.
+- `robots.txt` declares `search=yes`, `ai-input=yes`, and `ai-train=no` for the public marketing site.
+- The public source inventory is available at https://singulancelabs.com/sitemap.xml.
 
 ## Contact
 

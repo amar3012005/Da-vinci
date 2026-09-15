@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow } from 'lucide-react';
+import { Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow, Mail } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 import { clearInvitationContext, loadInvitationContext, saveInvitationContext } from './invitation-session';
@@ -58,6 +58,17 @@ function DotGrid() {
 const INPUT_CLS = "w-full px-3.5 py-2.5 rounded-[6px] border border-[#e3e0db] bg-white text-[#0a0a0a] text-[13px] focus:outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]/20 transition-all";
 const LABEL_CLS = "text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5";
 
+function ReferralTrustBanner({ invitation }) {
+  if (!invitation?.referrer?.display_name) return null;
+  const name = invitation.referrer.display_name;
+  const days = invitation.offer?.trial_days;
+  const credits = Number(invitation.offer?.monthly_credits || 0).toLocaleString();
+  return <div className="mb-5 flex items-start gap-3 rounded-[8px] border border-[#117dff]/20 bg-[#117dff]/[0.045] px-3 py-3">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#117dff]/25 bg-white text-[11px] font-semibold text-[#117dff]" aria-label={`${name} Humation avatar`}>{name.slice(0, 1).toUpperCase()}</div>
+    <div><p className="font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-[#117dff]">Invited by {name}</p><p className="mt-1 text-[11px] leading-relaxed text-[#3b6da3]">{name} trusts HIVEMIND and opened this verified path for you. {days} days free · {credits} monthly credits.</p></div>
+  </div>;
+}
+
 const PERSONAL_PLANS = [
   {
     id: 'free', name: 'Free', product: 'BRAIN + OS + VOICE', price: '€0', cadence: '/mo',
@@ -85,10 +96,101 @@ const PERSONAL_PLANS = [
   },
 ];
 
+function EmailTurnstile({ siteKey, onToken }) {
+  const host = useRef(null);
+  useEffect(() => {
+    if (!siteKey || !host.current) return undefined;
+    let widgetId;
+    const render = () => {
+      if (!window.turnstile || !host.current || widgetId !== undefined) return;
+      widgetId = window.turnstile.render(host.current, {
+        sitekey: siteKey, action: 'email_auth', appearance: 'interaction-only',
+        callback: onToken, 'expired-callback': () => onToken(''), 'error-callback': () => onToken(''),
+      });
+    };
+    let script = document.querySelector('script[data-singulance-turnstile]');
+    if (!script) {
+      script = document.createElement('script'); script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true; script.defer = true; script.dataset.singulanceTurnstile = 'true'; document.head.appendChild(script);
+    }
+    script.addEventListener('load', render); render();
+    return () => { script.removeEventListener('load', render); if (widgetId !== undefined) window.turnstile?.remove(widgetId); };
+  }, [siteKey, onToken]);
+  return siteKey ? <div ref={host} className="min-h-[1px]" aria-label="Bot verification" /> : null;
+}
+
 export default function LoginPage() {
-  const { isAuthenticated, isUnreachable, loading, login, org, needsOnboarding } = useAuth();
+  const { isAuthenticated, isUnreachable, loading, login, org, user, needsOnboarding } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [emailConfig, setEmailConfig] = useState({ mode: 'off', enabled: false, email_only: false, turnstile_site_key: null });
+  const [emailConfigLoaded, setEmailConfigLoaded] = useState(false);
+  const [emailView, setEmailView] = useState('methods');
+  const [emailAddress, setEmailAddress] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [emailChallenge, setEmailChallenge] = useState('');
+  const [emailLinkToken, setEmailLinkToken] = useState('');
+  const [emailIntent, setEmailIntent] = useState('login');
+  const [emailSignupTicket, setEmailSignupTicket] = useState('');
+  const [emailReturnTo, setEmailReturnTo] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [emailState, setEmailState] = useState({ busy: false, message: '', error: false });
+  const emailEnabled = emailConfig.enabled;
+  const emailOnly = emailConfig.email_only;
+
+  const requestEmailSignIn = async (event) => {
+    event.preventDefault();
+    const email = emailAddress.trim().toLowerCase();
+    if (!email) return;
+    setEmailState({ busy: true, message: '', error: false });
+    try {
+      const returnTo = emailReturnTo || returnToFromState
+        || `${window.location.origin}/hivemind/app/overview?auth=callback`;
+      const result = await apiClient.startEmailSignIn({
+        email, returnTo, intent: emailIntent, turnstileToken,
+        signupTicket: emailIntent === 'register' ? emailSignupTicket : '',
+      });
+      setEmailChallenge(result.challenge_id);
+      setEmailView('code');
+      setEmailState({ busy: false, message: result?.message || 'Check your email for the sign-in code.', error: false });
+    } catch (error) {
+      setEmailState({
+        busy: false,
+        message: error?.response?.data?.error || 'Unable to start email sign-in.',
+        error: true,
+      });
+    }
+  };
+
+  const verifyEmail = async ({ code = emailCode, linkToken = emailLinkToken } = {}) => {
+    if (!emailChallenge || (!code && !linkToken)) return;
+    setEmailState({ busy: true, message: '', error: false });
+    try {
+      const result = await apiClient.verifyEmailSignIn({ challengeId: emailChallenge, code, linkToken });
+      window.location.assign(result.redirect_to || emailConfig.default_redirect_to || `${window.location.origin}/hivemind/app/overview?auth=callback`);
+    } catch (error) {
+      setEmailState({ busy: false, message: error?.response?.data?.error || 'The code is invalid or expired.', error: true });
+      setEmailCode('');
+    }
+  };
+
+  useEffect(() => {
+    apiClient.getEmailIdentityConfig().then((config) => {
+      setEmailConfig(config);
+    }).catch(() => setEmailConfig({ mode: 'off', enabled: false, email_only: false, turnstile_site_key: null })).finally(() => setEmailConfigLoaded(true));
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const challenge = fragment.get('email_challenge');
+    const token = fragment.get('email_token');
+    if (challenge && token) {
+      setEmailChallenge(challenge); setEmailLinkToken(token); setEmailView('link_confirm');
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (emailCode.length === 6 && emailView === 'code' && !emailState.busy) verifyEmail({ code: emailCode, linkToken: '' });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emailCode]);
 
   // If the user landed on /login via ProtectedRoute (e.g. clicked an invite link
   // /hivemind/join/<slug>/<token> while signed out), preserve that path as the
@@ -174,11 +276,21 @@ export default function LoginPage() {
   // memory until the server exchanges it for a signed signup admission.
   const [appliedEnterpriseInvitationToken, setAppliedEnterpriseInvitationToken] = useState(null);
   const [appliedPersonalInvitationToken, setAppliedPersonalInvitationToken] = useState(null);
+  const [appliedReferralToken, setAppliedReferralToken] = useState(null);
+  const [referralInvitation, setReferralInvitation] = useState(null);
   const [invitationLockedKind, setInvitationLockedKind] = useState(null);
   const [loadingEnterpriseInvitation, setLoadingEnterpriseInvitation] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [personalInvitationCode, setPersonalInvitationCode] = useState('');
   const [createError, setCreateError] = useState('');
+
+  // Provider identity is only a convenience prefill. The field stays editable,
+  // and the value submitted by the user becomes canonical during org creation.
+  useEffect(() => {
+    if (!wantsCreate || userName.trim()) return;
+    const providerName = String(user?.display_name || user?.displayName || user?.name || '').trim();
+    if (providerName && !/^guest(?:\s+mode)?$/i.test(providerName)) setUserName(providerName);
+  }, [wantsCreate, user, userName]);
   const onboardingError = useMemo(
     () => new URLSearchParams(location.search).get('onboarding_error'),
     [location.search]
@@ -221,16 +333,24 @@ export default function LoginPage() {
     const context = loadInvitationContext();
     if (!context) return;
     setShowOnboarding(true);
-    setInvitationLockedKind(context.kind);
-    setAccountType(context.kind);
+    const resolvedKind = context.kind === 'referral'
+      ? (context.preview?.offer?.account_type === 'personal' ? 'personal' : 'enterprise')
+      : context.kind;
+    setInvitationLockedKind(resolvedKind);
+    setAccountType(resolvedKind);
     setOnboardingStep(1);
     if (context.kind === 'enterprise') {
       setAppliedEnterpriseInvitationToken(context.credential);
       setEnterpriseInvitation(context.preview || null);
       setHostingChoice(context.preview?.hosting_mode === 'self_host' ? 'self_hosted' : 'managed');
       setEnterpriseName((value) => value || context.preview?.workspace_name || context.preview?.company_name || '');
-    } else {
+    } else if (context.kind === 'personal') {
       setAppliedPersonalInvitationToken(context.credential);
+    } else {
+      setAppliedReferralToken(context.credential);
+      setReferralInvitation(context.preview || null);
+      setSelectedPlan(context.preview?.offer?.plan || 'free');
+      setHostingChoice(context.preview?.offer?.hosting_mode === 'self_host' ? 'self_hosted' : 'managed');
     }
   }, [wantsCreate]);
 
@@ -307,7 +427,7 @@ export default function LoginPage() {
   const handleCreateAccount = async (provider = 'google') => {
     setCreateError('');
     const accessCode = accountType === 'personal' ? personalInvitationCode.trim() : enterpriseAccessCode.trim();
-    const invitationTokenReady = accountType === 'enterprise' ? appliedEnterpriseInvitationToken : appliedPersonalInvitationToken;
+    const invitationTokenReady = appliedReferralToken || (accountType === 'enterprise' ? appliedEnterpriseInvitationToken : appliedPersonalInvitationToken);
     if (!accessCode && !invitationTokenReady) {
       setCreateError(accountType === 'personal' ? 'Enter the invitation code to continue.' : 'Enter the Enterprise access code to continue.');
       return;
@@ -319,6 +439,7 @@ export default function LoginPage() {
         invitationCode: accessCode,
         enterpriseInvitationToken: appliedEnterpriseInvitationToken,
         personalInvitationToken: appliedPersonalInvitationToken,
+        referralToken: appliedReferralToken,
       });
     } catch {
       setCreateError('This invitation is unavailable.');
@@ -332,13 +453,14 @@ export default function LoginPage() {
       deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
       ...(accountType === 'personal' ? { selected_plan: selectedPlan || 'free' } : {}),
       ...(accountType === 'personal' ? { referral_code: referralCode.trim() || null } : {}),
+      ...(appliedReferralToken ? { referral_token: appliedReferralToken, selected_plan: referralInvitation?.offer?.plan || selectedPlan || 'free', referral_invitation: referralInvitation } : {}),
       ...(admission.invitation ? { enterprise_invitation: admission.invitation } : {}),
       signup_ticket: admission.signup_ticket,
     };
     // Save onboarding data for post-auth pickup
     try {
       localStorage.setItem('hivemind_onboarding', JSON.stringify(onboardingIntent));
-      if (accountType === 'personal' && selectedPlan && selectedPlan !== 'free') {
+      if (!appliedReferralToken && accountType === 'personal' && selectedPlan && selectedPlan !== 'free') {
         sessionStorage.setItem('hivemind_post_signup_upgrade', selectedPlan);
       } else {
         sessionStorage.removeItem('hivemind_post_signup_upgrade');
@@ -353,6 +475,14 @@ export default function LoginPage() {
     const intentFragment = encodeURIComponent(JSON.stringify(onboardingIntent));
     const returnTo = returnToFromState
       || `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true#onboarding=${intentFragment}`;
+    if (provider === 'email') {
+      setEmailIntent('register');
+      setEmailSignupTicket(admission.signup_ticket);
+      setEmailReturnTo(returnTo);
+      setEmailView('email');
+      setShowOnboarding(false);
+      return;
+    }
     if (provider === 'zitadel') {
       // Zitadel with prompt=create → shows registration screen
       window.location.href = apiClient.getRegisterUrl(returnTo, undefined, admission.signup_ticket);
@@ -365,8 +495,8 @@ export default function LoginPage() {
     }
   };
 
-  const enterpriseAdmissionReady = Boolean(appliedEnterpriseInvitationToken || enterpriseAccessCode.trim());
-  const personalAdmissionReady = Boolean(appliedPersonalInvitationToken || personalInvitationCode.trim());
+  const enterpriseAdmissionReady = Boolean(appliedReferralToken || appliedEnterpriseInvitationToken || enterpriseAccessCode.trim());
+  const personalAdmissionReady = Boolean(appliedReferralToken || appliedPersonalInvitationToken || personalInvitationCode.trim());
 
   const resetOnboarding = () => {
     setShowOnboarding(false);
@@ -374,12 +504,17 @@ export default function LoginPage() {
     setAccountType(null);
     setSelectedPlan(null);
     setHostingChoice(null);
+    setEmailIntent('login');
+    setEmailSignupTicket('');
+    setEmailReturnTo('');
     setUserName('');
     setEnterpriseName('');
     setHivemindName('');
     setEnterpriseAccessCode('');
     setAppliedEnterpriseInvitationToken(null);
     setAppliedPersonalInvitationToken(null);
+    setAppliedReferralToken(null);
+    setReferralInvitation(null);
     setInvitationLockedKind(null);
     setEnterpriseInvitation(null);
     setPersonalInvitationCode('');
@@ -388,16 +523,17 @@ export default function LoginPage() {
     clearInvitationContext();
   };
 
-  /* Small square provider button (Microsoft / Apple / SSO) */
-  const ProviderTile = ({ onClick, label, children }) => (
+  /* Non-Google identity providers are intentionally visible but not live yet.
+     Keeping these as disabled native buttons prevents accidental OAuth redirects. */
+  const ComingSoonProvider = ({ label, children }) => (
     <button
-      onClick={onClick}
-      disabled={loading}
-      title={label}
-      aria-label={label}
-      className="flex-1 h-11 flex items-center justify-center gap-2 rounded-[6px] border border-[#e3e0db] bg-white hover:border-[#0a0a0a] hover:shadow-sm disabled:opacity-60 transition-all text-[#0a0a0a]"
+      type="button"
+      disabled
+      aria-label={`${label} — coming soon`}
+      className="flex-1 h-11 flex items-center justify-center gap-2 rounded-[6px] border border-[#e3e0db] bg-[#faf9f4] text-[#737373] cursor-not-allowed"
     >
       {children}
+      <span className="text-[9px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3]">Coming soon</span>
     </button>
   );
 
@@ -419,16 +555,19 @@ export default function LoginPage() {
 
         <div className={`flex flex-col md:flex-row items-stretch bg-white overflow-hidden ${showOnboarding ? 'h-full w-full border-0 rounded-none shadow-none' : 'border border-[#e3e0db] rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
           {/* Left: Login form */}
-          <div className={`transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'h-full overflow-y-auto p-8 md:w-1/2 md:border-r md:border-[#e3e0db] lg:p-12 xl:p-16' : 'p-8 md:w-[448px]'}`}>
+          <div className={`transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'h-full overflow-y-auto p-7 md:w-1/2 md:border-r md:border-[#e3e0db] lg:p-10 xl:p-12' : 'p-8 md:w-[448px]'}`}>
+            <div className={showOnboarding ? 'mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center py-8 lg:py-12' : ''}>
             {/* Logo */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-[8px] bg-[#117dff]/10 border border-[#117dff]/25 flex items-center justify-center">
-                  <Hexagon size={22} className="text-[#117dff]" />
-                </div>
+                <img
+                  src="/images/singulance-orbit.png"
+                  alt="Singulance"
+                  className="h-10 w-14 shrink-0 object-contain"
+                />
                 <div>
-                  <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">HIVEMIND</h1>
-                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.18em]">Memory Engine</p>
+                  <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">SINGULANCE</h1>
+                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.18em]">HIVEMIND · MEMORY ENGINE</p>
                 </div>
               </div>
               <span className="hidden sm:inline text-[10px] font-mono text-[#d4d0ca] tabular-nums">[v2]</span>
@@ -485,39 +624,77 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* Primary: Google */}
-                  <button
-                    onClick={() => login({ provider: 'google', returnTo: returnToFromState || undefined })}
-                    disabled={loading}
-                    className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]"
-                  >
-                    {loading ? <Loader2 size={16} className="animate-spin text-white/60" /> : (
-                      <span className="w-6 h-6 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={14} /></span>
-                    )}
-                    Continue with Google
-                  </button>
-                  {/* Provider row: Microsoft · Apple · SSO */}
-                  <div className="flex items-center gap-2 mt-2.5">
-                    <ProviderTile label="Continue with Microsoft" onClick={() => login({ provider: 'microsoft', returnTo: returnToFromState || undefined })}>
+                  {emailEnabled && emailView === 'methods' && (
+                    <button onClick={() => setEmailView('email')} className="w-full h-12 mb-2.5 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
+                      <Mail size={16} /> Continue with Email
+                    </button>
+                  )}
+                  {emailEnabled && emailView === 'email' && (
+                    <form onSubmit={requestEmailSignIn} className="space-y-3">
+                      <label className="block text-[10px] font-mono uppercase tracking-[0.16em] text-[#737373]" htmlFor="email-sign-in-address">Email address</label>
+                      <input id="email-sign-in-address" type="email" autoComplete="email" inputMode="email" required autoFocus value={emailAddress} onChange={(event) => setEmailAddress(event.target.value)} placeholder="name@company.com" className="w-full h-12 rounded-[6px] border border-[#d4d0ca] bg-white px-3 text-[15px] text-[#0a0a0a] outline-none focus:border-[#117dff]" />
+                      <EmailTurnstile siteKey={emailConfig.turnstile_site_key} onToken={setTurnstileToken} />
+                      <button type="submit" disabled={emailState.busy || !emailAddress.trim()} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
+                        {emailState.busy ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />} Send sign-in code
+                      </button>
+                      {!emailOnly && <button type="button" onClick={() => setEmailView('methods')} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Back to other sign-in methods</button>}
+                    </form>
+                  )}
+                  {emailEnabled && emailView === 'code' && (
+                    <div className="space-y-3">
+                      <label className="block text-[10px] font-mono uppercase tracking-[0.16em] text-[#737373]" htmlFor="email-sign-in-code">Enter the 6-digit code</label>
+                      <input id="email-sign-in-code" type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={6} value={emailCode} onChange={(event) => setEmailCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className="w-full h-14 rounded-[6px] border border-[#d4d0ca] bg-white px-3 text-center text-[24px] tracking-[0.45em] font-mono text-[#0a0a0a] outline-none focus:border-[#117dff]" />
+                      <button type="button" onClick={() => verifyEmail()} disabled={emailState.busy || emailCode.length !== 6} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] disabled:opacity-60 text-white font-semibold rounded-[6px] uppercase tracking-[0.08em]">
+                        {emailState.busy ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />} Verify and continue
+                      </button>
+                      <button type="button" onClick={async () => { await apiClient.resendEmailSignIn({ challengeId: emailChallenge, turnstileToken }); setEmailState({ busy: false, error: false, message: 'If the challenge is active, a new code is on its way.' }); }} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Resend code</button>
+                      <button type="button" onClick={() => { setEmailView('email'); setEmailCode(''); }} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Use another email</button>
+                    </div>
+                  )}
+                  {emailView === 'link_confirm' && (
+                    <div className="space-y-3">
+                      <p className="text-[13px] leading-relaxed text-[#525252]">Confirm this browser to finish signing in. Opening the email link alone never authenticates you.</p>
+                      <button type="button" onClick={() => verifyEmail({ code: '', linkToken: emailLinkToken })} disabled={emailState.busy} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] disabled:opacity-60 text-white font-semibold rounded-[6px] uppercase tracking-[0.08em]">
+                        {emailState.busy ? <Loader2 size={16} className="animate-spin" /> : <Shield size={16} />} Confirm and continue
+                      </button>
+                    </div>
+                  )}
+                  {emailState.message && <p role="status" className={`mt-3 text-[11px] leading-5 ${emailState.error ? 'text-[#dc2626]' : 'text-[#16a34a]'}`}>{emailState.message}</p>}
+
+                  {emailConfigLoaded && !emailOnly && emailView === 'methods' && (
+                    <button
+                      onClick={() => login({ provider: 'google', returnTo: returnToFromState || undefined })}
+                      disabled={loading}
+                      className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]"
+                    >
+                      {loading ? <Loader2 size={16} className="animate-spin text-white/60" /> : (
+                        <span className="w-6 h-6 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={14} /></span>
+                      )}
+                      Continue with Google
+                    </button>
+                  )}
+                  {/* Visible provider roadmap is production-only. */}
+                  {emailConfigLoaded && !emailOnly && emailView === 'methods' && <div className="flex items-center gap-2 mt-2.5">
+                    <ComingSoonProvider label="Microsoft">
                       <MicrosoftIcon size={15} />
                       <span className="text-[12px] font-medium">Microsoft</span>
-                    </ProviderTile>
-                    <ProviderTile label="Continue with Apple" onClick={() => login({ provider: 'apple', returnTo: returnToFromState || undefined })}>
+                    </ComingSoonProvider>
+                    <ComingSoonProvider label="Apple">
                       <AppleIcon size={16} />
                       <span className="text-[12px] font-medium">Apple</span>
-                    </ProviderTile>
-                  </div>
+                    </ComingSoonProvider>
+                  </div>}
 
-                  {/* EU Sovereign SSO — full-width, the compliance path */}
-                  <button
-                    onClick={() => login({ returnTo: returnToFromState || undefined })}
-                    disabled={loading}
-                    className="mt-2.5 w-full h-11 flex items-center justify-center gap-2.5 bg-white hover:bg-[#faf9f4] disabled:opacity-60 text-[#0a0a0a] font-medium rounded-[6px] transition-all text-[12px] font-['Space_Grotesk'] cursor-pointer border border-[#e3e0db] hover:border-[#0a0a0a] uppercase tracking-[0.075em]"
+                  {emailConfigLoaded && !emailOnly && emailView === 'methods' && <button
+                    type="button"
+                    disabled
+                    aria-label="Enterprise SSO — coming soon"
+                    className="mt-2.5 w-full h-11 flex items-center justify-center gap-2.5 bg-[#faf9f4] text-[#737373] font-medium rounded-[6px] text-[12px] font-['Space_Grotesk'] cursor-not-allowed border border-[#e3e0db] uppercase tracking-[0.075em]"
                   >
-                    <Shield size={14} className="text-[#117dff]" />
+                    <Shield size={14} className="text-[#a3a3a3]" />
                     Enterprise SSO · EU Sovereign
-                    <span className="text-[9px] font-mono normal-case tracking-normal text-[#a3a3a3]">SAML / OIDC</span>
-                  </button>
+                    <span className="text-[9px] font-mono normal-case tracking-normal text-[#a3a3a3]">Coming soon</span>
+                  </button>}
 
                   {/* trust line */}
                   <div className="flex items-center justify-center gap-2 mt-4 px-3 py-2 rounded-[6px] bg-[#f0fdf4] border border-[#bbf7d0]">
@@ -526,14 +703,14 @@ export default function LoginPage() {
                   </div>
 
                   {/* Create New Account */}
-                  <div className="text-center mt-5">
+                  {emailView === 'methods' && <div className="text-center mt-5">
                     <p className="text-[13px] text-[#737373]">
                       New here?{' '}
-                      <button onClick={() => setShowOnboarding(true)} className="text-[#117dff] font-semibold hover:underline">
+                      <button onClick={() => { if (emailEnabled) { setEmailIntent('register'); setEmailView('email'); } else setShowOnboarding(true); }} className="text-[#117dff] font-semibold hover:underline">
                         Create your HIVEMIND
                       </button>
                     </p>
-                  </div>
+                  </div>}
 
                   {/* Divider */}
                   <div className="flex items-center gap-3 my-5">
@@ -585,6 +762,7 @@ export default function LoginPage() {
                           : 'Workspace creation did not complete. Review the details and try again.'}
                     </div>
                   )}
+                  <ReferralTrustBanner invitation={referralInvitation} />
 
                   {/* Step 1: Choose path */}
                   {onboardingStep === 1 && (
@@ -595,13 +773,13 @@ export default function LoginPage() {
                         </div>
                         <h2 className="text-[24px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">How will you use HIVEMIND?</h2>
                         <p className="text-[13px] text-[#737373] mt-1.5">Choose the workspace that fits you. You can grow into Enterprise anytime.</p>
-                        {invitationLockedKind && <p className="mt-3 rounded-[6px] border border-[#117dff]/20 bg-[#117dff]/[0.05] px-3 py-2 text-[11px] text-[#3b6da3]">Your verified invitation has reserved the {invitationLockedKind === 'enterprise' ? 'Enterprise' : 'Personal'} path. The other account type is unavailable for this setup.</p>}
+                        {invitationLockedKind && <p className="mt-3 rounded-[6px] border border-[#117dff]/20 bg-[#117dff]/[0.05] px-3 py-2 text-[11px] text-[#3b6da3]">{referralInvitation ? `${referralInvitation.referrer?.display_name} invited you: ${referralInvitation.offer?.trial_days} days free · ${Number(referralInvitation.offer?.monthly_credits || 0).toLocaleString()} monthly credits.` : `Your verified invitation has reserved the ${invitationLockedKind === 'enterprise' ? 'Enterprise' : 'Personal'} path. The other account type is unavailable for this setup.`}</p>}
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           disabled={invitationLockedKind === 'enterprise'}
-                          onClick={() => { if (invitationLockedKind !== 'enterprise') { setAccountType('personal'); setOnboardingStep(2); } }}
+                          onClick={() => { if (invitationLockedKind !== 'enterprise') { setAccountType('personal'); setOnboardingStep(referralInvitation ? 3 : 2); } }}
                           className={`p-4 rounded-[10px] border transition-all text-left group flex flex-col bg-white ${invitationLockedKind === 'enterprise' ? 'cursor-not-allowed border-[#eceae6] opacity-35' : accountType === 'personal' ? 'border-[#117dff] ring-1 ring-[#117dff]/20' : 'border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm'}`}
                         >
                           <div className="w-10 h-10 rounded-[8px] bg-blue-50 border border-blue-100 flex items-center justify-center mb-3">
@@ -620,7 +798,7 @@ export default function LoginPage() {
 
                         <button
                           disabled={invitationLockedKind === 'personal'}
-                          onClick={() => { if (invitationLockedKind !== 'personal') { setAccountType('enterprise'); if (!enterpriseInvitation) setHostingChoice(null); setOnboardingStep(2); } }}
+                          onClick={() => { if (invitationLockedKind !== 'personal') { setAccountType('enterprise'); if (!enterpriseInvitation && !referralInvitation) setHostingChoice(null); setOnboardingStep(referralInvitation ? 3 : 2); } }}
                           className={`relative p-4 rounded-[10px] border transition-all text-left group flex flex-col bg-white ${invitationLockedKind === 'personal' ? 'cursor-not-allowed border-[#eceae6] opacity-35' : accountType === 'enterprise' ? 'border-[#0a0a0a] ring-1 ring-[#0a0a0a]/10' : 'border-[#e3e0db] hover:border-[#0a0a0a] hover:shadow-sm'}`}
                         >
                           <div className="w-10 h-10 rounded-[8px] bg-[#f3f1ec] border border-[#e3e0db] flex items-center justify-center mb-3">
@@ -717,13 +895,13 @@ export default function LoginPage() {
                       <div>
                         <label className={LABEL_CLS}>Invitation code</label>
                         <input
-                          value={appliedPersonalInvitationToken ? 'Secure invitation applied' : personalInvitationCode}
+                          value={appliedPersonalInvitationToken || appliedReferralToken ? 'Secure invitation applied' : personalInvitationCode}
                           onChange={e => setPersonalInvitationCode(e.target.value)}
                           placeholder="Enter your invitation code"
                           maxLength={128}
                           autoComplete="off"
-                          readOnly={Boolean(appliedPersonalInvitationToken)}
-                          className={`${INPUT_CLS} font-mono ${appliedPersonalInvitationToken ? 'bg-[#f3f8ff] text-[#117dff]' : ''}`}
+                          readOnly={Boolean(appliedPersonalInvitationToken || appliedReferralToken)}
+                          className={`${INPUT_CLS} font-mono ${appliedPersonalInvitationToken || appliedReferralToken ? 'bg-[#f3f8ff] text-[#117dff]' : ''}`}
                         />
                         <p className="text-[11px] text-[#a3a3a3] mt-1">Personal workspaces are currently available by invitation.</p>
                       </div>
@@ -736,20 +914,28 @@ export default function LoginPage() {
                         <span className="w-5 h-5 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={12} /></span>
                         Continue with Google
                       </button>
+                      {emailEnabled && <button
+                        onClick={() => handleCreateAccount('email')}
+                        disabled={!userName.trim() || !personalAdmissionReady}
+                        className="w-full h-11 rounded-[6px] bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border border-[#e3e0db] flex items-center justify-center gap-2"
+                      >
+                        <Mail size={14} className="text-[#117dff]" /> Continue with Email
+                      </button>}
                       <div className="flex items-center gap-2">
-                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && personalAdmissionReady && handleCreateAccount('microsoft')}>
+                        <ComingSoonProvider label="Microsoft">
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
-                        </ProviderTile>
-                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && personalAdmissionReady && handleCreateAccount('apple')}>
+                        </ComingSoonProvider>
+                        <ComingSoonProvider label="Apple">
                           <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
-                        </ProviderTile>
+                        </ComingSoonProvider>
                       </div>
                       <button
-                        onClick={() => handleCreateAccount('zitadel')}
-                        disabled={!userName.trim() || !personalAdmissionReady}
-                        className="w-full h-10 rounded-[6px] bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-medium text-[12px] font-['Space_Grotesk'] transition-all cursor-pointer border border-[#e3e0db] hover:border-[#0a0a0a] flex items-center justify-center gap-2"
+                        type="button"
+                        disabled
+                        aria-label="Enterprise SSO — coming soon"
+                        className="w-full h-10 rounded-[6px] bg-[#faf9f4] text-[#737373] font-medium text-[12px] font-['Space_Grotesk'] cursor-not-allowed border border-[#e3e0db] flex items-center justify-center gap-2"
                       >
-                        <Shield size={13} className="text-[#117dff]" /> Enterprise SSO (EU Sovereign)
+                        <Shield size={13} className="text-[#a3a3a3]" /> Enterprise SSO (EU Sovereign) · <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#a3a3a3]">Coming soon</span>
                       </button>
                     </div>
                   )}
@@ -877,7 +1063,7 @@ export default function LoginPage() {
                         <label className={LABEL_CLS}>Your Enterprise HIVEMIND</label>
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${(enterpriseName || 'company').toLowerCase().replace(/\s+/g, '')}_hivemind`} className={INPUT_CLS} />
                       </div>
-                      {!enterpriseInvitation && <div>
+                      {!enterpriseInvitation && !referralInvitation && <div>
                         <label className={LABEL_CLS}>Enterprise access code</label>
                         <input
                           value={enterpriseAccessCode}
@@ -901,37 +1087,81 @@ export default function LoginPage() {
                         </div>
                       )}
                       <button
-                        onClick={() => handleCreateAccount('zitadel')}
+                        onClick={() => handleCreateAccount('google')}
                         disabled={loadingEnterpriseInvitation || !userName.trim() || !enterpriseName.trim() || !enterpriseAdmissionReady}
-                        className="w-full h-11 rounded-[6px] bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
+                        className="w-full h-12 rounded-[6px] bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
                       >
-                        {hostingChoice === 'self_hosted'
-                          ? (<><Crown size={14} className="text-amber-300" /> Reserve Sovereign Instance</>)
-                          : (<><Shield size={14} /> Create with Enterprise SSO (EU)</>)}
+                        <span className="w-5 h-5 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={12} /></span>
+                        Continue with Google
                       </button>
+                      {emailEnabled && <button
+                        onClick={() => handleCreateAccount('email')}
+                        disabled={loadingEnterpriseInvitation || !userName.trim() || !enterpriseName.trim() || !enterpriseAdmissionReady}
+                        className="w-full h-12 rounded-[6px] bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border border-[#e3e0db] flex items-center justify-center gap-2"
+                      >
+                        <Mail size={15} className="text-[#117dff]" /> Continue with Email
+                      </button>}
                       <div className="flex items-center gap-2">
-                        <ProviderTile label="Create with Google" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('google')}>
-                          <GoogleIcon size={14} /><span className="text-[12px] font-medium">Google</span>
-                        </ProviderTile>
-                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('microsoft')}>
+                        <ComingSoonProvider label="Microsoft">
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
-                        </ProviderTile>
-                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAdmissionReady && handleCreateAccount('apple')}>
+                        </ComingSoonProvider>
+                        <ComingSoonProvider label="Apple">
                           <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
-                        </ProviderTile>
+                        </ComingSoonProvider>
                       </div>
+                      <button
+                        type="button"
+                        disabled
+                        aria-label="Enterprise SSO — coming soon"
+                        className="w-full h-10 rounded-[6px] bg-[#faf9f4] text-[#737373] font-medium text-[12px] font-['Space_Grotesk'] cursor-not-allowed border border-[#e3e0db] flex items-center justify-center gap-2"
+                      >
+                        <Shield size={13} className="text-[#a3a3a3]" /> Enterprise SSO (EU Sovereign) · <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#a3a3a3]">Coming soon</span>
+                      </button>
                     </div>
                   )}
                 </motion.div>
               )}
             </AnimatePresence>
+            </div>
           </div>
 
           {/* Right pane — artwork until a personal plan is selected, then a
               useful plan summary in the same half of the onboarding card. */}
-          <div className={`hidden md:block bg-[#f8f7f2] overflow-hidden relative ${showOnboarding ? 'h-full md:w-1/2' : 'md:w-[448px]'}`}>
-            {showOnboarding && accountType === 'personal' && onboardingStep === 2 && selectedPlan ? (() => {
+          <div className={`hidden md:flex bg-[#f8f7f2] overflow-hidden relative flex-col ${showOnboarding ? 'h-full md:w-1/2' : 'md:w-[448px]'}`}>
+            {showOnboarding && accountType === 'personal' && onboardingStep === 2 ? (() => {
               const plan = PERSONAL_PLANS.find((candidate) => candidate.id === selectedPlan);
+              if (!plan) {
+                return (
+                  <div className="flex h-full flex-col justify-between p-10 lg:p-14 xl:p-16">
+                    <div>
+                      <p className="text-[9px] font-mono uppercase tracking-[0.22em] text-[#117dff]">HIVEMIND PRODUCT LAYERS</p>
+                      <h3 className="mt-4 max-w-md text-[38px] font-semibold leading-[1.04] tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">Choose the way your Brain grows.</h3>
+                      <p className="mt-5 max-w-md text-[15px] leading-relaxed text-[#525252]">Every plan begins with your memory. Add governed work and voice only when they belong in your workflow.</p>
+                    </div>
+
+                    <div className="my-10 space-y-3">
+                      {[
+                        { icon: Brain, title: 'BRAIN', body: 'Grounded memory that remains yours.' },
+                        { icon: Workflow, title: 'OPERATING SYSTEM', body: 'Approved agents that carry work forward.' },
+                        { icon: Mic2, title: 'VOICE', body: 'TARA for conversations that become memory.' },
+                      ].map(({ icon: Icon, title, body }, index) => (
+                        <div key={title} className="flex items-center gap-4 rounded-[10px] border border-[#e3e0db] bg-white px-4 py-4">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[7px] bg-[#117dff]/[0.07] text-[#117dff]"><Icon size={17} /></span>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-mono font-bold tracking-[0.15em] text-[#0a0a0a]">0{index + 1} · {title}</p>
+                            <p className="mt-1 text-[12px] text-[#737373]">{body}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-t border-[#e3e0db] pt-5">
+                      <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#a3a3a3]">Select a plan to preview your access</p>
+                      <p className="mt-2 max-w-md text-[11px] leading-relaxed text-[#737373]">You can change plans later. Your Brain is never metered per recall.</p>
+                    </div>
+                  </div>
+                );
+              }
               const layers = [
                 { label: 'BRAIN', enabled: true, icon: Brain },
                 { label: 'OPERATING SYSTEM', enabled: ['free', 'pro', 'scale'].includes(plan.id), icon: Workflow },

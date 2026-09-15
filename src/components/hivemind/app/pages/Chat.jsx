@@ -26,6 +26,7 @@ import {
 import apiClient from '../shared/api-client';
 import SingulanceMark from '../shared/SingulanceMark';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
+import { getOrCreateChatThreadId, resetChatThreadId } from '../shared/chat-thread-id';
 import useDictation from '../shared/useDictation';
 import { useTeamContext } from '../shared/team-context';
 import { useQuickRecorder } from '../shared/QuickRecorderProvider';
@@ -333,6 +334,7 @@ export function ChatPanel({ isOpen, onClose }) {
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
+  const [useTools, setUseTools] = useState(false);
   // Chat recall scope — 'all' (default: everything accessible), 'organization',
   // 'personal', or 'project'. Mirrors TalkToHiveMobile / Overview.jsx exactly.
   const [chatScope, setChatScope] = useState(activeProjectId || null);
@@ -352,6 +354,7 @@ export function ChatPanel({ isOpen, onClose }) {
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
+  const conversationThreadIdRef = useRef(null);
 
   const fetchProjects = useCallback(async () => {
     if (!org?.id) { setProjects([]); setProjectsError(null); return; }
@@ -382,6 +385,8 @@ export function ChatPanel({ isOpen, onClose }) {
   const handleClear = useCallback(() => {
     setMessages([]);
     clearPersistedMessages();
+    resetChatThreadId(localStorage, storageKey());
+    conversationThreadIdRef.current = null;
   }, []);
 
   // Push-to-talk dictation — same Groq Whisper path as AI Meeting Notes.
@@ -431,6 +436,7 @@ export function ChatPanel({ isOpen, onClose }) {
     const wireMessage = trimmed;
 
     try {
+      const streamedEvents = [];
       setAgentEvents([{ id: `${Date.now()}-plan`, type: 'plan' }]);
       const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
       const chatRes = await fetch(chatUrl, {
@@ -444,6 +450,9 @@ export function ChatPanel({ isOpen, onClose }) {
           language: lang2,
           stream: true,
           router: 'tool',
+          use_tools: useTools,
+          thread_id: conversationThreadIdRef.current || (conversationThreadIdRef.current = getOrCreateChatThreadId(localStorage, storageKey())),
+          history_turns: 6,
           scope: chatScopeMode,
           ...((chatScopeMode === 'project' && (chatScope || activeProjectId))
             ? { project_id: chatScope || activeProjectId, project_ids: [chatScope || activeProjectId] }
@@ -472,7 +481,9 @@ export function ChatPanel({ isOpen, onClose }) {
               setMessages((prev) => prev.filter((item) => item.id !== streamingId));
               return;
             }
-            setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-5));
+            const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
+            streamedEvents.push(next);
+            setAgentEvents([...streamedEvents]);
           })) || {}
         : await chatRes.json();
 
@@ -483,12 +494,17 @@ export function ChatPanel({ isOpen, onClose }) {
         sources: (data.sources || []).map(s => ({ ...s, title: s.title || (s.content || '').slice(0, 60) })),
         model: MODELS.find((m) => m.id === selectedModel)?.label || selectedModel,
         usage: data.usage || null,
+        harness_version: data.harness_version || data.execution?.harness_version || null,
+        execution: data.execution || null,
         steps: Array.isArray(data.steps) ? data.steps : [],
         draft_ids: Array.isArray(data.draft_ids) ? data.draft_ids : [],
         pending_actions: Array.isArray(data.pending_actions) ? data.pending_actions : [],
+        orchestration_events: streamedEvents.filter((event) => ['agent_state', 'orchestration_step', 'tool_start', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
+        continuation: data.continuation || null,
         trace: data.trace || null,
         project_choice: data.project_choice || null,
         scopes_found: Array.isArray(data.scopes_found) ? data.scopes_found : [],
+        follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
       };
       setMessages((prev) => prev.some((item) => item.id === streamingId)
         ? prev.map((item) => item.id === streamingId ? assistantMsg : item)
@@ -503,36 +519,50 @@ export function ChatPanel({ isOpen, onClose }) {
       setLoading(false);
       setAgentEvents([]);
     }
-  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId]);
+  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools]);
 
   const sendMessage = useCallback(() => sendText(), [sendText]);
+
+  const selectFollowUp = useCallback((question) => {
+    setInput(String(question || '').slice(0, MAX_CHARS));
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, []);
 
   const continueOrchestration = useCallback(async (continuation, request, option) => {
     if (loading) return;
     setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: option.label }]);
     setLoading(true);
     setAgentEvents([]);
+    const streamedEvents = [];
     try {
       const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
       const response = await fetch(chatUrl, {
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: option.label, stream: true, use_tools: true,
+          message: option.label, stream: true, use_tools: request?.kind === 'enable_tools' ? option?.id === 'enable' : true,
           continuation_token: continuation.token,
           continuation_response: {
-            step_index: request.step_index, option_id: option.id,
+            step_index: request.step_index ?? 0, option_id: option.id,
             value: option.value, values: option.values,
           },
         }),
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `Resume failed (${response.status})`);
       const data = (response.headers.get('content-type') || '').includes('text/event-stream')
-        ? (await readChatStream(response, (event) => setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-8)))) || {}
+        ? (await readChatStream(response, (event) => {
+            const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
+            streamedEvents.push(next);
+            setAgentEvents([...streamedEvents]);
+          })) || {}
         : await response.json();
       setMessages((prev) => [...prev, {
         id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
         steps: data.steps || [], draft_ids: data.draft_ids || [], pending_actions: data.pending_actions || [],
+        harness_version: data.harness_version || data.execution?.harness_version || null,
+        execution: data.execution || null,
         sources: data.sources || [], continuation: data.continuation || null,
+        orchestration_events: streamedEvents.filter((event) => ['agent_state', 'orchestration_step', 'tool_start', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
+        follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
       }]);
     } catch (error) {
       setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', error: true, content: error.message, sources: [] }]);
@@ -547,7 +577,11 @@ export function ChatPanel({ isOpen, onClose }) {
     if (loading) return;
     const idx = messages.findIndex((m) => m.id === assistantMsg.id);
     for (let i = idx - 1; i >= 0; i--) {
-      if (messages[i].role === 'user') { sendText(messages[i].content); return; }
+      if (messages[i].role !== 'user') continue;
+      const content = String(messages[i].content || '').trim();
+      if (/^(Youtube|YouTube|Gmail|Github|GitHub|Notion|Slack|Linkedin|LinkedIn)$/i.test(content)) continue;
+      sendText(content);
+      return;
     }
   }, [loading, messages, sendText]);
 
@@ -764,6 +798,17 @@ export function ChatPanel({ isOpen, onClose }) {
                   )}
                 </div>
 
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={useTools}
+                  onClick={() => setUseTools((value) => !value)}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${useTools ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:bg-white'}`}
+                  title="Use connected apps"
+                >
+                  <Boxes size={12} /> Apps
+                </button>
+
                 {messages.length > 0 && (
                   <button
                     onClick={handleClear}
@@ -794,7 +839,7 @@ export function ChatPanel({ isOpen, onClose }) {
                     {messages.map((m) =>
                       m.role === 'user'
                         ? <UserBubble key={m.id} content={m.content} />
-                        : <AiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} />
+                        : <AiBubble key={m.id} msg={m} onRetry={retry} onContinue={continueOrchestration} onFollowUp={selectFollowUp} />
                     )}
                     {loading && !messages.some((item) => item.streaming) && <Thinking events={agentEvents} />}
                   </>

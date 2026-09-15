@@ -282,12 +282,16 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete, theme =
   };
 
   return (
+    /* `absolute`, not `fixed` — this panel lives inside MemoryGraph's own
+       relative root, which already sits below the app's TopBar in normal
+       document flow. `fixed` measures from the true viewport instead and
+       ignored that offset, so the panel rendered over/behind the navbar. */
     <motion.div
       initial={{ opacity: 0, x: 40 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ opacity: 0, x: 40 }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="fixed inset-y-0 right-0 w-full max-w-lg z-50 flex flex-col"
+      className="absolute inset-y-0 right-0 w-full max-w-lg z-50 flex flex-col"
     >
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 lg:hidden" onClick={onClose} />
 
@@ -645,7 +649,14 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // Sync graph project filter with TeamSwitcher's active project so the
   // 3D atlas reflects the same scope as Chat / Memories / Overview.
   // `projects` is the role-scoped list (admins all, members invited-only).
-  const { activeProject, projects: accessibleProjects } = useTeamContext() || {};
+  // `projects` from context is filtered to the currently active TEAM only
+  // (see team-context.jsx: teamProjects = projects.filter(p => p.teamId ===
+  // activeTeamId)) — using that here silently hid every project belonging
+  // to any other team. `allProjects` is the same context's unfiltered list;
+  // this graph's project-tier scope is meant to be org-wide, not
+  // team-scoped, so it needs the unfiltered list.
+  const { activeProject, projects: accessibleProjects, allProjects } = useTeamContext() || {};
+  const allScopeProjects = (allProjects?.length ? allProjects : accessibleProjects) || [];
   useEffect(() => {
     if (activeProject) setProjectFilter(activeProject.slug || activeProject.name || "");
     else setProjectFilter("");
@@ -1161,7 +1172,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     : "border-[#e6dfd3] bg-[#fff7ee]/92 text-[#9a8b7a] hover:text-[#d54d45] hover:border-[#e8b9a9] hover:bg-[#fff0e8]";
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
+    <div className="relative h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
       <PageWalkthrough pageKey="memory-graph-3d" steps={GRAPH_STEPS} />
       {/* ── Compact unified toolbar ── single row, theme-consistent ── */}
       <div
@@ -1266,7 +1277,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             className={`hidden md:block shrink-0 rounded-lg border px-2 py-1.5 text-[10px] font-mono max-w-[170px] focus:outline-none ${toolbarControlClass}`}
           >
             <option value="">All my projects</option>
-            {(accessibleProjects || []).map((p) => (
+            {allScopeProjects.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>

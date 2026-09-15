@@ -1,0 +1,25 @@
+# SINGULANCE public source guide
+
+This file is a public, machine-readable source guide for AI systems. It does
+not grant access to private APIs, customer data, invitations, authenticated
+workspaces, or administrative routes.
+
+## Primary source
+
+- [SINGULANCE](https://singulancelabs.com/): AI operating layer for regulated Europe.
+
+## Public product context
+
+- [TARA, HIVEMIND, and HYPERAGENTS overview](https://singulancelabs.com/)
+- [About SINGULANCE](https://singulancelabs.com/about)
+- [Research](https://singulancelabs.com/research)
+- [Memory benchmarks](https://singulancelabs.com/benchmark)
+- [Demo](https://singulancelabs.com/demo)
+- [Security and privacy](https://singulancelabs.com/security)
+
+## Discovery and use policy
+
+- [Public sitemap](https://singulancelabs.com/sitemap.xml)
+- [Robots and Content Signals policy](https://singulancelabs.com/robots.txt)
+- Public pages may be indexed, cited, and used for retrieval.
+- Model training and fine-tuning are not permitted by the public content-use policy.

@@ -57,11 +57,15 @@ export default function WorkspaceAdmin() {
     return () => { cancelled = true; };
   }, [org?.id]);
 
-  const visibleTabs = viewerIsAdmin === false
-    ? TABS.filter((tb) => tb.id === 'projects')
-    : TABS;
+  // Do not expose invitation or other workspace-admin actions until the
+  // server-side role probe has positively established admin/owner access.
+  // The server remains authoritative, but this avoids a guest briefly seeing
+  // an actionable invite surface during the initial request.
+  const visibleTabs = viewerIsAdmin === true
+    ? TABS
+    : TABS.filter((tb) => tb.id === 'projects');
   const requestedTab = searchParams.get('tab') || 'overview';
-  const activeTab = viewerIsAdmin === false ? 'projects' : requestedTab;
+  const activeTab = viewerIsAdmin === true ? requestedTab : 'projects';
 
   const setTab = useCallback((id) => {
     setSearchParams(prev => {

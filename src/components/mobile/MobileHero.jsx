@@ -17,7 +17,16 @@ const CinematicPlate = lazy(() => import('./three/CinematicPlate'));
  * Reduced-motion: static cover, no canvas.
  */
 const ease = [0.16, 1, 0.3, 1];
-const COVER = '/singulance-cover.webp';
+// Re-encoded, size-appropriate variants of the original 1586x992/338KB
+// source (see scripts — generated via sharp): AVIF first (smaller, modern
+// browsers), WebP fallback. Desktop gets the 1600w plate; the mobile band
+// (never wider than its own viewport) gets 900w — a real payload cut on the
+// connection that needs it most, not a downgrade (the shader softens detail
+// regardless).
+const COVER = '/singulance-cover-1600.webp';
+const COVER_AVIF = '/singulance-cover-1600.avif';
+const COVER_MOBILE = '/singulance-cover-900.webp';
+const COVER_MOBILE_AVIF = '/singulance-cover-900.avif';
 
 const useHeroMode = () => {
   const [mode, setMode] = useState('static-desktop');
@@ -84,11 +93,19 @@ const DesktopHero = ({ immersive }) => (
     {/* plate — fill full width, crop top/bottom (wordmark sides never cut) */}
     <div className="absolute inset-0">
       {immersive ? (
-        <Suspense fallback={<img src={COVER} alt="" className="absolute inset-0 h-full w-full object-cover object-top" />}>
+        <Suspense fallback={
+          <picture>
+            <source srcSet={COVER_AVIF} type="image/avif" />
+            <img src={COVER} alt="" className="absolute inset-0 h-full w-full object-cover object-top" fetchpriority="high" />
+          </picture>
+        }>
           <HeroScene />
         </Suspense>
       ) : (
-        <img src={COVER} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover object-top" decoding="async" />
+        <picture>
+          <source srcSet={COVER_AVIF} type="image/avif" />
+          <img src={COVER} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover object-top" decoding="async" fetchpriority="high" />
+        </picture>
       )}
     </div>
 
@@ -152,11 +169,19 @@ const MobileHeroBand = ({ water }) => (
       style={{ backgroundImage: `url(${COVER_LQIP})`, backgroundSize: 'cover' }}
     >
       {water ? (
-        <Suspense fallback={<img src={COVER} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" />}>
-          <CinematicPlate src={COVER} zoom={1} warp={1} bloom={0.5} tint={[0.04, 0.015, 0.0]} />
+        <Suspense fallback={
+          <picture>
+            <source srcSet={COVER_MOBILE_AVIF} type="image/avif" />
+            <img src={COVER_MOBILE} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" fetchpriority="high" />
+          </picture>
+        }>
+          <CinematicPlate src={COVER_MOBILE} zoom={1} warp={1} bloom={0.5} tint={[0.04, 0.015, 0.0]} />
         </Suspense>
       ) : (
-        <img src={COVER} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
+        <picture>
+          <source srcSet={COVER_MOBILE_AVIF} type="image/avif" />
+          <img src={COVER_MOBILE} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
+        </picture>
       )}
     </motion.div>
 

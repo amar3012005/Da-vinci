@@ -9,7 +9,12 @@ export default function JoinOrg() {
   const { t } = useTranslation('dashboard');
   const { slug, token } = useParams();
   const navigate = useNavigate();
-  const { refresh: refreshAuth } = useAuth() || {};
+  const {
+    refresh: refreshAuth,
+    isAuthenticated,
+    loading: authLoading,
+    login,
+  } = useAuth() || {};
 
   // Phases: loading | consent | accepting | success | declined | error
   const [phase, setPhase] = useState('loading');
@@ -47,6 +52,14 @@ export default function JoinOrg() {
   }, [token, navigate, refreshAuth, t]);
 
   async function handleAccept() {
+    if (!isAuthenticated) {
+      // Keep the invite token in the server-owned OAuth state.  The control
+      // plane validates it before and after OAuth, then returns here so this
+      // explicit consent action remains the sole membership mutation.
+      const returnTo = `${window.location.origin}${window.location.pathname}`;
+      login?.({ provider: 'google', returnTo, workspaceInviteToken: token });
+      return;
+    }
     setPhase('accepting');
     try {
       const data = await apiClient.acceptInvite(token);
@@ -135,16 +148,23 @@ export default function JoinOrg() {
             )}
 
             <section className="mb-6 p-3 rounded-[8px] bg-[#fafaf9] border border-[#eae7e1] text-[12px] text-[#525252]">
-              {t('joinOrg.acceptDisclaimer', "By accepting, you'll get read + write access to the memories scoped to the projects above. Your user id will be added as a project member.")}
+              {t('joinOrg.acceptDisclaimer', projects.length > 0
+                ? "By accepting, you'll get access to the projects above."
+                : "By accepting, you'll join this organization's shared HIVEMIND workspace.")}
             </section>
 
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleAccept}
-                className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0066e0]"
+                disabled={authLoading}
+                className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0066e0] disabled:cursor-wait disabled:opacity-60"
               >
-                {t('joinOrg.acceptAndJoin', 'Accept and join')}
+                {authLoading
+                  ? t('joinOrg.checkingAccount', 'Checking your account…')
+                  : isAuthenticated
+                    ? t('joinOrg.acceptAndJoin', 'Accept and join')
+                    : t('joinOrg.signInToJoin', 'Sign in to join')}
                 <ArrowRight size={16} />
               </button>
               <button

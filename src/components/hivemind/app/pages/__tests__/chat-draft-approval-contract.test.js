@@ -11,6 +11,7 @@ test('all chat surfaces retain structured pending actions', () => {
     'mobile/pages/TalkToHiveMobile.jsx',
   ]) {
     expect(read(relative)).toContain('pending_actions');
+    expect(read(relative)).toContain('thread_id:');
   }
 });
 
@@ -23,6 +24,8 @@ test('shared inline interaction prints exact fields and exposes governed actions
   expect(source).toContain("return 'Send email'");
   expect(source).toContain('Nothing has been executed yet. Review the exact details below');
   expect(source).toContain('pendingActions={msg.pending_actions}');
+  expect(source).toContain('refreshDraftStatus');
+  expect(source).toContain("status === 'sent' || status === 'cancelled' || status === 'failed' || status === 'expired'");
 });
 
 test('choices, arbitrary fields, and save scope use inline rectangular controls', () => {

@@ -29,3 +29,14 @@ test('the parent page does not duplicate the MemoriesTab list request', () => {
   const tab = source.slice(source.indexOf('function MemoriesTab('));
   expect(tab.match(/apiClient\.listMemories\(listParams\)/g)).toHaveLength(1);
 });
+
+test('tab totals use the ACL list pagination contract and refresh after mutations', () => {
+  const parent = source.slice(source.indexOf('export default function Memories()'), source.indexOf('function MemoriesTab('));
+  expect(parent).toContain('apiClient.listMemories({ limit: 1 })');
+  expect(parent).toContain('apiClient.listDocuments({ limit: 1 })');
+  expect(parent).toContain('apiClient.listEvidence({ limit: 1 })');
+  expect(parent).toContain('paginationTotal(results[0].value)');
+  expect(parent).toContain('paginationTotal(results[1].value)');
+  expect(parent).toContain('paginationTotal(results[2].value)');
+  expect(parent).toContain('window.addEventListener(KNOWLEDGE_CHANGED_EVENT, refresh)');
+});
