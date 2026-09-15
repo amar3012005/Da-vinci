@@ -161,6 +161,43 @@ export function LoadingSurface({ stage = 0 }) {
   );
 }
 
+/** The host loader ends only when native Harness has painted an interactive seat. */
+export function nativeHarnessMounted(container) {
+  return Boolean(container?.querySelector?.('[data-composer-seat], aside[aria-label="HIVE chat sessions"]'));
+}
+
+function waitForNativeHarnessMount(container, signal) {
+  if (nativeHarnessMounted(container)) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const observer = new MutationObserver(() => {
+      if (!nativeHarnessMounted(container)) return;
+      cleanup();
+      resolve();
+    });
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error('Harness did not finish rendering the chat interface.'));
+    }, 30000);
+    const onAbort = () => {
+      cleanup();
+      reject(new DOMException('Harness mount cancelled.', 'AbortError'));
+    };
+    const cleanup = () => {
+      observer.disconnect();
+      window.clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+    observer.observe(container, { childList: true, subtree: true });
+    // A synchronous native insertion can occur between the first check and
+    // observer registration.
+    if (nativeHarnessMounted(container)) {
+      cleanup();
+      resolve();
+    }
+  });
+}
+
 function isFreshHarnessRoute() {
   return window.location.pathname === `${HARNESS_OVERVIEW_PATH}/new`;
 }
@@ -196,6 +233,7 @@ export default function HarnessSurface() {
     let cancelled = false;
     let recovering = false;
     let livenessTimer;
+    const readinessAbort = new AbortController();
     const request = { container: mount, cancelled: false };
     const setLoadingStage = (stage) => {
       if (!cancelled) setState({ phase: 'loading', stage, message: null });
@@ -283,6 +321,7 @@ export default function HarnessSurface() {
       } else {
         await window.__DSH_EMBED_INITIAL_MOUNT__;
       }
+      await waitForNativeHarnessMount(mount, readinessAbort.signal);
       if (!cancelled) {
         setState({ phase: 'ready', stage: HARNESS_BOOT_STAGES.length - 1, message: null });
         livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);
@@ -301,6 +340,7 @@ export default function HarnessSurface() {
       window.removeEventListener('online', recoverExpiredSession);
       document.removeEventListener('visibilitychange', recoverExpiredSession);
       request.cancelled = true;
+      readinessAbort.abort();
       if (window.__DSH_EMBED_REQUEST__ === request) window.__DSH_EMBED_REQUEST__ = undefined;
       window.__HIVEMIND_TRANSCRIBE_AUDIO__ = undefined;
       window.__HIVEMIND_DELETE_SESSION__ = undefined;

@@ -8,6 +8,7 @@ import {
   LoadingSurface,
   harnessBootRevision,
   harnessShellUrl,
+  nativeHarnessMounted,
 } from '../HarnessSurface';
 
 describe('HarnessSurface module cache', () => {
@@ -48,5 +49,12 @@ describe('HarnessSurface module cache', () => {
 
     act(() => reactRoot.unmount());
     root.remove();
+  });
+
+  it('keeps the host boot surface until native Harness has an interactive chat seat', () => {
+    const root = document.createElement('div');
+    expect(nativeHarnessMounted(root)).toBe(false);
+    root.innerHTML = '<aside aria-label="HIVE chat sessions"></aside>';
+    expect(nativeHarnessMounted(root)).toBe(true);
   });
 });
