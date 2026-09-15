@@ -297,7 +297,11 @@ export default {
       if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
       return harnessChatFlagResponse(request, env);
     }
+    // Establishment is the one runner route that necessarily precedes the
+    // admission cookie.  The runner validates the signed, short-lived ticket
+    // carried in this request; every later runner route remains cookie-gated.
     if (pathname === '/api/hivemind/embed/exchange'
+      || pathname === '/api/hivemind/session/establish'
       || isHarnessDocumentOrAsset(request, pathname)
       || (hasHarnessAdmission(request) && isHarnessRunnerRoute(pathname))) {
       return noIndex(await harnessResponse(request, env));

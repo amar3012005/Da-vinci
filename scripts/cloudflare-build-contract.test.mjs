@@ -5,6 +5,7 @@ import test from 'node:test';
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url)));
 const dockerignore = readFileSync(new URL('../.dockerignore', import.meta.url), 'utf8');
 const gitignore = readFileSync(new URL('../.gitignore', import.meta.url), 'utf8');
+const worker = readFileSync(new URL('../cloudflare/worker.mjs', import.meta.url), 'utf8');
 
 test('Cloudflare build stays bounded and uses a pinned Wrangler', () => {
   assert.equal(packageJson.scripts['build:cloudflare'], 'node scripts/build-cloudflare.mjs');
@@ -23,4 +24,15 @@ test('browser package excludes known server-only dependencies', () => {
   for (const dependency of ['express', 'mysql2', 'nodemailer', 'sequelize', 'twilio']) {
     assert.equal(packageJson.dependencies[dependency], undefined);
   }
+});
+
+test('native session establishment reaches the runner before an admission cookie exists', () => {
+  assert.match(
+    worker,
+    /pathname === '\/api\/hivemind\/embed\/exchange'\s*\n\s*\|\| pathname === '\/api\/hivemind\/session\/establish'/u,
+  );
+  assert.match(
+    worker,
+    /hasHarnessAdmission\(request\) && isHarnessRunnerRoute\(pathname\)/u,
+  );
 });
