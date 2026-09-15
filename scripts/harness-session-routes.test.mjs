@@ -107,3 +107,24 @@ test('generic API traffic without Harness admission stays on Da-vinci', async ()
   assert.equal(calls, 0);
   assert.match(await response.text(), /Da-vinci/);
 });
+
+test('remote runner transport preserves public browser Origin', async () => {
+  const originalFetch = globalThis.fetch;
+  let forwarded;
+  globalThis.fetch = async request => {
+    forwarded = request;
+    return Response.json({ ok: true });
+  };
+  try {
+    await worker.fetch(new Request(`${origin}/api/session/create`, {
+      method: 'POST',
+      headers: { cookie: 'hm_harness_admitted=1', origin, 'content-type': 'application/json' },
+      body: '{}',
+    }), { RUNNER_ORIGIN: 'https://harness-chat-origin.singulancelabs.com' });
+    assert.equal(new URL(forwarded.url).host, 'harness-chat-origin.singulancelabs.com');
+    assert.equal(forwarded.headers.get('origin'), origin);
+    assert.equal(forwarded.headers.get('x-forwarded-host'), new URL(origin).host);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

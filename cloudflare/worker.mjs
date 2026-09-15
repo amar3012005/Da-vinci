@@ -156,16 +156,9 @@ async function proxyHarnessRunner(request, env) {
   const headers = new Headers(request.headers);
   headers.set('x-forwarded-host', incoming.host);
   headers.set('x-forwarded-proto', incoming.protocol.slice(0, -1));
-  // Admission validates the forwarded public authority, so both ticket entry
-  // points must retain the browser Origin. Native Harness API and WebSocket
-  // requests are then authenticated by the runner's own Host/Origin fence;
-  // present the runner authority for those paths while retaining the public
-  // authority in x-forwarded-host for audit and ticket validation.
-  const preservesPublicOrigin = incoming.pathname === '/api/hivemind/embed/exchange'
-    || incoming.pathname === '/api/hivemind/session/establish';
-  if (!preservesPublicOrigin && headers.has('origin')) {
-    headers.set('origin', target.origin);
-  }
+  // The runner verifies the public authority supplied by its configured proxy.
+  // Preserve the actual browser Origin for that same-authority fence. Rewriting
+  // it to the tunnel origin makes valid session RPCs and WebSockets fail 403.
   return fetch(new Request(target, {
     method: request.method,
     headers,
