@@ -163,7 +163,10 @@ export function LoadingSurface({ stage = 0 }) {
 
 /** The host loader ends only when native Harness has painted an interactive seat. */
 export function nativeHarnessMounted(container) {
-  return Boolean(container?.querySelector?.('[data-composer-seat], aside[aria-label="HIVE chat sessions"]'));
+  return Boolean(
+    container?.querySelector?.('[data-composer-seat]')
+    && container?.querySelector?.('aside[aria-label="HIVE chat sessions"]'),
+  );
 }
 
 function waitForNativeHarnessMount(container, signal) {

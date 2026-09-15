@@ -54,7 +54,7 @@ describe('HarnessSurface module cache', () => {
   it('keeps the host boot surface until native Harness has an interactive chat seat', () => {
     const root = document.createElement('div');
     expect(nativeHarnessMounted(root)).toBe(false);
-    root.innerHTML = '<aside aria-label="HIVE chat sessions"></aside>';
+    root.innerHTML = '<aside aria-label="HIVE chat sessions"></aside><div data-composer-seat=""></div>';
     expect(nativeHarnessMounted(root)).toBe(true);
   });
 });

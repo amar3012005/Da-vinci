@@ -18,6 +18,8 @@
  */
 
 export const SERVICE_ERROR_EVENT = 'hm:service-error';
+const NETWORK_FAILURE_WINDOW_MS = 10_000;
+let lastNetworkFailureAt = null;
 
 /**
  * Route changes, component disposal, and explicit AbortController use all
@@ -48,6 +50,27 @@ export function isServiceError(err) {
   if (typeof status === 'number') return status >= 500 && status <= 599;
   // No response but a request was made → network error / timeout / CORS / DNS.
   return Boolean(err?.request) && !err?.response;
+}
+
+/**
+ * A single failed browser request is common while an SPA is mounting or a
+ * WebSocket is being replaced. Avoid alarming the user unless that transport
+ * failure repeats inside a short window; an explicit 5xx remains immediate.
+ */
+export function shouldNotifyServiceError(err, now = Date.now()) {
+  if (!isServiceError(err)) return false;
+  if (typeof err?.response?.status === 'number') return true;
+  if (lastNetworkFailureAt === null || now - lastNetworkFailureAt > NETWORK_FAILURE_WINDOW_MS) {
+    lastNetworkFailureAt = now;
+    return false;
+  }
+  lastNetworkFailureAt = now;
+  return true;
+}
+
+/** Reset the lightweight notification debounce; exposed for deterministic tests. */
+export function resetServiceErrorNotificationState() {
+  lastNetworkFailureAt = null;
 }
 
 /** Normalize into { status, message } for the toast. */
