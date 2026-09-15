@@ -1,6 +1,16 @@
-import { isExpectedBrowserContextError, isRequestCancellation, isServiceError } from '../serviceError';
+import {
+  isExpectedBrowserContextError,
+  isRequestCancellation,
+  isServiceError,
+  resetServiceErrorNotificationState,
+  shouldNotifyServiceError,
+} from '../serviceError';
 
 describe('service error classification', () => {
+  beforeEach(() => {
+    resetServiceErrorNotificationState();
+  });
+
   it.each([
     { code: 'ERR_CANCELED', request: {} },
     { name: 'CanceledError', request: {} },
@@ -23,5 +33,13 @@ describe('service error classification', () => {
     };
     expect(isExpectedBrowserContextError(error)).toBe(true);
     expect(isServiceError(error)).toBe(false);
+  });
+
+  it('waits for a repeated transient network failure before showing the global toast', () => {
+    const networkError = { request: {} };
+
+    expect(shouldNotifyServiceError(networkError, 100)).toBe(false);
+    expect(shouldNotifyServiceError(networkError, 2_000)).toBe(true);
+    expect(shouldNotifyServiceError({ response: { status: 503 } }, 100)).toBe(true);
   });
 });

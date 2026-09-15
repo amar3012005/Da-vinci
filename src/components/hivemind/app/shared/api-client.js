@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API_DEFAULTS } from './theme';
 import { isPlanLimitError, extractPlanLimit, emitPlanLimit } from './planLimit';
-import { isServiceError, extractServiceError, emitServiceError } from './serviceError';
+import { shouldNotifyServiceError, extractServiceError, emitServiceError } from './serviceError';
 import { productActionDecision } from './product-access';
 import { hasIngestModeMismatch, hasMemoryGenerationFailure, ingestFailureDetails, normalizeIngestMode, responseIngestMode } from './knowledge-ingest-contract';
 
@@ -138,7 +138,7 @@ class HiveMindApiClient {
       (error) => {
         if (isPlanLimitError(error)) {
           emitPlanLimit(extractPlanLimit(error));
-        } else if (isServiceError(error) && error?.config?.suppressServiceError !== true) {
+        } else if (error?.config?.suppressServiceError !== true && shouldNotifyServiceError(error)) {
           // 5xx / network outage → global toast so it never fails silently.
           emitServiceError(extractServiceError(error));
         }
