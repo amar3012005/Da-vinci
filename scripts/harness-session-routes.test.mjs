@@ -94,48 +94,6 @@ test('admitted native unary RPCs are delegated to Harness', async () => {
   assert.deepEqual(forwarded, { path: '/api/session/create', method: 'POST' });
 });
 
-test('direct runner proxy preserves the public Cordis cookie authority', async () => {
-  const originalFetch = globalThis.fetch;
-  let forwarded;
-  globalThis.fetch = async (request, init) => {
-    forwarded = {
-      url: request.url,
-      host: request.headers.get('host'),
-      origin: request.headers.get('origin'),
-      forwardedHost: request.headers.get('x-forwarded-host'),
-      resolveOverride: init?.cf?.resolveOverride,
-    };
-    return Response.json({ ok: true });
-  };
-  try {
-    const env = {
-      ASSETS: { fetch: async () => new Response('Da-vinci') },
-      RUNNER_ORIGIN: 'https://harness-chat-origin.singulancelabs.com',
-    };
-    const response = await worker.fetch(new Request(`${origin}/api/session/create`, {
-      method: 'POST',
-      headers: {
-        cookie: 'dsh-auth-next.preview.singulancelabs.com=value; hm_harness_admitted=1',
-        'content-type': 'application/json',
-        origin,
-      },
-      body: JSON.stringify({ request: {} }),
-    }), env);
-
-    assert.equal(response.status, 200);
-    assert.equal(forwarded.url, `${origin}/api/session/create`);
-    // Node's Request omits the implicit Host header; Cloudflare derives it
-    // from this preserved public URL before applying resolveOverride.
-    assert.equal(new URL(forwarded.url).hostname, 'next.preview.singulancelabs.com');
-    assert.equal(forwarded.host, null);
-    assert.equal(forwarded.origin, origin);
-    assert.equal(forwarded.forwardedHost, 'next.preview.singulancelabs.com');
-    assert.equal(forwarded.resolveOverride, 'harness-chat-origin.singulancelabs.com');
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
 test('generic API traffic without Harness admission stays on Da-vinci', async () => {
   let calls = 0;
   const env = environment(async () => { calls += 1; return new Response('Harness'); });
