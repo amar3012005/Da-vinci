@@ -197,6 +197,15 @@ async function harnessResponse(request, env) {
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
   }
 
+  // The in-page client uses the JSON establishment endpoint rather than the
+  // navigation exchange. Mirror the successful admission marker here so its
+  // immediate authenticated boot request reaches the runner, not SPA assets.
+  if (pathname === '/api/hivemind/session/establish' && response.ok) {
+    const headers = new Headers(response.headers);
+    headers.append('set-cookie', `${HARNESS_ADMISSION_COOKIE}=1; Path=/; Max-Age=3600; Secure; HttpOnly; SameSite=Strict`);
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  }
+
   const runnerRejectedPrincipal = harnessDocumentPath(pathname) !== null && (
     response.status === 401
     || response.status === 403

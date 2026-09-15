@@ -37,6 +37,10 @@ test('native session establishment reaches the runner before an admission cookie
   );
   assert.match(
     worker,
+    /pathname === '\/api\/hivemind\/session\/establish' && response\.ok/u,
+  );
+  assert.match(
+    worker,
     /hasHarnessAdmission\(request\) && isHarnessRunnerRoute\(pathname\)/u,
   );
 });
