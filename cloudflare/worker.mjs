@@ -11,6 +11,8 @@ const USE_TOOLS_DURABLE_AGENT_ENV_KEY = 'USE_TOOLS_DURABLE_AGENT';
 const ENABLE_TOOLS_HITL_FLAG_PATH = '/__hivemind/feature-flags/enable-tools-hitl';
 const ENABLE_TOOLS_HITL_FLAGSHIP_KEY = 'enable-tools-hitl';
 const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
+const DAY0_LIFECYCLE_FLAG_PATH = '/__hivemind/feature-flags/day0-lifecycle';
+const DAY0_LIFECYCLE_FLAG_KEY = 'day0-lifecycle';
 const HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const UI_SHELL_FLAG_PATH = '/__hivemind/feature-flags/ui-shell';
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
@@ -79,6 +81,15 @@ function missingAssetResponse() {
       'x-content-type-options': 'nosniff',
     },
   });
+}
+
+function constantTimeBearer(request, secret) {
+  const expected = `Bearer ${secret || ''}`;
+  const actual = request.headers.get('authorization') || '';
+  if (!secret || actual.length !== expected.length) return false;
+  let mismatch = 0;
+  for (let index = 0; index < actual.length; index += 1) mismatch |= actual.charCodeAt(index) ^ expected.charCodeAt(index);
+  return mismatch === 0;
 }
 
 function hasHarnessSession(request) {
@@ -236,6 +247,26 @@ async function partnerReferralsFlagResponse(request, env) {
   return booleanFlagshipResponse(request, env, PARTNER_REFERRALS_FLAG_KEY);
 }
 
+async function dayZeroLifecycleFlagResponse(request, env) {
+  if (!constantTimeBearer(request, env.HIVE_HARNESS_EDGE_EVAL_SECRET)) {
+    return Response.json({ error: 'unauthorized' }, { status: 401, headers: { 'cache-control': 'no-store' } });
+  }
+  const body = await request.json().catch(() => ({}));
+  const orgId = typeof body?.org_id === 'string' ? body.org_id : '';
+  const userId = typeof body?.user_id === 'string' ? body.user_id : '';
+  let enabled = false;
+  try {
+    enabled = await env.FLAGS.getBooleanValue(DAY0_LIFECYCLE_FLAG_KEY, false, {
+      ...flagshipContext(request, env), targetingKey: `${orgId}:${userId}`, org_id: orgId, user_id: userId,
+    });
+  } catch {
+    // Flagship unavailability must not send lifecycle email unexpectedly.
+  }
+  return Response.json({ key: DAY0_LIFECYCLE_FLAG_KEY, enabled: enabled === true, source: 'cloudflare-flagship' }, {
+    headers: { 'cache-control': 'no-store' },
+  });
+}
+
 export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
@@ -261,6 +292,11 @@ export default {
     // namespace. Route it before the broad native `/api/*` boundary.
     if (pathname === MEETING_TRANSCRIBE_PATH) {
       return noIndex(await meetingTranscriptionResponse(request, env));
+    }
+
+    if (pathname === DAY0_LIFECYCLE_FLAG_PATH) {
+      if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
+      return dayZeroLifecycleFlagResponse(request, env);
     }
 
     // Da-vinci owns every application document, including session deep links.
