@@ -13,6 +13,8 @@ const ENABLE_TOOLS_HITL_FLAGSHIP_KEY = 'enable-tools-hitl';
 const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const UI_SHELL_FLAG_PATH = '/__hivemind/feature-flags/ui-shell';
+const DAY0_ONBOARDING_FLAG_PATH = '/__hivemind/feature-flags/day0-onboarding';
+const DAY0_ONBOARDING_FLAG_KEY = 'day0_onboarding_v1';
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const MEETING_TRANSCRIBE_PATH = '/api/meetings/transcribe';
 const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
@@ -37,6 +39,15 @@ function flagshipContext(request, env) {
     surface: env.FLAGSHIP_SURFACE || 'hivemind-web',
     hostname: hostname(request),
   };
+}
+
+function constantTimeBearer(request, secret) {
+  const expected = `Bearer ${secret || ''}`;
+  const actual = request.headers.get('authorization') || '';
+  if (!secret || actual.length !== expected.length) return false;
+  let mismatch = 0;
+  for (let index = 0; index < actual.length; index += 1) mismatch |= actual.charCodeAt(index) ^ expected.charCodeAt(index);
+  return mismatch === 0;
 }
 
 function noIndex(response) {
@@ -236,6 +247,37 @@ async function partnerReferralsFlagResponse(request, env) {
   return booleanFlagshipResponse(request, env, PARTNER_REFERRALS_FLAG_KEY);
 }
 
+// Core supplies the already authenticated organisation/user pair.  Browsers
+// cannot use this route as a Flagship oracle, and a Flagship error never starts
+// an email lifecycle.
+async function dayZeroOnboardingFlagResponse(request, env) {
+  if (!constantTimeBearer(request, env.HIVE_HARNESS_EDGE_EVAL_SECRET)) {
+    return Response.json({ error: 'unauthorized' }, { status: 401, headers: { 'cache-control': 'no-store' } });
+  }
+  const body = await request.json().catch(() => ({}));
+  const orgId = typeof body?.org_id === 'string' ? body.org_id : '';
+  const userId = typeof body?.user_id === 'string' ? body.user_id : '';
+  let enabled = false;
+  let evaluationId;
+  if (orgId && userId) {
+    try {
+      const details = await env.FLAGS.getBooleanDetails(DAY0_ONBOARDING_FLAG_KEY, false, {
+        ...flagshipContext(request, env), targetingKey: `${orgId}:${userId}`, org_id: orgId, user_id: userId,
+      });
+      enabled = details.value === true;
+      evaluationId = details.evaluationId;
+    } catch {
+      // Fail closed.
+    }
+  }
+  return Response.json({
+    key: DAY0_ONBOARDING_FLAG_KEY,
+    source: 'cloudflare-flagship',
+    enabled,
+    ...(evaluationId ? { evaluation_id: evaluationId } : {}),
+  }, { headers: { 'cache-control': 'no-store', 'x-robots-tag': 'noindex, nofollow, noarchive, nosnippet' } });
+}
+
 export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
@@ -261,6 +303,11 @@ export default {
     // namespace. Route it before the broad native `/api/*` boundary.
     if (pathname === MEETING_TRANSCRIBE_PATH) {
       return noIndex(await meetingTranscriptionResponse(request, env));
+    }
+
+    if (pathname === DAY0_ONBOARDING_FLAG_PATH) {
+      if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
+      return dayZeroOnboardingFlagResponse(request, env);
     }
 
     // Da-vinci owns every application document, including session deep links.

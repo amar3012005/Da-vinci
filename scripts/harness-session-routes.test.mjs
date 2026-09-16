@@ -39,6 +39,26 @@ test('dictation fails closed when its canonical Core origin is not configured', 
   assert.equal(response.status, 503);
 });
 
+test('Day 0 admission is private and evaluated only by Flagship', async () => {
+  const payload = { org_id: '67503d34-97e9-49a8-8c52-8ee30cc7603e', user_id: '54f5568b-4d6a-4ae1-9a33-48cb2909d59b' };
+  const env = {
+    ...environment(async () => { throw new Error('Day 0 must not reach Harness'); }),
+    HIVE_HARNESS_EDGE_EVAL_SECRET: 'edge-secret',
+    FLAGS: { getBooleanDetails: async () => ({ value: true, evaluationId: 'day0-eval' }) },
+  };
+  const url = `${origin}/__hivemind/feature-flags/day0-onboarding`;
+  const rejected = await worker.fetch(new Request(url, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload),
+  }), env);
+  assert.equal(rejected.status, 401);
+  const admitted = await worker.fetch(new Request(url, {
+    method: 'POST', headers: { authorization: 'Bearer edge-secret', 'content-type': 'application/json' }, body: JSON.stringify(payload),
+  }), env);
+  assert.deepEqual(await admitted.json(), {
+    key: 'day0_onboarding_v1', source: 'cloudflare-flagship', enabled: true, evaluation_id: 'day0-eval',
+  });
+});
+
 test('a deep link survives the one-shot admission exchange', async () => {
   const target = '/hivemind/app/overview/session/session-opaque';
   const env = environment(async () => new Response(null, { status: 303, headers: { location: '/old' } }));
