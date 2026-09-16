@@ -46,7 +46,11 @@ async function navigateHarnessTicket(ticket, destination) {
 export default function HarnessChatSurface({ legacy }) {
   const { t } = useTranslation('dashboard');
   const mountedRef = useRef(true);
-  const [mode, setMode] = useState('legacy');
+  // The only authority allowed to choose a surface is the successful
+  // Cloudflare rollout receipt. Until that arrives, or after a bootstrap
+  // failure, keep the current launcher visible rather than silently exposing
+  // the legacy orchestrator.
+  const [mode, setMode] = useState(null);
   const [notice, setNotice] = useState(null);
   const [connecting, setConnecting] = useState(false);
 
@@ -97,13 +101,13 @@ export default function HarnessChatSurface({ legacy }) {
           </button>
         </div>
       )}
-      {connecting ? (
+      {connecting || mode === null ? (
         <div className="flex min-h-[360px] flex-1 items-center justify-center bg-[#faf9f4]">
-          <div className="h-1 w-44 overflow-hidden rounded-full bg-[#e7e4dc]" aria-label="Opening HIVE-MIND chat">
+          <div className="h-1 w-44 overflow-hidden rounded-full bg-[#e7e4dc]" aria-label={notice ? 'HIVE-MIND chat unavailable' : 'Opening HIVE-MIND chat'}>
             <div className="h-full w-1/2 animate-pulse rounded-full bg-[#117dff]" />
           </div>
         </div>
-      ) : legacy}
+      ) : mode === 'legacy' ? legacy : null}
     </div>
   );
 }
