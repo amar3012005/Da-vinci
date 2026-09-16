@@ -14,7 +14,12 @@ const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const HIVE_HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const HIVE_HARNESS_CHAT_FLAG_KEY = 'hivemind_harness_chat_v1';
 const DAY0_ONBOARDING_FLAG_PATH = '/__hivemind/feature-flags/day0-onboarding';
-const DAY0_ONBOARDING_FLAG_KEY = 'day0_onboarding_v1';
+// Core speaks one stable Day-0 admission contract, while Flagship keeps the
+// two independently deployable server rollouts isolated. Never expose the
+// server-specific key to Core: it must only consume the canonical contract.
+const DAY0_ONBOARDING_CONTRACT_KEY = 'day0_onboarding_v1';
+const SINGULANCE_DAY0_ONBOARDING_FLAG_KEY = 'singulance_day0_onboarding_v1';
+const ENIGMA_DAY0_ONBOARDING_FLAG_KEY = 'enigma_day0_onboarding_v1';
 // One rollout decides the conversation engine for a user.  "legacy" stays
 // on the existing LangGraph/LangChain orchestrator; "harness" enables the
 // native Cordis surface.  Do not add an intermediate browser-visible mode:
@@ -36,6 +41,13 @@ const PRIVATE_ROBOTS = `# This hostname serves an authenticated SINGULANCE appli
 function hostname(request) {
   const host = request.headers.get('host');
   return (host ? host.split(':')[0] : new URL(request.url).hostname).toLowerCase();
+}
+
+function dayZeroOnboardingFlagKey(env) {
+  const environment = env.FLAGSHIP_ENVIRONMENT || env.ENVIRONMENT || 'production';
+  return environment === 'dev'
+    ? ENIGMA_DAY0_ONBOARDING_FLAG_KEY
+    : SINGULANCE_DAY0_ONBOARDING_FLAG_KEY;
 }
 
 function noIndex(response) {
@@ -279,7 +291,7 @@ async function dayZeroOnboardingFlagResponse(request, env) {
   let evaluationId;
   if (orgId && userId) {
     try {
-      const details = await env.FLAGS.getBooleanDetails(DAY0_ONBOARDING_FLAG_KEY, false, {
+      const details = await env.FLAGS.getBooleanDetails(dayZeroOnboardingFlagKey(env), false, {
         targetingKey: `${orgId}:${userId}`, org_id: orgId, user_id: userId,
         environment: env.ENVIRONMENT || 'production', surface: 'hivemind-web', hostname: hostname(request),
       });
@@ -290,7 +302,7 @@ async function dayZeroOnboardingFlagResponse(request, env) {
     }
   }
   return Response.json({
-    key: DAY0_ONBOARDING_FLAG_KEY,
+    key: DAY0_ONBOARDING_CONTRACT_KEY,
     source: 'cloudflare-flagship',
     enabled,
     ...(evaluationId ? { evaluation_id: evaluationId } : {}),

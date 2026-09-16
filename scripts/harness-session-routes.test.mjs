@@ -140,10 +140,14 @@ test('native WebSocket upgrades are returned without losing their socket', async
 test('Day 0 admission is private, Flagship-owned, and fails closed', async () => {
   const day0Url = `${origin}/__hivemind/feature-flags/day0-onboarding`;
   const payload = { org_id: '67503d34-97e9-49a8-8c52-8ee30cc7603e', user_id: '54f5568b-4d6a-4ae1-9a33-48cb2909d59b' };
+  let evaluatedKey;
   const env = {
     HIVE_HARNESS_EDGE_EVAL_SECRET: 'edge-secret',
     ENVIRONMENT: 'production',
-    FLAGS: { getBooleanDetails: async () => ({ value: true, evaluationId: 'day0-eval' }) },
+    FLAGS: { getBooleanDetails: async (key) => {
+      evaluatedKey = key;
+      return { value: true, evaluationId: 'day0-eval' };
+    } },
   };
   const rejected = await worker.fetch(new Request(day0Url, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload),
@@ -155,4 +159,5 @@ test('Day 0 admission is private, Flagship-owned, and fails closed', async () =>
   assert.deepEqual(await admitted.json(), {
     key: 'day0_onboarding_v1', source: 'cloudflare-flagship', enabled: true, evaluation_id: 'day0-eval',
   });
+  assert.equal(evaluatedKey, 'singulance_day0_onboarding_v1');
 });
