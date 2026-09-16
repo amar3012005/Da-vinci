@@ -49,7 +49,10 @@ describe('knowledge ingest frontend contract', () => {
     expect(exactLayerCount(1.5)).toBeNull();
     expect(exactLayerCount(undefined)).toBeNull();
     expect(paginationTotal({ pagination: { total: 12 } })).toBe(12);
-    expect(paginationTotal({ total: 12 })).toBeNull();
+    expect(paginationTotal({ total: 12 })).toBe(12);
+    expect(paginationTotal({ count: 7 })).toBe(7);
+    expect(paginationTotal({ meta: { total: 4 } })).toBe(4);
+    expect(paginationTotal({ data: { pagination: { total: 3 } } })).toBe(3);
   });
 
   test('uses structured quota data in a terminal upload row', () => {

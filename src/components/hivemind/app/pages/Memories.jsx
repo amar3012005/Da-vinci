@@ -2160,7 +2160,7 @@ function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelect
       const seen = new Set(base.map((d) => d.id));
       return [...base, ...page.filter((d) => !seen.has(d.id))];
     });
-    setTotal(data.pagination?.total ?? data.total ?? 0);
+    setTotal(paginationTotal(data) ?? page.length);
   }, [data, isSearching, offset]);
 
   const hasMore = !isSearching && total > 0 && documents.length < total;
@@ -2305,7 +2305,7 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
       const seen = new Set(base.map((item) => item.segmentId || item.segment_id || item.id));
       return [...base, ...page.filter((item) => !seen.has(item.segmentId || item.segment_id || item.id))];
     });
-    setTotal(data?.pagination?.total ?? page.length);
+    setTotal(paginationTotal(data) ?? page.length);
   }, [data, isSearching, offset]);
 
   const hasMore = !isSearching && total > 0 && evidenceRows.length < total;

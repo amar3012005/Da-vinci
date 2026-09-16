@@ -22,7 +22,6 @@ import {
   GitFork,
   Globe,
   HelpCircle,
-  Hexagon,
   Lightbulb,
   Loader2,
   Lock,
@@ -49,6 +48,7 @@ import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/up
 import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './WebStudio';
 import HarnessChatSurface from './HarnessChatSurface';
 import HarnessSurface from './HarnessSurface';
+import BetaFeatureModal from '../components/BetaFeatureModal';
 
 // ─── Animation variants ──────────────────────────────────────────
 
@@ -815,7 +815,11 @@ function OverviewChat({ inputRef }) {
   // renders progress + "View in Chrome" / "Preview" on the assistant turn
   // once it lands. jobsByIdRef backs the postMessage save-bridge below,
   // same pattern as Web Studio's own bridge.
-  const [deepResearchMode, setDeepResearchMode] = useState(false);
+  // Deep Research is deliberately not admitted on the general Overview
+  // surface yet. Keep the existing report path dormant until its beta gate is
+  // enabled server-side; the visible control opens the reusable beta notice.
+  const deepResearchMode = false;
+  const [betaFeature, setBetaFeature] = useState(null);
   const [drPreviewJob, setDrPreviewJob] = useState(null);
   const jobsByIdRef = useRef({});
   const drPollersRef = useRef({});
@@ -1121,9 +1125,7 @@ function OverviewChat({ inputRef }) {
           follow directly below (belt sits between welcome and chat). */}
       {!hasThread && (
         <div className="flex flex-col items-start text-left mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-[#0a0a0a] flex items-center justify-center shadow-sm">
-            <Hexagon size={24} className="text-white" />
-          </div>
+          <img src="/singulance-mark.svg" alt="Singulance" className="h-10 w-auto" />
           <h1 className="text-[34px] leading-tight font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-5">
             {firstName
               ? t('overview.chat.welcomeBack', 'Welcome back, {{name}}', { name: firstName })
@@ -1313,11 +1315,10 @@ function OverviewChat({ inputRef }) {
                 in Chrome / Preview on the turn once it lands. */}
             <button
               type="button"
-              role="switch"
-              aria-checked={deepResearchMode}
-              onClick={() => setDeepResearchMode((v) => !v)}
-              className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 transition-all ${deepResearchMode ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-[#e3e0db] bg-white text-[#525252] hover:border-[#d4d0ca] hover:bg-[#faf9f4]'}`}
-              title={t('overview.chat.deepResearchHint', 'Compile a multi-source research report with citations (1-3 min)')}
+              aria-haspopup="dialog"
+              onClick={() => setBetaFeature(t('overview.chat.deepResearch', 'Deep Research'))}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#e3e0db] bg-white px-2.5 text-[#525252] transition-all hover:border-[#d4d0ca] hover:bg-[#faf9f4]"
+              title={t('overview.chat.deepResearchBetaHint', 'Deep Research is currently available to beta users')}
             >
               <Globe size={12} />
               <span className="text-[10px] font-semibold tracking-tight">{t('overview.chat.deepResearch', 'Deep Research')}</span>
@@ -1378,6 +1379,8 @@ function OverviewChat({ inputRef }) {
           />
         )}
       </AnimatePresence>
+
+      <BetaFeatureModal open={Boolean(betaFeature)} feature={betaFeature || ''} onClose={() => setBetaFeature(null)} />
     </motion.div>
   );
 }
@@ -1625,8 +1628,8 @@ function LegacyOverview() {
         className="mb-6 bg-white border border-[#e3e0db] rounded-[10px] px-4 py-3 flex items-center gap-4 flex-wrap"
       >
         {/* Badge */}
-        <div className="w-9 h-9 rounded-xl bg-[#0a0a0a] flex items-center justify-center flex-shrink-0">
-          <Hexagon size={18} className="text-white" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0a0a0a] flex-shrink-0">
+          <img src="/singulance-mark.svg" alt="" className="h-5 w-5 brightness-0 invert" />
         </div>
 
         {/* Live clock */}

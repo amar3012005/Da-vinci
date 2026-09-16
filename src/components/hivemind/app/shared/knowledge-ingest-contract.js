@@ -62,7 +62,19 @@ export function exactLayerCount(value) {
 }
 
 export function paginationTotal(response) {
-  return exactLayerCount(response?.pagination?.total);
+  // Core, Control Plane and a few older proxy deployments have returned the
+  // same paged projection under slightly different envelopes.  Counts are UI
+  // metadata only, but showing 0 when visible rows exist destroys trust in the
+  // Documents/Evidence lanes. Keep the source authoritative while accepting
+  // each supported envelope.
+  return exactLayerCount(
+    response?.pagination?.total
+      ?? response?.total
+      ?? response?.count
+      ?? response?.meta?.total
+      ?? response?.data?.pagination?.total
+      ?? response?.data?.total
+  );
 }
 
 export function emitKnowledgeChanged() {

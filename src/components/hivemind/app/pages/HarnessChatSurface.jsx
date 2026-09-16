@@ -88,7 +88,7 @@ export default function HarnessChatSurface({ legacy }) {
   useEffect(() => { bootstrap(); }, [bootstrap]);
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex flex-1 min-h-0 flex-col justify-end">
       {mode === 'preview' && !notice && !connecting && (
         <div className="mx-auto mb-2 flex w-full max-w-3xl items-center justify-between gap-3 rounded-[10px] border border-blue-200 bg-blue-50 px-3 py-2">
           <div className="flex min-w-0 items-center gap-2">
