@@ -89,9 +89,13 @@ function hasHarnessAdmission(request) {
   return new RegExp(`(?:^|;\\s*)${HARNESS_ADMISSION_COOKIE}=1(?:;|$)`).test(request.headers.get('cookie') || '');
 }
 
-function isHarnessRuntimePath(pathname) {
+function isHarnessRuntimePath(request, pathname) {
   return pathname.startsWith('/api/') || pathname.startsWith('/plugins/')
-    || pathname.startsWith('/assets/');
+    // `/assets/` is shared by the public Da-vinci bundle and the embedded
+    // native Harness. Only an already-admitted Harness session may reach its
+    // private asset origin; otherwise this Worker must let ASSETS serve the
+    // public onboarding artwork and application assets.
+    || (pathname.startsWith('/assets/') && hasHarnessSession(request) && hasHarnessAdmission(request));
 }
 
 function harnessDocumentPath(pathname) {
@@ -261,7 +265,7 @@ export default {
 
     // Da-vinci owns every application document, including session deep links.
     // The embedded native Harness client owns its runtime and plugin assets.
-    if (isHarnessRuntimePath(pathname)) {
+    if (isHarnessRuntimePath(request, pathname)) {
       const response = await harnessResponse(request, env);
       if ((request.headers.get('upgrade') || '').toLowerCase() === 'websocket') return response;
       return noIndex(response);

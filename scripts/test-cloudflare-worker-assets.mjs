@@ -69,6 +69,25 @@ assert.equal(missingAsset.status, 404);
 assert.equal(missingAsset.headers.get('x-content-type-options'), 'nosniff');
 assert.equal(missingAsset.headers.get('cache-control'), 'no-store');
 
+const onboardingArtwork = await worker.fetch(
+  new Request('https://dev.next.singulancelabs.com/assets/onboarding/awakening-1920.webp'),
+  envReturning(new Response('webp-bytes', { headers: { 'content-type': 'image/webp' } })),
+);
+assert.equal(onboardingArtwork.status, 200);
+assert.equal(onboardingArtwork.headers.get('content-type'), 'image/webp');
+assert.equal(await onboardingArtwork.text(), 'webp-bytes');
+
+const harnessAsset = await worker.fetch(
+  new Request('https://dev.next.singulancelabs.com/assets/native-runtime.js', {
+    headers: { cookie: 'dsh-auth-session=opaque; hm_harness_admitted=1' },
+  }),
+  {
+    ...envReturning(new Response('public asset should not be used')),
+    HARNESS_CHAT: { fetch: async () => new Response('native-runtime', { headers: { 'content-type': 'text/javascript' } }) },
+  },
+);
+assert.equal(await harnessAsset.text(), 'native-runtime');
+
 const missingAgentPrompt = await worker.fetch(
   new Request('https://icarus.singulancelabs.com/agent-setup/prompt.md'),
   envReturning(new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } })),
