@@ -11,6 +11,8 @@ const USE_TOOLS_DURABLE_AGENT_ENV_KEY = 'USE_TOOLS_DURABLE_AGENT';
 const ENABLE_TOOLS_HITL_FLAG_PATH = '/__hivemind/feature-flags/enable-tools-hitl';
 const ENABLE_TOOLS_HITL_FLAGSHIP_KEY = 'enable-tools-hitl';
 const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
+const DAY0_LIFECYCLE_FLAG_PATH = '/__hivemind/feature-flags/day0-lifecycle';
+const DAY0_LIFECYCLE_FLAG_KEY = 'day0-lifecycle';
 const HIVE_HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const HIVE_HARNESS_CHAT_FLAG_KEY = 'hivemind_harness_chat_v1';
 // One rollout decides the conversation engine for a user.  "legacy" stays
@@ -292,6 +294,27 @@ async function partnerReferralsFlagResponse(request, env) {
   return booleanFlagshipResponse(request, env, PARTNER_REFERRALS_FLAG_KEY);
 }
 
+async function dayZeroLifecycleFlagResponse(request, env) {
+  if (!constantTimeBearer(request, env.HIVE_HARNESS_EDGE_EVAL_SECRET)) {
+    return Response.json({ error: 'unauthorized' }, { status: 401, headers: { 'cache-control': 'no-store' } });
+  }
+  const body = await request.json().catch(() => ({}));
+  const orgId = typeof body?.org_id === 'string' ? body.org_id : '';
+  const userId = typeof body?.user_id === 'string' ? body.user_id : '';
+  let enabled = false;
+  try {
+    enabled = await env.FLAGS.getBooleanValue(DAY0_LIFECYCLE_FLAG_KEY, false, {
+      targetingKey: `${orgId}:${userId}`, org_id: orgId, user_id: userId,
+      environment: env.ENVIRONMENT || 'production', surface: 'hivemind-web', hostname: hostname(request),
+    });
+  } catch {
+    // Flagship unavailability must not send lifecycle email unexpectedly.
+  }
+  return Response.json({ key: DAY0_LIFECYCLE_FLAG_KEY, enabled: enabled === true, source: 'cloudflare-flagship' }, {
+    headers: { 'cache-control': 'no-store' },
+  });
+}
+
 export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
@@ -313,6 +336,10 @@ export default {
     if (pathname === HIVE_HARNESS_CHAT_FLAG_PATH) {
       if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
       return harnessChatFlagResponse(request, env);
+    }
+    if (pathname === DAY0_LIFECYCLE_FLAG_PATH) {
+      if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
+      return dayZeroLifecycleFlagResponse(request, env);
     }
     // Establishment is the one runner route that necessarily precedes the
     // admission cookie.  The runner validates the signed, short-lived ticket
