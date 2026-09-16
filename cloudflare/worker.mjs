@@ -14,7 +14,11 @@ const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const UI_SHELL_FLAG_PATH = '/__hivemind/feature-flags/ui-shell';
 const DAY0_ONBOARDING_FLAG_PATH = '/__hivemind/feature-flags/day0-onboarding';
-const DAY0_ONBOARDING_FLAG_KEY = 'day0_onboarding_v1';
+// Keep the Core contract stable while allowing production and Enigma to be
+// released and rolled back independently in Flagship.
+const DAY0_ONBOARDING_CONTRACT_KEY = 'day0_onboarding_v1';
+const SINGULANCE_DAY0_ONBOARDING_FLAG_KEY = 'singulance_day0_onboarding_v1';
+const ENIGMA_DAY0_ONBOARDING_FLAG_KEY = 'enigma_day0_onboarding_v1';
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const MEETING_TRANSCRIBE_PATH = '/api/meetings/transcribe';
 const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
@@ -39,6 +43,12 @@ function flagshipContext(request, env) {
     surface: env.FLAGSHIP_SURFACE || 'hivemind-web',
     hostname: hostname(request),
   };
+}
+
+function dayZeroOnboardingFlagKey(env) {
+  return (env.FLAGSHIP_ENVIRONMENT || 'production') === 'dev'
+    ? ENIGMA_DAY0_ONBOARDING_FLAG_KEY
+    : SINGULANCE_DAY0_ONBOARDING_FLAG_KEY;
 }
 
 function constantTimeBearer(request, secret) {
@@ -261,7 +271,7 @@ async function dayZeroOnboardingFlagResponse(request, env) {
   let evaluationId;
   if (orgId && userId) {
     try {
-      const details = await env.FLAGS.getBooleanDetails(DAY0_ONBOARDING_FLAG_KEY, false, {
+      const details = await env.FLAGS.getBooleanDetails(dayZeroOnboardingFlagKey(env), false, {
         ...flagshipContext(request, env), targetingKey: `${orgId}:${userId}`, org_id: orgId, user_id: userId,
       });
       enabled = details.value === true;
@@ -271,7 +281,7 @@ async function dayZeroOnboardingFlagResponse(request, env) {
     }
   }
   return Response.json({
-    key: DAY0_ONBOARDING_FLAG_KEY,
+    key: DAY0_ONBOARDING_CONTRACT_KEY,
     source: 'cloudflare-flagship',
     enabled,
     ...(evaluationId ? { evaluation_id: evaluationId } : {}),
