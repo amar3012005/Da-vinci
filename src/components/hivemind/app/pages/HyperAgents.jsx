@@ -62,6 +62,7 @@ import {
   relTime, hyperEventKey,
 } from '../hyperagents/rooms/shared';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
+import BetaFeatureModal from '../components/BetaFeatureModal';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import { FIELDS, professionsForField, NAME_SUGGESTIONS } from '../shared/field-catalog';
 import AgentAvatar from '../hyperagents/AgentAvatar';
@@ -242,6 +243,7 @@ export default function HyperAgents() {
   const [showAgentRooms, setShowAgentRooms] = useState(false);
   const [runtimeWork, setRuntimeWork] = useState({ agent_runtime_tasks: [] });
   const [operatingRoomsEnabled, setOperatingRoomsEnabled] = useState(false);
+  const [betaFeature, setBetaFeature] = useState(null);
   const domainRoomsEnsuredRef = useRef(false);
 
   useEffect(() => {
@@ -515,20 +517,20 @@ export default function HyperAgents() {
           </button>
           <button
             type="button"
-            onClick={() => goMode('runtime', null)}
+            onClick={() => setBetaFeature('Runtime')}
             className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#bcd0ef]"
           >
             <Power size={13} className="text-[#185bcc]" />
             Runtime
           </button>
-          {operatingRoomsEnabled && <button
+          <button
             type="button"
-            onClick={() => navigate('/hivemind/app/employees/operating-rooms')}
+            onClick={() => setBetaFeature('Operating Rooms')}
             className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#bcd0ef]"
           >
             <PhoneCall size={13} className="text-[#117dff]" />
             Operating Rooms
-          </button>}
+          </button>
           {/* YOUR LEADS — outreach progress board (Notion-style). */}
           <button
             onClick={() => goMode('leads', null)}
@@ -540,7 +542,7 @@ export default function HyperAgents() {
           {/* YOUR CAMPAIGNS — standalone paid media workspace, outside rooms. */}
           <button
             type="button"
-            onClick={() => goMode('campaigns', null)}
+            onClick={() => setBetaFeature('Social Media')}
             className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#e3e0db]"
           >
             <Megaphone size={13} className="text-[#c2410c]" />
@@ -675,10 +677,10 @@ export default function HyperAgents() {
             }}
             onShowRoster={() => goMode('roster')}
             onOpenLeads={() => goMode('leads', null)}
-            onOpenRuntime={() => goMode('runtime', null)}
-            onOpenOperatingRooms={() => navigate('/hivemind/app/employees/operating-rooms')}
+            onOpenRuntime={() => setBetaFeature('Runtime')}
+            onOpenOperatingRooms={() => setBetaFeature('Operating Rooms')}
             operatingRoomsEnabled={operatingRoomsEnabled}
-            showRuntimeInvite={showRuntimeIntro}
+            showRuntimeInvite={false}
             runtimeInviteVersion="canary-20260901"
           />
         ) : viewMode === 'runtime' && hqRoom ? (
@@ -747,6 +749,7 @@ export default function HyperAgents() {
           {error}
         </div>
       )}
+      <BetaFeatureModal open={Boolean(betaFeature)} feature={betaFeature || ''} onClose={() => setBetaFeature(null)} />
     </div>
   );
 }

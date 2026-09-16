@@ -1628,9 +1628,7 @@ function LegacyOverview() {
         className="mb-6 bg-white border border-[#e3e0db] rounded-[10px] px-4 py-3 flex items-center gap-4 flex-wrap"
       >
         {/* Badge */}
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0a0a0a] flex-shrink-0">
-          <img src="/singulance-mark.svg" alt="" className="h-5 w-5 brightness-0 invert" />
-        </div>
+        <img src="/singulance-mark.svg" alt="Singulance" className="h-9 w-auto flex-shrink-0" />
 
         {/* Live clock */}
         <ConsoleClock />
