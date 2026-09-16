@@ -11,8 +11,8 @@ const USE_TOOLS_DURABLE_AGENT_ENV_KEY = 'USE_TOOLS_DURABLE_AGENT';
 const ENABLE_TOOLS_HITL_FLAG_PATH = '/__hivemind/feature-flags/enable-tools-hitl';
 const ENABLE_TOOLS_HITL_FLAGSHIP_KEY = 'enable-tools-hitl';
 const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
-const DAY0_LIFECYCLE_FLAG_PATH = '/__hivemind/feature-flags/day0-lifecycle';
-const DAY0_LIFECYCLE_FLAG_KEY = 'day0-lifecycle';
+const DAY0_LIFECYCLE_FLAG_PATH = '/__hivemind/feature-flags/day0-onboarding';
+const DAY0_LIFECYCLE_FLAG_KEY = 'day0_onboarding_v1';
 const HIVE_HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const HIVE_HARNESS_CHAT_FLAG_KEY = 'hivemind_harness_chat_v1';
 // One rollout decides the conversation engine for a user.  "legacy" stays

@@ -25,22 +25,22 @@ assert.deepEqual(await enableToolsHitl.json(), {
 });
 
 const dayZeroLifecycle = await worker.fetch(
-  new Request('https://next.singulancelabs.com/__hivemind/feature-flags/day0-lifecycle', {
+  new Request('https://next.singulancelabs.com/__hivemind/feature-flags/day0-onboarding', {
     method: 'POST', headers: { authorization: 'Bearer edge-secret', 'content-type': 'application/json' },
     body: JSON.stringify({ org_id: 'org-1', user_id: 'user-1' }),
   }),
   {
     ASSETS: { fetch: async () => new Response('unused') },
     HIVE_HARNESS_EDGE_EVAL_SECRET: 'edge-secret',
-    FLAGS: { getBooleanValue: async (key, _fallback, context) => key === 'day0-lifecycle' && context.targetingKey === 'org-1:user-1' },
+    FLAGS: { getBooleanValue: async (key, _fallback, context) => key === 'day0_onboarding_v1' && context.targetingKey === 'org-1:user-1' },
   },
 );
 assert.deepEqual(await dayZeroLifecycle.json(), {
-  key: 'day0-lifecycle', enabled: true, source: 'cloudflare-flagship',
+  key: 'day0_onboarding_v1', enabled: true, source: 'cloudflare-flagship',
 });
 
 const unauthorizedDayZeroLifecycle = await worker.fetch(
-  new Request('https://next.singulancelabs.com/__hivemind/feature-flags/day0-lifecycle', { method: 'POST' }),
+  new Request('https://next.singulancelabs.com/__hivemind/feature-flags/day0-onboarding', { method: 'POST' }),
   envReturning(new Response('unused')),
 );
 assert.equal(unauthorizedDayZeroLifecycle.status, 401);
