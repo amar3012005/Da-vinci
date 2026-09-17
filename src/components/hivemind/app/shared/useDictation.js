@@ -70,6 +70,11 @@ export default function useDictation(onText) {
 
   const start = useCallback(async () => {
     setError(null);
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setState('error');
+      setError('Microphone is not supported in this browser.');
+      return;
+    }
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -81,15 +86,21 @@ export default function useDictation(onText) {
       return;
     }
     streamRef.current = stream;
-    const mime = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
-      ? 'audio/webm;codecs=opus'
-      : 'audio/webm';
-    const rec = new MediaRecorder(stream, { mimeType: mime });
+    const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+    const mime = candidates.find((type) => MediaRecorder.isTypeSupported(type)) || '';
+    let rec;
+    try { rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); }
+    catch (e) {
+      cleanup();
+      setState('error');
+      setError('Microphone could not start — try again.');
+      return;
+    }
     recRef.current = rec;
     chunksRef.current = [];
     rec.ondataavailable = (ev) => { if (ev.data && ev.data.size > 0) chunksRef.current.push(ev.data); };
     rec.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      const blob = new Blob(chunksRef.current, { type: rec.mimeType || mime || 'audio/webm' });
       cleanup();
       transcribe(blob);
     };
