@@ -41,6 +41,7 @@ export default function LangSwitcher({ compact = false, theme = 'light' }) {
   const pickLanguage = async (code) => {
     try {
       await i18n.changeLanguage(code);
+      window.dispatchEvent(new CustomEvent('hivemind:ui-language', { detail: { language: code } }));
     } catch (e) {
       console.warn('[lang] changeLanguage failed', e);
     }

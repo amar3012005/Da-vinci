@@ -12,7 +12,7 @@ describe('Runtime post-onboarding introduction canary', () => {
   });
 
   it('opens live Runtime and records the introduction once per version', () => {
-    expect(source).toContain("onOpenRuntime={() => goMode('runtime', null)}");
+    expect(source).toContain("onOpenRuntime={() => setBetaFeature('runtime')}");
     expect(source).toContain('runtimeInviteVersion="canary-20260901"');
     expect(dashboard).toContain('hm_runtime_invite:${runtimeInviteVersion}:');
   });

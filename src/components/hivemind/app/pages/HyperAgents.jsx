@@ -45,6 +45,7 @@ import CampaignProgressDashboard from '../hyperagents/campaigns/CampaignProgress
 import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
+import FeatureBetaModal from './FeatureBetaModal';
 import {
   CAMPAIGN_INTELLIGENCE_V2,
   CampaignConnectionsRail,
@@ -147,7 +148,7 @@ const RUNTIME_INTRO_CANARY = Object.freeze({
   userId: 'b457c254-38a0-4c43-8280-b026f1a78b04',
   orgId: 'f0cb77ef-e62b-4f8c-a1da-066611fc3b36',
 });
-const OPERATING_ROOMS_V1 = process.env.REACT_APP_OPERATING_ROOMS_V1 === 'true';
+const OPERATING_ROOMS_V1 = true;
 const domainRoomDefinition = (key) => DOMAIN_ROOMS.find((domain) => domain.key === key) || DOMAIN_ROOMS[0];
 
 const DOMAIN_ROOM_STAGES = {
@@ -242,6 +243,7 @@ export default function HyperAgents() {
   const [showCreate, setShowCreate] = useState(false);
   const [showAgentRooms, setShowAgentRooms] = useState(false);
   const [runtimeWork, setRuntimeWork] = useState({ agent_runtime_tasks: [] });
+  const [betaFeature, setBetaFeature] = useState(null);
   const domainRoomsEnsuredRef = useRef(false);
   // viewMode: 'hero' (company dashboard — /employees/mycompany, the landing)
   // | 'runtime' | 'leads' | 'campaigns' | 'thread' (room chat) | 'roster'.
@@ -253,7 +255,7 @@ export default function HyperAgents() {
       const m = p.match(/\/employees\/rooms\/([0-9a-f-]{36})/i);
       if (m) return { mode: 'thread', roomId: m[1] };
       if (/\/employees\/agents/.test(p)) return { mode: 'roster', roomId: null };
-      if (/\/employees\/runtime/.test(p)) return { mode: 'runtime', roomId: null };
+      if (/\/employees\/runtime/.test(p)) return { mode: 'hero', roomId: null };
       if (/\/employees\/leads/.test(p)) return { mode: 'leads', roomId: null };
       if (/\/employees\/campaigns/.test(p)) return { mode: 'campaigns', roomId: null };
       return { mode: 'hero', roomId: null };
@@ -507,7 +509,7 @@ export default function HyperAgents() {
           </button>
           <button
             type="button"
-            onClick={() => goMode('runtime', null)}
+            onClick={() => setBetaFeature('runtime')}
             className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#bcd0ef]"
           >
             <Power size={13} className="text-[#185bcc]" />
@@ -515,7 +517,7 @@ export default function HyperAgents() {
           </button>
           {OPERATING_ROOMS_V1 && <button
             type="button"
-            onClick={() => navigate('/hivemind/app/employees/operating-rooms')}
+            onClick={() => setBetaFeature('operatingRooms')}
             className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#bcd0ef]"
           >
             <PhoneCall size={13} className="text-[#117dff]" />
@@ -667,7 +669,7 @@ export default function HyperAgents() {
             }}
             onShowRoster={() => goMode('roster')}
             onOpenLeads={() => goMode('leads', null)}
-            onOpenRuntime={() => goMode('runtime', null)}
+            onOpenRuntime={() => setBetaFeature('runtime')}
             showRuntimeInvite={showRuntimeIntro}
             runtimeInviteVersion="canary-20260901"
           />
@@ -737,6 +739,9 @@ export default function HyperAgents() {
           {error}
         </div>
       )}
+      <AnimatePresence>
+        {betaFeature ? <FeatureBetaModal feature={betaFeature} onClose={() => setBetaFeature(null)} /> : null}
+      </AnimatePresence>
     </div>
   );
 }

@@ -4,11 +4,10 @@ const path = require('path');
 describe('Runtime and Social global access', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
 
-  it('opens Runtime directly for every authenticated workspace', () => {
-    expect(source).toContain("if (/\\/employees\\/runtime/.test(p)) return { mode: 'runtime', roomId: null };");
-    expect(source).toContain("onClick={() => goMode('runtime', null)}");
-    expect(source).not.toContain("openComingSoon('runtime')");
-    expect(source).not.toContain('RuntimeWaitlistModal');
+  it('shows the Runtime beta popup instead of opening the live runtime', () => {
+    expect(source).toContain("onClick={() => setBetaFeature('runtime')}");
+    expect(source).not.toContain("onClick={() => goMode('runtime', null)}");
+    expect(source).toContain('FeatureBetaModal');
   });
 
   it('opens the Social campaigns workspace instead of a preview modal', () => {
