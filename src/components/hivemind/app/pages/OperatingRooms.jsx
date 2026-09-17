@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useRealtimeKitClient } from '@cloudflare/realtimekit-react';
 import { RtkMeeting } from '@cloudflare/realtimekit-react-ui';
 import apiClient from '../shared/api-client';
+import FeatureBetaModal from './FeatureBetaModal';
 
 function RoomCall({ roomId }) {
   const navigate = useNavigate();
@@ -199,6 +200,11 @@ function RoomLobby() {
 }
 
 export default function OperatingRooms() {
-  const { roomId } = useParams();
-  return roomId ? <RoomCall roomId={roomId} /> : <RoomLobby />;
+  const navigate = useNavigate();
+  return (
+    <FeatureBetaModal
+      feature="operatingRooms"
+      onClose={() => navigate('/hivemind/app/employees/mycompany')}
+    />
+  );
 }

@@ -125,16 +125,8 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
         ]},
       ],
     },
-    {
-      label: tt('groups.aiFeatures', 'AI Features'),
-      items: [
-        { to: '/hivemind/app/web', icon: Globe, label: tt('webIntel', 'Web Intel'), children: [
-          { to: '/hivemind/app/web?mode=research', icon: FileSearch, label: tt('deepResearch', 'Deep Research') },
-          { to: '/hivemind/app/web?mode=search',   icon: Search,     label: tt('webSearch', 'Web Search') },
-          { to: '/hivemind/app/web?mode=crawl',    icon: Globe,      label: tt('webCrawl', 'Web Crawl') },
-        ]},
-      ],
-    },
+    // Web Intelligence remains routable and entitled server-side, but is
+    // intentionally not advertised in the HIVE sidebar at this stage.
     {
       label: tt('groups.advanced', 'Advanced'),
       items: advancedItems,
@@ -161,13 +153,13 @@ export default function Sidebar({
   }, []);
 
   useEffect(() => {
-    const close = () => onCollapsedChange?.(true);
-    const open = () => onCollapsedChange?.(false);
-    window.addEventListener('hivemind:close-sidebar', close);
-    window.addEventListener('hivemind:open-sidebar', open);
+    const handleClose = () => onCollapsedChange?.(true);
+    const handleOpen = () => onCollapsedChange?.(false);
+    window.addEventListener('hivemind:close-sidebar', handleClose);
+    window.addEventListener('hivemind:open-sidebar', handleOpen);
     return () => {
-      window.removeEventListener('hivemind:close-sidebar', close);
-      window.removeEventListener('hivemind:open-sidebar', open);
+      window.removeEventListener('hivemind:close-sidebar', handleClose);
+      window.removeEventListener('hivemind:open-sidebar', handleOpen);
     };
   }, [onCollapsedChange]);
 

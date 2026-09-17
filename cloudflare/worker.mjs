@@ -13,7 +13,19 @@ const ENABLE_TOOLS_HITL_FLAGSHIP_KEY = 'enable-tools-hitl';
 const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const HIVE_HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const HIVE_HARNESS_CHAT_FLAG_KEY = 'hivemind_harness_chat_v1';
-const HIVE_HARNESS_MODES = new Set(['legacy', 'preview', 'harness']);
+const DAY0_ONBOARDING_FLAG_PATH = '/__hivemind/feature-flags/day0-onboarding';
+// Core speaks one stable Day-0 admission contract, while Flagship keeps the
+// two independently deployable server rollouts isolated. Never expose the
+// server-specific key to Core: it must only consume the canonical contract.
+const DAY0_ONBOARDING_CONTRACT_KEY = 'day0_onboarding_v1';
+const SINGULANCE_DAY0_ONBOARDING_FLAG_KEY = 'singulance_day0_onboarding_v1';
+const ENIGMA_DAY0_ONBOARDING_FLAG_KEY = 'enigma_day0_onboarding_v1';
+// One rollout decides the conversation engine for a user.  "legacy" stays
+// on the existing LangGraph/LangChain orchestrator; "harness" enables the
+// native Cordis surface.  Do not add an intermediate browser-visible mode:
+// it creates a third state that can leave a user on a native route without a
+// valid native admission.
+const HIVE_HARNESS_MODES = new Set(['legacy', 'harness']);
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
 const HARNESS_RETURN_COOKIE = 'hm_harness_return';
@@ -29,6 +41,13 @@ const PRIVATE_ROBOTS = `# This hostname serves an authenticated SINGULANCE appli
 function hostname(request) {
   const host = request.headers.get('host');
   return (host ? host.split(':')[0] : new URL(request.url).hostname).toLowerCase();
+}
+
+function dayZeroOnboardingFlagKey(env) {
+  const environment = env.FLAGSHIP_ENVIRONMENT || env.ENVIRONMENT || 'production';
+  return environment === 'dev'
+    ? ENIGMA_DAY0_ONBOARDING_FLAG_KEY
+    : SINGULANCE_DAY0_ONBOARDING_FLAG_KEY;
 }
 
 function noIndex(response) {
@@ -141,6 +160,8 @@ function isHarnessRunnerRoute(pathname) {
   return pathname === '/api/hivemind/embed/exchange'
     || pathname === '/api/hivemind/session/establish'
     || pathname === '/api/hivemind/boot'
+    || pathname === '/api/hivemind/projects'
+    || pathname === '/api/hivemind/connectors'
     || pathname === '/api/remote.mux'
     || pathname.startsWith('/api/session/')
     || pathname.startsWith('/api/dynamicCordisRunner/')
@@ -256,6 +277,43 @@ async function harnessChatFlagResponse(request, env) {
   }, { headers: { 'cache-control': 'no-store' } });
 }
 
+// This is a private Core-to-edge evaluation.  The bearer check ensures that
+// neither the browser nor a caller-controlled org/user pair can use this as a
+// Flagship oracle.  Flagship remains the sole rollout authority.
+async function dayZeroOnboardingFlagResponse(request, env) {
+  if (!constantTimeBearer(request, env.HIVE_HARNESS_EDGE_EVAL_SECRET)) {
+    return Response.json({ error: 'unauthorized' }, { status: 401, headers: { 'cache-control': 'no-store' } });
+  }
+  const body = await request.json().catch(() => ({}));
+  const orgId = typeof body?.org_id === 'string' ? body.org_id : '';
+  const userId = typeof body?.user_id === 'string' ? body.user_id : '';
+  let enabled = false;
+  let evaluationId;
+  if (orgId && userId) {
+    try {
+      const details = await env.FLAGS.getBooleanDetails(dayZeroOnboardingFlagKey(env), false, {
+        targetingKey: `${orgId}:${userId}`, org_id: orgId, user_id: userId,
+        environment: env.ENVIRONMENT || 'production', surface: 'hivemind-web', hostname: hostname(request),
+      });
+      enabled = details.value === true;
+      evaluationId = details.evaluationId;
+    } catch {
+      // A Flagship outage cannot start a lifecycle email.
+    }
+  }
+  return Response.json({
+    key: DAY0_ONBOARDING_CONTRACT_KEY,
+    source: 'cloudflare-flagship',
+    enabled,
+    ...(evaluationId ? { evaluation_id: evaluationId } : {}),
+  }, {
+    headers: {
+      'cache-control': 'no-store',
+      'x-robots-tag': 'noindex, nofollow, noarchive, nosnippet',
+    },
+  });
+}
+
 async function booleanFlagshipResponse(request, env, key) {
   let enabled = false;
   try {
@@ -306,6 +364,10 @@ export default {
     if (pathname === HIVE_HARNESS_CHAT_FLAG_PATH) {
       if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
       return harnessChatFlagResponse(request, env);
+    }
+    if (pathname === DAY0_ONBOARDING_FLAG_PATH) {
+      if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
+      return dayZeroOnboardingFlagResponse(request, env);
     }
     // Establishment is the one runner route that necessarily precedes the
     // admission cookie.  The runner validates the signed, short-lived ticket

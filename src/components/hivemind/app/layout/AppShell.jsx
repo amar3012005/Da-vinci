@@ -15,7 +15,7 @@ import { QuickRecorderProvider } from '../shared/QuickRecorderProvider';
 import { WelcomeSlides, ActivationGate } from '../shared/WelcomeFlow';
 import PlanLimitModal from '../components/PlanLimitModal';
 import RunwayEstimatorModal from '../components/RunwayEstimatorModal';
-import { PLAN_LIMIT_EVENT } from '../shared/planLimit';
+import { PLAN_LIMIT_CODE, PLAN_LIMIT_EVENT } from '../shared/planLimit';
 import ServiceErrorToast from '../components/ServiceErrorToast';
 import CallContractModal from '../components/CallContractModal';
 import ProductAccessModal from '../components/ProductAccessModal';
@@ -34,9 +34,27 @@ function PlanLimitGate() {
 
   useEffect(() => {
     const onLimit = (e) => setState(e.detail || {});
+    // Native Harness owns its own turn renderer. It forwards only the stable
+    // plan-limit category to the host shell, which already owns the common
+    // upgrade modal used by every other product surface.
+    const onHarnessTurnError = (e) => {
+      const detail = e?.detail;
+      if (detail?.code !== PLAN_LIMIT_CODE) return;
+      setState({
+        resource: 'credits',
+        plan: org?.plan || 'free',
+        message: typeof detail.message === 'string' ? detail.message : null,
+        suggestedPlan: 'pro',
+        upgradeUrl: '/hivemind/app/billing',
+      });
+    };
     window.addEventListener(PLAN_LIMIT_EVENT, onLimit);
-    return () => window.removeEventListener(PLAN_LIMIT_EVENT, onLimit);
-  }, []);
+    window.addEventListener('dsh:turn-error', onHarnessTurnError);
+    return () => {
+      window.removeEventListener(PLAN_LIMIT_EVENT, onLimit);
+      window.removeEventListener('dsh:turn-error', onHarnessTurnError);
+    };
+  }, [org?.plan]);
 
   const close = () => setState(null);
   const upgrade = () => {

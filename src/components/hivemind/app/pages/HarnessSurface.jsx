@@ -207,9 +207,11 @@ function isFreshHarnessRoute() {
 async function establishHarnessSession({ fresh = false } = {}) {
   const path = fresh ? '/v1/harness-chat/new-session' : '/v1/harness-chat/bootstrap';
   const { data: admission } = await apiClient.controlPlane.post(path, {});
-  if (admission?.mode !== 'harness' && admission?.mode !== 'preview') {
-    throw new Error('Harness chat is not admitted for this account yet.');
-  }
+  // The rollout is deliberately binary.  A user outside the Harness cohort
+  // must stay on the existing LangGraph conversation surface, including when
+  // they arrive through a stale /overview/new or /overview/session/:id URL.
+  if (admission?.mode === 'legacy') return { mode: 'legacy' };
+  if (admission?.mode !== 'harness') throw new Error('Harness admission returned an unsupported mode.');
   if (typeof admission.ticket !== 'string' || admission.ticket.length === 0) {
     throw new Error('Harness admission did not return a session ticket.');
   }
@@ -218,6 +220,7 @@ async function establishHarnessSession({ fresh = false } = {}) {
     body: JSON.stringify({ ticket: admission.ticket, request_id: crypto.randomUUID() }),
   });
   if (!established.ok) throw new Error('Could not establish the secure Harness session.');
+  return { mode: 'harness' };
 }
 
 /**
@@ -260,7 +263,14 @@ export default function HarnessSurface() {
     };
 
     const start = async () => {
-      await establishHarnessSession({ fresh: isFreshHarnessRoute() });
+      const admission = await establishHarnessSession({ fresh: isFreshHarnessRoute() });
+      if (admission.mode === 'legacy') {
+        // Never render or boot the native client for a legacy user.  This
+        // replaces the former "not admitted" dead end with the established
+        // LangGraph/LangChain chat, retaining the feature flag as rollback.
+        window.location.replace(HARNESS_OVERVIEW_PATH);
+        return;
+      }
       setLoadingStage(1);
       const bootResponse = await fetch(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
       if (!bootResponse.ok) throw new Error('Harness did not accept the authenticated browser session.');
