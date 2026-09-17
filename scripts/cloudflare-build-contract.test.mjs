@@ -26,6 +26,21 @@ test('browser package excludes known server-only dependencies', () => {
   }
 });
 
+test('production Worker runs before SPA assets on Harness RPC and overview paths', () => {
+  const wrangler = JSON.parse(readFileSync(new URL('../wrangler.jsonc', import.meta.url)));
+  const first = wrangler.assets?.run_worker_first;
+  assert.ok(Array.isArray(first), 'wrangler.jsonc must set assets.run_worker_first');
+  for (const path of ['/api/*', '/plugins/*', '/assets/*', '/hivemind/app/overview', '/hivemind/app/overview/*']) {
+    assert.ok(first.includes(path), `run_worker_first must include ${path}`);
+  }
+});
+
+test('admitted Harness RPC includes Typert command and event paths', () => {
+  assert.match(worker, /pathname\.startsWith\('\/api\/'\)/u);
+  assert.match(worker, /commands\/list/u);
+  assert.match(worker, /\$events\/result/u);
+});
+
 test('native session establishment reaches the runner before an admission cookie exists', () => {
   assert.match(
     worker,

@@ -152,19 +152,13 @@ function isHarnessDocumentOrAsset(request, pathname) {
 }
 
 function isHarnessRunnerRoute(pathname) {
-  // Keep the HIVE Worker authoritative for its own app/API surface. Native
-  // Harness owns the generic session controller and the dynamic Cordis
-  // inspection namespace; treating only the initial ticket routes as native
-  // leaves a successfully booted client unable to create its first session.
-  // Do not proxy the broad `/api/*` namespace: HIVE's own APIs remain local.
-  return pathname === '/api/hivemind/embed/exchange'
-    || pathname === '/api/hivemind/session/establish'
-    || pathname === '/api/hivemind/boot'
-    || pathname === '/api/hivemind/projects'
-    || pathname === '/api/hivemind/connectors'
-    || pathname === '/api/remote.mux'
-    || pathname.startsWith('/api/session/')
-    || pathname.startsWith('/api/dynamicCordisRunner/')
+  // Native Harness Typert RPC is same-origin POST `/api/<method>`
+  // (commands/list, $events/result, agentPresets/list, subagents/list, …).
+  // HIVE Core stays on the control-plane origin. Do not let SPA assets
+  // answer those POSTs with 405 — that aborts ask_user_question and the
+  // model asks the same question again.
+  if (pathname === '/api/meetings/transcribe' || pathname.startsWith('/api/meetings/')) return false;
+  return pathname.startsWith('/api/')
     || pathname.startsWith('/plugins/')
     || pathname.startsWith('/assets/');
 }
