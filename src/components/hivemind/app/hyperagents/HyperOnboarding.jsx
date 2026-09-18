@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin, BrainCircuit, AudioWaveform, Orbit } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
+import LangSwitcher from '../layout/LangSwitcher';
 import SingulanceMark from '../shared/SingulanceMark';
 import OnboardingTerminal from './OnboardingTerminal';
 import AgentAvatar from './AgentAvatar';
@@ -237,7 +238,7 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
 }
 
 export default function HyperOnboarding({ onComplete, onSkip }) {
-  const { t } = useTranslation('dashboard');
+  const { t, i18n } = useTranslation('dashboard');
   const [phase, setPhase] = useState('input'); // input | running | done
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [companyLocation, setCompanyLocation] = useState('');
@@ -291,7 +292,13 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
     if (!websiteUrl.trim() || starting) return;
     setStarting(true); setError(null);
     try {
-      await apiClient.startHyperOnboarding({ website_url: websiteUrl.trim(), goal: goal.trim() || undefined });
+      const preferredLanguage = String(i18n.language || 'en').split('-')[0] || 'en';
+      await apiClient.startHyperOnboarding({
+        website_url: websiteUrl.trim(),
+        goal: goal.trim() || undefined,
+        preferred_language: preferredLanguage,
+      });
+      try { await i18n.changeLanguage(preferredLanguage); } catch { /* chrome language follows the same choice */ }
       setPhase('running'); setLines([]); poll();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -361,6 +368,10 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)}
               placeholder={t('hyperOnboarding.goalPlaceholder', 'Optional: what should your AI team focus on first?')}
               className="w-full px-4 py-3 bg-white border border-[#e3e0db] rounded-xl text-[13px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15" />
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-[#e3e0db] bg-white px-3.5 py-2.5">
+              <span className="text-[12px] text-[#525252]">{t('hyperOnboarding.preferredLanguage', 'Preferred language')}</span>
+              <LangSwitcher />
+            </div>
             {error && <p className="text-[12px] text-[#dc2626] font-mono">{error}</p>}
             <button type="submit" disabled={!websiteUrl.trim() || starting}
               className="w-full flex items-center justify-center gap-2 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 text-white text-[13.5px] font-semibold px-4 py-3.5 rounded-xl transition-colors">

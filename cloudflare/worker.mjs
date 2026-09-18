@@ -151,12 +151,20 @@ function isHarnessDocumentOrAsset(request, pathname) {
     || pathname === '/manifest.webmanifest';
 }
 
+function isDavinciPublicAsset(pathname) {
+  // Logged-in Overview sessions send /assets/* to the Harness runner. Da-vinci
+  // public art (awakening stills) lives under /assets/onboarding and must stay
+  // on this Worker’s ASSETS binding or the navy overlay has no image.
+  return pathname.startsWith('/assets/onboarding/');
+}
+
 function isHarnessRunnerRoute(pathname) {
   // Native Harness Typert RPC is same-origin POST `/api/<method>`
   // (commands/list, $events/result, agentPresets/list, subagents/list, …).
   // HIVE Core stays on the control-plane origin. Do not let SPA assets
   // answer those POSTs with 405 — that aborts ask_user_question and the
   // model asks the same question again.
+  if (isDavinciPublicAsset(pathname)) return false;
   if (pathname === '/api/meetings/transcribe' || pathname.startsWith('/api/meetings/')) return false;
   return pathname.startsWith('/api/')
     || pathname.startsWith('/plugins/')

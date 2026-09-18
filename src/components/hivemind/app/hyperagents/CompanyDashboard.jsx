@@ -187,6 +187,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   const [runtimeFocuses, setRuntimeFocuses] = useState([]);
   const [runtimeLaunching, setRuntimeLaunching] = useState(false);
   const [runtimeError, setRuntimeError] = useState('');
+  const [pipelineDoneOpen, setPipelineDoneOpen] = useState(false);
   const dayZeroReportRequested = useRef(false);
   const runtimeCompanyReady = Boolean(state?.onboarded && state?.company?.company);
   const runtimeInviteStorageKey = `hm_runtime_invite:${runtimeInviteVersion}:${state?.hq_room_id || state?.company?.company || 'company'}`;
@@ -236,6 +237,20 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
     }, 0);
     return () => window.clearTimeout(timer);
   }, [state?.onboarded, state?.company, state?.hq_room_id]);
+  useEffect(() => {
+    if (!state?.onboarded || !state?.company) return;
+    if (state.company.day0_report_email?.status !== 'sent') return;
+    const latchKey = `hm_day0_pipeline_done:${state.hq_room_id || state.company.company || 'company'}`;
+    try { if (window.localStorage.getItem(latchKey) === 'seen') return; } catch { /* continue */ }
+    setPipelineDoneOpen(true);
+  }, [state?.onboarded, state?.company, state?.hq_room_id, state?.company?.day0_report_email?.status]);
+
+  const dismissPipelineDone = () => {
+    const latchKey = `hm_day0_pipeline_done:${state?.hq_room_id || state?.company?.company || 'company'}`;
+    try { window.localStorage.setItem(latchKey, 'seen'); } catch { /* noop */ }
+    setPipelineDoneOpen(false);
+  };
+
   useEffect(() => {
     if (!showRuntimeInvite || !runtimeCompanyReady) return undefined;
     try { if (window.localStorage.getItem(runtimeInviteStorageKey) === 'seen') return undefined; } catch { /* continue */ }
@@ -361,6 +376,18 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
+      {pipelineDoneOpen ? (
+        <div className="fixed inset-0 z-[88] grid place-items-center bg-[#101828]/35 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="First HyperAgents task complete">
+          <div className="w-full max-w-[420px] rounded-lg border border-[#e3e0db] bg-white p-5 shadow-[0_24px_70px_rgba(12,38,84,0.22)]">
+            <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-[#117dff]">Day 0</p>
+            <h2 className="mt-2 text-[18px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Check your pipeline</h2>
+            <p className="mt-2 text-[13px] leading-5 text-[#525252]">Your HyperAgents have finished their first task. Open the pipeline to review what they produced.</p>
+            <div className="mt-5 flex justify-end">
+              <button type="button" onClick={dismissPipelineDone} className="h-9 rounded-md bg-[#0a0a0a] px-4 text-[12px] font-semibold text-white hover:bg-[#262626]">Got it</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {runtimeInvite ? (
         <div className="fixed inset-0 z-[90] grid place-items-center bg-[#101828]/35 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="Activate Runtime">
           <motion.div initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="flex max-h-[calc(100vh-2rem)] w-full max-w-[760px] flex-col overflow-hidden rounded-lg border border-[#cbd8ee] bg-white shadow-[0_28px_90px_rgba(12,38,84,0.28)]">
