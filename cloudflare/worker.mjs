@@ -82,6 +82,9 @@ function constantTimeBearer(request, secret) {
 function isHarnessRunnerRoute(pathname) {
   // Keep the HIVE Worker authoritative for its own app/API surface.  These are
   // the complete native Harness browser routes and nothing else.
+  // Enigma: /assets/onboarding is Da-vinci public art. Never send it to Harness
+  // or the awakening overlay is a flat navy field.
+  if (pathname.startsWith('/assets/onboarding/')) return false;
   return pathname === '/api/hivemind/embed/exchange'
     || pathname === '/api/hivemind/session/establish'
     || pathname === '/api/hivemind/boot'

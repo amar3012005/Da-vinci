@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin, BrainCircuit, AudioWaveform, Orbit } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
+import LangSwitcher from '../layout/LangSwitcher';
 import SingulanceMark from '../shared/SingulanceMark';
 import OnboardingTerminal from './OnboardingTerminal';
 import AgentAvatar from './AgentAvatar';
@@ -237,7 +238,7 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
 }
 
 export default function HyperOnboarding({ onComplete, onSkip }) {
-  const { t } = useTranslation('dashboard');
+  const { t, i18n } = useTranslation('dashboard');
   const [phase, setPhase] = useState('input'); // input | running | done
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [companyLocation, setCompanyLocation] = useState('');
@@ -291,7 +292,13 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
     if (!websiteUrl.trim() || starting) return;
     setStarting(true); setError(null);
     try {
-      await apiClient.startHyperOnboarding({ website_url: websiteUrl.trim(), goal: goal.trim() || undefined });
+      const preferredLanguage = String(i18n.language || 'en').split('-')[0] || 'en';
+      await apiClient.startHyperOnboarding({
+        website_url: websiteUrl.trim(),
+        goal: goal.trim() || undefined,
+        preferred_language: preferredLanguage,
+      });
+      try { await i18n.changeLanguage(preferredLanguage); } catch { /* chrome follows the same choice */ }
       setPhase('running'); setLines([]); poll();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -351,7 +358,11 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           <p className="text-[13.5px] text-[#525252] mt-2 max-w-[520px]">
             {t('hyperOnboarding.sub', 'Enter your website. Your agents read it, draft a grounded company profile and mission into HIVEMIND memory, assemble your team, plan first tasks and open your HQ room.')}
           </p>
-          <form onSubmit={start} className="mt-7 space-y-3">
+          <div className="mt-7 flex items-center justify-between gap-3 rounded-xl border border-[#e3e0db] bg-white px-3.5 py-2.5">
+            <span className="text-[12px] text-[#525252]">{t('hyperOnboarding.preferredLanguage', 'Preferred language')}</span>
+            <LangSwitcher />
+          </div>
+          <form onSubmit={start} className="mt-3 space-y-3">
             <div className="relative">
               <Globe size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
               <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
