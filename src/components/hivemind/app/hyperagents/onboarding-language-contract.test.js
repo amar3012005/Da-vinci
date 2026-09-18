@@ -12,11 +12,12 @@ test('onboarding start sends preferred_language and keeps the navbar LangSwitche
   assert.match(onboarding, /preferred_language/);
   assert.match(onboarding, /<LangSwitcher \/>/);
   assert.match(topbar, /<LangSwitcher \/>/);
+  assert.doesNotMatch(onboarding, /<form[\s\S]*<LangSwitcher \/>/);
 });
 
 test('awakening still is absolutely positioned so framer-motion transform cannot hide it', () => {
   const onboarding = fs.readFileSync(path.join(dir, 'HyperOnboarding.jsx'), 'utf8');
-  assert.match(onboarding, /absolute inset-0 z-0 block h-full w-full/);
+  assert.match(onboarding, /backgroundImage: 'url\(\/assets\/onboarding\/awakening-1920\.webp\)'/);
   assert.match(onboarding, /awakening-1920\.webp/);
 });
 

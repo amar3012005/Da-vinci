@@ -87,9 +87,14 @@ export default function LangSwitcher({ compact = false, theme = 'light' }) {
             return (
               <button
                 key={lng.code}
+                type="button"
                 role="menuitemradio"
                 aria-checked={active}
-                onClick={() => pickLanguage(lng.code)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  pickLanguage(lng.code);
+                }}
                 className={`w-full text-left flex items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
                   dark ? 'hover:bg-[#151312]' : 'hover:bg-[#f5f3ee]'
                 } ${

@@ -133,25 +133,19 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: reduceMotion ? 0 : 0.45 }}
-      className="fixed inset-0 z-[110] overflow-y-auto bg-[#071a35] text-white"
+      className="fixed inset-0 z-[110] overflow-y-auto bg-[#071a35] bg-cover bg-center text-white"
+      style={{ backgroundImage: 'url(/assets/onboarding/awakening-1920.webp)' }}
       role="dialog"
       aria-modal="true"
       aria-label={`${company} HIVEMIND awakening`}
     >
-      <picture className="pointer-events-none absolute inset-0 z-0 block h-full w-full">
-        <source
-          type="image/webp"
-          srcSet="/assets/onboarding/awakening-1280.webp 1280w, /assets/onboarding/awakening-1920.webp 1920w, /assets/onboarding/awakening-2560.webp 2560w, /assets/onboarding/awakening-3840.webp 3840w"
-          sizes="100vw"
-        />
-        <img
-          src="/assets/onboarding/awakening-1920.webp"
-          alt=""
-          fetchPriority="high"
-          decoding="async"
-          className="h-full w-full object-cover object-center"
-        />
-      </picture>
+      <img
+        src="/assets/onboarding/awakening-1920.webp"
+        alt=""
+        fetchPriority="high"
+        decoding="async"
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-center"
+      />
       <div className="pointer-events-none absolute inset-0 z-[1] bg-[#04152f]/[0.08]" aria-hidden="true" />
 
       <button type="button" onClick={profilesVisible ? onClose : skipToProfiles} className="fixed right-5 top-5 z-10 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-[10px] font-mono uppercase tracking-[0.14em] text-white/80 backdrop-blur-xl transition-colors hover:bg-white/20 hover:text-white">
@@ -358,7 +352,11 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           <p className="text-[13.5px] text-[#525252] mt-2 max-w-[520px]">
             {t('hyperOnboarding.sub', 'Enter your website. Your agents read it, draft a grounded company profile and mission into HIVEMIND memory, assemble your team, plan first tasks and open your HQ room.')}
           </p>
-          <form onSubmit={start} className="mt-7 space-y-3">
+          <div className="mt-7 flex items-center justify-between gap-3 rounded-xl border border-[#e3e0db] bg-white px-3.5 py-2.5">
+            <span className="text-[12px] text-[#525252]">{t('hyperOnboarding.preferredLanguage', 'Preferred language')}</span>
+            <LangSwitcher />
+          </div>
+          <form onSubmit={start} className="mt-3 space-y-3">
             <div className="relative">
               <Globe size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
               <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
@@ -368,10 +366,6 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)}
               placeholder={t('hyperOnboarding.goalPlaceholder', 'Optional: what should your AI team focus on first?')}
               className="w-full px-4 py-3 bg-white border border-[#e3e0db] rounded-xl text-[13px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15" />
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-[#e3e0db] bg-white px-3.5 py-2.5">
-              <span className="text-[12px] text-[#525252]">{t('hyperOnboarding.preferredLanguage', 'Preferred language')}</span>
-              <LangSwitcher />
-            </div>
             {error && <p className="text-[12px] text-[#dc2626] font-mono">{error}</p>}
             <button type="submit" disabled={!websiteUrl.trim() || starting}
               className="w-full flex items-center justify-center gap-2 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 text-white text-[13.5px] font-semibold px-4 py-3.5 rounded-xl transition-colors">
