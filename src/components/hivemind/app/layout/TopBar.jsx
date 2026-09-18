@@ -47,7 +47,7 @@ const pageDescriptions = {
   '/hivemind/app/audit': 'Immutable trail of every mutating action — SOC2 + GDPR ready',
   '/hivemind/app/admin/users': 'Org-wide roles, deactivation, and invite management',
   '/hivemind/app/admin/sso': 'SAML routing + SCIM provisioning for enterprise SSO',
-  '/hivemind/app/employees': 'Hyper Agents — autonomous brains with HIVEMIND memory + Slack access',
+  '/hivemind/app/employees': '',
   '/hivemind/app/workspace': 'Members, teams, projects, invitations, audit and SSO — all in one place',
   '/hivemind/app/hermes': 'Hermes Agents — per-tenant task agents with run history and approval flows',
 };

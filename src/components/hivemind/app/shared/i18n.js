@@ -25,7 +25,7 @@ const messages = {
       audit: 'Audit Log',
       adminUsers: 'Org Members',
       adminSso: 'SSO Configuration',
-      employees: 'Digital Employees',
+      employees: 'Hyper Agents',
       talkToHive: 'Talk to HIVE',
       searchMemories: 'Search memories...',
       docs: 'Documentation',

@@ -141,24 +141,28 @@ function cookieValue(request, name) {
   return match ? match[1] : null;
 }
 
+function isDavinciPublicAsset(pathname) {
+  // Da-vinci public files. Not Harness. Never proxy these to the runner.
+  return pathname.startsWith('/assets/onboarding/');
+}
+
+function isHarnessViteAsset(pathname) {
+  // Harness compiled client is only files at /assets/<file>, never a subdirectory.
+  // /assets/onboarding/* is Da-vinci art and must be served by this Worker’s ASSETS.
+  if (isDavinciPublicAsset(pathname)) return false;
+  if (!pathname.startsWith('/assets/')) return false;
+  const rest = pathname.slice('/assets/'.length);
+  return rest.length > 0 && !rest.includes('/');
+}
+
 function isHarnessDocumentOrAsset(request, pathname) {
   if (!hasHarnessSession(request) || !hasHarnessAdmission(request)) return false;
-  // Enigma: public onboarding stills live under /assets/onboarding. Overview
-  // cookies must not send those to Harness or the overlay is a flat navy field.
-  if (pathname.startsWith('/assets/onboarding/')) return false;
   // Overview documents always belong to Da-vinci, including admitted reloads.
   // The host mounts Harness into its chat seat; standalone runner HTML would
   // replace the HIVE sidebar, header, and embedding configuration.
-  return pathname.startsWith('/assets/')
+  return isHarnessViteAsset(pathname)
     || pathname === '/favicon.svg'
     || pathname === '/manifest.webmanifest';
-}
-
-function isDavinciPublicAsset(pathname) {
-  // Logged-in Overview sessions send /assets/* to the Harness runner. Da-vinci
-  // public art (awakening stills) lives under /assets/onboarding and must stay
-  // on this Worker’s ASSETS binding or the navy overlay has no image.
-  return pathname.startsWith('/assets/onboarding/');
 }
 
 function isHarnessRunnerRoute(pathname) {
@@ -171,7 +175,7 @@ function isHarnessRunnerRoute(pathname) {
   if (pathname === '/api/meetings/transcribe' || pathname.startsWith('/api/meetings/')) return false;
   return pathname.startsWith('/api/')
     || pathname.startsWith('/plugins/')
-    || pathname.startsWith('/assets/');
+    || isHarnessViteAsset(pathname);
 }
 
 async function proxyHarnessRunner(request, env) {
