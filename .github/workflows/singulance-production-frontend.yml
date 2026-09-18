@@ -1,0 +1,52 @@
+name: SINGULANCE production frontend
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Expected origin/main SHA (optional; must match HEAD if set)
+        required: false
+        type: string
+      requested_by:
+        description: Who triggered the Cloudflare Workflow
+        required: false
+        type: string
+
+concurrency:
+  group: singulance-production-frontend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: hivemind-web next.singulancelabs.com
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Refuse anything except origin/main
+        run: |
+          git fetch origin main
+          HEAD=$(git rev-parse HEAD)
+          MAIN=$(git rev-parse origin/main)
+          echo "HEAD=$HEAD origin/main=$MAIN requested=${{ github.event.inputs.sha }}"
+          test "$HEAD" = "$MAIN"
+          if [ -n "${{ github.event.inputs.sha }}" ]; then
+            test "$HEAD" = "${{ github.event.inputs.sha }}"
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Deploy hivemind-web only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run deploy:cloudflare
+      - name: Canary next.singulancelabs.com
+        run: |
+          curl -fsS -o /dev/null https://next.singulancelabs.com/
+          curl -fsS -o /dev/null -w "art:%{http_code}\n" https://next.singulancelabs.com/assets/onboarding/awakening-1920.webp
