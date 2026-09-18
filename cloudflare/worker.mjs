@@ -143,6 +143,9 @@ function cookieValue(request, name) {
 
 function isHarnessDocumentOrAsset(request, pathname) {
   if (!hasHarnessSession(request) || !hasHarnessAdmission(request)) return false;
+  // Enigma: public onboarding stills live under /assets/onboarding. Overview
+  // cookies must not send those to Harness or the overlay is a flat navy field.
+  if (pathname.startsWith('/assets/onboarding/')) return false;
   // Overview documents always belong to Da-vinci, including admitted reloads.
   // The host mounts Harness into its chat seat; standalone runner HTML would
   // replace the HIVE sidebar, header, and embedding configuration.

@@ -38,6 +38,8 @@ test('production Worker runs before SPA assets on Harness RPC and overview paths
 test('awakening artwork is not sent to the Harness runner', () => {
   assert.match(worker, /pathname\.startsWith\('\/assets\/onboarding\/'\)/u);
   assert.match(worker, /function isDavinciPublicAsset/u);
+  const docFn = worker.slice(worker.indexOf('function isHarnessDocumentOrAsset'));
+  assert.match(docFn.slice(0, 600), /assets\/onboarding\/'\)\) return false/u);
 });
 
 test('admitted Harness RPC includes Typert command and event paths', () => {
