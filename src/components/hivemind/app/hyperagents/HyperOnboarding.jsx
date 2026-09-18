@@ -138,7 +138,7 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
       aria-modal="true"
       aria-label={`${company} HIVEMIND awakening`}
     >
-      <picture className="fixed inset-0 block h-full w-full">
+      <picture className="pointer-events-none absolute inset-0 z-0 block h-full w-full">
         <source
           type="image/webp"
           srcSet="/assets/onboarding/awakening-1280.webp 1280w, /assets/onboarding/awakening-1920.webp 1920w, /assets/onboarding/awakening-2560.webp 2560w, /assets/onboarding/awakening-3840.webp 3840w"
@@ -152,13 +152,13 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
           className="h-full w-full object-cover object-center"
         />
       </picture>
-      <div className="fixed inset-0 bg-[#04152f]/[0.08]" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-[#04152f]/[0.08]" aria-hidden="true" />
 
       <button type="button" onClick={profilesVisible ? onClose : skipToProfiles} className="fixed right-5 top-5 z-10 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-[10px] font-mono uppercase tracking-[0.14em] text-white/80 backdrop-blur-xl transition-colors hover:bg-white/20 hover:text-white">
         {profilesVisible ? 'Back' : 'Skip introduction'}
       </button>
 
-      <div className="relative z-[1] mx-auto flex min-h-full w-full max-w-[1180px] items-center justify-center px-5 py-20 sm:px-8">
+      <div className="relative z-[2] mx-auto flex min-h-full w-full max-w-[1180px] items-center justify-center px-5 py-20 sm:px-8">
         <AnimatePresence mode="wait">
           {!profilesVisible ? (
             <motion.div

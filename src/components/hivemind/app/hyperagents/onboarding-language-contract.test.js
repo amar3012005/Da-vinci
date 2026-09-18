@@ -14,6 +14,12 @@ test('onboarding start sends preferred_language and keeps the navbar LangSwitche
   assert.match(topbar, /<LangSwitcher \/>/);
 });
 
+test('awakening still is absolutely positioned so framer-motion transform cannot hide it', () => {
+  const onboarding = fs.readFileSync(path.join(dir, 'HyperOnboarding.jsx'), 'utf8');
+  assert.match(onboarding, /absolute inset-0 z-0 block h-full w-full/);
+  assert.match(onboarding, /awakening-1920\.webp/);
+});
+
 test('company dashboard shows a one-shot Day 0 pipeline popup when the email is already sent', () => {
   const dashboard = fs.readFileSync(path.join(dir, 'CompanyDashboard.jsx'), 'utf8');
   assert.match(dashboard, /day0_report_email\?\.status !== 'sent'/);
