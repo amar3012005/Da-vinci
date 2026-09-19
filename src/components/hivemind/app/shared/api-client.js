@@ -355,6 +355,42 @@ class HiveMindApiClient {
     return data;
   }
 
+  // WorkRuns are durable, tenant-scoped AgentScope sessions.  Keep their
+  // transport on the authenticated control plane rather than exposing the
+  // runtime directly to a browser.
+  async listWorkRuns({ limit = 24 } = {}) {
+    const { data } = await this.controlPlane.get('/v1/workruns', { params: { limit } });
+    return data;
+  }
+
+  async getWorkRun(id) {
+    const { data } = await this.controlPlane.get(`/v1/workruns/${encodeURIComponent(id)}`);
+    return data;
+  }
+
+  async createWorkRun(payload) {
+    const { data } = await this.controlPlane.post('/v1/workruns', payload);
+    return data;
+  }
+
+  async getWorkRunSessionMessages(id) {
+    const { data } = await this.controlPlane.get(`/v1/workruns/${encodeURIComponent(id)}/session/messages`);
+    return data;
+  }
+
+  async sendWorkRunChat(id, content) {
+    const { data } = await this.controlPlane.post(`/v1/workruns/${encodeURIComponent(id)}/chat`, { content });
+    return data;
+  }
+
+  workRunStreamUrl(id) {
+    return `${this._controlPlaneBaseUrl()}/v1/workruns/${encodeURIComponent(id)}/stream`;
+  }
+
+  workRunSessionStreamUrl(id) {
+    return `${this._controlPlaneBaseUrl()}/v1/workruns/${encodeURIComponent(id)}/session/stream`;
+  }
+
   /**
    * Fire the post-login welcome email. Recipient is resolved server-side from
    * the session (never client-supplied). Idempotent per login session and
