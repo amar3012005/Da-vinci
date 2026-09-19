@@ -120,10 +120,11 @@ export default function WorkspaceNotifications() {
     else if (navigate && notice?.href) window.location.assign(notice.href);
   };
 
-  const dismissToast = () => {
+  const dismissToast = async () => {
     const notice = toast;
+    if (!notice) return;
+    await markRead(notice);
     setToast(null);
-    if (notice) markRead(notice);
   };
 
   const openDetail = (notice) => { setToast(null); setOpen(false); setDetail(notice); markRead(notice); };
@@ -137,8 +138,8 @@ export default function WorkspaceNotifications() {
       </motion.section> : null}</AnimatePresence>
     </div>
 
-    {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{toast ? <motion.div initial={{ opacity: 0, x: 40, y: 20 }} animate={{ opacity: 1, x: 0, y: 0 }} exit={{ opacity: 0, x: 40 }} transition={{ type: 'spring', stiffness: 330, damping: 31 }}>
-      <WorkspacePopupSurface variant="toast" label={`hivemind — day ${lifecycleDay(toast) ?? 'update'}`} title={lifecycleDay(toast) === 0 ? 'Your company is ready.' : 'Your team moved the company forward.'} description={lifecycleDay(toast) === 0 ? 'Your brief, first research and new HyperAgents are filed in HIVEMIND.' : (toast.body || 'Your report is ready.')} visual={lifecycleDay(toast) === 0 ? null : <LifecycleVisual notice={toast} />} onClose={dismissToast} secondaryAction={{ label: 'Later', onClick: dismissToast }} primaryAction={{ label: lifecycleDay(toast) === 0 ? 'See Day 0 report' : 'Review update', onClick: () => openDetail(toast) }}>
+    {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{toast ? <motion.div className="fixed -bottom-3 left-4 z-[2147483647] w-[min(420px,calc(100vw-28px))] sm:left-6" initial={{ opacity: 1, y: 'calc(100% - 34px)' }} animate={{ y: 0 }} exit={{ opacity: 0, y: 'calc(100% - 34px)' }} transition={{ type: 'spring', stiffness: 190, damping: 25, mass: 0.9 }}>
+      <WorkspacePopupSurface variant="toast" label={`hivemind — day ${lifecycleDay(toast) ?? 'update'}`} title={lifecycleDay(toast) === 0 ? 'DAY 0 TASK FINISHED.' : 'Your team moved the company forward.'} description={lifecycleDay(toast) === 0 ? 'Your company is ready. Your brief, first research and new HyperAgents are filed in HIVEMIND.' : (toast.body || 'Your report is ready.')} visual={lifecycleDay(toast) === 0 ? null : <LifecycleVisual notice={toast} />} onClose={dismissToast} secondaryAction={{ label: 'Later', onClick: dismissToast }} primaryAction={{ label: lifecycleDay(toast) === 0 ? 'See Day 0 report' : 'Review update', onClick: () => openDetail(toast) }}>
         {lifecycleDay(toast) === 0 ? <DayZeroCompanyBrief context={lifecycleContext} /> : null}
       </WorkspacePopupSurface>
     </motion.div> : null}</AnimatePresence>, document.body) : null}

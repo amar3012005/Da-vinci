@@ -18,17 +18,19 @@ test('lifecycle popup is owned by durable workspace notifications', () => {
   assert.match(notifications, /variant="toast"/);
   assert.match(notifications, /<GmailMark/);
   assert.match(notifications, /createPortal/);
-  assert.match(notifications, /if \(notice\) markRead\(notice\)/);
   assert.match(notifications, /markWorkspaceNotificationRead/);
+  assert.match(notifications, /await markRead\(notice\)/);
+  assert.match(notifications, /DAY 0 TASK FINISHED/);
+  assert.match(notifications, /y: 'calc\(100% - 34px\)'/);
+  assert.match(notifications, /-bottom-3 left-4/);
   assert.match(notifications, /apiClient\.hyperCompany\(\)/);
   assert.match(notifications, /<AgentAvatar/);
   assert.match(notifications, /company\.mission/);
   assert.match(notifications, /company\.icp/);
   assert.match(notifications, /company\.positioning/);
   const surface = fs.readFileSync(path.join(dir, '../shared/WorkspacePopupSurface.jsx'), 'utf8');
-  assert.match(surface, /z-\[2147483647\]/);
-  assert.match(surface, /bottom-4 left-4/);
-  assert.match(surface, /max-h-\[calc\(100dvh-32px\)\]/);
+  assert.match(notifications, /z-\[2147483647\]/);
+  assert.match(surface, /max-h-\[calc\(100dvh-28px\)\]/);
 });
 
 test('company web artifacts open in the shared in-app reader', () => {
