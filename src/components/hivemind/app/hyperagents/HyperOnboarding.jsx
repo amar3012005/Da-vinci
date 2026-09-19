@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin, BrainCircuit, AudioWaveform, Orbit } from 'lucide-react';
+import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin, BrainCircuit, AudioWaveform, Orbit, Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import LangSwitcher from '../layout/LangSwitcher';
@@ -243,6 +243,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [companyLocation, setCompanyLocation] = useState('');
   const [goal, setGoal] = useState('');
+  const [preferredLanguage, setPreferredLanguage] = useState('');
   const [lines, setLines] = useState([]);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -292,13 +293,15 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
     if (!websiteUrl.trim() || starting) return;
     setStarting(true); setError(null);
     try {
-      const preferredLanguage = String(i18n.language || 'en').split('-')[0] || 'en';
+      // Explicit dropdown choice wins; otherwise fall back to the UI language
+      // (upstream behavior). The backend normalizes both.
+      const lang = preferredLanguage.trim() || String(i18n.language || 'en').split('-')[0] || 'en';
       await apiClient.startHyperOnboarding({
         website_url: websiteUrl.trim(),
         goal: goal.trim() || undefined,
-        preferred_language: preferredLanguage,
+        preferred_language: lang,
       });
-      try { await i18n.changeLanguage(preferredLanguage); } catch { /* chrome language follows the same choice */ }
+      try { await i18n.changeLanguage(lang); } catch { /* chrome language follows the same choice */ }
       setPhase('running'); setLines([]); poll();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -372,6 +375,23 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)}
               placeholder={t('hyperOnboarding.goalPlaceholder', 'Optional: what should your AI team focus on first?')}
               className="w-full px-4 py-3 bg-white border border-[#e3e0db] rounded-xl text-[13px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15" />
+            <div className="relative">
+              <Languages size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a3a3] pointer-events-none" />
+              <select value={preferredLanguage} onChange={(e) => setPreferredLanguage(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white border border-[#e3e0db] rounded-xl text-[13px] text-[#0a0a0a] focus:outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15 appearance-none cursor-pointer">
+                <option value="">{t('hyperOnboarding.languageAuto', 'Company language: auto-detect from website')}</option>
+                <option value="en">English</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+                <option value="it">Italiano</option>
+                <option value="nl">Nederlands</option>
+                <option value="pt">Português</option>
+                <option value="tr">Türkçe</option>
+                <option value="ar">العربية</option>
+                <option value="hi">हिन्दी</option>
+              </select>
+            </div>
             {error && <p className="text-[12px] text-[#dc2626] font-mono">{error}</p>}
             <button type="submit" disabled={!websiteUrl.trim() || starting}
               className="w-full flex items-center justify-center gap-2 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 text-white text-[13.5px] font-semibold px-4 py-3.5 rounded-xl transition-colors">
