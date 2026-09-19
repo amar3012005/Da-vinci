@@ -134,14 +134,23 @@ export default function LoginPage() {
   const [emailSignupTicket, setEmailSignupTicket] = useState('');
   const [emailReturnTo, setEmailReturnTo] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileEpoch, setTurnstileEpoch] = useState(0);
+  const [resendSeconds, setResendSeconds] = useState(0);
   const [emailState, setEmailState] = useState({ busy: false, message: '', error: false });
   const emailEnabled = emailConfig.enabled;
   const emailOnly = emailConfig.email_only;
+  const securityReady = !emailConfig.turnstile_site_key || Boolean(turnstileToken);
+
+  useEffect(() => {
+    if (resendSeconds <= 0) return undefined;
+    const timer = window.setInterval(() => setResendSeconds((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [resendSeconds]);
 
   const requestEmailSignIn = async (event) => {
     event.preventDefault();
     const email = emailAddress.trim().toLowerCase();
-    if (!email) return;
+    if (!email || !securityReady) return;
     setEmailState({ busy: true, message: '', error: false });
     try {
       const returnTo = emailReturnTo || returnToFromState
@@ -151,6 +160,9 @@ export default function LoginPage() {
         signupTicket: emailIntent === 'register' ? emailSignupTicket : '',
       });
       setEmailChallenge(result.challenge_id);
+      setTurnstileToken('');
+      setTurnstileEpoch((epoch) => epoch + 1);
+      setResendSeconds(Number(result?.resend_after_seconds) || 30);
       setEmailView('code');
       setEmailState({ busy: false, message: result?.message || 'Check your email for the sign-in code.', error: false });
     } catch (error) {
@@ -159,6 +171,22 @@ export default function LoginPage() {
         message: error?.response?.data?.error || 'Unable to start email sign-in.',
         error: true,
       });
+    }
+  };
+
+  const resendEmailCode = async () => {
+    if (!emailChallenge || emailState.busy || resendSeconds > 0 || !securityReady) return;
+    setEmailState({ busy: true, message: '', error: false });
+    try {
+      const result = await apiClient.resendEmailSignIn({ challengeId: emailChallenge, turnstileToken });
+      setEmailCode('');
+      setResendSeconds(Number(result?.resend_after_seconds) || 30);
+      setEmailState({ busy: false, error: false, message: result?.message || 'A new code is on its way.' });
+    } catch (error) {
+      setEmailState({ busy: false, error: true, message: error?.response?.data?.error || 'Unable to resend the code. Please try again.' });
+    } finally {
+      setTurnstileToken('');
+      setTurnstileEpoch((epoch) => epoch + 1);
     }
   };
 
@@ -634,20 +662,22 @@ export default function LoginPage() {
                       <label className="block text-[10px] font-mono uppercase tracking-[0.16em] text-[#737373]" htmlFor="email-sign-in-address">Email address</label>
                       <input id="email-sign-in-address" type="email" autoComplete="email" inputMode="email" required autoFocus value={emailAddress} onChange={(event) => setEmailAddress(event.target.value)} placeholder="name@company.com" className="w-full h-12 rounded-[6px] border border-[#d4d0ca] bg-white px-3 text-[15px] text-[#0a0a0a] outline-none focus:border-[#117dff]" />
                       <EmailTurnstile siteKey={emailConfig.turnstile_site_key} onToken={setTurnstileToken} />
-                      <button type="submit" disabled={emailState.busy || !emailAddress.trim()} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
-                        {emailState.busy ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />} Send sign-in code
+                      <button type="submit" disabled={emailState.busy || !emailAddress.trim() || !securityReady} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
+                        {emailState.busy || !securityReady ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />} {securityReady ? 'Send sign-in code' : 'Completing security check…'}
                       </button>
                       {!emailOnly && <button type="button" onClick={() => setEmailView('methods')} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Back to other sign-in methods</button>}
                     </form>
                   )}
                   {emailEnabled && emailView === 'code' && (
                     <div className="space-y-3">
+                      <button type="button" onClick={() => { setEmailView('email'); setEmailCode(''); setTurnstileToken(''); }} className="inline-flex items-center gap-1.5 text-[12px] text-[#737373] hover:text-[#117dff]" aria-label="Back to email address"><ArrowLeft size={14} /> Back</button>
                       <label className="block text-[10px] font-mono uppercase tracking-[0.16em] text-[#737373]" htmlFor="email-sign-in-code">Enter the 6-digit code</label>
                       <input id="email-sign-in-code" type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={6} value={emailCode} onChange={(event) => setEmailCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className="w-full h-14 rounded-[6px] border border-[#d4d0ca] bg-white px-3 text-center text-[24px] tracking-[0.45em] font-mono text-[#0a0a0a] outline-none focus:border-[#117dff]" />
                       <button type="button" onClick={() => verifyEmail()} disabled={emailState.busy || emailCode.length !== 6} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] disabled:opacity-60 text-white font-semibold rounded-[6px] uppercase tracking-[0.08em]">
                         {emailState.busy ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />} Verify and continue
                       </button>
-                      <button type="button" onClick={async () => { await apiClient.resendEmailSignIn({ challengeId: emailChallenge, turnstileToken }); setEmailState({ busy: false, error: false, message: 'If the challenge is active, a new code is on its way.' }); }} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Resend code</button>
+                      <EmailTurnstile key={`resend-${turnstileEpoch}`} siteKey={emailConfig.turnstile_site_key} onToken={setTurnstileToken} />
+                      <button type="button" onClick={resendEmailCode} disabled={emailState.busy || resendSeconds > 0 || !securityReady} className="w-full text-[12px] text-[#737373] hover:text-[#117dff] disabled:cursor-not-allowed disabled:text-[#b8b4ad]">{resendSeconds > 0 ? `Resend code in ${resendSeconds}s` : (securityReady ? 'Resend code' : 'Preparing resend…')}</button>
                       <button type="button" onClick={() => { setEmailView('email'); setEmailCode(''); }} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Use another email</button>
                     </div>
                   )}
