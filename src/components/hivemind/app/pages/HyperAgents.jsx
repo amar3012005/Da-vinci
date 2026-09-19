@@ -43,6 +43,7 @@ import CampaignsView from '../hyperagents/CampaignsView';
 import CampaignDashboardModal from '../hyperagents/campaigns/CampaignDashboardModal';
 import CampaignProgressDashboard from '../hyperagents/campaigns/CampaignProgressDashboard';
 import CampaignRoomVisualProgress from '../hyperagents/campaigns/CampaignRoomVisualProgress';
+import RoomVisualGeneration from '../hyperagents/RoomVisualGeneration';
 import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
@@ -2978,6 +2979,7 @@ function RoomThread({ roomId, onArchived }) {
               onOpenCampaign={() => openRoomCampaign(activeRoomCampaign.id)}
             />
           ) : null}
+          <RoomVisualGeneration roomId={roomId} turnRunning={Boolean(activeTurnId)} />
           {error && (
             <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               <AlertTriangle size={11} className="inline mr-1" /> {error}

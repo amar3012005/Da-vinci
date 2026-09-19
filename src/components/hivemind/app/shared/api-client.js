@@ -1220,6 +1220,46 @@ class HiveMindApiClient {
     return `${base}/v1/hyper-rooms/${roomId}/turns/${turnId}/stream`;
   }
 
+  async listVisualGenerationJobs(roomId, { limit = 12 } = {}) {
+    const { data } = await this.controlPlane.get('/v1/proxy/visual-generation/jobs', {
+      params: { room_id: roomId, limit },
+      suppressServiceError: true,
+    });
+    return data;
+  }
+
+  async getVisualGenerationJob(jobId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/visual-generation/jobs/${encodeURIComponent(jobId)}`, {
+      suppressServiceError: true,
+    });
+    return data;
+  }
+
+  async retryVisualGenerationJob(job) {
+    const { data } = await this.controlPlane.post('/v1/proxy/visual-generation/jobs', {
+      instruction: job.instruction,
+      use_case: job.use_case,
+      output: {
+        mode: job.output?.mode,
+        count: job.output?.count,
+        aspect_ratios: job.output?.aspect_ratios,
+        quality: job.quality,
+      },
+      model_policy: job.model_policy,
+      source: job.source || {},
+      idempotency_key: `room-retry:${job.job_id}:${Date.now()}`,
+    }, { suppressServiceError: true });
+    return data;
+  }
+
+  visualGenerationEventsUrl(jobId) {
+    return `${this._controlPlaneBaseUrl()}/v1/proxy/visual-generation/jobs/${encodeURIComponent(jobId)}/events`;
+  }
+
+  visualGenerationAssetUrl(jobId, assetId) {
+    return `${this._controlPlaneBaseUrl()}/v1/proxy/visual-generation/jobs/${encodeURIComponent(jobId)}/assets/${encodeURIComponent(assetId)}`;
+  }
+
   hyperArtifactAssetUrl(path) {
     const value = String(path || '');
     if (!value.startsWith('/v1/hyper-artifacts/')) return '';
