@@ -96,6 +96,12 @@ export default function WorkRunConsole() {
   const { runId } = useParams(); const navigate = useNavigate();
   const [runs, setRuns] = useState([]); const [run, setRun] = useState(null); const [messages, setMessages] = useState([]); const [events, setEvents] = useState([]); const [draft, setDraft] = useState(''); const [failure, setFailure] = useState(''); const [sending, setSending] = useState(false);
   const sources = useRef([]);
+  // Match the legacy Room canvas: this console owns its left rail, so the
+  // application navigation collapses while the user is inside a WorkRun.
+  useEffect(() => {
+    window.dispatchEvent(new Event('hivemind:close-sidebar'));
+    return () => window.dispatchEvent(new Event('hivemind:open-sidebar'));
+  }, []);
   const load = useCallback(async () => { const data = await apiClient.listWorkRuns({ limit: 24 }); setRuns(data?.workruns || []); }, []);
   useEffect(() => { load().catch(() => {}); }, [load]);
   useEffect(() => { let cancelled = false; let session; let progress;
