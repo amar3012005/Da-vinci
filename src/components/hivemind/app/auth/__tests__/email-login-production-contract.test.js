@@ -10,7 +10,9 @@ const login = fs.readFileSync(path.resolve(dir, '../LoginPage.jsx'), 'utf8');
 test('email sign-in cannot submit a fake challenge before Turnstile is ready', () => {
   assert.match(login, /const securityReady = !emailConfig\.turnstile_site_key \|\| Boolean\(turnstileToken\)/);
   assert.match(login, /!emailAddress\.trim\(\) \|\| !securityReady/);
-  assert.match(login, /Completing security check/);
+  assert.match(login, /Complete security check above/);
+  assert.match(login, /appearance: 'always'/);
+  assert.match(login, /retry security check/);
 });
 
 test('code resend obtains a fresh Turnstile token and respects the server cooldown', () => {

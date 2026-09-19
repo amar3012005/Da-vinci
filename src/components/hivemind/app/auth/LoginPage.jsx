@@ -96,16 +96,20 @@ const PERSONAL_PLANS = [
   },
 ];
 
-function EmailTurnstile({ siteKey, onToken }) {
+function EmailTurnstile({ siteKey, onToken, onStatus }) {
   const host = useRef(null);
   useEffect(() => {
     if (!siteKey || !host.current) return undefined;
     let widgetId;
+    const fail = () => { onToken(''); onStatus('error'); };
     const render = () => {
       if (!window.turnstile || !host.current || widgetId !== undefined) return;
       widgetId = window.turnstile.render(host.current, {
-        sitekey: siteKey, action: 'email_auth', appearance: 'interaction-only',
-        callback: onToken, 'expired-callback': () => onToken(''), 'error-callback': () => onToken(''),
+        sitekey: siteKey, action: 'email_auth', appearance: 'always', size: 'flexible',
+        retry: 'auto', 'retry-interval': 3000, 'refresh-expired': 'auto',
+        callback: (token) => { onToken(token); onStatus('ready'); },
+        'expired-callback': () => { onToken(''); onStatus('checking'); },
+        'error-callback': fail,
       });
     };
     let script = document.querySelector('script[data-singulance-turnstile]');
@@ -113,10 +117,10 @@ function EmailTurnstile({ siteKey, onToken }) {
       script = document.createElement('script'); script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
       script.async = true; script.defer = true; script.dataset.singulanceTurnstile = 'true'; document.head.appendChild(script);
     }
-    script.addEventListener('load', render); render();
-    return () => { script.removeEventListener('load', render); if (widgetId !== undefined) window.turnstile?.remove(widgetId); };
-  }, [siteKey, onToken]);
-  return siteKey ? <div ref={host} className="min-h-[1px]" aria-label="Bot verification" /> : null;
+    script.addEventListener('load', render); script.addEventListener('error', fail); render();
+    return () => { script.removeEventListener('load', render); script.removeEventListener('error', fail); if (widgetId !== undefined) window.turnstile?.remove(widgetId); };
+  }, [siteKey, onStatus, onToken]);
+  return siteKey ? <div ref={host} className="min-h-[65px] w-full" aria-label="Bot verification" /> : null;
 }
 
 export default function LoginPage() {
@@ -134,12 +138,20 @@ export default function LoginPage() {
   const [emailSignupTicket, setEmailSignupTicket] = useState('');
   const [emailReturnTo, setEmailReturnTo] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileStatus, setTurnstileStatus] = useState('checking');
   const [turnstileEpoch, setTurnstileEpoch] = useState(0);
   const [resendSeconds, setResendSeconds] = useState(0);
   const [emailState, setEmailState] = useState({ busy: false, message: '', error: false });
   const emailEnabled = emailConfig.enabled;
   const emailOnly = emailConfig.email_only;
   const securityReady = !emailConfig.turnstile_site_key || Boolean(turnstileToken);
+
+  const retryTurnstile = () => {
+    setTurnstileToken('');
+    setTurnstileStatus('checking');
+    if (!window.turnstile) document.querySelector('script[data-singulance-turnstile]')?.remove();
+    setTurnstileEpoch((epoch) => epoch + 1);
+  };
 
   useEffect(() => {
     if (resendSeconds <= 0) return undefined;
@@ -661,9 +673,10 @@ export default function LoginPage() {
                     <form onSubmit={requestEmailSignIn} className="space-y-3">
                       <label className="block text-[10px] font-mono uppercase tracking-[0.16em] text-[#737373]" htmlFor="email-sign-in-address">Email address</label>
                       <input id="email-sign-in-address" type="email" autoComplete="email" inputMode="email" required autoFocus value={emailAddress} onChange={(event) => setEmailAddress(event.target.value)} placeholder="name@company.com" className="w-full h-12 rounded-[6px] border border-[#d4d0ca] bg-white px-3 text-[15px] text-[#0a0a0a] outline-none focus:border-[#117dff]" />
-                      <EmailTurnstile siteKey={emailConfig.turnstile_site_key} onToken={setTurnstileToken} />
+                      <EmailTurnstile key={`start-${turnstileEpoch}`} siteKey={emailConfig.turnstile_site_key} onToken={setTurnstileToken} onStatus={setTurnstileStatus} />
+                      {turnstileStatus === 'error' && <div role="alert" className="rounded-[6px] border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-800">Cloudflare could not complete the security check. Check content blockers, then <button type="button" onClick={retryTurnstile} className="font-semibold underline">retry security check</button>.</div>}
                       <button type="submit" disabled={emailState.busy || !emailAddress.trim() || !securityReady} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
-                        {emailState.busy || !securityReady ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />} {securityReady ? 'Send sign-in code' : 'Completing security check…'}
+                        {emailState.busy || (!securityReady && turnstileStatus !== 'error') ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />} {securityReady ? 'Send sign-in code' : (turnstileStatus === 'error' ? 'Security check unavailable' : 'Complete security check above')}
                       </button>
                       {!emailOnly && <button type="button" onClick={() => setEmailView('methods')} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Back to other sign-in methods</button>}
                     </form>
@@ -676,7 +689,8 @@ export default function LoginPage() {
                       <button type="button" onClick={() => verifyEmail()} disabled={emailState.busy || emailCode.length !== 6} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] disabled:opacity-60 text-white font-semibold rounded-[6px] uppercase tracking-[0.08em]">
                         {emailState.busy ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />} Verify and continue
                       </button>
-                      <EmailTurnstile key={`resend-${turnstileEpoch}`} siteKey={emailConfig.turnstile_site_key} onToken={setTurnstileToken} />
+                      <EmailTurnstile key={`resend-${turnstileEpoch}`} siteKey={emailConfig.turnstile_site_key} onToken={setTurnstileToken} onStatus={setTurnstileStatus} />
+                      {turnstileStatus === 'error' && <button type="button" onClick={retryTurnstile} className="w-full text-[12px] font-semibold text-amber-700 underline">Retry security check</button>}
                       <button type="button" onClick={resendEmailCode} disabled={emailState.busy || resendSeconds > 0 || !securityReady} className="w-full text-[12px] text-[#737373] hover:text-[#117dff] disabled:cursor-not-allowed disabled:text-[#b8b4ad]">{resendSeconds > 0 ? `Resend code in ${resendSeconds}s` : (securityReady ? 'Resend code' : 'Preparing resend…')}</button>
                       <button type="button" onClick={() => { setEmailView('email'); setEmailCode(''); }} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Use another email</button>
                     </div>
