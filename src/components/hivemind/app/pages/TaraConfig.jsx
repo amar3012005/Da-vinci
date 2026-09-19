@@ -645,6 +645,7 @@ function CampaignPanel({ identity, language = 'en' }) {
 
 export default function TaraConfig() {
   const { t, i18n } = useTranslation('dashboard');
+  const voiceProvider = 'grok';
 
   // Identity for the self-hosted AaaS voice widget (tenant = user_id).
   const [identity, setIdentity] = useState({ userId: null, orgId: null });
@@ -728,7 +729,7 @@ export default function TaraConfig() {
           <h1 className="text-[#0a0a0a] text-3xl font-bold font-['Space_Grotesk'] leading-tight">TARA × HIVEMIND</h1>
           <p className="text-[#737373] text-[14px] mt-1">{t('taraconfig.subtitle', 'Voice agent conversational runtime — real-time STT, recall-grounded answers, TTS.')}</p>
         </div>
-        <div className="flex items-center rounded-lg border border-[#e3e0db] overflow-hidden text-[12px] font-semibold">
+        <div aria-hidden="true" className="hidden items-center rounded-lg border border-[#e3e0db] overflow-hidden text-[12px] font-semibold">
           {['deepgram', 'grok'].map((provider) => (
             <button key={provider} type="button" disabled={!canManageProvider || providerSaving || !runtimeConfig}
               title={!runtimeConfig ? 'Loading provider configuration…' : (!canManageProvider ? 'Owners and admins can change the voice provider' : `Use ${provider}`)}
@@ -743,7 +744,7 @@ export default function TaraConfig() {
       {/* Talk to TARA — self-hosted AaaS (STT→tara_stream→TTS, one service).
           The ONE Start. Voice/lang config + current-turn chat live inside. */}
       <motion.div variants={fadeUp}>
-        <AaasVoiceWidget userId={identity.userId} orgId={identity.orgId} provider={runtimeConfig?.default_provider || 'deepgram'} language={(i18n.language || 'en').split('-')[0]} />
+        <AaasVoiceWidget userId={identity.userId} orgId={identity.orgId} provider={voiceProvider} language={(i18n.language || 'en').split('-')[0]} />
       </motion.div>
 
       {/* Stat cards */}
