@@ -88,9 +88,10 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
   const routeSlug = (pagePath || '').replace(/^\/+/, '').replace(/\//g, '.') || 'home';
   const tTitle = t(`topbar.titles.${routeSlug}`, { defaultValue: title });
   const tDesc = description ? t(`topbar.descriptions.${routeSlug}`, { defaultValue: description }) : '';
+  const harnessCanvas = pagePath === '/hivemind/app/overview';
 
   return (
-    <header className="pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center bg-transparent px-3 md:px-6">
+    <header className={`pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-white' : 'bg-transparent'}`}>
       {/* Branding and team selection live in the persistent HIVE sidebar. */}
       <div className="pointer-events-auto min-w-0 justify-self-start">
         <div className="min-w-0">
