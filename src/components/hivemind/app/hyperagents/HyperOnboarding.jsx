@@ -524,6 +524,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           </div>
         </div>
 
+
         {error && (
           <div className="mt-4 flex items-center justify-between bg-red-50 border border-red-200 rounded-xl px-4 py-3">
             <span className="text-[12.5px] text-[#dc2626] font-mono">{error}</span>
@@ -535,8 +536,22 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
       </div>
 
       <AnimatePresence>
-        {done && (
+        {done && !result?.screenshot && (
           <motion.div
+            key="preview-wait"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="shrink-0 border-t border-[#e3e0db] bg-[#faf9f4]/95 pt-2 backdrop-blur-sm"
+          >
+            <div className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0a0a0a]/60 px-4 text-[12px] font-mono text-white/70">
+              <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
+              {t('hyperOnboarding.preparingPreview', 'Preparing website preview…')}
+            </div>
+          </motion.div>
+        )}
+        {done && (result?.screenshot || (result?.screenshot_pending === false && !result?.website_visual_source)) && (
+          <motion.div
+            key="enter"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className="shrink-0 border-t border-[#e3e0db] bg-[#faf9f4]/95 pt-2 backdrop-blur-sm"
