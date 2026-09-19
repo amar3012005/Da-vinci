@@ -552,6 +552,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  hyperCompanyWebArtifactPreviewUrl(artifactId) {
+    const id = String(artifactId || '').trim();
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return '';
+    return `${this._controlPlaneBaseUrl()}/v1/hyper/company/web-artifacts/${encodeURIComponent(id)}/preview`;
+  }
+
   /** Claim the one-time Day-0 report after Your Company has rendered. */
   async claimHyperCompanyDayZeroReport() {
     const { data } = await this.controlPlane.post('/v1/hyper/company/day0-report', {});

@@ -563,8 +563,19 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
                 <FileText size={12} className="text-[#a3a3a3] shrink-0" /> {documentTitle}
               </div>
             ))}
+            {(Array.isArray(c.web_artifacts) ? c.web_artifacts : []).map((artifact) => (
+              <a key={artifact.id} href={apiClient.hyperCompanyWebArtifactPreviewUrl(artifact.id)} target="_blank" rel="noreferrer"
+                className="flex items-start gap-2 rounded-md border border-[#e3e0db] bg-white px-2.5 py-2 text-[12px] text-[#3f3d39] hover:border-[#117dff] hover:text-[#117dff] group">
+                <Globe size={12} className="text-[#117dff] shrink-0 mt-0.5" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{artifact.title || artifact.url}</span>
+                  <span className="block truncate text-[9.5px] font-mono text-[#a3a3a3]">{artifact.content_chars || 0} chars · {artifact.provider || 'web crawl'}</span>
+                </span>
+                <ArrowUpRight size={11} className="shrink-0 opacity-50 group-hover:opacity-100" />
+              </a>
+            ))}
             </div>
-            <p className="text-[10.5px] text-[#a3a3a3] mt-2 font-mono leading-4">{t('hyperDash.filedTo', 'Filed to HIVEMIND memory — agents recall these before acting.')}</p>
+            <p className="text-[10.5px] text-[#a3a3a3] mt-2 font-mono leading-4">{t('hyperDash.filedTo', 'Filed to HIVEMIND memory — open web artifacts show the exact crawl agents can recall.')}</p>
           </div>
 
           {(c.deliverables || []).length > 0 ? (

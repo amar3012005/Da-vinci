@@ -1019,6 +1019,14 @@ function DomainRoomIntro({ room, company, busy, onRun, onEnter, onStartCampaign,
                     <FileText size={11} style={{ color: domain.color }} /> {document}
                   </div>
                 ))}
+                {(Array.isArray(company?.web_artifacts) ? company.web_artifacts : []).map((artifact) => (
+                  <a key={artifact.id} href={apiClient.hyperCompanyWebArtifactPreviewUrl(artifact.id)} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-2 py-2.5 text-[11px] text-[#525252] hover:text-[#117dff]">
+                    <Globe size={11} style={{ color: domain.color }} />
+                    <span className="min-w-0 flex-1 truncate">{artifact.title || artifact.url}</span>
+                    <ExternalLink size={10} className="shrink-0" />
+                  </a>
+                ))}
               </div>
             </div>
           </div>
