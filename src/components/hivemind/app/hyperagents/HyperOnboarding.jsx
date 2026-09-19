@@ -334,9 +334,8 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
       };
       setResult(nextResult);
       setLocationPromptOpen(false);
-      // Entering the completed workspace is the authoritative Day-0 moment.
-      // The server owns the idempotent claim; CompanyDashboard repeats the
-      // same safe call as a recovery path if navigation/network timing races.
+      // Entering the completed workspace is the sole client-side Day-0 moment.
+      // The server still owns the idempotent claim, so a retry remains safe.
       await apiClient.claimHyperCompanyDayZeroReport().catch(() => null);
       onComplete?.(nextResult);
     } catch (err) {
@@ -361,11 +360,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           <p className="text-[13.5px] text-[#525252] mt-2 max-w-[520px]">
             {t('hyperOnboarding.sub', 'Enter your website. Your agents read it, draft a grounded company profile and mission into HIVEMIND memory, assemble your team, plan first tasks and open your HQ room.')}
           </p>
-          <div className="mt-7 flex items-center justify-between gap-3 rounded-xl border border-[#e3e0db] bg-white px-3.5 py-2.5">
-            <span className="text-[12px] text-[#525252]">{t('hyperOnboarding.preferredLanguage', 'Preferred language')}</span>
-            <LangSwitcher />
-          </div>
-          <form onSubmit={start} className="mt-3 space-y-3">
+          <form onSubmit={start} className="mt-7 space-y-3">
             <div className="relative">
               <Globe size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
               <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
@@ -375,22 +370,18 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)}
               placeholder={t('hyperOnboarding.goalPlaceholder', 'Optional: what should your AI team focus on first?')}
               className="w-full px-4 py-3 bg-white border border-[#e3e0db] rounded-xl text-[13px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15" />
-            <div className="relative">
-              <Languages size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a3a3] pointer-events-none" />
-              <select value={preferredLanguage} onChange={(e) => setPreferredLanguage(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-[#e3e0db] rounded-xl text-[13px] text-[#0a0a0a] focus:outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15 appearance-none cursor-pointer">
-                <option value="">{t('hyperOnboarding.languageAuto', 'Company language: auto-detect from website')}</option>
-                <option value="en">English</option>
-                <option value="de">Deutsch</option>
-                <option value="fr">Français</option>
-                <option value="es">Español</option>
-                <option value="it">Italiano</option>
-                <option value="nl">Nederlands</option>
-                <option value="pt">Português</option>
-                <option value="tr">Türkçe</option>
-                <option value="ar">العربية</option>
-                <option value="hi">हिन्दी</option>
-              </select>
+            <div className="flex items-center gap-2 rounded-xl border border-[#e3e0db] bg-white px-3.5 py-2.5">
+              <Languages size={15} className="shrink-0 text-[#a3a3a3]" />
+              <span className="text-[12px] text-[#525252]">{t('hyperOnboarding.languageAuto', 'Company language: auto-detect from website')}</span>
+              <span className="text-[12px] text-[#a3a3a3]">or</span>
+              <LangSwitcher
+                variant="link"
+                compact
+                includeAutoDetect
+                linkLabel={preferredLanguage || t('hyperOnboarding.chooseLanguage', 'choose preferred language')}
+                onLanguageChange={setPreferredLanguage}
+                onAutoDetect={() => setPreferredLanguage('')}
+              />
             </div>
             {error && <p className="text-[12px] text-[#dc2626] font-mono">{error}</p>}
             <button type="submit" disabled={!websiteUrl.trim() || starting}

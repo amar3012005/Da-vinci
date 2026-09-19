@@ -188,7 +188,6 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   const [runtimeLaunching, setRuntimeLaunching] = useState(false);
   const [runtimeError, setRuntimeError] = useState('');
   const [pipelineDoneOpen, setPipelineDoneOpen] = useState(false);
-  const dayZeroReportRequested = useRef(false);
   const runtimeCompanyReady = Boolean(state?.onboarded && state?.company?.company);
   const runtimeInviteStorageKey = `hm_runtime_invite:${runtimeInviteVersion}:${state?.hq_room_id || state?.company?.company || 'company'}`;
 
@@ -222,21 +221,6 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
-  // Claim delivery only after the real CompanyDashboard has committed its
-  // persisted company record to the screen. The server owns idempotency, while
-  // this latch avoids a duplicate POST from local re-renders.
-  useEffect(() => {
-    if (!state?.onboarded || !state?.company || dayZeroReportRequested.current) return;
-    if (state.company.day0_report_email?.status === 'sent' || state.company.day0_report_email?.status === 'sending') return;
-    dayZeroReportRequested.current = true;
-    const timer = window.setTimeout(() => {
-      apiClient.claimHyperCompanyDayZeroReport().catch(() => {
-        // A later visit may retry a failed delivery; this never blocks the
-        // company workspace or makes email transport a UI failure.
-      });
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [state?.onboarded, state?.company, state?.hq_room_id]);
   useEffect(() => {
     if (!state?.onboarded || !state?.company) return;
     if (state.company.day0_report_email?.status !== 'sent') return;
