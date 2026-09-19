@@ -13,3 +13,12 @@ test('architecture copy is offset below the wordmark embedded in the awakening a
   const source = fs.readFileSync(path.join(componentDir, 'HyperOnboarding.jsx'), 'utf8');
   expect(source).toContain('className="relative top-10 w-full max-w-[1080px] text-center sm:top-12"');
 });
+
+test('workspace entry waits for a validated homepage capture and exposes explicit retry', () => {
+  const source = fs.readFileSync(path.join(componentDir, 'HyperOnboarding.jsx'), 'utf8');
+  expect(source).toContain('result?.screenshot_pending !== false');
+  expect(source).toContain("done && result?.screenshot &&");
+  expect(source).toContain('retryHyperOnboardingScreenshot');
+  expect(source).toContain('Retry capture');
+  expect(source).not.toContain("result?.screenshot_pending === false && !result?.website_visual_source");
+});

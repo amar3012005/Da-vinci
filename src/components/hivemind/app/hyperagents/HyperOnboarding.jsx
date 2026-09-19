@@ -252,6 +252,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
   const [savingLocation, setSavingLocation] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [awakeningOpen, setAwakeningOpen] = useState(false);
+  const [retryingCapture, setRetryingCapture] = useState(false);
   const pollRef = useRef(null);
 
   const stopPolling = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
@@ -312,6 +313,20 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
     setCompanyLocation(result?.profile?.location || result?.company_location || '');
     setLocationError('');
     setLocationPromptOpen(true);
+  };
+
+  const retryWebsiteCapture = async () => {
+    if (retryingCapture) return;
+    setRetryingCapture(true);
+    setResult((current) => ({ ...current, screenshot: null, screenshot_pending: true, screenshot_error: null }));
+    try {
+      await apiClient.retryHyperOnboardingScreenshot();
+      poll();
+    } catch (err) {
+      setResult((current) => ({ ...current, screenshot_pending: false, screenshot_error: err.response?.data?.error || 'website_capture_failed' }));
+    } finally {
+      setRetryingCapture(false);
+    }
   };
 
   const beginWorkspaceEntry = () => {
@@ -524,7 +539,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
       </div>
 
       <AnimatePresence>
-        {done && !result?.screenshot && (
+        {done && !result?.screenshot && result?.screenshot_pending !== false && (
           <motion.div
             key="preview-wait"
             initial={{ opacity: 0, y: 8 }}
@@ -537,7 +552,22 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             </div>
           </motion.div>
         )}
-        {done && (result?.screenshot || (result?.screenshot_pending === false && !result?.website_visual_source)) && (
+        {done && !result?.screenshot && result?.screenshot_pending === false && (
+          <motion.div
+            key="preview-failed"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="shrink-0 border-t border-[#e3e0db] bg-[#faf9f4]/95 pt-2 backdrop-blur-sm"
+          >
+            <div className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-[12px] text-amber-900">
+              <span>{t('hyperOnboarding.captureFailed', 'We could not capture a complete rendered homepage. Your workspace will stay here until the preview is ready.')}</span>
+              <button type="button" onClick={retryWebsiteCapture} disabled={retryingCapture} className="shrink-0 rounded-lg bg-[#0a0a0a] px-4 py-2 font-semibold text-white disabled:opacity-50">
+                {retryingCapture ? t('hyperOnboarding.retryingCapture', 'Retrying…') : t('hyperOnboarding.retryCapture', 'Retry capture')}
+              </button>
+            </div>
+          </motion.div>
+        )}
+        {done && result?.screenshot && (
           <motion.div
             key="enter"
             initial={{ opacity: 0, y: 8 }}

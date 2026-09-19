@@ -5,9 +5,10 @@ import {
   ArrowRight,
   Brain,
   Check,
-  Hexagon,
+  Blocks,
+  BriefcaseBusiness,
+  Headphones,
   MessageSquare,
-  Mic,
   Network,
   Plug,
   Shield,
@@ -15,6 +16,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import SingulanceMark from './SingulanceMark';
 
 /**
  * WelcomeFlow — the two full-screen moments around sign-in:
@@ -52,50 +54,84 @@ function BlueprintCanvas({ children }) {
 
 export const SLIDES = [
   {
+    icon: Blocks,
+    eyebrow: 'HIVEMIND OPERATING SYSTEM',
+    title: 'Your company, running as one intelligent system',
+    body: 'BRAIN, OS, HYPERAGENTS, and VOICE operate as one connected layer — company knowledge becomes coordinated work, digital employees, and customer conversations.',
+    stats: [['MEMORY', 'brain'], ['EXECUTION', 'operating system'], ['EMPLOYEES · VOICE', 'action']],
+    visual: 'system',
+  },
+  {
     icon: Brain,
     eyebrow: 'MEMORY ENGINE',
     title: 'A brain that never forgets',
-    body: 'Every fact, decision, and document becomes durable memory with semantic recall — searchable by meaning, not keywords. Knowledge updates, merges, and contradicts itself into truth.',
-    stats: [['<50ms', 'recall'], ['100%', 'yours'], ['∞', 'retention']],
+    body: 'Company knowledge, meetings, documents, decisions, and connected tools become durable memory with semantic recall — grounded in the context your organization owns.',
+    stats: [['PERSISTENT', 'memory'], ['GROUNDED', 'recall'], ['GOVERNED', 'access']],
     visual: 'memory',
   },
   {
-    icon: Plug,
-    eyebrow: 'CONNECTORS',
-    title: 'Plug in your world',
-    body: 'Gmail, Slack, Notion, Drive, Calendar and more — one-click OAuth, encrypted at rest, synced in the background. Your tools stream straight into one shared cortex.',
-    stats: [['13+', 'connectors'], ['1-click', 'OAuth'], ['auto', 'sync']],
-    visual: 'connectors',
-  },
-  {
-    icon: Network,
-    eyebrow: 'MEMORY GRAPH',
-    title: 'See how it all connects',
-    body: 'Entities and relationships link automatically into a living knowledge graph. Explore it in 3D, trace how decisions were made, watch contradictions resolve.',
-    stats: [['3D', 'atlas'], ['live', 'edges'], ['auto', 'linking']],
-    visual: 'graph',
-  },
-  {
-    icon: Mic,
-    eyebrow: 'MEETINGS + VOICE',
-    title: 'It listens, so you don’t take notes',
-    body: 'One-click meeting recording with transcripts, insights and hard facts saved to memory. Talk to TARA — a voice agent grounded in everything your org knows, in 30+ languages.',
-    stats: [['30+', 'languages'], ['1-click', 'record'], ['live', 'insights']],
-    visual: 'voice',
+    icon: BriefcaseBusiness,
+    eyebrow: 'OPERATING SYSTEM',
+    title: 'Turn knowledge into coordinated work',
+    body: 'Rooms, tasks, projects, workflows, approvals, and organizational context run from the same memory, carrying an objective from plan through execution and evidence.',
+    stats: [['PLAN', 'objectives'], ['EXECUTE', 'workflows'], ['TRACK', 'evidence']],
+    visual: 'operating',
   },
   {
     icon: Sparkles,
-    eyebrow: 'DIGITAL EMPLOYEES',
-    title: 'Agents that work like a team',
-    body: 'HyperAgents collaborate in rooms — they plan, debate, draft documents and send email, all grounded in your memory. Ask anything in chat; the answer cites what it knows.',
-    stats: [['multi', 'agent'], ['grounded', 'answers'], ['24/7', 'on']],
+    eyebrow: 'HYPERAGENTS',
+    title: 'Digital employees that know your company',
+    body: 'Specialized employees for research, strategy, operations, risk, content, and customer work collaborate from the same company memory with inspectable work and outcomes.',
+    stats: [['SPECIALIZED', 'roles'], ['COLLABORATIVE', 'teams'], ['ACCOUNTABLE', 'work']],
     visual: 'agents',
+  },
+  {
+    icon: Headphones,
+    eyebrow: 'VOICE',
+    title: 'Your AI team, in every conversation',
+    body: 'TARA can speak with customers and users, qualify leads, support sales, answer questions, and retain conversation context in the company’s shared intelligence.',
+    stats: [['REAL-TIME', 'conversation'], ['MULTILINGUAL', 'reach'], ['CUSTOMER-FACING', 'sales']],
+    visual: 'voice',
   },
 ];
 
 /** Minimal line-art visual per slide — blueprint style, no images. */
 export function SlideVisual({ kind }) {
   const ink = '#117dff';
+  if (kind === 'system') {
+    const modules = [
+      { x: 14, y: 20, label: 'BRAIN' }, { x: 58, y: 20, label: 'OS' },
+      { x: 14, y: 62, label: 'AGENTS' }, { x: 58, y: 62, label: 'VOICE' },
+    ];
+    return (
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <motion.path d="M36 30 H58 M36 72 H58 M25 40 V62 M69 40 V62" fill="none" stroke={ink} strokeWidth="0.6" strokeOpacity="0.4"
+          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9 }} />
+        {modules.map((module, i) => (
+          <motion.g key={module.label} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.12 + i * 0.1 }}>
+            <rect x={module.x} y={module.y} width="28" height="18" rx="3" fill={i === 0 ? ink : '#fff'} stroke={ink} strokeWidth="0.7" />
+            <text x={module.x + 14} y={module.y + 11} textAnchor="middle" fontSize="4" fontFamily="monospace" fill={i === 0 ? '#fff' : ink}>{module.label}</text>
+          </motion.g>
+        ))}
+        <motion.circle cx="50" cy="51" r="4" fill={ink} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.55, type: 'spring' }} />
+      </svg>
+    );
+  }
+  if (kind === 'operating') {
+    const stages = [['OBJECTIVE', 10], ['PLAN', 34], ['EXECUTE', 58], ['EVIDENCE', 82]];
+    return (
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <motion.line x1="14" y1="50" x2="86" y2="50" stroke={ink} strokeWidth="0.7" strokeOpacity="0.45"
+          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9 }} />
+        {stages.map(([label, x], i) => (
+          <motion.g key={label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 + i * 0.12 }}>
+            <circle cx={x + 4} cy="50" r={i === 3 ? 5 : 3.2} fill={i === 3 ? ink : '#fff'} stroke={ink} strokeWidth="0.8" />
+            <text x={x + 4} y="63" textAnchor="middle" fontSize="3.2" fontFamily="monospace" fill={ink}>{label}</text>
+          </motion.g>
+        ))}
+      </svg>
+    );
+  }
   if (kind === 'graph' || kind === 'memory') {
     // node constellation
     const nodes = kind === 'graph'
@@ -204,10 +240,8 @@ export function WelcomeSlides({ onDone }) {
       {/* top bar */}
       <div className="flex items-center justify-between px-6 md:px-10 pt-6">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-[6px] bg-[#117dff]/10 border border-[#117dff]/25 flex items-center justify-center">
-            <Hexagon size={16} className="text-[#117dff]" />
-          </div>
-          <span className="text-[13px] font-bold font-['Space_Grotesk'] text-[#0a0a0a] tracking-tight">HIVEMIND</span>
+          <SingulanceMark size={32} />
+          <span className="text-[13px] font-bold font-['Space_Grotesk'] text-[#0a0a0a] tracking-tight">SINGULANCE <span className="mx-1 text-[#a3a3a3]">|</span> HIVEMIND</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-[11px] font-mono text-[#a3a3a3] tabular-nums">[{index + 1}/{total}]</span>

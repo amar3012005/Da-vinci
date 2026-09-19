@@ -376,6 +376,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async retryHyperOnboardingScreenshot() {
+    const { data } = await this.controlPlane.post('/v1/hyper/onboarding/screenshot/retry', {});
+    return data;
+  }
+
   /** Dated, source-backed growth snapshot. Runs independently from Rooms. */
   async runGrowthBaseline(payload = {}) {
     const { data } = await this.controlPlane.post('/v1/hyper/growth-baseline', payload);
