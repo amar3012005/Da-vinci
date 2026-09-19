@@ -19,6 +19,7 @@ import { PLAN_LIMIT_CODE, PLAN_LIMIT_EVENT } from '../shared/planLimit';
 import ServiceErrorToast from '../components/ServiceErrorToast';
 import CallContractModal from '../components/CallContractModal';
 import ProductAccessModal from '../components/ProductAccessModal';
+import ReferralTrialGateModal from '../components/ReferralTrialGateModal';
 import { NEW_WORKSPACE_LANDING, RETURNING_USER_LANDING } from '../shared/routes';
 
 /**
@@ -69,6 +70,10 @@ function PlanLimitGate() {
   // ("Upgrade to Runway") to configure + self-serve subscribe — NOT the generic
   // "upgrade to Pro" wall.
   const isEnterpriseRunway = String(org?.plan || '').toLowerCase() === 'enterprise';
+
+  if (state?.referralTrial) {
+    return <ReferralTrialGateModal open reason={state?.message || null} onClose={close} />;
+  }
 
   if (isEnterpriseRunway) {
     return (

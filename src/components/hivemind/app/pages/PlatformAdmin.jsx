@@ -446,10 +446,8 @@ function CommercialManager() {
     referrer_email: "",
     internal_name: "",
     account_type: "enterprise_managed",
-    base_plan: "plus",
     trial_days: 14,
-    monthly_credits: 2000,
-    fallback_action: "free",
+    total_credits: 2000,
     max_redemptions: 10,
     ends_at: "",
     welcome_message: "",
@@ -611,7 +609,7 @@ function CommercialManager() {
       const payload = {
         ...referralForm,
         trial_days: Number(referralForm.trial_days),
-        monthly_credits: Number(referralForm.monthly_credits),
+        total_credits: Number(referralForm.total_credits),
         max_redemptions: referralForm.max_redemptions
           ? Number(referralForm.max_redemptions)
           : undefined,
@@ -1694,24 +1692,7 @@ function CommercialManager() {
               className="border border-[#d8d6cf] px-3 py-2"
               aria-label="Free trial duration in days"
             />
-            <select
-              value={referralForm.base_plan}
-              onChange={(e) => {
-                const creditsByPlan = { free: 500, plus: 2000, pro: 5000, scale: 10000 };
-                setReferralForm({
-                  ...referralForm,
-                  base_plan: e.target.value,
-                  monthly_credits: creditsByPlan[e.target.value],
-                });
-              }}
-              className="border border-[#d8d6cf] px-3 py-2"
-              aria-label="Trial plan"
-            >
-              <option value="free">Free · 500 credits</option>
-              <option value="plus">Plus · 2,000 credits</option>
-              <option value="pro">Pro · 5,000 credits</option>
-              <option value="scale">Scale · 10,000 credits</option>
-            </select>
+            <div className="border border-[#d8d6cf] bg-[#f7f6f2] px-3 py-2 text-sm" aria-label="Trial plan">Enterprise trial</div>
             <select
               value={referralForm.account_type}
               onChange={(e) =>
@@ -1723,7 +1704,6 @@ function CommercialManager() {
               className="border border-[#d8d6cf] px-3 py-2"
               aria-label="Account type"
             >
-              <option value="personal">Personal</option>
               <option value="enterprise_managed">Enterprise managed</option>
               <option value="enterprise_self_hosted">Enterprise self-hosted</option>
             </select>
@@ -1731,17 +1711,17 @@ function CommercialManager() {
               type="number"
               min="1"
               max="100000000"
-              value={referralForm.monthly_credits}
+              value={referralForm.total_credits}
               onChange={(e) =>
                 setReferralForm({
                   ...referralForm,
-                  monthly_credits: e.target.value,
+                  total_credits: e.target.value,
                 })
               }
               className="border border-[#d8d6cf] px-3 py-2"
-              aria-label="Monthly credits"
+              aria-label="Total trial credits"
             />
-            <select value={referralForm.fallback_action} onChange={(e) => setReferralForm({ ...referralForm, fallback_action: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" aria-label="Plan after trial"><option value="free">Free after trial</option><option value="manual_review">Manual review before expiry</option></select>
+            <div className="border border-[#d8d6cf] bg-[#f7f6f2] px-3 py-2 text-sm" aria-label="After trial">Talk to founder after trial</div>
             <input
               type="number"
               min="1"
@@ -1781,7 +1761,7 @@ function CommercialManager() {
                     {campaign.status} · {campaign.accepted_count} accepted · {campaign.visit_count} visits
                   </span>
                   <p className="mt-1 text-xs text-[#737373]">
-                    {campaign.offer.trial_days} days free · {Number(campaign.offer.monthly_credits).toLocaleString()} credits/month · {campaign.offer.plan} · {campaign.offer.remaining_activations == null ? "unlimited activations" : `${campaign.offer.remaining_activations} activations left`} · sent {when(campaign.last_sent_at)}
+                    {campaign.offer.trial_days} days · {Number(campaign.offer.total_credits ?? campaign.offer.monthly_credits).toLocaleString()} total trial credits · Enterprise · {campaign.offer.remaining_activations == null ? "unlimited activations" : `${campaign.offer.remaining_activations} activations left`} · sent {when(campaign.last_sent_at)}
                   </p>
                   <button type="button" onClick={() => navigator.clipboard.writeText(campaign.invitation_url).then(() => setNotice("Invitation link copied."))} className="mt-2 text-xs font-medium text-[#117dff]">Copy share link</button>
                 </div>
