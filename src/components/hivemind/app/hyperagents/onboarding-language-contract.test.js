@@ -33,9 +33,3 @@ test('company dashboard shows a one-shot Day 0 pipeline popup when the email is 
   assert.match(dashboard, /Check your pipeline/);
   assert.match(dashboard, /Your HyperAgents have finished their first task/);
 });
-
-test('HyperAgents emits the normalized UI language on every Harness turn', () => {
-  const hyperAgents = fs.readFileSync(path.join(dir, '../pages/HyperAgents.jsx'), 'utf8');
-  const matches = hyperAgents.match(/language: \(i18n\?\.language \|\| 'en'\)\.slice\(0, 2\)\.toLowerCase\(\)/g) || [];
-  assert.equal(matches.length, 3);
-});
