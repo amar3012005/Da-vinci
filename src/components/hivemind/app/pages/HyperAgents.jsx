@@ -42,6 +42,7 @@ import LeadsView from '../hyperagents/LeadsView';
 import CampaignsView from '../hyperagents/CampaignsView';
 import CampaignDashboardModal from '../hyperagents/campaigns/CampaignDashboardModal';
 import CampaignProgressDashboard from '../hyperagents/campaigns/CampaignProgressDashboard';
+import CampaignRoomVisualProgress from '../hyperagents/campaigns/CampaignRoomVisualProgress';
 import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
@@ -1175,6 +1176,11 @@ function RoomThread({ roomId, onArchived }) {
   const [campaignActivation, setCampaignActivation] = useState(null);
   const [campaignBusy, setCampaignBusy] = useState(false);
   const [pendingCampaignId, setPendingCampaignId] = useState(campaignReturn || null);
+  const activeRoomCampaign = useMemo(() => {
+    if (selectedCampaign) return selectedCampaign;
+    if (pendingCampaignId) return roomCampaigns.find((campaign) => campaign.id === pendingCampaignId) || null;
+    return roomCampaigns[0] || null;
+  }, [pendingCampaignId, roomCampaigns, selectedCampaign]);
   const isCampaignRoom = Boolean(campaignReturn || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
   const isHqRoom = Boolean(room?.is_domain_home && (room?.room_tag || room?.roomTag) === 'general');
   const growthBaselineRequested = useMemo(() => new URLSearchParams(location.search).get('growthBaseline') === '1', [location.search]);
@@ -1521,7 +1527,12 @@ function RoomThread({ roomId, onArchived }) {
         const campaign = response?.campaign;
         if (!active || !campaign) return;
         setRoomCampaigns((current) => [campaign, ...current.filter((item) => item.id !== campaign.id)]);
-        if (campaign.planVersions?.length && ['READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status)) {
+        const pendingAssets = (campaign.actions || []).some((action) => {
+          const assets = action.assets || [];
+          return (action.payload?.creative_brief?.required === true && assets.length === 0)
+            || assets.some((asset) => ['QUEUED', 'GENERATING', 'WAITING_QUOTA'].includes(asset.status));
+        });
+        if (campaign.planVersions?.length && ['READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status) && !pendingAssets) {
           setSelectedCampaign(campaign);
           setPendingCampaignId(null);
         }
@@ -1533,7 +1544,7 @@ function RoomThread({ roomId, onArchived }) {
   }, [isCampaignRoom, pendingCampaignId]);
 
   useEffect(() => {
-    const pendingCampaignAssets = (selectedCampaign?.actions || []).some((action) => (action.assets || []).some((asset) => ['QUEUED', 'GENERATING'].includes(asset.status)));
+    const pendingCampaignAssets = (selectedCampaign?.actions || []).some((action) => (action.assets || []).some((asset) => ['QUEUED', 'GENERATING', 'WAITING_QUOTA'].includes(asset.status)));
     if (!selectedCampaign || !(['GENERATING', 'PREPARING_ASSETS', 'RUNNING', 'SCHEDULED'].includes(selectedCampaign.status) || pendingCampaignAssets)) return undefined;
     const timer = window.setInterval(() => openRoomCampaign(selectedCampaign.id), 5000);
     return () => window.clearInterval(timer);
@@ -2953,6 +2964,12 @@ function RoomThread({ roomId, onArchived }) {
             />
             </div>
           ))}
+          {isCampaignRoom && activeRoomCampaign ? (
+            <CampaignRoomVisualProgress
+              campaign={activeRoomCampaign}
+              onOpenCampaign={() => openRoomCampaign(activeRoomCampaign.id)}
+            />
+          ) : null}
           {error && (
             <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               <AlertTriangle size={11} className="inline mr-1" /> {error}
