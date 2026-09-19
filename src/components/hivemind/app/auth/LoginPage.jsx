@@ -153,6 +153,18 @@ export default function LoginPage() {
     setTurnstileEpoch((epoch) => epoch + 1);
   };
 
+  const leaveEmailChallenge = (nextView = 'email') => {
+    setEmailView(nextView);
+    setEmailCode('');
+    setEmailChallenge('');
+    setEmailLinkToken('');
+    setResendSeconds(0);
+    setEmailState({ busy: false, message: '', error: false });
+    setTurnstileToken('');
+    setTurnstileStatus('checking');
+    setTurnstileEpoch((epoch) => epoch + 1);
+  };
+
   useEffect(() => {
     if (resendSeconds <= 0) return undefined;
     const timer = window.setInterval(() => setResendSeconds((seconds) => Math.max(0, seconds - 1)), 1000);
@@ -665,7 +677,7 @@ export default function LoginPage() {
                   )}
 
                   {emailEnabled && emailView === 'methods' && (
-                    <button onClick={() => setEmailView('email')} className="w-full h-12 mb-2.5 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
+                    <button onClick={() => leaveEmailChallenge('email')} className="w-full h-12 mb-2.5 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
                       <Mail size={16} /> Continue with Email
                     </button>
                   )}
@@ -678,12 +690,12 @@ export default function LoginPage() {
                       <button type="submit" disabled={emailState.busy || !emailAddress.trim() || !securityReady} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
                         {emailState.busy || (!securityReady && turnstileStatus !== 'error') ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />} {securityReady ? 'Send sign-in code' : (turnstileStatus === 'error' ? 'Security check unavailable' : 'Complete security check above')}
                       </button>
-                      {!emailOnly && <button type="button" onClick={() => setEmailView('methods')} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Back to other sign-in methods</button>}
+                      {!emailOnly && <button type="button" onClick={() => leaveEmailChallenge('methods')} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Back to other sign-in methods</button>}
                     </form>
                   )}
                   {emailEnabled && emailView === 'code' && (
                     <div className="space-y-3">
-                      <button type="button" onClick={() => { setEmailView('email'); setEmailCode(''); setTurnstileToken(''); }} className="inline-flex items-center gap-1.5 text-[12px] text-[#737373] hover:text-[#117dff]" aria-label="Back to email address"><ArrowLeft size={14} /> Back</button>
+                      <button type="button" onClick={() => leaveEmailChallenge('email')} className="inline-flex items-center gap-1.5 text-[12px] text-[#737373] hover:text-[#117dff]" aria-label="Back to email address"><ArrowLeft size={14} /> Back</button>
                       <label className="block text-[10px] font-mono uppercase tracking-[0.16em] text-[#737373]" htmlFor="email-sign-in-code">Enter the 6-digit code</label>
                       <input id="email-sign-in-code" type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={6} value={emailCode} onChange={(event) => setEmailCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className="w-full h-14 rounded-[6px] border border-[#d4d0ca] bg-white px-3 text-center text-[24px] tracking-[0.45em] font-mono text-[#0a0a0a] outline-none focus:border-[#117dff]" />
                       <button type="button" onClick={() => verifyEmail()} disabled={emailState.busy || emailCode.length !== 6} className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] disabled:opacity-60 text-white font-semibold rounded-[6px] uppercase tracking-[0.08em]">
@@ -692,7 +704,7 @@ export default function LoginPage() {
                       <EmailTurnstile key={`resend-${turnstileEpoch}`} siteKey={emailConfig.turnstile_site_key} onToken={setTurnstileToken} onStatus={setTurnstileStatus} />
                       {turnstileStatus === 'error' && <button type="button" onClick={retryTurnstile} className="w-full text-[12px] font-semibold text-amber-700 underline">Retry security check</button>}
                       <button type="button" onClick={resendEmailCode} disabled={emailState.busy || resendSeconds > 0 || !securityReady} className="w-full text-[12px] text-[#737373] hover:text-[#117dff] disabled:cursor-not-allowed disabled:text-[#b8b4ad]">{resendSeconds > 0 ? `Resend code in ${resendSeconds}s` : (securityReady ? 'Resend code' : 'Preparing resend…')}</button>
-                      <button type="button" onClick={() => { setEmailView('email'); setEmailCode(''); }} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Use another email</button>
+                      <button type="button" onClick={() => leaveEmailChallenge('email')} className="w-full text-[12px] text-[#737373] hover:text-[#117dff]">Use another email</button>
                     </div>
                   )}
                   {emailView === 'link_confirm' && (

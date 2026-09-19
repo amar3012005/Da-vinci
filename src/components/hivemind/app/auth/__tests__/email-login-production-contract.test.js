@@ -26,3 +26,10 @@ test('verification step exposes a one-step back action', () => {
   assert.match(login, /aria-label="Back to email address"/);
   assert.equal(login.includes('<ArrowLeft size={14} /> Back'), true);
 });
+
+test('leaving a failed challenge clears stale verification state before email entry', () => {
+  assert.match(login, /const leaveEmailChallenge = \(nextView = 'email'\) =>/);
+  assert.match(login, /setEmailChallenge\(''\)/);
+  assert.match(login, /setEmailState\(\{ busy: false, message: '', error: false \}\)/);
+  assert.match(login, /onClick=\{\(\) => leaveEmailChallenge\('email'\)\}[^>]*>Use another email/);
+});
