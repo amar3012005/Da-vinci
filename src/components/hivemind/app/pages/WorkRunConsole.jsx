@@ -105,9 +105,27 @@ export default function WorkRunConsole() {
   const load = useCallback(async () => { const data = await apiClient.listWorkRuns({ limit: 24 }); setRuns(data?.workruns || []); }, []);
   useEffect(() => { load().catch(() => {}); }, [load]);
   useEffect(() => { let cancelled = false; let session; let progress;
+    // The collection route is the new-WorkRun composer.  It intentionally has
+    // no id yet, so querying `/v1/workruns/undefined` here used to surface a
+    // misleading "Not found" error before an operator had even supplied work.
+    if (!runId) {
+      setRun(null); setMessages([]); setEvents([]); setFailure('');
+      return () => {};
+    }
     const receive = (message) => { try { const event = JSON.parse(message.data); if (cancelled) return; setEvents((previous) => [...previous.slice(-99), event]); setMessages((previous) => applySessionEvent(previous, event)); if (String(event?.t || '') === 'workrun.failed') setFailure(event?.reason || 'This WorkRun could not continue.'); } catch { /* malformed SSE is ignored */ } };
     (async () => { try { const data = await apiClient.getWorkRun(runId); const row = data?.workrun || data; if (cancelled) return; setRun(row); const history = await apiClient.getWorkRunSessionMessages(runId).catch(() => null); const loaded = (history?.messages || history?.items || []).map(normalizeMessage).filter(Boolean); setMessages(loaded.length ? loaded : row?.goal ? [{ role: 'user', text: stripWorkOrder(row.goal) }] : []); (row?.events || []).forEach((event) => setEvents((previous) => [...previous, event])); if (['completed', 'failed', 'cancelled'].includes(String(row?.status || ''))) return; session = new EventSource(apiClient.workRunSessionStreamUrl(runId), { withCredentials: true }); progress = new EventSource(apiClient.workRunStreamUrl(runId), { withCredentials: true }); ['reply_start','reply_end','text_block_delta','text_block_end','thinking_block_delta','thinking_block_end','tool_call_start','tool_call_end','tool_result_end','custom','require_user_confirm'].forEach((name) => session.addEventListener(name, receive)); session.onmessage = receive; ['tool.started','tool.completed','artifact.created','agent.status','approval.requested','team.member.started','workrun.failed','workrun.completed'].forEach((name) => progress.addEventListener(name, receive)); progress.onmessage = receive; sources.current = [session, progress]; } catch (error) { if (!cancelled) setFailure(error?.response?.data?.error || error.message); } })(); return () => { cancelled = true; (sources.current || []).forEach((source) => source?.close()); }; }, [runId]);
-  const onSend = async (event) => { event.preventDefault(); const content = draft.trim(); if (!content || sending) return; setDraft(''); setSending(true); setMessages((previous) => [...previous, { role: 'user', text: content }, { role: 'assistant', text: '', thinking: '', tools: [], streaming: true }]); try { await apiClient.sendWorkRunChat(runId, content); } catch (error) { setFailure(error?.response?.data?.error || error.message); } finally { setSending(false); } };
-  const status = useMemo(() => String(run?.status || 'running'), [run]);
-  return <div className="flex h-full min-h-0 bg-[#f7f6f3]"><LegacyRoomRail runs={runs} runId={runId} onNew={() => navigate('/hivemind/app/employees/workruns')} onOpen={(id) => navigate(`/hivemind/app/employees/workruns/${id}`)} /><div className="flex min-w-0 flex-1 flex-col"><header className="flex h-12 shrink-0 items-center justify-between border-b border-[#e3e0db] bg-[#faf9f4] px-5"><div className="min-w-0"><p className="truncate text-[13px] font-semibold text-[#171717]">{stripWorkOrder(run?.goal) || 'WorkRun'}</p></div><span className="rounded-full border border-[#bfd3ff] bg-white px-2 py-1 text-[9px] font-mono uppercase tracking-wider text-[#185bcc]">{status}</span></header><div className="flex min-h-0 flex-1"><WorkRunCentre messages={messages} draft={draft} setDraft={setDraft} sending={sending} onSend={onSend} activities={events} failure={failure} /><Inspector events={events} status={status} /></div></div></div>;
+  const onSend = async (event) => { event.preventDefault(); const content = draft.trim(); if (!content || sending) return; setFailure(''); setSending(true);
+    try {
+      if (!runId) {
+        const data = await apiClient.createWorkRun({ goal: content });
+        const created = data?.workrun || data;
+        if (!created?.id) throw new Error('The control plane did not return a WorkRun id.');
+        setDraft(''); await load(); navigate(`/hivemind/app/employees/workruns/${created.id}`); return;
+      }
+      setDraft(''); setMessages((previous) => [...previous, { role: 'user', text: content }, { role: 'assistant', text: '', thinking: '', tools: [], streaming: true }]);
+      await apiClient.sendWorkRunChat(runId, content);
+    } catch (error) { setFailure(error?.response?.data?.error || error.message); } finally { setSending(false); }
+  };
+  const status = useMemo(() => String(run?.status || (runId ? 'loading' : 'ready')), [run, runId]);
+  return <div className="flex h-full min-h-0 bg-[#f7f6f3]"><LegacyRoomRail runs={runs} runId={runId} onNew={() => navigate('/hivemind/app/employees/workruns')} onOpen={(id) => navigate(`/hivemind/app/employees/workruns/${id}`)} /><div className="flex min-w-0 flex-1 flex-col"><header className="flex h-12 shrink-0 items-center justify-between border-b border-[#e3e0db] bg-[#faf9f4] px-5"><div className="min-w-0"><p className="truncate text-[13px] font-semibold text-[#171717]">{stripWorkOrder(run?.goal) || (runId ? 'WorkRun' : 'New WorkRun')}</p></div><span className="rounded-full border border-[#bfd3ff] bg-white px-2 py-1 text-[9px] font-mono uppercase tracking-wider text-[#185bcc]">{status}</span></header><div className="flex min-h-0 flex-1"><WorkRunCentre messages={messages} draft={draft} setDraft={setDraft} sending={sending} onSend={onSend} activities={events} failure={failure} /><Inspector events={events} status={status} /></div></div></div>;
 }
