@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, Check, ChevronRight, Mail, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import WorkspacePopupSurface from '../shared/WorkspacePopupSurface';
+import AgentAvatar from '../hyperagents/AgentAvatar';
 
 export function GmailMark({ size = 18 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" aria-label="Gmail" role="img">
@@ -42,12 +43,32 @@ function LifecycleVisual({ notice }) {
   </div>;
 }
 
+function DayZeroCompanyBrief({ context }) {
+  const company = context?.company || {};
+  const employees = Array.isArray(context?.employees) ? context.employees.slice(0, 4) : [];
+  const names = employees.map((employee) => employee.name).filter(Boolean);
+  const facts = [
+    { label: 'Mission', value: company.mission },
+    { label: 'Ideal customer', value: company.icp },
+    { label: 'Positioning', value: company.positioning },
+  ].filter((fact) => fact.value);
+  return <>
+    <div className="flex items-center gap-4">
+      {employees.length ? <div className="flex shrink-0 -space-x-3">{employees.map((employee) => <span key={employee.id || employee.name} className="rounded-full border-2 border-white bg-white shadow-sm"><AgentAvatar agent={employee} size={48} /></span>)}</div> : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-[#deddd7] bg-white"><GmailMark size={25} /></span>}
+      <div className="min-w-0"><strong className="block truncate text-[15px] text-[#181918]">{names.length ? names.join(', ') : 'Your HyperAgents'}</strong><span className="mt-1 block text-[11px] leading-4 text-[#777]">completed your company setup</span></div>
+    </div>
+    {facts.length ? <div className="mt-6 space-y-4 border-t border-[#deddd7] pt-5">{facts.map((fact) => <div key={fact.label}><div className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-[#347df4]">{fact.label}</div><p className="mt-1.5 line-clamp-3 text-[12px] leading-5 text-[#555750]">{fact.value}</p></div>)}</div> : null}
+    <div className="mt-5 flex items-center gap-2 rounded-[10px] bg-white px-3 py-2.5 text-[10.5px] text-[#686a64]"><GmailMark size={17} /><span>Your Day 0 report was delivered to your inbox.</span></div>
+  </>;
+}
+
 export default function WorkspaceNotifications() {
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [lifecycleContext, setLifecycleContext] = useState(null);
   const initialized = useRef(false);
   const knownIds = useRef(new Set());
 
@@ -77,6 +98,12 @@ export default function WorkspaceNotifications() {
   }, [unseenLifecycle]);
 
   useEffect(() => { load(); const interval = window.setInterval(load, 5000); return () => window.clearInterval(interval); }, [load]);
+  useEffect(() => {
+    if (!toast || lifecycleDay(toast) !== 0) { setLifecycleContext(null); return undefined; }
+    let active = true;
+    apiClient.hyperCompany().then((result) => { if (active) setLifecycleContext(result); }).catch(() => null);
+    return () => { active = false; };
+  }, [toast]);
 
   const rememberShown = (notice) => {
     if (!notice) return;
@@ -111,7 +138,9 @@ export default function WorkspaceNotifications() {
     </div>
 
     {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{toast ? <motion.div initial={{ opacity: 0, x: 40, y: 20 }} animate={{ opacity: 1, x: 0, y: 0 }} exit={{ opacity: 0, x: 40 }} transition={{ type: 'spring', stiffness: 330, damping: 31 }}>
-      <WorkspacePopupSurface variant="toast" label={`hivemind — day ${lifecycleDay(toast) ?? 'update'}`} title={lifecycleDay(toast) === 0 ? 'Your company is ready.' : 'Your team moved the company forward.'} description={toast.body || 'Your report is ready.'} visual={<LifecycleVisual notice={toast} />} onClose={dismissToast} secondaryAction={{ label: 'Later', onClick: dismissToast }} primaryAction={{ label: lifecycleDay(toast) === 0 ? 'See Day 0 report' : 'Review update', onClick: () => openDetail(toast) }} />
+      <WorkspacePopupSurface variant="toast" label={`hivemind — day ${lifecycleDay(toast) ?? 'update'}`} title={lifecycleDay(toast) === 0 ? 'Your company is ready.' : 'Your team moved the company forward.'} description={lifecycleDay(toast) === 0 ? 'Your brief, first research and new HyperAgents are filed in HIVEMIND.' : (toast.body || 'Your report is ready.')} visual={lifecycleDay(toast) === 0 ? null : <LifecycleVisual notice={toast} />} onClose={dismissToast} secondaryAction={{ label: 'Later', onClick: dismissToast }} primaryAction={{ label: lifecycleDay(toast) === 0 ? 'See Day 0 report' : 'Review update', onClick: () => openDetail(toast) }}>
+        {lifecycleDay(toast) === 0 ? <DayZeroCompanyBrief context={lifecycleContext} /> : null}
+      </WorkspacePopupSurface>
     </motion.div> : null}</AnimatePresence>, document.body) : null}
 
     {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{detail ? <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[2147483647] grid place-items-center bg-black/35 p-4 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetail(null); }}>

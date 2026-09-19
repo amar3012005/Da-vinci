@@ -25,7 +25,7 @@ export default function WorkspacePopupSurface({
     aria-modal={!toast}
     aria-label={ariaLabel || title || label}
     className={`${toast
-      ? 'fixed right-5 top-[76px] z-[2147483647] flex max-h-[calc(100dvh-96px)] w-[min(410px,calc(100vw-28px))] flex-col sm:right-7 sm:top-[84px]'
+      ? 'fixed bottom-4 left-4 z-[2147483647] flex max-h-[calc(100dvh-32px)] w-[min(420px,calc(100vw-28px))] flex-col sm:bottom-6 sm:left-6'
       : 'w-full'} overflow-hidden rounded-[18px] border border-[#deddd7] bg-[#fbfaf7] shadow-[0_26px_75px_rgba(25,31,39,0.16)]`}
   >
     <header className="flex h-[52px] items-center border-b border-[#deddd7] px-5">

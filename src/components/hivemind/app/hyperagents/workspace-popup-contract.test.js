@@ -20,9 +20,15 @@ test('lifecycle popup is owned by durable workspace notifications', () => {
   assert.match(notifications, /createPortal/);
   assert.match(notifications, /if \(notice\) markRead\(notice\)/);
   assert.match(notifications, /markWorkspaceNotificationRead/);
+  assert.match(notifications, /apiClient\.hyperCompany\(\)/);
+  assert.match(notifications, /<AgentAvatar/);
+  assert.match(notifications, /company\.mission/);
+  assert.match(notifications, /company\.icp/);
+  assert.match(notifications, /company\.positioning/);
   const surface = fs.readFileSync(path.join(dir, '../shared/WorkspacePopupSurface.jsx'), 'utf8');
   assert.match(surface, /z-\[2147483647\]/);
-  assert.match(surface, /max-h-\[calc\(100dvh-96px\)\]/);
+  assert.match(surface, /bottom-4 left-4/);
+  assert.match(surface, /max-h-\[calc\(100dvh-32px\)\]/);
 });
 
 test('company web artifacts open in the shared in-app reader', () => {
