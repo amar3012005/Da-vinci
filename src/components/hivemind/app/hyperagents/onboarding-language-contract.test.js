@@ -23,11 +23,11 @@ test('awakening still is absolutely positioned so framer-motion transform cannot
   assert.match(onboarding, /awakening-1920\.webp/);
 });
 
-test('company dashboard shows a one-shot Day 0 pipeline popup when the email is already sent', () => {
+test('Day 0 remains server-owned and the dashboard only shows its delivered-state popup', () => {
   const dashboard = fs.readFileSync(path.join(dir, 'CompanyDashboard.jsx'), 'utf8');
   const onboarding = fs.readFileSync(path.join(dir, 'HyperOnboarding.jsx'), 'utf8');
   assert.doesNotMatch(dashboard, /claimHyperCompanyDayZeroReport/);
-  assert.match(onboarding, /claimHyperCompanyDayZeroReport/);
+  assert.doesNotMatch(onboarding, /claimHyperCompanyDayZeroReport/);
   assert.match(dashboard, /day0_report_email\?\.status !== 'sent'/);
   assert.match(dashboard, /hm_day0_pipeline_done:/);
   assert.match(dashboard, /Check your pipeline/);
