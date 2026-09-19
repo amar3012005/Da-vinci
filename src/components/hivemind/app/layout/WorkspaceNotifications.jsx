@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, Check, ChevronRight, Mail, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
@@ -81,8 +82,6 @@ export default function WorkspaceNotifications() {
     if (!notice) return;
     try { window.localStorage.setItem(noticeSeenKey(notice), 'seen'); } catch { /* storage can be unavailable */ }
   };
-  const dismissToast = () => { rememberShown(toast); setToast(null); };
-
   const markRead = async (notice, { navigate = false } = {}) => {
     rememberShown(notice);
     if (!notice.readAt && !notice.read_at) {
@@ -92,6 +91,12 @@ export default function WorkspaceNotifications() {
     }
     if (navigate && notice?.data?.href) window.location.assign(notice.data.href);
     else if (navigate && notice?.href) window.location.assign(notice.href);
+  };
+
+  const dismissToast = () => {
+    const notice = toast;
+    setToast(null);
+    if (notice) markRead(notice);
   };
 
   const openDetail = (notice) => { setToast(null); setOpen(false); setDetail(notice); markRead(notice); };
@@ -105,14 +110,14 @@ export default function WorkspaceNotifications() {
       </motion.section> : null}</AnimatePresence>
     </div>
 
-    <AnimatePresence>{toast ? <motion.div initial={{ opacity: 0, y: 80 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }} transition={{ type: 'spring', stiffness: 330, damping: 31 }}>
+    {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{toast ? <motion.div initial={{ opacity: 0, x: 40, y: 20 }} animate={{ opacity: 1, x: 0, y: 0 }} exit={{ opacity: 0, x: 40 }} transition={{ type: 'spring', stiffness: 330, damping: 31 }}>
       <WorkspacePopupSurface variant="toast" label={`hivemind — day ${lifecycleDay(toast) ?? 'update'}`} title={lifecycleDay(toast) === 0 ? 'Your company is ready.' : 'Your team moved the company forward.'} description={toast.body || 'Your report is ready.'} visual={<LifecycleVisual notice={toast} />} onClose={dismissToast} secondaryAction={{ label: 'Later', onClick: dismissToast }} primaryAction={{ label: lifecycleDay(toast) === 0 ? 'See Day 0 report' : 'Review update', onClick: () => openDetail(toast) }} />
-    </motion.div> : null}</AnimatePresence>
+    </motion.div> : null}</AnimatePresence>, document.body) : null}
 
-    <AnimatePresence>{detail ? <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[95] grid place-items-center bg-black/35 p-4 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetail(null); }}>
+    {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{detail ? <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[2147483647] grid place-items-center bg-black/35 p-4 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetail(null); }}>
       <div className="w-full max-w-[700px]"><WorkspacePopupSurface label="hivemind — workspace lifecycle" title={detail.title} description={detail.body} visual={<LifecycleVisual notice={detail} />} onClose={() => setDetail(null)} meta={`${relativeTime(detail.createdAt || detail.created_at)} · saved in notifications`} secondaryAction={{ label: 'Close', onClick: () => setDetail(null) }} primaryAction={(detail.href || detail?.data?.href) ? { label: 'Open workspace', onClick: () => markRead(detail, { navigate: true }) } : null}>
         <div className="mt-6 border-t border-[#deddd7] pt-4 text-[12px] leading-5 text-[#666861]">The in-app notification is the durable record for this update. Email delivery and the popup both refer to this same lifecycle event.</div>
       </WorkspacePopupSurface></div>
-    </motion.div> : null}</AnimatePresence>
+    </motion.div> : null}</AnimatePresence>, document.body) : null}
   </>;
 }

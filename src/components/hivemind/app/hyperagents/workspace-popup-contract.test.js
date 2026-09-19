@@ -17,6 +17,12 @@ test('lifecycle popup is owned by durable workspace notifications', () => {
   assert.match(notifications, /hm_lifecycle_notice_seen:/);
   assert.match(notifications, /variant="toast"/);
   assert.match(notifications, /<GmailMark/);
+  assert.match(notifications, /createPortal/);
+  assert.match(notifications, /if \(notice\) markRead\(notice\)/);
+  assert.match(notifications, /markWorkspaceNotificationRead/);
+  const surface = fs.readFileSync(path.join(dir, '../shared/WorkspacePopupSurface.jsx'), 'utf8');
+  assert.match(surface, /z-\[2147483647\]/);
+  assert.match(surface, /max-h-\[calc\(100dvh-96px\)\]/);
 });
 
 test('company web artifacts open in the shared in-app reader', () => {
