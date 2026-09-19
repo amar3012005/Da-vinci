@@ -53,6 +53,7 @@ const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
 const AdminSso = React.lazy(() => import('./pages/AdminSso'));
 const DigitalEmployees = React.lazy(() => import('./pages/DigitalEmployees'));
 const HyperAgents = React.lazy(() => import('./pages/HyperAgents'));
+const WorkRunConsole = React.lazy(() => import('./pages/WorkRunConsole'));
 const OperatingRooms = React.lazy(() => import('./pages/OperatingRooms'));
 const HermesAgents = React.lazy(() => import('./pages/HermesAgents'));
 const WorkspaceAdmin = React.lazy(() => import('./pages/WorkspaceAdmin'));
@@ -261,6 +262,8 @@ export default function HiveMindApp() {
               /employees/rooms/:id (thread) · /employees (redirect→mycompany) */}
           <Route path="employees/operating-rooms" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
           <Route path="employees/operating-rooms/:roomId" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
+          <Route path="employees/workruns" element={<PageSuspense><WorkRunConsole /></PageSuspense>} />
+          <Route path="employees/workruns/:runId" element={<PageSuspense><WorkRunConsole /></PageSuspense>} />
           <Route path="employees/*" element={<PageSuspense><HyperAgents /></PageSuspense>} />
           {/* Legacy direct roster path — kept for back-compat */}
           <Route path="employees/roster" element={<PageSuspense><DigitalEmployees /></PageSuspense>} />
