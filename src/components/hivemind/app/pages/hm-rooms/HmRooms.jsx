@@ -17,6 +17,7 @@ import {
   eventType,
   hasRunningTools,
   startUserTurn,
+  transcriptText,
   toolLabel,
 } from './hm-rooms-dsh/workrun-view';
 import { WorkRunShell } from './workrun';
@@ -67,14 +68,14 @@ const AUTONOMY_MARK = 'Work autonomously to completion';
 const TOOL_NAME_RE = /\b(hivemind_[a-z0-9_]+|composio_[a-z0-9_]+)\b/gi;
 
 function stripWorkOrder(text) {
-  const raw = String(text || '');
+  const raw = transcriptText(text);
   const cut = raw.indexOf(AUTONOMY_MARK);
   if (cut === -1) return raw.trim();
   return raw.slice(0, cut).trim();
 }
 
 function splitAssistantBody(raw) {
-  let text = String(raw || '');
+  let text = transcriptText(raw);
   const tools = [];
   const toolHits = text.match(TOOL_NAME_RE) || [];
   toolHits.forEach((name) => {
@@ -113,7 +114,7 @@ export function flattenMsg(msg) {
   ), -1);
   blocks.forEach((b, index) => {
     const t = String(b.type || '').toLowerCase();
-    const value = b.thinking || b.text || b.delta || '';
+    const value = transcriptText(b.thinking ?? b.text ?? b.delta ?? b.content ?? '');
     if (t === 'text') {
       if (index > lastToolIndex) text += value;
       else if (value) timeline.push({ kind: 'thinking', id: b.id || `text-${index}`, text: value });
