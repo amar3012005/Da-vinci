@@ -1,8 +1,8 @@
 import React from 'react';
-import { ArrowUp, Plus } from 'lucide-react';
+import { ArrowUp, Plus, Square } from 'lucide-react';
 import bar from '../hm-rooms-dsh/InputBar.module.css';
 
-export default function WorkRunComposer({ value, onChange, onSubmit, busy }) {
+export default function WorkRunComposer({ value, onChange, onSubmit, onStop, busy }) {
   const empty = !String(value || '').trim();
   return (
     <form onSubmit={onSubmit} className={bar.root}>
@@ -31,9 +31,15 @@ export default function WorkRunComposer({ value, onChange, onSubmit, busy }) {
           </div>
           <div className={bar.trailing}>
             <span className={bar.select}>Fast ▾</span>
-            <button type="submit" disabled={busy || empty} className={bar.primary} aria-label="Send">
-              <ArrowUp className="w-4 h-4" />
-            </button>
+            {busy ? (
+              <button type="button" onClick={onStop} className={bar.primary} aria-label="Stop WorkRun" title="Stop WorkRun">
+                <Square className="w-3.5 h-3.5 fill-current" />
+              </button>
+            ) : (
+              <button type="submit" disabled={empty} className={bar.primary} aria-label="Send">
+                <ArrowUp className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
