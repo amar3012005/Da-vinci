@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Hash, Plus } from 'lucide-react';
+import { AudioLines, Bell, BrainCircuit, Orbit, UserPlus } from 'lucide-react';
 import WorkRunHeader from './WorkRunHeader';
 import WorkRunStream from './WorkRunStream';
 import WorkRunComposer from './WorkRunComposer';
@@ -12,8 +11,6 @@ export default function WorkRunShell({
   goal,
   status,
   working,
-  runs,
-  runId,
   msgs,
   activity,
   tasks,
@@ -28,52 +25,27 @@ export default function WorkRunShell({
   error,
   navOpen,
   onNavOpen,
-  onNavigate,
-  onNewWork,
   onPreview,
   onDraft,
   onSend,
-  userLabel,
-  onSignOut,
+  legacySidebar,
 }) {
   const [planOpen, setPlanOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
   return (
-    <div className="hmDshHost h-full flex bg-[#f7f6f3]">
-      <motion.aside
-        initial={false}
-        animate={{ width: navOpen ? 240 : 0, opacity: navOpen ? 1 : 0 }}
-        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-        className="shrink-0 overflow-hidden border-r border-[#e3e0db] bg-[#faf9f4]"
-      >
-        <div className="w-[240px] h-full flex flex-col">
-          <div className="px-2 pt-2">
-            <button type="button" onClick={onNewWork} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold bg-[#0a0a0a] text-white">
-              <Plus size={13} /> New work
-            </button>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto py-1">
-            <div className="px-3 pt-3 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">Recents</div>
-            {(runs || []).map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => onNavigate(`/hivemind/app/hm-rooms/${r.id}`)}
-                className={`w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-white ${r.id === runId ? 'bg-white' : ''}`}
-              >
-                <Hash size={12} className="text-[#a3a3a3]" />
-                <span className="text-[12px] truncate">{r.goal || r.id.slice(0, 8)}</span>
-              </button>
-            ))}
-          </div>
-          <div className="border-t border-[#e3e0db] px-2 py-2 text-[11px] text-[#525252]">
-            {userLabel}
-            <button type="button" className="block mt-1 hover:text-[#dc2626]" onClick={onSignOut}>Sign Out</button>
-          </div>
+    <div className="hmDshHost h-screen overflow-hidden flex flex-col bg-[#f7f6f3]">
+      <header className="h-14 shrink-0 flex items-center justify-between border-y border-[#e3e0db] bg-[#faf9f4] px-5">
+        <div className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Hyper Agents</div>
+        <div className="flex items-center rounded-[9px] border border-[#e3e0db] bg-white p-0.5 shadow-sm">
+          <span className="flex items-center gap-1.5 rounded-[6px] px-4 py-2 text-[10px] font-semibold text-[#737373]"><BrainCircuit size={13} />BRAIN</span>
+          <span className="flex items-center gap-1.5 rounded-[6px] bg-[#0a0a0a] px-4 py-2 text-[10px] font-semibold text-white"><Orbit size={13} />OS</span>
+          <span className="flex items-center gap-1.5 rounded-[6px] px-4 py-2 text-[10px] font-semibold text-[#a3a3a3]"><AudioLines size={13} />VOICE</span>
         </div>
-      </motion.aside>
-
-      <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex items-center gap-2"><Bell size={15} className="text-[#737373]" /><button type="button" className="flex items-center gap-1.5 rounded-[6px] bg-[#117dff] px-3 py-2 text-[11px] font-semibold text-white"><UserPlus size={13} />Invite your team</button></div>
+      </header>
+      <div className="flex flex-1 min-h-0">
+      {navOpen ? legacySidebar : null}
+      <div className="flex-1 min-w-0 flex flex-col bg-[#fbfaf7]">
         <WorkRunHeader
           goal={goal}
           status={status}
@@ -100,6 +72,9 @@ export default function WorkRunShell({
             </div>
           </div>
           <Inspector
+            goal={goal}
+            status={status}
+            working={working}
             artifacts={artifacts}
             sources={sources}
             team={team}
@@ -112,6 +87,7 @@ export default function WorkRunShell({
       </div>
       <PlanDrawer open={planOpen} tasks={tasks || activity} onClose={() => setPlanOpen(false)} />
       <TeamDrawer open={teamOpen} team={team} onClose={() => setTeamOpen(false)} />
+      </div>
     </div>
   );
 }

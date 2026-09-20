@@ -22,4 +22,13 @@ describe('HM Rooms WorkRun routing', () => {
     expect(rooms).toContain('apiClient.createWorkRun({ goal: text })');
     expect(rooms).toContain('navigate(`/hivemind/app/hm-rooms/${id}`)');
   });
+
+  it('uses the same legacy Rooms sidebar inside an active WorkRun session', () => {
+    const rooms = source('pages/hm-rooms/HmRooms.jsx');
+    const shell = source('pages/hm-rooms/workrun/WorkRunShell.jsx');
+    expect(rooms).toContain("import LegacyRoomsSidebar from './LegacyRoomsSidebar'");
+    expect(rooms).toContain('<LegacyRoomsSidebar runs={runs} rooms={rooms} activeRunId={runId}');
+    expect(shell).toContain('{navOpen ? legacySidebar : null}');
+    expect(shell).toContain('Hyper Agents');
+  });
 });
