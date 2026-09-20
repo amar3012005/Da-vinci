@@ -2,7 +2,6 @@ import React from 'react';
 import {
   ArrowUp,
   ChevronDown,
-  Folder,
   Mic,
   Paperclip,
   Plus,
@@ -15,18 +14,6 @@ export default function WorkRunComposer({ value, onChange, onSubmit, onStop, bus
   const empty = !String(value || '').trim();
   return (
     <form onSubmit={onSubmit} className={styles.root}>
-      <div className={styles.contextRow} aria-label="Conversation settings">
-        <button type="button" className={styles.contextControl} aria-label="Full scope">
-          <Folder size={15} strokeWidth={1.8} />
-          <span>Full scope</span>
-          <ChevronDown size={14} strokeWidth={1.8} />
-        </button>
-        <button type="button" className={styles.contextControl} aria-label="HIVE-MIND chat">
-          <Workflow size={15} strokeWidth={1.8} />
-          <span>HIVE-MIND chat</span>
-          <ChevronDown size={14} strokeWidth={1.8} />
-        </button>
-      </div>
       <div className={styles.card}>
         <textarea
           value={value}
