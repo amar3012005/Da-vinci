@@ -67,6 +67,7 @@ export default function WorkRunShell({
     });
   }, [clampPreviewWidth]);
   const showRoomStatus = !previewOpen || previewWidth <= Math.floor(window.innerWidth * 0.4);
+  const completedTasks = (tasks || []).filter((task) => task.status === 'complete' || task.done).length;
   return (
     <div className="hmDshHost h-screen overflow-hidden flex flex-col bg-[#f7f6f3]">
       <header className="h-14 shrink-0 flex items-center justify-between border-y border-[#e3e0db] bg-[#faf9f4] px-5">
@@ -87,6 +88,7 @@ export default function WorkRunShell({
               <div className="absolute right-5 top-4 z-10 w-[220px] rounded-[10px] border border-[#e3e0db] bg-white/95 p-3 shadow-sm backdrop-blur" aria-label="WorkRun status">
                 <div className="flex items-start gap-1.5"><Hash size={13} className="mt-0.5 shrink-0 text-[#737373]" /><div className="min-w-0 flex-1"><p className="truncate text-[12px] font-semibold text-[#0a0a0a]">{goal || 'WorkRun'}</p><span className="mt-1 inline-flex rounded-full bg-[#117dff]/10 px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wider text-[#117dff]">General</span></div><button type="button" onClick={() => setPreviewOpen((open) => !open)} aria-label={previewOpen ? 'Close preview' : 'Open preview'} className="rounded-[6px] p-1 text-[#737373] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><PanelRightOpen size={15} className={previewOpen ? 'rotate-180' : ''} /></button></div>
                 <div className="mt-2 flex items-center justify-between border-t border-[#eae7e1] pt-2 text-[10px] text-[#737373]"><span className="inline-flex items-center gap-1"><Users size={11} />{team?.length || 0} participants</span><span className={working ? 'text-[#117dff]' : ''}>{working ? 'working' : (status || 'idle')}</span></div>
+                {(tasks || []).length ? <button type="button" onClick={() => setPlanOpen(true)} className="mt-2 w-full rounded-[6px] border border-[#e3e0db] px-2 py-1.5 text-left text-[10px] font-medium text-[#525252] hover:bg-[#f7f6f3] hover:text-[#0a0a0a]">Plan · {completedTasks} / {tasks.length}</button> : null}
               </div>
             ) : null}
             <WorkRunStream
