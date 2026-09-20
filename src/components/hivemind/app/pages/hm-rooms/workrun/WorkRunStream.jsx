@@ -37,6 +37,7 @@ export default function WorkRunStream({ msgs, onPreview, error }) {
                   thinking={m.thinking}
                   text={m.text}
                   streaming={m.streaming}
+                  stage={m.stage}
                   tools={m.tools}
                   timeline={m.timeline}
                   onPreview={onPreview}

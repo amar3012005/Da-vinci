@@ -8,6 +8,7 @@ export default function AgentMessage({
   thinking,
   text,
   streaming,
+  stage,
   tools,
   timeline,
   onPreview,
@@ -27,9 +28,18 @@ export default function AgentMessage({
   useEffect(() => {
     if (finished) setToolsOpen(false);
   }, [finished]);
+  const liveStatus = stage === 'acknowledging' ? 'Acknowledging your request…'
+    : stage === 'reasoning' ? 'Reasoning…'
+      : stage === 'working' ? 'Working…'
+        : null;
 
   return (
     <article className="w-full space-y-5 text-[#171717]">
+      {streaming && liveStatus && stage !== 'working' ? (
+        <div className="inline-flex items-center gap-2 text-[13px] text-[#737373]">
+          <LoaderCircle size={14} className="animate-spin" /> {liveStatus}
+        </div>
+      ) : null}
       {hasWork ? (
         <button
           type="button"

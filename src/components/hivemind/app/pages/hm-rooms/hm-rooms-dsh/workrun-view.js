@@ -60,6 +60,13 @@ export function textOf(ev) {
   return '';
 }
 
+export function toolInputOf(ev) {
+  const value = ev?.input ?? ev?.arguments ?? ev?.args ?? ev?.parameters ?? ev?.tool_input ?? ev?.tool_args;
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  try { return JSON.stringify(value, null, 2); } catch { return String(value); }
+}
+
 export function toolLabel(name) {
   const n = String(name || 'tool');
   if (/company_context/i.test(n)) return 'Read company context';
@@ -358,6 +365,7 @@ export function applyAgentEvent(msgs, ev) {
     }
     const cur = ensureAssistant();
     cur.reply_id = replyId || cur.reply_id;
+    cur.stage = 'reasoning';
     return next;
   }
 
@@ -367,9 +375,16 @@ export function applyAgentEvent(msgs, ev) {
     || type === 'TEXT_BLOCK_END'
   ) {
     const cur = ensureAssistant();
-    if (type === 'TEXT_BLOCK_DELTA') cur.text = mergeDelta(cur.text, textOf(ev));
-    if (type === 'TEXT_BLOCK_END' && textOf(ev)) cur.text = mergeDelta(cur.text, textOf(ev));
+    if (type === 'TEXT_BLOCK_DELTA') {
+      cur.stage = 'answering';
+      cur.text = mergeDelta(cur.text, textOf(ev));
+    }
+    if (type === 'TEXT_BLOCK_END' && textOf(ev)) {
+      cur.stage = 'answering';
+      cur.text = mergeDelta(cur.text, textOf(ev));
+    }
     if (type === 'THINKING_BLOCK_DELTA' || type === 'THINKING_BLOCK_END') {
+      cur.stage = 'reasoning';
       const value = textOf(ev);
       cur.thinking = mergeDelta(cur.thinking, value);
       const blockId = ev.block_id || ev.id || null;
@@ -394,17 +409,21 @@ export function applyAgentEvent(msgs, ev) {
       const id = ev.tool_call_id || ev.id;
       const existing = cur.tools.find((t) => (id && t.id === id) || t.name === name);
       const result = type === 'TOOL_RESULT_END' ? (textOf(ev) || ev.result_summary || '').slice(0, 800) : undefined;
+      const input = toolInputOf(ev);
+      if (type === 'TOOL_CALL_START') cur.stage = 'working';
       if (existing) {
         existing.state = type === 'TOOL_CALL_START' ? 'running' : 'done';
         if (result) existing.result = result;
+        if (input) existing.input = input;
       } else {
-        cur.tools.push({ name, id, state: type === 'TOOL_CALL_START' ? 'running' : 'done', result });
+        cur.tools.push({ name, id, state: type === 'TOOL_CALL_START' ? 'running' : 'done', input, result });
       }
       const timelineTool = cur.timeline.find((item) => item.kind === 'tool' && ((id && item.id === id) || (!id && item.name === name)));
       if (timelineTool) {
         timelineTool.state = type === 'TOOL_CALL_START' ? 'running' : 'done';
         timelineTool.label = toolLabel(name);
         if (result) timelineTool.result = result;
+        if (input) timelineTool.input = input;
       } else {
         cur.timeline.push({
           kind: 'tool',
@@ -412,6 +431,7 @@ export function applyAgentEvent(msgs, ev) {
           label: toolLabel(name),
           id: id || `tool-${cur.timeline.length}`,
           state: type === 'TOOL_CALL_START' ? 'running' : 'done',
+          input,
           result,
         });
       }
@@ -423,6 +443,7 @@ export function applyAgentEvent(msgs, ev) {
     const cur = next[next.length - 1];
     if (cur && cur.role === 'assistant') {
       cur.streaming = toolsRunning(cur);
+      if (!cur.streaming) cur.stage = 'complete';
     }
   }
   return next;
@@ -432,6 +453,6 @@ export function startUserTurn(msgs, text) {
   return [
     ...msgs,
     { role: 'user', text, tools: [], thinking: '', timeline: [] },
-    { role: 'assistant', text: '', thinking: '', tools: [], timeline: [], streaming: true },
+    { role: 'assistant', text: '', thinking: '', tools: [], timeline: [], stage: 'acknowledging', streaming: true },
   ];
 }

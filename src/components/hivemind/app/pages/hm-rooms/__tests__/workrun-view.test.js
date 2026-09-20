@@ -163,6 +163,32 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(asst[0].streaming).toBe(true);
   });
 
+  it('acknowledges immediately, then retains tool input and result on one row', () => {
+    let msgs = startUserTurn([], 'inspect status');
+    let assistant = msgs.find((message) => message.role === 'assistant');
+    expect(assistant.stage).toBe('acknowledging');
+    msgs = applyAgentEvent(msgs, { type: 'REPLY_START', reply_id: 'r1' });
+    msgs = applyAgentEvent(msgs, {
+      type: 'TOOL_CALL_START',
+      tool_call_name: 'hivemind_meta',
+      tool_call_id: 'status-1',
+      input: { operation: 'save_status' },
+    });
+    msgs = applyAgentEvent(msgs, {
+      type: 'TOOL_RESULT_END',
+      tool_call_name: 'hivemind_meta',
+      tool_call_id: 'status-1',
+      text: '{"status":"saved"}',
+    });
+    assistant = msgs.find((message) => message.role === 'assistant');
+    expect(assistant.stage).toBe('working');
+    expect(assistant.timeline[0]).toMatchObject({
+      name: 'hivemind_meta',
+      input: '{\n  "operation": "save_status"\n}',
+      result: '{"status":"saved"}',
+    });
+  });
+
   it('seals a completed reply after its final tool result', () => {
     let msgs = startUserTurn([], 'check this');
     msgs = applyAgentEvent(msgs, { type: 'REPLY_START', reply_id: 'r1' });
