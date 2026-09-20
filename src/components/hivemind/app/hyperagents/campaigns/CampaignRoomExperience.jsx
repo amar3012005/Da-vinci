@@ -169,7 +169,7 @@ export default function CampaignRoomExperience({ campaign, ReportComponent }) {
 
     <section className="mt-6">
       {finalReport ? (ReportComponent ? <ReportComponent report={finalReport} taskTitle={campaign.name} surface="dashboard" /> : <div className="whitespace-pre-wrap text-[12px] leading-6 text-[#34312e]">{finalReport}</div>) : <div className="border-l-2 border-[#256d5b] bg-[#f2f7f4] px-4 py-4 text-[11px] leading-5 text-[#31554b]">Your Campaign Board will replace this workspace when the team completes its evidence, decisions, content, and schedule checks.</div>}
-      {preparingAssets ? <div className="mt-5 flex items-center gap-2 border-l-2 border-[#256d5b] bg-[#f2f7f4] px-4 py-3 text-[10.5px] text-[#31554b]"><Sparkles size={13} />The visual-prompt skill selected the actions that need imagery. Those campaign visuals are being generated now.</div> : null}
+      {preparingAssets ? <div className="mt-5 flex items-center gap-2 border-l-2 border-[#256d5b] bg-[#f2f7f4] px-4 py-3 text-[10.5px] text-[#31554b]"><Sparkles size={13} />Creating the campaign visuals. Each completed image will appear here as it becomes ready.</div> : null}
       <CampaignCreativeGallery actions={campaign.actions || []} />
     </section>
   </div>;
