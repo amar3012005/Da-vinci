@@ -26,6 +26,7 @@ export default function WorkRunShell({
   navOpen,
   onNavOpen,
   onPreview,
+  onApproval,
   onDraft,
   onSend,
   legacySidebar,
@@ -63,6 +64,7 @@ export default function WorkRunShell({
               tasks={tasks}
               approvals={approvals}
               onPreview={onPreview}
+              onApproval={onApproval}
               error={error}
             />
             <div className="shrink-0 border-t border-transparent bg-[#fbfaf7] px-4 pb-3 pt-1">

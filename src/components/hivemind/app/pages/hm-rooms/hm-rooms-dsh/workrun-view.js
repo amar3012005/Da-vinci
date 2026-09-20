@@ -124,11 +124,13 @@ function project(view) {
     .map((b) => ({
       id: b.block_id,
       kind: b.kind,
+      name: b.payload.name || null,
       label: b.payload.label || toolLabel(b.payload.name) || b.kind,
       status: b.status,
+      result: b.payload.result || null,
     }));
   const team = list.filter((b) => b.kind === 'team').map((b) => b.payload);
-  const approvals = list.filter((b) => b.kind === 'approval');
+  const approvals = list.filter((b) => b.kind === 'approval' && b.status === 'streaming');
   return { ...view, artifacts, sources, activity, team, approvals };
 }
 
@@ -204,13 +206,27 @@ export function applyWorkRunEvent(view, ev) {
   }
 
   if (t === 'approval.requested' || type === 'REQUIRE_USER_CONFIRM') {
-    const callId = ev.call_id || ev.tool_call_id || 'approval';
+    const calls = Array.isArray(ev.tool_calls) ? ev.tool_calls : [];
+    const first = calls[0] || {};
+    const replyId = ev.reply_id || ev.replyId || null;
+    const callId = ev.call_id || ev.tool_call_id || first.id || first.tool_call_id || null;
+    const tool = ev.tool || first.name || first.tool_name || null;
+    // The normalized progress stream and the raw AgentScope session stream
+    // both carry the same HITL request. Key it by the parked reply so those
+    // two transports update one card instead of rendering duplicates.
+    const approvalId = replyId || callId || tool || 'approval';
     return upsertBlock(view, {
-      block_id: `approval:${callId}`,
+      block_id: `approval:${approvalId}`,
       workrun_id: workrunId,
       kind: 'approval',
       status: 'streaming',
-      payload: { tool: ev.tool, prompt: ev.prompt, tools: ev.tools },
+      payload: {
+        tool,
+        prompt: ev.prompt || ev.message,
+        tools: ev.tools || calls.map((call) => call?.name || call?.tool_name).filter(Boolean),
+        reply_id: replyId,
+        tool_calls: calls.length ? calls : (ev.tool_calls || []),
+      },
     });
   }
 
@@ -270,6 +286,12 @@ export function hasRunningTools(view) {
 
 export function blocksInOrder(view) {
   return (view.blockOrder || []).map((id) => view.blocks[id]).filter(Boolean);
+}
+
+export function resolveApproval(view, blockId) {
+  const block = view.blocks?.[blockId];
+  if (!block || block.kind !== 'approval') return view;
+  return upsertBlock(view, { ...block, status: 'complete' });
 }
 
 function cloneMsgs(msgs) {

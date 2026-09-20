@@ -16,6 +16,7 @@ import {
   emptyWorkRunView,
   eventType,
   hasRunningTools,
+  resolveApproval,
   startUserTurn,
 } from './hm-rooms-dsh/workrun-view';
 import { WorkRunShell } from './workrun';
@@ -550,6 +551,33 @@ function HmRoomDesk({ runId }) {
     }
   };
 
+  const resolveConfirmation = async (approval, confirmed) => {
+    const replyId = approval?.payload?.reply_id;
+    const toolCalls = approval?.payload?.tool_calls || [];
+    if (!replyId || !toolCalls.length) {
+      setError('This approval is missing its AgentScope continuation data. Refresh the run and try again.');
+      return;
+    }
+    const input = {
+      type: 'USER_CONFIRM_RESULT',
+      reply_id: replyId,
+      confirm_results: toolCalls.map((toolCall) => ({
+        confirmed,
+        tool_call: toolCall,
+        rules: null,
+      })),
+    };
+    setError(null);
+    try {
+      await apiClient.sendWorkRunConfirmation(runId, input);
+      setView((prev) => resolveApproval(prev, approval.block_id));
+      setPhase('streaming');
+    } catch (err) {
+      setError(err?.response?.data?.error || err.message);
+      throw err;
+    }
+  };
+
   const sources = view.sources || [];
   const activity = view.activity || [];
   const artifacts = view.artifacts || [];
@@ -578,6 +606,7 @@ function HmRoomDesk({ runId }) {
       navOpen={navOpen}
       onNavOpen={setNavOpen}
       onPreview={setPreview}
+      onApproval={resolveConfirmation}
       onDraft={setDraft}
       onSend={send}
       legacySidebar={<LegacyRoomsSidebar runs={runs} rooms={rooms} activeRunId={runId} onNewWork={() => navigate('/hivemind/app/hm-rooms')} />}

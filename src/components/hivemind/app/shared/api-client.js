@@ -383,6 +383,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async sendWorkRunConfirmation(id, input) {
+    const { data } = await this.controlPlane.post(`/v1/workruns/${encodeURIComponent(id)}/chat`, { input });
+    return data;
+  }
+
   workRunStreamUrl(id) {
     return `${this._controlPlaneBaseUrl()}/v1/workruns/${encodeURIComponent(id)}/stream`;
   }
