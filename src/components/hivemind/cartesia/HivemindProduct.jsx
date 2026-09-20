@@ -661,13 +661,7 @@ const HivemindProduct = () => {
       {isMobile && mobileLandingEnabled === null && (
         <div className="min-h-screen bg-[#FBFBF8]" aria-label="Loading HIVEMIND" />
       )}
-      {isMobile && mobileLandingEnabled && (
-        <>
-          <MobileLandingV2 />
-          <Pricing />
-          <Developers />
-        </>
-      )}
+      {isMobile && mobileLandingEnabled && <MobileLandingV2 />}
       {(!isMobile || mobileLandingEnabled === false) && <div>
         <Hero />
         <MarqueeRow />
