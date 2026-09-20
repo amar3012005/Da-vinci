@@ -471,7 +471,6 @@ function HmRoomDesk({ runId }) {
   const [draft, setDraft] = useState('');
   const [phase, setPhase] = useState('idle');
   const [error, setError] = useState(null);
-  const [navOpen, setNavOpen] = useState(true);
   const [preview, setPreview] = useState(null);
   const esRef = useRef(null);
 
@@ -484,22 +483,28 @@ function HmRoomDesk({ runId }) {
         const data = await apiClient.getWorkRun(runId);
         row = data?.workrun || data;
         if (cancelled) return;
+        setError(null);
         setRun(row);
         (row?.events || []).forEach((ev) => {
           setView((prev) => applyWorkRunEvent(prev, ev));
         });
         const history = await apiClient.getWorkRunSessionMessages(runId).catch(() => null);
         const list = history?.messages || history?.items || [];
+        const initialUser = { role: 'user', text: stripWorkOrder(row?.goal), tools: [], thinking: '' };
         if (Array.isArray(list) && list.length) {
-          setMsgs(list.map(flattenMsg).map((m) => (
+          const normalized = list.map(flattenMsg).map((m) => (
             row?.status === 'failed' || row?.status === 'completed'
               ? { ...m, streaming: false }
               : m
-          )));
+          ));
+          const hasInitialPrompt = normalized.some((message) => (
+            message.role === 'user' && stripWorkOrder(message.text) === initialUser.text
+          ));
+          setMsgs(hasInitialPrompt || !initialUser.text ? normalized : [initialUser, ...normalized]);
         } else if (row?.goal) {
-          setMsgs([{ role: 'user', text: stripWorkOrder(row.goal), tools: [], thinking: '' }]);
+          setMsgs([initialUser]);
         }
-        if (row?.status === 'failed' || row?.status === 'completed') {
+        if (row?.status === 'failed' || row?.status === 'completed' || row?.status === 'cancelled') {
           setPhase('idle');
         }
       } catch (err) {
@@ -517,6 +522,7 @@ function HmRoomDesk({ runId }) {
         try { ev = JSON.parse(msg.data); } catch { return; }
         const type = eventType(ev) || String(msg.type || '').toUpperCase();
         ev.type = ev.type || type;
+        setError(null);
         const fingerprint = `${msg.lastEventId || ''}:${type}:${(ev.delta || ev.text || ev.tool_call_id || ev.name || '').toString().slice(0, 48)}`;
         if (seen.has(fingerprint)) return;
         seen.add(fingerprint);
@@ -618,8 +624,6 @@ function HmRoomDesk({ runId }) {
       preview={preview}
       draft={draft}
       error={error}
-      navOpen={navOpen}
-      onNavOpen={setNavOpen}
       onPreview={setPreview}
       onDraft={setDraft}
       onSend={send}

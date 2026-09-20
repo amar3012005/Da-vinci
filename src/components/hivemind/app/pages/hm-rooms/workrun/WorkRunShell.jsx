@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { AudioLines, Bell, BrainCircuit, Orbit, UserPlus } from 'lucide-react';
-import WorkRunHeader from './WorkRunHeader';
 import WorkRunStream from './WorkRunStream';
 import WorkRunComposer from './WorkRunComposer';
 import Inspector from './inspector/Inspector';
@@ -22,8 +21,6 @@ export default function WorkRunShell({
   preview,
   draft,
   error,
-  navOpen,
-  onNavOpen,
   onPreview,
   onDraft,
   onSend,
@@ -44,17 +41,8 @@ export default function WorkRunShell({
         <div className="flex items-center gap-2"><Bell size={15} className="text-[#737373]" /><button type="button" className="flex items-center gap-1.5 rounded-[6px] bg-[#117dff] px-3 py-2 text-[11px] font-semibold text-white"><UserPlus size={13} />Invite your team</button></div>
       </header>
       <div className="flex flex-1 min-h-0">
-      {navOpen ? legacySidebar : null}
+      {legacySidebar}
       <div className="flex-1 min-w-0 flex flex-col bg-[#fbfaf7]">
-        <WorkRunHeader
-          goal={goal}
-          status={status}
-          working={working}
-          team={team}
-          onToggleNav={() => onNavOpen((v) => !v)}
-          onToggleRail={() => setPlanOpen(true)}
-          onOpenTeam={() => setTeamOpen(true)}
-        />
         <div className="flex-1 min-h-0 flex">
           <div className="flex-1 min-w-0 flex flex-col">
             <WorkRunStream
