@@ -187,7 +187,7 @@ export default function Settings() {
           {t('settings.title', 'Settings')}
         </h1>
         <p className="text-[#525252] text-sm mt-1 font-['Space_Grotesk']">
-          {t('settings.subtitle', 'Workspace configuration, policies, and privacy controls')}
+          Workspace configuration, policies, and privacy controls
         </p>
       </div>
 
