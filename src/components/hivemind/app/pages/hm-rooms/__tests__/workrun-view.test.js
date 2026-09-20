@@ -163,6 +163,18 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(asst[0].streaming).toBe(true);
   });
 
+  it('seals a completed reply after its final tool result', () => {
+    let msgs = startUserTurn([], 'check this');
+    msgs = applyAgentEvent(msgs, { type: 'REPLY_START', reply_id: 'r1' });
+    msgs = applyAgentEvent(msgs, { type: 'TOOL_CALL_START', tool_call_name: 'hivemind_recall', tool_call_id: 'c1' });
+    msgs = applyAgentEvent(msgs, { type: 'TOOL_RESULT_END', tool_call_name: 'hivemind_recall', tool_call_id: 'c1', text: 'done' });
+    msgs = applyAgentEvent(msgs, { type: 'TEXT_BLOCK_DELTA', delta: 'Verified.' });
+    msgs = applyAgentEvent(msgs, { type: 'REPLY_END' });
+    const assistant = msgs.find((message) => message.role === 'assistant');
+    expect(assistant.streaming).toBe(false);
+    expect(assistant.timeline[0].label).toBe('Checked company memory');
+  });
+
   it('preserves thinking and tools in the exact AgentScope event order', () => {
     let msgs = startUserTurn([], 'research this');
     msgs = applyAgentEvent(msgs, { type: 'THINKING_BLOCK_DELTA', block_id: 'think-1', delta: 'First I will inspect.' });

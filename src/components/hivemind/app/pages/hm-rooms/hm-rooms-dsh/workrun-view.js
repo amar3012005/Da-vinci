@@ -388,11 +388,13 @@ export function applyAgentEvent(msgs, ev) {
       const timelineTool = cur.timeline.find((item) => item.kind === 'tool' && ((id && item.id === id) || (!id && item.name === name)));
       if (timelineTool) {
         timelineTool.state = type === 'TOOL_CALL_START' ? 'running' : 'done';
+        timelineTool.label = toolLabel(name);
         if (result) timelineTool.result = result;
       } else {
         cur.timeline.push({
           kind: 'tool',
           name,
+          label: toolLabel(name),
           id: id || `tool-${cur.timeline.length}`,
           state: type === 'TOOL_CALL_START' ? 'running' : 'done',
           result,

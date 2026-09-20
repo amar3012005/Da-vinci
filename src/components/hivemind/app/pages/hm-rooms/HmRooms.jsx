@@ -535,6 +535,11 @@ function HmRoomDesk({ runId }) {
           if (type === 'REPLY_END') {
             setPhase(hasRunningTools(next) ? 'streaming' : 'idle');
           }
+          if (String(ev.t || '') === 'agent.status' && ev.status === 'idle' && !hasRunningTools(next)) {
+            // A WorkRun remains durable and open for follow-up turns.  The
+            // composer, however, belongs to the current AgentScope reply.
+            setPhase('idle');
+          }
           return next;
         });
       };
@@ -605,7 +610,10 @@ function HmRoomDesk({ runId }) {
   const inspectOpen = true;
   const runStatus = String(run?.status || '').toLowerCase();
   const terminal = ['completed', 'failed', 'cancelled'].includes(runStatus);
-  const working = !terminal && (phase === 'streaming' || hasRunningTools(view) || runStatus === 'running');
+  // Do not use the durable WorkRun status here. A successful reply leaves the
+  // WorkRun running so the user can continue the same session; only a live
+  // reply or tool call should replace Send with Stop.
+  const working = !terminal && (phase === 'streaming' || hasRunningTools(view));
   void inspectOpen;
 
   return (

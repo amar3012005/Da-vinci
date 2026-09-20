@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { ChevronDown, LoaderCircle } from 'lucide-react';
 import { renderMarkdownLite } from '../../../../hyperagents/rooms/shared';
 import StreamingText from './StreamingText';
 import ToolDisclosure from '../tools/ToolDisclosure';
@@ -18,18 +19,39 @@ export default function AgentMessage({
       ...(tools || []).map((tool, index) => ({ ...tool, kind: 'tool', id: tool.id || `tool-${index}` })),
     ];
   const hasWork = ordered.length > 0;
+  const finished = Boolean(text) && !streaming;
+  const [toolsOpen, setToolsOpen] = useState(!finished);
+
+  // A completed turn keeps its answer prominent. Tool output remains available
+  // on demand, but details never stay expanded after final synthesis.
+  useEffect(() => {
+    if (finished) setToolsOpen(false);
+  }, [finished]);
 
   return (
     <article className="w-full space-y-5 text-[#171717]">
+      {hasWork ? (
+        <button
+          type="button"
+          onClick={() => setToolsOpen((open) => !open)}
+          className="inline-flex items-center gap-1.5 text-[13px] text-[#737373] hover:text-[#171717]"
+        >
+          {streaming ? <LoaderCircle size={14} className="animate-spin" /> : null}
+          <span>{streaming ? 'Working' : 'Worked'} · {ordered.length} action{ordered.length === 1 ? '' : 's'}</span>
+          <ChevronDown size={15} className={`transition-transform ${toolsOpen ? 'rotate-180' : ''}`} />
+        </button>
+      ) : null}
       {ordered.map((item, index) => (
         item.kind === 'tool' ? (
           <ToolDisclosure
             key={item.id || `${item.name}-${index}`}
-            tool={{ ...item, label: item.name, state: item.status || item.state }}
+            tool={{ ...item, label: item.label || item.name, state: item.status || item.state }}
             onOpen={onPreview}
+            hidden={finished && !toolsOpen}
+            collapseDetails={finished}
           />
         ) : (
-          <div key={item.id || `thinking-${index}`} className="text-[16px] leading-[1.75] text-[#404040]">
+          <div key={item.id || `thinking-${index}`} className={`text-[16px] leading-[1.75] text-[#404040] ${finished && !toolsOpen ? 'hidden' : ''}`}>
             <StreamingText text={item.text || ''} streaming={streaming && index === ordered.length - 1 && !text} />
           </div>
         )
