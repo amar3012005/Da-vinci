@@ -87,6 +87,22 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(view.approvals).toHaveLength(0);
   });
 
+  it('prefers a recoverable confirmation over a legacy card for the same tool', () => {
+    const toolCall = { id: 'bash-1', name: 'Bash', input: { command: 'pwd' } };
+    let view = applyWorkRunEvent(emptyWorkRunView(runId), {
+      t: 'approval.requested',
+      call_id: 'bash-1',
+      tool: 'Bash',
+    });
+    view = applyWorkRunEvent(view, {
+      type: 'REQUIRE_USER_CONFIRM',
+      reply_id: 'reply-1',
+      tool_calls: [toolCall],
+    });
+    expect(view.approvals).toHaveLength(1);
+    expect(view.approvals[0].payload.reply_id).toBe('reply-1');
+  });
+
   it('keeps working tools streaming after a status idle event', () => {
     let view = emptyWorkRunView(runId);
     view = applyWorkRunEvent(view, {

@@ -130,7 +130,15 @@ function project(view) {
       result: b.payload.result || null,
     }));
   const team = list.filter((b) => b.kind === 'team').map((b) => b.payload);
-  const approvals = list.filter((b) => b.kind === 'approval' && b.status === 'streaming');
+  const approvalByTool = new Map();
+  list.filter((b) => b.kind === 'approval' && b.status === 'streaming').forEach((block) => {
+    const key = String(block.payload.tool || block.payload.tools?.[0] || block.block_id).toLowerCase();
+    const current = approvalByTool.get(key);
+    if (!current || (!current.payload.reply_id && block.payload.reply_id)) {
+      approvalByTool.set(key, block);
+    }
+  });
+  const approvals = [...approvalByTool.values()];
   return { ...view, artifacts, sources, activity, team, approvals };
 }
 
