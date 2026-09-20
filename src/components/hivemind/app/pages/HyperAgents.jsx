@@ -3730,7 +3730,7 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const validates = lines.filter(l => l.t === 'validate');
   const seal = lines.find(l => l.t === 'seal');
   const errorLine = lines.find(l => l.t === 'error');
-  const typing = lines.filter(l => l.t === 'typing').slice(-2);
+  const typingLine = [...lines].reverse().find(l => l.t === 'typing');
   // Additional Population-Sim report (opt-in). Guarded — absent on normal turns.
   const simReport = lines.find(l => l.t === 'sim_report' && (l.report || l.n_personas));
   const [showSim, setShowSim] = useState(false);
@@ -4616,17 +4616,20 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         </div>
       )}
 
-      {!seal && typing.length > 0 && (
-        <div className="text-[11px] text-[#a3a3a3] italic flex items-center gap-2 pl-2">
-          {typing.map((typingLine, i) => (
-            <span key={i} className="flex items-center gap-1.5">
-              <AgentAvatar
-                agent={(participants || []).find(pp => pp.slug === typingLine.agent || pp.name === typingLine.agent) || { name: typingLine.agent, slug: typingLine.agent }}
-                size={18} active
-              />
-              {typingLine.note || t('hyperAgents.agentTyping', '{{agent}} typing…', { agent: typingLine.agent })}
-            </span>
-          ))}
+      {!seal && typingLine && (
+        <div className="flex items-center gap-2 rounded-lg border border-[#e3e0da] bg-white/75 px-2.5 py-2 text-[11px] text-[#6f6a63] shadow-sm" aria-live="polite" data-testid="room-live-progress">
+          <AgentAvatar
+            agent={(participants || []).find(pp => pp.slug === typingLine.agent || pp.name === typingLine.agent) || { name: typingLine.agent, slug: typingLine.agent }}
+            size={20} active
+          />
+          <span className="min-w-0 flex-1 truncate">
+            {typingLine.note || t('hyperAgents.agentTyping', '{{agent}} typing…', { agent: typingLine.agent })}
+          </span>
+          <span className="flex shrink-0 items-center gap-1" aria-hidden="true">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400 [animation-delay:180ms]" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-300 [animation-delay:360ms]" />
+          </span>
         </div>
       )}
 
