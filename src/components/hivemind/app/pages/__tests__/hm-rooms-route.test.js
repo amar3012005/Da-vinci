@@ -31,4 +31,20 @@ describe('HM Rooms WorkRun routing', () => {
     expect(shell).toContain('{navOpen ? legacySidebar : null}');
     expect(shell).toContain('Hyper Agents');
   });
+
+  it('keeps the composer fixed while only the WorkRun conversation scrolls', () => {
+    const shell = source('pages/hm-rooms/workrun/WorkRunShell.jsx');
+    const stream = source('pages/hm-rooms/workrun/WorkRunStream.jsx');
+    const userMessage = source('pages/hm-rooms/workrun/narrative/UserMessage.jsx');
+    const agentMessage = source('pages/hm-rooms/workrun/narrative/AgentMessage.jsx');
+
+    expect(shell).toContain('<WorkRunStream');
+    expect(shell).toContain('shrink-0 border-t border-transparent');
+    expect(stream).toContain('flex-1 min-h-0 overflow-y-auto overscroll-contain');
+    expect(stream).toContain("node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' })");
+    expect(stream).toContain('[msgs, activity, tasks, approvals]');
+    expect(userMessage).toContain('items-end gap-2');
+    expect(agentMessage).toContain('Worked on this run');
+    expect(agentMessage).toContain("border-t border-[#e3e0db] pt-8");
+  });
 });

@@ -1,13 +1,17 @@
 import React from 'react';
+import { Check, LoaderCircle, Search } from 'lucide-react';
 
 export default function ActivityRow({ label, status, children }) {
   return (
-    <div className="flex items-start gap-2 py-0.5">
-      <span className={`mt-1.5 inline-block w-2 h-2 rounded-full ${status === 'streaming' || status === 'running' ? 'bg-[#117dff] animate-pulse' : 'bg-[#10b981]'}`} />
-      <div className="min-w-0">
-        <div className="text-[13px] text-[#171717]">{label}</div>
+    <div className="relative flex items-start gap-3 py-2 text-[#737373] before:absolute before:bottom-[-8px] before:left-[8px] before:top-[24px] before:w-px before:bg-[#e3e0db] last:before:hidden">
+      {status === 'streaming' || status === 'running'
+        ? <LoaderCircle size={17} className="mt-0.5 shrink-0 animate-spin" />
+        : <Search size={17} className="mt-0.5 shrink-0" strokeWidth={1.7} />}
+      <div className="min-w-0 flex-1">
+        <div className="text-[14px]">{label}</div>
         {children}
       </div>
+      {status !== 'streaming' && status !== 'running' ? <Check size={14} className="mt-0.5 shrink-0" /> : null}
     </div>
   );
 }
