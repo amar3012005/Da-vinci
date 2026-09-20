@@ -1185,12 +1185,19 @@ function RoomThread({ roomId, onArchived }) {
   const [campaignActivation, setCampaignActivation] = useState(null);
   const [campaignBusy, setCampaignBusy] = useState(false);
   const [pendingCampaignId, setPendingCampaignId] = useState(campaignReturn || null);
+  const roomVisualCampaignId = useMemo(() => {
+    const durable = (turns || []).flatMap((turn) => Array.isArray(turn?.lines) ? turn.lines : []);
+    const latest = [...durable, ...(Array.isArray(liveLines) ? liveLines : [])]
+      .filter((line) => line?.t === 'campaign_visual_handoff' && line?.campaign_id)
+      .at(-1);
+    return latest?.campaign_id || null;
+  }, [liveLines, turns]);
   const activeRoomCampaign = useMemo(() => {
     if (selectedCampaign) return selectedCampaign;
     if (pendingCampaignId) return roomCampaigns.find((campaign) => campaign.id === pendingCampaignId) || null;
     return roomCampaigns[0] || null;
   }, [pendingCampaignId, roomCampaigns, selectedCampaign]);
-  const isCampaignRoom = Boolean(campaignReturn || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
+  const isCampaignRoom = Boolean(campaignReturn || roomVisualCampaignId || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
   const isHqRoom = Boolean(room?.is_domain_home && (room?.room_tag || room?.roomTag) === 'general');
   const growthBaselineRequested = useMemo(() => new URLSearchParams(location.search).get('growthBaseline') === '1', [location.search]);
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
@@ -1524,6 +1531,7 @@ function RoomThread({ roomId, onArchived }) {
 
   useEffect(() => { if (isCampaignRoom) loadRoomCampaigns(); }, [isCampaignRoom, loadRoomCampaigns]);
   useEffect(() => { if (campaignReturn) setPendingCampaignId(campaignReturn); }, [campaignReturn]);
+  useEffect(() => { if (roomVisualCampaignId) setPendingCampaignId(roomVisualCampaignId); }, [roomVisualCampaignId]);
 
   // The Room owns completion: poll the campaign associated with the active run and
   // open the existing dashboard in-place as soon as its governed plan is available.

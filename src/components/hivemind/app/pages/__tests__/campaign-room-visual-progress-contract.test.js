@@ -24,4 +24,10 @@ describe('Campaign Room visual lifecycle contract', () => {
     expect(source).toContain('window.setInterval(checkCampaign, 3500)');
     expect(source).toContain('window.setInterval(() => openRoomCampaign(selectedCampaign.id), 5000)');
   });
+
+  test('adopts a canonical campaign materialized from an ordinary Room visual handoff', () => {
+    expect(source).toContain("line?.t === 'campaign_visual_handoff'");
+    expect(source).toContain('if (roomVisualCampaignId) setPendingCampaignId(roomVisualCampaignId)');
+    expect(source).toContain('campaignReturn || roomVisualCampaignId');
+  });
 });
