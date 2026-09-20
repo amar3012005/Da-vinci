@@ -28,6 +28,9 @@ export function emptyWorkRunView(workrunId) {
     artifacts: [],
     sources: [],
     team: [],
+    // This is only a display projection of AgentScope's session task state.
+    // AgentScope remains the task authority; Rooms does not write this back.
+    tasks: [],
     approvals: [],
     status: 'idle',
   };
@@ -176,6 +179,26 @@ function project(view) {
       result: b.payload.result || null,
     }));
   const team = list.filter((b) => b.kind === 'team').map((b) => b.payload);
+  const latestPlan = [...list].reverse().find((b) => (
+    b.kind === 'plan' && Array.isArray(b.payload?.tasks)
+  ));
+  const tasks = (latestPlan?.payload?.tasks || []).map((task, index) => {
+    const state = String(task?.state || task?.status || '').toLowerCase();
+    const status = /complete|done|success/.test(state)
+      ? 'complete'
+      : /running|progress|active|working/.test(state)
+        ? 'streaming'
+        : 'pending';
+    return {
+      id: task?.id || `agentscope-task-${index}`,
+      label: task?.subject || task?.title || task?.description || `Task ${index + 1}`,
+      description: task?.description || '',
+      state,
+      status,
+      blocked_by: Array.isArray(task?.blocked_by) ? task.blocked_by : [],
+      owner: task?.owner || null,
+    };
+  });
   const approvalByTool = new Map();
   list.filter((b) => b.kind === 'approval' && b.status === 'streaming').forEach((block) => {
     const key = String(block.payload.tool || block.payload.tools?.[0] || block.block_id).toLowerCase();
@@ -185,7 +208,7 @@ function project(view) {
     }
   });
   const approvals = [...approvalByTool.values()];
-  return { ...view, artifacts, sources, activity, team, approvals };
+  return { ...view, artifacts, sources, activity, team, tasks, approvals };
 }
 
 function mergeDelta(prev, incoming) {
@@ -214,7 +237,21 @@ export function applyWorkRunEvent(view, ev) {
   const workrunId = view.workrun_id;
   const t = String(ev.t || '');
 
-  if (t === 'plan.updated' || t === 'tool.started' || type === 'TOOL_CALL_START') {
+  // hm-core turns AgentScope's state_updated event into this compact,
+  // reconnect-safe snapshot. It intentionally contains only the fields that
+  // belong in a WorkRun display, never AgentScope's private session state.
+  if (t === 'plan.updated') {
+    const tasks = Array.isArray(ev.tasks) ? ev.tasks : [];
+    return upsertBlock(view, {
+      block_id: `plan:${workrunId}`,
+      workrun_id: workrunId,
+      kind: 'plan',
+      status: 'complete',
+      payload: { name: 'TaskUpdate', label: 'Plan updated', family: 'task', tasks },
+    });
+  }
+
+  if (t === 'tool.started' || type === 'TOOL_CALL_START') {
     const name = ev.tool_call_name || ev.tool_name || ev.tool || ev.name || 'tool';
     const isTask = /^Task(Create|Update|List|Get)$/i.test(name) || t === 'plan.updated';
     return upsertBlock(view, {
@@ -296,12 +333,14 @@ export function applyWorkRunEvent(view, ev) {
   }
 
   if (type === 'CUSTOM' && ev.name === 'state_updated') {
+    const tasks = ev.value?.tasks_context?.tasks;
+    if (!Array.isArray(tasks)) return view;
     return upsertBlock(view, {
       block_id: `plan:${workrunId}`,
       workrun_id: workrunId,
       kind: 'plan',
       status: 'complete',
-      payload: { label: 'Plan updated', value: ev.value },
+      payload: { name: 'TaskUpdate', label: 'Plan updated', family: 'task', tasks },
     });
   }
 
