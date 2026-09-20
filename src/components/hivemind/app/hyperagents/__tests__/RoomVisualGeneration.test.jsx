@@ -24,8 +24,11 @@ describe('RoomVisualGeneration', () => {
   test('renders a polished in-room progress card for every expected visual', () => {
     const markup = renderToStaticMarkup(<VisualJobCard job={baseJob} onPatch={jest.fn()} onRefresh={jest.fn()} onRetry={jest.fn()} onOpen={jest.fn()} />);
     expect(markup).toContain('Visual studio');
+    expect(markup).toContain('Generating 2 images');
     expect(markup).toContain('Rendering the master');
     expect(markup).toContain('58%');
+    expect(markup).not.toContain(baseJob.instruction);
+    expect(markup).not.toContain('campaign social');
     expect((markup.match(/visual-generation-skeleton/g) || [])).toHaveLength(2);
   });
 
@@ -38,6 +41,7 @@ describe('RoomVisualGeneration', () => {
     expect(markup).toContain('/visual/job-1/asset-1');
     expect(markup).toContain('/visual/job-1/asset-2');
     expect((markup.match(/visual-generation-ready/g) || [])).toHaveLength(2);
+    expect(markup).toContain('2 images ready');
     expect(markup).toContain('Rendered + reviewed');
   });
 

@@ -41,12 +41,12 @@ function VisualLightbox({ job, asset, onClose }) {
     <div className="flex max-h-full w-full max-w-[1500px] flex-col overflow-hidden rounded-xl border border-white/15 bg-[#161616] shadow-2xl">
       <div className="flex min-h-12 items-center gap-3 border-b border-white/10 px-4 text-white">
         <Sparkles size={14} className="text-[#8bb8ff]" />
-        <div className="min-w-0 flex-1 truncate text-[11px] font-medium">{job.instruction || 'Generated visual'}</div>
+        <div className="min-w-0 flex-1 truncate text-[11px] font-medium">Generated visual</div>
         <a href={url} download className="grid h-9 w-9 place-items-center rounded-full text-white/70 hover:bg-white/10 hover:text-white" aria-label="Download visual"><Download size={16} /></a>
         <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full text-white/70 hover:bg-white/10 hover:text-white" aria-label="Close visual"><X size={18} /></button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto bg-[#0d0d0d] p-3 sm:p-5">
-        <img src={url} alt={asset.alt_text || job.instruction || 'Generated visual'} className="mx-auto max-h-[calc(100vh-9rem)] max-w-full object-contain" />
+        <img src={url} alt={asset.alt_text || 'Generated visual'} className="mx-auto max-h-[calc(100vh-9rem)] max-w-full object-contain" />
       </div>
     </div>
   </div>;
@@ -68,6 +68,11 @@ export function VisualJobCard({ job, onPatch, onRefresh, onRetry, onOpen }) {
   const count = Math.max(1, Number(job.output?.count) || 1);
   const assets = Array.isArray(job.assets) ? job.assets : [];
   const [retrying, setRetrying] = useState(false);
+  const statusTitle = job.status === 'completed'
+    ? (count === 1 ? 'Image ready' : `${count} images ready`)
+    : job.status === 'failed'
+      ? 'Image generation needs attention'
+      : (count === 1 ? 'Generating image' : `Generating ${count} images`);
 
   useEffect(() => {
     if (!active || typeof EventSource === 'undefined') return undefined;
@@ -101,8 +106,8 @@ export function VisualJobCard({ job, onPatch, onRefresh, onRetry, onOpen }) {
         {active ? <span className="absolute inset-1 animate-ping rounded-md border border-[#4d8c79]/35 motion-reduce:animate-none" /> : null}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="text-[9px] font-mono font-semibold uppercase tracking-[0.16em] text-[#256d5b]">Visual studio</span><span className="text-[9px] text-[#99928a]">{job.use_case?.replaceAll('_', ' ')}</span></div>
-        <h3 className="mt-1 text-[13px] font-semibold leading-5 text-[#24211f]">{job.instruction || 'Creating a brand-grounded visual'}</h3>
+        <div className="text-[9px] font-mono font-semibold uppercase tracking-[0.16em] text-[#256d5b]">Visual studio</div>
+        <h3 className="mt-1 text-[13px] font-semibold leading-5 text-[#24211f]">{statusTitle}</h3>
         <p className={`mt-1 text-[10.5px] ${job.status === 'failed' ? 'text-red-700' : 'text-[#777168]'}`}>{job.status === 'failed' ? (job.error?.message || 'The workflow could not complete this visual.') : (job.last_message || visualStageLabel(job.stage))}</p>
       </div>
       <div className="shrink-0 text-right"><div className="text-[17px] font-semibold tabular-nums text-[#24211f]">{Math.max(0, Math.min(100, Number(job.progress) || 0))}%</div><div className="text-[8px] font-mono uppercase tracking-wider text-[#99928a]">{job.quality || 'quality'}</div></div>
@@ -112,7 +117,7 @@ export function VisualJobCard({ job, onPatch, onRefresh, onRetry, onOpen }) {
       {assets.length ? assets.map((asset) => {
         const url = apiClient.visualGenerationAssetUrl(job.job_id, asset.asset_id);
         return <button key={asset.asset_id} type="button" onClick={() => onOpen(job, asset)} className="group min-w-0 text-left" data-testid="visual-generation-ready">
-          <div className={`relative overflow-hidden rounded-lg border border-[#d8d3cc] bg-[#eae7e1] ${assetRatio(asset, job)}`}><img src={url} alt={asset.alt_text || job.instruction || 'Generated visual'} className="h-full w-full object-cover opacity-0 transition duration-700 group-hover:scale-[1.015]" onLoad={(event) => event.currentTarget.classList.remove('opacity-0')} /><span className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur transition group-hover:opacity-100"><Expand size={14} /></span></div>
+          <div className={`relative overflow-hidden rounded-lg border border-[#d8d3cc] bg-[#eae7e1] ${assetRatio(asset, job)}`}><img src={url} alt={asset.alt_text || 'Generated visual'} className="h-full w-full object-cover opacity-0 transition duration-700 group-hover:scale-[1.015]" onLoad={(event) => event.currentTarget.classList.remove('opacity-0')} /><span className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur transition group-hover:opacity-100"><Expand size={14} /></span></div>
           <div className="mt-1.5 flex items-center justify-between gap-2 px-0.5 text-[9.5px] text-[#6f6962]"><span>{asset.aspect_ratio || job.output?.aspect_ratios?.[0] || 'visual'}</span><span className="text-emerald-700">Rendered + reviewed</span></div>
         </button>;
       }) : active ? Array.from({ length: count }).map((unused, index) => <GeneratingTile key={index} job={job} index={index} />) : null}
