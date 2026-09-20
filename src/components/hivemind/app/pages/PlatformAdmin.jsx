@@ -360,7 +360,7 @@ function AiCostsPanel() {
 function Metric({ label, value }) { return <div className="rounded-[10px] border border-[#e3e0db] bg-white p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-[#737373]">{label}</p><p className="mt-1 font-['Space_Grotesk'] text-xl font-bold tabular-nums text-[#0a0a0a]">{value}</p></div>; }
 function LedgerSection({ title, rows, columns, moneyColumns = [] }) { return <section className="rounded-[10px] border border-[#e3e0db] bg-white"><h4 className="border-b border-[#e3e0db] px-4 py-3 text-sm font-semibold">{title}</h4><div className="overflow-auto"><table className="w-full min-w-[600px] text-xs"><thead><tr className="bg-[#faf9f4] text-left uppercase tracking-wider text-[#737373]">{columns.map(([, label]) => <th key={label} className="px-3 py-2">{label}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <tr key={index} className="border-t border-[#f0ede8]">{columns.map(([key]) => <td key={key} className="max-w-[200px] truncate px-3 py-2">{moneyColumns.includes(key) ? usdFromMicros(row[key]) : key.endsWith('_at') ? when(row[key]) : String(row[key] ?? '—')}</td>)}</tr>) : <tr><td colSpan={columns.length} className="px-3 py-4 text-[#737373]">No activity in this period.</td></tr>}</tbody></table></div></section>; }
 
-const EMPTY_ANNOUNCEMENT = { key: '', title: '', body: '', eyebrow: 'hivemind — update', placement: 'toast', priority: 10, status: 'draft', starts_at: '', ends_at: '', requires_notification: true, cta_label: '', cta_href: '', facts_json: '[]', agent_ids: '', audience_json: '{\n  "kind": "all"\n}' };
+const EMPTY_ANNOUNCEMENT = { key: '', title: '', body: '', eyebrow: 'hivemind — update', placement: 'toast', priority: 10, status: 'draft', starts_at: '', ends_at: '', requires_notification: true, cta_label: '', cta_href: '', facts_json: '[]', agent_ids: '', artifact_json: '', audience_json: '{\n  "kind": "all"\n}' };
 function AnnouncementManager() {
   const [items, setItems] = useState([]);
   const [draft, setDraft] = useState(EMPTY_ANNOUNCEMENT);
@@ -374,16 +374,18 @@ function AnnouncementManager() {
   useEffect(() => { load(); }, [load]);
   const edit = (item) => {
     setSelectedId(item.id);
-    setDraft({ key: item.key, title: item.title, body: item.body || '', eyebrow: item.content?.eyebrow || '', placement: item.placement, priority: item.priority, status: item.status, starts_at: item.starts_at ? new Date(item.starts_at).toISOString().slice(0, 16) : '', ends_at: item.ends_at ? new Date(item.ends_at).toISOString().slice(0, 16) : '', requires_notification: item.requires_notification !== false, cta_label: item.content?.cta?.label || '', cta_href: item.content?.cta?.href || '', facts_json: JSON.stringify(item.content?.facts || [], null, 2), agent_ids: (item.content?.agent_ids || []).join(', '), audience_json: JSON.stringify(item.audience || { kind: 'all' }, null, 2) });
+    setDraft({ key: item.key, title: item.title, body: item.body || '', eyebrow: item.content?.eyebrow || '', placement: item.placement, priority: item.priority, status: item.status, starts_at: item.starts_at ? new Date(item.starts_at).toISOString().slice(0, 16) : '', ends_at: item.ends_at ? new Date(item.ends_at).toISOString().slice(0, 16) : '', requires_notification: item.requires_notification !== false, cta_label: item.content?.cta?.label || '', cta_href: item.content?.cta?.href || '', facts_json: JSON.stringify(item.content?.facts || [], null, 2), agent_ids: (item.content?.agent_ids || []).join(', '), artifact_json: item.content?.artifact ? JSON.stringify(item.content.artifact, null, 2) : '', audience_json: JSON.stringify(item.audience || { kind: 'all' }, null, 2) });
   };
   const save = async () => {
     setBusy(true); setError(''); setMessage('');
     try {
       const audience = JSON.parse(draft.audience_json || '{"kind":"all"}');
-      const facts = JSON.parse(draft.facts_json || '[]');
-      if (!Array.isArray(facts)) throw new Error('Facts must be a JSON array of { label, value } entries');
+      const display = JSON.parse(draft.facts_json || '[]');
+      const facts = Array.isArray(display) ? display : display?.facts;
+      if (!Array.isArray(facts)) throw new Error('Facts must be a JSON array, or an object with a facts array');
+      const artifact = draft.artifact_json.trim() ? JSON.parse(draft.artifact_json) : display?.artifact || null;
       const agent_ids = draft.agent_ids.split(',').map((value) => value.trim()).filter(Boolean);
-      const payload = { key: draft.key, title: draft.title, body: draft.body, placement: draft.placement, priority: Number(draft.priority), status: draft.status, starts_at: draft.starts_at || null, ends_at: draft.ends_at || null, requires_notification: draft.requires_notification, audience, content: { eyebrow: draft.eyebrow, facts, agent_ids, cta: draft.cta_href ? { label: draft.cta_label, href: draft.cta_href } : null } };
+      const payload = { key: draft.key, title: draft.title, body: draft.body, placement: draft.placement, priority: Number(draft.priority), status: draft.status, starts_at: draft.starts_at || null, ends_at: draft.ends_at || null, requires_notification: draft.requires_notification, audience, content: { eyebrow: draft.eyebrow, facts, agent_ids, artifact, cta: draft.cta_href ? { label: draft.cta_label, href: draft.cta_href } : null } };
       const result = selectedId ? await apiClient.updatePlatformAnnouncement(selectedId, payload) : await apiClient.createPlatformAnnouncement(payload);
       setSelectedId(result.announcement.id); setMessage('Saved. Publish when the preview and audience are ready.'); await load();
     } catch (err) { setError(err.response?.data?.error || err.message || 'Invalid announcement'); } finally { setBusy(false); }

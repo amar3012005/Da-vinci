@@ -73,6 +73,21 @@ function AnnouncementBrief({ announcement, context }) {
   </>;
 }
 
+function AnnouncementArtifactReader({ announcement }) {
+  const artifact = announcement?.content?.artifact;
+  if (!artifact?.id || artifact.type !== 'web') return <AnnouncementBrief announcement={announcement} />;
+  const previewUrl = apiClient.hyperCompanyWebArtifactPreviewUrl(artifact.id);
+  return <div className="flex h-[min(640px,calc(100dvh-120px))] min-h-0 flex-col bg-[#fbfaf7]">
+    <div className="border-b border-[#deddd7] px-6 py-5 sm:px-8">
+      <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-[#248564]">Verified web artifact</div>
+      <h2 className="mt-3 text-[24px] font-semibold tracking-[-0.035em] text-[#111]">{artifact.title || announcement.title}</h2>
+      {artifact.url ? <p className="mt-1 truncate text-[11px] text-[#347df4]">{artifact.url}</p> : null}
+      <p className="mt-2 text-[11px] text-[#777]">{[artifact.content_chars ? `${artifact.content_chars.toLocaleString()} characters` : null, artifact.provider || 'web crawl', 'stored in company memory'].filter(Boolean).join(' · ')}</p>
+    </div>
+    {previewUrl ? <iframe title={artifact.title || 'Web artifact preview'} src={previewUrl} className="min-h-0 flex-1 border-0 bg-white" sandbox="allow-same-origin allow-popups" /> : <div className="p-6 text-sm text-[#737373]">This artifact reference is unavailable.</div>}
+  </div>;
+}
+
 export default function WorkspaceNotifications() {
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -187,8 +202,8 @@ export default function WorkspaceNotifications() {
     </motion.div> : null}</AnimatePresence>, document.body) : null}
 
     {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{announcement ? <motion.div className={announcement.placement === 'toast' ? 'fixed -bottom-3 left-4 z-[2147483646] w-[min(420px,calc(100vw-28px))] sm:left-6' : announcement.placement === 'banner' ? 'fixed left-1/2 top-5 z-[2147483646] w-[min(680px,calc(100vw-28px))] -translate-x-1/2' : 'fixed inset-0 z-[2147483646] grid place-items-center bg-black/35 p-4 backdrop-blur-[2px]'} initial={{ opacity: 0, y: announcement.placement === 'toast' ? 'calc(100% - 34px)' : 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} transition={{ type: 'spring', stiffness: 190, damping: 25, mass: 0.9 }}>
-      <div className={announcement.placement === 'toast' ? 'w-full' : 'w-full max-w-[700px]'}><WorkspacePopupSurface variant={announcement.placement === 'toast' ? 'toast' : 'dialog'} label={announcement?.content?.eyebrow || 'hivemind — workspace update'} title={announcement.title} description={announcement.body} onClose={dismissAnnouncement} meta="Saved in notifications" secondaryAction={{ label: 'Later', onClick: dismissAnnouncement }} primaryAction={announcement?.content?.cta ? { label: announcement.content.cta.label, onClick: actOnAnnouncement } : null}>
-        <AnnouncementBrief announcement={announcement} context={announcementContext} />
+      <div className={announcement.placement === 'toast' ? 'w-full' : announcement.placement === 'reader' ? 'flex max-h-[calc(100dvh-24px)] w-full max-w-[920px] flex-col' : 'w-full max-w-[700px]'}><WorkspacePopupSurface variant={announcement.placement === 'toast' ? 'toast' : announcement.placement === 'reader' ? 'reader' : 'dialog'} label={announcement?.content?.eyebrow || 'hivemind — workspace update'} title={announcement.title} description={announcement.body} onClose={dismissAnnouncement} meta={announcement.placement === 'reader' ? 'Saved in notifications · exact onboarding evidence' : 'Saved in notifications'} secondaryAction={announcement.placement === 'reader' && announcement?.content?.artifact?.url ? { label: 'Open source', onClick: () => window.open(announcement.content.artifact.url, '_blank', 'noopener,noreferrer') } : { label: 'Later', onClick: dismissAnnouncement }} primaryAction={announcement?.content?.cta ? { label: announcement.content.cta.label, onClick: actOnAnnouncement } : null}>
+        {announcement.placement === 'reader' ? <AnnouncementArtifactReader announcement={announcement} /> : <AnnouncementBrief announcement={announcement} context={announcementContext} />}
       </WorkspacePopupSurface></div>
     </motion.div> : null}</AnimatePresence>, document.body) : null}
 
