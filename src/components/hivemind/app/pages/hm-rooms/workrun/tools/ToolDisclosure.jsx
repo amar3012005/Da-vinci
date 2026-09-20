@@ -19,6 +19,7 @@ export default function ToolDisclosure({ tool, onOpen, hidden = false, collapseD
     state: tool?.state,
     result: tool?.result,
     onOpen,
+    onToggle: () => setOpen((value) => !value),
   };
   let body = <GenericTool {...shared} />;
   if (/bash|shell|exec/i.test(name)) body = <BashTool {...shared} />;
@@ -30,13 +31,17 @@ export default function ToolDisclosure({ tool, onOpen, hidden = false, collapseD
   return (
     <div className={hidden ? 'hidden' : ''}>
       {body}
-      {tool?.result ? (
-        <button type="button" className="ml-4 text-[11px] text-[#737373]" onClick={() => setOpen((v) => !v)}>
-          {open ? 'Hide details' : 'View details'}
-        </button>
-      ) : null}
-      {open && tool?.result ? (
-        <pre className="mt-1 ml-4 text-[11px] text-[#525252] bg-[#f7f7f5] p-2 rounded-lg whitespace-pre-wrap line-clamp-8">{tool.result}</pre>
+      {open ? (
+        <div className="ml-4 mt-1 overflow-hidden rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] text-[11px] text-[#525252]">
+          <div className="grid grid-cols-[44px_minmax(0,1fr)] border-b border-[#e3e0db]">
+            <div className="px-3 py-2 font-mono uppercase tracking-wider text-[#a3a3a3]">IN</div>
+            <pre className="max-h-48 overflow-auto whitespace-pre-wrap px-3 py-2 font-mono leading-5">{tool?.input || 'No input captured for this call.'}</pre>
+          </div>
+          <div className="grid grid-cols-[44px_minmax(0,1fr)]">
+            <div className="px-3 py-2 font-mono uppercase tracking-wider text-[#a3a3a3]">OUT</div>
+            <pre className="max-h-48 overflow-auto whitespace-pre-wrap px-3 py-2 font-mono leading-5">{tool?.result || (tool?.state === 'running' ? 'Waiting for tool result…' : 'No result captured for this call.')}</pre>
+          </div>
+        </div>
       ) : null}
     </div>
   );

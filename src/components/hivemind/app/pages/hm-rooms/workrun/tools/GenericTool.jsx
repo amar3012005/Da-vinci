@@ -2,14 +2,17 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Check, LoaderCircle, Wrench } from 'lucide-react';
 
-export default function GenericTool({ name, label, state, result, onOpen }) {
+export default function GenericTool({ name, label, state, result, onOpen, onToggle }) {
   return (
     <motion.button
       type="button"
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22 }}
-      onClick={() => onOpen && onOpen({ name, result })}
+      onClick={() => {
+        if (onToggle) onToggle();
+        else if (onOpen) onOpen({ name, result });
+      }}
       className="relative flex w-full items-center gap-3 py-2 text-left text-[#737373] before:absolute before:bottom-[-8px] before:left-[8px] before:top-[24px] before:w-px before:bg-[#e3e0db] last:before:hidden"
     >
       {state === 'running'
