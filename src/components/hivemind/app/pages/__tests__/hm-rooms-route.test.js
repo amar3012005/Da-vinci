@@ -55,6 +55,8 @@ describe('HM Rooms WorkRun routing', () => {
     const api = source('shared/api-client.js');
     const card = source('pages/hm-rooms/workrun/approval/ApprovalCard.jsx');
     expect(rooms).toContain("type: 'USER_CONFIRM_RESULT'");
+    expect(rooms).toContain("block?.state === 'asking'");
+    expect(rooms).toContain('reply_id: message.id');
     expect(rooms).toContain('sendWorkRunConfirmation(runId, input)');
     expect(api).toContain('async sendWorkRunConfirmation(id, input)');
     expect(card).toContain('onClick={() => decide(onApprove)}');
