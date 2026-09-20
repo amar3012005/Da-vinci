@@ -123,6 +123,19 @@ function flattenMsg(msg) {
   return { role, text: split.text, thinking: thinking || split.thinking, tools, raw: msg };
 }
 
+function pendingConfirmationsFromMessages(messages) {
+  return (messages || []).flatMap((message) => {
+    const calls = (Array.isArray(message?.content) ? message.content : [])
+      .filter((block) => String(block?.type || '').toLowerCase() === 'tool_call' && block?.state === 'asking');
+    if (!calls.length || !message?.id) return [];
+    return [{
+      type: 'REQUIRE_USER_CONFIRM',
+      reply_id: message.id,
+      tool_calls: calls,
+    }];
+  });
+}
+
 
 
 
@@ -469,6 +482,9 @@ function HmRoomDesk({ runId }) {
               ? { ...m, streaming: false }
               : m
           )));
+          pendingConfirmationsFromMessages(list).forEach((event) => {
+            setView((prev) => applyWorkRunEvent(prev, event));
+          });
         } else if (row?.goal) {
           setMsgs([{ role: 'user', text: stripWorkOrder(row.goal), tools: [], thinking: '' }]);
         }
