@@ -3,15 +3,6 @@
   color: var(--dsw-alias-label-primary);
 }
 
-.contextRow {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 30px;
-  padding: 0 4px 2px;
-}
-
-.contextControl,
 .workspaceControl,
 .roundControl,
 .iconControl {
@@ -23,14 +14,6 @@
   cursor: pointer;
 }
 
-.contextControl {
-  gap: 5px;
-  padding: 2px 0;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.contextControl:hover,
 .workspaceControl:hover,
 .roundControl:hover,
 .iconControl:hover {
@@ -151,7 +134,6 @@
 }
 
 @media (max-width: 720px) {
-  .contextRow { gap: 12px; }
   .workspaceControl span { display: none; }
   .input { min-height: 52px; padding: 12px 15px 4px; font-size: 15px; }
   .controls { padding: 0 9px 8px; }

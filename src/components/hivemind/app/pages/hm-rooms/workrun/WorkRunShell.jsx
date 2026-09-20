@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { AudioLines, Bell, BrainCircuit, Orbit, UserPlus } from 'lucide-react';
+import { AudioLines, Bell, BrainCircuit, Hash, Orbit, PanelRightOpen, Users, UserPlus } from 'lucide-react';
 import WorkRunStream from './WorkRunStream';
 import WorkRunComposer from './WorkRunComposer';
 import Inspector from './inspector/Inspector';
@@ -30,6 +30,7 @@ export default function WorkRunShell({
   const [planOpen, setPlanOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
   const [previewWidth, setPreviewWidth] = useState(360);
+  const [previewOpen, setPreviewOpen] = useState(true);
   const dragRef = useRef(null);
 
   const clampPreviewWidth = useCallback((value) => {
@@ -65,6 +66,7 @@ export default function WorkRunShell({
       return clampPreviewWidth(current + (event.key === 'ArrowLeft' ? step : -step));
     });
   }, [clampPreviewWidth]);
+  const showRoomStatus = !previewOpen || previewWidth <= Math.floor(window.innerWidth * 0.4);
   return (
     <div className="hmDshHost h-screen overflow-hidden flex flex-col bg-[#f7f6f3]">
       <header className="h-14 shrink-0 flex items-center justify-between border-y border-[#e3e0db] bg-[#faf9f4] px-5">
@@ -80,7 +82,13 @@ export default function WorkRunShell({
       {legacySidebar}
       <div className="flex-1 min-w-0 flex flex-col bg-[#fbfaf7]">
         <div className="flex-1 min-h-0 flex">
-          <div className="flex-1 min-w-0 flex flex-col" aria-label="WorkRun output">
+          <div className="relative flex-1 min-w-0 flex flex-col" aria-label="WorkRun output">
+            {showRoomStatus ? (
+              <div className="absolute right-5 top-4 z-10 w-[220px] rounded-[10px] border border-[#e3e0db] bg-white/95 p-3 shadow-sm backdrop-blur" aria-label="WorkRun status">
+                <div className="flex items-start gap-1.5"><Hash size={13} className="mt-0.5 shrink-0 text-[#737373]" /><div className="min-w-0 flex-1"><p className="truncate text-[12px] font-semibold text-[#0a0a0a]">{goal || 'WorkRun'}</p><span className="mt-1 inline-flex rounded-full bg-[#117dff]/10 px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wider text-[#117dff]">General</span></div><button type="button" onClick={() => setPreviewOpen((open) => !open)} aria-label={previewOpen ? 'Close preview' : 'Open preview'} className="rounded-[6px] p-1 text-[#737373] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><PanelRightOpen size={15} className={previewOpen ? 'rotate-180' : ''} /></button></div>
+                <div className="mt-2 flex items-center justify-between border-t border-[#eae7e1] pt-2 text-[10px] text-[#737373]"><span className="inline-flex items-center gap-1"><Users size={11} />{team?.length || 0} participants</span><span className={working ? 'text-[#117dff]' : ''}>{working ? 'working' : (status || 'idle')}</span></div>
+              </div>
+            ) : null}
             <WorkRunStream
               msgs={msgs}
               onPreview={onPreview}
@@ -92,7 +100,7 @@ export default function WorkRunShell({
               </div>
             </div>
           </div>
-          <div
+          {previewOpen ? <div
             role="separator"
             aria-label="Resize preview pane"
             aria-orientation="vertical"
@@ -108,11 +116,8 @@ export default function WorkRunShell({
             className="group relative z-10 -mx-1 flex w-2 shrink-0 cursor-col-resize touch-none items-center justify-center outline-none before:h-full before:w-px before:bg-[#e3e0db] hover:before:w-0.5 hover:before:bg-[#117dff] focus-visible:before:w-0.5 focus-visible:before:bg-[#117dff]"
           >
             <span className="h-10 w-1 rounded-full bg-[#d4d0ca] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
-          </div>
-          <Inspector
-            goal={goal}
-            status={status}
-            working={working}
+          </div> : null}
+          {previewOpen ? <Inspector
             artifacts={artifacts}
             sources={sources}
             team={team}
@@ -120,8 +125,9 @@ export default function WorkRunShell({
             computer={computer}
             preview={preview}
             onPreview={onPreview}
+            onClose={() => setPreviewOpen(false)}
             width={previewWidth}
-          />
+          /> : null}
         </div>
       </div>
       <PlanDrawer open={planOpen} tasks={tasks || activity} onClose={() => setPlanOpen(false)} />

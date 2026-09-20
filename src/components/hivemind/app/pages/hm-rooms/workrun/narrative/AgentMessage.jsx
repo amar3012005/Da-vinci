@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, LoaderCircle } from 'lucide-react';
+import { Copy, Ellipsis, Link, LoaderCircle, RefreshCw, ThumbsDown, ThumbsUp, ChevronDown } from 'lucide-react';
 import { renderMarkdownLite } from '../../../../hyperagents/rooms/shared';
 import StreamingText from './StreamingText';
 import ToolDisclosure from '../tools/ToolDisclosure';
@@ -22,6 +22,7 @@ export default function AgentMessage({
   const hasWork = ordered.length > 0;
   const finished = Boolean(text) && !streaming;
   const [toolsOpen, setToolsOpen] = useState(!finished);
+  const [feedback, setFeedback] = useState(null);
 
   // A completed turn keeps its answer prominent. Tool output remains available
   // on demand, but details never stay expanded after final synthesis.
@@ -32,6 +33,10 @@ export default function AgentMessage({
     : stage === 'reasoning' ? 'Reasoning…'
       : stage === 'working' ? 'Working…'
         : null;
+  const copyAnswer = () => {
+    if (!text || !navigator.clipboard?.writeText) return;
+    navigator.clipboard.writeText(text).catch(() => {});
+  };
 
   return (
     <article className="w-full space-y-5 text-[#171717]">
@@ -67,10 +72,22 @@ export default function AgentMessage({
         )
       ))}
       {text ? (
-        <div className={`${hasWork ? 'border-t border-[#e3e0db] pt-8' : ''} text-[16px] leading-[1.75] text-[#171717] [&_h1]:mb-5 [&_h1]:mt-1 [&_h1]:text-[30px] [&_h1]:font-semibold [&_h1]:tracking-[-0.025em] [&_h2]:mb-3 [&_h2]:mt-8 [&_h2]:text-[22px] [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:text-[18px] [&_h3]:font-semibold [&_ol]:my-4 [&_ol]:space-y-3 [&_ul]:my-4 [&_ul]:space-y-2 [&_pre]:rounded-[10px] [&_pre]:bg-[#f3f1ec] [&_pre]:p-4 [&_code]:rounded [&_code]:bg-[#f7eee7] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[#a24d1d]`}>
-          {renderMarkdownLite(text)}
-          {streaming ? <StreamingText text="" streaming /> : null}
-        </div>
+        <>
+          <div className={`${hasWork ? 'border-t border-[#e3e0db] pt-8' : ''} text-[16px] leading-[1.75] text-[#171717] [&_h1]:mb-5 [&_h1]:mt-1 [&_h1]:text-[30px] [&_h1]:font-semibold [&_h1]:tracking-[-0.025em] [&_h2]:mb-3 [&_h2]:mt-8 [&_h2]:text-[22px] [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:text-[18px] [&_h3]:font-semibold [&_ol]:my-4 [&_ol]:space-y-3 [&_ul]:my-4 [&_ul]:space-y-2 [&_pre]:rounded-[10px] [&_pre]:bg-[#f3f1ec] [&_pre]:p-4 [&_code]:rounded [&_code]:bg-[#f7eee7] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[#a24d1d]`}>
+            {renderMarkdownLite(text)}
+            {streaming ? <StreamingText text="" streaming /> : null}
+          </div>
+          {!streaming ? (
+            <div className="flex items-center gap-1 pt-1 text-[#737373]" aria-label="Response actions">
+              <button type="button" onClick={copyAnswer} aria-label="Copy answer" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><Copy size={16} /></button>
+              <button type="button" onClick={() => setFeedback('up')} aria-label="Helpful" className={`rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a] ${feedback === 'up' ? 'text-[#117dff]' : ''}`}><ThumbsUp size={16} /></button>
+              <button type="button" onClick={() => setFeedback('down')} aria-label="Not helpful" className={`rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a] ${feedback === 'down' ? 'text-[#117dff]' : ''}`}><ThumbsDown size={16} /></button>
+              <button type="button" aria-label="Copy response link" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><Link size={16} /></button>
+              <button type="button" aria-label="Retry response" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><RefreshCw size={16} /></button>
+              <button type="button" aria-label="More response actions" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><Ellipsis size={16} /></button>
+            </div>
+          ) : null}
+        </>
       ) : null}
     </article>
   );
