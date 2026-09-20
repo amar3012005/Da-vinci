@@ -16,6 +16,7 @@ import {
   emptyWorkRunView,
   eventType,
   hasRunningTools,
+  hydrateRegisteredArtifacts,
   startUserTurn,
   transcriptText,
   toolLabel,
@@ -491,6 +492,7 @@ function HmRoomDesk({ runId }) {
         (row?.events || []).forEach((ev) => {
           setView((prev) => applyWorkRunEvent(prev, ev));
         });
+        setView((prev) => hydrateRegisteredArtifacts(prev, row?.result_artifact_ids || row?.artifact_ids));
         const history = await apiClient.getWorkRunSessionMessages(runId).catch(() => null);
         const list = history?.messages || history?.items || [];
         const initialUser = { role: 'user', text: stripWorkOrder(row?.goal), tools: [], thinking: '' };

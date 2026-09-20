@@ -3,6 +3,7 @@ import {
   applyWorkRunEvent,
   emptyWorkRunView,
   hasRunningTools,
+  hydrateRegisteredArtifacts,
   isProductKind,
   productFailure,
   resolveApproval,
@@ -47,6 +48,14 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(tools[0].status).toBe('complete');
     expect(tools[0].payload.label).toBe('Checked company memory');
     expect(view.sources).toHaveLength(1);
+  });
+
+  it('hydrates persisted artifact ids when a completed run is reopened', () => {
+    const artifactId = 'f2a25f03-9dab-4772-a06d-2a599d5ea7c0';
+    const view = hydrateRegisteredArtifacts(emptyWorkRunView(runId), [artifactId]);
+    expect(view.artifacts).toHaveLength(1);
+    expect(view.artifacts[0].payload.artifact_id).toBe(artifactId);
+    expect(view.artifacts[0].payload.label).toBe('Registered artifact');
   });
 
   it('maps recall to a human label, not raw args', () => {

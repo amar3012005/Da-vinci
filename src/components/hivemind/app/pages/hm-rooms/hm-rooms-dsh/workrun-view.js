@@ -33,6 +33,30 @@ export function emptyWorkRunView(workrunId) {
   };
 }
 
+// A completed run can be reopened after its live SSE connection has ended.
+// hm-core persists the registered artifact identifiers on the WorkRun, so seed
+// those durable records during hydration instead of showing an empty preview.
+// The browser receives only the citable pointer here; workspace bytes remain
+// behind the runtime boundary until a dedicated download endpoint is selected.
+export function hydrateRegisteredArtifacts(view, artifactIds) {
+  if (!Array.isArray(artifactIds)) return view;
+  return artifactIds.reduce((next, artifactId) => {
+    const id = String(artifactId || '').trim();
+    if (!id) return next;
+    return upsertBlock(next, {
+      block_id: `artifact:${id}`,
+      workrun_id: next.workrun_id,
+      kind: 'artifact',
+      status: 'complete',
+      payload: {
+        artifact_id: id,
+        label: 'Registered artifact',
+        detail: `Artifact ${id} is registered for this WorkRun.`,
+      },
+    });
+  }, view);
+}
+
 export function eventType(ev) {
   return String(ev?.type || ev?.t || '').toUpperCase();
 }
