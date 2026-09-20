@@ -14,7 +14,7 @@
  * viewports <= 768px — see HiveMindApp.jsx).
  */
 
-import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, useDeferredValue } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { emitUsageChanged } from '../../shared/useUsage';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -71,7 +71,6 @@ import {
   composeToolkitPrompt,
   findMentionedToolkits,
   removeToolkitMentions,
-  resolvePromptToolkits,
   savePendingConnectorPrompt,
   takePendingConnectorPrompt,
 } from '../../shared/connector-aware-chat';
@@ -311,10 +310,6 @@ export default function TalkToHiveMobile() {
   const userRole = user?.role || user?.org_role || user?.membership_role || 'member';
   const [messages, setMessages] = useState(() => loadMsgs());
   const [input, setInput] = useState('');
-  // Keep the native text input lane synchronous and tiny. Connector mention
-  // recognition scans a dynamic catalog and must never run in the keyboard's
-  // onChange event; defer it until React has painted the typed character.
-  const deferredInput = useDeferredValue(input);
   const [loading, setLoading] = useState(false);
   const [agentEvents, setAgentEvents] = useState([]); // live tool_call/tool_result stream
   const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
@@ -408,6 +403,9 @@ export default function TalkToHiveMobile() {
   const [connectToolkit, setConnectToolkit] = useState(null);
   const [connectingToolkit, setConnectingToolkit] = useState(false);
   const [connectorError, setConnectorError] = useState('');
+  const [connectorSheetOpen, setConnectorSheetOpen] = useState(false);
+  const [connectorSearch, setConnectorSearch] = useState('');
+  const [mentionQuery, setMentionQuery] = useState(null);
   const [toolsNotice, setToolsNotice] = useState(false);
   const toggleUseTools = () => {
     setUseTools((enabled) => !enabled);
@@ -478,24 +476,41 @@ export default function TalkToHiveMobile() {
     return () => { cancelled = true; };
   }, [loadToolkitCatalog]);
 
-  // A user can begin typing before the cold catalog request completes. Re-run
-  // mention resolution when it arrives so the chip and connection gate do not
-  // depend on network timing.
-  useEffect(() => {
-    if (!deferredInput || !toolkits.length || deferredInput !== input) return;
-    const resolved = resolvePromptToolkits(deferredInput, selectedToolkits, toolkits);
-    if (resolved.length === selectedToolkits.length) return;
-    const newlyMentioned = resolved.filter((toolkit) => !selectedToolkits.some((selected) => selected.slug === toolkit.slug));
-    setSelectedToolkits(resolved);
-    setInput((current) => removeToolkitMentions(current, newlyMentioned).slice(0, MAX_CHARS));
-    setUseTools(true);
-  }, [deferredInput, input, selectedToolkits, toolkits]);
-
   const suggestions = useMemo(() => buildToolkitSuggestions(toolkits, 4), [toolkits]);
 
   const absorbToolkitMentions = useCallback((nextText) => {
-    setInput(nextText.slice(0, MAX_CHARS));
+    const bounded = nextText.slice(0, MAX_CHARS);
+    setInput(bounded);
+    const match = bounded.match(/(?:^|\s)@([^\s@]*)$/u);
+    setMentionQuery(match ? match[1] : null);
   }, []);
+
+  const chooseToolkit = useCallback((toolkit, { fromMention = false } = {}) => {
+    if (!toolkit?.slug) return;
+    if (fromMention) {
+      setInput((current) => current.replace(/(?:^|\s)@[^\s@]*$/u, (fragment) => fragment.startsWith(' ') ? ' ' : '').slice(0, MAX_CHARS));
+      setMentionQuery(null);
+    }
+    setConnectorSheetOpen(false);
+    setConnectorSearch('');
+    if (!toolkit.connected) {
+      setConnectToolkit(toolkit);
+      setConnectorError('');
+      return;
+    }
+    setSelectedToolkits((current) => current.some((selected) => selected.slug === toolkit.slug)
+      ? current : [...current, toolkit]);
+    setUseTools(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
+
+  const visibleToolkits = useMemo(() => {
+    const query = String(connectorSearch || mentionQuery || '').trim().toLowerCase();
+    const ranked = [...toolkits].sort((left, right) => Number(Boolean(right.connected)) - Number(Boolean(left.connected))
+      || String(left.name || left.slug).localeCompare(String(right.name || right.slug)));
+    if (!query) return ranked;
+    return ranked.filter((toolkit) => `${toolkit.name || ''} ${toolkit.slug || ''}`.toLowerCase().includes(query));
+  }, [connectorSearch, mentionQuery, toolkits]);
 
   const removeSelectedToolkit = useCallback((slug) => {
     setSelectedToolkits((current) => current.filter((toolkit) => toolkit.slug !== slug));
@@ -594,8 +609,11 @@ export default function TalkToHiveMobile() {
     if (!displayText || loading || requestInFlightRef.current) return;
     requestInFlightRef.current = true;
     try {
-      const catalog = toolkits.length ? toolkits : await loadToolkitCatalog();
-      const activeToolkits = resolvePromptToolkits(displayText, fromInput ? selectedToolkits : [], catalog);
+      // App routing in the composer is explicit: selected connector chips or
+      // @mentions only. Ordinary words such as "gmail" and "sender" remain
+      // untouched text; the server-side decision gateway can still infer an
+      // app from the submitted request when no chip is selected.
+      const activeToolkits = fromInput ? selectedToolkits : [];
       const disconnected = activeToolkits.find((toolkit) => !toolkit.connected);
       if (disconnected) {
         setConnectToolkit(disconnected);
@@ -610,7 +628,7 @@ export default function TalkToHiveMobile() {
       // turns so follow-up tool actions see the preceding grounded answer once.
       const fullHistory = messagesRef.current.slice(-10).map(m => ({ role: m.role, content: m.content }));
       setMessages((prev) => [...prev, userMsg]);
-      if (fromInput) { setInput(''); setSelectedToolkits([]); }
+      if (fromInput) { setInput(''); setMentionQuery(null); setSelectedToolkits([]); }
       setLoading(true);
 
       const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
@@ -711,7 +729,7 @@ export default function TalkToHiveMobile() {
       setLoading(false);
       setAgentEvents([]);
     }
-  }, [input, loading, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools, selectedToolkits, toolkits, loadToolkitCatalog]);
+  }, [input, loading, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools, selectedToolkits]);
 
   useEffect(() => { sendTextRef.current = sendText; }, [sendText]);
 
@@ -918,6 +936,7 @@ export default function TalkToHiveMobile() {
   const clearChat = () => {
     setMessages([]);
     setInput('');
+    setMentionQuery(null);
     setSelectedToolkits([]);
     setAgentEvents([]);
     try { localStorage.removeItem(storageKey()); } catch {}
@@ -1202,6 +1221,33 @@ export default function TalkToHiveMobile() {
             </div>
           )}
 
+          <AnimatePresence>
+            {mentionQuery !== null && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                className="mb-2 max-h-48 overflow-y-auto rounded-[12px] border border-[#e3e0db] bg-white p-1 shadow-[0_10px_30px_rgba(0,0,0,0.10)]"
+                aria-label="App mentions"
+              >
+                <div className="px-2 py-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">Add an app</div>
+                {visibleToolkits.slice(0, 6).map((toolkit) => (
+                  <button
+                    key={toolkit.slug}
+                    type="button"
+                    onClick={() => chooseToolkit(toolkit, { fromMention: true })}
+                    className="flex w-full items-center gap-2 rounded-[9px] px-2 py-2 text-left active:bg-[#f3f1ec]"
+                  >
+                    <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-[7px] border border-[#e3e0db] bg-[#faf9f4]">
+                      {toolkit.logo ? <img src={toolkit.logo} alt="" className="h-4 w-4 object-contain" /> : <Cable size={13} className="text-[#117dff]" />}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#0a0a0a]">{toolkit.name || toolkit.slug}</span>
+                    <span className={`text-[9px] font-medium ${toolkit.connected ? 'text-emerald-600' : 'text-[#a3a3a3]'}`}>{toolkit.connected ? 'Connected' : 'Connect'}</span>
+                  </button>
+                ))}
+                {visibleToolkits.length === 0 && <div className="px-2 py-3 text-[11px] text-[#a3a3a3]">No matching app</div>}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <textarea
             ref={inputRef}
             value={input}
@@ -1225,7 +1271,7 @@ export default function TalkToHiveMobile() {
             style={{ fontFamily: 'inherit' }}
           />
 
-          {/* Action row: + · scope chip · spacer · mic · send */}
+          {/* Action row: + · connectors · scope · spacer · mic · send */}
           <div className="flex items-center gap-1.5 mt-1.5">
             <button
               onClick={() => setPlusSheetOpen(true)}
@@ -1233,6 +1279,16 @@ export default function TalkToHiveMobile() {
               aria-label="Add"
             >
               <Plus size={16} strokeWidth={2.2} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setConnectorSearch(''); setConnectorSheetOpen(true); }}
+              className={`w-8 h-8 rounded-full border flex items-center justify-center flex-shrink-0 active:bg-[#f1eee7] ${selectedToolkits.length ? 'border-[#117dff]/30 bg-[#117dff]/[0.08] text-[#117dff]' : 'border-[#e8e5de] text-[#3d3d3a]'}`}
+              aria-label="Apps and connectors"
+              title="Apps and connectors"
+            >
+              <Cable size={15} strokeWidth={2} />
             </button>
 
             {/* Scope — defaults to "All", tap opens a popup window (not an
@@ -1436,6 +1492,64 @@ export default function TalkToHiveMobile() {
                   <span className="block text-[10.5px] text-[#8a867e]">Gmail, GitHub, Calendar, Sheets…</span>
                 </span>
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Explicit connector picker — no word-level composer scanning ── */}
+      <AnimatePresence>
+        {connectorSheetOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[75] flex items-end bg-black/35"
+            onClick={() => setConnectorSheetOpen(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 360, damping: 34 }}
+              className="w-full rounded-t-[24px] border-t border-[#e3e0db] bg-white px-4 pt-2.5"
+              style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 18px)' }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mx-auto mb-3 h-1 w-8 rounded-full bg-[#d5d1c8]" />
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Apps &amp; connectors</h3>
+                  <p className="mt-0.5 text-[11px] text-[#737373]">Choose a connected app, or connect a new one.</p>
+                </div>
+                <button type="button" onClick={() => setConnectorSheetOpen(false)} className="p-1.5 text-[#a3a3a3]" aria-label="Close apps"><X size={15} /></button>
+              </div>
+              <label className="mb-3 flex h-10 items-center gap-2 rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] px-3 focus-within:border-[#117dff]">
+                <Search size={14} className="text-[#a3a3a3]" />
+                <input
+                  type="search"
+                  value={connectorSearch}
+                  onChange={(event) => setConnectorSearch(event.target.value)}
+                  placeholder="Search Gmail, Slack, Calendar…"
+                  className="min-w-0 flex-1 bg-transparent text-[13px] text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3]"
+                  autoFocus
+                />
+              </label>
+              <div className="max-h-[52vh] overflow-y-auto pb-1">
+                {visibleToolkits.length > 0 ? visibleToolkits.map((toolkit) => (
+                  <button
+                    key={toolkit.slug}
+                    type="button"
+                    onClick={() => chooseToolkit(toolkit)}
+                    className="flex w-full items-center gap-3 rounded-[12px] px-2 py-2.5 text-left active:bg-[#faf9f4]"
+                  >
+                    <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-[9px] border border-[#e3e0db] bg-[#faf9f4]">
+                      {toolkit.logo ? <img src={toolkit.logo} alt="" className="h-5 w-5 object-contain" /> : <Cable size={15} className="text-[#117dff]" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold text-[#0a0a0a]">{toolkit.name || toolkit.slug}</span>
+                      <span className="block truncate text-[10.5px] text-[#8a867e]">{toolkit.connected ? 'Ready for this chat' : 'Tap to connect and return here'}</span>
+                    </span>
+                    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-medium ${toolkit.connected ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>{toolkit.connected ? 'Connected' : 'Connect'}</span>
+                  </button>
+                )) : <div className="py-10 text-center text-[12px] text-[#a3a3a3]">No apps match this search.</div>}
+              </div>
             </motion.div>
           </motion.div>
         )}
