@@ -61,6 +61,7 @@ describe('HM Rooms WorkRun routing', () => {
     expect(shell).toContain('busy={working}');
     expect(composer).toContain('aria-label="Stop WorkRun"');
     expect(api).toContain('async cancelWorkRun(id)');
+    expect(api).toContain("post(`/v1/workruns/${encodeURIComponent(id)}/chat`, { text: content })");
     expect(api).toContain('/cancel`');
   });
 

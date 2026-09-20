@@ -585,6 +585,8 @@ function HmRoomDesk({ runId }) {
       setRun(data?.workrun || ((current) => ({ ...current, status: 'cancelled' })));
       setPhase('idle');
       setMsgs((previous) => previous.map((message) => ({ ...message, streaming: false })));
+      esRef.current?.session?.close?.();
+      esRef.current?.progress?.close?.();
     } catch (err) {
       setError(err?.response?.data?.error || err.message);
     }
@@ -595,7 +597,9 @@ function HmRoomDesk({ runId }) {
   const artifacts = view.artifacts || [];
   const team = view.team || [];
   const inspectOpen = true;
-  const working = phase === 'streaming' || hasRunningTools(view) || run?.status === 'running';
+  const runStatus = String(run?.status || '').toLowerCase();
+  const terminal = ['completed', 'failed', 'cancelled'].includes(runStatus);
+  const working = !terminal && (phase === 'streaming' || hasRunningTools(view) || runStatus === 'running');
   void inspectOpen;
 
   return (
