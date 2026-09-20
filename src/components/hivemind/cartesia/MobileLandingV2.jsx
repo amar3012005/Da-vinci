@@ -172,7 +172,7 @@ const OperatingSystem = () => {
     <section id="solutions" className="scroll-mt-20 px-5 py-20" style={{ background: PAPER }}>
       <div className="mx-auto max-w-md">
         <Rise>
-          <p className="font-mono text-[10px] uppercase tracking-[.24em] text-[#117DFF]">Operating system · 01</p>
+          <p className="font-mono text-[10px] uppercase tracking-[.24em] text-[#117DFF]">The HIVEMIND operating system</p>
           <h2 className="mt-4 font-['Space_Grotesk'] text-[42px] font-semibold leading-[.98] tracking-[-.055em] text-[#0A0A0A]">
             One system.<br />Three working layers.
           </h2>

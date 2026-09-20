@@ -13,11 +13,13 @@ import Features from './Features';
 import Developers from './Developers';
 import Pricing from './Pricing';
 import DownloadMacButton from './DownloadMacButton';
-import DownloadAllPlatforms from './DownloadAllPlatforms';
 import ChatDemoCard from './ChatDemoCard';
 import MinimalGraphIcon from './MinimalGraphIcon';
 import CinematicScrollScene from '../../mobile/CinematicScrollScene';
 import MobileLandingV2 from './MobileLandingV2';
+import {
+  ConnectorConveyorDetail, HumationTeamDetail, QuantumChapter, ResearchRequestsChapter,
+} from './MobileLandingAdditions';
 
 /**
  * HIVEMIND product cover — singulancelabs.com/hivemind
@@ -573,22 +575,21 @@ const FinalCta = () => (
       style={{ background: 'radial-gradient(80% 70% at 50% 50%, rgba(251,251,248,0) 30%, #FBFBF8 90%)' }} />
     <Reveal className="relative">
       <h2 className="mx-auto max-w-3xl font-['Space_Grotesk'] text-5xl font-semibold leading-[1.02] tracking-tight text-[#0a0a0a] md:text-7xl">
-        <WordReveal text="Stop starting" />
+        <WordReveal text="Your company already" />
         <br />
-        <WordReveal text="from zero" delay={0.2} />
+        <WordReveal text="knows where to begin" delay={0.2} />
       </h2>
       <p className="mx-auto mt-6 max-w-md text-[15px] font-light text-[#6b6b6b]">
-        Connect your first app in two minutes. Your organization starts compounding today.
+        Bring your tools, decisions and team into one operating system. Every approved action makes the next one better.
       </p>
       <div className="mt-10 flex flex-wrap items-center justify-center gap-5">
-        <motion.a href="/hivemind/app" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+        <motion.a href="/hivemind/login" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
           className="group inline-flex items-center gap-2.5 rounded-full px-8 py-4 text-[13px] font-semibold text-white no-underline"
           style={{ background: BLUE }}>
-          Get HIVEMIND <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+          Start your workspace <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
         </motion.a>
-        <DownloadAllPlatforms />
-        <a href="https://singulancelabs.com/benchmark" className="font-mono text-[12px] uppercase tracking-[0.18em] text-[#6b6b6b] no-underline hover:text-[#0a0a0a]">
-          see the benchmark →
+        <a href="#research-library" className="inline-flex min-h-12 items-center rounded-full border border-[#D8D4CC] bg-white px-6 text-[13px] font-semibold text-[#292724] no-underline hover:border-[#117DFF] hover:text-[#117DFF]">
+          Read the research
         </a>
       </div>
     </Reveal>
@@ -647,6 +648,7 @@ const HivemindProduct = () => {
   // Lenis smooth-scroll — buttery scrub for the parallax planes.
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
+    if (window.matchMedia('(max-width: 767px)').matches) return undefined;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
     const lenis = new Lenis({ duration: 1.1, smoothWheel: true });
     let raf;
@@ -687,6 +689,8 @@ const HivemindProduct = () => {
         ]}
         card={<ConnectorCard />} flip />
 
+      {isMobile && mobileLandingEnabled && <ConnectorConveyorDetail />}
+
       <VelocityBand text="Remember everything ·" />
 
       {/* context-savvy accuracy + solutions carousel (restored) */}
@@ -722,6 +726,8 @@ const HivemindProduct = () => {
         ]}
         card={<AgentsCard />} />
 
+      {isMobile && mobileLandingEnabled && <HumationTeamDetail />}
+
       <VelocityBand text="Agents that act ·" />
 
       <Chapter n="06" id="chapter-6" eyebrow="tara × hive"
@@ -745,6 +751,8 @@ const HivemindProduct = () => {
         card={<McpCard />} />
 
       <Sovereign />
+      {isMobile && mobileLandingEnabled && <QuantumChapter />}
+      {isMobile && mobileLandingEnabled && <ResearchRequestsChapter />}
       <FinalCta />
 
       {/* real SINGULANCE/HIVEMIND pricing — 4 tiers + sovereign scope estimator */}

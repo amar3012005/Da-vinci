@@ -254,34 +254,6 @@ const Developers = () => {
             </div>
           </div>
         </section>
-
-        {/* Footer */}
-        <footer className="border-t border-[#e3e0db] px-4 sm:px-8 lg:px-16 py-12 sm:py-16">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#117dff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                <polyline points="2 17 12 22 22 17"></polyline>
-                <polyline points="2 12 12 17 22 12"></polyline>
-              </svg>
-              <span className="text-base sm:text-lg font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">HIVEMIND</span>
-            </div>
-            <div className="flex gap-6 sm:gap-8 text-xs sm:text-sm text-[#a3a3a3]">
-              {['Documentation', 'API Reference', 'Trust Center'].map((item) => (
-                <button
-                  key={item}
-                  onClick={() => navigate('/hivemind/app/connectors')}
-                  className="hover:text-[#117dff] transition-colors bg-transparent border-none cursor-pointer"
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-            <div className="text-xs sm:text-sm text-[#a3a3a3] text-center md:text-right">
-              Davinci AI Startup | Built in Europe, for the World.
-            </div>
-          </div>
-        </footer>
       </div>
     </div>
   );
