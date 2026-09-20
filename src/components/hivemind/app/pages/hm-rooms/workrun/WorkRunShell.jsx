@@ -27,6 +27,7 @@ export default function WorkRunShell({
   onPreview,
   onDraft,
   onSend,
+  onStop,
   legacySidebar,
 }) {
   const [planOpen, setPlanOpen] = useState(false);
@@ -63,7 +64,7 @@ export default function WorkRunShell({
             />
             <div className="shrink-0 border-t border-transparent bg-[#fbfaf7] px-4 pb-3 pt-1">
               <div className="max-w-[940px] mx-auto px-8">
-                <WorkRunComposer value={draft} onChange={onDraft} onSubmit={onSend} busy={false} />
+                <WorkRunComposer value={draft} onChange={onDraft} onSubmit={onSend} onStop={onStop} busy={working} />
               </div>
             </div>
           </div>

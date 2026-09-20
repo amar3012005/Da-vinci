@@ -578,6 +578,18 @@ function HmRoomDesk({ runId }) {
     }
   };
 
+  const stop = async () => {
+    setError(null);
+    try {
+      const data = await apiClient.cancelWorkRun(runId);
+      setRun(data?.workrun || ((current) => ({ ...current, status: 'cancelled' })));
+      setPhase('idle');
+      setMsgs((previous) => previous.map((message) => ({ ...message, streaming: false })));
+    } catch (err) {
+      setError(err?.response?.data?.error || err.message);
+    }
+  };
+
   const sources = view.sources || [];
   const activity = view.activity || [];
   const artifacts = view.artifacts || [];
@@ -607,6 +619,7 @@ function HmRoomDesk({ runId }) {
       onPreview={setPreview}
       onDraft={setDraft}
       onSend={send}
+      onStop={stop}
       legacySidebar={<LegacyRoomsSidebar runs={runs} rooms={rooms} activeRunId={runId} onNewWork={() => navigate('/hivemind/app/hm-rooms')} />}
     />
   );
