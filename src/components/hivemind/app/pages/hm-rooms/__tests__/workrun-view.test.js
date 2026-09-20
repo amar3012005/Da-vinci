@@ -29,6 +29,23 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(plans[0].revision).toBeGreaterThanOrEqual(15);
   });
 
+  it('renders the compact AgentScope task snapshot without creating a second task store', () => {
+    let view = emptyWorkRunView(runId);
+    view = applyWorkRunEvent(view, {
+      t: 'plan.updated',
+      family: 'task',
+      tasks: [
+        { id: 'task-1', subject: 'Gather context', state: 'completed' },
+        { id: 'task-2', subject: 'Draft the report', state: 'in_progress', blocked_by: ['task-1'] },
+      ],
+    });
+    expect(view.tasks).toEqual([
+      expect.objectContaining({ id: 'task-1', label: 'Gather context', status: 'complete' }),
+      expect.objectContaining({ id: 'task-2', label: 'Draft the report', status: 'streaming', blocked_by: ['task-1'] }),
+    ]);
+    expect(view.blocks[`plan:${runId}`].payload.tasks).toHaveLength(2);
+  });
+
   it('upserts the same tool call_id instead of appending a second row', () => {
     let view = emptyWorkRunView(runId);
     view = applyWorkRunEvent(view, {

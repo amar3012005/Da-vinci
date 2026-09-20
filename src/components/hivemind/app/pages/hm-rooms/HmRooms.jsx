@@ -556,12 +556,14 @@ function HmRoomDesk({ runId }) {
         'THINKING_BLOCK_DELTA', 'THINKING_BLOCK_END', 'TOOL_CALL_START', 'TOOL_CALL_END', 'TOOL_RESULT_END',
         'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
         'approval.requested', 'team.member.started', 'workrun.failed', 'workrun.completed',
+        'plan.updated',
       ].forEach((n) => es.addEventListener(n, onEvt));
       es.onmessage = onEvt;
       const progress = new EventSource(apiClient.workRunStreamUrl(runId), { withCredentials: true });
       [
         'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
         'approval.requested', 'team.member.started', 'workrun.failed', 'workrun.completed',
+        'plan.updated',
       ].forEach((n) => progress.addEventListener(n, onEvt));
       progress.onmessage = onEvt;
       esRef.current = { session: es, progress };
@@ -628,7 +630,7 @@ function HmRoomDesk({ runId }) {
       working={working}
       msgs={msgs}
       activity={activity}
-      tasks={activity}
+      tasks={view.tasks}
       artifacts={artifacts}
       sources={sources}
       team={team}
