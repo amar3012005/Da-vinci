@@ -217,7 +217,15 @@ export default function HiveMindApp() {
         {/* HM Rooms is a full-viewport WorkRun surface. It owns the legacy
             sidebar and inspector instead of nesting inside AppShell. */}
         <Route
-          path="app/hm-rooms/*"
+          path="app/hm-rooms"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><HmRooms /></PageSuspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="app/hm-rooms/:runId"
           element={
             <ProtectedRoute>
               <PageSuspense><HmRooms /></PageSuspense>
