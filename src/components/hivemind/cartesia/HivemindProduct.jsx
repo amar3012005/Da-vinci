@@ -662,8 +662,8 @@ const HivemindProduct = () => {
         <div className="min-h-screen bg-[#FBFBF8]" aria-label="Loading HIVEMIND" />
       )}
       {isMobile && mobileLandingEnabled && <MobileLandingV2 />}
-      {(!isMobile || mobileLandingEnabled === false) && <div>
-        <Hero />
+      {(!isMobile || mobileLandingEnabled !== null) && <div>
+        {(!isMobile || mobileLandingEnabled === false) && <Hero />}
         <MarqueeRow />
 
       <Chapter n="01" id="chapter-1" eyebrow="memory engine"

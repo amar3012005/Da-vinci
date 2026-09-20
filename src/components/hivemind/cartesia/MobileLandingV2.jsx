@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowRight, BookOpen, Brain, CheckCircle2, Database, FileText,
-  Mic2, ShieldCheck, Sparkles, Users, Workflow,
+  ArrowRight, Brain, CheckCircle2, Mic2, Users,
 } from 'lucide-react';
 import AgentAvatar from '../app/hyperagents/AgentAvatar';
 
@@ -39,27 +38,6 @@ const layers = [
     copy: 'TARA speaks with customers, supports sales and retains the conversation as context for the team that follows.',
     points: ['Real-time conversations', 'Multilingual customer work', 'Every call returns to memory'],
     accent: '#178A62', tint: '#ECF8F3',
-  },
-];
-
-const research = [
-  {
-    href: '/research/icarus', label: 'SYSTEM PAPER · 01',
-    title: 'ICARUS memory architecture',
-    copy: 'How bi-temporal memory, hybrid retrieval and tenant-isolated boxes create durable organizational recall.',
-    icon: Database,
-  },
-  {
-    href: '/research/cognitive-swarm-intelligence', label: 'RESEARCH · 02',
-    title: 'Cognitive Swarm Intelligence',
-    copy: 'The operating model behind specialist agents that debate, coordinate and converge on grounded work.',
-    icon: Workflow,
-  },
-  {
-    href: '/hivemind/docs', label: 'DOCUMENTATION · 03',
-    title: 'Build with HIVEMIND',
-    copy: 'APIs, MCP tools, memory contracts and the technical surface for bringing company context into your stack.',
-    icon: FileText,
   },
 ];
 
@@ -263,131 +241,12 @@ const OperatingSystem = () => {
   );
 };
 
-const HumationTeam = () => (
-  <section className="bg-[#0A0A0A] px-5 py-20 text-white">
-    <div className="mx-auto max-w-md">
-      <Rise>
-        <p className="font-mono text-[10px] uppercase tracking-[.24em] text-[#75B7FF]">Humation employees · 02</p>
-        <h2 className="mt-4 font-['Space_Grotesk'] text-[42px] font-semibold leading-[.98] tracking-[-.055em]">Meet the company<br />that works for you.</h2>
-        <p className="mt-5 text-[16px] leading-relaxed text-[#AAA8A3]">Not anonymous bots. Named digital employees with a specialty, shared context, visible work and accountable outputs.</p>
-      </Rise>
-
-      <div className="mt-9 space-y-3">
-        {agents.map((agent, index) => (
-          <Rise key={agent.id} delay={index * 0.05}>
-            <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[.055] p-4">
-              <AgentAvatar agent={agent} size={58} ring active={index === 1} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-['Space_Grotesk'] text-[18px] font-semibold">{agent.name}</h3>
-                  <span className={`h-2 w-2 rounded-full ${index === 1 ? 'bg-[#5DE29A] shadow-[0_0_0_5px_rgba(93,226,154,.12)]' : 'bg-[#777]'}`} />
-                </div>
-                <p className="mt-0.5 text-[12px] text-[#AAA8A3]">{agent.role}</p>
-                <p className="mt-2 truncate font-mono text-[9px] uppercase tracking-[.12em] text-[#77746E]">{index === 1 ? 'working · launch plan' : index === 3 ? 'ready · customer calls' : 'ready · company context loaded'}</p>
-              </div>
-            </div>
-          </Rise>
-        ))}
-      </div>
-
-      <Rise className="mt-8 rounded-2xl border border-white/10 bg-[#141414] p-5">
-        <div className="flex items-center gap-3"><Sparkles size={18} className="text-[#75B7FF]" /><span className="font-mono text-[10px] uppercase tracking-[.18em] text-[#AAA8A3]">One objective · coordinated work</span></div>
-        <div className="mt-5 grid grid-cols-[1fr_auto] gap-x-3 gap-y-4">
-          {[
-            ['Context assembled', 'BRAIN'],
-            ['Research challenged', 'OMAR + PRIYA'],
-            ['Operating brief sealed', 'LENA'],
-            ['Customer follow-up ready', 'TARA'],
-          ].map(([task, owner], index) => (
-            <React.Fragment key={task}>
-              <div className="flex items-center gap-3 text-[13px]"><span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/15 font-mono text-[9px] text-[#75B7FF]">{index + 1}</span>{task}</div>
-              <span className="self-center text-right font-mono text-[8px] tracking-[.1em] text-[#77746E]">{owner}</span>
-            </React.Fragment>
-          ))}
-        </div>
-      </Rise>
-    </div>
-  </section>
-);
-
-const ResearchLibrary = () => (
-  <section id="developers" className="scroll-mt-20 px-5 py-20" style={{ background: PAPER }}>
-    <div className="mx-auto max-w-md">
-      <Rise>
-        <p className="font-mono text-[10px] uppercase tracking-[.24em] text-[#117DFF]">Research + documentation · 03</p>
-        <h2 className="mt-4 font-['Space_Grotesk'] text-[42px] font-semibold leading-[.98] tracking-[-.055em] text-[#0A0A0A]">See what the system<br />is built on.</h2>
-        <p className="mt-5 text-[16px] leading-relaxed text-[#66635D]">The architecture, agent science and developer contracts behind HIVEMIND are open for inspection.</p>
-      </Rise>
-
-      <div className="mt-9 overflow-hidden rounded-2xl border border-[#DEDAD1] bg-white">
-        {research.map((item, index) => {
-          const Icon = item.icon;
-          return (
-            <a key={item.href} href={item.href} className={`group block p-5 text-[#0A0A0A] no-underline ${index ? 'border-t border-[#E7E4DD]' : ''}`}>
-              <div className="flex items-start justify-between gap-4">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EEF6FF] text-[#117DFF]"><Icon size={19} /></span>
-                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#DEDAD1] transition-colors group-hover:border-[#0A0A0A] group-hover:bg-[#0A0A0A] group-hover:text-white"><ArrowRight size={17} /></span>
-              </div>
-              <p className="mt-7 font-mono text-[9px] uppercase tracking-[.18em] text-[#8B877F]">{item.label}</p>
-              <h3 className="mt-2 font-['Space_Grotesk'] text-[23px] font-semibold tracking-[-.035em]">{item.title}</h3>
-              <p className="mt-3 text-[13px] leading-relaxed text-[#66635D]">{item.copy}</p>
-            </a>
-          );
-        })}
-      </div>
-      <a href="/research" className="mt-4 flex min-h-12 items-center justify-between rounded-xl border border-[#DEDAD1] bg-white px-4 text-[14px] font-medium text-[#242321] no-underline">
-        Explore all research <BookOpen size={17} />
-      </a>
-    </div>
-  </section>
-);
-
-const SovereignClose = () => (
-  <section className="border-y border-[#E7E4DD] bg-white px-5 py-20">
-    <div className="mx-auto max-w-md">
-      <Rise>
-        <ShieldCheck size={34} className="text-[#178A62]" />
-        <p className="mt-8 font-mono text-[10px] uppercase tracking-[.24em] text-[#178A62]">Sovereign by design · 04</p>
-        <h2 className="mt-4 font-['Space_Grotesk'] text-[42px] font-semibold leading-[.98] tracking-[-.055em] text-[#0A0A0A]">Your company context<br />stays yours.</h2>
-        <p className="mt-5 text-[16px] leading-relaxed text-[#66635D]">EU infrastructure, tenant isolation, BYOK and a self-host path — designed for institutions that cannot outsource trust.</p>
-        <div className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-[#DEDAD1] bg-[#DEDAD1]">
-          {[
-            ['EU', 'data residency'], ['BYOK', 'key control'], ['PQC', 'future-ready'], ['100%', 'portable'],
-          ].map(([value, label]) => (
-            <div key={value} className="bg-[#FBFBF8] p-4">
-              <p className="font-['Space_Grotesk'] text-[25px] font-semibold tracking-[-.04em] text-[#0A0A0A]">{value}</p>
-              <p className="mt-1 font-mono text-[8px] uppercase tracking-[.14em] text-[#8B877F]">{label}</p>
-            </div>
-          ))}
-        </div>
-      </Rise>
-    </div>
-  </section>
-);
-
-const FinalCta = () => (
-  <section id="pricing" className="scroll-mt-20 px-5 py-20" style={{ background: PAPER }}>
-    <Rise className="mx-auto max-w-md overflow-hidden rounded-[26px] bg-[#117DFF] p-7 text-white shadow-[0_28px_60px_-30px_rgba(17,125,255,.7)]">
-      <div className="flex items-center justify-between"><AgentStack /><span className="font-mono text-[9px] uppercase tracking-[.16em] text-white/70">team ready</span></div>
-      <h2 className="mt-9 font-['Space_Grotesk'] text-[42px] font-semibold leading-[.94] tracking-[-.055em]">Give your company<br />a working memory.</h2>
-      <p className="mt-5 text-[15px] leading-relaxed text-white/80">Start with BRAIN. Put HYPERAGENTS to work. Bring TARA into the conversation.</p>
-      <a href="/hivemind/login" className="mt-8 flex min-h-14 items-center justify-between rounded-xl bg-white px-5 font-['Space_Grotesk'] text-[15px] font-semibold text-[#0A0A0A] no-underline">
-        Start your workspace <ArrowRight size={19} />
-      </a>
-    </Rise>
-  </section>
-);
-
 export default function MobileLandingV2() {
   return (
     <main className="md:hidden" style={{ background: PAPER, color: INK }}>
       <Hero />
       <ProofRail />
       <OperatingSystem />
-      <HumationTeam />
-      <ResearchLibrary />
-      <SovereignClose />
-      <FinalCta />
     </main>
   );
 }
