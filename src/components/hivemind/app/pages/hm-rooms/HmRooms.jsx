@@ -132,7 +132,7 @@ export function flattenMsg(msg) {
       const tool = [...timeline].reverse().find((item) => item.kind === 'tool' && ((id && item.id === id) || !id));
       if (tool) {
         tool.state = 'done';
-        tool.result = value || b.output || b.result || '';
+        tool.result = transcriptText(value || b.output || b.result || '');
       }
     }
   });
