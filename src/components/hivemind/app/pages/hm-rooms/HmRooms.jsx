@@ -17,6 +17,7 @@ import {
   eventType,
   hasRunningTools,
   startUserTurn,
+  toolLabel,
 } from './hm-rooms-dsh/workrun-view';
 import { WorkRunShell } from './workrun';
 import * as WorkRunModules from './workrun';
@@ -121,7 +122,8 @@ export function flattenMsg(msg) {
       if (value) timeline.push({ kind: 'thinking', id: b.id || `thinking-${index}`, text: value });
     }
     else if (t === 'tool_call' || t === 'tool-call') {
-      const tool = { name: b.name || b.tool_name, state: b.state || 'done', id: b.id };
+      const name = b.name || b.tool_name;
+      const tool = { name, label: toolLabel(name), state: b.state || 'done', id: b.id };
       tools.push(tool);
       timeline.push({ ...tool, kind: 'tool', id: b.id || `tool-${index}` });
     } else if (t === 'tool_result' || t === 'tool-result') {
@@ -140,7 +142,7 @@ export function flattenMsg(msg) {
   }
   const split = splitAssistantBody(text);
   split.toolsFromText.forEach((name) => {
-    if (!tools.some((t) => t.name === name)) tools.push({ name, state: 'done' });
+    if (!tools.some((t) => t.name === name)) tools.push({ name, label: toolLabel(name), state: 'done' });
   });
   if (split.thinking && !timeline.length) {
     timeline.push({ kind: 'thinking', id: 'legacy-thinking', text: split.thinking });
@@ -613,7 +615,7 @@ function HmRoomDesk({ runId }) {
   // Do not use the durable WorkRun status here. A successful reply leaves the
   // WorkRun running so the user can continue the same session; only a live
   // reply or tool call should replace Send with Stop.
-  const working = !terminal && (phase === 'streaming' || hasRunningTools(view));
+  const working = !terminal && phase === 'streaming';
   void inspectOpen;
 
   return (
