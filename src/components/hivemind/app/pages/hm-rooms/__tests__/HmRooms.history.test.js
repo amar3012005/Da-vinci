@@ -11,5 +11,6 @@ describe('persisted WorkRun history normalization', () => {
     };
 
     expect(transcriptText(envelope)).toBe('Recovered reply');
+    expect(transcriptText({ output: envelope })).toBe('Recovered reply');
   });
 });
