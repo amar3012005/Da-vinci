@@ -64,6 +64,28 @@ function EntityChips({ memory }) {
   );
 }
 
+function EntityInventory({ memory }) {
+  const entities = (Array.isArray(memory?.tags) ? memory.tags : [])
+    .filter((tag) => typeof tag === 'string' && tag.startsWith('entity:'))
+    .map((tag) => tag.slice(7).replace(/[_-]+/g, ' ').trim())
+    .filter(Boolean);
+  if (!entities.length) return null;
+  return (
+    <div className="mt-4">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-2">
+        Entities mentioned · {entities.length}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {entities.map((entity) => (
+          <span key={entity} className="inline-flex items-center px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-mono uppercase tracking-[0.06em]">
+            @{entity}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RelationshipIndicator({ memory }) {
   const chips = [];
   if (memory.is_latest === false || memory.superseded_by) {
@@ -285,8 +307,9 @@ export default function MobileMemories() {
               <div className="text-[19px] leading-tight" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>{titleOf(selected)}</div>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {selected.memory_type && <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border uppercase tracking-wider ${TYPE_TONE[selected.memory_type] || 'bg-[#f3f1ec] text-[#6f6b63] border-[#ebe6dc]'}`}>{selected.memory_type}</span>}
-                {(selected.tags || []).slice(0, 8).map((tag) => <span key={tag} className="px-2 py-1 rounded-full bg-[#f3f1ec] text-[10.5px] text-[#525252]">{tag}</span>)}
+                {(selected.tags || []).filter((tag) => !String(tag).startsWith('entity:')).map((tag) => <span key={tag} className="px-2 py-1 rounded-full bg-[#f3f1ec] text-[10.5px] text-[#525252] break-all">{tag}</span>)}
               </div>
+              <EntityInventory memory={selected} />
               <p className="mt-4 text-[14px] leading-relaxed whitespace-pre-wrap text-[#262626]">{selected.content || selected.text || selected.summary || 'No content available.'}</p>
             </motion.section>
           </motion.div>
