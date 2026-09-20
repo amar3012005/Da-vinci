@@ -5,6 +5,7 @@ import {
   hasRunningTools,
   isProductKind,
   productFailure,
+  resolveApproval,
   startUserTurn,
   toolLabel,
   upsertBlock,
@@ -51,6 +52,39 @@ describe('WorkRun identity-keyed block registry', () => {
   it('maps recall to a human label, not raw args', () => {
     expect(toolLabel('hivemind_recall')).toBe('Checked company memory');
     expect(toolLabel('hivemind_company_context')).toBe('Read company context');
+  });
+
+  it('retains the original tool identifier for the transcript', () => {
+    let view = emptyWorkRunView(runId);
+    view = applyWorkRunEvent(view, {
+      type: 'TOOL_CALL_START',
+      tool_call_name: 'hivemind_company_context',
+      tool_call_id: 'context-1',
+    });
+    expect(view.activity[0].name).toBe('hivemind_company_context');
+    expect(view.activity[0].label).toBe('Read company context');
+  });
+
+  it('deduplicates raw and normalized confirmation events by parked reply', () => {
+    const toolCall = { id: 'bash-1', name: 'Bash', input: { command: 'pwd' } };
+    let view = emptyWorkRunView(runId);
+    view = applyWorkRunEvent(view, {
+      type: 'REQUIRE_USER_CONFIRM',
+      reply_id: 'reply-1',
+      tool_calls: [toolCall],
+    });
+    view = applyWorkRunEvent(view, {
+      t: 'approval.requested',
+      reply_id: 'reply-1',
+      call_id: 'bash-1',
+      tool: 'Bash',
+      tool_calls: [toolCall],
+    });
+    expect(view.approvals).toHaveLength(1);
+    expect(view.approvals[0].payload.reply_id).toBe('reply-1');
+    expect(view.approvals[0].payload.tool_calls).toEqual([toolCall]);
+    view = resolveApproval(view, view.approvals[0].block_id);
+    expect(view.approvals).toHaveLength(0);
   });
 
   it('keeps working tools streaming after a status idle event', () => {

@@ -45,6 +45,18 @@ describe('HM Rooms WorkRun routing', () => {
     expect(stream).toContain('[msgs, activity, tasks, approvals]');
     expect(userMessage).toContain('items-end gap-2');
     expect(agentMessage).toContain('Worked on this run');
+    expect(agentMessage).toContain('View working notes');
+    expect(agentMessage).toContain('label: item.name');
     expect(agentMessage).toContain("border-t border-[#e3e0db] pt-8");
+  });
+
+  it('submits AgentScope confirmation results and resumes the parked WorkRun', () => {
+    const rooms = source('pages/hm-rooms/HmRooms.jsx');
+    const api = source('shared/api-client.js');
+    const card = source('pages/hm-rooms/workrun/approval/ApprovalCard.jsx');
+    expect(rooms).toContain("type: 'USER_CONFIRM_RESULT'");
+    expect(rooms).toContain('sendWorkRunConfirmation(runId, input)');
+    expect(api).toContain('async sendWorkRunConfirmation(id, input)');
+    expect(card).toContain('onClick={() => decide(onApprove)}');
   });
 });
