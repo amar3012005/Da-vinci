@@ -15,6 +15,11 @@ const eventType = (event) => String(event?.type || event?.t || '').toUpperCase()
 const eventText = (event) => String(event?.delta || event?.text || event?.content || event?.output || event?.thinking || '');
 const merge = (previous, next) => !next ? previous : !previous || next.startsWith(previous) ? next : previous.endsWith(next) || previous.includes(next) ? previous : `${previous}${next}`;
 const toolName = (event) => String(event?.tool_call_name || event?.tool_name || event?.tool || event?.name || 'Tool').replace(/^hivemind_/, '').replace(/_/g, ' ');
+const legacyRoomPath = (run) => {
+  const roomId = typeof run?.room_id === 'string' ? run.room_id : run?.roomId;
+  if (!roomId) return `/hivemind/app/employees/workruns/${run?.id || ''}`;
+  return `/hivemind/app/employees/rooms/${roomId}?workrun=${encodeURIComponent(run.id)}`;
+};
 
 function normalizeMessage(message) {
   if (!message) return null;
@@ -65,7 +70,7 @@ function LegacyRoomRail({ runs, runId, onNew, onOpen }) {
   return <aside className="w-[240px] shrink-0 overflow-hidden border-r border-[#e3e0db] bg-[#faf9f4]">
     <div className="flex h-full flex-col"><div className="px-2 pt-2"><button type="button" onClick={onNew} className="flex w-full items-center gap-2 rounded-lg bg-[#0a0a0a] px-2.5 py-2 text-[12px] font-semibold text-white"><Plus size={13} /> New work</button></div>
       <div className="mt-3 border-y border-[#e3e0db] bg-white/45"><div className="flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-[#525252]"><span className="inline-flex items-center gap-1.5"><Brain size={12} /> WorkRuns</span><ChevronDown size={13} /></div>
-        <div className="border-t border-[#e3e0db] pb-1">{runs.map((run) => <button key={run.id} type="button" onClick={() => onOpen(run.id)} className={`flex w-full items-center gap-2 border-l-2 px-3 py-2 text-left transition-colors ${run.id === runId ? 'border-violet-500 bg-white' : 'border-transparent hover:bg-white/60'}`}><Hash size={11} className="shrink-0 text-[#a3a3a3]" /><span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#171717]">{stripWorkOrder(run.goal) || run.id.slice(0, 8)}</span>{String(run.status).toLowerCase() === 'running' ? <span className="h-1.5 w-1.5 rounded-full bg-[#117dff] animate-pulse" /> : null}</button>)}</div>
+        <div className="border-t border-[#e3e0db] pb-1">{runs.map((run) => <button key={run.id} type="button" onClick={() => onOpen(run)} className={`flex w-full items-center gap-2 border-l-2 px-3 py-2 text-left transition-colors ${run.id === runId ? 'border-violet-500 bg-white' : 'border-transparent hover:bg-white/60'}`}><Hash size={11} className="shrink-0 text-[#a3a3a3]" /><span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#171717]">{stripWorkOrder(run.goal) || run.id.slice(0, 8)}</span>{String(run.status).toLowerCase() === 'running' ? <span className="h-1.5 w-1.5 rounded-full bg-[#117dff] animate-pulse" /> : null}</button>)}</div>
       </div><div className="mt-auto border-t border-[#e3e0db] px-3 py-3 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">AgentScope WorkRun</div></div>
   </aside>;
 }
@@ -120,12 +125,14 @@ export default function WorkRunConsole() {
         const data = await apiClient.createWorkRun({ goal: content });
         const created = data?.workrun || data;
         if (!created?.id) throw new Error('The control plane did not return a WorkRun id.');
-        setDraft(''); await load(); navigate(`/hivemind/app/employees/workruns/${created.id}`); return;
+        setDraft(''); await load(); navigate(legacyRoomPath(created)); return;
       }
       setDraft(''); setMessages((previous) => [...previous, { role: 'user', text: content }, { role: 'assistant', text: '', thinking: '', tools: [], streaming: true }]);
       await apiClient.sendWorkRunChat(runId, content);
     } catch (error) { setFailure(error?.response?.data?.error || error.message); } finally { setSending(false); }
   };
   const status = useMemo(() => String(run?.status || (runId ? 'loading' : 'ready')), [run, runId]);
-  return <div className="flex h-full min-h-0 bg-[#f7f6f3]"><LegacyRoomRail runs={runs} runId={runId} onNew={() => navigate('/hivemind/app/employees/workruns')} onOpen={(id) => navigate(`/hivemind/app/employees/workruns/${id}`)} /><div className="flex min-w-0 flex-1 flex-col"><header className="flex h-12 shrink-0 items-center justify-between border-b border-[#e3e0db] bg-[#faf9f4] px-5"><div className="min-w-0"><p className="truncate text-[13px] font-semibold text-[#171717]">{stripWorkOrder(run?.goal) || (runId ? 'WorkRun' : 'New WorkRun')}</p></div><span className="rounded-full border border-[#bfd3ff] bg-white px-2 py-1 text-[9px] font-mono uppercase tracking-wider text-[#185bcc]">{status}</span></header><div className="flex min-h-0 flex-1"><WorkRunCentre messages={messages} draft={draft} setDraft={setDraft} sending={sending} onSend={onSend} activities={events} failure={failure} /><Inspector events={events} status={status} /></div></div></div>;
+  return <div className="flex h-full min-h-0 bg-[#f7f6f3]"><LegacyRoomRail runs={runs} runId={runId} onNew={() => navigate('/hivemind/app/employees/workruns')} onOpen={(selected) => navigate(legacyRoomPath(selected))} /><div className="flex min-w-0 flex-1 flex-col"><header className="flex h-12 shrink-0 items-center justify-between border-b border-[#e3e0db] bg-[#faf9f4] px-5"><div className="min-w-0"><p className="truncate text-[13px] font-semibold text-[#171717]">{stripWorkOrder(run?.goal) || (runId ? 'WorkRun' : 'New WorkRun')}</p></div><span className="rounded-full border border-[#bfd3ff] bg-white px-2 py-1 text-[9px] font-mono uppercase tracking-wider text-[#185bcc]">{status}</span></header><div className="flex min-h-0 flex-1"><WorkRunCentre messages={messages} draft={draft} setDraft={setDraft} sending={sending} onSend={onSend} activities={events} failure={failure} /><Inspector events={events} status={status} /></div></div></div>;
 }
+
+export { legacyRoomPath };
