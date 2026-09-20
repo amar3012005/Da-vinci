@@ -28,8 +28,9 @@ describe('HM Rooms WorkRun routing', () => {
     const shell = source('pages/hm-rooms/workrun/WorkRunShell.jsx');
     expect(rooms).toContain("import LegacyRoomsSidebar from './LegacyRoomsSidebar'");
     expect(rooms).toContain('<LegacyRoomsSidebar runs={runs} rooms={rooms} activeRunId={runId}');
-    expect(shell).toContain('{navOpen ? legacySidebar : null}');
+    expect(shell).toContain('{legacySidebar}');
     expect(shell).toContain('Hyper Agents');
+    expect(shell).not.toContain('<WorkRunHeader');
   });
 
   it('keeps the composer fixed while only the WorkRun conversation scrolls', () => {
@@ -63,6 +64,12 @@ describe('HM Rooms WorkRun routing', () => {
     expect(api).toContain('async cancelWorkRun(id)');
     expect(api).toContain("post(`/v1/workruns/${encodeURIComponent(id)}/chat`, { text: content })");
     expect(api).toContain('/cancel`');
+  });
+
+  it('keeps the initial WorkRun prompt as a conversation bubble', () => {
+    const rooms = source('pages/hm-rooms/HmRooms.jsx');
+    expect(rooms).toContain("const initialUser = { role: 'user'");
+    expect(rooms).toContain('[initialUser, ...normalized]');
   });
 
   it('does not expose AgentScope sandbox confirmations in the WorkRun conversation', () => {
