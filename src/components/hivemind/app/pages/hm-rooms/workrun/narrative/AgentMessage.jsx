@@ -19,8 +19,11 @@ export default function AgentMessage({
   const [traceOpen, setTraceOpen] = useState(true);
   const trace = useMemo(() => {
     const seen = new Set();
-    return [...(tools || []), ...(activity || [])].filter((item) => {
-      const key = item.id || item.block_id || `${item.name || item.label}:${item.state || item.status}`;
+    const candidates = (activity || []).length ? activity : (tools || []);
+    return candidates.filter((item) => {
+      const label = String(item.label || item.name || item.payload?.name || '').trim();
+      if (!label || /^tool$/i.test(label) || label.startsWith('{')) return false;
+      const key = label.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
