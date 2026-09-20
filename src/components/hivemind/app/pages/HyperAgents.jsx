@@ -525,7 +525,7 @@ export default function HyperAgents() {
           </button>}
           <button
             type="button"
-            onClick={() => navigate('/hivemind/app/employees/workruns')}
+            onClick={() => navigate('/hivemind/app/hm-rooms')}
             className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#bcd0ef]"
           >
             <Brain size={13} className="text-violet-500" />
