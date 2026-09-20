@@ -379,7 +379,7 @@ class HiveMindApiClient {
   }
 
   async sendWorkRunChat(id, content) {
-    const { data } = await this.controlPlane.post(`/v1/workruns/${encodeURIComponent(id)}/chat`, { content });
+    const { data } = await this.controlPlane.post(`/v1/workruns/${encodeURIComponent(id)}/chat`, { text: content });
     return data;
   }
 
