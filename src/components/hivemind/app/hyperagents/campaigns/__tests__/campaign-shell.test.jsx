@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import CampaignDashboardModal from '../CampaignDashboardModal';
 import CampaignProgressDashboard, { launchProgress } from '../CampaignProgressDashboard';
-import { campaignPaceSummary, deriveCampaignPayload } from '../CreateCampaignWizard';
+import { CAMPAIGN_WIZARD_STEPS, campaignPaceSummary, deriveCampaignPayload } from '../CreateCampaignWizard';
 import { withCampaignSearchParam } from '../CampaignsView';
 import { CHANNEL_DESCRIPTIONS, CHANNEL_NAMES } from '../channel-catalog';
 
@@ -29,7 +29,7 @@ describe('campaign dashboard shell', () => {
     expect(CHANNEL_NAMES.x_organic).toBe('X Organic Posts');
     expect(CHANNEL_NAMES.x_ads).toBe('Paid X Ads');
     expect(CHANNEL_DESCRIPTIONS.x_organic).toMatch(/regular posts/i);
-    expect(CHANNEL_DESCRIPTIONS.x_ads).toMatch(/Ads API approval/i);
+    expect(CHANNEL_DESCRIPTIONS.x_ads).toMatch(/paid X campaigns/i);
   });
 
   test('builds a minimal campaign payload with ready channels and strategic defaults', () => {
@@ -47,7 +47,7 @@ describe('campaign dashboard shell', () => {
 
     expect(payload.goal).toBe('Start qualified conversations with founders');
     expect(payload.channels).toEqual(['x_organic', 'gmail', 'x_ads']);
-    expect(payload.audience).toEqual({ mode: 'existing_first', discover_if_insufficient: true });
+    expect(payload.audience).toEqual({ mode: 'existing_first', discover_if_insufficient: true, description: '' });
     expect(payload.success_metrics).toEqual(['Qualified replies', 'Meetings booked', 'Conversion rate']);
     expect(payload.autonomy_mode).toBe('APPROVE_PLAN_ONCE');
     expect(payload.timezone).toBe('Europe/Berlin');
@@ -79,6 +79,26 @@ describe('campaign dashboard shell', () => {
     );
     expect(payload.channels).toEqual(['meta']);
     expect(payload.duration_days).toBe(7);
+  });
+
+  test('progressive campaign brief preserves exact visual delivery', () => {
+    const payload = deriveCampaignPayload(
+      {
+        objective: 'LEAD_GENERATION', goal: 'Reach German law firms with a launch sequence',
+        audience: 'German law firms with 20–200 employees', offer: 'HIVEMIND BRAIN assessment',
+        cta: 'Book a discovery call', channels: ['instagram'], durationDays: 14,
+        intensity: 'focused', actionCount: 3, visualsRequired: true,
+      },
+      { channels: [{ id: 'instagram', planning_ready: true, executable: true, execution_ready: false }] },
+      'create-key',
+    );
+    expect(CAMPAIGN_WIZARD_STEPS).toEqual(['Outcome', 'Brief', 'Channels', 'Production', 'Review']);
+    expect(payload.action_count).toBe(3);
+    expect(payload.visuals_required).toBe(true);
+    expect(payload.visual_delivery).toEqual({ required: true, count: 3, coherence: 'shared_campaign_system' });
+    expect(payload.audience.description).toBe('German law firms with 20–200 employees');
+    expect(payload.offer).toBe('HIVEMIND BRAIN assessment');
+    expect(payload.cta).toBe('Book a discovery call');
   });
 
   test('campaign deep links preserve unrelated query parameters', () => {
