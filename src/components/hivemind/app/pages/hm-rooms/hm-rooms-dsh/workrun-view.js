@@ -37,6 +37,21 @@ export function eventType(ev) {
   return String(ev?.type || ev?.t || '').toUpperCase();
 }
 
+// Persisted AgentScope history is protocol data, not a React-child contract.
+// Older records can carry an envelope such as { type, text, id, created_at,
+// finished_at }; recursively extract printable content before it reaches a
+// transcript component.
+export function transcriptText(value) {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(transcriptText).join('');
+  if (!value || typeof value !== 'object') return '';
+  for (const key of ['text', 'delta', 'content', 'output', 'value', 'thinking']) {
+    if (value[key] != null && value[key] !== value) return transcriptText(value[key]);
+  }
+  return '';
+}
+
 export function textOf(ev) {
   const v = ev?.delta || ev?.text || ev?.content || ev?.output || ev?.value || ev?.thinking || '';
   if (typeof v === 'string') return v;
