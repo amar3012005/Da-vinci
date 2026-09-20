@@ -40,13 +40,14 @@ function PlanLimitGate() {
     // upgrade modal used by every other product surface.
     const onHarnessTurnError = (e) => {
       const detail = e?.detail;
-      if (detail?.code !== PLAN_LIMIT_CODE) return;
+      if (![PLAN_LIMIT_CODE, 'credits_exhausted'].includes(detail?.code)) return;
       setState({
         resource: 'credits',
         plan: org?.plan || 'free',
         message: typeof detail.message === 'string' ? detail.message : null,
         suggestedPlan: 'pro',
         upgradeUrl: '/hivemind/app/billing',
+        referralTrial: detail?.referral_trial === true || detail?.referralTrial === true || detail?.commercial_action === 'talk_to_founder',
       });
     };
     window.addEventListener(PLAN_LIMIT_EVENT, onLimit);

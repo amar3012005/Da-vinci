@@ -577,6 +577,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  async nextWorkspaceAnnouncement() {
+    const { data } = await this.controlPlane.get('/v1/workspace/announcements/next');
+    return data;
+  }
+
+  async recordWorkspaceAnnouncementEvent(announcementId, event) {
+    const { data } = await this.controlPlane.post(`/v1/workspace/announcements/${encodeURIComponent(announcementId)}/event`, { event });
+    return data;
+  }
+
   /** Confirm the organization's headquarters before entering its workspace. */
   async updateHyperCompanyLocation(location) {
     const { data } = await this.controlPlane.patch('/v1/hyper/company/location', { location });
@@ -1570,6 +1580,26 @@ class HiveMindApiClient {
 
   async listPlatformUsers({ q = '', limit = 200 } = {}) {
     const { data } = await this.controlPlane.get('/admin/api/platform/users', { params: { q, limit } });
+    return data;
+  }
+
+  async listPlatformAnnouncements() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/announcements');
+    return data;
+  }
+
+  async createPlatformAnnouncement(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/announcements', payload);
+    return data;
+  }
+
+  async updatePlatformAnnouncement(id, payload) {
+    const { data } = await this.controlPlane.patch(`/admin/api/platform/announcements/${encodeURIComponent(id)}`, payload);
+    return data;
+  }
+
+  async platformAnnouncementAction(id, action, payload = {}) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/announcements/${encodeURIComponent(id)}/${encodeURIComponent(action)}`, payload);
     return data;
   }
 

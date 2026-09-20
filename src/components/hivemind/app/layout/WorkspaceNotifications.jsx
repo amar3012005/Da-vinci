@@ -62,6 +62,17 @@ function DayZeroCompanyBrief({ context }) {
   </>;
 }
 
+function AnnouncementBrief({ announcement, context }) {
+  const content = announcement?.content || {};
+  const requestedAgents = Array.isArray(content.agent_ids) ? content.agent_ids : [];
+  const employees = (context?.employees || []).filter((employee) => !requestedAgents.length || requestedAgents.includes(employee.id)).slice(0, 4);
+  const facts = Array.isArray(content.facts) ? content.facts : [];
+  return <>
+    {employees.length ? <div className="flex items-center gap-3"><div className="flex -space-x-3">{employees.map((employee) => <span key={employee.id} className="rounded-full border-2 border-white bg-white shadow-sm"><AgentAvatar agent={employee} size={46} /></span>)}</div><div><strong className="block text-[14px] text-[#181918]">{employees.map((employee) => employee.name).filter(Boolean).join(', ')}</strong><span className="mt-1 block text-[11px] text-[#777]">Your Humation team contributed to this update</span></div></div> : null}
+    {facts.length ? <div className="mt-5 space-y-3 border-t border-[#deddd7] pt-4">{facts.map((fact, index) => <div key={`${fact.label}-${index}`}><div className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-[#347df4]">{fact.label}</div><p className="mt-1 text-[12px] leading-5 text-[#555750]">{fact.value}</p></div>)}</div> : null}
+  </>;
+}
+
 export default function WorkspaceNotifications() {
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -69,8 +80,11 @@ export default function WorkspaceNotifications() {
   const [toast, setToast] = useState(null);
   const [detail, setDetail] = useState(null);
   const [lifecycleContext, setLifecycleContext] = useState(null);
+  const [announcement, setAnnouncement] = useState(null);
+  const [announcementContext, setAnnouncementContext] = useState(null);
   const initialized = useRef(false);
   const knownIds = useRef(new Set());
+  const announcementId = useRef(null);
 
   const unseenLifecycle = useCallback((notices) => notices.find((notice) => {
     if (notice.type !== 'lifecycle.email.sent' || notice.readAt || notice.read_at) return false;
@@ -90,10 +104,16 @@ export default function WorkspaceNotifications() {
       // The popup can only originate from a row returned by the durable
       // notification API. On a fresh app entry, surface the newest unread row;
       // during polling, surface only a newly inserted lifecycle row.
-      if (!initialized.current ? persistedLifecycle : newlyPersisted?.type === 'lifecycle.email.sent' ? newlyPersisted : null) {
-        setToast(!initialized.current ? persistedLifecycle : newlyPersisted);
-      }
+      const lifecycleToast = !initialized.current ? persistedLifecycle : newlyPersisted?.type === 'lifecycle.email.sent' ? newlyPersisted : null;
+      if (lifecycleToast) setToast(lifecycleToast);
       initialized.current = true;
+      if (!lifecycleToast && !announcementId.current) {
+        const nextAnnouncement = await apiClient.nextWorkspaceAnnouncement().catch(() => null);
+        if (nextAnnouncement?.announcement) {
+          announcementId.current = nextAnnouncement.announcement.id;
+          setAnnouncement(nextAnnouncement.announcement);
+        }
+      }
     } catch { /* session/bootstrap can still be settling */ }
   }, [unseenLifecycle]);
 
@@ -104,6 +124,12 @@ export default function WorkspaceNotifications() {
     apiClient.hyperCompany().then((result) => { if (active) setLifecycleContext(result); }).catch(() => null);
     return () => { active = false; };
   }, [toast]);
+  useEffect(() => {
+    if (!announcement || !announcement?.content?.agent_ids?.length) { setAnnouncementContext(null); return undefined; }
+    let active = true;
+    apiClient.hyperCompany().then((result) => { if (active) setAnnouncementContext(result); }).catch(() => null);
+    return () => { active = false; };
+  }, [announcement]);
 
   const rememberShown = (notice) => {
     if (!notice) return;
@@ -128,6 +154,22 @@ export default function WorkspaceNotifications() {
   };
 
   const openDetail = (notice) => { setToast(null); setOpen(false); setDetail(notice); markRead(notice); };
+  const dismissAnnouncement = async () => {
+    const current = announcement;
+    if (!current) return;
+    announcementId.current = current.id;
+    await apiClient.recordWorkspaceAnnouncementEvent(current.id, 'dismiss').catch(() => null);
+    setAnnouncement(null);
+  };
+  const actOnAnnouncement = async () => {
+    const current = announcement;
+    if (!current) return;
+    announcementId.current = current.id;
+    await apiClient.recordWorkspaceAnnouncementEvent(current.id, 'action').catch(() => null);
+    const href = current?.content?.cta?.href;
+    setAnnouncement(null);
+    if (href) window.location.assign(href);
+  };
 
   return <>
     <div className="relative">
@@ -142,6 +184,12 @@ export default function WorkspaceNotifications() {
       <WorkspacePopupSurface variant="toast" label={`hivemind — day ${lifecycleDay(toast) ?? 'update'}`} title={lifecycleDay(toast) === 0 ? 'DAY 0 TASK FINISHED.' : 'Your team moved the company forward.'} description={lifecycleDay(toast) === 0 ? 'Your company is ready. Your brief, first research and new HyperAgents are filed in HIVEMIND.' : (toast.body || 'Your report is ready.')} visual={lifecycleDay(toast) === 0 ? null : <LifecycleVisual notice={toast} />} onClose={dismissToast} secondaryAction={{ label: 'Later', onClick: dismissToast }} primaryAction={{ label: lifecycleDay(toast) === 0 ? 'See Day 0 report' : 'Review update', onClick: () => openDetail(toast) }}>
         {lifecycleDay(toast) === 0 ? <DayZeroCompanyBrief context={lifecycleContext} /> : null}
       </WorkspacePopupSurface>
+    </motion.div> : null}</AnimatePresence>, document.body) : null}
+
+    {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{announcement ? <motion.div className={announcement.placement === 'toast' ? 'fixed -bottom-3 left-4 z-[2147483646] w-[min(420px,calc(100vw-28px))] sm:left-6' : announcement.placement === 'banner' ? 'fixed left-1/2 top-5 z-[2147483646] w-[min(680px,calc(100vw-28px))] -translate-x-1/2' : 'fixed inset-0 z-[2147483646] grid place-items-center bg-black/35 p-4 backdrop-blur-[2px]'} initial={{ opacity: 0, y: announcement.placement === 'toast' ? 'calc(100% - 34px)' : 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} transition={{ type: 'spring', stiffness: 190, damping: 25, mass: 0.9 }}>
+      <div className={announcement.placement === 'toast' ? 'w-full' : 'w-full max-w-[700px]'}><WorkspacePopupSurface variant={announcement.placement === 'toast' ? 'toast' : 'dialog'} label={announcement?.content?.eyebrow || 'hivemind — workspace update'} title={announcement.title} description={announcement.body} onClose={dismissAnnouncement} meta="Saved in notifications" secondaryAction={{ label: 'Later', onClick: dismissAnnouncement }} primaryAction={announcement?.content?.cta ? { label: announcement.content.cta.label, onClick: actOnAnnouncement } : null}>
+        <AnnouncementBrief announcement={announcement} context={announcementContext} />
+      </WorkspacePopupSurface></div>
     </motion.div> : null}</AnimatePresence>, document.body) : null}
 
     {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{detail ? <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[2147483647] grid place-items-center bg-black/35 p-4 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetail(null); }}>
