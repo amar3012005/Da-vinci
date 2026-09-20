@@ -54,9 +54,9 @@ describe('WorkRun identity-keyed block registry', () => {
       tool_call_id: 'c1',
     });
     view = applyWorkRunEvent(view, {
-      type: 'TOOL_RESULT_END',
+      t: 'tool.completed',
       tool_call_id: 'c1',
-      text: 'Amar Sai',
+      result: 'Amar Sai',
     });
     const tools = Object.values(view.blocks).filter((b) => b.kind === 'tool');
     expect(tools).toHaveLength(1);
@@ -64,6 +64,7 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(tools[0].revision).toBeGreaterThanOrEqual(2);
     expect(tools[0].status).toBe('complete');
     expect(tools[0].payload.label).toBe('Checked company memory');
+    expect(tools[0].payload.result).toBe('Amar Sai');
     expect(view.sources).toHaveLength(1);
   });
 
