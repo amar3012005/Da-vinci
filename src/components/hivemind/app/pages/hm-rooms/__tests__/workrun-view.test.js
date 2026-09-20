@@ -162,4 +162,21 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(asst[0].text).toContain('Here is what I know');
     expect(asst[0].streaming).toBe(true);
   });
+
+  it('preserves thinking and tools in the exact AgentScope event order', () => {
+    let msgs = startUserTurn([], 'research this');
+    msgs = applyAgentEvent(msgs, { type: 'THINKING_BLOCK_DELTA', block_id: 'think-1', delta: 'First I will inspect.' });
+    msgs = applyAgentEvent(msgs, { type: 'TOOL_CALL_START', tool_call_name: 'PlaybookList', tool_call_id: 'tool-1' });
+    msgs = applyAgentEvent(msgs, { type: 'TOOL_RESULT_END', tool_call_name: 'PlaybookList', tool_call_id: 'tool-1', text: 'done' });
+    msgs = applyAgentEvent(msgs, { type: 'THINKING_BLOCK_DELTA', block_id: 'think-2', delta: 'Now I will verify.' });
+    msgs = applyAgentEvent(msgs, { type: 'TOOL_CALL_START', tool_call_name: 'hivemind_recall', tool_call_id: 'tool-2' });
+    const assistant = msgs.find((message) => message.role === 'assistant');
+    expect(assistant.timeline.map((item) => item.kind)).toEqual(['thinking', 'tool', 'thinking', 'tool']);
+    expect(assistant.timeline.map((item) => item.name || item.text)).toEqual([
+      'First I will inspect.',
+      'PlaybookList',
+      'Now I will verify.',
+      'hivemind_recall',
+    ]);
+  });
 });

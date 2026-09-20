@@ -42,23 +42,20 @@ describe('HM Rooms WorkRun routing', () => {
     expect(shell).toContain('shrink-0 border-t border-transparent');
     expect(stream).toContain('flex-1 min-h-0 overflow-y-auto overscroll-contain');
     expect(stream).toContain("node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' })");
-    expect(stream).toContain('[msgs, activity, tasks, approvals]');
+    expect(stream).toContain('[msgs]');
     expect(userMessage).toContain('items-end gap-2');
-    expect(agentMessage).toContain('Worked on this run');
-    expect(agentMessage).toContain('View working notes');
+    expect(agentMessage).not.toContain('Working through the request');
+    expect(agentMessage).not.toContain('View working notes');
     expect(agentMessage).toContain('label: item.name');
     expect(agentMessage).toContain("border-t border-[#e3e0db] pt-8");
   });
 
-  it('submits AgentScope confirmation results and resumes the parked WorkRun', () => {
+  it('does not expose AgentScope sandbox confirmations in the WorkRun conversation', () => {
     const rooms = source('pages/hm-rooms/HmRooms.jsx');
-    const api = source('shared/api-client.js');
-    const card = source('pages/hm-rooms/workrun/approval/ApprovalCard.jsx');
-    expect(rooms).toContain("type: 'USER_CONFIRM_RESULT'");
-    expect(rooms).toContain("block?.state === 'asking'");
-    expect(rooms).toContain('reply_id: message.id');
-    expect(rooms).toContain('sendWorkRunConfirmation(runId, input)');
-    expect(api).toContain('async sendWorkRunConfirmation(id, input)');
-    expect(card).toContain('onClick={() => decide(onApprove)}');
+    const message = source('pages/hm-rooms/workrun/narrative/AgentMessage.jsx');
+    expect(rooms).not.toContain('pendingConfirmationsFromMessages');
+    expect(rooms).not.toContain('sendWorkRunConfirmation(runId, input)');
+    expect(message).not.toContain('ApprovalCard');
+    expect(message).not.toContain('Needs confirmation');
   });
 });

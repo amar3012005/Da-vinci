@@ -16,7 +16,6 @@ import {
   emptyWorkRunView,
   eventType,
   hasRunningTools,
-  resolveApproval,
   startUserTurn,
 } from './hm-rooms-dsh/workrun-view';
 import { WorkRunShell } from './workrun';
@@ -98,42 +97,57 @@ function splitAssistantBody(raw) {
   return { text: text.trim(), thinking, toolsFromText: tools };
 }
 
-function flattenMsg(msg) {
-  if (!msg) return { role: 'assistant', text: '', tools: [], thinking: '' };
+export function flattenMsg(msg) {
+  if (!msg) return {
+    role: 'assistant', text: '', tools: [], thinking: '', timeline: [],
+  };
   const role = msg.role || 'assistant';
   const blocks = Array.isArray(msg.content) ? msg.content : [{ type: 'text', text: String(msg.content || '') }];
   let text = '';
   let thinking = '';
   const tools = [];
-  blocks.forEach((b) => {
+  const timeline = [];
+  const lastToolIndex = blocks.reduce((last, block, index) => (
+    /^(tool_call|tool-call|tool_result|tool-result)$/.test(String(block?.type || '').toLowerCase()) ? index : last
+  ), -1);
+  blocks.forEach((b, index) => {
     const t = String(b.type || '').toLowerCase();
-    if (t === 'text') text += b.text || b.delta || '';
-    else if (t === 'thinking') thinking += b.thinking || b.text || '';
+    const value = b.thinking || b.text || b.delta || '';
+    if (t === 'text') {
+      if (index > lastToolIndex) text += value;
+      else if (value) timeline.push({ kind: 'thinking', id: b.id || `text-${index}`, text: value });
+    } else if (t === 'thinking') {
+      thinking += value;
+      if (value) timeline.push({ kind: 'thinking', id: b.id || `thinking-${index}`, text: value });
+    }
     else if (t === 'tool_call' || t === 'tool-call') {
-      tools.push({ name: b.name || b.tool_name, state: b.state || 'done', id: b.id });
+      const tool = { name: b.name || b.tool_name, state: b.state || 'done', id: b.id };
+      tools.push(tool);
+      timeline.push({ ...tool, kind: 'tool', id: b.id || `tool-${index}` });
+    } else if (t === 'tool_result' || t === 'tool-result') {
+      const id = b.tool_call_id || b.id;
+      const tool = [...timeline].reverse().find((item) => item.kind === 'tool' && ((id && item.id === id) || !id));
+      if (tool) {
+        tool.state = 'done';
+        tool.result = value || b.output || b.result || '';
+      }
     }
   });
   if (role === 'user') {
-    return { role, text: stripWorkOrder(text), tools: [], thinking: '' };
+    return {
+      role, text: stripWorkOrder(text), tools: [], thinking: '', timeline: [],
+    };
   }
   const split = splitAssistantBody(text);
   split.toolsFromText.forEach((name) => {
     if (!tools.some((t) => t.name === name)) tools.push({ name, state: 'done' });
   });
-  return { role, text: split.text, thinking: thinking || split.thinking, tools, raw: msg };
-}
-
-function pendingConfirmationsFromMessages(messages) {
-  return (messages || []).flatMap((message) => {
-    const calls = (Array.isArray(message?.content) ? message.content : [])
-      .filter((block) => String(block?.type || '').toLowerCase() === 'tool_call' && block?.state === 'asking');
-    if (!calls.length || !message?.id) return [];
-    return [{
-      type: 'REQUIRE_USER_CONFIRM',
-      reply_id: message.id,
-      tool_calls: calls,
-    }];
-  });
+  if (split.thinking && !timeline.length) {
+    timeline.push({ kind: 'thinking', id: 'legacy-thinking', text: split.thinking });
+  }
+  return {
+    role, text: split.text, thinking: thinking || split.thinking, tools, timeline, raw: msg,
+  };
 }
 
 
@@ -482,9 +496,6 @@ function HmRoomDesk({ runId }) {
               ? { ...m, streaming: false }
               : m
           )));
-          pendingConfirmationsFromMessages(list).forEach((event) => {
-            setView((prev) => applyWorkRunEvent(prev, event));
-          });
         } else if (row?.goal) {
           setMsgs([{ role: 'user', text: stripWorkOrder(row.goal), tools: [], thinking: '' }]);
         }
@@ -567,33 +578,6 @@ function HmRoomDesk({ runId }) {
     }
   };
 
-  const resolveConfirmation = async (approval, confirmed) => {
-    const replyId = approval?.payload?.reply_id;
-    const toolCalls = approval?.payload?.tool_calls || [];
-    if (!replyId || !toolCalls.length) {
-      setError('This approval is missing its AgentScope continuation data. Refresh the run and try again.');
-      return;
-    }
-    const input = {
-      type: 'USER_CONFIRM_RESULT',
-      reply_id: replyId,
-      confirm_results: toolCalls.map((toolCall) => ({
-        confirmed,
-        tool_call: toolCall,
-        rules: null,
-      })),
-    };
-    setError(null);
-    try {
-      await apiClient.sendWorkRunConfirmation(runId, input);
-      setView((prev) => resolveApproval(prev, approval.block_id));
-      setPhase('streaming');
-    } catch (err) {
-      setError(err?.response?.data?.error || err.message);
-      throw err;
-    }
-  };
-
   const sources = view.sources || [];
   const activity = view.activity || [];
   const artifacts = view.artifacts || [];
@@ -610,7 +594,6 @@ function HmRoomDesk({ runId }) {
       msgs={msgs}
       activity={activity}
       tasks={activity}
-      approvals={view.approvals}
       artifacts={artifacts}
       sources={sources}
       team={team}
@@ -622,7 +605,6 @@ function HmRoomDesk({ runId }) {
       navOpen={navOpen}
       onNavOpen={setNavOpen}
       onPreview={setPreview}
-      onApproval={resolveConfirmation}
       onDraft={setDraft}
       onSend={send}
       legacySidebar={<LegacyRoomsSidebar runs={runs} rooms={rooms} activeRunId={runId} onNewWork={() => navigate('/hivemind/app/hm-rooms')} />}
