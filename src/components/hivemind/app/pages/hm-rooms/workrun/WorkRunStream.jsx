@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import UserMessage from './narrative/UserMessage';
 import AgentMessage from './narrative/AgentMessage';
 
-export default function WorkRunStream({ msgs, activity, tasks, approvals, onPreview, onApproval, error }) {
+export default function WorkRunStream({ msgs, onPreview, error }) {
   const scroller = useRef(null);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -15,7 +15,7 @@ export default function WorkRunStream({ msgs, activity, tasks, approvals, onPrev
       }
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [msgs, activity, tasks, approvals]);
+  }, [msgs]);
   return (
     <div ref={scroller} className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-[#fbfaf7] scroll-smooth">
       <div className="mx-auto w-full max-w-[940px] space-y-7 px-12 pb-10 pt-8">
@@ -29,10 +29,8 @@ export default function WorkRunStream({ msgs, activity, tasks, approvals, onPrev
                 text={m.text}
                 streaming={m.streaming}
                 tools={m.tools}
-                activity={i === (msgs.length - 1) ? activity : []}
-                approvals={i === (msgs.length - 1) ? approvals : []}
+                timeline={m.timeline}
                 onPreview={onPreview}
-                onApproval={onApproval}
               />
             )
         ))}
