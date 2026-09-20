@@ -4,6 +4,7 @@ import {
   ArrowRight, Brain, CheckCircle2, Mic2, Users,
 } from 'lucide-react';
 import AgentAvatar from '../app/hyperagents/AgentAvatar';
+import DownloadMacButton from './DownloadMacButton';
 
 const BLUE = '#117DFF';
 const PAPER = '#FBFBF8';
@@ -108,9 +109,7 @@ const Hero = () => (
           <span className="font-['Space_Grotesk'] text-[16px] font-semibold">Start your workspace</span>
           <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
         </a>
-        <a href="#solutions" className="flex min-h-12 w-full items-center justify-center rounded-xl border border-[#DEDAD1] bg-white text-[15px] font-medium text-[#242321] no-underline">
-          See the system at work
-        </a>
+        <DownloadMacButton className="!flex !min-h-12 !w-full !rounded-xl !border-[#0A0A0A] !bg-[#0A0A0A] !px-5 !text-[13px]" />
       </Rise>
     </div>
 

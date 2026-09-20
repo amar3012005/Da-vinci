@@ -20,6 +20,7 @@ import MobileLandingV2 from './MobileLandingV2';
 import {
   ConnectorConveyorDetail, HumationTeamDetail, QuantumChapter, ResearchRequestsChapter,
 } from './MobileLandingAdditions';
+import HivemindFooter from './HivemindFooter';
 
 /**
  * HIVEMIND product cover — singulancelabs.com/hivemind
@@ -760,6 +761,7 @@ const HivemindProduct = () => {
 
       {/* developer-first + API/SDK/Playground/Security + footer (restored, ends page) */}
         <Developers />
+        <HivemindFooter />
       </div>}
     </div>
   );
