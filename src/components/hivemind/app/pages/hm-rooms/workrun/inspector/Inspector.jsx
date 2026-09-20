@@ -8,7 +8,7 @@ import ComputerPanel from './ComputerPanel';
 import TeamPanel from './TeamPanel';
 import ArtifactGrid from '../artifacts/ArtifactGrid';
 
-export default function Inspector({ goal, status, working, artifacts, sources, team, files, computer, preview, onPreview }) {
+export default function Inspector({ goal, status, working, artifacts, sources, team, files, computer, preview, onPreview, width = 360 }) {
   const [tab, setTab] = useState('preview');
   const counts = {
     artifacts: artifacts?.length || 0,
@@ -17,7 +17,7 @@ export default function Inspector({ goal, status, working, artifacts, sources, t
     files: files?.length || 0,
   };
   return (
-    <aside className="w-[330px] shrink-0 h-full flex flex-col bg-[#fafafa] border-l border-[#e3e0db]">
+    <aside aria-label="WorkRun preview" style={{ width }} className="min-w-[320px] shrink-0 h-full flex flex-col overflow-hidden bg-[#fafafa] border-l border-[#e3e0db]">
       <div className="border-b border-[#e3e0db] px-4 py-3">
         <div className="flex items-start gap-2"><Hash size={13} className="mt-0.5 text-[#737373]" /><div className="min-w-0"><p className="truncate text-[12px] font-semibold text-[#0a0a0a]">{goal || 'WorkRun'}</p><span className="mt-1 inline-flex rounded-full bg-[#117dff]/10 px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wider text-[#117dff]">General</span></div></div>
         <div className="mt-3 border-t border-[#eae7e1] pt-3"><p className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">Goal</p><p className="mt-1 text-[11px] leading-5 text-[#525252]">{goal || 'Waiting for the WorkRun objective.'}</p><div className="mt-2 flex items-center justify-between text-[10px] text-[#737373]"><span className="inline-flex items-center gap-1"><Users size={11} />{team?.length || 0} participants</span><span className={working ? 'text-[#117dff]' : 'text-[#737373]'}>{working ? 'working' : (status || 'idle')}</span></div></div>

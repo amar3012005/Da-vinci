@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { AudioLines, Bell, BrainCircuit, Orbit, UserPlus } from 'lucide-react';
 import WorkRunStream from './WorkRunStream';
 import WorkRunComposer from './WorkRunComposer';
@@ -29,6 +29,42 @@ export default function WorkRunShell({
 }) {
   const [planOpen, setPlanOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
+  const [previewWidth, setPreviewWidth] = useState(360);
+  const dragRef = useRef(null);
+
+  const clampPreviewWidth = useCallback((value) => {
+    const max = Math.max(320, Math.floor(window.innerWidth * 0.5));
+    return Math.min(max, Math.max(320, value));
+  }, []);
+
+  const startPreviewResize = useCallback((event) => {
+    event.preventDefault();
+    dragRef.current = { startX: event.clientX, startWidth: previewWidth, pointerId: event.pointerId };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }, [previewWidth]);
+
+  const resizePreview = useCallback((event) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    setPreviewWidth(clampPreviewWidth(drag.startWidth + drag.startX - event.clientX));
+  }, [clampPreviewWidth]);
+
+  const finishPreviewResize = useCallback((event) => {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+  }, []);
+
+  const resizeByKey = useCallback((event) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    setPreviewWidth((current) => {
+      if (event.key === 'Home') return 320;
+      if (event.key === 'End') return clampPreviewWidth(window.innerWidth * 0.5);
+      const step = event.shiftKey ? 48 : 16;
+      return clampPreviewWidth(current + (event.key === 'ArrowLeft' ? step : -step));
+    });
+  }, [clampPreviewWidth]);
   return (
     <div className="hmDshHost h-screen overflow-hidden flex flex-col bg-[#f7f6f3]">
       <header className="h-14 shrink-0 flex items-center justify-between border-y border-[#e3e0db] bg-[#faf9f4] px-5">
@@ -44,7 +80,7 @@ export default function WorkRunShell({
       {legacySidebar}
       <div className="flex-1 min-w-0 flex flex-col bg-[#fbfaf7]">
         <div className="flex-1 min-h-0 flex">
-          <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex-1 min-w-0 flex flex-col" aria-label="WorkRun output">
             <WorkRunStream
               msgs={msgs}
               onPreview={onPreview}
@@ -55,6 +91,23 @@ export default function WorkRunShell({
                 <WorkRunComposer value={draft} onChange={onDraft} onSubmit={onSend} onStop={onStop} busy={working} />
               </div>
             </div>
+          </div>
+          <div
+            role="separator"
+            aria-label="Resize preview pane"
+            aria-orientation="vertical"
+            aria-valuemin={320}
+            aria-valuemax={Math.floor(window.innerWidth * 0.5)}
+            aria-valuenow={previewWidth}
+            tabIndex={0}
+            onPointerDown={startPreviewResize}
+            onPointerMove={resizePreview}
+            onPointerUp={finishPreviewResize}
+            onPointerCancel={finishPreviewResize}
+            onKeyDown={resizeByKey}
+            className="group relative z-10 -mx-1 flex w-2 shrink-0 cursor-col-resize touch-none items-center justify-center outline-none before:h-full before:w-px before:bg-[#e3e0db] hover:before:w-0.5 hover:before:bg-[#117dff] focus-visible:before:w-0.5 focus-visible:before:bg-[#117dff]"
+          >
+            <span className="h-10 w-1 rounded-full bg-[#d4d0ca] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
           </div>
           <Inspector
             goal={goal}
@@ -67,6 +120,7 @@ export default function WorkRunShell({
             computer={computer}
             preview={preview}
             onPreview={onPreview}
+            width={previewWidth}
           />
         </div>
       </div>
