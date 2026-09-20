@@ -265,7 +265,7 @@ export function applyWorkRunEvent(view, ev) {
 
   if (t === 'tool.completed' || type === 'TOOL_CALL_END' || type === 'TOOL_RESULT_END') {
     const name = ev.tool_call_name || ev.tool_name || ev.tool || ev.name;
-    const result = (textOf(ev) || ev.result_summary || '').slice(0, 1200);
+    const result = (textOf(ev) || ev.result_summary || ev.result || '').slice(0, 12000);
     const existing = view.blocks[toolId(ev, workrunId)];
     return upsertBlock(view, {
       block_id: toolId(ev, workrunId),
