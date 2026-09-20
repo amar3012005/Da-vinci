@@ -17,6 +17,7 @@ import DownloadAllPlatforms from './DownloadAllPlatforms';
 import ChatDemoCard from './ChatDemoCard';
 import MinimalGraphIcon from './MinimalGraphIcon';
 import CinematicScrollScene from '../../mobile/CinematicScrollScene';
+import MobileLandingV2 from './MobileLandingV2';
 
 /**
  * HIVEMIND product cover — singulancelabs.com/hivemind
@@ -597,6 +598,36 @@ const FinalCta = () => (
 /* ───────── page ───────── */
 
 const HivemindProduct = () => {
+  const [isMobile, setIsMobile] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+  ));
+  const [mobileLandingEnabled, setMobileLandingEnabled] = useState(null);
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobile(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile) return undefined;
+    let active = true;
+    const controller = new AbortController();
+    fetch('/__hivemind/feature-flags/landing-mobile-v2', {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error('flag unavailable'))))
+      .then((payload) => { if (active) setMobileLandingEnabled(payload?.enabled === true); })
+      // The launch baseline is enabled for everyone. A failed flag request must
+      // not turn the public homepage into an indeterminate blank screen.
+      .catch((error) => { if (active && error?.name !== 'AbortError') setMobileLandingEnabled(true); });
+    return () => { active = false; controller.abort(); };
+  }, [isMobile]);
+
   // Deep-link to a section (e.g. /hivemind#pricing). The target only exists
   // once this lazy chunk mounts, so the browser's native hash-scroll fires
   // too early — retry until the element shows up (bounded), else scroll top.
@@ -627,8 +658,13 @@ const HivemindProduct = () => {
     <div style={{ background: PAPER }} className="min-h-screen">
       <ProgressBar />
       <Navbar />
-      <Hero />
-      <MarqueeRow />
+      {isMobile && mobileLandingEnabled === null && (
+        <div className="min-h-screen bg-[#FBFBF8]" aria-label="Loading HIVEMIND" />
+      )}
+      {isMobile && mobileLandingEnabled && <MobileLandingV2 />}
+      {(!isMobile || mobileLandingEnabled === false) && <div>
+        <Hero />
+        <MarqueeRow />
 
       <Chapter n="01" id="chapter-1" eyebrow="memory engine"
         title={<>A memory that<br />organizes itself</>}
@@ -715,7 +751,8 @@ const HivemindProduct = () => {
       <Pricing />
 
       {/* developer-first + API/SDK/Playground/Security + footer (restored, ends page) */}
-      <Developers />
+        <Developers />
+      </div>}
     </div>
   );
 };

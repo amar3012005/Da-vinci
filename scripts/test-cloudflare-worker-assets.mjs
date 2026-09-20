@@ -45,6 +45,48 @@ const unavailableFlag = await worker.fetch(
 );
 assert.equal((await unavailableFlag.json()).enabled, false);
 
+const mobileLandingEnabled = await worker.fetch(
+  new Request('https://next.singulancelabs.com/__hivemind/feature-flags/landing-mobile-v2'),
+  {
+    ASSETS: { fetch: async () => new Response('unused') },
+    LANDING_MOBILE_V2: 'true',
+    FLAGS: { getBooleanValue: async (_key, defaultValue) => defaultValue },
+  },
+);
+assert.equal(mobileLandingEnabled.status, 200);
+assert.equal(mobileLandingEnabled.headers.get('cache-control'), 'no-store');
+assert.deepEqual(await mobileLandingEnabled.json(), {
+  key: 'landing_mobile_v2',
+  enabled: true,
+  source: 'cloudflare-flagship',
+});
+
+const mobileLandingSurvivesFlagshipOutage = await worker.fetch(
+  new Request('https://next.singulancelabs.com/__hivemind/feature-flags/landing-mobile-v2'),
+  {
+    ASSETS: { fetch: async () => new Response('unused') },
+    LANDING_MOBILE_V2: 'true',
+    FLAGS: { getBooleanValue: async () => { throw new Error('unavailable'); } },
+  },
+);
+assert.equal((await mobileLandingSurvivesFlagshipOutage.json()).enabled, true);
+
+const mobileLandingFlagshipRollback = await worker.fetch(
+  new Request('https://next.singulancelabs.com/__hivemind/feature-flags/landing-mobile-v2'),
+  {
+    ASSETS: { fetch: async () => new Response('unused') },
+    LANDING_MOBILE_V2: 'true',
+    FLAGS: { getBooleanValue: async () => false },
+  },
+);
+assert.equal((await mobileLandingFlagshipRollback.json()).enabled, false);
+
+const mobileLandingRejectsWrites = await worker.fetch(
+  new Request('https://next.singulancelabs.com/__hivemind/feature-flags/landing-mobile-v2', { method: 'POST' }),
+  envReturning(new Response('unused'), true),
+);
+assert.equal(mobileLandingRejectsWrites.status, 405);
+
 const missingAsset = await worker.fetch(
   new Request('https://next.singulancelabs.com/static/js/missing.chunk.js'),
   envReturning(new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } })),
