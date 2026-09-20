@@ -11,7 +11,8 @@ describe('HM Rooms WorkRun routing', () => {
     expect(routes).toContain('path="app/hm-rooms"');
     expect(routes).toContain('path="app/hm-rooms/:runId"');
     expect(routes).toContain('<PageSuspense><HmRooms /></PageSuspense>');
-    expect(routes).toContain('Navigate to="/hivemind/app/hm-rooms" replace');
+    expect(routes).toContain('function LegacyWorkRunRedirect()');
+    expect(routes).toContain('`/hivemind/app/hm-rooms/${runId}`');
   });
 
   it('opens the HM Rooms canvas from the WorkRuns entry and keys a new session by the returned WorkRun id', () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
 import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './auth/LoginPage';
@@ -107,6 +107,11 @@ function PageSuspense({ children }) {
       </React.Suspense>
     </PageErrorBoundary>
   );
+}
+
+function LegacyWorkRunRedirect() {
+  const { runId } = useParams();
+  return <Navigate to={runId ? `/hivemind/app/hm-rooms/${runId}` : '/hivemind/app/hm-rooms'} replace />;
 }
 
 /**
@@ -278,8 +283,8 @@ export default function HiveMindApp() {
           <Route path="employees/operating-rooms" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
           <Route path="employees/operating-rooms/:roomId" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
           {/* Keep old WorkRun bookmarks but make HM Rooms the sole WorkRun UI. */}
-          <Route path="employees/workruns" element={<Navigate to="/hivemind/app/hm-rooms" replace />} />
-          <Route path="employees/workruns/:runId" element={<Navigate to="/hivemind/app/hm-rooms" replace />} />
+          <Route path="employees/workruns" element={<LegacyWorkRunRedirect />} />
+          <Route path="employees/workruns/:runId" element={<LegacyWorkRunRedirect />} />
           <Route path="employees/*" element={<PageSuspense><HyperAgents /></PageSuspense>} />
           {/* Legacy direct roster path — kept for back-compat */}
           <Route path="employees/roster" element={<PageSuspense><DigitalEmployees /></PageSuspense>} />
