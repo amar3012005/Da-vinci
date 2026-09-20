@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
-  ArrowUp, Bug, Building2, ChevronDown, ChevronRight, Code2, CreditCard, Eye,
-  FileText, Folder, Gauge, Globe, Hash, LayoutDashboard, ListChecks,
+  ArrowUp, Bug, Building2, ChevronDown, ChevronRight, CreditCard, Eye,
+  FileText, Folder, Gauge, Hash, LayoutDashboard, ListChecks,
   ListTodo, LogOut, Megaphone, PhoneCall, Plus, Power,
   Rocket, Scale, Search, Settings, Sparkles, User, Users,
 } from 'lucide-react';
@@ -52,13 +51,6 @@ const CANVAS_CARDS = [
 function roomIcon(tag) {
   const hit = COMPANY_ROOM_FALLBACK.find((r) => r.key === String(tag || '').toLowerCase());
   return hit?.Icon || Users;
-}
-
-function statusClass(status) {
-  if (status === 'completed' || status === 'idle') return 'text-[#10b981] bg-[#10b981]/10';
-  if (status === 'failed' || status === 'cancelled') return 'text-[#b45309] bg-[#f5f0e8]';
-  if (status === 'running' || status === 'streaming') return 'text-[#117dff] bg-[#117dff]/10';
-  return 'text-[#737373] bg-[#f3f1ec]';
 }
 
 function openHyperRoom(navigate, room) {
@@ -452,7 +444,6 @@ function HmRoomDesk({ runId }) {
   const [phase, setPhase] = useState('idle');
   const [error, setError] = useState(null);
   const [navOpen, setNavOpen] = useState(true);
-  const [railOpen, setRailOpen] = useState(false);
   const [preview, setPreview] = useState(null);
   const esRef = useRef(null);
 

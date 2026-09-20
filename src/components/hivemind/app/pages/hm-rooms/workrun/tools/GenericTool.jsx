@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Check, LoaderCircle, Wrench } from 'lucide-react';
 
 export default function GenericTool({ name, label, state, result, onOpen }) {
   return (
@@ -9,11 +10,13 @@ export default function GenericTool({ name, label, state, result, onOpen }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22 }}
       onClick={() => onOpen && onOpen({ name, result })}
-      className="flex items-center gap-2 text-left"
+      className="relative flex w-full items-center gap-3 py-2 text-left text-[#737373] before:absolute before:bottom-[-8px] before:left-[8px] before:top-[24px] before:w-px before:bg-[#e3e0db] last:before:hidden"
     >
-      <span className={`inline-block w-2 h-2 rounded-full ${state === 'running' ? 'bg-[#117dff] animate-pulse' : 'bg-[#10b981]'}`} />
-      <span className="text-[13px] text-[#171717]">{label || name}</span>
-      {state === 'running' ? <span className="h-3 w-3 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" /> : null}
+      {state === 'running'
+        ? <LoaderCircle size={17} className="shrink-0 animate-spin text-[#737373]" />
+        : <Wrench size={17} className="shrink-0" strokeWidth={1.7} />}
+      <span className="min-w-0 flex-1 truncate text-[14px]">{label || name}</span>
+      {state !== 'running' ? <Check size={14} className="shrink-0 text-[#737373]" /> : null}
     </motion.button>
   );
 }

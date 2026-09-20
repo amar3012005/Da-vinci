@@ -65,8 +65,8 @@ export default function WorkRunShell({
               onPreview={onPreview}
               error={error}
             />
-            <div className="shrink-0 bg-transparent px-4 pb-3 pt-1">
-              <div className="max-w-[760px] mx-auto">
+            <div className="shrink-0 border-t border-transparent bg-[#fbfaf7] px-4 pb-3 pt-1">
+              <div className="max-w-[940px] mx-auto px-8">
                 <WorkRunComposer value={draft} onChange={onDraft} onSubmit={onSend} busy={false} />
               </div>
             </div>
