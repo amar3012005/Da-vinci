@@ -21,6 +21,7 @@ import {
 } from './hm-rooms-dsh/workrun-view';
 import { WorkRunShell } from './workrun';
 import * as WorkRunModules from './workrun';
+import LegacyRoomsSidebar from './LegacyRoomsSidebar';
 
 const COMPANY_ROOM_FALLBACK = [
   { key: 'campaign', label: 'Campaign Intelligence', Icon: Megaphone },
@@ -442,9 +443,9 @@ function HmRoomList() {
 
 function HmRoomDesk({ runId }) {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const [run, setRun] = useState(null);
   const [runs, setRuns] = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [msgs, setMsgs] = useState([]);
   const [view, setView] = useState(() => emptyWorkRunView(runId));
   const [draft, setDraft] = useState('');
@@ -540,6 +541,7 @@ function HmRoomDesk({ runId }) {
 
   useEffect(() => {
     apiClient.listWorkRuns({ limit: 16 }).then((data) => setRuns(data?.workruns || [])).catch(() => {});
+    apiClient.listHyperRooms().then((data) => setRooms(data?.rooms || data || [])).catch(() => {});
   }, [runId]);
 
   const send = async (e) => {
@@ -570,8 +572,6 @@ function HmRoomDesk({ runId }) {
       goal={stripWorkOrder(run?.goal)}
       status={run?.status}
       working={working}
-      runs={(runs || []).map((r) => ({ ...r, goal: stripWorkOrder(r.goal) }))}
-      runId={runId}
       msgs={msgs}
       activity={activity}
       tasks={activity}
@@ -586,13 +586,10 @@ function HmRoomDesk({ runId }) {
       error={error}
       navOpen={navOpen}
       onNavOpen={setNavOpen}
-      onNavigate={navigate}
-      onNewWork={() => navigate('/hivemind/app/hm-rooms')}
       onPreview={setPreview}
       onDraft={setDraft}
       onSend={send}
-      userLabel={(user?.display_name || user?.email || '').split(' ')[0] || 'Account'}
-      onSignOut={async () => { try { await logout(); } catch { /* noop */ } navigate('/hivemind/login'); }}
+      legacySidebar={<LegacyRoomsSidebar runs={runs} rooms={rooms} activeRunId={runId} onNewWork={() => navigate('/hivemind/app/hm-rooms')} />}
     />
   );
 }
