@@ -30,6 +30,31 @@ export function visualStageLabel(stage) {
   return STAGE_LABELS[stage] || String(stage || 'working').replaceAll('_', ' ');
 }
 
+function normalizedPrompt(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+export function assignVisualJobsToTurns(jobs, turns) {
+  const assignments = new Map((Array.isArray(turns) ? turns : []).map((turn) => [String(turn.id), []]));
+  const unassigned = [];
+  const candidates = (Array.isArray(turns) ? turns : []).map((turn) => ({
+    id: String(turn.id),
+    prompt: normalizedPrompt(turn.userMessage || turn.user_message),
+  }));
+  (Array.isArray(jobs) ? jobs : []).forEach((job) => {
+    const sourceTurnId = String(job?.source?.turn_id || '');
+    let owner = sourceTurnId && assignments.has(sourceTurnId) ? sourceTurnId : '';
+    if (!owner && !sourceTurnId) {
+      const instruction = normalizedPrompt(job?.instruction);
+      const matching = candidates.filter(({ prompt }) => prompt && instruction.includes(prompt));
+      owner = matching.length === 1 ? matching[0].id : '';
+    }
+    if (owner) assignments.get(owner).push(job);
+    else unassigned.push(job);
+  });
+  return { assignments, unassigned };
+}
+
 function assetRatio(asset, job) {
   const ratio = asset?.aspect_ratio || asset?.aspectRatio || job?.output?.aspect_ratios?.[0] || '16:9';
   return ({ '1:1': 'aspect-square', '9:16': 'aspect-[9/16]', '4:5': 'aspect-[4/5]', '3:4': 'aspect-[3/4]', '4:3': 'aspect-[4/3]' })[ratio] || 'aspect-video';
@@ -126,7 +151,7 @@ export function VisualJobCard({ job, onPatch, onRefresh, onRetry, onOpen }) {
   </section>;
 }
 
-export default function RoomVisualGeneration({ roomId, turnRunning = false }) {
+export function useRoomVisualGeneration(roomId, turnRunning = false) {
   const [jobs, setJobs] = useState([]);
   const [lightbox, setLightbox] = useState(null);
   const [error, setError] = useState('');
@@ -157,12 +182,18 @@ export default function RoomVisualGeneration({ roomId, turnRunning = false }) {
     setJobs((current) => mergeVisualJobs(current, [created]));
     await refresh();
   }, [refresh]);
+  return { jobs, error, patch, refresh, retry, lightbox, setLightbox };
+}
+
+export default function RoomVisualGeneration({ controller, jobs: suppliedJobs, showError = true }) {
+  const jobs = useMemo(() => (Array.isArray(suppliedJobs) ? suppliedJobs : []), [suppliedJobs]);
   const activeJobs = useMemo(() => jobs.slice(0, 12), [jobs]);
-  if (!activeJobs.length && !error) return null;
+  const { error = '', patch, refresh, retry, lightbox, setLightbox } = controller || {};
+  if (!activeJobs.length && (!showError || !error)) return null;
 
   return <div className="space-y-3" aria-label="Room visual generation">
     {activeJobs.map((job) => <VisualJobCard key={job.job_id} job={job} onPatch={patch} onRefresh={refresh} onRetry={retry} onOpen={(selectedJob, asset) => setLightbox({ job: selectedJob, asset })} />)}
-    {error ? <div className="flex items-center gap-2 px-1 text-[10px] text-[#777168]"><Loader2 size={11} className="animate-spin" />{error}</div> : null}
+    {showError && error ? <div className="flex items-center gap-2 px-1 text-[10px] text-[#777168]"><Loader2 size={11} className="animate-spin" />{error}</div> : null}
     {lightbox ? <VisualLightbox job={lightbox.job} asset={lightbox.asset} onClose={() => setLightbox(null)} /> : null}
   </div>;
 }

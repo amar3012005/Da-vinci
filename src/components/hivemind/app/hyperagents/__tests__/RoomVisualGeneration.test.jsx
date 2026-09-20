@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { mergeVisualJobs, visualStageLabel, VisualJobCard } from '../RoomVisualGeneration';
+import { assignVisualJobsToTurns, mergeVisualJobs, visualStageLabel, VisualJobCard } from '../RoomVisualGeneration';
 
 jest.mock('../../shared/api-client', () => ({
   visualGenerationAssetUrl: (jobId, assetId) => `/visual/${jobId}/${assetId}`,
@@ -56,5 +56,19 @@ describe('RoomVisualGeneration', () => {
     expect(merged).toHaveLength(1);
     expect(merged[0]).toMatchObject({ job_id: 'job-1', stage: 'critiquing', progress: 70 });
     expect(visualStageLabel('art_direction')).toBe('Building art direction');
+  });
+
+  test('pins durable jobs to their originating turn and leaves legacy jobs deterministic', () => {
+    const turns = [
+      { id: 'turn-one', user_message: 'Create me a new logo for Solvis' },
+      { id: 'turn-two', user_message: 'Now explain the rollout' },
+    ];
+    const pinned = { ...baseJob, job_id: 'job-pinned', source: { turn_id: 'turn-one' } };
+    const legacy = { ...baseJob, job_id: 'job-legacy', instruction: 'Now explain the rollout as one visual' };
+    const orphan = { ...baseJob, job_id: 'job-orphan', instruction: 'An older unrelated render' };
+    const placement = assignVisualJobsToTurns([pinned, legacy, orphan], turns);
+    expect(placement.assignments.get('turn-one').map((job) => job.job_id)).toEqual(['job-pinned']);
+    expect(placement.assignments.get('turn-two').map((job) => job.job_id)).toEqual(['job-legacy']);
+    expect(placement.unassigned.map((job) => job.job_id)).toEqual(['job-orphan']);
   });
 });
