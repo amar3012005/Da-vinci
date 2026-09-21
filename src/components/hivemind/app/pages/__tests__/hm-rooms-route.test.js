@@ -81,4 +81,15 @@ describe('HM Rooms WorkRun routing', () => {
     expect(message).not.toContain('ApprovalCard');
     expect(message).not.toContain('Needs confirmation');
   });
+
+  it('uses the HIVE pending-write policy record for external actions', () => {
+    const rooms = source('pages/hm-rooms/HmRooms.jsx');
+    const api = source('shared/api-client.js');
+    const card = source('pages/hm-rooms/workrun/approval/ExternalActionCard.jsx');
+    expect(rooms).toContain("t: 'external_action.resolved'");
+    expect(api).toContain('async resolvePendingWrite(id, action)');
+    expect(api).toContain('/v1/proxy/pending-writes/');
+    expect(card).toContain('Approve action');
+    expect(card).not.toContain('Needs confirmation');
+  });
 });

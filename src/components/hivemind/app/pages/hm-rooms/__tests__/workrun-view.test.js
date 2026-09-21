@@ -191,6 +191,27 @@ describe('WorkRun identity-keyed block registry', () => {
     }));
   });
 
+  it('updates an external-action receipt in place when HIVE resolves it', () => {
+    let view = applyWorkRunEvent(emptyWorkRunView(runId), {
+      t: 'external_action.pending', approval: { id: 'approval-1', summary: 'Send the draft.' },
+    });
+    view = applyWorkRunEvent(view, {
+      t: 'external_action.resolved', approval_id: 'approval-1', status: 'sent', tool: 'GMAIL_SEND_EMAIL', summary: 'Message sent.',
+    });
+    expect(view.blockOrder).toEqual(['external-action:approval-1']);
+    expect(view.blocks['external-action:approval-1']).toMatchObject({
+      status: 'sent', payload: { title: 'External action sent', detail: 'Message sent.' },
+    });
+    let msgs = applyAgentEvent(startUserTurn([], 'send it'), {
+      t: 'external_action.pending', approval: { id: 'approval-1', summary: 'Send the draft.' },
+    });
+    msgs = applyAgentEvent(msgs, {
+      t: 'external_action.resolved', approval_id: 'approval-1', status: 'sent', summary: 'Message sent.',
+    });
+    const action = msgs.find((message) => message.role === 'assistant').timeline.find((item) => item.id === 'approval-1');
+    expect(action).toMatchObject({ status: 'sent', title: 'External action sent', detail: 'Message sent.' });
+  });
+
   it('prefers a recoverable confirmation over a legacy card for the same tool', () => {
     const toolCall = { id: 'bash-1', name: 'Bash', input: { command: 'pwd' } };
     let view = applyWorkRunEvent(emptyWorkRunView(runId), {

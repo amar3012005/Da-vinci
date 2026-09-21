@@ -358,6 +358,25 @@ export function applyWorkRunEvent(view, ev) {
     });
   }
 
+  if (t === 'external_action.resolved') {
+    const approvalId = ev.approval_id || ev.id || 'resolved';
+    const status = String(ev.status || 'failed').toLowerCase();
+    const detail = ev.error || ev.summary || (status === 'sent' ? 'The approved external action was sent.' : 'This external action was not sent.');
+    return upsertBlock(view, {
+      block_id: `external-action:${approvalId}`,
+      workrun_id: workrunId,
+      kind: 'appAction',
+      status,
+      payload: {
+        approval_id: approvalId,
+        tool: ev.tool || 'external action',
+        title: status === 'sent' ? 'External action sent' : 'External action resolved',
+        detail,
+        result: ev.result || null,
+      },
+    });
+  }
+
   if (t === 'approval.requested' || type === 'REQUIRE_USER_CONFIRM') {
     const calls = Array.isArray(ev.tool_calls) ? ev.tool_calls : [];
     const first = calls[0] || {};
@@ -517,10 +536,29 @@ export function applyAgentEvent(msgs, ev) {
     const action = {
       kind: 'externalAction',
       id: approvalId,
+      status: 'pending',
       title: 'External action awaiting approval',
       detail: approval.summary || ev.summary || 'HIVE policy requires approval before this action is sent.',
       tool: ev.tool || ev.tool_call_name || 'external action',
     };
+    if (existing) Object.assign(existing, action);
+    else cur.timeline.push(action);
+    return next;
+  }
+
+  if (String(ev?.t || '') === 'external_action.resolved') {
+    const cur = ensureAssistant();
+    const approvalId = ev.approval_id || ev.id || `external-${cur.timeline.length}`;
+    const status = String(ev.status || 'failed').toLowerCase();
+    const action = {
+      kind: 'externalAction',
+      id: approvalId,
+      status,
+      title: status === 'sent' ? 'External action sent' : 'External action resolved',
+      detail: ev.error || ev.summary || (status === 'sent' ? 'The approved external action was sent.' : 'This external action was not sent.'),
+      tool: ev.tool || 'external action',
+    };
+    const existing = cur.timeline.find((item) => item.kind === 'externalAction' && item.id === approvalId);
     if (existing) Object.assign(existing, action);
     else cur.timeline.push(action);
     return next;

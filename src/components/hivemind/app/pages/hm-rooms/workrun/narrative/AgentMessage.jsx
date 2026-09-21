@@ -13,6 +13,7 @@ export default function AgentMessage({
   tools,
   timeline,
   onPreview,
+  onResolveExternalAction,
 }) {
   const ordered = (timeline || []).length
     ? timeline
@@ -68,7 +69,7 @@ export default function AgentMessage({
           />
         ) : item.kind === 'externalAction' ? (
           <div key={item.id || `external-action-${index}`} className={finished && !toolsOpen ? 'hidden' : ''}>
-            <ExternalActionCard title={item.title} detail={item.detail} />
+            <ExternalActionCard id={item.id} title={item.title} detail={item.detail} status={item.status} onResolve={onResolveExternalAction} />
           </div>
         ) : (
           <div key={item.id || `thinking-${index}`} className={`text-[16px] leading-[1.75] text-[#404040] ${finished && !toolsOpen ? 'hidden' : ''}`}>

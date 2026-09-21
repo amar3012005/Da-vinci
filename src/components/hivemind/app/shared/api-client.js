@@ -388,6 +388,15 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Pending writes are HIVE's policy records.  This deliberately uses the
+  // authenticated control-plane proxy instead of addressing an AgentScope
+  // runtime confirmation endpoint from the browser.
+  async resolvePendingWrite(id, action) {
+    const verb = action === 'approve' ? 'approve' : 'cancel';
+    const { data } = await this.controlPlane.post(`/v1/proxy/pending-writes/${encodeURIComponent(id)}/${verb}`);
+    return data;
+  }
+
   async sendWorkRunConfirmation(id, input) {
     const { data } = await this.controlPlane.post(`/v1/workruns/${encodeURIComponent(id)}/chat`, { input });
     return data;

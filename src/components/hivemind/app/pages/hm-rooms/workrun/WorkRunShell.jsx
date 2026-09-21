@@ -22,6 +22,7 @@ export default function WorkRunShell({
   draft,
   error,
   onPreview,
+  onResolveExternalAction,
   onDraft,
   onSend,
   onStop,
@@ -94,6 +95,7 @@ export default function WorkRunShell({
             <WorkRunStream
               msgs={msgs}
               onPreview={onPreview}
+              onResolveExternalAction={onResolveExternalAction}
               error={error}
             />
             <div className="shrink-0 border-t border-transparent bg-[#fbfaf7] px-4 pb-2 pt-0">

@@ -564,14 +564,14 @@ function HmRoomDesk({ runId }) {
         'THINKING_BLOCK_DELTA', 'THINKING_BLOCK_END', 'TOOL_CALL_START', 'TOOL_CALL_END', 'TOOL_RESULT_END',
         'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
         'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
-        'plan.updated', 'external_action.pending',
+        'plan.updated', 'external_action.pending', 'external_action.resolved',
       ].forEach((n) => es.addEventListener(n, onEvt));
       es.onmessage = onEvt;
       const progress = new EventSource(apiClient.workRunStreamUrl(runId), { withCredentials: true });
       [
         'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
         'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
-        'plan.updated', 'external_action.pending',
+        'plan.updated', 'external_action.pending', 'external_action.resolved',
       ].forEach((n) => progress.addEventListener(n, onEvt));
       progress.onmessage = onEvt;
       esRef.current = { session: es, progress };
@@ -618,6 +618,31 @@ function HmRoomDesk({ runId }) {
     }
   };
 
+  const resolveExternalAction = async (approvalId, action) => {
+    setError(null);
+    try {
+      const data = await apiClient.resolvePendingWrite(approvalId, action);
+      const draft = data?.draft || {};
+      const status = String(data?.status || draft.status || (action === 'approve' ? 'sent' : 'cancelled')).toLowerCase();
+      const event = {
+        t: 'external_action.resolved',
+        approval_id: approvalId,
+        status,
+        tool: draft.toolName || 'external action',
+        summary: data?.text || draft.preview || null,
+        error: status === 'failed' ? (data?.error || draft.errorMsg || 'External action failed.') : null,
+        result: draft.result || null,
+      };
+      // The server persists the same event for reconnect/replay. Applying it
+      // here only removes UI latency while the stream catches up.
+      setMsgs((prev) => applyAgentEvent(prev, event));
+      setView((prev) => applyWorkRunEvent(prev, event));
+    } catch (err) {
+      setError(err?.response?.data?.error || err.message);
+      throw err;
+    }
+  };
+
   const sources = view.sources || [];
   const activity = view.activity || [];
   const artifacts = view.artifacts || [];
@@ -648,6 +673,7 @@ function HmRoomDesk({ runId }) {
       draft={draft}
       error={error}
       onPreview={setPreview}
+      onResolveExternalAction={resolveExternalAction}
       onDraft={setDraft}
       onSend={send}
       onStop={stop}

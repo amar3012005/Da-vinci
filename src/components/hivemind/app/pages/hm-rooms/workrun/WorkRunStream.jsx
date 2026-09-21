@@ -3,7 +3,7 @@ import { ArrowDown } from 'lucide-react';
 import UserMessage from './narrative/UserMessage';
 import AgentMessage from './narrative/AgentMessage';
 
-export default function WorkRunStream({ msgs, onPreview, error }) {
+export default function WorkRunStream({ msgs, onPreview, onResolveExternalAction, error }) {
   const scroller = useRef(null);
   const followLive = useRef(true);
   const [showJump, setShowJump] = useState(false);
@@ -41,6 +41,7 @@ export default function WorkRunStream({ msgs, onPreview, error }) {
                   tools={m.tools}
                   timeline={m.timeline}
                   onPreview={onPreview}
+                  onResolveExternalAction={onResolveExternalAction}
                 />
               )
           ))}
