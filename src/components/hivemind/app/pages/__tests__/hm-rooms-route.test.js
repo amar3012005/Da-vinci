@@ -41,15 +41,16 @@ describe('HM Rooms WorkRun routing', () => {
 
     expect(shell).toContain('<WorkRunStream');
     expect(shell).toContain('shrink-0 border-t border-transparent');
-    expect(stream).toContain('flex-1 min-h-0 overflow-y-auto overscroll-auto');
-    expect(stream).toContain('followLive.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80');
-    expect(stream).toContain('if (node && followLive.current) node.scrollTop = node.scrollHeight');
-    expect(stream).toContain('overscroll-auto');
+    expect(stream).toContain('h-full overflow-y-auto overscroll-contain');
+    expect(stream).toContain('const atLatest = node.scrollHeight - node.scrollTop - node.clientHeight < 96');
+    expect(stream).toContain('if (!node || !followLive.current) return undefined');
+    expect(stream).toContain('node.scrollTop = node.scrollHeight');
+    expect(stream).toContain('ArrowDown size={13} /> Latest');
     expect(stream).toContain('[msgs]');
     expect(userMessage).toContain('items-end gap-2');
     expect(agentMessage).not.toContain('Working through the request');
     expect(agentMessage).not.toContain('View working notes');
-    expect(agentMessage).toContain('label: item.name');
+    expect(agentMessage).toContain('label: item.label || item.name');
     expect(agentMessage).toContain("border-t border-[#e3e0db] pt-8");
   });
 
