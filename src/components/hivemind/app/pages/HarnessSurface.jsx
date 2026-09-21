@@ -197,9 +197,12 @@ export default function HarnessSurface() {
         return String(data?.text || data?.transcript || '').trim();
       };
       window.__HIVEMIND_TRANSCRIBE_AUDIO__ = transcribeAudio;
-      window.__HIVEMIND_DELETE_SESSION__ = async (sessionId) => {
+      const deleteSession = async (sessionId) => {
         await apiClient.controlPlane.delete(`/v1/harness-chat/sessions/${encodeURIComponent(sessionId)}`);
       };
+      window.__HIVEMIND_DELETE_SESSION__ = deleteSession;
+      request.transcribeAudio = transcribeAudio;
+      request.deleteSession = deleteSession;
       await applyHarnessInjections(boot.injections);
       if (cancelled) return;
       window.__DSH_EMBED_REQUEST__ = request;
@@ -225,8 +228,12 @@ export default function HarnessSurface() {
       document.removeEventListener('visibilitychange', recoverExpiredSession);
       request.cancelled = true;
       if (window.__DSH_EMBED_REQUEST__ === request) window.__DSH_EMBED_REQUEST__ = undefined;
-      window.__HIVEMIND_TRANSCRIBE_AUDIO__ = undefined;
-      window.__HIVEMIND_DELETE_SESSION__ = undefined;
+      if (window.__HIVEMIND_TRANSCRIBE_AUDIO__ === request.transcribeAudio) {
+        window.__HIVEMIND_TRANSCRIBE_AUDIO__ = undefined;
+      }
+      if (window.__HIVEMIND_DELETE_SESSION__ === request.deleteSession) {
+        window.__HIVEMIND_DELETE_SESSION__ = undefined;
+      }
       const app = window.__DSH_EMBED_APP__;
       window.__DSH_EMBED_APP__ = undefined;
       if (app) void app.dispose();
