@@ -488,14 +488,6 @@ function HmRoomDesk({ runId }) {
         row = data?.workrun || data;
         if (cancelled) return;
         setError(null);
-        if (String(ev.t || '') === 'workrun.state') {
-          const status = String(ev.status || '').toLowerCase();
-          if (['completed', 'failed', 'cancelled'].includes(status)) {
-            setRun((current) => ({ ...(current || {}), status, result: ev.result, error: ev.error }));
-            setPhase('idle');
-            setMsgs((previous) => previous.map((message) => ({ ...message, streaming: false })));
-          }
-        }
         setRun(row);
         (row?.events || []).forEach((ev) => {
           setView((prev) => applyWorkRunEvent(prev, ev));
@@ -541,6 +533,14 @@ function HmRoomDesk({ runId }) {
         seen.add(fingerprint);
         if (type === 'REPLY_START' || type === 'TEXT_BLOCK_DELTA' || type === 'THINKING_BLOCK_DELTA' || type === 'TOOL_CALL_START') {
           setPhase('streaming');
+        }
+        if (String(ev.t || '') === 'workrun.state') {
+          const status = String(ev.status || '').toLowerCase();
+          if (['completed', 'failed', 'cancelled'].includes(status)) {
+            setRun((current) => ({ ...(current || {}), status, result: ev.result, error: ev.error }));
+            setPhase('idle');
+            setMsgs((previous) => previous.map((message) => ({ ...message, streaming: false })));
+          }
         }
         setMsgs((prev) => applyAgentEvent(prev, ev));
         setView((prev) => {
