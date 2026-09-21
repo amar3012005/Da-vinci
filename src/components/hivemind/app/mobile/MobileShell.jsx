@@ -89,7 +89,12 @@ export default function MobileShell({ children, rightAction = null, title = null
       apiClient.controlPlane.get('/v1/proxy/profiles', { params: { category: 'static', key: 'name' } }),
     ]).then(([companyResult, profileResult]) => {
       if (!active) return;
-      if (companyResult.status === 'fulfilled') setCompanyOnboarded(companyResult.value?.onboarded === true);
+      if (companyResult.status === 'fulfilled') {
+        // Match CompanyDashboard's readiness contract exactly: the lifecycle
+        // is incomplete if either the durable flag or generated company
+        // payload is missing.
+        setCompanyOnboarded(Boolean(companyResult.value?.onboarded && companyResult.value?.company));
+      }
       else setCompanyOnboarded(null);
       if (profileResult.status === 'fulfilled') {
         const value = profileResult.value?.data?.facts?.find((fact) => fact?.key === 'name')?.value;
