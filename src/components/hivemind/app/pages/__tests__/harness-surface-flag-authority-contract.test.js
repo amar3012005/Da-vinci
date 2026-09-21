@@ -20,7 +20,8 @@ test('admission gates the whole legacy overview and transitions without a docume
 
 test('an admitted tab resumes its last native session before rendering legacy content', () => {
   expect(overview).toContain("const LAST_HARNESS_SESSION_KEY = 'hm.lastHarnessSession';");
-  expect(overview).toContain('if (cachedSession) return <Navigate to={cachedSession} replace />;');
+  expect(overview).toContain('if (cachedSession) return <ResumeHarnessSession path={cachedSession} />;');
+  expect(overview).toContain('window.location.replace(path);');
   expect(overview).toContain('rememberHarnessSessionPath(pathname);');
 });
 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import OverviewTour, { useOverviewTour } from '../shared/OverviewTour';
 import { useTranslation } from 'react-i18next';
 import {
@@ -64,6 +64,17 @@ function cachedHarnessSessionPath() {
 function rememberHarnessSessionPath(pathname) {
   if (!/^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(pathname)) return;
   try { window.sessionStorage.setItem(LAST_HARNESS_SESSION_KEY, pathname); } catch { /* storage may be unavailable */ }
+}
+
+function ResumeHarnessSession({ path }) {
+  useEffect(() => {
+    // The embedded Harness owns a separate React root. Re-enter it in a clean
+    // document after OS/VOICE instead of attempting to reuse a disposed root.
+    // Static assets remain browser/Cloudflare cached, while the neutral shell
+    // prevents the legacy Overview from flashing during the handoff.
+    window.location.replace(path);
+  }, [path]);
+  return <section className="h-full min-h-0 w-full overflow-hidden bg-[#f7f5f0]" aria-label="Loading BRAIN" />;
 }
 
 // ─── Animation variants ──────────────────────────────────────────
@@ -1478,7 +1489,7 @@ export default function Overview() {
     return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
   }
   const cachedSession = cachedHarnessSessionPath();
-  if (cachedSession) return <Navigate to={cachedSession} replace />;
+  if (cachedSession) return <ResumeHarnessSession path={cachedSession} />;
   return <HarnessChatSurface legacy={<LegacyOverview />} />;
 }
 
