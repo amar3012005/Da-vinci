@@ -245,6 +245,24 @@ html.cinematic-mode::after { bottom: 0; }
   position: absolute; inset: -2px; pointer-events: none;
   animation: hm-agent-pulse 1.6s ease-in-out infinite;
 }
+
+/* The active Humation employee stays quietly alive in the product switcher.
+   The long idle period is intentional: this should feel observed, not busy. */
+@keyframes hm-system-attentive-gesture {
+  0%, 72%, 100% { transform: translateY(-2px) rotate(0deg); }
+  77% { transform: translateY(-4px) rotate(-2.5deg); }
+  82% { transform: translateY(-3px) rotate(1.5deg); }
+  87% { transform: translateY(-2px) rotate(0deg); }
+}
+
+.hm-system-avatar-active {
+  animation: hm-system-attentive-gesture 7.5s cubic-bezier(.22,.61,.36,1) infinite;
+  transform-origin: 50% 88%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-system-avatar-active { animation: none; }
+}
 @keyframes hm-agent-pulse {
   0%, 100% { opacity: 0.25; transform: scale(1); }
   50%      { opacity: 0.9;  transform: scale(1.08); }
