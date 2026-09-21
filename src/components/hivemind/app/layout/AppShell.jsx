@@ -296,6 +296,12 @@ export default function AppShell() {
     const crossingHarnessBoundary = s === 'hivemind' || sectionForPath(location.pathname) === 'hivemind';
     if (crossingHarnessBoundary) {
       let target = landing[s];
+      // Native Harness owns history updates inside its independent router.
+      // Capture its current URL, not the host router's older /new location.
+      const currentPath = window.location.pathname;
+      if (/^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(currentPath)) {
+        try { sessionStorage.setItem('hm.lastHarnessSession', currentPath); } catch { /* storage may be unavailable */ }
+      }
       if (s === 'hivemind') {
         try {
           const cached = sessionStorage.getItem('hm.lastHarnessSession') || '';
