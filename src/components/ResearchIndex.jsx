@@ -112,12 +112,16 @@ const ResearchIndex = () => {
         .research-belt:hover { animation-play-state: paused; }
         @media (prefers-reduced-motion: reduce) { .research-belt { animation: none; } }
       `}</style>
-      <div className="px-4 pb-4 md:hidden">
-        <div className="mb-3 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-[#8a8a82]">
-          <span>Featured research</span>
-          <span>01</span>
-        </div>
-        <Card item={ITEMS[0]} onOpen={navigate} standalone />
+      <div className="space-y-8 px-4 pb-4 md:hidden">
+        {ITEMS.map((item, index) => (
+          <div key={item.title}>
+            <div className="mb-3 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-[#8a8a82]">
+              <span>{index === 0 ? 'Featured research' : 'Research'}</span>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+            </div>
+            <Card item={item} onOpen={navigate} standalone />
+          </div>
+        ))}
       </div>
       <div className="mt-7 hidden overflow-hidden md:block">
         <div className="research-belt flex w-max gap-5 pb-3">
@@ -127,7 +131,7 @@ const ResearchIndex = () => {
       </div>
 
       {/* All research list */}
-      <section className="mx-auto max-w-[1280px] px-5 py-16 sm:px-6 md:px-10 md:py-28">
+      <section className="mx-auto hidden max-w-[1280px] px-5 py-16 sm:px-6 md:block md:px-10 md:py-28">
         <h2 className="font-['Space_Grotesk'] text-[34px] font-semibold tracking-tight md:text-5xl">All research.</h2>
         <div className="mt-7 divide-y overflow-hidden rounded-xl border md:mt-10" style={{ borderColor: BORDER, background: '#fff' }}>
           {ITEMS.map((it) => (
