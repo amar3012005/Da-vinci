@@ -97,6 +97,7 @@ export default function WorkRunShell({
               onPreview={onPreview}
               onResolveExternalAction={onResolveExternalAction}
               error={error}
+              reserveStatusSpace={showRoomStatus}
             />
             <div className="shrink-0 border-t border-transparent bg-[#fbfaf7] px-4 pb-2 pt-0">
               <div className="max-w-[940px] mx-auto px-4">

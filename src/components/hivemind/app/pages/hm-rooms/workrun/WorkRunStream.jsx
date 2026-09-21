@@ -3,7 +3,7 @@ import { ArrowDown } from 'lucide-react';
 import UserMessage from './narrative/UserMessage';
 import AgentMessage from './narrative/AgentMessage';
 
-export default function WorkRunStream({ msgs, onPreview, onResolveExternalAction, error }) {
+export default function WorkRunStream({ msgs, onPreview, onResolveExternalAction, error, reserveStatusSpace = false }) {
   const scroller = useRef(null);
   const followLive = useRef(true);
   const [showJump, setShowJump] = useState(false);
@@ -27,7 +27,7 @@ export default function WorkRunStream({ msgs, onPreview, onResolveExternalAction
         }}
         className="h-full overflow-y-auto overscroll-contain bg-[#fbfaf7]"
       >
-        <div className="mx-auto w-full max-w-[940px] space-y-7 px-12 pb-10 pt-8">
+        <div className={`mx-auto w-full max-w-[940px] space-y-7 px-12 pb-10 ${reserveStatusSpace ? 'pt-[124px]' : 'pt-8'}`}>
           {(msgs || []).map((m, i) => (
             m.role === 'user'
               ? <UserMessage key={i} text={m.text} />

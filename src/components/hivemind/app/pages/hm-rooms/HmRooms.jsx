@@ -477,6 +477,16 @@ function HmRoomDesk({ runId }) {
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(null);
   const esRef = useRef(null);
+  const timingRef = useRef({});
+
+  const markFirstEvent = useCallback((name) => {
+    if (timingRef.current[name]) return;
+    timingRef.current[name] = performance.now();
+    // Browser Performance entries are deliberately content-free: they let us
+    // distinguish submit, acknowledgement, first reasoning/tool/text, and
+    // completion latency without recording a user's prompt or model output.
+    performance.mark(`hm-workrun:${runId}:${name}`);
+  }, [runId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -559,6 +569,11 @@ function HmRoomDesk({ runId }) {
         const fingerprint = `${msg.lastEventId || ''}:${type}:${(ev.delta || ev.text || ev.tool_call_id || ev.name || '').toString().slice(0, 48)}`;
         if (seen.has(fingerprint)) return;
         seen.add(fingerprint);
+        if (type === 'REPLY_START') markFirstEvent('first-reply');
+        if (type === 'THINKING_BLOCK_DELTA') markFirstEvent('first-thinking');
+        if (type === 'TOOL_CALL_START') markFirstEvent('first-tool');
+        if (type === 'TEXT_BLOCK_DELTA') markFirstEvent('first-answer');
+        if (type === 'REPLY_END' || String(ev.t || '') === 'agent.status' && ev.status === 'idle') markFirstEvent('completed');
         if (type === 'REPLY_START' || type === 'TEXT_BLOCK_DELTA' || type === 'THINKING_BLOCK_DELTA' || type === 'TOOL_CALL_START') {
           setPhase('streaming');
         }
@@ -615,6 +630,9 @@ function HmRoomDesk({ runId }) {
     const text = draft.trim();
     if (!text) return;
     setDraft('');
+    timingRef.current = {};
+    performance.mark(`hm-workrun:${runId}:submit`);
+    markFirstEvent('acknowledgement');
     setMsgs((prev) => startUserTurn(prev, text));
     setPhase('streaming');
     try {
