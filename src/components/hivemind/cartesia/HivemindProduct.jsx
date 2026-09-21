@@ -44,25 +44,6 @@ const ProgressBar = () => {
   );
 };
 
-/* ───────── word-by-word headline reveal ───────── */
-const WordReveal = ({ text, className, delay = 0 }) => (
-  <span className={className}>
-    {text.split(' ').map((w, i) => (
-      <span key={i} className="inline-block overflow-hidden pb-[0.08em] align-bottom">
-        <motion.span
-          className="inline-block"
-          initial={{ y: '110%' }}
-          whileInView={{ y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.9, delay: delay + i * 0.09, ease }}
-        >
-          {w}&nbsp;
-        </motion.span>
-      </span>
-    ))}
-  </span>
-);
-
 /* ───────── animated counter ───────── */
 const Counter = ({ to, prefix = '', suffix = '', className }) => {
   const ref = useRef(null);
@@ -568,36 +549,6 @@ const Sovereign = () => (
   </section>
 );
 
-/* ───────── final CTA ───────── */
-
-const FinalCta = () => (
-  <section className="relative overflow-hidden py-32 text-center" style={{ background: PAPER }}>
-    <div className="pointer-events-none absolute inset-0" style={dotField} />
-    <div className="pointer-events-none absolute inset-0"
-      style={{ background: 'radial-gradient(80% 70% at 50% 50%, rgba(251,251,248,0) 30%, #FBFBF8 90%)' }} />
-    <Reveal className="relative">
-      <h2 className="mx-auto max-w-3xl font-['Space_Grotesk'] text-5xl font-semibold leading-[1.02] tracking-tight text-[#0a0a0a] md:text-7xl">
-        <WordReveal text="Your company already" />
-        <br />
-        <WordReveal text="knows where to begin" delay={0.2} />
-      </h2>
-      <p className="mx-auto mt-6 max-w-md text-[15px] font-light text-[#6b6b6b]">
-        Bring your tools, decisions and team into one operating system. Every approved action makes the next one better.
-      </p>
-      <div className="mt-10 flex flex-wrap items-center justify-center gap-5">
-        <motion.a href="/hivemind/login" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-          className="group inline-flex items-center gap-2.5 rounded-full px-8 py-4 text-[13px] font-semibold text-white no-underline"
-          style={{ background: BLUE }}>
-          Start your workspace <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
-        </motion.a>
-        <a href="#research-library" className="inline-flex min-h-12 items-center rounded-full border border-[#D8D4CC] bg-white px-6 text-[13px] font-semibold text-[#292724] no-underline hover:border-[#117DFF] hover:text-[#117DFF]">
-          Read the research
-        </a>
-      </div>
-    </Reveal>
-  </section>
-);
-
 /* ───────── page ───────── */
 
 const HivemindProduct = () => {
@@ -676,13 +627,13 @@ const HivemindProduct = () => {
     <div style={{ background: PAPER }} className="min-h-screen">
       <ProgressBar />
       <Navbar />
-      {isMobile && landingEnhancementsEnabled === null && (
+      {landingEnhancementsEnabled === null && (
         <div className="min-h-screen bg-[#FBFBF8]" aria-label="Loading HIVEMIND" />
       )}
-      {landingEnhancementsEnabled && (
+      {landingEnhancementsEnabled === true && (
         <MobileLandingV2 desktop={!isMobile} profileName={profileName} />
       )}
-      {(!isMobile || landingEnhancementsEnabled !== null) && <div>
+      {landingEnhancementsEnabled !== null && <div>
         {/* Keep the proven cover only while the enhanced hero is unavailable.
             Once enabled, V2 owns the hero at both breakpoints. */}
         {landingEnhancementsEnabled !== true && <Hero profileName={profileName} />}
@@ -773,8 +724,6 @@ const HivemindProduct = () => {
       <Sovereign />
       {landingEnhancementsEnabled && <QuantumChapter />}
       {landingEnhancementsEnabled && <ResearchRequestsChapter />}
-      <FinalCta />
-
       {/* real SINGULANCE/HIVEMIND pricing — 4 tiers + sovereign scope estimator */}
       <Pricing />
 

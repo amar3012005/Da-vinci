@@ -57,16 +57,31 @@ const CinematicScrollScene = ({
   const stepRefs = useRef([]);
   const heroCenterRef = useRef(null);
   const heroSideRef = useRef(null);
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReduced] = useState(() => (
+    typeof window !== 'undefined'
+      && (window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        || window.matchMedia('(max-width: 767px)').matches)
+  ));
 
   const framePath = (i) => `/${frameDir}/f_${String(i + 1).padStart(3, '0')}.webp`;
   const hasVideo = Boolean(videoSrc);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-    const noMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(max-width: 767px)').matches;
-    setReduced(noMotion);
-    if (noMotion) return undefined;
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const mobileQuery = window.matchMedia('(max-width: 767px)');
+    const updateMode = () => setReduced(motionQuery.matches || mobileQuery.matches);
+    updateMode();
+    motionQuery.addEventListener('change', updateMode);
+    mobileQuery.addEventListener('change', updateMode);
+    return () => {
+      motionQuery.removeEventListener('change', updateMode);
+      mobileQuery.removeEventListener('change', updateMode);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || reduced) return undefined;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -255,7 +270,7 @@ const CinematicScrollScene = ({
       if (!isLight) document.documentElement.classList.remove('cinematic-mode');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasVideo, videoSrc, isLight, heroTitle]);
+  }, [hasVideo, videoSrc, isLight, heroTitle, reduced]);
 
   if (reduced) {
     // mobile / reduced-motion: a tall poster header + the full narration stacked

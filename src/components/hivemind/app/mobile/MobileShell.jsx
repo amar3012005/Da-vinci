@@ -41,12 +41,10 @@ const NAV = [
 export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false, showBareLogo = true }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, org, logout } = useAuth() || {};
+  const { user, org, logout, needsOnboarding } = useAuth() || {};
   const [drawer, setDrawer] = useState(false);
-  const [showAwakening, setShowAwakening] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try { return window.localStorage.getItem('hm.mobile_awakening_pending') === '1'; } catch { return false; }
-  });
+  const [reminderDismissed, setReminderDismissed] = useState(false);
+  const [showDesktopInstructions, setShowDesktopInstructions] = useState(false);
   const { usage } = useUsage();
 
   // SINGULANCE onboarding splash — plays once per device, and again right
@@ -76,11 +74,18 @@ export default function MobileShell({ children, rightAction = null, title = null
   // Close the drawer on any route change.
   useEffect(() => { setDrawer(false); }, [location.pathname]);
 
+  useEffect(() => {
+    if (needsOnboarding !== false) return;
+    setReminderDismissed(false);
+    setShowDesktopInstructions(false);
+  }, [needsOnboarding]);
+
   const firstName = (user?.name || user?.email || 'there').split(/[\s@]/)[0];
   const dismissAwakening = () => {
-    setShowAwakening(false);
-    try { window.localStorage.removeItem('hm.mobile_awakening_pending'); } catch { /* private mode */ }
+    setReminderDismissed(true);
+    setShowDesktopInstructions(false);
   };
+  const showAwakening = location.pathname === '/hivemind/m/chat' && needsOnboarding === true && !reminderDismissed;
 
   return (
     <div
@@ -92,11 +97,19 @@ export default function MobileShell({ children, rightAction = null, title = null
         <div className="absolute inset-0 z-[90] flex items-end bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Awaken your AI company">
           <section className="w-full rounded-[18px] border border-[#e3e0db] bg-white p-5 shadow-xl">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#117dff]">HIVEMIND · FIRST MOVE</p>
-            <h2 className="mt-2 font-['Space_Grotesk'] text-[25px] font-semibold leading-tight text-[#0a0a0a]">It’s time to awaken your AI company.</h2>
-            <p className="mt-2 text-[13px] leading-6 text-[#525252]">Your company brain is ready. Open the desktop workspace to meet your HyperAgents and make your first move.</p>
+            <h2 className="mt-2 font-['Space_Grotesk'] text-[25px] font-semibold leading-tight text-[#0a0a0a]">
+              {showDesktopInstructions ? 'Finish onboarding on your computer.' : 'Meet your HyperAgents.'}
+            </h2>
+            <p className="mt-2 text-[13px] leading-6 text-[#525252]">
+              {showDesktopInstructions
+                ? 'Open singulancelabs.com on your PC or Mac, sign in, and finish onboarding your company there.'
+                : 'Your account is ready, but your company onboarding is not finished yet. Complete it on a PC or Mac to activate your company, memory, and HyperAgents.'}
+            </p>
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <button type="button" onClick={dismissAwakening} className="h-10 rounded-[6px] border border-[#e3e0db] text-[12px] font-medium text-[#525252]">Stay in chat</button>
-              <button type="button" onClick={() => { dismissAwakening(); navigate('/hivemind/app/employees/mycompany?desktop=1'); }} className="h-10 rounded-[6px] bg-[#117dff] text-[12px] font-semibold text-white">Open desktop setup</button>
+              <button type="button" onClick={dismissAwakening} className="h-10 rounded-[6px] border border-[#e3e0db] text-[12px] font-medium text-[#525252]">Continue chat</button>
+              {!showDesktopInstructions && (
+                <button type="button" onClick={() => setShowDesktopInstructions(true)} className="h-10 rounded-[6px] bg-[#117dff] text-[12px] font-semibold text-white">Open desktop setup</button>
+              )}
             </div>
           </section>
         </div>
