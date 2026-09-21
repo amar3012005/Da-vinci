@@ -13,8 +13,15 @@ import SingulanceBrand from '../shared/SingulanceBrand';
 import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
 import apiClient from '../shared/api-client';
+import AgentAvatar from '../hyperagents/AgentAvatar';
 
 const SPLASH_FLAG = 'hm_m_splashed';
+const ONBOARDING_TEAM = [
+  { id: 'priya', name: 'Priya', lane: 'Strategist' },
+  { id: 'lena', name: 'Lena', lane: 'Builder' },
+  { id: 'omar', name: 'Omar', lane: 'Researcher' },
+  { id: 'tara', name: 'TARA', lane: 'Communicator' },
+];
 
 /**
  * MobileShell — the shared chrome for every /hivemind/m/* page, styled after
@@ -147,6 +154,19 @@ export default function MobileShell({ children, rightAction = null, title = null
         <div className="absolute inset-0 z-[90] flex items-end bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Awaken your AI company">
           <section className="w-full rounded-[18px] border border-[#e3e0db] bg-white p-5 shadow-xl">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#117dff]">HIVEMIND · FIRST MOVE</p>
+            <div className="mt-4 flex items-center gap-3" aria-label="Your Humation team">
+              <div className="flex -space-x-2.5">
+                {ONBOARDING_TEAM.map((agent) => (
+                  <span key={agent.id} className="inline-flex rounded-full border-2 border-white bg-white">
+                    <AgentAvatar agent={agent} size={42} ring />
+                  </span>
+                ))}
+              </div>
+              <div className="min-w-0">
+                <strong className="block text-[12px] font-semibold text-[#0a0a0a]">Priya, Lena, Omar &amp; TARA</strong>
+                <span className="mt-0.5 block text-[10px] text-[#737373]">Your Humation team is waiting</span>
+              </div>
+            </div>
             <h2 className="mt-2 font-['Space_Grotesk'] text-[25px] font-semibold leading-tight text-[#0a0a0a]">
               {showDesktopInstructions ? 'Finish onboarding on your computer.' : 'Meet your HyperAgents.'}
             </h2>
