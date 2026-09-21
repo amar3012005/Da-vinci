@@ -3,6 +3,7 @@ import { Copy, Ellipsis, Link, LoaderCircle, RefreshCw, ThumbsDown, ThumbsUp, Ch
 import { renderMarkdownLite } from '../../../../hyperagents/rooms/shared';
 import StreamingText from './StreamingText';
 import ToolDisclosure from '../tools/ToolDisclosure';
+import ExternalActionCard from '../approval/ExternalActionCard';
 
 export default function AgentMessage({
   thinking,
@@ -65,6 +66,10 @@ export default function AgentMessage({
             hidden={finished && !toolsOpen}
             collapseDetails={finished}
           />
+        ) : item.kind === 'externalAction' ? (
+          <div key={item.id || `external-action-${index}`} className={finished && !toolsOpen ? 'hidden' : ''}>
+            <ExternalActionCard title={item.title} detail={item.detail} />
+          </div>
         ) : (
           <div key={item.id || `thinking-${index}`} className={`text-[16px] leading-[1.75] text-[#404040] ${finished && !toolsOpen ? 'hidden' : ''}`}>
             <StreamingText text={item.text || ''} streaming={streaming && index === ordered.length - 1 && !text} />

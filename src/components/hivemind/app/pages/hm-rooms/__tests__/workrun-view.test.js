@@ -114,6 +114,26 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(view.approvals).toHaveLength(0);
   });
 
+  it('projects HIVE external approvals as a non-blocking policy receipt, not an AgentScope confirmation', () => {
+    const event = {
+      t: 'external_action.pending',
+      tool: 'hivemind_composio_session_execute',
+      approval: { id: 'approval-1', summary: 'Send the drafted email to Ada.' },
+    };
+    const view = applyWorkRunEvent(emptyWorkRunView(runId), event);
+    expect(view.approvals).toHaveLength(0);
+    expect(view.blocks['external-action:approval-1']).toMatchObject({
+      kind: 'appAction',
+      status: 'pending',
+      payload: { detail: 'Send the drafted email to Ada.' },
+    });
+    const msgs = applyAgentEvent(startUserTurn([], 'send it'), event);
+    const assistant = msgs.find((message) => message.role === 'assistant');
+    expect(assistant.timeline).toContainEqual(expect.objectContaining({
+      kind: 'externalAction', id: 'approval-1', detail: 'Send the drafted email to Ada.',
+    }));
+  });
+
   it('prefers a recoverable confirmation over a legacy card for the same tool', () => {
     const toolCall = { id: 'bash-1', name: 'Bash', input: { command: 'pwd' } };
     let view = applyWorkRunEvent(emptyWorkRunView(runId), {

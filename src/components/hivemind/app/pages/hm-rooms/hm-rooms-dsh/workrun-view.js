@@ -296,6 +296,28 @@ export function applyWorkRunEvent(view, ev) {
     });
   }
 
+  // External writes are governed by HIVE, not by AgentScope's generic HITL
+  // confirmation UI. Keep the receipt in the turn projection so the user can
+  // see what needs policy approval without parking the conversation on an
+  // Allow/Deny card.
+  if (t === 'external_action.pending') {
+    const approval = ev.approval || {};
+    const approvalId = approval.id || ev.approval_id || ev.tool_call_id || ev.id || 'pending';
+    return upsertBlock(view, {
+      block_id: `external-action:${approvalId}`,
+      workrun_id: workrunId,
+      kind: 'appAction',
+      status: 'pending',
+      payload: {
+        approval_id: approval.id || ev.approval_id || null,
+        tool: ev.tool || ev.tool_call_name || 'external action',
+        title: 'External action awaiting approval',
+        detail: approval.summary || ev.summary || 'HIVE policy requires approval before this action is sent.',
+        expires_at: approval.expires_at || ev.expires_at || null,
+      },
+    });
+  }
+
   if (t === 'approval.requested' || type === 'REQUIRE_USER_CONFIRM') {
     const calls = Array.isArray(ev.tool_calls) ? ev.tool_calls : [];
     const first = calls[0] || {};
@@ -429,6 +451,23 @@ export function applyAgentEvent(msgs, ev) {
     const cur = ensureAssistant();
     cur.reply_id = replyId || cur.reply_id;
     cur.stage = 'reasoning';
+    return next;
+  }
+
+  if (String(ev?.t || '') === 'external_action.pending') {
+    const cur = ensureAssistant();
+    const approval = ev.approval || {};
+    const approvalId = approval.id || ev.approval_id || ev.tool_call_id || ev.id || `external-${cur.timeline.length}`;
+    const existing = cur.timeline.find((item) => item.kind === 'externalAction' && item.id === approvalId);
+    const action = {
+      kind: 'externalAction',
+      id: approvalId,
+      title: 'External action awaiting approval',
+      detail: approval.summary || ev.summary || 'HIVE policy requires approval before this action is sent.',
+      tool: ev.tool || ev.tool_call_name || 'external action',
+    };
+    if (existing) Object.assign(existing, action);
+    else cur.timeline.push(action);
     return next;
   }
 
