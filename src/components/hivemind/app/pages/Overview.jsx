@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import OverviewTour, { useOverviewTour } from '../shared/OverviewTour';
 import { useTranslation } from 'react-i18next';
 import {
@@ -49,6 +49,22 @@ import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/up
 import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './WebStudio';
 import HarnessChatSurface from './HarnessChatSurface';
 import HarnessSurface from './HarnessSurface';
+
+const LAST_HARNESS_SESSION_KEY = 'hm.lastHarnessSession';
+
+function cachedHarnessSessionPath() {
+  try {
+    const value = window.sessionStorage.getItem(LAST_HARNESS_SESSION_KEY) || '';
+    return /^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberHarnessSessionPath(pathname) {
+  if (!/^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(pathname)) return;
+  try { window.sessionStorage.setItem(LAST_HARNESS_SESSION_KEY, pathname); } catch { /* storage may be unavailable */ }
+}
 
 // ─── Animation variants ──────────────────────────────────────────
 
@@ -1456,10 +1472,14 @@ export default function Overview() {
   // Do not select Harness by hostname: Enigma and main share this build and
   // use the server-side feature flag at admission. Only an explicit admitted
   // route mounts the native client; the overview root retains legacy fallback.
-  if (/^\/hivemind\/app\/overview\/(?:new|session\/[^/]+)$/u.test(window.location.pathname)) {
+  const pathname = window.location.pathname;
+  if (/^\/hivemind\/app\/overview\/(?:new|session\/[^/]+)$/u.test(pathname)) {
+    rememberHarnessSessionPath(pathname);
     return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
   }
-  return <LegacyOverview />;
+  const cachedSession = cachedHarnessSessionPath();
+  if (cachedSession) return <Navigate to={cachedSession} replace />;
+  return <HarnessChatSurface legacy={<LegacyOverview />} />;
 }
 
 function LegacyOverview() {
@@ -1702,8 +1722,8 @@ function LegacyOverview() {
         </motion.div>
       </div>
 
-      {/* The HIVE chat — the Overview centerpiece */}
-      <HarnessChatSurface legacy={<OverviewChat inputRef={chatInputRef} />} />
+      {/* The HIVE chat — shown only after the rollout authority selected legacy. */}
+      <OverviewChat inputRef={chatInputRef} />
 
       {/* Mobile QR promo — one bottom-right corner widget, desktop-only
           (mobile visitors never reach this page — see the redirect effect

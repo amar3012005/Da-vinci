@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
 
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
@@ -28,7 +29,7 @@ function canonicalHarnessDestination(url) {
   return HARNESS_OVERVIEW_PATH;
 }
 
-async function navigateHarnessTicket(ticket, destination) {
+async function navigateHarnessTicket(ticket, destination, navigate) {
   const requestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
   const response = await fetch(HARNESS_EXCHANGE_PATH, {
     method: 'POST',
@@ -37,7 +38,12 @@ async function navigateHarnessTicket(ticket, destination) {
     body: JSON.stringify({ ticket, request_id: requestId }),
   });
   if (!response.ok) throw new Error('Could not establish the secure Harness session.');
-  window.location.replace(canonicalHarnessDestination(destination || response.url || window.location.href));
+  const target = canonicalHarnessDestination(destination || response.url || window.location.href);
+  if (typeof navigate === 'function') {
+    navigate(target, { replace: true });
+  } else {
+    window.location.replace(target);
+  }
 }
 
 /** Admission stays in Da-vinci; the admitted result is the complete native
@@ -45,6 +51,7 @@ async function navigateHarnessTicket(ticket, destination) {
  * implementation is involved. */
 export default function HarnessChatSurface({ legacy }) {
   const { t } = useTranslation('dashboard');
+  const navigate = useNavigate();
   const mountedRef = useRef(true);
   // The only authority allowed to choose a surface is the successful
   // Cloudflare rollout receipt. Until that arrives, or after a bootstrap
@@ -63,13 +70,13 @@ export default function HarnessChatSurface({ legacy }) {
       // The overview root is the flag-controlled launcher.  After a successful
       // exchange, land on the explicit native route so an enabled account
       // mounts Harness while a disabled account remains on the legacy root.
-      await navigateHarnessTicket(ticket, `${HARNESS_OVERVIEW_PATH}/new`);
+      await navigateHarnessTicket(ticket, `${HARNESS_OVERVIEW_PATH}/new`, navigate);
     } catch (error) {
       if (!mountedRef.current) return;
       setConnecting(false);
       setNotice(error?.message || t('overview.harness.unavailable', 'Harness chat is temporarily unavailable.'));
     }
-  }, [t]);
+  }, [navigate, t]);
 
   const bootstrap = useCallback(async () => {
     setNotice(null);
@@ -92,7 +99,7 @@ export default function HarnessChatSurface({ legacy }) {
   useEffect(() => { bootstrap(); }, [bootstrap]);
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex h-full flex-1 min-h-0 flex-col bg-[#faf9f4]">
       {notice && (
         <div className="mx-auto mb-2 flex w-full max-w-3xl items-center justify-between gap-3 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2">
           <p className="flex items-center gap-2 text-[11px] text-amber-700"><AlertTriangle size={13} />{notice}</p>
