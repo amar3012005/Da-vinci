@@ -4,6 +4,7 @@ import path from 'node:path';
 const source = fs.readFileSync(path.resolve(__dirname, '..', 'HarnessChatSurface.jsx'), 'utf8');
 const overview = fs.readFileSync(path.resolve(__dirname, '..', 'Overview.jsx'), 'utf8');
 const nativeSurface = fs.readFileSync(path.resolve(__dirname, '..', 'HarnessSurface.jsx'), 'utf8');
+const appShell = fs.readFileSync(path.resolve(__dirname, '..', '..', 'layout', 'AppShell.jsx'), 'utf8');
 
 test('only a successful legacy rollout receipt can render the legacy surface', () => {
   expect(source).toContain("const [mode, setMode] = useState(null);");
@@ -30,4 +31,10 @@ test('cached native remount waits for the prior app disposal', () => {
   expect(nativeSurface).toContain('await pendingDispose;');
   expect(nativeSurface).toContain('window.__HIVE_HARNESS_DISPOSE_PROMISE__ = disposePromise;');
   expect(nativeSurface).not.toContain('mount.replaceChildren();');
+});
+
+test('the product switcher crosses the native Harness boundary in one clean navigation', () => {
+  expect(appShell).toContain("const crossingHarnessBoundary = s === 'hivemind' || sectionForPath(location.pathname) === 'hivemind';");
+  expect(appShell).toContain("sessionStorage.getItem('hm.lastHarnessSession')");
+  expect(appShell).toContain('window.location.assign(target);');
 });

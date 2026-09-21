@@ -286,7 +286,25 @@ export default function AppShell() {
     setActiveSection(s);
     try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }
     const landing = { hivemind: '/hivemind/app/overview', hyperagents: '/hivemind/app/employees/mycompany', tara: '/hivemind/app/tara' };
-    if (landing[s]) navigate(landing[s]);
+    if (!landing[s]) return;
+
+    // BRAIN embeds the native Harness, which owns an independent React root.
+    // Cross its boundary with one clean document handoff so React Router never
+    // tries to dismantle or revive that root in place. Resume the exact cached
+    // session directly—do not stop at Overview and redirect a second time.
+    const crossingHarnessBoundary = s === 'hivemind' || sectionForPath(location.pathname) === 'hivemind';
+    if (crossingHarnessBoundary) {
+      let target = landing[s];
+      if (s === 'hivemind') {
+        try {
+          const cached = sessionStorage.getItem('hm.lastHarnessSession') || '';
+          if (/^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(cached)) target = cached;
+        } catch { /* storage may be unavailable */ }
+      }
+      window.location.assign(target);
+      return;
+    }
+    navigate(landing[s]);
   };
   useEffect(() => {
     apiClient.setProductAccessPlan(org?.plan);
