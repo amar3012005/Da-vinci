@@ -264,7 +264,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
     // "Your Company" IS the onboarding page. Render the full genesis flow
     // inline instead of a dead placeholder.
     return (
-      <div className="flex-1 min-h-0 overflow-y-auto bg-white px-6 py-4">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-[#faf9f4] px-6 py-4">
         <div className="max-w-[1280px] mx-auto">
           <HyperOnboarding
             // The first destination is the completed CompanyDashboard itself:
@@ -346,7 +346,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#faf9f4]">
       {selectedWebArtifact ? (
         <div className="fixed inset-0 z-[92] grid place-items-center bg-black/35 p-3 backdrop-blur-[2px] sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedWebArtifact(null); }}>
           <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-[920px] flex-col">
@@ -385,7 +385,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
         </div>
       ) : null}
       {/* Header — Polsia's name bar */}
-      <div className="px-6 pt-5 pb-4 border-b border-[#e3e0db] flex items-start justify-between bg-white z-10 shrink-0">
+      <div className="px-6 pt-5 pb-4 border-b border-[#e3e0db] flex items-start justify-between bg-[#faf9f4] z-10 shrink-0">
         <div className="min-w-0">
           <h1 className="text-[26px] leading-tight font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{c.company}</h1>
           <div className="flex items-center gap-2 mt-1 text-[11.5px] text-[#525252]">
@@ -490,7 +490,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
           </div>
 
           {c.website ? (
-            <div className="shrink-0 pt-3 border-t border-[#ece9e3] bg-white">
+            <div className="shrink-0 pt-3 border-t border-[#ece9e3] bg-[#faf9f4]">
               <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#a3a3a3] uppercase mb-2"><Globe size={11} /> {t('hyperDash.website', 'Website')}</div>
               <WebsitePreview
                 image={c.screenshot}
