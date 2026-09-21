@@ -8,7 +8,9 @@ test('Harness admission is exchanged on the current origin and never navigates t
   assert.match(source, /const HARNESS_EXCHANGE_PATH = '\/api\/hivemind\/embed\/exchange'/u);
   assert.match(source, /credentials: 'include'/u);
   assert.match(source, /body: JSON\.stringify\(\{ ticket, request_id: requestId \}\)/u);
-  assert.match(source, /window\.location\.replace\(canonicalHarnessDestination/u);
+  assert.match(source, /const target = canonicalHarnessDestination\(/u);
+  assert.match(source, /navigate\(target, \{ replace: true \}\)/u);
+  assert.match(source, /window\.location\.replace\(target\)/u);
   assert.doesNotMatch(source, /chat\.preview\.singulancelabs\.com/u);
   assert.doesNotMatch(source, /target\.pathname = '\/auth\/callback'/u);
 });

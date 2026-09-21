@@ -497,7 +497,22 @@ export default {
       return privateDiscoveryResponse(pathname);
     }
 
-    const response = await env.ASSETS.fetch(request);
+    // All HIVE pages are client routes of the same current document. Fetch
+    // index explicitly instead of caching a separate SPA fallback per route.
+    // Only content-hashed assets, never the authenticated app shell, are cached.
+    const appDocument = request.method === 'GET'
+      && pathname.startsWith('/hivemind/')
+      && !pathname.split('/').pop().includes('.');
+    const assetRequest = appDocument
+      ? new Request(new URL('/index.html', request.url), request)
+      : request;
+    let response = await env.ASSETS.fetch(assetRequest);
+    if (appDocument && isHtml(response)) {
+      const headers = new Headers(response.headers);
+      headers.set('cache-control', 'private, no-store');
+      headers.set('cdn-cache-control', 'no-store');
+      response = new Response(response.body, { status: response.status, headers });
+    }
 
     // Preserve an unauthenticated Overview deep link through the one-shot
     // admission exchange. It is navigation intent only, never authorization.

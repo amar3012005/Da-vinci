@@ -19,7 +19,8 @@
       "/__hivemind/*",
       "/manifest.webmanifest",
       "/hivemind/app/overview",
-      "/hivemind/app/overview/*"
+      "/hivemind/app/overview/*",
+      "/hivemind/*"
     ]
   },
   "flagship": [
