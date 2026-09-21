@@ -19,7 +19,7 @@ test('the provider control stays implemented but hidden from users', () => {
   assert.match(tara, /const switchProvider = async/);
 });
 
-test('the TARA page always initializes the Grok catalog and session UI', () => {
-  assert.match(tara, /const voiceProvider = 'grok';/);
+test('the TARA page aligns the catalog and session UI with the runtime provider', () => {
+  assert.match(tara, /const voiceProvider = runtimeConfig\?\.default_provider \|\| 'deepgram';/);
   assert.match(tara, /provider=\{voiceProvider\}/);
 });

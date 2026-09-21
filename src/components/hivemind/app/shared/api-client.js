@@ -21,6 +21,16 @@ const PLATFORM_ADMIN_BASES = Object.freeze({
   }),
 });
 
+const NETWORK_CHANGED_RETRY_DELAYS_MS = [300, 800];
+
+function isNetworkChangedError(error) {
+  return error?.code === 'ERR_NETWORK_CHANGED' || /network changed/i.test(String(error?.message || ''));
+}
+
+function waitForNetworkRecovery(delay) {
+  return new Promise((resolve) => window.setTimeout(resolve, delay));
+}
+
 function selectedPlatformAdminEnvironment() {
   if (typeof window === 'undefined' || window.location.hostname !== PLATFORM_ADMIN_HOST) return null;
   try {
@@ -1231,11 +1241,18 @@ class HiveMindApiClient {
   }
 
   async listVisualGenerationJobs(roomId, { limit = 12 } = {}) {
-    const { data } = await this.controlPlane.get('/v1/proxy/visual-generation/jobs', {
-      params: { room_id: roomId, limit },
-      suppressServiceError: true,
-    });
-    return data;
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        const { data } = await this.controlPlane.get('/v1/proxy/visual-generation/jobs', {
+          params: { room_id: roomId, limit },
+          suppressServiceError: true,
+        });
+        return data;
+      } catch (error) {
+        if (!isNetworkChangedError(error) || attempt >= NETWORK_CHANGED_RETRY_DELAYS_MS.length) throw error;
+        await waitForNetworkRecovery(NETWORK_CHANGED_RETRY_DELAYS_MS[attempt]);
+      }
+    }
   }
 
   async getVisualGenerationJob(jobId) {

@@ -62,10 +62,10 @@ export const ConnectorConveyorDetail = () => {
   const reduceMotion = useReducedMotion();
   const rail = [...connectors, ...connectors];
   return (
-    <section className="md:hidden overflow-hidden border-b border-[#E7E4DD] bg-[#FBFBF8] pb-20" aria-label="Connected applications">
-      <div className="mx-auto max-w-md px-5">
-        <p className="font-['Space_Grotesk'] text-[22px] font-semibold tracking-[-.035em] text-[#0A0A0A]">Your tools keep moving. Memory keeps up.</p>
-        <p className="mt-2 text-[13px] leading-relaxed text-[#6B6862]">Two-way context flows from the apps your team already uses into one governed company record.</p>
+    <section className="overflow-hidden border-b border-[#E7E4DD] bg-[#FBFBF8] pb-20 pt-8 md:py-20" aria-label="Connected applications">
+      <div className="mx-auto max-w-md px-5 md:max-w-6xl md:px-10">
+        <p className="font-['Space_Grotesk'] text-[22px] font-semibold tracking-[-.035em] text-[#0A0A0A] md:text-[30px]">Your tools keep moving. Memory keeps up.</p>
+        <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-[#6B6862] md:text-[15px]">Two-way context flows from the apps your team already uses into one governed company record.</p>
       </div>
       <div className="relative mt-7 py-2">
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-gradient-to-r from-[#FBFBF8] to-transparent" />
@@ -99,11 +99,11 @@ export const ConnectorConveyorDetail = () => {
 };
 
 export const HumationTeamDetail = () => (
-  <section className="md:hidden relative overflow-hidden bg-[#0A0A0A] px-5 py-20 text-white">
+  <section className="relative overflow-hidden bg-[#0A0A0A] px-5 py-20 text-white md:px-10 md:py-28">
     <span aria-hidden className="pointer-events-none absolute -right-8 top-5 select-none font-['Space_Grotesk'] text-[13rem] font-semibold leading-none tracking-[-.1em] text-white/[.05]">05</span>
-    <div className="relative mx-auto max-w-md">
+    <div className="relative mx-auto max-w-md md:max-w-5xl">
       <p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#75B7FF]">Inside the employee layer</p>
-      <h2 className="mt-4 font-['Space_Grotesk'] text-[40px] font-semibold leading-[.98] tracking-[-.055em]">The people inside<br />your AI company.</h2>
+      <h2 className="mt-4 font-['Space_Grotesk'] text-[40px] font-semibold leading-[.98] tracking-[-.055em] md:text-6xl">The people inside<br />your AI company.</h2>
       <p className="mt-5 text-[15px] leading-relaxed text-[#AAA8A3]">Named Humation employees bring a specialty, shared memory, visible ownership and accountable output to every room.</p>
 
       <div className="mt-9 divide-y divide-white/10 border-y border-white/10">
@@ -140,13 +140,13 @@ export const HumationTeamDetail = () => (
 );
 
 export const QuantumChapter = () => (
-  <section id="chapter-9" className="md:hidden relative scroll-mt-20 overflow-hidden border-t border-[#E7E4DD] bg-[#FBFBF8] px-5 py-20">
+  <section id="chapter-9" className="relative scroll-mt-20 overflow-hidden border-t border-[#E7E4DD] bg-[#FBFBF8] px-5 py-20 md:px-10 md:py-28">
     <span aria-hidden className="pointer-events-none absolute -right-8 top-7 select-none font-['Space_Grotesk'] text-[13rem] font-semibold leading-none tracking-[-.1em] text-[#0A0A0A]/[.05]">09</span>
-    <div className="relative mx-auto max-w-md">
+    <div className="relative mx-auto max-w-md md:max-w-5xl">
       <p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#117DFF]">Post-quantum security · 09</p>
-      <h2 className="mt-4 font-['Space_Grotesk'] text-[40px] font-semibold leading-[.98] tracking-[-.055em] text-[#0A0A0A]">Encryption that outlives<br />the quantum threat.</h2>
+      <h2 className="mt-4 font-['Space_Grotesk'] text-[40px] font-semibold leading-[.98] tracking-[-.055em] text-[#0A0A0A] md:text-6xl">Encryption that outlives<br />the quantum threat.</h2>
       <p className="mt-5 text-[15px] leading-relaxed text-[#66635D]">Classical and NIST-standardized post-quantum protection keep long-lived company memory from becoming tomorrow’s readable archive.</p>
-      <div className="mt-9 grid grid-cols-2 gap-px overflow-hidden border-y border-[#D9E9FF] bg-[#D9E9FF]">
+      <div className="mt-9 grid grid-cols-2 gap-px overflow-hidden border-y border-[#D9E9FF] bg-[#D9E9FF] md:grid-cols-4">
         {[
           ['ML-KEM-768', 'key encapsulation'], ['ML-DSA-65', 'signed memory'],
           ['X25519', 'hybrid handshake'], ['AES-256-GCM', 'data at rest'],
@@ -163,11 +163,11 @@ export const QuantumChapter = () => (
 );
 
 export const ResearchRequestsChapter = () => (
-  <section id="research-library" className="md:hidden relative scroll-mt-20 overflow-hidden border-t border-[#E7E4DD] px-5 py-20" style={{ background: PAPER }}>
+  <section id="research-library" className="relative scroll-mt-20 overflow-hidden border-t border-[#E7E4DD] px-5 py-20 md:px-10 md:py-28" style={{ background: PAPER }}>
     <span aria-hidden className="pointer-events-none absolute -right-8 top-7 select-none font-['Space_Grotesk'] text-[13rem] font-semibold leading-none tracking-[-.1em] text-[#0A0A0A]/[.05]">10</span>
-    <div className="relative mx-auto max-w-md">
+    <div className="relative mx-auto max-w-md md:max-w-5xl">
       <p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#117DFF]">Research + requests · 10</p>
-      <h2 className="mt-4 font-['Space_Grotesk'] text-[40px] font-semibold leading-[.98] tracking-[-.055em] text-[#0A0A0A]">Inspect the system.<br />Ask for the evidence.</h2>
+      <h2 className="mt-4 font-['Space_Grotesk'] text-[40px] font-semibold leading-[.98] tracking-[-.055em] text-[#0A0A0A] md:text-6xl">Inspect the system.<br />Ask for the evidence.</h2>
       <p className="mt-5 text-[15px] leading-relaxed text-[#66635D]">Read the architecture, agent science and security model—or request a focused technical briefing for your organization.</p>
 
       <div className="mt-9 divide-y divide-[#E7E4DD] border-y border-[#E7E4DD]">

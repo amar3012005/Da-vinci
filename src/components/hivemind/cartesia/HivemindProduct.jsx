@@ -603,7 +603,7 @@ const HivemindProduct = () => {
   const [isMobile, setIsMobile] = useState(() => (
     typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
   ));
-  const [mobileLandingEnabled, setMobileLandingEnabled] = useState(null);
+  const [landingEnhancementsEnabled, setLandingEnhancementsEnabled] = useState(null);
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 767px)');
@@ -614,7 +614,6 @@ const HivemindProduct = () => {
   }, []);
 
   useEffect(() => {
-    if (!isMobile) return undefined;
     let active = true;
     const controller = new AbortController();
     fetch('/__hivemind/feature-flags/landing-mobile-v2', {
@@ -623,12 +622,12 @@ const HivemindProduct = () => {
       signal: controller.signal,
     })
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error('flag unavailable'))))
-      .then((payload) => { if (active) setMobileLandingEnabled(payload?.enabled === true); })
+      .then((payload) => { if (active) setLandingEnhancementsEnabled(payload?.enabled === true); })
       // The launch baseline is enabled for everyone. A failed flag request must
       // not turn the public homepage into an indeterminate blank screen.
-      .catch((error) => { if (active && error?.name !== 'AbortError') setMobileLandingEnabled(true); });
+      .catch((error) => { if (active && error?.name !== 'AbortError') setLandingEnhancementsEnabled(true); });
     return () => { active = false; controller.abort(); };
-  }, [isMobile]);
+  }, []);
 
   // Deep-link to a section (e.g. /hivemind#pricing). The target only exists
   // once this lazy chunk mounts, so the browser's native hash-scroll fires
@@ -661,12 +660,12 @@ const HivemindProduct = () => {
     <div style={{ background: PAPER }} className="min-h-screen">
       <ProgressBar />
       <Navbar />
-      {isMobile && mobileLandingEnabled === null && (
+      {isMobile && landingEnhancementsEnabled === null && (
         <div className="min-h-screen bg-[#FBFBF8]" aria-label="Loading HIVEMIND" />
       )}
-      {isMobile && mobileLandingEnabled && <MobileLandingV2 />}
-      {(!isMobile || mobileLandingEnabled !== null) && <div>
-        {(!isMobile || mobileLandingEnabled === false) && <Hero />}
+      {isMobile && landingEnhancementsEnabled && <MobileLandingV2 />}
+      {(!isMobile || landingEnhancementsEnabled !== null) && <div>
+        {(!isMobile || landingEnhancementsEnabled === false) && <Hero />}
         <MarqueeRow />
 
       <Chapter n="01" id="chapter-1" eyebrow="memory engine"
@@ -690,7 +689,7 @@ const HivemindProduct = () => {
         ]}
         card={<ConnectorCard />} flip />
 
-      {isMobile && mobileLandingEnabled && <ConnectorConveyorDetail />}
+      {landingEnhancementsEnabled && <ConnectorConveyorDetail />}
 
       <VelocityBand text="Remember everything ·" />
 
@@ -727,7 +726,7 @@ const HivemindProduct = () => {
         ]}
         card={<AgentsCard />} />
 
-      {isMobile && mobileLandingEnabled && <HumationTeamDetail />}
+      {landingEnhancementsEnabled && <HumationTeamDetail />}
 
       <VelocityBand text="Agents that act ·" />
 
@@ -752,8 +751,8 @@ const HivemindProduct = () => {
         card={<McpCard />} />
 
       <Sovereign />
-      {isMobile && mobileLandingEnabled && <QuantumChapter />}
-      {isMobile && mobileLandingEnabled && <ResearchRequestsChapter />}
+      {landingEnhancementsEnabled && <QuantumChapter />}
+      {landingEnhancementsEnabled && <ResearchRequestsChapter />}
       <FinalCta />
 
       {/* real SINGULANCE/HIVEMIND pricing — 4 tiers + sovereign scope estimator */}
