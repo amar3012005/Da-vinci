@@ -53,8 +53,9 @@ export function hydrateRegisteredArtifacts(view, artifactIds) {
       status: 'complete',
       payload: {
         artifact_id: id,
+        workrun_id: next.workrun_id,
         label: 'Registered artifact',
-        detail: `Artifact ${id} is registered for this WorkRun.`,
+        detail: `Artifact ${id} is durably registered for this WorkRun.`,
       },
     });
   }, view);
