@@ -647,7 +647,11 @@ function HmRoomDesk({ runId }) {
     setError(null);
     try {
       const data = await apiClient.cancelWorkRun(runId);
-      setRun(data?.workrun || ((current) => ({ ...current, status: 'cancelled' })));
+      // The cancel endpoint normally returns the updated WorkRun. If a
+      // compatible runtime only returns an acknowledgement, preserve the
+      // existing object and patch its status through React's functional setter
+      // (passing the updater function as the state value corrupts the render).
+      setRun((current) => data?.workrun || ({ ...(current || {}), status: 'cancelled' }));
       setPhase('idle');
       setMsgs((previous) => previous.map((message) => ({ ...message, streaming: false })));
       esRef.current?.session?.close?.();
