@@ -319,6 +319,13 @@ export default function HarnessSurface() {
         window.__HIVE_HARNESS_BOOT_REV__ = bootRevision;
       }
       if (cancelled) return;
+      // A fast OS → BRAIN transition can create the next host while the
+      // previous native app is still disposing. Wait for that teardown before
+      // remounting the cached module, otherwise the old dispose can erase the
+      // new DOM and leave a blank Overview canvas.
+      const pendingDispose = window.__HIVE_HARNESS_DISPOSE_PROMISE__;
+      if (pendingDispose && typeof pendingDispose.then === 'function') await pendingDispose;
+      if (cancelled) return;
       window.__DSH_EMBED_REQUEST__ = request;
       setLoadingStage(3);
       // The module URL changes only when the authenticated Harness release
@@ -358,7 +365,17 @@ export default function HarnessSurface() {
       window.__HIVEMIND_DELETE_SESSION__ = undefined;
       const app = window.__DSH_EMBED_APP__;
       window.__DSH_EMBED_APP__ = undefined;
-      if (app) void app.dispose();
+      if (app) {
+        const disposePromise = Promise.resolve()
+          .then(() => app.dispose())
+          .catch(() => undefined)
+          .finally(() => {
+            if (window.__HIVE_HARNESS_DISPOSE_PROMISE__ === disposePromise) {
+              window.__HIVE_HARNESS_DISPOSE_PROMISE__ = undefined;
+            }
+          });
+        window.__HIVE_HARNESS_DISPOSE_PROMISE__ = disposePromise;
+      }
       mount.replaceChildren();
     };
   }, []);
