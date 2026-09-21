@@ -1159,6 +1159,36 @@ class HiveMindApiClient {
     return data;
   }
 
+  // AgentScope-native governed Routines. These endpoints own the HIVE
+  // lifecycle while the runtime remains the single scheduler owner.
+  async listRoutines({ status } = {}) {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    const { data } = await this.controlPlane.get(`/v1/routines${query}`);
+    return data;
+  }
+
+  async createRoutine(payload) {
+    const { data } = await this.controlPlane.post('/v1/routines', payload);
+    return data;
+  }
+
+  async updateRoutine(routineId, status) {
+    const { data } = await this.controlPlane.patch(`/v1/routines/${routineId}`, { status });
+    return data;
+  }
+
+  async runRoutineNow(routineId, scheduledAt) {
+    const { data } = await this.controlPlane.post(`/v1/routines/${routineId}/run-now`, {
+      ...(scheduledAt ? { scheduled_at: scheduledAt } : {}),
+    });
+    return data;
+  }
+
+  async listRoutineHistory(routineId, limit = 20) {
+    const { data } = await this.controlPlane.get(`/v1/routines/${routineId}/history?limit=${limit}`);
+    return data;
+  }
+
   async getHyperRoomArtifacts(roomId, { type = 'all', limit = 200 } = {}) {
     const qs = new URLSearchParams({ type, limit: String(limit) }).toString();
     const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/artifacts?${qs}`);

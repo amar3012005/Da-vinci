@@ -476,6 +476,7 @@ function HmRoomDesk({ runId }) {
   const [phase, setPhase] = useState('idle');
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [routines, setRoutines] = useState([]);
   const esRef = useRef(null);
   const timingRef = useRef({});
 
@@ -623,6 +624,7 @@ function HmRoomDesk({ runId }) {
   useEffect(() => {
     apiClient.listWorkRuns({ limit: 16 }).then((data) => setRuns(data?.workruns || [])).catch(() => {});
     apiClient.listHyperRooms().then((data) => setRooms(data?.rooms || data || [])).catch(() => {});
+    apiClient.listRoutines().then((data) => setRoutines(data?.routines || [])).catch(() => {});
   }, [runId]);
 
   const send = async (e) => {
@@ -686,6 +688,20 @@ function HmRoomDesk({ runId }) {
     }
   };
 
+  const updateRoutineStatus = async (routineId, status) => {
+    const data = await apiClient.updateRoutine(routineId, status);
+    if (data?.routine) setRoutines((current) => current.map((item) => item.id === routineId ? data.routine : item));
+    return data;
+  };
+
+  const runRoutineNow = async (routineId) => {
+    const data = await apiClient.runRoutineNow(routineId);
+    if (data?.workrun?.id) setRuns((current) => [data.workrun, ...current.filter((item) => item.id !== data.workrun.id)]);
+    return data;
+  };
+
+  const routineHistory = (routineId) => apiClient.listRoutineHistory(routineId);
+
   const sources = view.sources || [];
   const activity = view.activity || [];
   const artifacts = view.artifacts || [];
@@ -713,6 +729,10 @@ function HmRoomDesk({ runId }) {
       files={[]}
       computer={null}
       preview={preview}
+      routines={routines}
+      onRoutineStatus={updateRoutineStatus}
+      onRoutineRunNow={runRoutineNow}
+      onRoutineHistory={routineHistory}
       draft={draft}
       error={error}
       onPreview={setPreview}

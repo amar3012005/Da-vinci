@@ -100,4 +100,17 @@ describe('HM Rooms WorkRun routing', () => {
     expect(card).toContain('Approve action');
     expect(card).not.toContain('Needs confirmation');
   });
+
+  it('exposes governed AgentScope Routines without creating a second scheduler', () => {
+    const rooms = source('pages/hm-rooms/HmRooms.jsx');
+    const shell = source('pages/hm-rooms/workrun/WorkRunShell.jsx');
+    const drawer = source('pages/hm-rooms/workrun/RoutinesDrawer.jsx');
+    const api = source('shared/api-client.js');
+    expect(rooms).toContain('apiClient.listRoutines()');
+    expect(rooms).toContain('apiClient.runRoutineNow(routineId)');
+    expect(shell).toContain('<RoutinesDrawer');
+    expect(drawer).toContain('AgentScope schedules · HIVE governed');
+    expect(api).toContain("get('/v1/routines");
+    expect(api).toContain("post(`/v1/routines/${routineId}/run-now`");
+  });
 });

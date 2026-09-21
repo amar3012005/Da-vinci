@@ -1,10 +1,11 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { AudioLines, Bell, BrainCircuit, Hash, Orbit, PanelRightOpen, Users, UserPlus } from 'lucide-react';
+import { AudioLines, Bell, BrainCircuit, CalendarClock, Hash, Orbit, PanelRightOpen, Users, UserPlus } from 'lucide-react';
 import WorkRunStream from './WorkRunStream';
 import WorkRunComposer from './WorkRunComposer';
 import Inspector from './inspector/Inspector';
 import PlanDrawer from './plan/PlanDrawer';
 import TeamDrawer from './team/TeamDrawer';
+import RoutinesDrawer from './RoutinesDrawer';
 
 export default function WorkRunShell({
   goal,
@@ -19,6 +20,10 @@ export default function WorkRunShell({
   files,
   computer,
   preview,
+  routines,
+  onRoutineStatus,
+  onRoutineRunNow,
+  onRoutineHistory,
   draft,
   error,
   onPreview,
@@ -30,6 +35,7 @@ export default function WorkRunShell({
 }) {
   const [planOpen, setPlanOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
+  const [routinesOpen, setRoutinesOpen] = useState(false);
   const [previewWidth, setPreviewWidth] = useState(360);
   const [previewOpen, setPreviewOpen] = useState(true);
   const dragRef = useRef(null);
@@ -90,6 +96,7 @@ export default function WorkRunShell({
                 <div className="flex items-start gap-1.5"><Hash size={13} className="mt-0.5 shrink-0 text-[#737373]" /><div className="min-w-0 flex-1"><p className="truncate text-[12px] font-semibold text-[#0a0a0a]">{goal || 'WorkRun'}</p><span className="mt-1 inline-flex rounded-full bg-[#117dff]/10 px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wider text-[#117dff]">General</span></div><button type="button" onClick={() => setPreviewOpen((open) => !open)} aria-label={previewOpen ? 'Close preview' : 'Open preview'} className="rounded-[6px] p-1 text-[#737373] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><PanelRightOpen size={15} className={previewOpen ? 'rotate-180' : ''} /></button></div>
                 <div className="mt-2 flex items-center justify-between border-t border-[#eae7e1] pt-2 text-[10px] text-[#737373]"><span className="inline-flex items-center gap-1"><Users size={11} />{team?.length || 0} participants</span><span className={working ? 'text-[#117dff]' : ''}>{working ? 'working' : (status || 'idle')}</span></div>
                 {(tasks || []).length ? <button type="button" onClick={() => setPlanOpen(true)} className="mt-2 w-full rounded-[6px] border border-[#e3e0db] px-2 py-1.5 text-left text-[10px] font-medium text-[#525252] hover:bg-[#f7f6f3] hover:text-[#0a0a0a]">Plan · {completedTasks} / {tasks.length}</button> : null}
+                <button type="button" onClick={() => setRoutinesOpen(true)} className="mt-2 flex w-full items-center gap-1.5 rounded-[6px] border border-[#e3e0db] px-2 py-1.5 text-left text-[10px] font-medium text-[#525252] hover:bg-[#f7f6f3] hover:text-[#0a0a0a]"><CalendarClock size={11} />Routines{routines?.length ? <span className="ml-auto font-mono text-[9px] text-[#a3a3a3]">{routines.length}</span> : null}</button>
               </div>
             ) : null}
             <WorkRunStream
@@ -137,6 +144,7 @@ export default function WorkRunShell({
       </div>
       <PlanDrawer open={planOpen} tasks={tasks || activity} onClose={() => setPlanOpen(false)} />
       <TeamDrawer open={teamOpen} team={team} onClose={() => setTeamOpen(false)} />
+      <RoutinesDrawer open={routinesOpen} routines={routines} onClose={() => setRoutinesOpen(false)} onStatus={onRoutineStatus} onRunNow={onRoutineRunNow} onHistory={onRoutineHistory} />
       </div>
     </div>
   );
