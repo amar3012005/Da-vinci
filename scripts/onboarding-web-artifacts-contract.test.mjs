@@ -8,7 +8,7 @@ const api = fs.readFileSync(new URL('../src/components/hivemind/app/shared/api-c
 
 test('company dashboard exposes exact onboarding crawl previews', () => {
   assert.match(dashboard, /c\.web_artifacts/);
-  assert.match(dashboard, /hyperCompanyWebArtifactPreviewUrl\(artifact\.id\)/);
+  assert.match(dashboard, /apiClient\.hyperCompanyWebArtifactPreviewUrl\(selectedWebArtifact\.id\)/);
   assert.match(dashboard, /content_chars/);
 });
 
