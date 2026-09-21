@@ -14,6 +14,7 @@ const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const HIVE_HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const HIVE_HARNESS_CHAT_FLAG_KEY = 'hivemind_harness_chat_v1';
 const HIVE_HARNESS_MODES = new Set(['legacy', 'preview', 'harness']);
+const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const PUBLIC_MARKETING_HOSTS = new Set([
   'singulancelabs.com',
   'www.singulancelabs.com',
@@ -26,6 +27,31 @@ const PRIVATE_ROBOTS = `# This hostname serves an authenticated SINGULANCE appli
 function hostname(request) {
   const host = request.headers.get('host');
   return (host ? host.split(':')[0] : new URL(request.url).hostname).toLowerCase();
+}
+
+function harnessDocumentPath(pathname) {
+  if (pathname === HARNESS_OVERVIEW_PATH || pathname === `${HARNESS_OVERVIEW_PATH}/new`) return pathname;
+  const sessionPrefix = `${HARNESS_OVERVIEW_PATH}/session/`;
+  if (!pathname.startsWith(sessionPrefix)) return null;
+  const encodedSessionId = pathname.slice(sessionPrefix.length);
+  if (!encodedSessionId || encodedSessionId.includes('/')) return null;
+  try {
+    return decodeURIComponent(encodedSessionId) ? pathname : null;
+  } catch {
+    return null;
+  }
+}
+
+function canonicalHarnessDocumentPath(pathname) {
+  const exact = harnessDocumentPath(pathname);
+  if (exact) return exact;
+
+  const sessionPrefix = `${HARNESS_OVERVIEW_PATH}/session/`;
+  if (!pathname.startsWith(sessionPrefix)) return null;
+  const parts = pathname.slice(sessionPrefix.length).split('/');
+  const encodedSessionId = parts.shift();
+  if (!encodedSessionId || parts.length === 0 || parts.some((part) => part !== 'overview')) return null;
+  return harnessDocumentPath(`${sessionPrefix}${encodedSessionId}`);
 }
 
 function noIndex(response) {
@@ -174,6 +200,14 @@ async function partnerReferralsFlagResponse(request, env) {
 export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
+
+    const canonicalHarnessPath = canonicalHarnessDocumentPath(pathname);
+    if (canonicalHarnessPath && canonicalHarnessPath !== pathname) {
+      return Response.redirect(new URL(canonicalHarnessPath, request.url), 302);
+    }
+    if (/^\/hivemind\/app\/overview(?:\/overview)+\/?$/u.test(pathname)) {
+      return Response.redirect(new URL(HARNESS_OVERVIEW_PATH, request.url), 302);
+    }
 
     if (pathname === HIVE_HARNESS_CHAT_FLAG_PATH) {
       if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });

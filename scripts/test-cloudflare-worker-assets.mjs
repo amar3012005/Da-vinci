@@ -94,6 +94,23 @@ assert.equal(servedSpa.headers.get('content-type'), 'text/html');
 assert.match(servedSpa.headers.get('x-robots-tag'), /noindex/);
 assert.equal(await servedSpa.text(), '<!doctype html>');
 
+const canonicalSession = await worker.fetch(
+  new Request('https://next.singulancelabs.com/hivemind/app/overview/session/session-123/overview'),
+  envReturning(spa),
+);
+assert.equal(canonicalSession.status, 302);
+assert.equal(
+  canonicalSession.headers.get('location'),
+  'https://next.singulancelabs.com/hivemind/app/overview/session/session-123',
+);
+
+const canonicalOverview = await worker.fetch(
+  new Request('https://next.singulancelabs.com/hivemind/app/overview/overview'),
+  envReturning(spa),
+);
+assert.equal(canonicalOverview.status, 302);
+assert.equal(canonicalOverview.headers.get('location'), 'https://next.singulancelabs.com/hivemind/app/overview');
+
 const originalFetch = globalThis.fetch;
 let proxiedRequest;
 globalThis.fetch = async (request) => {
