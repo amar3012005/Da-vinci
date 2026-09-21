@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Building2, Target, Users, FileText, Globe, ArrowUpRight,
   Sparkles, LayoutGrid, MessageSquare, RefreshCw, Search,
-  MapPin, Mail, Phone, Pencil, X, Power, Check, ArrowRight,
+  MapPin, Mail, Phone, Pencil, X, Power, Check,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -11,6 +11,7 @@ import HyperOnboarding from './HyperOnboarding';
 import WebsitePreview from './WebsitePreview';
 import AgentAvatar from './AgentAvatar';
 import { LANE_META } from './rooms/shared';
+import WorkspacePopupSurface from '../shared/WorkspacePopupSurface';
 
 /**
  * CompanyDashboard — the HyperAgents HERO page (Polsia-style operating view).
@@ -187,8 +188,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   const [runtimeFocuses, setRuntimeFocuses] = useState([]);
   const [runtimeLaunching, setRuntimeLaunching] = useState(false);
   const [runtimeError, setRuntimeError] = useState('');
-  const [pipelineDoneOpen, setPipelineDoneOpen] = useState(false);
-  const dayZeroReportRequested = useRef(false);
+  const [selectedWebArtifact, setSelectedWebArtifact] = useState(null);
   const runtimeCompanyReady = Boolean(state?.onboarded && state?.company?.company);
   const runtimeInviteStorageKey = `hm_runtime_invite:${runtimeInviteVersion}:${state?.hq_room_id || state?.company?.company || 'company'}`;
 
@@ -222,35 +222,6 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
-  // Claim delivery only after the real CompanyDashboard has committed its
-  // persisted company record to the screen. The server owns idempotency, while
-  // this latch avoids a duplicate POST from local re-renders.
-  useEffect(() => {
-    if (!state?.onboarded || !state?.company || dayZeroReportRequested.current) return;
-    if (state.company.day0_report_email?.status === 'sent' || state.company.day0_report_email?.status === 'sending') return;
-    dayZeroReportRequested.current = true;
-    const timer = window.setTimeout(() => {
-      apiClient.claimHyperCompanyDayZeroReport().catch(() => {
-        // A later visit may retry a failed delivery; this never blocks the
-        // company workspace or makes email transport a UI failure.
-      });
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [state?.onboarded, state?.company, state?.hq_room_id]);
-  useEffect(() => {
-    if (!state?.onboarded || !state?.company) return;
-    if (state.company.day0_report_email?.status !== 'sent') return;
-    const latchKey = `hm_day0_pipeline_done:${state.hq_room_id || state.company.company || 'company'}`;
-    try { if (window.localStorage.getItem(latchKey) === 'seen') return; } catch { /* continue */ }
-    setPipelineDoneOpen(true);
-  }, [state?.onboarded, state?.company, state?.hq_room_id, state?.company?.day0_report_email?.status]);
-
-  const dismissPipelineDone = () => {
-    const latchKey = `hm_day0_pipeline_done:${state?.hq_room_id || state?.company?.company || 'company'}`;
-    try { window.localStorage.setItem(latchKey, 'seen'); } catch { /* noop */ }
-    setPipelineDoneOpen(false);
-  };
-
   useEffect(() => {
     if (!showRuntimeInvite || !runtimeCompanyReady) return undefined;
     try { if (window.localStorage.getItem(runtimeInviteStorageKey) === 'seen') return undefined; } catch { /* continue */ }
@@ -376,29 +347,39 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-      {pipelineDoneOpen ? (
-        <div className="fixed inset-0 z-[88] grid place-items-center bg-[#101828]/35 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="First HyperAgents task complete">
-          <div className="w-full max-w-[420px] rounded-lg border border-[#e3e0db] bg-white p-5 shadow-[0_24px_70px_rgba(12,38,84,0.22)]">
-            <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-[#117dff]">Day 0</p>
-            <h2 className="mt-2 text-[18px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Check your pipeline</h2>
-            <p className="mt-2 text-[13px] leading-5 text-[#525252]">Your HyperAgents have finished their first task. Open the pipeline to review what they produced.</p>
-            <div className="mt-5 flex justify-end">
-              <button type="button" onClick={dismissPipelineDone} className="h-9 rounded-md bg-[#0a0a0a] px-4 text-[12px] font-semibold text-white hover:bg-[#262626]">Got it</button>
-            </div>
+      {selectedWebArtifact ? (
+        <div className="fixed inset-0 z-[92] grid place-items-center bg-black/35 p-3 backdrop-blur-[2px] sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedWebArtifact(null); }}>
+          <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-[920px] flex-col">
+            <WorkspacePopupSurface
+              variant="reader"
+              label="hivemind — onboarding evidence"
+              ariaLabel={`Preview ${selectedWebArtifact.title || selectedWebArtifact.url}`}
+              onClose={() => setSelectedWebArtifact(null)}
+              meta={`${selectedWebArtifact.content_chars || 0} characters · ${selectedWebArtifact.provider || 'web crawl'} · stored in company memory`}
+              secondaryAction={{ label: 'Open source', onClick: () => window.open(selectedWebArtifact.url, '_blank', 'noopener,noreferrer') }}
+              primaryAction={{ label: 'Open exact crawl', onClick: () => window.open(apiClient.hyperCompanyWebArtifactPreviewUrl(selectedWebArtifact.id), '_blank', 'noopener,noreferrer') }}
+            >
+              <div className="flex h-[min(640px,calc(100dvh-120px))] min-h-0 flex-col bg-[#fbfaf7]">
+                <div className="border-b border-[#deddd7] px-6 py-5 sm:px-8">
+                  <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.12em] text-[#248564]"><Globe size={12} /> Verified web artifact</div>
+                  <h2 className="mt-3 text-[24px] font-semibold tracking-[-0.035em] text-[#111]">{selectedWebArtifact.title || selectedWebArtifact.url}</h2>
+                  <p className="mt-1 truncate text-[11px] text-[#347df4]">{selectedWebArtifact.url}</p>
+                </div>
+                <iframe title={selectedWebArtifact.title || 'Web artifact preview'} src={apiClient.hyperCompanyWebArtifactPreviewUrl(selectedWebArtifact.id)} className="min-h-0 flex-1 border-0 bg-white" sandbox="allow-same-origin allow-popups" />
+              </div>
+            </WorkspacePopupSurface>
           </div>
         </div>
       ) : null}
       {runtimeInvite ? (
-        <div className="fixed inset-0 z-[90] grid place-items-center bg-[#101828]/35 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="Activate Runtime">
-          <motion.div initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="flex max-h-[calc(100vh-2rem)] w-full max-w-[760px] flex-col overflow-hidden rounded-lg border border-[#cbd8ee] bg-white shadow-[0_28px_90px_rgba(12,38,84,0.28)]">
-            <div className="flex items-start justify-between gap-4 border-b border-[#dce6f5] bg-[#f5f8ff] px-6 py-5">
-              <div className="flex min-w-0 gap-4"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#185bcc] text-white"><Power size={19} /></span><div><div className="text-[10px] font-mono uppercase tracking-[0.16em] text-[#185bcc]">New · Autonomous company runtime</div><h2 className="mt-1 text-[22px] font-semibold text-[#101828]">Try Runtime</h2><p className="mt-1 max-w-[560px] text-[12px] leading-5 text-[#52627a]">Run your company autonomously. Runtime reads company memory, chooses bounded work, calls skills and tools, delegates to Company Rooms, and wakes again when evidence changes.</p></div></div>
-              <button type="button" onClick={closeRuntimeInvite} className="grid h-8 w-8 shrink-0 place-items-center text-[#667085] hover:text-[#101828]" title="Not now"><X size={17} /></button>
-            </div>
+        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/35 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="Activate Runtime">
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="flex max-h-[calc(100vh-2rem)] w-full max-w-[760px] flex-col">
             {runtimeInvite === 'intro' ? (
-              <div className="flex items-center justify-between gap-4 px-6 py-5"><p className="text-[12px] text-[#52627a]">You remain in control. Runtime pauses when access or approval is required.</p><button type="button" onClick={() => setRuntimeInvite('focus')} className="inline-flex h-10 items-center gap-2 rounded-md bg-[#101828] px-5 text-[12px] font-semibold text-white hover:bg-[#185bcc]">RUN <ArrowRight size={14} /></button></div>
+              <WorkspacePopupSurface label="hivemind — page guide" title="This is where Runtime operates your company." description="Runtime reads company memory, chooses bounded work, delegates to operating rooms, and wakes again when evidence changes." visual={<div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-full bg-[#111] text-white"><Power size={18} /></span><span><strong className="block text-[14px] text-[#181918]">HIVEMIND Runtime</strong><span className="mt-0.5 block text-[11px] text-[#777]">You remain in control; approval gates stay active.</span></span></div>} onClose={closeRuntimeInvite} secondaryAction={{ label: 'Not now', onClick: closeRuntimeInvite }} primaryAction={{ label: 'Choose priorities', onClick: () => setRuntimeInvite('focus') }} />
             ) : (
-              <div className="min-h-0 overflow-y-auto px-6 py-5"><div className="mb-4"><h3 className="text-[15px] font-semibold text-[#101828]">What do you want Runtime to operate?</h3><p className="mt-1 text-[11px] text-[#667085]">Choose one or more priorities. Runtime will order the work from current company evidence.</p></div><div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{RUNTIME_FOCUSES.map((item) => { const selected = runtimeFocuses.includes(item.id); return <button key={item.id} type="button" onClick={() => toggleRuntimeFocus(item.id)} className={`min-h-[92px] rounded-md border p-3 text-left transition-colors ${selected ? 'border-[#185bcc] bg-[#eef4ff]' : 'border-[#d9e1ec] bg-white hover:border-[#9db7df]'}`}><span className="flex items-center justify-between gap-2 text-[12px] font-semibold text-[#101828]">{item.label}{selected ? <Check size={14} className="text-[#185bcc]" /> : null}</span><span className="mt-2 block text-[10.5px] leading-4 text-[#667085]">{item.detail}</span></button>; })}</div>{runtimeError ? <p className="mt-3 text-[11px] text-[#c2410c]">{runtimeError}</p> : null}<div className="sticky bottom-0 mt-5 flex items-center justify-between gap-3 border-t border-[#e7ecf3] bg-white pt-4"><button type="button" onClick={() => setRuntimeInvite('intro')} className="text-[11px] font-medium text-[#667085] hover:text-[#101828]">Back</button><button type="button" disabled={runtimeLaunching || !runtimeFocuses.length} onClick={wakeRuntime} className="inline-flex h-10 items-center gap-2 rounded-md bg-[#185bcc] px-5 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"><Power size={14} />{runtimeLaunching ? 'WAKING…' : 'WAKE ME UP'}</button></div></div>
+              <WorkspacePopupSurface label="hivemind — Runtime setup" title="What do you want Runtime to operate?" description="Choose one or more priorities. Runtime orders the work from current company evidence." onClose={closeRuntimeInvite} secondaryAction={{ label: 'Back', onClick: () => setRuntimeInvite('intro') }} primaryAction={{ label: runtimeLaunching ? 'Waking…' : 'Wake Runtime', onClick: wakeRuntime }}>
+                <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{RUNTIME_FOCUSES.map((item) => { const selected = runtimeFocuses.includes(item.id); return <button key={item.id} type="button" onClick={() => toggleRuntimeFocus(item.id)} className={`min-h-[92px] rounded-md border p-3 text-left transition-colors ${selected ? 'border-[#347df4] bg-[#eef4ff]' : 'border-[#deddd7] bg-white hover:border-[#9db7df]'}`}><span className="flex items-center justify-between gap-2 text-[12px] font-semibold text-[#111]">{item.label}{selected ? <Check size={14} className="text-[#347df4]" /> : null}</span><span className="mt-2 block text-[10.5px] leading-4 text-[#667085]">{item.detail}</span></button>; })}</div>{runtimeError ? <p className="mt-3 text-[11px] text-[#c2410c]">{runtimeError}</p> : null}
+              </WorkspacePopupSurface>
             )}
           </motion.div>
         </div>
@@ -579,8 +560,19 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
                 <FileText size={12} className="text-[#a3a3a3] shrink-0" /> {documentTitle}
               </div>
             ))}
+            {(Array.isArray(c.web_artifacts) ? c.web_artifacts : []).map((artifact) => (
+              <button key={artifact.id} type="button" onClick={() => setSelectedWebArtifact(artifact)}
+                className="flex items-start gap-2 rounded-md border border-[#e3e0db] bg-white px-2.5 py-2 text-[12px] text-[#3f3d39] hover:border-[#117dff] hover:text-[#117dff] group">
+                <Globe size={12} className="text-[#117dff] shrink-0 mt-0.5" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{artifact.title || artifact.url}</span>
+                  <span className="block truncate text-[9.5px] font-mono text-[#a3a3a3]">{artifact.content_chars || 0} chars · {artifact.provider || 'web crawl'}</span>
+                </span>
+                <ArrowUpRight size={11} className="shrink-0 opacity-50 group-hover:opacity-100" />
+              </button>
+            ))}
             </div>
-            <p className="text-[10.5px] text-[#a3a3a3] mt-2 font-mono leading-4">{t('hyperDash.filedTo', 'Filed to HIVEMIND memory — agents recall these before acting.')}</p>
+            <p className="text-[10.5px] text-[#a3a3a3] mt-2 font-mono leading-4">{t('hyperDash.filedTo', 'Filed to HIVEMIND memory — open web artifacts show the exact crawl agents can recall.')}</p>
           </div>
 
           {(c.deliverables || []).length > 0 ? (

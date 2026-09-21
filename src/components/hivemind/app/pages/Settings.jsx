@@ -1,9 +1,7 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon,
-  Globe,
-  Copy,
   Check,
   AlertTriangle,
   Trash2,
@@ -26,49 +24,6 @@ const fadeUp = {
   hidden: { opacity: 0, y: 12 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 };
-
-// ─── Copy button with per-field tracking ────────────────────────────────────
-function CopyButton({ value, field, copiedField, onCopy }) {
-  const { t } = useTranslation('dashboard');
-  const isCopied = copiedField === field;
-  return (
-    <button
-      onClick={() => onCopy(value, field)}
-      className="ml-2 p-1.5 rounded-lg hover:bg-[#117dff]/10 transition-colors group flex-shrink-0"
-      title={t('settings.copyToClipboard', 'Copy to clipboard')}
-    >
-      {isCopied ? (
-        <Check size={14} className="text-[#117dff]" />
-      ) : (
-        <Copy size={14} className="text-[#a3a3a3] group-hover:text-[#117dff] transition-colors" />
-      )}
-    </button>
-  );
-}
-
-// ─── Read-only field row ────────────────────────────────────────────────────
-function ReadOnlyField({ label, value, field, copiedField, onCopy }) {
-  return (
-    <div>
-      <label className="block text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-1.5">
-        {label}
-      </label>
-      <div className="flex items-center bg-[#faf9f4] border border-[#e3e0db] rounded-xl px-3 py-2.5">
-        <span className="text-[#525252] text-sm font-mono truncate flex-1 select-all">
-          {value || '—'}
-        </span>
-        {value && (
-          <CopyButton
-            value={value}
-            field={field}
-            copiedField={copiedField}
-            onCopy={onCopy}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ─── Section card wrapper ───────────────────────────────────────────────────
 function SectionCard({ children, className = '' }) {
@@ -102,7 +57,6 @@ function SectionHeader({ icon: Icon, title, description }) {
 export default function Settings() {
   const { t } = useTranslation('dashboard');
   const { user, org, logout } = useAuth();
-  const [copiedField, setCopiedField] = useState(null);
   const [revoking, setRevoking] = useState(false);
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   const [showClearMemConfirm, setShowClearMemConfirm] = useState(false);
@@ -113,10 +67,6 @@ export default function Settings() {
   const [memoryPolicy, setMemoryPolicy] = useState('private');
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policySaved, setPolicySaved] = useState(false);
-  const timeoutRef = useRef(null);
-
-  const controlPlaneUrl = apiClient.controlPlane.defaults.baseURL;
-  const coreApiUrl = apiClient.core.defaults.baseURL;
 
   // Load current org policies from canonical endpoint (covers both axes:
   // project provisioning + memory-save routing).
@@ -135,22 +85,6 @@ export default function Settings() {
     })();
     return () => { abort = true; };
   }, [org]);
-
-  const handleCopy = useCallback(async (text, field) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-    setCopiedField(field);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setCopiedField(null), 2000);
-  }, []);
 
   const handleSavePolicy = useCallback(async () => {
     setPolicyLoading(true);
@@ -253,7 +187,7 @@ export default function Settings() {
           {t('settings.title', 'Settings')}
         </h1>
         <p className="text-[#525252] text-sm mt-1 font-['Space_Grotesk']">
-          {t('settings.subtitle', 'Workspace configuration and connection details')}
+          Workspace configuration, policies, and privacy controls
         </p>
       </div>
 
@@ -287,45 +221,6 @@ export default function Settings() {
                 Members, invitations, roles, projects and access
               </p>
             </div>
-          </div>
-        </SectionCard>
-
-        {/* ── Connection Details ──────────────────────────────────── */}
-        <SectionCard>
-          <SectionHeader
-            icon={Globe}
-            title={t('settings.connectionDetails', 'Connection Details')}
-            description={t('settings.connectionDetailsDesc', 'Use these values to configure API clients and integrations')}
-          />
-          <div className="space-y-3">
-            <ReadOnlyField
-              label={t('settings.labelControlPlaneUrl', 'Control Plane URL')}
-              value={controlPlaneUrl}
-              field="controlPlane"
-              copiedField={copiedField}
-              onCopy={handleCopy}
-            />
-            <ReadOnlyField
-              label={t('settings.labelCoreApiBaseUrl', 'Core API Base URL')}
-              value={coreApiUrl}
-              field="coreApi"
-              copiedField={copiedField}
-              onCopy={handleCopy}
-            />
-            <ReadOnlyField
-              label={t('settings.labelUserId', 'User ID')}
-              value={user?.id}
-              field="userId"
-              copiedField={copiedField}
-              onCopy={handleCopy}
-            />
-            <ReadOnlyField
-              label={t('settings.labelOrgId', 'Org ID')}
-              value={org?.id}
-              field="orgId"
-              copiedField={copiedField}
-              onCopy={handleCopy}
-            />
           </div>
         </SectionCard>
 

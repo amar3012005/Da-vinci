@@ -42,6 +42,8 @@ import LeadsView from '../hyperagents/LeadsView';
 import CampaignsView from '../hyperagents/CampaignsView';
 import CampaignDashboardModal from '../hyperagents/campaigns/CampaignDashboardModal';
 import CampaignProgressDashboard from '../hyperagents/campaigns/CampaignProgressDashboard';
+import CampaignRoomVisualProgress from '../hyperagents/campaigns/CampaignRoomVisualProgress';
+import RoomVisualGeneration, { assignVisualJobsToTurns, useRoomVisualGeneration } from '../hyperagents/RoomVisualGeneration';
 import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
@@ -1026,6 +1028,14 @@ function DomainRoomIntro({ room, company, busy, onRun, onEnter, onStartCampaign,
                     <FileText size={11} style={{ color: domain.color }} /> {document}
                   </div>
                 ))}
+                {(Array.isArray(company?.web_artifacts) ? company.web_artifacts : []).map((artifact) => (
+                  <a key={artifact.id} href={apiClient.hyperCompanyWebArtifactPreviewUrl(artifact.id)} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-2 py-2.5 text-[11px] text-[#525252] hover:text-[#117dff]">
+                    <Globe size={11} style={{ color: domain.color }} />
+                    <span className="min-w-0 flex-1 truncate">{artifact.title || artifact.url}</span>
+                    <ExternalLink size={10} className="shrink-0" />
+                  </a>
+                ))}
               </div>
             </div>
           </div>
@@ -1120,6 +1130,11 @@ function RoomThread({ roomId, onArchived }) {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [activeTurnId, setActiveTurnId] = useState(null);
+  const visualGeneration = useRoomVisualGeneration(roomId, Boolean(activeTurnId));
+  const visualPlacement = useMemo(
+    () => assignVisualJobsToTurns(visualGeneration.jobs, turns),
+    [turns, visualGeneration.jobs],
+  );
   // A server may intentionally preserve the client-generated turn id. Track
   // confirmation separately so releasing the pending-id latch always starts
   // the live SSE/poll lifecycle, even when the id itself has not changed.
@@ -1183,7 +1198,19 @@ function RoomThread({ roomId, onArchived }) {
   const [campaignActivation, setCampaignActivation] = useState(null);
   const [campaignBusy, setCampaignBusy] = useState(false);
   const [pendingCampaignId, setPendingCampaignId] = useState(campaignReturn || null);
-  const isCampaignRoom = Boolean(campaignReturn || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
+  const roomVisualCampaignId = useMemo(() => {
+    const durable = (turns || []).flatMap((turn) => Array.isArray(turn?.lines) ? turn.lines : []);
+    const latest = [...durable, ...(Array.isArray(liveLines) ? liveLines : [])]
+      .filter((line) => line?.t === 'campaign_visual_handoff' && line?.campaign_id)
+      .at(-1);
+    return latest?.campaign_id || null;
+  }, [liveLines, turns]);
+  const activeRoomCampaign = useMemo(() => {
+    if (selectedCampaign) return selectedCampaign;
+    if (pendingCampaignId) return roomCampaigns.find((campaign) => campaign.id === pendingCampaignId) || null;
+    return roomCampaigns[0] || null;
+  }, [pendingCampaignId, roomCampaigns, selectedCampaign]);
+  const isCampaignRoom = Boolean(campaignReturn || roomVisualCampaignId || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
   const isHqRoom = Boolean(room?.is_domain_home && (room?.room_tag || room?.roomTag) === 'general');
   const growthBaselineRequested = useMemo(() => new URLSearchParams(location.search).get('growthBaseline') === '1', [location.search]);
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
@@ -1517,6 +1544,7 @@ function RoomThread({ roomId, onArchived }) {
 
   useEffect(() => { if (isCampaignRoom) loadRoomCampaigns(); }, [isCampaignRoom, loadRoomCampaigns]);
   useEffect(() => { if (campaignReturn) setPendingCampaignId(campaignReturn); }, [campaignReturn]);
+  useEffect(() => { if (roomVisualCampaignId) setPendingCampaignId(roomVisualCampaignId); }, [roomVisualCampaignId]);
 
   // The Room owns completion: poll the campaign associated with the active run and
   // open the existing dashboard in-place as soon as its governed plan is available.
@@ -1529,7 +1557,12 @@ function RoomThread({ roomId, onArchived }) {
         const campaign = response?.campaign;
         if (!active || !campaign) return;
         setRoomCampaigns((current) => [campaign, ...current.filter((item) => item.id !== campaign.id)]);
-        if (campaign.planVersions?.length && ['READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status)) {
+        const pendingAssets = (campaign.actions || []).some((action) => {
+          const assets = action.assets || [];
+          return (action.payload?.creative_brief?.required === true && assets.length === 0)
+            || assets.some((asset) => ['QUEUED', 'GENERATING', 'WAITING_QUOTA'].includes(asset.status));
+        });
+        if (campaign.planVersions?.length && ['READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status) && !pendingAssets) {
           setSelectedCampaign(campaign);
           setPendingCampaignId(null);
         }
@@ -1541,7 +1574,7 @@ function RoomThread({ roomId, onArchived }) {
   }, [isCampaignRoom, pendingCampaignId]);
 
   useEffect(() => {
-    const pendingCampaignAssets = (selectedCampaign?.actions || []).some((action) => (action.assets || []).some((asset) => ['QUEUED', 'GENERATING'].includes(asset.status)));
+    const pendingCampaignAssets = (selectedCampaign?.actions || []).some((action) => (action.assets || []).some((asset) => ['QUEUED', 'GENERATING', 'WAITING_QUOTA'].includes(asset.status)));
     if (!selectedCampaign || !(['GENERATING', 'PREPARING_ASSETS', 'RUNNING', 'SCHEDULED'].includes(selectedCampaign.status) || pendingCampaignAssets)) return undefined;
     const timer = window.setInterval(() => openRoomCampaign(selectedCampaign.id), 5000);
     return () => window.clearInterval(timer);
@@ -2481,13 +2514,14 @@ function RoomThread({ roomId, onArchived }) {
         connecting={gmailConnecting}
       />
       <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-[#fbfaf7]">
-        {/* Human rooms retain their room chrome. HQ is a dedicated runtime surface. */}
-        {!isHqRoom && <header className="px-4 py-3 border-b border-[#e3e0db] bg-[#fbfaf7] flex items-center justify-between">
-          <div className="min-w-0 flex items-center gap-2">
+        {/* Room chrome now lives in the persistent right rail. Keep modal portals
+            mounted here without reserving a fixed header above the conversation. */}
+        {!isHqRoom && <div className="contents">
+          <div className="contents">
             {/* "Out of Room" moved to the left-rail footer for a calmer, more
                 feasible room UX — exit lives with the room list, not the header. */}
-            <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-[#0a0a0a]">
+            <div className="contents">
+            <div className="hidden">
               <Hash size={13} className="text-[#a3a3a3]" />
               <h2 className="text-[14px] font-semibold truncate">{room.name}</h2>
               <span
@@ -2543,7 +2577,7 @@ function RoomThread({ roomId, onArchived }) {
                 );
               })()}
             </div>
-            <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
+            <div className="hidden">
               {t('hyperAgents.participantsTurns', '{{pCount}} participant{{pPlural}} · {{tCount}} turn{{tPlural}}', { pCount: participants.length, pPlural: participants.length !== 1 ? 's' : '', tCount: turns.length, tPlural: turns.length !== 1 ? 's' : '' })}
             </div>
             {showJournal && (
@@ -2662,12 +2696,12 @@ function RoomThread({ roomId, onArchived }) {
               </div>
             )}
             {room.goal ? (
-              <div className="mt-1 max-w-[720px] text-[11px] leading-snug text-[#525252] line-clamp-2">
+              <div className="hidden">
                 <span className="font-mono uppercase tracking-wider text-[#117dff] text-[9px] mr-1">{t('hyperAgents.goalLbl', 'Goal')}</span>
                 {room.goal}
               </div>
             ) : !archived && (
-              <div className="mt-2 max-w-[720px] flex items-center gap-1.5">
+              <div className="hidden">
                 <input
                   value={goalDraft}
                   onChange={e => setGoalDraft(e.target.value)}
@@ -2693,7 +2727,7 @@ function RoomThread({ roomId, onArchived }) {
             )}
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden">
             {!archived && isCampaignRoom && (
               <button
                 type="button"
@@ -2742,7 +2776,7 @@ function RoomThread({ roomId, onArchived }) {
               </button>
             )}
           </div>
-        </header>}
+        </div>}
 
         {isSeoRoom && !archived && <SeoRoomBanner
           audit={roomSeoAudit}
@@ -2827,6 +2861,16 @@ function RoomThread({ roomId, onArchived }) {
             />
           )}
           <div ref={discussionStartRef} />
+          {!isHqRoom && room.goal?.trim() && (
+            <div className="flex flex-col items-end" data-room-goal-message>
+              <div className="max-w-[80%] rounded-2xl rounded-br-md bg-violet-500 px-4 py-2.5 text-[13px] leading-relaxed text-white shadow-sm">
+                {room.goal.trim()}
+              </div>
+              <span className="mt-1 px-1 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+                {t('hyperAgents.goalLbl', 'Goal')}
+              </span>
+            </div>
+          )}
           {isHqRoom && <HqRuntimeConsole
             objective={growthOperatingState?.goals?.find((goal) => goal.status === 'ACTIVE')?.objective || room?.goal || companyContext?.mission}
             baselineReady={Boolean(growthBaseline)}
@@ -2948,8 +2992,20 @@ function RoomThread({ roomId, onArchived }) {
               roomId={roomId}
               taskTag={room?.taskTag || 'GENERAL'}
             />
+            <RoomVisualGeneration
+              controller={visualGeneration}
+              jobs={visualPlacement.assignments.get(String(turn.id)) || []}
+              showError={false}
+            />
             </div>
           ))}
+          {isCampaignRoom && activeRoomCampaign ? (
+            <CampaignRoomVisualProgress
+              campaign={activeRoomCampaign}
+              onOpenCampaign={() => openRoomCampaign(activeRoomCampaign.id)}
+            />
+          ) : null}
+          <RoomVisualGeneration controller={visualGeneration} jobs={visualPlacement.unassigned} />
           {error && (
             <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               <AlertTriangle size={11} className="inline mr-1" /> {error}
@@ -3075,7 +3131,134 @@ function RoomThread({ roomId, onArchived }) {
       </section>
 
       {/* HQ owns a persistent runtime rail. Human rooms keep participants. */}
-      <aside className={`${isHqRoom ? 'hidden lg:flex' : 'flex'} w-[260px] min-w-[260px] border-l border-[#e3e0db] bg-[#faf9f4] flex-col shrink-0`}>
+      <aside className={`${isHqRoom ? 'hidden lg:flex' : 'flex'} w-[300px] min-w-[300px] border-l border-[#e3e0db] bg-[#faf9f4] flex-col shrink-0`}>
+        {!isHqRoom && (
+          <section className="shrink-0 border-b border-[#e3e0db] bg-[#fbfaf7] p-3" data-room-metadata-sidebar>
+            <div className="flex items-start gap-2">
+              <Hash size={13} className="mt-0.5 shrink-0 text-[#a3a3a3]" />
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-[13px] font-semibold text-[#0a0a0a]">{room.name}</h2>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span
+                    className="inline-flex items-center gap-1 rounded-[4px] border px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider"
+                    style={{ color: roomDomain.color, borderColor: `${roomDomain.color}55`, backgroundColor: `${roomDomain.color}12` }}
+                  >
+                    <RoomDomainIcon size={9} /> {roomDomainLabel}
+                  </span>
+                  {archived && (
+                    <span className="rounded bg-[#f3f1ec] px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#525252]">
+                      {t('hyperAgents.archived', 'archived')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-2.5 flex items-center justify-between gap-2">
+              {(() => {
+                const inProject = Boolean(room.projectId);
+                const projectName = inProject
+                  ? (projects.find(project => project.id === room.projectId)?.name || t('hyperAgents.scopeProject', 'Project'))
+                  : null;
+                return (
+                  <div className="relative min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setScopeOpen(open => !open)}
+                      title={t('hyperAgents.changeScope', 'Change scope (Org ↔ Project)')}
+                      className={`inline-flex max-w-[170px] items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold transition-colors ${inProject ? 'border-[#117dff]/20 bg-[#117dff]/10 text-[#117dff] hover:bg-[#117dff]/15' : 'border-[#e3e0db] bg-white text-[#525252] hover:border-[#117dff]/30'}`}
+                    >
+                      {inProject ? <FolderOpen size={10} /> : <Globe size={10} />}
+                      <span className="truncate">{inProject ? projectName : t('hyperAgents.scopeOrg', 'Whole Org')}</span>
+                      <ChevronDown size={10} className="shrink-0 opacity-60" />
+                    </button>
+                    {scopeOpen && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setScopeOpen(false)} />
+                        <div className="absolute right-0 top-full z-30 mt-1 w-56 rounded-xl border border-[#e3e0db] bg-white p-1.5 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.25)]">
+                          <div className="px-2 py-1 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.moveRoomTo', 'Move room to')}</div>
+                          <button type="button" disabled={savingScope} onClick={() => handleSetScope(null)}
+                            className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] hover:bg-[#faf9f4] ${!inProject ? 'font-semibold text-[#117dff]' : 'text-[#0a0a0a]'}`}>
+                            <Globe size={12} /> {t('hyperAgents.scopeOrg', 'Whole Org')} {!inProject && <Check size={12} className="ml-auto" />}
+                          </button>
+                          <div className="max-h-44 overflow-y-auto">
+                            {projects.map(project => (
+                              <button type="button" key={project.id} disabled={savingScope} onClick={() => handleSetScope(project.id)}
+                                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] hover:bg-[#faf9f4] ${room.projectId === project.id ? 'font-semibold text-[#117dff]' : 'text-[#0a0a0a]'}`}>
+                                <FolderOpen size={12} /> <span className="truncate">{project.name || project.slug || project.id}</span>
+                                {room.projectId === project.id && <Check size={12} className="ml-auto shrink-0" />}
+                              </button>
+                            ))}
+                            {projects.length === 0 && <div className="px-2 py-2 text-[11px] text-[#a3a3a3]">{t('hyperAgents.noProjects', 'No projects yet.')}</div>}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+              <span className="shrink-0 text-[9px] font-mono text-[#a3a3a3]">
+                {t('hyperAgents.participantsTurns', '{{pCount}} participant{{pPlural}} · {{tCount}} turn{{tPlural}}', { pCount: participants.length, pPlural: participants.length !== 1 ? 's' : '', tCount: turns.length, tPlural: turns.length !== 1 ? 's' : '' })}
+              </span>
+            </div>
+
+            <div className="mt-3 border-t border-[#ece9e3] pt-2.5">
+              <div className="text-[9px] font-mono uppercase tracking-wider text-[#117dff]">{t('hyperAgents.goalLbl', 'Goal')}</div>
+              {room.goal ? (
+                <p className="mt-1 max-h-16 overflow-y-auto text-[10px] leading-relaxed text-[#525252]">{room.goal}</p>
+              ) : !archived && (
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <input
+                    value={goalDraft}
+                    onChange={event => setGoalDraft(event.target.value)}
+                    onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); handleSaveGoal(); } }}
+                    placeholder={t('hyperAgents.goalRequiredPlaceholder', 'Set this room goal before the next turn')}
+                    className="h-8 min-w-0 flex-1 rounded-lg border border-amber-200 bg-amber-50 px-2 text-[10px] text-[#0a0a0a] placeholder:text-amber-700/60 outline-none focus:border-amber-400"
+                  />
+                  <button type="button" onClick={handleSaveGoal} disabled={!goalDraft.trim() || savingGoal}
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-amber-500 text-white disabled:opacity-50"
+                    title={t('hyperAgents.saveGoal', 'Save goal')}>
+                    {savingGoal ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-1.5">
+              {!archived && (
+                <button type="button" onClick={() => { setCallStatus(null); setCallOpen(true); }}
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[#e3e0db] bg-white px-2 text-[10px] font-semibold text-[#0a0a0a] hover:border-[#117dff]/50 hover:text-[#117dff]"
+                  title={t('hyperAgents.callWithTaraHint', 'Place an approved outbound call through TARA')}>
+                  <PhoneCall size={12} /> {t('hyperAgents.callWithTara', 'Call with TARA')}
+                </button>
+              )}
+              <span className="inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-violet-50 px-2 text-[10px] font-mono font-semibold text-violet-700"
+                title={t('hyperAgents.totalLlmTokens', 'Total LLM tokens used in this room')}>
+                <Zap size={11} /> {fmtTokens} {t('hyperAgents.tok', 'tok')}
+              </span>
+              {!isCompanyIntelligenceRoom && (
+                <button type="button" onClick={handleClearDiscussion} disabled={!hasClearableHistory}
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[#e3e0db] bg-white px-2 text-[10px] font-semibold text-[#737373] hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  title={t('hyperAgents.clearDiscussionTitle', 'Clear discussion — delete all turns + agent activity (keeps the room)')}>
+                  <Eraser size={12} /> {t('hyperAgents.clearAll', 'Clear all')}
+                </button>
+              )}
+              {!archived && (
+                <button type="button" onClick={handleArchive}
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[#e3e0db] bg-white px-2 text-[10px] font-semibold text-[#737373] hover:border-red-200 hover:text-red-600"
+                  title={t('hyperAgents.archiveRoomTitle', 'Archive room (distills into 1 memory)')}>
+                  <Archive size={12} /> {t('hyperAgents.archive', 'Archive')}
+                </button>
+              )}
+            </div>
+            {!archived && isCampaignRoom && (
+              <button type="button" onClick={() => setShowCampaignCreate(true)} disabled={!campaignCapabilities?.enabled}
+                className="mt-1.5 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-md bg-[#171717] px-3 text-[10px] font-semibold text-white disabled:bg-[#aaa49c]">
+                <Plus size={12} /> Create campaign
+              </button>
+            )}
+          </section>
+        )}
         <header className={`${isHqRoom ? 'hidden' : 'flex'} px-3 py-3 border-b border-[#e3e0db] items-center justify-between`}>
           <div className="flex items-center gap-1.5">
             <Users size={12} className="text-[#525252]" />
@@ -3555,7 +3738,7 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const validates = lines.filter(l => l.t === 'validate');
   const seal = lines.find(l => l.t === 'seal');
   const errorLine = lines.find(l => l.t === 'error');
-  const typing = lines.filter(l => l.t === 'typing').slice(-2);
+  const typingLine = [...lines].reverse().find(l => l.t === 'typing');
   // Additional Population-Sim report (opt-in). Guarded — absent on normal turns.
   const simReport = lines.find(l => l.t === 'sim_report' && (l.report || l.n_personas));
   const [showSim, setShowSim] = useState(false);
@@ -4441,17 +4624,20 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         </div>
       )}
 
-      {!seal && typing.length > 0 && (
-        <div className="text-[11px] text-[#a3a3a3] italic flex items-center gap-2 pl-2">
-          {typing.map((typingLine, i) => (
-            <span key={i} className="flex items-center gap-1.5">
-              <AgentAvatar
-                agent={(participants || []).find(pp => pp.slug === typingLine.agent || pp.name === typingLine.agent) || { name: typingLine.agent, slug: typingLine.agent }}
-                size={18} active
-              />
-              {typingLine.note || t('hyperAgents.agentTyping', '{{agent}} typing…', { agent: typingLine.agent })}
-            </span>
-          ))}
+      {!seal && typingLine && (
+        <div className="flex items-center gap-2 rounded-lg border border-[#e3e0da] bg-white/75 px-2.5 py-2 text-[11px] text-[#6f6a63] shadow-sm" aria-live="polite" data-testid="room-live-progress">
+          <AgentAvatar
+            agent={(participants || []).find(pp => pp.slug === typingLine.agent || pp.name === typingLine.agent) || { name: typingLine.agent, slug: typingLine.agent }}
+            size={20} active
+          />
+          <span className="min-w-0 flex-1 truncate">
+            {typingLine.note || t('hyperAgents.agentTyping', '{{agent}} typing…', { agent: typingLine.agent })}
+          </span>
+          <span className="flex shrink-0 items-center gap-1" aria-hidden="true">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400 [animation-delay:180ms]" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-300 [animation-delay:360ms]" />
+          </span>
         </div>
       )}
 

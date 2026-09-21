@@ -13,10 +13,15 @@ import Features from './Features';
 import Developers from './Developers';
 import Pricing from './Pricing';
 import DownloadMacButton from './DownloadMacButton';
-import DownloadAllPlatforms from './DownloadAllPlatforms';
 import ChatDemoCard from './ChatDemoCard';
 import MinimalGraphIcon from './MinimalGraphIcon';
 import CinematicScrollScene from '../../mobile/CinematicScrollScene';
+import MobileLandingV2 from './MobileLandingV2';
+import {
+  ConnectorConveyorDetail, HumationTeamDetail, QuantumChapter, ResearchRequestsChapter,
+} from './MobileLandingAdditions';
+import HivemindFooter from './HivemindFooter';
+import apiClient from '../app/shared/api-client';
 
 /**
  * HIVEMIND product cover — singulancelabs.com/hivemind
@@ -38,25 +43,6 @@ const ProgressBar = () => {
     <motion.div className="fixed inset-x-0 top-0 z-[120] h-[2px] origin-left" style={{ scaleX, background: BLUE }} />
   );
 };
-
-/* ───────── word-by-word headline reveal ───────── */
-const WordReveal = ({ text, className, delay = 0 }) => (
-  <span className={className}>
-    {text.split(' ').map((w, i) => (
-      <span key={i} className="inline-block overflow-hidden pb-[0.08em] align-bottom">
-        <motion.span
-          className="inline-block"
-          initial={{ y: '110%' }}
-          whileInView={{ y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.9, delay: delay + i * 0.09, ease }}
-        >
-          {w}&nbsp;
-        </motion.span>
-      </span>
-    ))}
-  </span>
-);
 
 /* ───────── animated counter ───────── */
 const Counter = ({ to, prefix = '', suffix = '', className }) => {
@@ -155,7 +141,7 @@ const GraphCard = () => (
 
 /* ───────── hero ───────── */
 
-const Hero = () => {
+const Hero = ({ profileName = null }) => {
   const secRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: secRef, offset: ['start start', 'end start'] });
   const dotsY = useTransform(scrollYProgress, [0, 1], [0, 120]);
@@ -193,11 +179,11 @@ const Hero = () => {
 
           <Reveal delay={0.5}>
             <div className="mx-auto mt-[clamp(1rem,3vh,1.75rem)] max-w-[700px]">
-              <motion.a href="/hivemind/login" whileHover={{ y: -2, boxShadow: '0 16px 36px rgba(17,125,255,0.24)' }} whileTap={{ scale: 0.99 }}
+              <motion.a href={profileName ? '/hivemind/app/overview' : '/hivemind/login'} whileHover={{ y: -2, boxShadow: '0 16px 36px rgba(17,125,255,0.24)' }} whileTap={{ scale: 0.99 }}
                 className="group flex min-h-[68px] w-full items-center justify-between rounded-[10px] bg-[#117dff] px-5 text-white no-underline transition-colors hover:bg-[#006fe8] sm:px-7">
                 <span className="flex items-center gap-4">
                   <span className="flex h-9 w-9 items-center justify-center rounded-[6px] bg-white"><GoogleMark /></span>
-                  <span className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] sm:text-[16px]">Get started</span>
+                  <span className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] sm:text-[16px]">{profileName ? `Welcome back — ${profileName}` : 'Start your Hivemind'}</span>
                 </span>
                 <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
               </motion.a>
@@ -563,40 +549,53 @@ const Sovereign = () => (
   </section>
 );
 
-/* ───────── final CTA ───────── */
-
-const FinalCta = () => (
-  <section className="relative overflow-hidden py-32 text-center" style={{ background: PAPER }}>
-    <div className="pointer-events-none absolute inset-0" style={dotField} />
-    <div className="pointer-events-none absolute inset-0"
-      style={{ background: 'radial-gradient(80% 70% at 50% 50%, rgba(251,251,248,0) 30%, #FBFBF8 90%)' }} />
-    <Reveal className="relative">
-      <h2 className="mx-auto max-w-3xl font-['Space_Grotesk'] text-5xl font-semibold leading-[1.02] tracking-tight text-[#0a0a0a] md:text-7xl">
-        <WordReveal text="Stop starting" />
-        <br />
-        <WordReveal text="from zero" delay={0.2} />
-      </h2>
-      <p className="mx-auto mt-6 max-w-md text-[15px] font-light text-[#6b6b6b]">
-        Connect your first app in two minutes. Your organization starts compounding today.
-      </p>
-      <div className="mt-10 flex flex-wrap items-center justify-center gap-5">
-        <motion.a href="/hivemind/app" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-          className="group inline-flex items-center gap-2.5 rounded-full px-8 py-4 text-[13px] font-semibold text-white no-underline"
-          style={{ background: BLUE }}>
-          Get HIVEMIND <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
-        </motion.a>
-        <DownloadAllPlatforms />
-        <a href="https://singulancelabs.com/benchmark" className="font-mono text-[12px] uppercase tracking-[0.18em] text-[#6b6b6b] no-underline hover:text-[#0a0a0a]">
-          see the benchmark →
-        </a>
-      </div>
-    </Reveal>
-  </section>
-);
-
 /* ───────── page ───────── */
 
 const HivemindProduct = () => {
+  const [isMobile, setIsMobile] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+  ));
+  const [landingEnhancementsEnabled, setLandingEnhancementsEnabled] = useState(null);
+  const [profileName, setProfileName] = useState(null);
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobile(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    apiClient.controlPlane.get('/v1/proxy/profiles', { params: { category: 'static', key: 'name' }, timeout: 3500 })
+      .then(({ data }) => {
+        const rawName = data?.facts?.[0]?.value;
+        const name = typeof rawName === 'string' ? rawName.trim().slice(0, 80) : '';
+        if (active && name) setProfileName(name);
+      })
+      .catch(() => {
+        // The unauthenticated landing must stay fully usable without a profile.
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    fetch('/__hivemind/feature-flags/landing-mobile-v2', {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error('flag unavailable'))))
+      .then((payload) => { if (active) setLandingEnhancementsEnabled(payload?.enabled === true); })
+      // The launch baseline is enabled for everyone. A failed flag request must
+      // not turn the public homepage into an indeterminate blank screen.
+      .catch((error) => { if (active && error?.name !== 'AbortError') setLandingEnhancementsEnabled(true); });
+    return () => { active = false; controller.abort(); };
+  }, []);
+
   // Deep-link to a section (e.g. /hivemind#pricing). The target only exists
   // once this lazy chunk mounts, so the browser's native hash-scroll fires
   // too early — retry until the element shows up (bounded), else scroll top.
@@ -616,6 +615,7 @@ const HivemindProduct = () => {
   // Lenis smooth-scroll — buttery scrub for the parallax planes.
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
+    if (window.matchMedia('(max-width: 767px)').matches) return undefined;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
     const lenis = new Lenis({ duration: 1.1, smoothWheel: true });
     let raf;
@@ -627,8 +627,17 @@ const HivemindProduct = () => {
     <div style={{ background: PAPER }} className="min-h-screen">
       <ProgressBar />
       <Navbar />
-      <Hero />
-      <MarqueeRow />
+      {landingEnhancementsEnabled === null && (
+        <div className="min-h-screen bg-[#FBFBF8]" aria-label="Loading HIVEMIND" />
+      )}
+      {landingEnhancementsEnabled === true && (
+        <MobileLandingV2 desktop={!isMobile} profileName={profileName} />
+      )}
+      {landingEnhancementsEnabled !== null && <div>
+        {/* Keep the proven cover only while the enhanced hero is unavailable.
+            Once enabled, V2 owns the hero at both breakpoints. */}
+        {landingEnhancementsEnabled !== true && <Hero profileName={profileName} />}
+        <MarqueeRow />
 
       <Chapter n="01" id="chapter-1" eyebrow="memory engine"
         title={<>A memory that<br />organizes itself</>}
@@ -650,6 +659,8 @@ const HivemindProduct = () => {
           'Personal / Team / Org-wide scoping',
         ]}
         card={<ConnectorCard />} flip />
+
+      {landingEnhancementsEnabled && <ConnectorConveyorDetail />}
 
       <VelocityBand text="Remember everything ·" />
 
@@ -686,6 +697,8 @@ const HivemindProduct = () => {
         ]}
         card={<AgentsCard />} />
 
+      {landingEnhancementsEnabled && <HumationTeamDetail />}
+
       <VelocityBand text="Agents that act ·" />
 
       <Chapter n="06" id="chapter-6" eyebrow="tara × hive"
@@ -709,13 +722,15 @@ const HivemindProduct = () => {
         card={<McpCard />} />
 
       <Sovereign />
-      <FinalCta />
-
+      {landingEnhancementsEnabled && <QuantumChapter />}
+      {landingEnhancementsEnabled && <ResearchRequestsChapter />}
       {/* real SINGULANCE/HIVEMIND pricing — 4 tiers + sovereign scope estimator */}
       <Pricing />
 
       {/* developer-first + API/SDK/Playground/Security + footer (restored, ends page) */}
-      <Developers />
+        <Developers />
+        <HivemindFooter />
+      </div>}
     </div>
   );
 };

@@ -30,6 +30,7 @@
   ],
   "vars": {
     "ENVIRONMENT": "production",
+    "LANDING_MOBILE_V2": "true",
     "RUNNER_ORIGIN": "https://harness-chat-origin.singulancelabs.com"
   },
   "routes": [

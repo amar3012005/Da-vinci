@@ -3,6 +3,9 @@ const AGENT_SETUP_PREFIX = '/agent-setup/';
 const DISCOVERY_PATHS = new Set(['/robots.txt', '/llms.txt', '/llms-full.txt', '/sitemap.xml']);
 const PARTNER_REFERRALS_FLAG_PATH = '/__hivemind/feature-flags/partner-referrals';
 const PARTNER_REFERRALS_FLAG_KEY = 'partner_referrals_v1';
+const LANDING_MOBILE_V2_FLAG_PATH = '/__hivemind/feature-flags/landing-mobile-v2';
+const LANDING_MOBILE_V2_FLAG_KEY = 'landing_mobile_v2';
+const LANDING_MOBILE_V2_ENV_KEY = 'LANDING_MOBILE_V2';
 const USE_TOOLS_UNIFIED_DAG_FLAG_PATH = '/__hivemind/feature-flags/use-tools-unified-dag';
 const USE_TOOLS_UNIFIED_DAG_FLAG_KEY = 'USE_TOOLS_UNIFIED_DAG';
 const USE_TOOLS_DURABLE_AGENT_FLAG_PATH = '/__hivemind/feature-flags/use-tools-durable-agent';
@@ -352,6 +355,34 @@ async function partnerReferralsFlagResponse(request, env) {
   return booleanFlagshipResponse(request, env, PARTNER_REFERRALS_FLAG_KEY);
 }
 
+async function mobileLandingFlagResponse(request, env) {
+  // This launch is intentionally enabled for everyone. The Worker variable is
+  // the durable rollout baseline; Flagship can still return false for an
+  // immediate no-deploy rollback or later audience targeting.
+  const defaultEnabled = String(env[LANDING_MOBILE_V2_ENV_KEY] ?? 'true').toLowerCase() !== 'false';
+  let enabled = defaultEnabled;
+  try {
+    enabled = await env.FLAGS.getBooleanValue(LANDING_MOBILE_V2_FLAG_KEY, defaultEnabled, {
+      environment: env.ENVIRONMENT || 'production',
+      surface: 'hivemind-public-mobile',
+      hostname: hostname(request),
+    });
+  } catch {
+    // Preserve the globally-enabled launch baseline during a Flagship outage.
+  }
+
+  return Response.json({
+    key: LANDING_MOBILE_V2_FLAG_KEY,
+    enabled: enabled === true,
+    source: 'cloudflare-flagship',
+  }, {
+    headers: {
+      'cache-control': 'no-store',
+      'x-robots-tag': 'noindex, nofollow, noarchive, nosnippet',
+    },
+  });
+}
+
 export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
@@ -390,6 +421,10 @@ export default {
 
     if (pathname === PARTNER_REFERRALS_FLAG_PATH) {
       return partnerReferralsFlagResponse(request, env);
+    }
+    if (pathname === LANDING_MOBILE_V2_FLAG_PATH) {
+      if (request.method !== 'GET') return new Response(null, { status: 405, headers: { allow: 'GET' } });
+      return mobileLandingFlagResponse(request, env);
     }
     if (pathname === USE_TOOLS_UNIFIED_DAG_FLAG_PATH) {
       return booleanFlagshipResponse(request, env, USE_TOOLS_UNIFIED_DAG_FLAG_KEY);

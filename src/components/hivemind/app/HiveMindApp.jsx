@@ -9,6 +9,7 @@ import CliVerified from './auth/CliVerified';
 import AppShell from './layout/AppShell';
 import { QuickRecorderProvider } from './shared/QuickRecorderProvider';
 import { TeamProvider } from './shared/team-context';
+import TaraConfig from './pages/TaraConfig';
 
 // Pages (lazy loaded for code splitting)
 const Overview = React.lazy(() => import('./pages/Overview'));
@@ -41,7 +42,6 @@ const Engine = React.lazy(() => import('./pages/Engine'));
 const KnowledgeBase = React.lazy(() => import('./pages/KnowledgeBase'));
 const AgentSwarm = React.lazy(() => import('./pages/AgentSwarm'));
 const SwarmGovernance = React.lazy(() => import('./pages/SwarmGovernance'));
-const TaraConfig = React.lazy(() => import('./pages/TaraConfig'));
 const TeamMembers = React.lazy(() => import('./pages/TeamMembers'));
 const TeamProjects = React.lazy(() => import('./pages/TeamProjects'));
 const JoinOrg = React.lazy(() => import('./pages/JoinOrg'));

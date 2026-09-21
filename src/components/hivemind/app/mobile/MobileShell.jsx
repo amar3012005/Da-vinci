@@ -12,8 +12,16 @@ import SingulanceMark from '../shared/SingulanceMark';
 import SingulanceBrand from '../shared/SingulanceBrand';
 import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
+import apiClient from '../shared/api-client';
+import AgentAvatar from '../hyperagents/AgentAvatar';
 
 const SPLASH_FLAG = 'hm_m_splashed';
+const ONBOARDING_TEAM = [
+  { id: 'priya', name: 'Priya', lane: 'Strategist' },
+  { id: 'lena', name: 'Lena', lane: 'Builder' },
+  { id: 'omar', name: 'Omar', lane: 'Researcher' },
+  { id: 'tara', name: 'TARA', lane: 'Communicator' },
+];
 
 /**
  * MobileShell — the shared chrome for every /hivemind/m/* page, styled after
@@ -41,12 +49,12 @@ const NAV = [
 export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false, showBareLogo = true }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, org, logout } = useAuth() || {};
+  const { user, org, logout, needsOnboarding } = useAuth() || {};
   const [drawer, setDrawer] = useState(false);
-  const [showAwakening, setShowAwakening] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try { return window.localStorage.getItem('hm.mobile_awakening_pending') === '1'; } catch { return false; }
-  });
+  const [reminderDismissed, setReminderDismissed] = useState(false);
+  const [showDesktopInstructions, setShowDesktopInstructions] = useState(false);
+  const [companyOnboarded, setCompanyOnboarded] = useState(null);
+  const [profileName, setProfileName] = useState('');
   const { usage } = useUsage();
 
   // SINGULANCE onboarding splash — plays once per device, and again right
@@ -76,11 +84,65 @@ export default function MobileShell({ children, rightAction = null, title = null
   // Close the drawer on any route change.
   useEffect(() => { setDrawer(false); }, [location.pathname]);
 
-  const firstName = (user?.name || user?.email || 'there').split(/[\s@]/)[0];
+  // Organization creation and company onboarding are separate lifecycle
+  // boundaries. A mobile-created account can already have an org while its
+  // HyperAgents company record is still empty, so `needs_org_setup` alone is
+  // not an onboarding-completion signal.
+  useEffect(() => {
+    if (location.pathname !== '/hivemind/m/chat') return undefined;
+    let active = true;
+    let retryTimer;
+
+    // Auth bootstrap and the company endpoint can briefly race on a fresh
+    // mobile visit. Retry that authoritative check; if it remains unavailable,
+    // fail closed and keep the onboarding reminder visible. A failed status
+    // lookup must never make an unfinished account look onboarded.
+    const checkCompany = async (attempt = 0) => {
+      try {
+        const company = await apiClient.hyperCompany();
+        if (!active) return;
+        // Match CompanyDashboard's readiness contract exactly: the lifecycle
+        // is incomplete if either the durable flag or generated company
+        // payload is missing.
+        setCompanyOnboarded(Boolean(company?.onboarded && company?.company));
+      } catch {
+        if (!active) return;
+        if (attempt < 2) {
+          retryTimer = window.setTimeout(() => checkCompany(attempt + 1), 700 * (attempt + 1));
+        } else {
+          setCompanyOnboarded(false);
+        }
+      }
+    };
+
+    checkCompany();
+    apiClient.controlPlane.get('/v1/proxy/profiles', { params: { category: 'static', key: 'name' } })
+      .then((profileResult) => {
+        if (!active) return;
+        const value = profileResult?.data?.facts?.find((fact) => fact?.key === 'name')?.value;
+        if (typeof value === 'string') setProfileName(value.trim().slice(0, 80));
+      })
+      .catch(() => null);
+
+    return () => {
+      active = false;
+      if (retryTimer) window.clearTimeout(retryTimer);
+    };
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (needsOnboarding !== false) return;
+    setReminderDismissed(false);
+    setShowDesktopInstructions(false);
+  }, [needsOnboarding]);
+
+  const firstName = (profileName || user?.display_name || user?.email || 'there').split(/[\s@]/)[0];
   const dismissAwakening = () => {
-    setShowAwakening(false);
-    try { window.localStorage.removeItem('hm.mobile_awakening_pending'); } catch { /* private mode */ }
+    setReminderDismissed(true);
+    setShowDesktopInstructions(false);
   };
+  const onboardingIncomplete = needsOnboarding === true || companyOnboarded === false;
+  const showAwakening = location.pathname === '/hivemind/m/chat' && onboardingIncomplete && !reminderDismissed;
 
   return (
     <div
@@ -92,11 +154,32 @@ export default function MobileShell({ children, rightAction = null, title = null
         <div className="absolute inset-0 z-[90] flex items-end bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Awaken your AI company">
           <section className="w-full rounded-[18px] border border-[#e3e0db] bg-white p-5 shadow-xl">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#117dff]">HIVEMIND · FIRST MOVE</p>
-            <h2 className="mt-2 font-['Space_Grotesk'] text-[25px] font-semibold leading-tight text-[#0a0a0a]">It’s time to awaken your AI company.</h2>
-            <p className="mt-2 text-[13px] leading-6 text-[#525252]">Your company brain is ready. Open the desktop workspace to meet your HyperAgents and make your first move.</p>
+            <div className="mt-4 flex items-center gap-3" aria-label="Your Humation team">
+              <div className="flex -space-x-2.5">
+                {ONBOARDING_TEAM.map((agent) => (
+                  <span key={agent.id} className="inline-flex rounded-full border-2 border-white bg-white">
+                    <AgentAvatar agent={agent} size={42} ring />
+                  </span>
+                ))}
+              </div>
+              <div className="min-w-0">
+                <strong className="block text-[12px] font-semibold text-[#0a0a0a]">Priya, Lena, Omar &amp; TARA</strong>
+                <span className="mt-0.5 block text-[10px] text-[#737373]">Your Humation team is waiting</span>
+              </div>
+            </div>
+            <h2 className="mt-2 font-['Space_Grotesk'] text-[25px] font-semibold leading-tight text-[#0a0a0a]">
+              {showDesktopInstructions ? 'Finish onboarding on your computer.' : 'Meet your HyperAgents.'}
+            </h2>
+            <p className="mt-2 text-[13px] leading-6 text-[#525252]">
+              {showDesktopInstructions
+                ? 'Open singulancelabs.com on your PC or Mac, sign in, and finish onboarding your company there.'
+                : 'Your account is ready, but your company onboarding is not finished yet. Complete it on a PC or Mac to activate your company, memory, and HyperAgents.'}
+            </p>
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <button type="button" onClick={dismissAwakening} className="h-10 rounded-[6px] border border-[#e3e0db] text-[12px] font-medium text-[#525252]">Stay in chat</button>
-              <button type="button" onClick={() => { dismissAwakening(); navigate('/hivemind/app/employees/mycompany?desktop=1'); }} className="h-10 rounded-[6px] bg-[#117dff] text-[12px] font-semibold text-white">Open desktop setup</button>
+              <button type="button" onClick={dismissAwakening} className="h-10 rounded-[6px] border border-[#e3e0db] text-[12px] font-medium text-[#525252]">Continue chat</button>
+              {!showDesktopInstructions && (
+                <button type="button" onClick={() => setShowDesktopInstructions(true)} className="h-10 rounded-[6px] bg-[#117dff] text-[12px] font-semibold text-white">Open desktop setup</button>
+              )}
             </div>
           </section>
         </div>

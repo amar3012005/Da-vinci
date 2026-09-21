@@ -8,6 +8,14 @@ describe('HyperAgents live turn adoption', () => {
     expect(source).toContain('setActiveTurnId(liveTurn?.id || null);');
   });
 
+  it('shows only the latest durable progress heartbeat while a turn is live', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
+    expect(source).toContain("const typingLine = [...lines].reverse().find(l => l.t === 'typing');");
+    expect(source).toContain('data-testid="room-live-progress"');
+    expect(source).toContain('aria-live="polite"');
+    expect(source).not.toContain("lines.filter(l => l.t === 'typing').slice(-2)");
+  });
+
   it('keeps every domain as a permanent company Room and tags work Rooms', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
     ['general', 'campaign', 'seo', 'marketing', 'branding', 'fundraising', 'research', 'product', 'design', 'legal_finance']

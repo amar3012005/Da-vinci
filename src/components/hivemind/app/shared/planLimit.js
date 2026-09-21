@@ -14,6 +14,7 @@
  */
 
 export const PLAN_LIMIT_CODE = 'plan_limit_exceeded';
+export const CREDIT_LIMIT_CODE = 'credits_exhausted';
 export const PLAN_LIMIT_EVENT = 'hm:plan-limit';
 
 /**
@@ -28,7 +29,7 @@ export function isPlanLimitError(err) {
   const data = err?.response?.data;
   const code = data?.code || data?.error;
   if (status !== 402 && status !== 403 && status !== 429) return false;
-  return code === PLAN_LIMIT_CODE || code === 'quota_reached';
+  return code === PLAN_LIMIT_CODE || code === CREDIT_LIMIT_CODE || code === 'quota_reached';
 }
 
 /**
@@ -55,6 +56,7 @@ export function extractPlanLimit(err) {
     estimatedPages: num(data.estimated_pages ?? data.estimatedPages ?? data.requested_pages),
     suggestedPlan: data.suggested_plan ?? data.suggestedPlan ?? null,
     upgradeUrl: data.upgrade_url ?? data.upgradeUrl ?? '/hivemind/app/billing',
+    referralTrial: data.referral_trial === true || data.referralTrial === true || data.commercial_action === 'talk_to_founder',
   };
 }
 

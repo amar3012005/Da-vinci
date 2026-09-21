@@ -21,6 +21,7 @@ import RunwayUpgradePanel from '../components/RunwayUpgradePanel';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
 import CreditBalance from '../shared/CreditBalance';
+import { isEnterpriseBillingWorkspace, orderedPersonalPlans } from '../shared/billing-presentation';
 
 // ─── Plan Definitions ────────────────────────────────────────────────────────
 
@@ -398,12 +399,13 @@ export default function Billing() {
   const subscription = billing?.subscription || {};
   const currentPlan = billing?.plan?.id || org?.plan || 'free';
   const canManageBilling = Boolean(billing?.can_manage_billing);
-  const isEnterpriseWorkspace = billing?.billing_model === 'enterprise_contract' || currentPlan === 'enterprise';
+  const isEnterpriseWorkspace = isEnterpriseBillingWorkspace({ billing, org, currentPlan });
   const dummyCheckoutId = searchParams.get('dummy_checkout');
   const checkoutState = searchParams.get('checkout');
-  const planOptions = Array.isArray(billing?.all_plans) && billing.all_plans.length
+  const availablePlans = Array.isArray(billing?.all_plans) && billing.all_plans.length
     ? billing.all_plans.map(planFromBackend)
-    : PLANS.filter((plan) => plan.id !== 'enterprise');
+    : PLANS;
+  const planOptions = orderedPersonalPlans(availablePlans);
 
   useEffect(() => {
     const requested = String(searchParams.get('upgrade') || '').toLowerCase();
@@ -595,7 +597,7 @@ export default function Billing() {
       </motion.div>
 
       {/* Enterprise invitation holders configure the paid continuation here. */}
-      {org?.plan === 'enterprise' && <RunwayUpgradePanel />}
+      {isEnterpriseWorkspace && <RunwayUpgradePanel />}
 
       {/* Invoices */}
       {canManageBilling && (
@@ -661,16 +663,25 @@ export default function Billing() {
       )}
 
       {!isEnterpriseWorkspace && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {planOptions.map((plan) => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              currentPlan={currentPlan}
-              onSelect={(id) => canManageBilling ? setUpgradeModal(id) : setBillingError('Only an organization owner or admin can change the subscription.')}
-            />
-          ))}
-        </div>
+        <section className="space-y-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a3a3a3]">Personal plans</p>
+              <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Choose the capacity that fits your work</h2>
+            </div>
+            <p className="max-w-md text-xs leading-5 text-[#737373]">Plans are ordered from individual memory to autonomous execution. Your current plan remains clearly marked.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {planOptions.map((plan) => (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                currentPlan={currentPlan}
+                onSelect={(id) => canManageBilling ? setUpgradeModal(id) : setBillingError('Only an organization owner or admin can change the subscription.')}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
       {/* FAQ Section */}

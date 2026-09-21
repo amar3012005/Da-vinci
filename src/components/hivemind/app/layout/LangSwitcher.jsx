@@ -11,7 +11,7 @@ import { Globe, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '../../../../i18n';
 
-export default function LangSwitcher({ compact = false, theme = 'light' }) {
+export default function LangSwitcher({ compact = false, theme = 'light', variant = 'button', linkLabel = null, includeAutoDetect = false, onLanguageChange = null, onAutoDetect = null }) {
   const { i18n, t } = useTranslation();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
@@ -41,10 +41,16 @@ export default function LangSwitcher({ compact = false, theme = 'light' }) {
   const pickLanguage = async (code) => {
     try {
       await i18n.changeLanguage(code);
+      onLanguageChange?.(code);
       window.dispatchEvent(new CustomEvent('hivemind:ui-language', { detail: { language: code } }));
     } catch (e) {
       console.warn('[lang] changeLanguage failed', e);
     }
+    setOpen(false);
+  };
+
+  const pickAutoDetect = () => {
+    onAutoDetect?.();
     setOpen(false);
   };
 
@@ -53,20 +59,22 @@ export default function LangSwitcher({ compact = false, theme = 'light' }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-colors text-[12px] font-medium ${
+        className={`${variant === 'link'
+          ? 'inline-flex items-center gap-1 text-[12px] font-medium text-[#117dff] underline decoration-[#117dff]/40 underline-offset-2 hover:text-[#0066e0]'
+          : 'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-colors text-[12px] font-medium'} ${variant === 'link' ? '' : (
           dark
             ? 'border-[#2f2925] bg-[#080808]/78 text-[#d5c8bc] hover:text-[#fff0e5]'
             : 'border-[#e3e0db] bg-white text-[#525252] hover:bg-[#f5f3ee]'
-        } ${
+        )} ${variant === 'link' ? '' : (
           compact ? '' : 'min-w-[68px] justify-center'
-        }`}
+        )}`}
         title={t('common.language', 'Language')}
         aria-label={t('common.language', 'Language')}
         aria-expanded={open}
       >
         <Globe className="w-3.5 h-3.5" strokeWidth={2} />
         <span className="uppercase tracking-wide text-[11px] font-semibold">
-          {currentMeta.code}
+          {linkLabel || currentMeta.code}
         </span>
       </button>
 
@@ -82,6 +90,16 @@ export default function LangSwitcher({ compact = false, theme = 'light' }) {
           <div className={`px-3 py-2 text-[10px] uppercase tracking-[0.08em] font-semibold ${dark ? 'text-[#9d9288]' : 'text-[#8a8a8a]'}`}>
             {t('common.languageHeader', 'Choose language')}
           </div>
+          {includeAutoDetect && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={(event) => { event.preventDefault(); event.stopPropagation(); pickAutoDetect(); }}
+              className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${dark ? 'text-[#d5c8bc] hover:bg-[#151312]' : 'text-[#0a0a0a] hover:bg-[#f5f3ee]'}`}
+            >
+              Company language: auto-detect from website
+            </button>
+          )}
           {SUPPORTED_LANGUAGES.map((lng) => {
             const active = lng.code === current;
             return (

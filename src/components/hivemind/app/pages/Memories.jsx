@@ -301,6 +301,31 @@ function EntityChips({ memory }) {
   );
 }
 
+function EntityInventory({ memory }) {
+  const entities = (Array.isArray(memory?.tags) ? memory.tags : [])
+    .filter((tag) => typeof tag === 'string' && tag.startsWith('entity:'))
+    .map((tag) => tag.slice(7).replace(/[_-]+/g, ' ').trim())
+    .filter(Boolean);
+  if (!entities.length) return null;
+  return (
+    <div>
+      <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
+        Entities mentioned · {entities.length}
+      </label>
+      <div className="flex flex-wrap gap-1.5">
+        {entities.map((entity) => (
+          <span
+            key={entity}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-mono uppercase tracking-[0.06em]"
+          >
+            @{entity}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RelationshipIndicator({ memory }) {
   // Three signals stacked left → right:
   //   1. SUPERSEDED   — this row is no longer the latest; another memory
@@ -886,6 +911,11 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
             </div>
           </div>
 
+          {/* Entity tags are first-class memory metadata. Keep the complete
+              inventory visible in the detail reader instead of applying the
+              compact list-card overflow cap. */}
+          <EntityInventory memory={memory} />
+
           {/* Tags */}
           {memory.tags?.length > 0 && (
             <div>
@@ -893,7 +923,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
                 {t('memories.tags', 'Tags')}
               </label>
               <div className="flex flex-wrap gap-1.5">
-                {memory.tags.map((tag) => (
+                {memory.tags.filter((tag) => !String(tag).startsWith('entity:')).map((tag) => (
                   <TagPill key={tag} label={tag} />
                 ))}
               </div>

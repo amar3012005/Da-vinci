@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import UpdateBanner from './components/hivemind/UpdateBanner';
 import MobileHomepage from './components/mobile/MobileHomepage';
 import CookieConsent from './components/CookieConsent';
+import apiClient from './components/hivemind/app/shared/api-client';
 
 // Hivemind
 const HivemindRedirect = React.lazy(() => import('./components/hivemind/HivemindRedirect'));
@@ -34,6 +35,7 @@ const HIVEMIND_PREVIEW_HOSTS = new Set(['next.preview.singulancelabs.com']);
 // Default false preserves the legacy davinciai multi-subdomain split (marketing host vs the
 // dedicated hivemind.davinciai.eu subdomain), so the Vercel deploy is unaffected.
 const PRODUCT_HOST = process.env.REACT_APP_PRODUCT_HOST === 'true';
+const HIVEMIND_PUBLIC_LANDING_URL = 'https://next.singulancelabs.com/';
 
 /**
  * Hard-redirect any /hivemind* hit on a non-HIVEMIND host (e.g. singulancelabs.com,
@@ -65,6 +67,31 @@ const MarketingHomepage = () => (
     <MobileHomepage />
   </>
 );
+
+// New visitors retain the SINGULANCE marketing journey. A returning user is
+// recognized only by the server-authoritative session bootstrap and is then
+// taken to the public HIVEMIND landing page — never directly into the app.
+// This deliberately does not inspect browser storage or Google identity data.
+const ReturningUserMarketingHomepage = () => {
+  React.useEffect(() => {
+    let active = true;
+    const currentHost = window.location.hostname.toLowerCase();
+    if (currentHost !== 'singulancelabs.com' && currentHost !== 'www.singulancelabs.com') return undefined;
+
+    apiClient.controlPlane.get('/v1/bootstrap', { timeout: 3500 })
+      .then(({ data }) => {
+        if (active && data?.authenticated === true && data?.user?.id) {
+          window.location.replace(HIVEMIND_PUBLIC_LANDING_URL);
+        }
+      })
+      .catch(() => {
+        // Signed-out and temporarily offline visitors remain on marketing.
+      });
+    return () => { active = false; };
+  }, []);
+
+  return <MarketingHomepage />;
+};
 
 function App() {
   const isPlatformAdminHost =
@@ -98,7 +125,7 @@ function App() {
       <UpdateBanner />
       <CookieConsent />
       <Routes>
-        <Route path="/" element={PRODUCT_HOST ? <MarketingHomepage /> : (isHivemindHost ? <React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><HivemindRedirect /></React.Suspense> : <MarketingHomepage />)} />
+        <Route path="/" element={PRODUCT_HOST ? <ReturningUserMarketingHomepage /> : (isHivemindHost ? <React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><HivemindRedirect /></React.Suspense> : <ReturningUserMarketingHomepage />)} />
 
         {/* HIVEMIND — only served on the HIVEMIND subdomain; every /hivemind* hit
             on the marketing domain hard-redirects to HIVEMIND_SITE_HOST. */}

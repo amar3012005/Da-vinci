@@ -21,6 +21,16 @@ const PLATFORM_ADMIN_BASES = Object.freeze({
   }),
 });
 
+const NETWORK_CHANGED_RETRY_DELAYS_MS = [300, 800];
+
+function isNetworkChangedError(error) {
+  return error?.code === 'ERR_NETWORK_CHANGED' || /network changed/i.test(String(error?.message || ''));
+}
+
+function waitForNetworkRecovery(delay) {
+  return new Promise((resolve) => window.setTimeout(resolve, delay));
+}
+
 function selectedPlatformAdminEnvironment() {
   if (typeof window === 'undefined' || window.location.hostname !== PLATFORM_ADMIN_HOST) return null;
   try {
@@ -435,6 +445,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async retryHyperOnboardingScreenshot() {
+    const { data } = await this.controlPlane.post('/v1/hyper/onboarding/screenshot/retry', {});
+    return data;
+  }
+
   /** Dated, source-backed growth snapshot. Runs independently from Rooms. */
   async runGrowthBaseline(payload = {}) {
     const { data } = await this.controlPlane.post('/v1/hyper/growth-baseline', payload);
@@ -606,6 +621,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  hyperCompanyWebArtifactPreviewUrl(artifactId) {
+    const id = String(artifactId || '').trim();
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return '';
+    return `${this._controlPlaneBaseUrl()}/v1/hyper/company/web-artifacts/${encodeURIComponent(id)}/preview`;
+  }
+
   /** Claim the one-time Day-0 report after Your Company has rendered. */
   async claimHyperCompanyDayZeroReport() {
     const { data } = await this.controlPlane.post('/v1/hyper/company/day0-report', {});
@@ -622,6 +643,16 @@ class HiveMindApiClient {
 
   async markWorkspaceNotificationRead(notificationId) {
     const { data } = await this.controlPlane.post(`/v1/workspace/notifications/${encodeURIComponent(notificationId)}/read`, {});
+    return data;
+  }
+
+  async nextWorkspaceAnnouncement() {
+    const { data } = await this.controlPlane.get('/v1/workspace/announcements/next');
+    return data;
+  }
+
+  async recordWorkspaceAnnouncementEvent(announcementId, event) {
+    const { data } = await this.controlPlane.post(`/v1/workspace/announcements/${encodeURIComponent(announcementId)}/event`, { event });
     return data;
   }
 
@@ -1268,6 +1299,53 @@ class HiveMindApiClient {
     return `${base}/v1/hyper-rooms/${roomId}/turns/${turnId}/stream`;
   }
 
+  async listVisualGenerationJobs(roomId, { limit = 12 } = {}) {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        const { data } = await this.controlPlane.get('/v1/proxy/visual-generation/jobs', {
+          params: { room_id: roomId, limit },
+          suppressServiceError: true,
+        });
+        return data;
+      } catch (error) {
+        if (!isNetworkChangedError(error) || attempt >= NETWORK_CHANGED_RETRY_DELAYS_MS.length) throw error;
+        await waitForNetworkRecovery(NETWORK_CHANGED_RETRY_DELAYS_MS[attempt]);
+      }
+    }
+  }
+
+  async getVisualGenerationJob(jobId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/visual-generation/jobs/${encodeURIComponent(jobId)}`, {
+      suppressServiceError: true,
+    });
+    return data;
+  }
+
+  async retryVisualGenerationJob(job) {
+    const { data } = await this.controlPlane.post('/v1/proxy/visual-generation/jobs', {
+      instruction: job.instruction,
+      use_case: job.use_case,
+      output: {
+        mode: job.output?.mode,
+        count: job.output?.count,
+        aspect_ratios: job.output?.aspect_ratios,
+        quality: job.quality,
+      },
+      model_policy: job.model_policy,
+      source: job.source || {},
+      idempotency_key: `room-retry:${job.job_id}:${Date.now()}`,
+    }, { suppressServiceError: true });
+    return data;
+  }
+
+  visualGenerationEventsUrl(jobId) {
+    return `${this._controlPlaneBaseUrl()}/v1/proxy/visual-generation/jobs/${encodeURIComponent(jobId)}/events`;
+  }
+
+  visualGenerationAssetUrl(jobId, assetId) {
+    return `${this._controlPlaneBaseUrl()}/v1/proxy/visual-generation/jobs/${encodeURIComponent(jobId)}/assets/${encodeURIComponent(assetId)}`;
+  }
+
   hyperArtifactAssetUrl(path) {
     const value = String(path || '');
     if (!value.startsWith('/v1/hyper-artifacts/')) return '';
@@ -1578,6 +1656,26 @@ class HiveMindApiClient {
 
   async listPlatformUsers({ q = '', limit = 200 } = {}) {
     const { data } = await this.controlPlane.get('/admin/api/platform/users', { params: { q, limit } });
+    return data;
+  }
+
+  async listPlatformAnnouncements() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/announcements');
+    return data;
+  }
+
+  async createPlatformAnnouncement(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/announcements', payload);
+    return data;
+  }
+
+  async updatePlatformAnnouncement(id, payload) {
+    const { data } = await this.controlPlane.patch(`/admin/api/platform/announcements/${encodeURIComponent(id)}`, payload);
+    return data;
+  }
+
+  async platformAnnouncementAction(id, action, payload = {}) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/announcements/${encodeURIComponent(id)}/${encodeURIComponent(action)}`, payload);
     return data;
   }
 

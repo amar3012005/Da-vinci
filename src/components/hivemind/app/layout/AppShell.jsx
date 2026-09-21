@@ -19,6 +19,7 @@ import { PLAN_LIMIT_CODE, PLAN_LIMIT_EVENT } from '../shared/planLimit';
 import ServiceErrorToast from '../components/ServiceErrorToast';
 import CallContractModal from '../components/CallContractModal';
 import ProductAccessModal from '../components/ProductAccessModal';
+import ReferralTrialGateModal from '../components/ReferralTrialGateModal';
 import { NEW_WORKSPACE_LANDING, RETURNING_USER_LANDING } from '../shared/routes';
 
 /**
@@ -39,13 +40,14 @@ function PlanLimitGate() {
     // upgrade modal used by every other product surface.
     const onHarnessTurnError = (e) => {
       const detail = e?.detail;
-      if (detail?.code !== PLAN_LIMIT_CODE) return;
+      if (![PLAN_LIMIT_CODE, 'credits_exhausted'].includes(detail?.code)) return;
       setState({
         resource: 'credits',
         plan: org?.plan || 'free',
         message: typeof detail.message === 'string' ? detail.message : null,
         suggestedPlan: 'pro',
         upgradeUrl: '/hivemind/app/billing',
+        referralTrial: detail?.referral_trial === true || detail?.referralTrial === true || detail?.commercial_action === 'talk_to_founder',
       });
     };
     window.addEventListener(PLAN_LIMIT_EVENT, onLimit);
@@ -69,6 +71,10 @@ function PlanLimitGate() {
   // ("Upgrade to Runway") to configure + self-serve subscribe — NOT the generic
   // "upgrade to Pro" wall.
   const isEnterpriseRunway = String(org?.plan || '').toLowerCase() === 'enterprise';
+
+  if (state?.referralTrial) {
+    return <ReferralTrialGateModal open reason={state?.message || null} onClose={close} />;
+  }
 
   if (isEnterpriseRunway) {
     return (

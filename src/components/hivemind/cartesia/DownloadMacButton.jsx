@@ -4,11 +4,9 @@ import { motion } from 'framer-motion';
 /**
  * DownloadMacButton — robust "Download for [detected OS]" desktop CTA.
  *
- * Despite the name (kept to avoid touching the 2 existing import sites —
- * Hero.jsx, HivemindProduct.jsx), this is platform-aware: Mac and Windows
- * installers both publish to the SAME GitHub release (release-mac.yml +
- * release-win.yml both run on the same v* tag, electron-builder --publish
- * always uploads dmg/zip/latest-mac.yml and exe/blockmap/latest.yml to it).
+ * Despite the name (kept to avoid touching the existing import sites), this
+ * is platform-aware: Mac, Windows and Android assets publish to the same
+ * GitHub release and the visitor sees one relevant download action.
  * One release fetch, pick the asset matching the visitor's OS.
  *
  *   • resolve the latest release once, cache it (sessionStorage) so the
@@ -20,9 +18,8 @@ import { motion } from 'framer-motion';
  *   • cross-origin-safe download via direct navigation (the `download`
  *     attribute is ignored cross-origin; browsers auto-download on nav).
  *
- * Non-Mac/non-Windows visitors (Linux, mobile) default to the Mac asset
- * with an explicit "(macOS)" suffix — matches the old behavior exactly,
- * no regression for the common case.
+ * Android visitors receive the APK. Linux and unknown platforms retain the
+ * previous macOS fallback so the action always has a safe destination.
  */
 
 const REPO = 'amar3012005/HIVEMIND';
@@ -42,6 +39,12 @@ const WindowsIcon = ({ size = 14 }) => (
   </svg>
 );
 
+const AndroidIcon = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M17.6 9.48l1.84-3.18a.4.4 0 0 0-.15-.55.4.4 0 0 0-.55.15l-1.86 3.23a11.4 11.4 0 0 0-9.76 0L5.26 5.9a.4.4 0 0 0-.55-.15.4.4 0 0 0-.15.55L6.4 9.48A10.6 10.6 0 0 0 1.5 17.5h21A10.6 10.6 0 0 0 17.6 9.48zM7 14.75a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z" />
+  </svg>
+);
+
 const Spinner = ({ size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" className="animate-spin" aria-hidden="true">
     <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
@@ -52,13 +55,14 @@ const Spinner = ({ size = 14 }) => (
 const readCache = () => {
   try {
     const c = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
-    return c && (c.dmgUrl || c.exeUrl) ? c : null;
+    return c && (c.dmgUrl || c.exeUrl || c.apkUrl) ? c : null;
   } catch { return null; }
 };
 
 const detectOS = () => {
   if (typeof navigator === 'undefined') return 'mac';
-  const p = `${navigator.userAgentData?.platform || navigator.platform || navigator.userAgent}`;
+  const p = `${navigator.userAgent} ${navigator.userAgentData?.platform || navigator.platform || ''}`;
+  if (/Android/i.test(p)) return 'android';
   if (/Win/i.test(p)) return 'windows';
   if (/Mac|iPhone|iPad|iPod/i.test(p)) return 'mac';
   return 'mac'; // default — matches prior behavior for Linux/unknown
@@ -70,15 +74,16 @@ const DownloadMacButton = ({ className = '' }) => {
   const [version, setVersion] = useState(cached?.version || null);
   const [dmgUrl, setDmgUrl] = useState(cached?.dmgUrl || null);
   const [exeUrl, setExeUrl] = useState(cached?.exeUrl || null);
+  const [apkUrl, setApkUrl] = useState(cached?.apkUrl || null);
   const [state, setState] = useState(cached ? 'ready' : 'resolving'); // resolving | ready | error
   const [downloading, setDownloading] = useState(false);
   const resolving = useRef(null);
 
-  const assetUrl = os === 'windows' ? exeUrl : dmgUrl;
+  const assetUrl = os === 'windows' ? exeUrl : os === 'android' ? apkUrl : dmgUrl;
 
   const resolve = useCallback(() => {
     if (resolving.current) return resolving.current;
-    if (dmgUrl || exeUrl) return Promise.resolve(os === 'windows' ? exeUrl : dmgUrl);
+    if (dmgUrl || exeUrl || apkUrl) return Promise.resolve(os === 'windows' ? exeUrl : os === 'android' ? apkUrl : dmgUrl);
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 8000);
     const p = fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' }, signal: ctrl.signal })
@@ -89,20 +94,22 @@ const DownloadMacButton = ({ className = '' }) => {
       .then((data) => {
         const dmg = data.assets?.find((a) => a.name?.toLowerCase().endsWith('.dmg'));
         const exe = data.assets?.find((a) => a.name?.toLowerCase().endsWith('.exe'));
+        const apk = data.assets?.find((a) => a.name?.toLowerCase().endsWith('.apk'));
         const dUrl = dmg?.browser_download_url || null;
         const eUrl = exe?.browser_download_url || null;
-        const picked = os === 'windows' ? eUrl : dUrl;
-        if (!picked) throw new Error(`no ${os === 'windows' ? 'exe' : 'dmg'} asset`);
+        const aUrl = apk?.browser_download_url || null;
+        const picked = os === 'windows' ? eUrl : os === 'android' ? aUrl : dUrl;
+        if (!picked) throw new Error(`no ${os === 'windows' ? 'exe' : os === 'android' ? 'apk' : 'dmg'} asset`);
         const v = data.tag_name || null;
-        setVersion(v); setDmgUrl(dUrl); setExeUrl(eUrl); setState('ready');
-        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ version: v, dmgUrl: dUrl, exeUrl: eUrl, at: Date.now() })); } catch (_) {}
+        setVersion(v); setDmgUrl(dUrl); setExeUrl(eUrl); setApkUrl(aUrl); setState('ready');
+        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ version: v, dmgUrl: dUrl, exeUrl: eUrl, apkUrl: aUrl, at: Date.now() })); } catch (_) {}
         return picked;
       })
       .catch(() => { setState('error'); return null; })
       .finally(() => { clearTimeout(timer); resolving.current = null; });
     resolving.current = p;
     return p;
-  }, [dmgUrl, exeUrl, os]);
+  }, [apkUrl, dmgUrl, exeUrl, os]);
 
   useEffect(() => { if (!assetUrl) resolve(); /* one resolve on mount */ }, [assetUrl, resolve]);
 
@@ -124,10 +131,10 @@ const DownloadMacButton = ({ className = '' }) => {
     else window.open(RELEASES_PAGE, '_blank', 'noopener,noreferrer');
   };
 
-  const osLabel = os === 'windows' ? 'Windows' : 'Mac';
+  const osLabel = os === 'windows' ? 'Windows' : os === 'android' ? 'Android' : 'Mac';
   const label = downloading ? 'Downloading…' : (state === 'resolving' && !assetUrl) ? 'Preparing…' : `Download for ${osLabel}`;
-  const Icon = os === 'windows' ? WindowsIcon : AppleIcon;
-  const suffix = os === 'windows' ? '(Windows · .exe)' : (os === 'mac' ? 'Universal' : '(macOS · .dmg)');
+  const Icon = os === 'windows' ? WindowsIcon : os === 'android' ? AndroidIcon : AppleIcon;
+  const suffix = os === 'windows' ? '.exe' : os === 'android' ? '.apk' : 'Universal';
 
   return (
     <motion.a

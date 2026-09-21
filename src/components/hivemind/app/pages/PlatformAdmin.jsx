@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, BarChart3, ChevronRight, Eye, EyeOff, FileText, Gift, LayoutDashboard, Mail, Menu, MessageCircle, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
+import { Activity, BarChart3, ChevronRight, Eye, EyeOff, FileText, Gift, LayoutDashboard, Mail, Megaphone, Menu, MessageCircle, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
 import apiClient from "../shared/api-client";
 import AccessApplicationsPanel from "./AccessApplicationsPanel";
 
@@ -360,6 +360,67 @@ function AiCostsPanel() {
 function Metric({ label, value }) { return <div className="rounded-[10px] border border-[#e3e0db] bg-white p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-[#737373]">{label}</p><p className="mt-1 font-['Space_Grotesk'] text-xl font-bold tabular-nums text-[#0a0a0a]">{value}</p></div>; }
 function LedgerSection({ title, rows, columns, moneyColumns = [] }) { return <section className="rounded-[10px] border border-[#e3e0db] bg-white"><h4 className="border-b border-[#e3e0db] px-4 py-3 text-sm font-semibold">{title}</h4><div className="overflow-auto"><table className="w-full min-w-[600px] text-xs"><thead><tr className="bg-[#faf9f4] text-left uppercase tracking-wider text-[#737373]">{columns.map(([, label]) => <th key={label} className="px-3 py-2">{label}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <tr key={index} className="border-t border-[#f0ede8]">{columns.map(([key]) => <td key={key} className="max-w-[200px] truncate px-3 py-2">{moneyColumns.includes(key) ? usdFromMicros(row[key]) : key.endsWith('_at') ? when(row[key]) : String(row[key] ?? '—')}</td>)}</tr>) : <tr><td colSpan={columns.length} className="px-3 py-4 text-[#737373]">No activity in this period.</td></tr>}</tbody></table></div></section>; }
 
+const EMPTY_ANNOUNCEMENT = { key: '', title: '', body: '', eyebrow: 'hivemind — update', placement: 'toast', priority: 10, status: 'draft', starts_at: '', ends_at: '', requires_notification: true, cta_label: '', cta_href: '', facts_json: '[]', agent_ids: '', artifact_json: '', audience_json: '{\n  "kind": "all"\n}' };
+function AnnouncementManager() {
+  const [items, setItems] = useState([]);
+  const [draft, setDraft] = useState(EMPTY_ANNOUNCEMENT);
+  const [selectedId, setSelectedId] = useState(null);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    try { const result = await apiClient.listPlatformAnnouncements(); setItems(result.announcements || []); } catch (err) { setError(err.response?.data?.error || err.message); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  const edit = (item) => {
+    setSelectedId(item.id);
+    setDraft({ key: item.key, title: item.title, body: item.body || '', eyebrow: item.content?.eyebrow || '', placement: item.placement, priority: item.priority, status: item.status, starts_at: item.starts_at ? new Date(item.starts_at).toISOString().slice(0, 16) : '', ends_at: item.ends_at ? new Date(item.ends_at).toISOString().slice(0, 16) : '', requires_notification: item.requires_notification !== false, cta_label: item.content?.cta?.label || '', cta_href: item.content?.cta?.href || '', facts_json: JSON.stringify(item.content?.facts || [], null, 2), agent_ids: (item.content?.agent_ids || []).join(', '), artifact_json: item.content?.artifact ? JSON.stringify(item.content.artifact, null, 2) : '', audience_json: JSON.stringify(item.audience || { kind: 'all' }, null, 2) });
+  };
+  const save = async () => {
+    setBusy(true); setError(''); setMessage('');
+    try {
+      const audience = JSON.parse(draft.audience_json || '{"kind":"all"}');
+      const display = JSON.parse(draft.facts_json || '[]');
+      const facts = Array.isArray(display) ? display : display?.facts;
+      if (!Array.isArray(facts)) throw new Error('Facts must be a JSON array, or an object with a facts array');
+      const artifact = draft.artifact_json.trim() ? JSON.parse(draft.artifact_json) : display?.artifact || null;
+      const agent_ids = draft.agent_ids.split(',').map((value) => value.trim()).filter(Boolean);
+      const payload = { key: draft.key, title: draft.title, body: draft.body, placement: draft.placement, priority: Number(draft.priority), status: draft.status, starts_at: draft.starts_at || null, ends_at: draft.ends_at || null, requires_notification: draft.requires_notification, audience, content: { eyebrow: draft.eyebrow, facts, agent_ids, artifact, cta: draft.cta_href ? { label: draft.cta_label, href: draft.cta_href } : null } };
+      const result = selectedId ? await apiClient.updatePlatformAnnouncement(selectedId, payload) : await apiClient.createPlatformAnnouncement(payload);
+      setSelectedId(result.announcement.id); setMessage('Saved. Publish when the preview and audience are ready.'); await load();
+    } catch (err) { setError(err.response?.data?.error || err.message || 'Invalid announcement'); } finally { setBusy(false); }
+  };
+  const action = async (item, next) => { setBusy(true); setError(''); try { await apiClient.platformAnnouncementAction(item.id, next); setMessage(`${next[0].toUpperCase()}${next.slice(1)}d ${item.key}.`); await load(); } catch (err) { setError(err.response?.data?.error || err.message); } finally { setBusy(false); } };
+  // Keep the authoring controls explicit. In particular, an artifact reader is
+  // not an implicit convention buried in the facts payload: its reference is
+  // separately editable and validated by Core before it can be published.
+  return <section id="admin-announcements" className="mb-6 scroll-mt-20 rounded-[10px] border border-[#e3e0db] bg-white p-5">
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-wider text-[#117dff]">In-app communication control</p><h2 className="mt-1 text-xl font-semibold text-[#0a0a0a]">Announcements & popup delivery</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-[#737373]">Create a draft, choose its audience and delivery moment, then publish it without a frontend release. The inbox is written before any popup is eligible.</p></div><button type="button" onClick={() => { setSelectedId(null); setDraft(EMPTY_ANNOUNCEMENT); setMessage(''); setError(''); }} className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-xs font-semibold">New announcement</button></div>
+    <div className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]"><div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2"><input value={draft.key} onChange={(e) => setDraft({ ...draft, key: e.target.value })} placeholder="release.day-3" className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/><select value={draft.placement} onChange={(e) => setDraft({ ...draft, placement: e.target.value })} className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"><option value="toast">Bottom-left slide-up</option><option value="dialog">Centered popup</option><option value="reader">Artifact reader</option><option value="banner">Top banner</option></select></div>
+      <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="What changed?" className="w-full rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm font-medium"/>
+      <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} placeholder="Explain the update in plain language." rows={3} className="w-full rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/>
+      <div className="grid gap-3 sm:grid-cols-2"><input value={draft.eyebrow} onChange={(e) => setDraft({ ...draft, eyebrow: e.target.value })} placeholder="hivemind — update" className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/><input type="number" value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: e.target.value })} placeholder="Priority" className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/></div>
+      <div className="grid gap-3 sm:grid-cols-2"><input type="datetime-local" aria-label="Start delivery" value={draft.starts_at} onChange={(e) => setDraft({ ...draft, starts_at: e.target.value })} className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/><input type="datetime-local" aria-label="End delivery" value={draft.ends_at} onChange={(e) => setDraft({ ...draft, ends_at: e.target.value })} className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/></div>
+      <div className="grid gap-3 sm:grid-cols-2"><input value={draft.cta_label} onChange={(e) => setDraft({ ...draft, cta_label: e.target.value })} placeholder="CTA label" className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/><input value={draft.cta_href} onChange={(e) => setDraft({ ...draft, cta_href: e.target.value })} placeholder="/hivemind/app/… or approved Cal.com URL" className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/></div>
+      <label className="block"><span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[#737373]">Facts JSON</span><textarea value={draft.facts_json} onChange={(e) => setDraft({ ...draft, facts_json: e.target.value })} rows={4} placeholder={'[{"label":"What changed","value":"…"}]'} className="w-full rounded-[6px] border border-[#e3e0db] bg-[#faf9f4] px-3 py-2 font-mono text-xs"/></label>
+      <label className="block"><span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[#737373]">Web artifact reader JSON <span className="normal-case tracking-normal text-[#a3a3a3]">(reader placement only)</span></span><textarea value={draft.artifact_json} onChange={(e) => setDraft({ ...draft, artifact_json: e.target.value })} rows={5} placeholder={'{"type":"web","id":"artifact UUID","title":"Homepage crawl","url":"https://…"}'} className="w-full rounded-[6px] border border-[#e3e0db] bg-[#faf9f4] px-3 py-2 font-mono text-xs"/></label>
+      <input value={draft.agent_ids} onChange={(e) => setDraft({ ...draft, agent_ids: e.target.value })} placeholder="Humation agent IDs to show (comma separated, optional)" className="w-full rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/>
+      <label className="flex items-center gap-2 text-xs text-[#525252]"><input type="checkbox" checked={draft.requires_notification} onChange={(e) => setDraft({ ...draft, requires_notification: e.target.checked })}/> Create the durable inbox notification before the popup</label>
+      <label className="block"><span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[#737373]">Audience JSON</span><textarea value={draft.audience_json} onChange={(e) => setDraft({ ...draft, audience_json: e.target.value })} rows={7} placeholder={'{"kind":"all"}'} className="w-full rounded-[6px] border border-[#e3e0db] bg-[#faf9f4] px-3 py-2 font-mono text-xs"/></label>
+      <div className="flex gap-2"><button type="button" disabled={busy} onClick={save} className="rounded-[6px] bg-[#117dff] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">{busy ? 'Saving…' : selectedId ? 'Save changes' : 'Create draft'}</button>{selectedId ? <button type="button" disabled={busy} onClick={() => { const item = items.find((entry) => entry.id === selectedId); if (item) action(item, 'publish'); }} className="rounded-[6px] border border-[#117dff] px-4 py-2 text-xs font-semibold text-[#117dff]">Publish</button> : null}</div>
+      {message ? <p className="text-xs text-emerald-700">{message}</p> : null}{error ? <p className="text-xs text-red-700">{error}</p> : null}
+    </div>
+    <div className="min-h-0 divide-y divide-[#eae7e1] overflow-y-auto rounded-[8px] border border-[#e3e0db]">{items.length ? items.map((item) => <article key={item.id} className="p-4"><div className="flex items-start justify-between gap-3"><button type="button" onClick={() => edit(item)} className="min-w-0 text-left"><p className="font-mono text-[10px] text-[#117dff]">{item.key} · v{item.version}</p><h3 className="mt-1 truncate text-sm font-semibold">{item.title}</h3><p className="mt-1 text-xs text-[#737373]">{item.status} · {item.placement} · priority {item.priority}</p></button><span className="rounded-full bg-[#f3f1ec] px-2 py-1 text-[10px]">{item.metrics?.deliveries || 0} delivered</span></div><div className="mt-3 flex flex-wrap gap-2 text-[11px]"><button type="button" onClick={() => action(item, 'publish')} className="rounded-[5px] border border-[#e3e0db] px-2 py-1">Publish</button><button type="button" onClick={() => action(item, 'pause')} className="rounded-[5px] border border-[#e3e0db] px-2 py-1">Pause</button><button type="button" onClick={() => action(item, 'duplicate')} className="rounded-[5px] border border-[#e3e0db] px-2 py-1">New version</button><span className="ml-auto text-[#737373]">{item.metrics?.actions || 0} actions · {item.metrics?.dismissals || 0} dismissed</span></div></article>) : <p className="p-8 text-center text-sm text-[#737373]">No announcements yet. Create a draft to begin.</p>}</div>
+    </div>
+  </section>;
+  return <section id="admin-announcements" className="mb-6 scroll-mt-20 rounded-[10px] border border-[#e3e0db] bg-white p-5">
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-wider text-[#117dff]">In-app communication control</p><h2 className="mt-1 text-xl font-semibold text-[#0a0a0a]">Announcements & popup delivery</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-[#737373]">Publish typed, scheduled updates to the notification inbox first, then show one eligible popup across Brain, OS, Voice, Rooms, and artifact pages. No frontend deployment is needed for copy, audience, or timing changes.</p></div><button type="button" onClick={() => { setSelectedId(null); setDraft(EMPTY_ANNOUNCEMENT); setMessage(''); }} className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-xs font-semibold">New announcement</button></div>
+    <div className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]"><div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><input value={draft.key} onChange={(e) => setDraft({ ...draft, key: e.target.value })} placeholder="release.day-3" className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/><select value={draft.placement} onChange={(e) => setDraft({ ...draft, placement: e.target.value })} className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"><option value="toast">Bottom-left slide-up</option><option value="dialog">Centered popup</option><option value="reader">Artifact reader</option><option value="banner">Top banner</option></select></div><input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="What changed?" className="w-full rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm font-medium"/><textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} placeholder="Explain the update in plain language." rows={3} className="w-full rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/><div className="grid gap-3 sm:grid-cols-2"><input value={draft.eyebrow} onChange={(e) => setDraft({ ...draft, eyebrow: e.target.value })} placeholder="hivemind — update" className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/><input type="number" value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: e.target.value })} placeholder="Priority" className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/></div><div className="grid gap-3 sm:grid-cols-2"><input type="datetime-local" value={draft.starts_at} onChange={(e) => setDraft({ ...draft, starts_at: e.target.value })} className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/><input type="datetime-local" value={draft.ends_at} onChange={(e) => setDraft({ ...draft, ends_at: e.target.value })} className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/></div><div className="grid gap-3 sm:grid-cols-2"><input value={draft.cta_label} onChange={(e) => setDraft({ ...draft, cta_label: e.target.value })} placeholder="CTA label" className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/><input value={draft.cta_href} onChange={(e) => setDraft({ ...draft, cta_href: e.target.value })} placeholder="/hivemind/app/… or approved Cal.com URL" className="rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/></div><label className="block"><span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[#737373]">Facts JSON</span><textarea value={draft.facts_json} onChange={(e) => setDraft({ ...draft, facts_json: e.target.value })} rows={4} placeholder={'[{"label":"What changed","value":"…"}]'} className="w-full rounded-[6px] border border-[#e3e0db] bg-[#faf9f4] px-3 py-2 font-mono text-xs"/></label><input value={draft.agent_ids} onChange={(e) => setDraft({ ...draft, agent_ids: e.target.value })} placeholder="Agent IDs to show (comma separated, optional)" className="w-full rounded-[6px] border border-[#e3e0db] px-3 py-2 text-sm"/><label className="flex items-center gap-2 text-xs text-[#525252]"><input type="checkbox" checked={draft.requires_notification} onChange={(e) => setDraft({ ...draft, requires_notification: e.target.checked })}/> Create the durable inbox notification before the popup</label><label className="block"><span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[#737373]">Audience JSON</span><textarea value={draft.audience_json} onChange={(e) => setDraft({ ...draft, audience_json: e.target.value })} rows={7} className="w-full rounded-[6px] border border-[#e3e0db] bg-[#faf9f4] px-3 py-2 font-mono text-xs"/></label><div className="flex gap-2"><button type="button" disabled={busy} onClick={save} className="rounded-[6px] bg-[#117dff] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">{busy ? 'Saving…' : selectedId ? 'Save changes' : 'Create draft'}</button>{selectedId ? <button type="button" disabled={busy} onClick={() => { const item = items.find((entry) => entry.id === selectedId); if (item) action(item, 'publish'); }} className="rounded-[6px] border border-[#117dff] px-4 py-2 text-xs font-semibold text-[#117dff]">Publish</button> : null}</div>{message ? <p className="text-xs text-emerald-700">{message}</p> : null}{error ? <p className="text-xs text-red-700">{error}</p> : null}</div>
+      <div className="min-h-0 divide-y divide-[#eae7e1] overflow-y-auto rounded-[8px] border border-[#e3e0db]">{items.length ? items.map((item) => <article key={item.id} className="p-4"><div className="flex items-start justify-between gap-3"><button type="button" onClick={() => edit(item)} className="min-w-0 text-left"><p className="font-mono text-[10px] text-[#117dff]">{item.key} · v{item.version}</p><h3 className="mt-1 truncate text-sm font-semibold">{item.title}</h3><p className="mt-1 text-xs text-[#737373]">{item.status} · {item.placement} · priority {item.priority}</p></button><span className="rounded-full bg-[#f3f1ec] px-2 py-1 text-[10px]">{item.metrics?.deliveries || 0} delivered</span></div><div className="mt-3 flex flex-wrap gap-2 text-[11px]"><button onClick={() => action(item, 'publish')} className="rounded-[5px] border border-[#e3e0db] px-2 py-1">Publish</button><button onClick={() => action(item, 'pause')} className="rounded-[5px] border border-[#e3e0db] px-2 py-1">Pause</button><button onClick={() => action(item, 'duplicate')} className="rounded-[5px] border border-[#e3e0db] px-2 py-1">New version</button><span className="ml-auto text-[#737373]">{item.metrics?.actions || 0} actions · {item.metrics?.dismissals || 0} dismissed</span></div></article>) : <p className="p-8 text-center text-sm text-[#737373]">No announcements yet. Create a draft to begin.</p>}</div></div>
+  </section>;
+}
+
 const COMMERCIAL_TABS = [
   ["plans", "Plans"], ["models", "Models"], ["ai_costs", "AI Costs"],
   ["promotions", "Promotions"], ["invitations", "Invitations"], ["email", "Email"],
@@ -446,10 +507,8 @@ function CommercialManager() {
     referrer_email: "",
     internal_name: "",
     account_type: "enterprise_managed",
-    base_plan: "plus",
     trial_days: 14,
-    monthly_credits: 2000,
-    fallback_action: "free",
+    total_credits: 2000,
     max_redemptions: 10,
     ends_at: "",
     welcome_message: "",
@@ -611,7 +670,7 @@ function CommercialManager() {
       const payload = {
         ...referralForm,
         trial_days: Number(referralForm.trial_days),
-        monthly_credits: Number(referralForm.monthly_credits),
+        total_credits: Number(referralForm.total_credits),
         max_redemptions: referralForm.max_redemptions
           ? Number(referralForm.max_redemptions)
           : undefined,
@@ -1694,24 +1753,7 @@ function CommercialManager() {
               className="border border-[#d8d6cf] px-3 py-2"
               aria-label="Free trial duration in days"
             />
-            <select
-              value={referralForm.base_plan}
-              onChange={(e) => {
-                const creditsByPlan = { free: 500, plus: 2000, pro: 5000, scale: 10000 };
-                setReferralForm({
-                  ...referralForm,
-                  base_plan: e.target.value,
-                  monthly_credits: creditsByPlan[e.target.value],
-                });
-              }}
-              className="border border-[#d8d6cf] px-3 py-2"
-              aria-label="Trial plan"
-            >
-              <option value="free">Free · 500 credits</option>
-              <option value="plus">Plus · 2,000 credits</option>
-              <option value="pro">Pro · 5,000 credits</option>
-              <option value="scale">Scale · 10,000 credits</option>
-            </select>
+            <div className="border border-[#d8d6cf] bg-[#f7f6f2] px-3 py-2 text-sm" aria-label="Trial plan">Enterprise trial</div>
             <select
               value={referralForm.account_type}
               onChange={(e) =>
@@ -1723,7 +1765,6 @@ function CommercialManager() {
               className="border border-[#d8d6cf] px-3 py-2"
               aria-label="Account type"
             >
-              <option value="personal">Personal</option>
               <option value="enterprise_managed">Enterprise managed</option>
               <option value="enterprise_self_hosted">Enterprise self-hosted</option>
             </select>
@@ -1731,17 +1772,17 @@ function CommercialManager() {
               type="number"
               min="1"
               max="100000000"
-              value={referralForm.monthly_credits}
+              value={referralForm.total_credits}
               onChange={(e) =>
                 setReferralForm({
                   ...referralForm,
-                  monthly_credits: e.target.value,
+                  total_credits: e.target.value,
                 })
               }
               className="border border-[#d8d6cf] px-3 py-2"
-              aria-label="Monthly credits"
+              aria-label="Total trial credits"
             />
-            <select value={referralForm.fallback_action} onChange={(e) => setReferralForm({ ...referralForm, fallback_action: e.target.value })} className="border border-[#d8d6cf] px-3 py-2" aria-label="Plan after trial"><option value="free">Free after trial</option><option value="manual_review">Manual review before expiry</option></select>
+            <div className="border border-[#d8d6cf] bg-[#f7f6f2] px-3 py-2 text-sm" aria-label="After trial">Talk to founder after trial</div>
             <input
               type="number"
               min="1"
@@ -1781,7 +1822,7 @@ function CommercialManager() {
                     {campaign.status} · {campaign.accepted_count} accepted · {campaign.visit_count} visits
                   </span>
                   <p className="mt-1 text-xs text-[#737373]">
-                    {campaign.offer.trial_days} days free · {Number(campaign.offer.monthly_credits).toLocaleString()} credits/month · {campaign.offer.plan} · {campaign.offer.remaining_activations == null ? "unlimited activations" : `${campaign.offer.remaining_activations} activations left`} · sent {when(campaign.last_sent_at)}
+                    {campaign.offer.trial_days} days · {Number(campaign.offer.total_credits ?? campaign.offer.monthly_credits).toLocaleString()} total trial credits · Enterprise · {campaign.offer.remaining_activations == null ? "unlimited activations" : `${campaign.offer.remaining_activations} activations left`} · sent {when(campaign.last_sent_at)}
                   </p>
                   <button type="button" onClick={() => navigator.clipboard.writeText(campaign.invitation_url).then(() => setNotice("Invitation link copied."))} className="mt-2 text-xs font-medium text-[#117dff]">Copy share link</button>
                 </div>
@@ -1908,6 +1949,7 @@ const ADMIN_NAV_ITEMS = [
   { id: "plans", label: "Plans & credits", icon: BarChart3 },
   { id: "promotions", label: "Promotions", icon: Gift },
   { id: "invitations", label: "Invitations", icon: Send },
+  { id: "announcements", label: "Announcements", icon: Megaphone },
   { id: "email", label: "Email", icon: FileText },
   { id: "models", label: "AI policies", icon: Activity },
   { id: "chat", label: "HIVE Chat", icon: MessageCircle },
@@ -2054,6 +2096,10 @@ export default function PlatformAdmin() {
       window.location.assign(apiClient.getPlatformAdminFrontendUrl("/hivemind/m/chat"));
       return;
     }
+    if (target === "announcements") {
+      document.getElementById("admin-announcements")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     document.getElementById("admin-commercial")?.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => window.dispatchEvent(new CustomEvent("platform-admin:navigate", { detail: { tab: target } })), 0);
   }, []);
@@ -2125,6 +2171,7 @@ export default function PlatformAdmin() {
           </button>
         </div>
       </div>
+      <AnnouncementManager />
       <CommercialManager />
       <SecurityChecklist />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
