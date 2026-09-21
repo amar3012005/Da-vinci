@@ -401,6 +401,10 @@ class HiveMindApiClient {
     return `${this._controlPlaneBaseUrl()}/v1/workruns/${encodeURIComponent(id)}/session/stream`;
   }
 
+  workRunArtifactUrl(workRunId, artifactId) {
+    return `${this._controlPlaneBaseUrl()}/v1/workruns/${encodeURIComponent(workRunId)}/artifacts/${encodeURIComponent(artifactId)}`;
+  }
+
   /**
    * Fire the post-login welcome email. Recipient is resolved server-side from
    * the session (never client-supplied). Idempotent per login session and
