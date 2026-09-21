@@ -307,6 +307,7 @@ export default function TalkToHiveMobile() {
   const { t, i18n } = useTranslation('dashboard');
   const { activeProjectId, activeTeamId, projects: ctxProjects } = useTeamContext() || {};
   const { org, user } = useAuth() || {};
+  const [profileName, setProfileName] = useState('');
   const userRole = user?.role || user?.org_role || user?.membership_role || 'member';
   const [messages, setMessages] = useState(() => loadMsgs());
   const [input, setInput] = useState('');
@@ -325,6 +326,17 @@ export default function TalkToHiveMobile() {
   const [chatScopeMode, setChatScopeMode] = useState('all');
   const [useTools, setUseTools] = useState(false);
   const [toolkits, setToolkits] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    apiClient.controlPlane.get('/v1/proxy/profiles', { params: { category: 'static', key: 'name' } })
+      .then(({ data }) => {
+        const value = data?.facts?.find((fact) => fact?.key === 'name')?.value;
+        if (active && typeof value === 'string') setProfileName(value.trim().slice(0, 80));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   // ─── Deep Research from the mobile composer ───────────────────
   // Same backend + reused report/save toolkit as Overview.jsx's desktop
@@ -1030,7 +1042,7 @@ export default function TalkToHiveMobile() {
               {/* Claude-style centered greeting: accent mark + large serif name line */}
               <SingulanceMark size={40} />
               <div className="text-[32px] leading-tight text-[#1a1a17]" style={{ fontFamily: 'Georgia, \'Times New Roman\', serif' }}>
-                {(() => { const h = new Date().getHours(); const g = h < 12 ? t('overview.morning', 'Good morning') : h < 18 ? t('overview.afternoon', 'Good afternoon') : t('overview.evening', 'Good evening'); const n = (user?.name || user?.email || '').split(/[\s@]/)[0]; return n ? `${g}, ${n.charAt(0).toUpperCase()}${n.slice(1)}` : g; })()}
+                {(() => { const h = new Date().getHours(); const g = h < 12 ? t('overview.morning', 'Good morning') : h < 18 ? t('overview.afternoon', 'Good afternoon') : t('overview.evening', 'Good evening'); const n = (profileName || user?.display_name || user?.email || '').split(/[\s@]/)[0]; return n ? `${g}, ${n.charAt(0).toUpperCase()}${n.slice(1)}` : g; })()}
               </div>
               <div className="flex flex-col gap-2 mt-4 w-full">
                 {(suggestions.length ? suggestions : [

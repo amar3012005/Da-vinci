@@ -12,6 +12,7 @@ import SingulanceMark from '../shared/SingulanceMark';
 import SingulanceBrand from '../shared/SingulanceBrand';
 import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
+import apiClient from '../shared/api-client';
 
 const SPLASH_FLAG = 'hm_m_splashed';
 
@@ -45,6 +46,8 @@ export default function MobileShell({ children, rightAction = null, title = null
   const [drawer, setDrawer] = useState(false);
   const [reminderDismissed, setReminderDismissed] = useState(false);
   const [showDesktopInstructions, setShowDesktopInstructions] = useState(false);
+  const [companyOnboarded, setCompanyOnboarded] = useState(null);
+  const [profileName, setProfileName] = useState('');
   const { usage } = useUsage();
 
   // SINGULANCE onboarding splash — plays once per device, and again right
@@ -74,18 +77,41 @@ export default function MobileShell({ children, rightAction = null, title = null
   // Close the drawer on any route change.
   useEffect(() => { setDrawer(false); }, [location.pathname]);
 
+  // Organization creation and company onboarding are separate lifecycle
+  // boundaries. A mobile-created account can already have an org while its
+  // HyperAgents company record is still empty, so `needs_org_setup` alone is
+  // not an onboarding-completion signal.
+  useEffect(() => {
+    if (location.pathname !== '/hivemind/m/chat') return undefined;
+    let active = true;
+    Promise.allSettled([
+      apiClient.hyperCompany(),
+      apiClient.controlPlane.get('/v1/proxy/profiles', { params: { category: 'static', key: 'name' } }),
+    ]).then(([companyResult, profileResult]) => {
+      if (!active) return;
+      if (companyResult.status === 'fulfilled') setCompanyOnboarded(companyResult.value?.onboarded === true);
+      else setCompanyOnboarded(null);
+      if (profileResult.status === 'fulfilled') {
+        const value = profileResult.value?.data?.facts?.find((fact) => fact?.key === 'name')?.value;
+        if (typeof value === 'string') setProfileName(value.trim().slice(0, 80));
+      }
+    });
+    return () => { active = false; };
+  }, [location.pathname]);
+
   useEffect(() => {
     if (needsOnboarding !== false) return;
     setReminderDismissed(false);
     setShowDesktopInstructions(false);
   }, [needsOnboarding]);
 
-  const firstName = (user?.name || user?.email || 'there').split(/[\s@]/)[0];
+  const firstName = (profileName || user?.display_name || user?.email || 'there').split(/[\s@]/)[0];
   const dismissAwakening = () => {
     setReminderDismissed(true);
     setShowDesktopInstructions(false);
   };
-  const showAwakening = location.pathname === '/hivemind/m/chat' && needsOnboarding === true && !reminderDismissed;
+  const onboardingIncomplete = needsOnboarding === true || companyOnboarded === false;
+  const showAwakening = location.pathname === '/hivemind/m/chat' && onboardingIncomplete && !reminderDismissed;
 
   return (
     <div
