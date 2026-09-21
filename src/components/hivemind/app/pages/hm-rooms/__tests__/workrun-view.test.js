@@ -46,6 +46,36 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(view.blocks[`plan:${runId}`].payload.tasks).toHaveLength(2);
   });
 
+  it('upserts the native PlanNotebook task projection into that same plan block', () => {
+    let view = applyWorkRunEvent(emptyWorkRunView(runId), {
+      t: 'plan.updated',
+      tasks: [{ id: 'old-task', subject: 'Old plan', state: 'todo' }],
+    });
+    view = applyWorkRunEvent(view, {
+      t: 'task_plan',
+      source: 'agentscope_plan_notebook',
+      name: 'Germany research',
+      description: 'Find and verify target accounts.',
+      expected_outcome: 'A qualified account list.',
+      subtasks: [
+        { id: '0', title: 'Load company context', status: 'done' },
+        { id: '1', title: 'Research accounts', status: 'in_progress' },
+      ],
+    });
+    const plan = view.blocks[`plan:${runId}`];
+    expect(plan.revision).toBeGreaterThanOrEqual(2);
+    expect(plan.payload).toMatchObject({
+      name: 'Germany research',
+      label: 'Operating plan',
+      description: 'Find and verify target accounts.',
+      expected_outcome: 'A qualified account list.',
+    });
+    expect(view.tasks).toEqual([
+      expect.objectContaining({ id: '0', label: 'Load company context', status: 'complete' }),
+      expect.objectContaining({ id: '1', label: 'Research accounts', status: 'streaming' }),
+    ]);
+  });
+
   it('upserts the same tool call_id instead of appending a second row', () => {
     let view = emptyWorkRunView(runId);
     view = applyWorkRunEvent(view, {
