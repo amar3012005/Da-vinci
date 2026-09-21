@@ -679,9 +679,13 @@ const HivemindProduct = () => {
       {isMobile && landingEnhancementsEnabled === null && (
         <div className="min-h-screen bg-[#FBFBF8]" aria-label="Loading HIVEMIND" />
       )}
-      {isMobile && landingEnhancementsEnabled && <MobileLandingV2 profileName={profileName} />}
+      {landingEnhancementsEnabled && (
+        <MobileLandingV2 desktop={!isMobile} profileName={profileName} />
+      )}
       {(!isMobile || landingEnhancementsEnabled !== null) && <div>
-        {(!isMobile || landingEnhancementsEnabled === false) && <Hero profileName={profileName} />}
+        {/* Keep the proven cover only while the enhanced hero is unavailable.
+            Once enabled, V2 owns the hero at both breakpoints. */}
+        {landingEnhancementsEnabled !== true && <Hero profileName={profileName} />}
         <MarqueeRow />
 
       <Chapter n="01" id="chapter-1" eyebrow="memory engine"

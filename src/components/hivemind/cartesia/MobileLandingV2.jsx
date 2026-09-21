@@ -76,7 +76,7 @@ const Hero = ({ desktop = false, profileName = null }) => (
       backgroundSize: '14px 14px',
       maskImage: 'linear-gradient(to bottom, black 0%, transparent 72%)',
     }} />
-    <div className={`relative mx-auto max-w-md text-center ${desktop ? 'md:max-w-[90rem]' : ''}`}>
+    <div className={`relative mx-auto max-w-md text-center ${desktop ? 'md:max-w-none' : ''}`}>
       <Rise>
         <div className="flex justify-center"><AgentStack large /></div>
         <p className="mt-3 font-mono text-[10px] uppercase tracking-[.22em] text-[#77736b]">
@@ -91,7 +91,7 @@ const Hero = ({ desktop = false, profileName = null }) => (
       </Rise>
 
       <Rise delay={0.14}>
-        <h1 className={`mt-6 font-['Space_Grotesk'] text-[clamp(3.1rem,14vw,4.35rem)] font-semibold leading-[.9] tracking-[-.065em] text-[#0A0A0A] ${desktop ? 'md:text-[clamp(5rem,7vw,8rem)]' : ''}`}>
+        <h1 className={`mt-6 font-['Space_Grotesk'] text-[clamp(3.1rem,14vw,4.35rem)] font-semibold leading-[.9] tracking-[-.065em] text-[#0A0A0A] ${desktop ? 'md:text-[clamp(4rem,6.25vw,7rem)]' : ''}`}>
           <span className={desktop ? 'md:whitespace-nowrap' : ''}>Your company,</span><br />
           <span className={desktop ? 'md:whitespace-nowrap' : ''}>working as one.</span>
         </h1>
