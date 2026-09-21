@@ -241,14 +241,23 @@ export function applyWorkRunEvent(view, ev) {
   // hm-core turns AgentScope's state_updated event into this compact,
   // reconnect-safe snapshot. It intentionally contains only the fields that
   // belong in a WorkRun display, never AgentScope's private session state.
-  if (t === 'plan.updated') {
-    const tasks = Array.isArray(ev.tasks) ? ev.tasks : [];
+  if (t === 'plan.updated' || t === 'task_plan') {
+    const tasks = Array.isArray(ev.tasks)
+      ? ev.tasks
+      : (Array.isArray(ev.subtasks) ? ev.subtasks : []);
     return upsertBlock(view, {
       block_id: `plan:${workrunId}`,
       workrun_id: workrunId,
       kind: 'plan',
       status: 'complete',
-      payload: { name: 'TaskUpdate', label: 'Plan updated', family: 'task', tasks },
+      payload: {
+        name: ev.name || 'TaskUpdate',
+        label: ev.label || (t === 'task_plan' ? 'Operating plan' : 'Plan updated'),
+        family: 'task',
+        description: ev.description || '',
+        expected_outcome: ev.expected_outcome || '',
+        tasks,
+      },
     });
   }
 
