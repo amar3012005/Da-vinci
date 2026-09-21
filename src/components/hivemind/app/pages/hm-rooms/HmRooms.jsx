@@ -702,6 +702,12 @@ function HmRoomDesk({ runId }) {
 
   const routineHistory = (routineId) => apiClient.listRoutineHistory(routineId);
 
+  const createRoutine = async (payload) => {
+    const data = await apiClient.createRoutine(payload);
+    if (data?.routine) setRoutines((current) => [data.routine, ...current.filter((item) => item.id !== data.routine.id)]);
+    return data;
+  };
+
   const sources = view.sources || [];
   const activity = view.activity || [];
   const artifacts = view.artifacts || [];
@@ -733,6 +739,7 @@ function HmRoomDesk({ runId }) {
       onRoutineStatus={updateRoutineStatus}
       onRoutineRunNow={runRoutineNow}
       onRoutineHistory={routineHistory}
+      onRoutineCreate={createRoutine}
       draft={draft}
       error={error}
       onPreview={setPreview}

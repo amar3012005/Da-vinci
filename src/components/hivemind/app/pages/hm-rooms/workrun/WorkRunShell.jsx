@@ -24,6 +24,7 @@ export default function WorkRunShell({
   onRoutineStatus,
   onRoutineRunNow,
   onRoutineHistory,
+  onRoutineCreate,
   draft,
   error,
   onPreview,
@@ -144,7 +145,7 @@ export default function WorkRunShell({
       </div>
       <PlanDrawer open={planOpen} tasks={tasks || activity} onClose={() => setPlanOpen(false)} />
       <TeamDrawer open={teamOpen} team={team} onClose={() => setTeamOpen(false)} />
-      <RoutinesDrawer open={routinesOpen} routines={routines} onClose={() => setRoutinesOpen(false)} onStatus={onRoutineStatus} onRunNow={onRoutineRunNow} onHistory={onRoutineHistory} />
+      <RoutinesDrawer open={routinesOpen} routines={routines} onClose={() => setRoutinesOpen(false)} onStatus={onRoutineStatus} onRunNow={onRoutineRunNow} onHistory={onRoutineHistory} onCreate={onRoutineCreate} />
       </div>
     </div>
   );
