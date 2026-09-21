@@ -113,6 +113,18 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(tool.payload.result).toBe('Matched 3 records.');
   });
 
+  it('projects a native team member lifecycle from the durable WorkRun event', () => {
+    const view = applyWorkRunEvent(emptyWorkRunView(runId), {
+      t: 'team.updated', team_id: 'team-1', action: 'member_created',
+      member: 'researcher', member_session_id: 'worker-session',
+    });
+    const team = Object.values(view.blocks).find((block) => block.kind === 'team');
+    expect(team).toMatchObject({
+      block_id: 'team:team-1:researcher:member_created',
+      payload: { label: 'researcher joined', team_id: 'team-1', action: 'member_created' },
+    });
+  });
+
   it('hydrates persisted artifact ids when a completed run is reopened', () => {
     const artifactId = 'f2a25f03-9dab-4772-a06d-2a599d5ea7c0';
     const view = hydrateRegisteredArtifacts(emptyWorkRunView(runId), [artifactId]);

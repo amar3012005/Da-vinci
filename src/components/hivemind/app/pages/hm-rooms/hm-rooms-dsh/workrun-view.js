@@ -383,14 +383,24 @@ export function applyWorkRunEvent(view, ev) {
     });
   }
 
-  if (t === 'team.member.started' || (type === 'CUSTOM' && ev.name === 'team_updated')) {
+  if (t === 'team.updated' || t === 'team.member.started' || (type === 'CUSTOM' && ev.name === 'team_updated')) {
     const member = ev.member || ev.source || 'member';
+    const action = ev.action || 'member_started';
+    const labels = {
+      team_created: 'Team created',
+      member_created: `${member} joined`,
+      member_invited: `${member} joined`,
+      message_sent: `Coordinated with ${ev.recipient || 'team'}`,
+      team_deleted: 'Team closed',
+      member_started: `${member} joined`,
+    };
+    const teamId = ev.team_id || ev.teamId || 'current';
     return upsertBlock(view, {
-      block_id: `team:${member}`,
+      block_id: `team:${teamId}:${member}:${action}`,
       workrun_id: workrunId,
       kind: 'team',
-      status: 'streaming',
-      payload: { member, label: `${member} joined` },
+      status: action === 'team_deleted' ? 'complete' : 'streaming',
+      payload: { member, action, team_id: teamId, label: labels[action] || `${member} joined` },
     });
   }
 
