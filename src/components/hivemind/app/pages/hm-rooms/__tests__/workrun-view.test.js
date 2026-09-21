@@ -346,6 +346,25 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(assistant.timeline[0].label).toBe('Checked company memory');
   });
 
+  it('seals a completed reply from the durable idle projection too', () => {
+    let msgs = startUserTurn([], 'say hello');
+    msgs = applyAgentEvent(msgs, { type: 'REPLY_START', reply_id: 'r1' });
+    msgs = applyAgentEvent(msgs, { type: 'THINKING_BLOCK_DELTA', delta: 'I can answer directly.' });
+    msgs = applyAgentEvent(msgs, { type: 'TEXT_BLOCK_DELTA', delta: 'Hello!' });
+    msgs = applyAgentEvent(msgs, { t: 'agent.status', status: 'idle' });
+    const assistant = msgs.find((message) => message.role === 'assistant');
+    expect(assistant.streaming).toBe(false);
+    expect(assistant.stage).toBe('complete');
+  });
+
+  it('does not seal an idle projection while a tool remains active', () => {
+    let msgs = startUserTurn([], 'check this');
+    msgs = applyAgentEvent(msgs, { type: 'TOOL_CALL_START', tool_call_name: 'hivemind_recall', tool_call_id: 'c1' });
+    msgs = applyAgentEvent(msgs, { t: 'agent.status', status: 'idle' });
+    const assistant = msgs.find((message) => message.role === 'assistant');
+    expect(assistant.streaming).toBe(true);
+  });
+
   it('preserves thinking and tools in the exact AgentScope event order', () => {
     let msgs = startUserTurn([], 'research this');
     msgs = applyAgentEvent(msgs, { type: 'THINKING_BLOCK_DELTA', block_id: 'think-1', delta: 'First I will inspect.' });

@@ -495,6 +495,19 @@ function toolsRunning(msg) {
   return (msg?.tools || []).some((t) => t.state === 'running');
 }
 
+// AgentScope's native reply stream normally ends with REPLY_END.  The durable
+// WorkRun projection can also report the same boundary as agent.status=idle
+// (or a terminal workrun event).  Treat those forms as the same terminal
+// receipt for the current assistant block, but never seal while a tool is
+// still executing.  This keeps completed thinking collapsible and prevents a
+// stale typing cursor after the answer is already visible.
+function sealLatestAssistant(next) {
+  const cur = next[next.length - 1];
+  if (!cur || cur.role !== 'assistant' || toolsRunning(cur)) return;
+  cur.streaming = false;
+  cur.stage = 'complete';
+}
+
 /**
  * Transcript reducer. A tool call never ends the stream; REPLY_END only
  * seals the bubble when no tool is still running. Later deltas reopen it.
@@ -637,11 +650,18 @@ export function applyAgentEvent(msgs, ev) {
   }
 
   if (type === 'REPLY_END') {
-    const cur = next[next.length - 1];
-    if (cur && cur.role === 'assistant') {
-      cur.streaming = toolsRunning(cur);
-      if (!cur.streaming) cur.stage = 'complete';
-    }
+    sealLatestAssistant(next);
+  }
+
+  // Keep the long-lived WorkRun open for follow-ups, but finish the current
+  // reply as soon as its own AgentScope lifecycle says it is idle.
+  if (
+    ((String(ev?.t || '') === 'agent.status' || type === 'AGENT.STATUS') && String(ev?.status || '').toLowerCase() === 'idle')
+    || String(ev?.t || '') === 'workrun.completed' || type === 'WORKRUN.COMPLETED'
+    || String(ev?.t || '') === 'workrun.cancelled' || type === 'WORKRUN.CANCELLED'
+    || String(ev?.t || '') === 'workrun.failed' || type === 'WORKRUN.FAILED'
+  ) {
+    sealLatestAssistant(next);
   }
   return next;
 }
