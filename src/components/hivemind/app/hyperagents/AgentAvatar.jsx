@@ -13,6 +13,14 @@ import { Avatar } from '@humation/react';
 import { humation1 } from '@humation/assets-humation-1';
 import { LANE_META } from './rooms/shared';
 
+const HUMATION_FACE_ASSETS = {
+  ...humation1,
+  crops: {
+    ...humation1.crops,
+    face: { x: 8, y: -1, width: 64, height: 64 },
+  },
+};
+
 // role_archetype values (lowercase: strategist/investigator/generalist/skeptic/
 // coordinator/…) and mixed-case lanes both normalize to a LANE_META key so the
 // avatar's ring + palette are correct on marketplace role cards too.
@@ -55,13 +63,24 @@ function resolveImg(agent) {
  * @param ring    show the lane-colored ring/background (default true)
  * @param active  live speaker → soft pulsing ring (default false)
  */
-export default function AgentAvatar({ agent, size = 28, shape = 'circle', ring = true, active = false, className = '' }) {
+export default function AgentAvatar({
+  agent,
+  size = 28,
+  shape = 'circle',
+  ring = true,
+  active = false,
+  crop = 'avatar',
+  facing = 'front',
+  className = '',
+}) {
   const lane = resolveLane(agent);
   const meta = LANE_META[lane] || LANE_META.Communicator;
   const seed = resolveSeed(agent);
   const name = resolveName(agent);
   const img = resolveImg(agent);
   const radius = shape === 'square' ? Math.round(size * 0.28) : size;
+  const faceCrop = crop === 'face';
+  const direction = facing === 'left' ? -1 : 1;
 
   // Bias the avatar's palette by lane so role identity carries into the artwork
   // itself (deterministic — same lane always maps to the same accent).
@@ -84,15 +103,26 @@ export default function AgentAvatar({ agent, size = 28, shape = 'circle', ring =
       data-lane={lane}
     >
       {img ? (
-        <img src={img} alt="" className="w-full h-full object-cover" style={{ borderRadius: radius }} />
+        <img
+          src={img}
+          alt=""
+          className="w-full h-full object-cover"
+          style={{
+            borderRadius: radius,
+            objectPosition: faceCrop ? '50% 24%' : '50% 50%',
+            transform: `scaleX(${direction}) ${faceCrop ? 'scale(1.28)' : ''}`.trim(),
+          }}
+        />
       ) : (
         <Avatar
-          assets={humation1}
+          assets={faceCrop ? HUMATION_FACE_ASSETS : humation1}
           seed={seed}
           size={size}
           colors={colors}
           background="transparent"
+          crop={faceCrop ? 'face' : 'avatar'}
           title={name}
+          style={{ transform: `scaleX(${direction})` }}
         />
       )}
       {active && (

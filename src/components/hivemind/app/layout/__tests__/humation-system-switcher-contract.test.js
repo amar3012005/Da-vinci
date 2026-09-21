@@ -8,6 +8,8 @@ test('uses the organisation employee roster for the joined Humation switcher', (
   expect(topBarSource).toContain('apiClient.listEmployees()');
   expect(topBarSource).toContain('employees[index] || FALLBACK_HUMATION_TEAM[index]');
   expect(topBarSource).toContain('aria-label="Switch product"');
+  expect(topBarSource).toContain('crop="face"');
+  expect(topBarSource).toContain("index === 0 ? 'right' : index === 2 ? 'left' : 'front'");
   expect(topBarSource).toContain("{ key: 'hivemind', label: 'BRAIN'");
   expect(topBarSource).toContain("{ key: 'hyperagents', label: 'OS'");
   expect(topBarSource).toContain("{ key: 'tara', label: 'VOICE'");

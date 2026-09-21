@@ -88,17 +88,23 @@ export function HumationSystemSwitcher({ activeSection, onSectionChange, employe
             key={section.key}
             type="button"
             onClick={() => onSectionChange?.(section.key)}
-            className={`group relative flex w-[46px] flex-col items-center outline-none transition-[filter,opacity,transform] duration-300 focus-visible:z-10 focus-visible:rounded-xl focus-visible:ring-2 focus-visible:ring-[#117dff] focus-visible:ring-offset-2 ${index ? '-ml-1.5' : ''} ${active ? 'z-[3]' : 'z-[1] opacity-55 grayscale-[0.18] hover:z-[2] hover:opacity-85 hover:grayscale-0'}`}
+            className={`group relative flex w-[48px] flex-col items-center outline-none transition-[filter,opacity,transform] duration-300 focus-visible:z-10 focus-visible:rounded-xl focus-visible:ring-2 focus-visible:ring-[#117dff] focus-visible:ring-offset-2 ${index ? '-ml-1.5' : ''} ${active ? 'z-[3]' : 'z-[1] opacity-62 grayscale-[0.12] hover:z-[2] hover:opacity-90 hover:grayscale-0'}`}
             aria-current={active ? 'page' : undefined}
             aria-label={`${section.label}, represented by ${agentName}`}
             title={`${section.label} · ${agentName}`}
           >
             <span
-              className={`hm-system-avatar relative grid place-items-center rounded-full border-2 border-white shadow-[0_2px_8px_rgba(10,10,10,0.10)] transition-[transform,box-shadow] duration-300 ${active ? 'hm-system-avatar-active h-[43px] w-[43px] -translate-y-0.5 shadow-[0_5px_13px_rgba(10,10,10,0.15)]' : 'h-[38px] w-[38px] group-hover:-translate-y-0.5'}`}
+              className={`hm-system-avatar relative grid place-items-center overflow-hidden rounded-full border-2 border-white shadow-[0_2px_8px_rgba(10,10,10,0.10)] transition-[transform,box-shadow] duration-300 ${active ? 'hm-system-avatar-active h-[46px] w-[46px] -translate-y-0.5 shadow-[0_5px_13px_rgba(10,10,10,0.15)]' : 'h-[41px] w-[41px] group-hover:-translate-y-0.5'}`}
               style={{ backgroundColor: section.tint }}
               aria-hidden="true"
             >
-              <AgentAvatar agent={agent} size={active ? 41 : 36} ring={false} />
+              <AgentAvatar
+                agent={agent}
+                size={active ? 44 : 39}
+                crop="face"
+                facing={index === 0 ? 'right' : index === 2 ? 'left' : 'front'}
+                ring={false}
+              />
             </span>
             <span className={`mt-0.5 font-mono text-[7px] font-semibold uppercase tracking-[0.13em] transition-colors ${active ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'}`}>
               {section.label}
