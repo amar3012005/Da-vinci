@@ -488,6 +488,14 @@ function HmRoomDesk({ runId }) {
         row = data?.workrun || data;
         if (cancelled) return;
         setError(null);
+        if (String(ev.t || '') === 'workrun.state') {
+          const status = String(ev.status || '').toLowerCase();
+          if (['completed', 'failed', 'cancelled'].includes(status)) {
+            setRun((current) => ({ ...(current || {}), status, result: ev.result, error: ev.error }));
+            setPhase('idle');
+            setMsgs((previous) => previous.map((message) => ({ ...message, streaming: false })));
+          }
+        }
         setRun(row);
         (row?.events || []).forEach((ev) => {
           setView((prev) => applyWorkRunEvent(prev, ev));
@@ -555,14 +563,14 @@ function HmRoomDesk({ runId }) {
         'REPLY_START', 'REPLY_END', 'TEXT_BLOCK_DELTA', 'TEXT_BLOCK_END',
         'THINKING_BLOCK_DELTA', 'THINKING_BLOCK_END', 'TOOL_CALL_START', 'TOOL_CALL_END', 'TOOL_RESULT_END',
         'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
-        'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed',
+        'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
         'plan.updated', 'external_action.pending',
       ].forEach((n) => es.addEventListener(n, onEvt));
       es.onmessage = onEvt;
       const progress = new EventSource(apiClient.workRunStreamUrl(runId), { withCredentials: true });
       [
         'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
-        'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed',
+        'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
         'plan.updated', 'external_action.pending',
       ].forEach((n) => progress.addEventListener(n, onEvt));
       progress.onmessage = onEvt;

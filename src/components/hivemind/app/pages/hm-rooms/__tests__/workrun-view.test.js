@@ -252,6 +252,14 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(isProductKind('react-component')).toBe(false);
   });
 
+  it('seals the display when the durable stream reports cancellation', () => {
+    const view = applyWorkRunEvent(emptyWorkRunView(runId), {
+      t: 'workrun.state', status: 'cancelled',
+    });
+    expect(view.status).toBe('cancelled');
+    expect(isProductKind('cancelled')).toBe(true);
+  });
+
   it('keeps thinking and text streaming after a tool call', () => {
     let msgs = startUserTurn([], 'what do u know about me?');
     msgs = applyAgentEvent(msgs, { type: 'REPLY_START' });

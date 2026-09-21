@@ -11,7 +11,7 @@ export const BLOCK_KINDS = Object.freeze([
 
 /** Product UI kinds — AgentScope class names never reach the workbench. */
 export const PRODUCT_KINDS = Object.freeze([
-  'started', 'message', 'plan', 'activity', 'team', 'approval', 'artifact', 'completed', 'failed',
+  'started', 'message', 'plan', 'activity', 'team', 'approval', 'artifact', 'completed', 'failed', 'cancelled',
 ]);
 
 export function isProductKind(kind) {
@@ -439,6 +439,11 @@ export function applyWorkRunEvent(view, ev) {
     return { ...view, status: 'failed', failure: fail };
   }
   if (t === 'workrun.completed') return { ...view, status: 'completed' };
+  if (t === 'workrun.cancelled' || (t === 'workrun.state' && ev.status === 'cancelled')) return { ...view, status: 'cancelled' };
+  if (t === 'workrun.state' && ev.status === 'completed') return { ...view, status: 'completed' };
+  if (t === 'workrun.state' && ev.status === 'failed') {
+    return { ...view, status: 'failed', failure: productFailure(ev) };
+  }
 
   return view;
 }
