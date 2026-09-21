@@ -73,6 +73,14 @@ describe('HM Rooms WorkRun routing', () => {
     expect(rooms).toContain('[initialUser, ...normalized]');
   });
 
+  it('opens live streams before history hydration and replays their buffered events', () => {
+    const rooms = source('pages/hm-rooms/HmRooms.jsx');
+    expect(rooms.indexOf('new EventSource(apiClient.workRunSessionStreamUrl(runId)')).toBeLessThan(
+      rooms.indexOf('apiClient.getWorkRunSessionMessages(runId)'),
+    );
+    expect(rooms).toContain('bufferedEvents.splice(0).forEach(onEvt)');
+  });
+
   it('does not expose AgentScope sandbox confirmations in the WorkRun conversation', () => {
     const rooms = source('pages/hm-rooms/HmRooms.jsx');
     const message = source('pages/hm-rooms/workrun/narrative/AgentMessage.jsx');

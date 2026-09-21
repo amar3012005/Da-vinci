@@ -480,6 +480,35 @@ function HmRoomDesk({ runId }) {
 
   useEffect(() => {
     let cancelled = false;
+    // Connect before history hydration.  A fast AgentScope reply can otherwise
+    // emit its first deltas while the two GETs below are still in flight; those
+    // deltas used to appear only after a reload fetched the finished history.
+    const sessionEventNames = [
+      'reply_start', 'reply_end', 'text_block_delta', 'text_block_end',
+      'thinking_block_delta', 'thinking_block_end', 'tool_call_start', 'tool_call_end', 'tool_result_end',
+      'custom', 'require_user_confirm',
+      'REPLY_START', 'REPLY_END', 'TEXT_BLOCK_DELTA', 'TEXT_BLOCK_END',
+      'THINKING_BLOCK_DELTA', 'THINKING_BLOCK_END', 'TOOL_CALL_START', 'TOOL_CALL_END', 'TOOL_RESULT_END',
+      'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
+      'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
+      'plan.updated', 'external_action.pending', 'external_action.resolved',
+    ];
+    const progressEventNames = [
+      'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
+      'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
+      'plan.updated', 'external_action.pending', 'external_action.resolved',
+    ];
+    const bufferedEvents = [];
+    const bufferEvent = (message) => {
+      if (message?.data) bufferedEvents.push({ data: message.data, type: message.type, lastEventId: message.lastEventId });
+    };
+    const es = new EventSource(apiClient.workRunSessionStreamUrl(runId), { withCredentials: true });
+    const progress = new EventSource(apiClient.workRunStreamUrl(runId), { withCredentials: true });
+    esRef.current = { session: es, progress };
+    sessionEventNames.forEach((name) => es.addEventListener(name, bufferEvent));
+    progressEventNames.forEach((name) => progress.addEventListener(name, bufferEvent));
+    es.onmessage = bufferEvent;
+    progress.onmessage = bufferEvent;
     (async () => {
       let row = null;
       try {
@@ -519,7 +548,6 @@ function HmRoomDesk({ runId }) {
       const terminal = ['failed', 'completed', 'cancelled'].includes(String(row?.status || ''));
       if (terminal) return;
 
-      const es = new EventSource(apiClient.workRunSessionStreamUrl(runId), { withCredentials: true });
       const seen = new Set();
       const onEvt = (msg) => {
         if (!msg?.data) return;
@@ -556,24 +584,17 @@ function HmRoomDesk({ runId }) {
           return next;
         });
       };
-      [
-        'reply_start', 'reply_end', 'text_block_delta', 'text_block_end',
-        'thinking_block_delta', 'thinking_block_end', 'tool_call_start', 'tool_call_end', 'tool_result_end',
-        'custom', 'require_user_confirm',
-        'REPLY_START', 'REPLY_END', 'TEXT_BLOCK_DELTA', 'TEXT_BLOCK_END',
-        'THINKING_BLOCK_DELTA', 'THINKING_BLOCK_END', 'TOOL_CALL_START', 'TOOL_CALL_END', 'TOOL_RESULT_END',
-        'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
-        'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
-        'plan.updated', 'external_action.pending', 'external_action.resolved',
-      ].forEach((n) => es.addEventListener(n, onEvt));
+      sessionEventNames.forEach((name) => {
+        es.removeEventListener(name, bufferEvent);
+        es.addEventListener(name, onEvt);
+      });
       es.onmessage = onEvt;
-      const progress = new EventSource(apiClient.workRunStreamUrl(runId), { withCredentials: true });
-      [
-        'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
-        'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
-        'plan.updated', 'external_action.pending', 'external_action.resolved',
-      ].forEach((n) => progress.addEventListener(n, onEvt));
+      progressEventNames.forEach((name) => {
+        progress.removeEventListener(name, bufferEvent);
+        progress.addEventListener(name, onEvt);
+      });
       progress.onmessage = onEvt;
+      bufferedEvents.splice(0).forEach(onEvt);
       esRef.current = { session: es, progress };
     })();
     return () => {

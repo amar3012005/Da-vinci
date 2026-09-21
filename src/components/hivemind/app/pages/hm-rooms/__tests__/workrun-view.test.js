@@ -322,6 +322,18 @@ describe('WorkRun identity-keyed block registry', () => {
     });
   });
 
+  it('renders replayed durable native deltas without needing session history', () => {
+    let msgs = startUserTurn([], 'reply quickly');
+    msgs = applyAgentEvent(msgs, { t: 'assistant.delta', type: 'REPLY_START', reply_id: 'reply-1' });
+    msgs = applyAgentEvent(msgs, { t: 'assistant.delta', type: 'THINKING_BLOCK_DELTA', block_id: 'think-1', delta: 'Reasoning now.' });
+    msgs = applyAgentEvent(msgs, { t: 'tool.started', type: 'TOOL_CALL_START', tool_call_name: 'hivemind_recall', tool_call_id: 'tool-1' });
+    msgs = applyAgentEvent(msgs, { t: 'assistant.delta', type: 'TEXT_BLOCK_DELTA', block_id: 'answer-1', delta: 'First visible chunk.' });
+    const assistant = msgs.find((message) => message.role === 'assistant');
+    expect(assistant.thinking).toContain('Reasoning now');
+    expect(assistant.tools).toHaveLength(1);
+    expect(assistant.text).toContain('First visible chunk');
+  });
+
   it('seals a completed reply after its final tool result', () => {
     let msgs = startUserTurn([], 'check this');
     msgs = applyAgentEvent(msgs, { type: 'REPLY_START', reply_id: 'r1' });
