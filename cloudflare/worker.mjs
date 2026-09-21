@@ -504,7 +504,7 @@ export default {
       && pathname.startsWith('/hivemind/')
       && !pathname.split('/').pop().includes('.');
     const assetRequest = appDocument
-      ? new Request(new URL('/index.html', request.url), request)
+      ? new Request(new URL('/', request.url), request)
       : request;
     let response = await env.ASSETS.fetch(assetRequest);
     if (appDocument && isHtml(response)) {

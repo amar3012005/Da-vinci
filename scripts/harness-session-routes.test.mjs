@@ -13,7 +13,7 @@ test('product documents use the current index and cannot cache an old SPA shell'
         return new Response('<html>current shell</html>', { headers: { 'content-type': 'text/html', 'cache-control': 'public' } });
       } },
     });
-    assert.equal(fetched, '/index.html');
+    assert.equal(fetched, '/');
     assert.equal(response.headers.get('cache-control'), 'private, no-store');
     assert.equal(response.headers.get('cdn-cache-control'), 'no-store');
   }
