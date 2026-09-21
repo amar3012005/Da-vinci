@@ -26,6 +26,15 @@ test('an admitted tab resumes its last native session before rendering legacy co
   expect(overview).toContain('rememberHarnessSessionPath(pathname);');
 });
 
+test('mobile routing wins over explicit and cached desktop Harness sessions', () => {
+  const mobileGate = overview.indexOf('if (shouldUseMobileChat()) return <MobileChatRedirect />;');
+  const nativeGate = overview.indexOf("if (/^\\/hivemind\\/app\\/overview\\/(?:new|session\\/[^/]+)$/u.test(pathname))");
+  expect(mobileGate).toBeGreaterThan(-1);
+  expect(nativeGate).toBeGreaterThan(mobileGate);
+  expect(overview).toContain("window.location.replace('/hivemind/m/chat');");
+  expect(overview).toContain("params.get('desktop') === '1'");
+});
+
 test('cached native remount waits for the prior app disposal', () => {
   expect(nativeSurface).toContain('const pendingDispose = window.__HIVE_HARNESS_DISPOSE_PROMISE__;');
   expect(nativeSurface).toContain('await pendingDispose;');

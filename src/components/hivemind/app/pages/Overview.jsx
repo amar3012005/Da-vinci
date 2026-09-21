@@ -66,6 +66,22 @@ function rememberHarnessSessionPath(pathname) {
   try { window.sessionStorage.setItem(LAST_HARNESS_SESSION_KEY, pathname); } catch { /* storage may be unavailable */ }
 }
 
+function shouldUseMobileChat() {
+  if (typeof window === 'undefined') return false;
+  if (window.location.hostname === 'next.preview.singulancelabs.com') return false;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('desktop') === '1') return false;
+  const narrowViewport = window.matchMedia('(max-width: 768px)').matches;
+  const uaDataMobile = !!(navigator.userAgentData && navigator.userAgentData.mobile);
+  const uaSniff = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(navigator.userAgent || '');
+  return narrowViewport || uaDataMobile || uaSniff || Boolean(params.get('from'));
+}
+
+function MobileChatRedirect() {
+  useEffect(() => { window.location.replace('/hivemind/m/chat'); }, []);
+  return <section className="min-h-dvh w-full bg-[#f7f5f0]" aria-label="Loading mobile chat" />;
+}
+
 function ResumeHarnessSession({ path }) {
   useEffect(() => {
     // The embedded Harness owns a separate React root. Re-enter it in a clean
@@ -1484,6 +1500,9 @@ export default function Overview() {
   // use the server-side feature flag at admission. Only an explicit admitted
   // route mounts the native client; the overview root retains legacy fallback.
   const pathname = window.location.pathname;
+  // Mobile routing is authoritative and must run before either an explicit or
+  // cached desktop Harness session is selected.
+  if (shouldUseMobileChat()) return <MobileChatRedirect />;
   if (/^\/hivemind\/app\/overview\/(?:new|session\/[^/]+)$/u.test(pathname)) {
     rememberHarnessSessionPath(pathname);
     return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
@@ -1512,26 +1531,6 @@ function LegacyOverview() {
     setQrCardDismissed(true);
     try { window.localStorage.setItem(MOBILE_QR_DISMISS_KEY, '1'); } catch { /* storage blocked */ }
   }, []);
-
-  // Auto-redirect to the dedicated mobile chat page on phones. The full
-  // Overview surface is hard to navigate one-handed; mobile users land on
-  // /hivemind/m/chat which is a full-screen Talk-to-HIVE.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    // Preview Overview launches the responsive full-page Harness application;
-    // it must not race the legacy mobile chat redirect.
-    if (window.location.hostname === 'next.preview.singulancelabs.com') return;
-    // Detect phones either by narrow viewport OR by UA — catches the
-    // "Request Desktop Site" case where the viewport widens beyond 768px
-    // but the device is still a phone.
-    const narrowViewport = window.matchMedia('(max-width: 768px)').matches;
-    const uaDataMobile = !!(navigator.userAgentData && navigator.userAgentData.mobile);
-    const uaSniff = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(navigator.userAgent || '');
-    const isMobile = narrowViewport || uaDataMobile || uaSniff;
-    const fromQR = new URLSearchParams(window.location.search).get('from');
-    const optOut = new URLSearchParams(window.location.search).get('desktop') === '1';
-    if ((isMobile || fromQR) && !optOut) navigate('/hivemind/m/chat', { replace: true });
-  }, [navigate]);
 
   // NOTE: the old auto-greet (sliding the Talk-to-HIVE panel out after 1.5s)
   // is intentionally gone — the chat IS the page now, and the floating
