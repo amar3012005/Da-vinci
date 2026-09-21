@@ -376,7 +376,6 @@ export default function HarnessSurface() {
           });
         window.__HIVE_HARNESS_DISPOSE_PROMISE__ = disposePromise;
       }
-      mount.replaceChildren();
     };
   }, []);
 

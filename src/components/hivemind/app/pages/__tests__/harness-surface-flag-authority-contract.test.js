@@ -28,4 +28,5 @@ test('cached native remount waits for the prior app disposal', () => {
   expect(nativeSurface).toContain('const pendingDispose = window.__HIVE_HARNESS_DISPOSE_PROMISE__;');
   expect(nativeSurface).toContain('await pendingDispose;');
   expect(nativeSurface).toContain('window.__HIVE_HARNESS_DISPOSE_PROMISE__ = disposePromise;');
+  expect(nativeSurface).not.toContain('mount.replaceChildren();');
 });
