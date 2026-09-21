@@ -79,18 +79,17 @@ function constantTimeBearer(request, secret) {
   return mismatch === 0;
 }
 
+function hasHarnessSession(request) {
+  return /(?:^|;\s*)dsh-auth-[A-Za-z0-9_-]+=/.test(request.headers.get('cookie') || '');
+}
+
 function isHarnessRunnerRoute(pathname) {
-  // Keep the HIVE Worker authoritative for its own app/API surface.  These are
-  // the complete native Harness browser routes and nothing else.
-  // Enigma: /assets/onboarding is Da-vinci public art. Never send it to Harness
-  // or the awakening overlay is a flat navy field.
+  // Native Harness uses same-origin typed RPC below /api/. Keep Da-vinci's
+  // meeting endpoints and onboarding art on the Worker, and require a real
+  // Harness session cookie before proxying the broader RPC surface.
   if (pathname.startsWith('/assets/onboarding/')) return false;
-  return pathname === '/api/hivemind/embed/exchange'
-    || pathname === '/api/hivemind/session/establish'
-    || pathname === '/api/hivemind/boot'
-    || pathname === '/api/hivemind/projects'
-    || pathname === '/api/hivemind/connectors'
-    || pathname === '/api/remote.mux'
+  if (pathname.startsWith('/api/meetings/')) return false;
+  return pathname.startsWith('/api/')
     || pathname.startsWith('/plugins/')
     || pathname.startsWith('/assets/');
 }
@@ -104,13 +103,9 @@ async function proxyHarnessRunner(request, env) {
   const headers = new Headers(request.headers);
   headers.set('x-forwarded-host', incoming.host);
   headers.set('x-forwarded-proto', incoming.protocol.slice(0, -1));
-  // The Worker-to-runner hop is internal. Preserve the original public
-  // authority for ticket/cookie validation while expressing same-origin JSON
-  // calls with the runner's origin on that hop.
-  const contentType = (headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
-  const parentNavigation = incoming.pathname === '/api/hivemind/embed/exchange'
-    && contentType === 'application/x-www-form-urlencoded';
-  if (!parentNavigation && headers.get('origin') === incoming.origin) headers.set('origin', target.origin);
+  // Preserve the public browser Origin. The runner validates that configured
+  // public authority; rewriting it to the private tunnel causes valid RPCs to
+  // fail authorization.
   return fetch(new Request(target, {
     method: request.method,
     headers,
@@ -184,7 +179,11 @@ export default {
       if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
       return harnessChatFlagResponse(request, env);
     }
-    if (isHarnessRunnerRoute(pathname)) return proxyHarnessRunner(request, env);
+    const establishesHarness = pathname === '/api/hivemind/embed/exchange'
+      || pathname === '/api/hivemind/session/establish';
+    if (establishesHarness || (hasHarnessSession(request) && isHarnessRunnerRoute(pathname))) {
+      return proxyHarnessRunner(request, env);
+    }
 
     if (pathname === PARTNER_REFERRALS_FLAG_PATH) {
       return partnerReferralsFlagResponse(request, env);

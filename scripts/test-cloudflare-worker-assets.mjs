@@ -94,4 +94,35 @@ assert.equal(servedSpa.headers.get('content-type'), 'text/html');
 assert.match(servedSpa.headers.get('x-robots-tag'), /noindex/);
 assert.equal(await servedSpa.text(), '<!doctype html>');
 
+const originalFetch = globalThis.fetch;
+let proxiedRequest;
+globalThis.fetch = async (request) => {
+  proxiedRequest = request;
+  return Response.json({ status: 'proxied' });
+};
+const promptResponse = await worker.fetch(
+  new Request('https://next.singulancelabs.com/api/session/prompt', {
+    method: 'POST',
+    headers: {
+      cookie: 'dsh-auth-session=valid',
+      origin: 'https://next.singulancelabs.com',
+      'content-type': 'application/json',
+    },
+  }),
+  { RUNNER_ORIGIN: 'https://harness-chat-origin.singulancelabs.com' },
+);
+globalThis.fetch = originalFetch;
+assert.equal(promptResponse.status, 200);
+assert.equal(new URL(proxiedRequest.url).pathname, '/api/session/prompt');
+assert.equal(proxiedRequest.headers.get('origin'), 'https://next.singulancelabs.com');
+
+const meetingResponse = await worker.fetch(
+  new Request('https://next.singulancelabs.com/api/meetings/transcribe', {
+    method: 'POST', headers: { cookie: 'dsh-auth-session=valid' },
+  }),
+  envReturning(new Response('worker-owned', { status: 202 })),
+);
+assert.equal(meetingResponse.status, 202);
+assert.equal(await meetingResponse.text(), 'worker-owned');
+
 console.log('cloudflare static asset boundary: ok');
