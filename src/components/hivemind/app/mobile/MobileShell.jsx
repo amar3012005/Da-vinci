@@ -84,24 +84,43 @@ export default function MobileShell({ children, rightAction = null, title = null
   useEffect(() => {
     if (location.pathname !== '/hivemind/m/chat') return undefined;
     let active = true;
-    Promise.allSettled([
-      apiClient.hyperCompany(),
-      apiClient.controlPlane.get('/v1/proxy/profiles', { params: { category: 'static', key: 'name' } }),
-    ]).then(([companyResult, profileResult]) => {
-      if (!active) return;
-      if (companyResult.status === 'fulfilled') {
+    let retryTimer;
+
+    // Auth bootstrap and the company endpoint can briefly race on a fresh
+    // mobile visit. Retry that authoritative check; if it remains unavailable,
+    // fail closed and keep the onboarding reminder visible. A failed status
+    // lookup must never make an unfinished account look onboarded.
+    const checkCompany = async (attempt = 0) => {
+      try {
+        const company = await apiClient.hyperCompany();
+        if (!active) return;
         // Match CompanyDashboard's readiness contract exactly: the lifecycle
         // is incomplete if either the durable flag or generated company
         // payload is missing.
-        setCompanyOnboarded(Boolean(companyResult.value?.onboarded && companyResult.value?.company));
+        setCompanyOnboarded(Boolean(company?.onboarded && company?.company));
+      } catch {
+        if (!active) return;
+        if (attempt < 2) {
+          retryTimer = window.setTimeout(() => checkCompany(attempt + 1), 700 * (attempt + 1));
+        } else {
+          setCompanyOnboarded(false);
+        }
       }
-      else setCompanyOnboarded(null);
-      if (profileResult.status === 'fulfilled') {
-        const value = profileResult.value?.data?.facts?.find((fact) => fact?.key === 'name')?.value;
+    };
+
+    checkCompany();
+    apiClient.controlPlane.get('/v1/proxy/profiles', { params: { category: 'static', key: 'name' } })
+      .then((profileResult) => {
+        if (!active) return;
+        const value = profileResult?.data?.facts?.find((fact) => fact?.key === 'name')?.value;
         if (typeof value === 'string') setProfileName(value.trim().slice(0, 80));
-      }
-    });
-    return () => { active = false; };
+      })
+      .catch(() => null);
+
+    return () => {
+      active = false;
+      if (retryTimer) window.clearTimeout(retryTimer);
+    };
   }, [location.pathname]);
 
   useEffect(() => {
