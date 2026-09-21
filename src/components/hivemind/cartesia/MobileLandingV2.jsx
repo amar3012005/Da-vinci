@@ -69,7 +69,7 @@ const AgentStack = ({ large = false }) => (
   </div>
 );
 
-const Hero = ({ desktop = false }) => (
+const Hero = ({ desktop = false, profileName = null }) => (
   <section className={`relative overflow-hidden px-5 pb-16 pt-28 ${desktop ? 'md:px-10 md:pb-24 md:pt-36' : ''}`} style={{ background: PAPER }}>
     <div className="pointer-events-none absolute inset-0 opacity-90" style={{
       backgroundImage: 'radial-gradient(rgba(17,125,255,.15) 1px, transparent 1px)',
@@ -106,8 +106,8 @@ const Hero = ({ desktop = false }) => (
       </Rise>
 
       <Rise delay={0.26} className={`mt-8 space-y-3 ${desktop ? 'md:mx-auto md:flex md:max-w-xl md:items-center md:justify-center md:gap-3 md:space-y-0' : ''}`}>
-        <a href="/hivemind/login" className="group flex min-h-14 w-full items-center justify-between rounded-xl bg-[#117DFF] px-5 text-white no-underline shadow-[0_16px_34px_rgba(17,125,255,.24)] transition-transform active:scale-[.99]">
-          <span className="font-['Space_Grotesk'] text-[16px] font-semibold">Start your workspace</span>
+        <a href={profileName ? '/hivemind/app/overview' : '/hivemind/login'} className="group flex min-h-14 w-full items-center justify-between rounded-xl bg-[#117DFF] px-5 text-white no-underline shadow-[0_16px_34px_rgba(17,125,255,.24)] transition-transform active:scale-[.99]">
+          <span className="font-['Space_Grotesk'] text-[16px] font-semibold">{profileName ? `Welcome back — ${profileName}` : 'Start your Hivemind'}</span>
           <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
         </a>
         <DownloadMacButton className="!flex !min-h-12 !w-full !rounded-xl !border-[#0A0A0A] !bg-[#0A0A0A] !px-5 !text-[13px]" />
@@ -241,10 +241,10 @@ const OperatingSystem = ({ desktop = false }) => {
   );
 };
 
-export default function MobileLandingV2({ desktop = false }) {
+export default function MobileLandingV2({ desktop = false, profileName = null }) {
   return (
     <main className={desktop ? 'hidden md:block' : 'md:hidden'} style={{ background: PAPER, color: INK }}>
-      <Hero desktop={desktop} />
+      <Hero desktop={desktop} profileName={profileName} />
       <ProofRail />
       <OperatingSystem desktop={desktop} />
     </main>

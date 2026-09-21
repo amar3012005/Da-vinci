@@ -21,6 +21,7 @@ import {
   ConnectorConveyorDetail, HumationTeamDetail, QuantumChapter, ResearchRequestsChapter,
 } from './MobileLandingAdditions';
 import HivemindFooter from './HivemindFooter';
+import apiClient from '../app/shared/api-client';
 
 /**
  * HIVEMIND product cover — singulancelabs.com/hivemind
@@ -159,7 +160,7 @@ const GraphCard = () => (
 
 /* ───────── hero ───────── */
 
-const Hero = () => {
+const Hero = ({ profileName = null }) => {
   const secRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: secRef, offset: ['start start', 'end start'] });
   const dotsY = useTransform(scrollYProgress, [0, 1], [0, 120]);
@@ -197,11 +198,11 @@ const Hero = () => {
 
           <Reveal delay={0.5}>
             <div className="mx-auto mt-[clamp(1rem,3vh,1.75rem)] max-w-[700px]">
-              <motion.a href="/hivemind/login" whileHover={{ y: -2, boxShadow: '0 16px 36px rgba(17,125,255,0.24)' }} whileTap={{ scale: 0.99 }}
+              <motion.a href={profileName ? '/hivemind/app/overview' : '/hivemind/login'} whileHover={{ y: -2, boxShadow: '0 16px 36px rgba(17,125,255,0.24)' }} whileTap={{ scale: 0.99 }}
                 className="group flex min-h-[68px] w-full items-center justify-between rounded-[10px] bg-[#117dff] px-5 text-white no-underline transition-colors hover:bg-[#006fe8] sm:px-7">
                 <span className="flex items-center gap-4">
                   <span className="flex h-9 w-9 items-center justify-center rounded-[6px] bg-white"><GoogleMark /></span>
-                  <span className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] sm:text-[16px]">Get started</span>
+                  <span className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] sm:text-[16px]">{profileName ? `Welcome back — ${profileName}` : 'Start your Hivemind'}</span>
                 </span>
                 <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
               </motion.a>
@@ -604,6 +605,7 @@ const HivemindProduct = () => {
     typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
   ));
   const [landingEnhancementsEnabled, setLandingEnhancementsEnabled] = useState(null);
+  const [profileName, setProfileName] = useState(null);
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 767px)');
@@ -611,6 +613,20 @@ const HivemindProduct = () => {
     update();
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    apiClient.controlPlane.get('/v1/proxy/profiles', { params: { category: 'static', key: 'name' }, timeout: 3500 })
+      .then(({ data }) => {
+        const rawName = data?.facts?.[0]?.value;
+        const name = typeof rawName === 'string' ? rawName.trim().slice(0, 80) : '';
+        if (active && name) setProfileName(name);
+      })
+      .catch(() => {
+        // The unauthenticated landing must stay fully usable without a profile.
+      });
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -663,9 +679,9 @@ const HivemindProduct = () => {
       {isMobile && landingEnhancementsEnabled === null && (
         <div className="min-h-screen bg-[#FBFBF8]" aria-label="Loading HIVEMIND" />
       )}
-      {isMobile && landingEnhancementsEnabled && <MobileLandingV2 />}
+      {isMobile && landingEnhancementsEnabled && <MobileLandingV2 profileName={profileName} />}
       {(!isMobile || landingEnhancementsEnabled !== null) && <div>
-        {(!isMobile || landingEnhancementsEnabled === false) && <Hero />}
+        {(!isMobile || landingEnhancementsEnabled === false) && <Hero profileName={profileName} />}
         <MarqueeRow />
 
       <Chapter n="01" id="chapter-1" eyebrow="memory engine"
