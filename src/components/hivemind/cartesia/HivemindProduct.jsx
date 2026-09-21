@@ -16,6 +16,7 @@ import DownloadMacButton from './DownloadMacButton';
 import ChatDemoCard from './ChatDemoCard';
 import MinimalGraphIcon from './MinimalGraphIcon';
 import CinematicScrollScene from '../../mobile/CinematicScrollScene';
+import HorizonScene from '../../mobile/HorizonScene';
 import MobileLandingV2 from './MobileLandingV2';
 import {
   ConnectorConveyorDetail, HumationTeamDetail, QuantumChapter, ResearchRequestsChapter,
@@ -664,9 +665,15 @@ const HivemindProduct = () => {
         <div className="min-h-screen bg-[#FBFBF8]" aria-label="Loading HIVEMIND" />
       )}
       {isMobile && landingEnhancementsEnabled && <MobileLandingV2 />}
+      {!isMobile && landingEnhancementsEnabled && <MobileLandingV2 desktop />}
       {(!isMobile || landingEnhancementsEnabled !== null) && <div>
-        {(!isMobile || landingEnhancementsEnabled === false) && <Hero />}
+        {((!isMobile && landingEnhancementsEnabled === null) || landingEnhancementsEnabled === false) && <Hero />}
         <MarqueeRow />
+
+      {/* Desktop keeps the same OS cover as mobile, then opens into the
+          scroll-scrubbed 164-frame Horizon film. Mobile uses its static,
+          reduced-motion treatment to protect first paint and battery. */}
+      {!isMobile && landingEnhancementsEnabled && <HorizonScene />}
 
       <Chapter n="01" id="chapter-1" eyebrow="memory engine"
         title={<>A memory that<br />organizes itself</>}

@@ -69,14 +69,14 @@ const AgentStack = ({ large = false }) => (
   </div>
 );
 
-const Hero = () => (
-  <section className="relative overflow-hidden px-5 pb-16 pt-28" style={{ background: PAPER }}>
+const Hero = ({ desktop = false }) => (
+  <section className={`relative overflow-hidden px-5 pb-16 pt-28 ${desktop ? 'md:px-10 md:pb-24 md:pt-36' : ''}`} style={{ background: PAPER }}>
     <div className="pointer-events-none absolute inset-0 opacity-90" style={{
       backgroundImage: 'radial-gradient(rgba(17,125,255,.15) 1px, transparent 1px)',
       backgroundSize: '14px 14px',
       maskImage: 'linear-gradient(to bottom, black 0%, transparent 72%)',
     }} />
-    <div className="relative mx-auto max-w-md text-center">
+    <div className={`relative mx-auto max-w-md text-center ${desktop ? 'md:max-w-3xl' : ''}`}>
       <Rise>
         <div className="flex justify-center"><AgentStack large /></div>
         <p className="mt-3 font-mono text-[10px] uppercase tracking-[.22em] text-[#77736b]">
@@ -91,7 +91,7 @@ const Hero = () => (
       </Rise>
 
       <Rise delay={0.14}>
-        <h1 className="mt-6 font-['Space_Grotesk'] text-[clamp(3.1rem,14vw,4.35rem)] font-semibold leading-[.9] tracking-[-.065em] text-[#0A0A0A]">
+        <h1 className={`mt-6 font-['Space_Grotesk'] text-[clamp(3.1rem,14vw,4.35rem)] font-semibold leading-[.9] tracking-[-.065em] text-[#0A0A0A] ${desktop ? 'md:text-[clamp(5.5rem,9vw,9rem)]' : ''}`}>
           Your company,<br />working as one.
         </h1>
       </Rise>
@@ -104,7 +104,7 @@ const Hero = () => (
         </p>
       </Rise>
 
-      <Rise delay={0.26} className="mt-8 space-y-3">
+      <Rise delay={0.26} className={`mt-8 space-y-3 ${desktop ? 'md:mx-auto md:flex md:max-w-xl md:items-center md:justify-center md:gap-3 md:space-y-0' : ''}`}>
         <a href="/hivemind/login" className="group flex min-h-14 w-full items-center justify-between rounded-xl bg-[#117DFF] px-5 text-white no-underline shadow-[0_16px_34px_rgba(17,125,255,.24)] transition-transform active:scale-[.99]">
           <span className="font-['Space_Grotesk'] text-[16px] font-semibold">Start your workspace</span>
           <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
@@ -113,7 +113,7 @@ const Hero = () => (
       </Rise>
     </div>
 
-    <Rise delay={0.3} className="relative mx-auto mt-12 max-w-md">
+    <Rise delay={0.3} className={`relative mx-auto mt-12 max-w-md ${desktop ? 'md:mt-16 md:max-w-3xl' : ''}`}>
       <div className="overflow-hidden rounded-2xl border border-[#DEDAD1] bg-white shadow-[0_28px_70px_-34px_rgba(20,20,20,.34)]">
         <div className="flex h-11 items-center gap-2 border-b border-[#ECE9E2] px-4">
           <span className="h-2.5 w-2.5 rounded-full bg-[#E96E64]" />
@@ -161,18 +161,18 @@ const ProofRail = () => (
   </section>
 );
 
-const OperatingSystem = () => {
+const OperatingSystem = ({ desktop = false }) => {
   const [active, setActive] = useState('brain');
   const reduceMotion = useReducedMotion();
   const current = layers.find((layer) => layer.id === active) || layers[0];
   const Icon = current.icon;
 
   return (
-    <section id="solutions" className="scroll-mt-20 px-5 py-20" style={{ background: PAPER }}>
-      <div className="mx-auto max-w-md">
+    <section id="solutions" className={`scroll-mt-20 px-5 py-20 ${desktop ? 'md:px-10 md:py-28' : ''}`} style={{ background: PAPER }}>
+      <div className={`mx-auto max-w-md ${desktop ? 'md:max-w-5xl' : ''}`}>
         <Rise>
           <p className="font-mono text-[10px] uppercase tracking-[.24em] text-[#117DFF]">The HIVEMIND operating system</p>
-          <h2 className="mt-4 font-['Space_Grotesk'] text-[42px] font-semibold leading-[.98] tracking-[-.055em] text-[#0A0A0A]">
+          <h2 className={`mt-4 font-['Space_Grotesk'] text-[42px] font-semibold leading-[.98] tracking-[-.055em] text-[#0A0A0A] ${desktop ? 'md:text-7xl' : ''}`}>
             One system.<br />Three working layers.
           </h2>
           <p className="mt-5 text-[16px] leading-relaxed text-[#66635D]">
@@ -202,7 +202,7 @@ const OperatingSystem = () => {
           </div>
         </Rise>
 
-        <div className="mt-3 min-h-[445px]">
+        <div className={`mt-3 min-h-[445px] ${desktop ? 'md:min-h-[390px]' : ''}`}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.article
               key={current.id}
@@ -240,12 +240,12 @@ const OperatingSystem = () => {
   );
 };
 
-export default function MobileLandingV2() {
+export default function MobileLandingV2({ desktop = false }) {
   return (
-    <main className="md:hidden" style={{ background: PAPER, color: INK }}>
-      <Hero />
+    <main className={desktop ? 'hidden md:block' : 'md:hidden'} style={{ background: PAPER, color: INK }}>
+      <Hero desktop={desktop} />
       <ProofRail />
-      <OperatingSystem />
+      <OperatingSystem desktop={desktop} />
     </main>
   );
 }
