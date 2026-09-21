@@ -61,7 +61,10 @@ export default function HarnessChatSurface({ legacy }) {
   const [notice, setNotice] = useState(null);
   const [connecting, setConnecting] = useState(false);
 
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const openHarness = useCallback(async (ticket) => {
     setConnecting(true);

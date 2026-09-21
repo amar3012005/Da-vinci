@@ -283,6 +283,7 @@ export default function AppShell() {
     try { localStorage.setItem('hm_active_section', section); } catch { /* noop */ }
   }, [location.pathname]);
   const handleSectionChange = (s) => {
+    if (s === sectionForPath(location.pathname)) return;
     setActiveSection(s);
     try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }
     const landing = { hivemind: '/hivemind/app/overview', hyperagents: '/hivemind/app/employees/mycompany', tara: '/hivemind/app/tara' };

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import OverviewTour, { useOverviewTour } from '../shared/OverviewTour';
 import { useTranslation } from 'react-i18next';
 import {
@@ -1499,7 +1499,7 @@ export default function Overview() {
   // Do not select Harness by hostname: Enigma and main share this build and
   // use the server-side feature flag at admission. Only an explicit admitted
   // route mounts the native client; the overview root retains legacy fallback.
-  const pathname = window.location.pathname;
+  const { pathname } = useLocation();
   // Mobile routing is authoritative and must run before either an explicit or
   // cached desktop Harness session is selected.
   if (shouldUseMobileChat()) return <MobileChatRedirect />;
