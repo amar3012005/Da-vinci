@@ -378,6 +378,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getWorkRunTelemetry(id) {
+    const { data } = await this.controlPlane.get(`/v1/workruns/${encodeURIComponent(id)}/telemetry`);
+    return data;
+  }
+
   async createWorkRun(payload) {
     const { data } = await this.controlPlane.post('/v1/workruns', payload);
     return data;
