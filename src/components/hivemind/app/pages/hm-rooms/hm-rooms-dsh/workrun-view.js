@@ -269,11 +269,41 @@ export function applyWorkRunEvent(view, ev) {
       workrun_id: workrunId,
       kind: isTask ? 'plan' : (/web_search/i.test(name) ? 'search' : 'tool'),
       status: 'streaming',
-      payload: { name, label: toolLabel(name), family: isTask ? 'task' : null },
+      payload: { name, label: toolLabel(name), family: isTask ? 'task' : null, input: toolInputOf(ev) },
     });
   }
 
-  if (t === 'tool.completed' || type === 'TOOL_CALL_END' || type === 'TOOL_RESULT_END') {
+  if (t === 'tool.input.delta' || type === 'TOOL_CALL_DELTA') {
+    const existing = view.blocks[toolId(ev, workrunId)];
+    const input = mergeDelta(existing?.payload?.input, textOf(ev));
+    return upsertBlock(view, {
+      block_id: toolId(ev, workrunId), workrun_id: workrunId,
+      kind: existing?.kind || 'tool', status: 'streaming',
+      payload: {
+        name: existing?.payload?.name || ev.tool_call_name || ev.tool || 'tool',
+        label: existing?.payload?.label || toolLabel(ev.tool_call_name || ev.tool), input,
+      },
+    });
+  }
+
+  if (t === 'tool.output.delta' || type === 'TOOL_RESULT_TEXT_DELTA') {
+    const existing = view.blocks[toolId(ev, workrunId)];
+    const result = mergeDelta(existing?.payload?.result, textOf(ev));
+    return upsertBlock(view, {
+      block_id: toolId(ev, workrunId), workrun_id: workrunId,
+      kind: existing?.kind || 'tool', status: 'streaming',
+      payload: {
+        name: existing?.payload?.name || ev.tool_call_name || ev.tool || 'tool',
+        label: existing?.payload?.label || toolLabel(ev.tool_call_name || ev.tool), result,
+      },
+    });
+  }
+
+  // TOOL_CALL_END closes the argument envelope, not the tool execution.
+  // Keep the row running until AgentScope emits TOOL_RESULT_END.
+  if (type === 'TOOL_CALL_END') return view;
+
+  if (t === 'tool.completed' || type === 'TOOL_RESULT_END') {
     const name = ev.tool_call_name || ev.tool_name || ev.tool || ev.name;
     const result = (textOf(ev) || ev.result_summary || ev.result || '').slice(0, 12000);
     const existing = view.blocks[toolId(ev, workrunId)];
@@ -285,7 +315,7 @@ export function applyWorkRunEvent(view, ev) {
       payload: {
         name: name || existing?.payload?.name || 'tool',
         label: toolLabel(name || existing?.payload?.name),
-        result,
+        ...(result ? { result } : {}),
       },
     });
   }
@@ -483,7 +513,8 @@ export function applyAgentEvent(msgs, ev) {
 
   if (
     type === 'TEXT_BLOCK_DELTA' || type === 'THINKING_BLOCK_DELTA' || type === 'THINKING_BLOCK_END'
-    || type === 'TOOL_CALL_START' || type === 'TOOL_CALL_END' || type === 'TOOL_RESULT_END'
+    || type === 'TOOL_CALL_START' || type === 'TOOL_CALL_DELTA' || type === 'TOOL_CALL_END'
+    || type === 'TOOL_RESULT_TEXT_DELTA' || type === 'TOOL_RESULT_END'
     || type === 'TEXT_BLOCK_END'
   ) {
     const cur = ensureAssistant();
@@ -516,33 +547,34 @@ export function applyAgentEvent(msgs, ev) {
         });
       }
     }
-    if (type === 'TOOL_CALL_START' || type === 'TOOL_CALL_END' || type === 'TOOL_RESULT_END') {
+    if (type === 'TOOL_CALL_START' || type === 'TOOL_CALL_DELTA' || type === 'TOOL_RESULT_TEXT_DELTA' || type === 'TOOL_RESULT_END') {
       const name = ev.tool_call_name || ev.name || ev.tool_name || 'tool';
       const id = ev.tool_call_id || ev.id;
       const existing = cur.tools.find((t) => (id && t.id === id) || t.name === name);
-      const result = type === 'TOOL_RESULT_END' ? (textOf(ev) || ev.result_summary || '').slice(0, 800) : undefined;
-      const input = toolInputOf(ev);
+      const result = (type === 'TOOL_RESULT_END' || type === 'TOOL_RESULT_TEXT_DELTA')
+        ? (textOf(ev) || ev.result_summary || '').slice(0, 800) : undefined;
+      const input = type === 'TOOL_CALL_DELTA' ? textOf(ev) : toolInputOf(ev);
       if (type === 'TOOL_CALL_START') cur.stage = 'working';
       if (existing) {
-        existing.state = type === 'TOOL_CALL_START' ? 'running' : 'done';
-        if (result) existing.result = result;
-        if (input) existing.input = input;
+        existing.state = type === 'TOOL_RESULT_END' ? 'done' : 'running';
+        if (result) existing.result = mergeDelta(existing.result, result);
+        if (input) existing.input = mergeDelta(existing.input, input);
       } else {
-        cur.tools.push({ name, id, state: type === 'TOOL_CALL_START' ? 'running' : 'done', input, result });
+        cur.tools.push({ name, id, state: type === 'TOOL_RESULT_END' ? 'done' : 'running', input, result });
       }
       const timelineTool = cur.timeline.find((item) => item.kind === 'tool' && ((id && item.id === id) || (!id && item.name === name)));
       if (timelineTool) {
-        timelineTool.state = type === 'TOOL_CALL_START' ? 'running' : 'done';
+        timelineTool.state = type === 'TOOL_RESULT_END' ? 'done' : 'running';
         timelineTool.label = toolLabel(name);
-        if (result) timelineTool.result = result;
-        if (input) timelineTool.input = input;
+        if (result) timelineTool.result = mergeDelta(timelineTool.result, result);
+        if (input) timelineTool.input = mergeDelta(timelineTool.input, input);
       } else {
         cur.timeline.push({
           kind: 'tool',
           name,
           label: toolLabel(name),
           id: id || `tool-${cur.timeline.length}`,
-          state: type === 'TOOL_CALL_START' ? 'running' : 'done',
+          state: type === 'TOOL_RESULT_END' ? 'done' : 'running',
           input,
           result,
         });

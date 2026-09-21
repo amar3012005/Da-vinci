@@ -98,6 +98,21 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(view.sources).toHaveLength(1);
   });
 
+  it('keeps tool input and output inspectable across streamed deltas', () => {
+    let view = applyWorkRunEvent(emptyWorkRunView(runId), {
+      type: 'TOOL_CALL_START', tool_call_name: 'hivemind_recall', tool_call_id: 'inspect-1',
+    });
+    view = applyWorkRunEvent(view, { t: 'tool.input.delta', call_id: 'inspect-1', delta: '{"query":"ICP"}' });
+    view = applyWorkRunEvent(view, { t: 'tool.output.delta', call_id: 'inspect-1', delta: 'Matched 3 records.' });
+    view = applyWorkRunEvent(view, { type: 'TOOL_CALL_END', tool_call_id: 'inspect-1' });
+    expect(view.blocks[`tool:${runId}:inspect-1`].status).toBe('streaming');
+    view = applyWorkRunEvent(view, { t: 'tool.completed', call_id: 'inspect-1' });
+    const tool = view.blocks[`tool:${runId}:inspect-1`];
+    expect(tool.status).toBe('complete');
+    expect(tool.payload.input).toContain('ICP');
+    expect(tool.payload.result).toBe('Matched 3 records.');
+  });
+
   it('hydrates persisted artifact ids when a completed run is reopened', () => {
     const artifactId = 'f2a25f03-9dab-4772-a06d-2a599d5ea7c0';
     const view = hydrateRegisteredArtifacts(emptyWorkRunView(runId), [artifactId]);
