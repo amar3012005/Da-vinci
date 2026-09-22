@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Building2, ChevronDown, CreditCard, Gauge, Hash, LayoutDashboard,
+  Building2, ChevronDown, CreditCard, Gauge, Hash, LayoutDashboard, PanelLeftClose, PanelLeftOpen,
   ListChecks, LogOut, Megaphone, PhoneCall, Power, Search, Settings,
   User, Users,
 } from 'lucide-react';
@@ -33,6 +33,7 @@ export default function LegacyRoomsSidebar({ runs = [], rooms = [], activeRunId,
   const navigate = useNavigate();
   const { user, org, logout } = useAuth();
   const [companyOpen, setCompanyOpen] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const liveRooms = useMemo(
     () => (Array.isArray(rooms) ? rooms.filter((room) => !room.archived_at && !room.archivedAt) : []),
     [rooms],
@@ -46,8 +47,31 @@ export default function LegacyRoomsSidebar({ runs = [], rooms = [], activeRunId,
     if (/^[0-9a-f-]{36}$/i.test(String(room.id || ''))) navigate(`/hivemind/app/employees/rooms/${room.id}`);
   };
 
+  if (collapsed) {
+    const compactItems = [
+      { Icon: Building2, label: 'Your Company', to: '/hivemind/app/employees/rooms' },
+      { Icon: Power, label: 'Runtime', to: '/hivemind/app/employees/rooms' },
+      { Icon: PhoneCall, label: 'Operating Rooms', to: '/hivemind/app/employees/operating-rooms' },
+      { Icon: ListChecks, label: 'Your Leads', to: '/hivemind/app/employees/rooms' },
+      { Icon: Megaphone, label: 'Run your Social Media', to: '/hivemind/app/employees/rooms' },
+    ];
+    return (
+      <aside aria-label="Collapsed navigation" className="w-[56px] min-w-[56px] shrink-0 flex flex-col items-center border-r border-[#e3e0db] bg-[#faf9f4]">
+        <button type="button" onClick={() => setCollapsed(false)} aria-label="Expand navigation" className="mt-2 mb-2 rounded-[6px] p-2 text-[#525252] hover:bg-white hover:text-[#0a0a0a]"><PanelLeftOpen size={16} /></button>
+        <div className="flex flex-col items-center gap-1 border-t border-[#e3e0db] pt-2">
+          {compactItems.map(({ Icon, label, to }) => <button key={label} type="button" onClick={() => navigate(to)} aria-label={label} title={label} className="rounded-[6px] p-2.5 text-[#525252] hover:bg-white hover:text-[#0a0a0a]"><Icon size={16} /></button>)}
+        </div>
+        <div className="mt-2 flex-1 border-t border-[#e3e0db] pt-2">
+          <button type="button" onClick={onNewWork} aria-label="New WorkRun" title="New WorkRun" className="rounded-[6px] p-2.5 text-[#117dff] hover:bg-white"><Hash size={16} /></button>
+          {runs.slice(0, 10).map((run) => <button key={run.id} type="button" onClick={() => navigate(`/hivemind/app/hm-rooms/${run.id}`)} aria-label={cleanGoal(run.goal) || run.id.slice(0, 8)} title={cleanGoal(run.goal) || run.id.slice(0, 8)} className={`block rounded-[6px] p-2.5 hover:bg-white ${run.id === activeRunId ? 'text-[#117dff]' : 'text-[#a3a3a3]'}`}><Hash size={14} /></button>)}
+        </div>
+      </aside>
+    );
+  }
+
   return (
-    <aside className="w-[240px] min-w-[240px] shrink-0 flex flex-col border-r border-[#e3e0db] bg-[#faf9f4]">
+    <aside className="relative w-[240px] min-w-[240px] shrink-0 flex flex-col border-r border-[#e3e0db] bg-[#faf9f4]">
+      <button type="button" onClick={() => setCollapsed(true)} aria-label="Collapse navigation" title="Collapse navigation" className="absolute right-2 top-2 z-10 rounded-[6px] bg-white p-1.5 text-[#737373] shadow-sm hover:text-[#0a0a0a]"><PanelLeftClose size={15} /></button>
       <div className="px-2 pt-2">
         <button type="button" onClick={() => navigate('/hivemind/app/employees/rooms')} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold bg-[#0a0a0a] text-white"><Building2 size={13} />Your Company</button>
         <button type="button" onClick={() => navigate('/hivemind/app/employees/rooms')} className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] hover:bg-white border border-[#bcd0ef]"><Power size={13} className="text-[#185bcc]" />Runtime</button>

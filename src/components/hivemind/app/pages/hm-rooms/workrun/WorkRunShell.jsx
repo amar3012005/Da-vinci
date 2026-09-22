@@ -31,7 +31,10 @@ export default function WorkRunShell({
   const [planOpen, setPlanOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
   const [previewWidth, setPreviewWidth] = useState(360);
-  const [previewOpen, setPreviewOpen] = useState(true);
+  // Preview is an opt-in secondary surface. Keeping it closed on entry gives
+  // the transcript the full width and avoids a resize gesture stealing the
+  // first streamed turn; the status card remains the explicit open control.
+  const [previewOpen, setPreviewOpen] = useState(false);
   const dragRef = useRef(null);
 
   const clampPreviewWidth = useCallback((value) => {

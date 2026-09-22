@@ -509,6 +509,8 @@ function HmRoomDesk({ runId }) {
       'plan.updated', 'external_action.pending', 'external_action.resolved',
     ];
     const bufferedEvents = [];
+    const seen = new Set();
+    let liveEventCount = 0;
     const bufferEvent = (message) => {
       if (message?.data) bufferedEvents.push({ data: message.data, type: message.type, lastEventId: message.lastEventId });
     };
@@ -519,6 +521,32 @@ function HmRoomDesk({ runId }) {
     progressEventNames.forEach((name) => progress.addEventListener(name, bufferEvent));
     es.onmessage = bufferEvent;
     progress.onmessage = bufferEvent;
+
+    // Render the first live lifecycle events immediately. History hydration is
+    // deliberately secondary: a slow messages GET must never hide the
+    // acknowledgement/thinking/tool rows that are already arriving over SSE.
+    const renderEarly = (message) => {
+      if (!message?.data) return;
+      let ev;
+      try { ev = JSON.parse(message.data); } catch { return; }
+      const type = eventType(ev) || String(message.type || '').toUpperCase();
+      ev.type = ev.type || type;
+      const fingerprint = `${message.lastEventId || ''}:${type}:${(ev.delta || ev.text || ev.tool_call_id || ev.name || '').toString().slice(0, 48)}`;
+      if (seen.has(fingerprint)) return;
+      seen.add(fingerprint);
+      liveEventCount += 1;
+      if (type === 'REPLY_START') markFirstEvent('first-reply');
+      if (type === 'THINKING_BLOCK_DELTA') markFirstEvent('first-thinking');
+      if (type === 'TOOL_CALL_START') markFirstEvent('first-tool');
+      if (type === 'TEXT_BLOCK_DELTA') markFirstEvent('first-answer');
+      setPhase('streaming');
+      setMsgs((prev) => applyAgentEvent(prev, ev));
+      setView((prev) => applyWorkRunEvent(prev, ev));
+    };
+    sessionEventNames.forEach((name) => es.addEventListener(name, renderEarly));
+    progressEventNames.forEach((name) => progress.addEventListener(name, renderEarly));
+    es.addEventListener('message', renderEarly);
+    progress.addEventListener('message', renderEarly);
     (async () => {
       let row = null;
       try {
@@ -535,7 +563,7 @@ function HmRoomDesk({ runId }) {
         const history = await apiClient.getWorkRunSessionMessages(runId).catch(() => null);
         const list = history?.messages || history?.items || [];
         const initialUser = { role: 'user', text: stripWorkOrder(row?.goal), tools: [], thinking: '' };
-        if (Array.isArray(list) && list.length) {
+        if (Array.isArray(list) && list.length && liveEventCount === 0) {
           const normalized = list.map(flattenMsg).map((m) => (
             row?.status === 'failed' || row?.status === 'completed'
               ? { ...m, streaming: false }
@@ -545,8 +573,12 @@ function HmRoomDesk({ runId }) {
             message.role === 'user' && stripWorkOrder(message.text) === initialUser.text
           ));
           setMsgs(hasInitialPrompt || !initialUser.text ? normalized : [initialUser, ...normalized]);
-        } else if (row?.goal) {
+        } else if (row?.goal && liveEventCount === 0) {
           setMsgs([initialUser]);
+        } else if (row?.goal && liveEventCount > 0) {
+          setMsgs((previous) => (previous.some((message) => message.role === 'user')
+            ? previous
+            : [{ ...initialUser }, ...previous]));
         }
         if (row?.status === 'failed' || row?.status === 'completed' || row?.status === 'cancelled') {
           setPhase('idle');
@@ -558,7 +590,6 @@ function HmRoomDesk({ runId }) {
       const terminal = ['failed', 'completed', 'cancelled'].includes(String(row?.status || ''));
       if (terminal) return;
 
-      const seen = new Set();
       const onEvt = (msg) => {
         if (!msg?.data) return;
         let ev;
