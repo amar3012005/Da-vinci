@@ -5,6 +5,7 @@ import { Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight,
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 import { clearInvitationContext, loadInvitationContext, saveInvitationContext } from './invitation-session';
+import { defaultAuthReturnUrl, defaultAuthenticatedPath, isMobileAuthClient } from './mobile-routing';
 
 /* ─── Provider icons ───────────────────────────────────────────────────── */
 function GoogleIcon({ size = 18 }) {
@@ -196,7 +197,7 @@ export default function LoginPage() {
     setEmailState({ busy: true, message: '', error: false });
     try {
       const returnTo = emailReturnTo || returnToFromState
-        || `${window.location.origin}/hivemind/app/overview?auth=callback`;
+        || defaultAuthReturnUrl(window.location.origin);
       const result = await apiClient.startEmailSignIn({
         email, returnTo, intent: emailIntent, turnstileToken,
         signupTicket: emailIntent === 'register' ? emailSignupTicket : '',
@@ -237,7 +238,13 @@ export default function LoginPage() {
     setEmailState({ busy: true, message: '', error: false });
     try {
       const result = await apiClient.verifyEmailSignIn({ challengeId: emailChallenge, code, linkToken });
-      window.location.assign(result.redirect_to || emailConfig.default_redirect_to || `${window.location.origin}/hivemind/app/overview?auth=callback`);
+      // The API may retain its desktop default.  Once the user is on a mobile
+      // client, keep the callback on the mobile chat route instead of allowing
+      // the desktop OS shell to mount first.
+      const fallback = defaultAuthReturnUrl(window.location.origin);
+      const redirectTo = emailIntent !== 'register' && isMobileAuthClient() ? fallback
+        : (result.redirect_to || emailConfig.default_redirect_to || fallback);
+      window.location.assign(redirectTo);
     } catch (error) {
       setEmailState({ busy: false, message: error?.response?.data?.error || 'The code is invalid or expired.', error: true });
       setEmailCode('');
@@ -503,9 +510,11 @@ export default function LoginPage() {
         return;
       }
       const from = location.state && location.state.from;
-      const dest = from && from.pathname && !from.pathname.startsWith('/hivemind/login')
+      const hasDeepLink = from && from.pathname && !from.pathname.startsWith('/hivemind/login');
+      const isDesktopAppLanding = hasDeepLink && from.pathname.startsWith('/hivemind/app/');
+      const dest = hasDeepLink && !(isMobileAuthClient() && isDesktopAppLanding)
         ? `${from.pathname}${from.search || ''}`
-        : '/hivemind/app/overview';
+        : defaultAuthenticatedPath();
       navigate(dest, { replace: true });
     }
   }, [isAuthenticated, navigate, location.state, location.search, oauthReturnTo, wantsCreate, needsOnboarding, org?.id]);
