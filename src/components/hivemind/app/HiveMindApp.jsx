@@ -23,11 +23,13 @@ const MobileUsage = React.lazy(() => import('./mobile/pages/MobileUsage'));
 const MobileBilling = React.lazy(() => import('./mobile/pages/MobileBilling'));
 const MobileProfile = React.lazy(() => import('./mobile/pages/MobileProfile'));
 const MobileMemoryGraph = React.lazy(() => import('./mobile/pages/MobileMemoryGraph'));
+const MobileEntityProfile = React.lazy(() => import('./mobile/pages/MobileEntityProfile'));
 const Memories = React.lazy(() => import('./pages/Memories'));
 const MeetingNotes = React.lazy(() => import('./pages/MeetingNotes'));
 const ApiKeys = React.lazy(() => import('./pages/ApiKeys'));
 const Connectors = React.lazy(() => import('./pages/Connectors'));
 const Profile = React.lazy(() => import('./pages/Profile'));
+const EntityProfilePage = React.lazy(() => import('./pages/EntityProfilePage'));
 const Evaluation = React.lazy(() => import('./pages/Evaluation'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 const Billing = React.lazy(() => import('./pages/Billing'));
@@ -207,6 +209,7 @@ export default function HiveMindApp() {
             </ProtectedRoute>
           }
         />
+        <Route path="m/entities/:entityId" element={<ProtectedRoute><PageSuspense><MobileEntityProfile /></PageSuspense></ProtectedRoute>} />
         <Route path="m/characters" element={<Navigate to="m/connectors" replace />} />
         <Route
           path="join/:slug/:token"
@@ -233,6 +236,7 @@ export default function HiveMindApp() {
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
           <Route path="connectors" element={<PageSuspense><Connectors /></PageSuspense>} />
           <Route path="profile" element={<PageSuspense><Profile /></PageSuspense>} />
+          <Route path="entities/:entityId" element={<PageSuspense><EntityProfilePage /></PageSuspense>} />
           <Route path="evaluation" element={<PageSuspense><Evaluation /></PageSuspense>} />
           <Route path="settings" element={<PageSuspense><Settings /></PageSuspense>} />
           <Route path="billing" element={<PageSuspense><Billing /></PageSuspense>} />

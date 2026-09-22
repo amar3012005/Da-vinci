@@ -2086,6 +2086,29 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Entity dossiers ────────────────────────────────────────
+  // The server remains the authorization and evidence boundary; the browser
+  // receives bounded rendered facts only.
+  async getEntityProfile(entityId, { evidence = true } = {}) {
+    const { data } = await this.core.get(`/api/entities/${encodeURIComponent(entityId)}/profile?evidence=${evidence ? 'true' : 'false'}`);
+    return data;
+  }
+
+  async reviewEntityProfile(entityId, reviewId, action, note = '') {
+    const { data } = await this.core.post(`/api/entities/${encodeURIComponent(entityId)}/profile/reviews/${encodeURIComponent(reviewId)}/${action}`, { note });
+    return data;
+  }
+
+  async correctEntityProfile(entityId, payload) {
+    const { data } = await this.core.post(`/api/entities/${encodeURIComponent(entityId)}/profile/correct`, payload);
+    return data;
+  }
+
+  async linkUserToEntity(entityId, payload) {
+    const { data } = await this.core.post(`/api/entities/${encodeURIComponent(entityId)}/profile/link-user`, payload);
+    return data;
+  }
+
   // ─── Core: Connectors (MCP) ─────────────────────────────────
 
   async getConnectorStatus() {
