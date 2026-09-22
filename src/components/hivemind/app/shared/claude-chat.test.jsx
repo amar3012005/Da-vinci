@@ -1,4 +1,4 @@
-import { liveReasoningRows } from './claude-chat';
+import { liveReasoningRows, reasoningRows } from './claude-chat';
 
 test.each(['error', 'failed', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval'])('progressive %s receipts never become completed', (status) => {
   const [row] = liveReasoningRows([
@@ -52,4 +52,20 @@ test('native LangGraph states remain visible and truthful in the timeline', () =
   ]);
   expect(rows.map((row) => row.phase)).toEqual(['context_loaded', 'awaiting_connection', 'resumed']);
   expect(rows[1]).toMatchObject({ tool: 'agent', detail: 'awaiting connection' });
+});
+
+test('mobile timeline keeps only meaningful provider receipts and never narrates them with an LLM', () => {
+  const rows = reasoningRows([
+    { type: 'tool_started', name: 'hivemind_connected_task', arguments: { action: 'search' } },
+    { type: 'tool_result', name: 'hivemind_connected_task', status: 'completed' },
+    { type: 'tool_started', name: 'GMAIL_FETCH_EMAILS' },
+    { type: 'tool_result', name: 'GMAIL_FETCH_EMAILS', status: 'completed', summary: 'five raw subjects' },
+    { type: 'tool_started', name: 'hivemind_save_memory' },
+    { type: 'tool_result', name: 'hivemind_save_memory', status: 'completed', summary: 'saved' },
+  ]);
+  expect(rows.map((row) => row.tool)).toEqual(['GMAIL_FETCH_EMAILS', 'hivemind_save_memory']);
+  expect(rows.map((row) => [row.display_label, row.display_detail])).toEqual([
+    ['Gmail', 'Email retrieval complete'],
+    ['HIVE-MIND', 'Memory saved'],
+  ]);
 });

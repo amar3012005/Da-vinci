@@ -37,16 +37,24 @@ function connectorKey(event) {
   return null;
 }
 
-function reasoningRows(events = [], fallbackSteps = []) {
+export function reasoningRows(events = [], fallbackSteps = []) {
   const live = liveReasoningRows(events);
   if (live.length) {
-    return live.map((row, index) => ({
+    const rows = live.map((row, index) => ({
       ...row,
       index: row.index ?? index,
       tool: row.tool || row.name || row.slug,
       phase: row.phase || row.status || 'completed',
       detail: row.detail || row.result_summary || row.summary || String(row.phase || row.status || '').replace(/_/g, ' '),
     }));
+    // `hivemind_connected_task` and `COMPOSIO_SEARCH_TOOLS` are orchestration
+    // adapters, not useful user-facing steps once the selected provider has
+    // emitted its own receipt. Keep the audit events, but present the smallest
+    // truthful timeline in chat.
+    const hasProviderStep = rows.some((row) => /^(?:GMAIL|SLACK|GITHUB|NOTION|LINEAR|OUTLOOK|GOOGLE_)/i.test(String(row.tool || '')));
+    return rows
+      .filter((row) => !hasProviderStep || !['hivemind_connected_task', 'COMPOSIO_SEARCH_TOOLS'].includes(String(row.tool || '')))
+      .map((row) => ({ ...row, ...stagePresentation(row) }));
   }
   return (fallbackSteps || []).map((step, index) => ({
     ...step,
@@ -55,7 +63,43 @@ function reasoningRows(events = [], fallbackSteps = []) {
     tool: step.tool || step.slug || step.operation || step.kind,
     label: step.tool || step.slug || step.operation || step.kind || 'Step',
     detail: step.summary || step.result_summary || step.detail || String(step.status || '').replace(/_/g, ' '),
-  }));
+  })).map((row) => ({ ...row, ...stagePresentation(row) }));
+}
+
+// Stage text comes from the durable event contract, not an LLM. This avoids
+// spending tokens narrating internal tool plumbing while keeping the user
+// informed about the governed action actually taking place.
+function stagePresentation(row = {}) {
+  const tool = String(row.tool || row.name || row.slug || '');
+  const phase = String(row.phase || row.status || '');
+  const failed = ['error', 'failed', 'cancelled'].includes(phase);
+  const waiting = ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval'].includes(phase);
+  const completed = ['completed', 'draft_created'].includes(phase);
+  const rawDetail = String(row.detail || row.result_summary || row.summary || '').trim();
+  if (failed || waiting) return { display_label: friendlyToolName(tool), display_detail: rawDetail || phase.replace(/_/g, ' ') };
+
+  if (/^GMAIL_(?:FETCH_EMAILS|LIST_THREADS|SEARCH)/i.test(tool)) {
+    return { display_label: 'Gmail', display_detail: completed ? 'Email retrieval complete' : 'Retrieving requested emails' };
+  }
+  if (/^OUTLOOK_/i.test(tool)) {
+    return { display_label: 'Outlook', display_detail: completed ? 'Email retrieval complete' : 'Retrieving requested emails' };
+  }
+  if (tool === 'hivemind_save_memory') {
+    return { display_label: 'HIVE-MIND', display_detail: completed ? 'Memory saved' : 'Preparing memory' };
+  }
+  if (tool === 'hivemind_meta' || tool === 'hivemind_recall') {
+    return { display_label: 'HIVE-MIND', display_detail: completed ? 'Memory evidence ready' : 'Retrieving memory evidence' };
+  }
+  if (tool === 'hivemind_connected_task' || tool === 'COMPOSIO_SEARCH_TOOLS') {
+    return { display_label: 'Connected apps', display_detail: completed ? 'Capability selected' : 'Finding the right capability' };
+  }
+  return { display_label: friendlyToolName(tool), display_detail: rawDetail || (completed ? 'Complete' : 'In progress') };
+}
+
+function friendlyToolName(tool = '') {
+  const raw = String(tool || '').replace(/^hivemind_/, '').replace(/_/g, ' ').trim();
+  if (!raw) return 'HIVE-MIND';
+  return raw.replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 export function liveReasoningRows(events = []) {
@@ -141,11 +185,11 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
                         : <Sparkles size={12} className="text-[#117dff]" />}
                 </span>
                 <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <code className="max-w-full break-all rounded-[4px] bg-[#e8f0ff] px-1.5 py-0.5 font-mono text-[11.5px] text-[#1764d8]">
-                    {row.tool || row.label || row.operation || 'Working'}
-                  </code>
+                  <span className="font-medium text-[#25221d]">
+                    {row.display_label || row.tool || row.label || row.operation || 'Working'}
+                  </span>
                   <span className={['error', 'failed', 'cancelled'].includes(row.phase) ? 'text-[#b91c1c]' : ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval', 'awaiting_provider_event'].includes(row.phase) ? 'text-[#a16207]' : complete ? 'text-[#329044]' : 'text-[#77736c]'}>
-                    → {row.detail || (row.phase === 'started' ? 'Working…' : String(row.phase || '').replace(/_/g, ' '))}
+                    {row.display_detail || row.detail || (row.phase === 'started' ? 'Working…' : String(row.phase || '').replace(/_/g, ' '))}
                   </span>
                 </div>
               </div>
@@ -1033,7 +1077,11 @@ export function Thinking({ events = [] }) {
     const timer = window.setInterval(() => setElapsedStep((value) => value + 1), 3200);
     return () => window.clearInterval(timer);
   }, []);
-  const rows = liveReasoningRows(events);
+  // Agent state transitions are preserved server-side, but they are audit
+  // noise in a mobile chat. The visible timeline contains only governed
+  // actions and receipts; a stage starts appearing as soon as its tool event
+  // is streamed.
+  const rows = liveReasoningRows(events.filter((event) => event?.type !== 'agent_state'));
   const thought = PATIENCE_COPY[elapsedStep % PATIENCE_COPY.length];
   useEffect(() => {
     setTyped('');
@@ -1054,10 +1102,12 @@ export function Thinking({ events = [] }) {
             <Loader2 size={15} className="animate-spin text-[#117dff]" />
             <span className="text-[13px] font-medium">Reasoning</span>
           </div>}
-      <motion.div key={thought} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        className="ml-6 mt-1 min-h-[20px] text-[12.5px] italic text-[#737373]" aria-live="polite">
-        {typed}<span className="ml-0.5 inline-block h-3.5 w-px translate-y-0.5 bg-[#a3a3a3] animate-pulse" />
-      </motion.div>
+      {!rows.length && (
+        <motion.div key={thought} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="ml-6 mt-1 min-h-[20px] text-[12.5px] italic text-[#737373]" aria-live="polite">
+          {typed}<span className="ml-0.5 inline-block h-3.5 w-px translate-y-0.5 bg-[#a3a3a3] animate-pulse" />
+        </motion.div>
+      )}
     </div>
   );
 }
