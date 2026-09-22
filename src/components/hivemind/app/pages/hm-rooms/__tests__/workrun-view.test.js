@@ -1,6 +1,7 @@
 import {
   applyAgentEvent,
   applyWorkRunEvent,
+  eventType,
   emptyWorkRunView,
   hasRunningTools,
   hydrateRegisteredArtifacts,
@@ -14,6 +15,13 @@ import {
 
 describe('WorkRun identity-keyed block registry', () => {
   const runId = '11111111-1111-4111-8111-111111111111';
+
+  it('normalizes native AgentScope dotted lifecycle events', () => {
+    expect(eventType({ type: 'thinking.delta' })).toBe('THINKING_BLOCK_DELTA');
+    expect(eventType({ type: 'text.delta' })).toBe('TEXT_BLOCK_DELTA');
+    expect(eventType({ type: 'tool.output.delta' })).toBe('TOOL_RESULT_TEXT_DELTA');
+    expect(eventType({ type: 'reply.completed' })).toBe('REPLY_END');
+  });
 
   it('upserts many TaskCreate events onto one plan block', () => {
     let view = emptyWorkRunView(runId);

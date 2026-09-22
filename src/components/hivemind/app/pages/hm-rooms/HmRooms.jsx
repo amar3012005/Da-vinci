@@ -499,12 +499,16 @@ function HmRoomDesk({ runId }) {
       'custom', 'require_user_confirm',
       'REPLY_START', 'REPLY_END', 'TEXT_BLOCK_DELTA', 'TEXT_BLOCK_END',
       'THINKING_BLOCK_DELTA', 'THINKING_BLOCK_END', 'TOOL_CALL_START', 'TOOL_CALL_END', 'TOOL_RESULT_END',
-      'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
+      'reply.start', 'reply.started', 'reply.end', 'reply.completed',
+      'thinking.delta', 'thinking.end', 'text.delta', 'text.end',
+      'tool.started', 'tool.input.delta', 'tool.output.delta', 'tool.completed', 'tool.failed',
+      'artifact.created', 'agent.status',
       'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
       'plan.updated', 'external_action.pending', 'external_action.resolved',
     ];
     const progressEventNames = [
       'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
+      'tool.input.delta', 'tool.output.delta', 'tool.failed',
       'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
       'plan.updated', 'external_action.pending', 'external_action.resolved',
     ];
@@ -723,7 +727,10 @@ function HmRoomDesk({ runId }) {
   // Do not use the durable WorkRun status here. A successful reply leaves the
   // WorkRun running so the user can continue the same session; only a live
   // reply or tool call should replace Send with Stop.
-  const working = !terminal && phase === 'streaming';
+  // WorkRun status is durable room state and may remain completed/running
+  // across follow-up turns. The Stop control belongs to the current stream,
+  // therefore it must be driven by the per-turn phase only.
+  const working = phase === 'streaming';
   void inspectOpen;
 
   return (

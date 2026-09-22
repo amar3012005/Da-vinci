@@ -62,7 +62,29 @@ export function hydrateRegisteredArtifacts(view, artifactIds) {
 }
 
 export function eventType(ev) {
-  return String(ev?.type || ev?.t || '').toUpperCase();
+  const raw = String(ev?.type || ev?.t || '').trim();
+  if (!raw) return '';
+  const normalized = raw.toLowerCase();
+  // AgentScope's native stream uses dotted lifecycle names while the Rooms
+  // projection historically used the normalized block vocabulary. Keep one
+  // reducer contract so named SSE events are rendered live instead of waiting
+  // for the persisted history snapshot.
+  const aliases = {
+    'reply.start': 'REPLY_START',
+    'reply.started': 'REPLY_START',
+    'reply.end': 'REPLY_END',
+    'reply.completed': 'REPLY_END',
+    'thinking.delta': 'THINKING_BLOCK_DELTA',
+    'thinking.end': 'THINKING_BLOCK_END',
+    'text.delta': 'TEXT_BLOCK_DELTA',
+    'text.end': 'TEXT_BLOCK_END',
+    'tool.started': 'TOOL_CALL_START',
+    'tool.input.delta': 'TOOL_CALL_DELTA',
+    'tool.output.delta': 'TOOL_RESULT_TEXT_DELTA',
+    'tool.completed': 'TOOL_RESULT_END',
+    'tool.failed': 'TOOL_RESULT_END',
+  };
+  return aliases[normalized] || raw.toUpperCase();
 }
 
 // Persisted AgentScope history is protocol data, not a React-child contract.
