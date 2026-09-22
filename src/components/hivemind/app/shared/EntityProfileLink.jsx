@@ -30,12 +30,12 @@ export default function EntityProfileLink({
           `/api/entity-search?query=${encodeURIComponent(name)}&limit=5`,
         );
         const exact = (data?.matches || []).find((match) => (
-          match?.id
+          match?.entity_id
           && String(match?.canonical_name || match?.name || '').trim().toLocaleLowerCase()
             === String(name || '').trim().toLocaleLowerCase()
         ));
-        const canonical = exact || (data?.matches || []).find((match) => match?._canonical && match?.id);
-        resolvedId = canonical?.id;
+        const canonical = exact || (data?.matches || []).find((match) => match?.entity_id);
+        resolvedId = canonical?.entity_id;
       }
       if (resolvedId) {
         navigate(mobile ? `/hivemind/m/entities/${resolvedId}` : `/hivemind/app/entities/${resolvedId}`);
