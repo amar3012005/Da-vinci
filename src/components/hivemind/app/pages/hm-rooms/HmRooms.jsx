@@ -487,6 +487,10 @@ function HmRoomDesk({ runId }) {
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(null);
   const esRef = useRef(null);
+  // The session stream can replay persisted tool events when a durable
+  // WorkRun is reopened. Keep that history in the inspector projection, but
+  // never let it resurrect the already-completed assistant bubble as live.
+  const liveReplyRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -516,6 +520,10 @@ function HmRoomDesk({ runId }) {
             message.role === 'user' && stripWorkOrder(message.text) === initialUser.text
           ));
           setMsgs(hasInitialPrompt || !initialUser.text ? normalized : [initialUser, ...normalized]);
+          liveReplyRef.current = normalized.some((message) => (
+            message.role === 'assistant' && !message.raw?.finished_at && !message.raw?.completed_at
+          ));
+          if (!liveReplyRef.current) setPhase('idle');
         } else if (row?.goal) {
           setMsgs([initialUser]);
         }
@@ -541,7 +549,9 @@ function HmRoomDesk({ runId }) {
         const fingerprint = `${msg.lastEventId || ''}:${type}:${(ev.delta || ev.text || ev.tool_call_id || ev.name || '').toString().slice(0, 48)}`;
         if (seen.has(fingerprint)) return;
         seen.add(fingerprint);
-        if (type === 'REPLY_START' || type === 'TEXT_BLOCK_DELTA' || type === 'THINKING_BLOCK_DELTA' || type === 'TOOL_CALL_START') {
+        if (type === 'REPLY_START') liveReplyRef.current = true;
+        const appliesToLiveReply = liveReplyRef.current;
+        if (appliesToLiveReply && (type === 'REPLY_START' || type === 'TEXT_BLOCK_DELTA' || type === 'THINKING_BLOCK_DELTA' || type === 'TOOL_CALL_START')) {
           setPhase('streaming');
         }
         if (String(ev.t || '') === 'workrun.state') {
@@ -554,15 +564,16 @@ function HmRoomDesk({ runId }) {
         }
         setView((prev) => {
           const next = applyWorkRunEvent(prev, ev);
-          if (isTurnCompleteEvent(ev, type, next)) {
+          if (appliesToLiveReply && isTurnCompleteEvent(ev, type, next)) {
             // A WorkRun remains durable and open for follow-up turns.  The
             // composer, however, belongs to the current AgentScope reply.
             setPhase('idle');
+            liveReplyRef.current = false;
             setMsgs((previous) => previous.map((message) => ({ ...message, streaming: false, stage: message.role === 'assistant' ? 'complete' : message.stage })));
           }
           return next;
         });
-        setMsgs((prev) => applyAgentEvent(prev, ev));
+        if (appliesToLiveReply) setMsgs((prev) => applyAgentEvent(prev, ev));
       };
       [
         'reply_start', 'reply_end', 'text_block_delta', 'text_block_end',
@@ -603,6 +614,7 @@ function HmRoomDesk({ runId }) {
     if (!text) return;
     setDraft('');
     setMsgs((prev) => startUserTurn(prev, text));
+    liveReplyRef.current = true;
     setPhase('streaming');
     try {
       await apiClient.sendWorkRunChat(runId, text);
