@@ -54,6 +54,13 @@ test('native LangGraph states remain visible and truthful in the timeline', () =
   expect(rows[1]).toMatchObject({ tool: 'agent', detail: 'awaiting connection' });
 });
 
+test('the selected LangGraph plan is a compact first stage', () => {
+  const [row] = reasoningRows([
+    { type: 'decision', stage: 'capability', selected: 'multi_task', authoritative: true },
+  ]);
+  expect(row).toMatchObject({ tool: 'plan', display_label: 'Plan', display_detail: 'Selected: Multi Task' });
+});
+
 test('mobile timeline keeps every meaningful governed stage and never narrates them with an LLM', () => {
   const rows = reasoningRows([
     { type: 'tool_started', name: 'hivemind_connected_task', arguments: { action: 'search' } },

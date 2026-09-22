@@ -73,6 +73,10 @@ function stagePresentation(row = {}) {
   const completed = ['completed', 'draft_created'].includes(phase);
   const rawDetail = String(row.detail || row.result_summary || row.summary || '').trim();
 
+  if (tool === 'plan') {
+    return { display_label: 'Plan', display_detail: completed ? `Selected: ${friendlyToolName(rawDetail)}` : 'Selecting the right path' };
+  }
+
   if (/^GMAIL_(?:FETCH_EMAILS|LIST_THREADS|SEARCH)/i.test(tool)) {
     return { display_label: 'Gmail', display_detail: completed ? 'Email retrieval complete' : 'Retrieving requested emails' };
   }
@@ -153,6 +157,15 @@ export function liveReasoningRows(events = []) {
         tool: 'agent',
         phase: state,
         detail: state.replace(/_/g, ' '),
+      });
+      continue;
+    }
+    if (type === 'decision' && event.stage) {
+      rows.set(`decision:${event.stage}`, {
+        ...event,
+        tool: 'plan',
+        phase: event.authoritative === true ? 'completed' : 'pending',
+        detail: String(event.selected || event.reason || 'fallback_harness'),
       });
       continue;
     }
