@@ -25,9 +25,9 @@ export default function WorkRunStream({ msgs, onPreview, onResolveExternalAction
           followLive.current = atLatest;
           setShowJump(!atLatest);
         }}
-        className="h-full overflow-y-auto overscroll-contain bg-[#fbfaf7]"
+        className="h-full overflow-y-auto overscroll-contain bg-[#faf9f4]"
       >
-        <div className="mx-auto w-full max-w-[940px] space-y-7 px-12 pb-10 pt-8">
+        <div className="mx-auto w-full max-w-[840px] space-y-7 px-8 pb-10 pt-9 sm:px-12">
           {(msgs || []).map((m, i) => (
             m.role === 'user'
               ? <UserMessage key={i} text={m.text} />

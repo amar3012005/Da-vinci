@@ -16,16 +16,16 @@ export default function Inspector({ artifacts, sources, team, files, computer, p
     files: files?.length || 0,
   };
   return (
-    <aside aria-label="WorkRun preview" style={{ width }} className="min-w-[320px] shrink-0 h-full flex flex-col overflow-hidden bg-[#fafafa] border-l border-[#e3e0db]">
+    <aside aria-label="WorkRun preview" style={{ width }} className="min-w-[320px] shrink-0 h-full flex flex-col overflow-hidden bg-white border-l border-[#e3e0db]">
       <InspectorTabs tab={tab} onChange={setTab} counts={counts} onClose={onClose} />
-      <div className="flex-1 min-h-0 overflow-y-auto p-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-5">
         {tab === 'preview' ? (
           preview || artifacts?.length ? (
             <ArtifactPreview artifact={preview || artifacts[0]} />
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center px-6">
-              <div className="text-[15px] font-medium text-[#0a0a0a]">Preview</div>
-              <p className="mt-2 text-[13px] text-[#737373] leading-5">Artifacts, pages, and computer sessions from this run appear here.</p>
+              <div className="font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">Preview</div>
+              <p className="mt-1.5 text-[12px] text-[#737373] leading-5">Artifacts, pages, computer sessions, and files from this run appear here.</p>
             </div>
           )
         ) : null}

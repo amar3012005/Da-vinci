@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { cloneElement, isValidElement, useCallback, useRef, useState } from 'react';
 import { AudioLines, Bell, BrainCircuit, Hash, Orbit, PanelRightOpen, Users, UserPlus } from 'lucide-react';
 import WorkRunStream from './WorkRunStream';
 import WorkRunComposer from './WorkRunComposer';
@@ -32,6 +32,7 @@ export default function WorkRunShell({
   const [teamOpen, setTeamOpen] = useState(false);
   const [previewWidth, setPreviewWidth] = useState(360);
   const [previewOpen, setPreviewOpen] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const dragRef = useRef(null);
 
   const clampPreviewWidth = useCallback((value) => {
@@ -70,7 +71,7 @@ export default function WorkRunShell({
   const showRoomStatus = !previewOpen || previewWidth <= Math.floor(window.innerWidth * 0.4);
   const completedTasks = (tasks || []).filter((task) => task.status === 'complete' || task.done).length;
   return (
-    <div className="hmDshHost h-screen overflow-hidden flex flex-col bg-[#f7f6f3]">
+    <div className="hmDshHost h-screen overflow-hidden flex flex-col bg-[#faf9f4]">
       <header className="h-14 shrink-0 flex items-center justify-between border-y border-[#e3e0db] bg-[#faf9f4] px-5">
         <div className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Hyper Agents</div>
         <div className="flex items-center rounded-[9px] border border-[#e3e0db] bg-white p-0.5 shadow-sm">
@@ -81,8 +82,8 @@ export default function WorkRunShell({
         <div className="flex items-center gap-2"><Bell size={15} className="text-[#737373]" /><button type="button" className="flex items-center gap-1.5 rounded-[6px] bg-[#117dff] px-3 py-2 text-[11px] font-semibold text-white"><UserPlus size={13} />Invite your team</button></div>
       </header>
       <div className="flex flex-1 min-h-0">
-      {legacySidebar}
-      <div className="flex-1 min-w-0 flex flex-col bg-[#fbfaf7]">
+      {isValidElement(legacySidebar) ? cloneElement(legacySidebar, { collapsed: sidebarCollapsed, onCollapsedChange: setSidebarCollapsed }) : legacySidebar}
+      <div className="flex-1 min-w-0 flex flex-col bg-[#faf9f4]">
         <div className="flex-1 min-h-0 flex">
           <div className="relative flex-1 min-w-0 flex flex-col" aria-label="WorkRun output">
             {showRoomStatus ? (
@@ -98,7 +99,7 @@ export default function WorkRunShell({
               onResolveExternalAction={onResolveExternalAction}
               error={error}
             />
-            <div className="shrink-0 border-t border-transparent bg-[#fbfaf7] px-4 pb-2 pt-0">
+            <div className="shrink-0 border-t border-transparent bg-[#faf9f4] px-4 pb-2 pt-0">
               <div className="max-w-[940px] mx-auto px-4">
                 <WorkRunComposer value={draft} onChange={onDraft} onSubmit={onSend} onStop={onStop} busy={working} />
               </div>

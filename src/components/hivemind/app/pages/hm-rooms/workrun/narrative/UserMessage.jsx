@@ -3,8 +3,8 @@ import { Copy, Pencil } from 'lucide-react';
 
 export default function UserMessage({ text }) {
   return (
-    <div className="flex flex-col items-end gap-2 pb-5">
-      <div className="max-w-[72%] rounded-[22px] bg-[#f3f2ef] px-5 py-3 text-[15px] leading-6 text-[#171717]">
+    <div className="flex flex-col items-end gap-1.5 pb-5">
+      <div className="max-w-[72%] rounded-[18px] bg-[#f3f1ec] px-4 py-2.5 text-[14px] leading-6 text-[#0a0a0a]">
         {text}
       </div>
       <div className="flex items-center gap-3 pr-2 text-[#737373]">

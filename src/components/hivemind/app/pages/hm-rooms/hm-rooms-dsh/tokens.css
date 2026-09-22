@@ -25,7 +25,7 @@
   --dsw-specific-selector: var(--dsw-static-neutral-bluish-60);
   --dsw-alias-border-l2: rgba(15, 17, 21, 0.08);
   --dsw-elevation-soft: 0 8px 28px rgba(15, 17, 21, 0.08);
-  --dsw-font-family: "Space Grotesk", Inter, ui-sans-serif, system-ui, sans-serif;
+  --dsw-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --dsh-chat-content-width: 680px;
   --dsh-composer-card-max-width: 760px;
   --dsh-composer-side-clearance: 16px;
