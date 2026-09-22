@@ -22,7 +22,10 @@ export default function AgentMessage({
       ...(tools || []).map((tool, index) => ({ ...tool, kind: 'tool', id: tool.id || `tool-${index}` })),
     ];
   const hasWork = ordered.length > 0;
-  const finished = Boolean(text) && !streaming;
+  // Final text is not the completion signal.  A reply can complete with an
+  // empty synthesis after a tool failure/cancellation, and that must still
+  // release the UI rather than leaving its working trace permanently open.
+  const finished = !streaming && (Boolean(text) || hasWork || stage === 'complete');
   const [toolsOpen, setToolsOpen] = useState(!finished);
   const [feedback, setFeedback] = useState(null);
 

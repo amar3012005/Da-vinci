@@ -4,6 +4,7 @@ import WorkRunStream from './WorkRunStream';
 import WorkRunComposer from './WorkRunComposer';
 import Inspector from './inspector/Inspector';
 import PlanDrawer from './plan/PlanDrawer';
+import PlanInline from './plan/PlanInline';
 import TeamDrawer from './team/TeamDrawer';
 
 export default function WorkRunShell({
@@ -100,7 +101,8 @@ export default function WorkRunShell({
               error={error}
             />
             <div className="shrink-0 border-t border-transparent bg-[#faf9f4] px-4 pb-2 pt-0">
-              <div className="max-w-[940px] mx-auto px-4">
+              <div className="max-w-[840px] mx-auto px-4">
+                <PlanInline tasks={tasks} onOpen={() => setPlanOpen(true)} />
                 <WorkRunComposer value={draft} onChange={onDraft} onSubmit={onSend} onStop={onStop} busy={working} />
               </div>
             </div>

@@ -1,10 +1,11 @@
 import React from 'react';
 import apiClient from '../../../../shared/api-client';
+import { artifactDisplayName } from '../../hm-rooms-dsh/workrun-view';
 
 export default function ArtifactPreviewRouter({ artifact }) {
   if (!artifact) return null;
   const type = String(artifact.content_type || artifact.payload?.content_type || '');
-  const title = artifact.title || artifact.payload?.label || 'Preview';
+  const title = artifactDisplayName(artifact);
   const body = artifact.detail || artifact.result || artifact.payload?.detail || artifact.payload?.path || '';
   const workRunId = artifact.payload?.workrun_id;
   const artifactId = artifact.payload?.artifact_id;

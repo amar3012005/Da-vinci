@@ -41,11 +41,27 @@ export function emptyWorkRunView(workrunId) {
 // those durable records during hydration instead of showing an empty preview.
 // The browser receives only the citable pointer here; workspace bytes remain
 // behind the runtime boundary until a dedicated download endpoint is selected.
-export function hydrateRegisteredArtifacts(view, artifactIds) {
-  if (!Array.isArray(artifactIds)) return view;
-  return artifactIds.reduce((next, artifactId) => {
-    const id = String(artifactId || '').trim();
+export function artifactDisplayName(artifact) {
+  const payload = artifact?.payload || artifact || {};
+  const candidate = payload.title || payload.name || payload.filename || payload.file_name || payload.label || payload.path || payload.artifact_id;
+  const value = String(candidate || '').trim();
+  if (!value) return 'Artifact';
+  const basename = value.split(/[\\/]/).filter(Boolean).pop() || value;
+  return basename === 'Registered artifact' && payload.artifact_id
+    ? `Artifact ${String(payload.artifact_id).slice(0, 8)}`
+    : basename;
+}
+
+export function hydrateRegisteredArtifacts(view, artifactRecords) {
+  if (!Array.isArray(artifactRecords)) return view;
+  return artifactRecords.reduce((next, record) => {
+    const meta = record && typeof record === 'object' ? record : {};
+    const id = String(meta.artifact_id || meta.id || record || '').trim();
     if (!id) return next;
+    const label = artifactDisplayName({
+      ...meta,
+      label: meta.label || meta.title || meta.name || meta.filename || meta.path || (typeof record === 'string' ? 'Registered artifact' : ''),
+    });
     return upsertBlock(next, {
       block_id: `artifact:${id}`,
       workrun_id: next.workrun_id,
@@ -54,8 +70,10 @@ export function hydrateRegisteredArtifacts(view, artifactIds) {
       payload: {
         artifact_id: id,
         workrun_id: next.workrun_id,
-        label: 'Registered artifact',
-        detail: `Artifact ${id} is durably registered for this WorkRun.`,
+        path: meta.path || null,
+        content_type: meta.content_type || meta.mime_type || null,
+        label,
+        detail: meta.detail || `Artifact ${id} is durably registered for this WorkRun.`,
       },
     });
   }, view);
@@ -331,7 +349,11 @@ export function applyWorkRunEvent(view, ev) {
         artifact_id: artifactId,
         path: ev.path || ev.value?.path,
         content_type: ev.content_type || ev.value?.content_type,
-        label: ev.path || ev.value?.path || 'Artifact',
+        label: artifactDisplayName({
+          title: ev.title || ev.value?.title,
+          name: ev.artifact_name || ev.filename || ev.value?.artifact_name || ev.value?.filename || ev.value?.name,
+          path: ev.path || ev.value?.path,
+        }),
       },
     });
   }
@@ -636,10 +658,15 @@ export function applyAgentEvent(msgs, ev) {
     }
   }
 
-  if (type === 'REPLY_END') {
+  const terminalStatus = String(ev?.status || '').toLowerCase();
+  const t = String(ev?.t || '').toLowerCase();
+  if (type === 'REPLY_END'
+    || ['workrun.completed', 'workrun.failed', 'workrun.cancelled'].includes(t)
+    || (t === 'workrun.state' && ['completed', 'failed', 'cancelled'].includes(terminalStatus))
+    || (t === 'agent.status' && ['idle', 'completed', 'failed', 'cancelled'].includes(terminalStatus))) {
     const cur = next[next.length - 1];
     if (cur && cur.role === 'assistant') {
-      cur.streaming = toolsRunning(cur);
+      cur.streaming = toolsRunning(cur) && type === 'REPLY_END';
       if (!cur.streaming) cur.stage = 'complete';
     }
   }

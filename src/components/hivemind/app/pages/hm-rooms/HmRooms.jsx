@@ -75,6 +75,16 @@ function stripWorkOrder(text) {
   return raw.slice(0, cut).trim();
 }
 
+function isTurnCompleteEvent(ev, type, nextView) {
+  const t = String(ev?.t || '').toLowerCase();
+  const status = String(ev?.status || '').toLowerCase();
+  return (type === 'REPLY_END'
+    || ['workrun.completed', 'workrun.failed', 'workrun.cancelled'].includes(t)
+    || (t === 'workrun.state' && ['completed', 'failed', 'cancelled'].includes(status))
+    || (t === 'agent.status' && ['idle', 'completed', 'failed', 'cancelled'].includes(status)))
+    && !hasRunningTools(nextView);
+}
+
 function splitAssistantBody(raw) {
   let text = transcriptText(raw);
   const tools = [];
@@ -492,7 +502,7 @@ function HmRoomDesk({ runId }) {
         (row?.events || []).forEach((ev) => {
           setView((prev) => applyWorkRunEvent(prev, ev));
         });
-        setView((prev) => hydrateRegisteredArtifacts(prev, row?.result_artifact_ids || row?.artifact_ids));
+        setView((prev) => hydrateRegisteredArtifacts(prev, row?.result_artifacts || row?.artifacts || row?.result_artifact_ids || row?.artifact_ids));
         const history = await apiClient.getWorkRunSessionMessages(runId).catch(() => null);
         const list = history?.messages || history?.items || [];
         const initialUser = { role: 'user', text: stripWorkOrder(row?.goal), tools: [], thinking: '' };
@@ -542,19 +552,17 @@ function HmRoomDesk({ runId }) {
             setMsgs((previous) => previous.map((message) => ({ ...message, streaming: false })));
           }
         }
-        setMsgs((prev) => applyAgentEvent(prev, ev));
         setView((prev) => {
           const next = applyWorkRunEvent(prev, ev);
-          if (type === 'REPLY_END') {
-            setPhase(hasRunningTools(next) ? 'streaming' : 'idle');
-          }
-          if (String(ev.t || '') === 'agent.status' && ev.status === 'idle' && !hasRunningTools(next)) {
+          if (isTurnCompleteEvent(ev, type, next)) {
             // A WorkRun remains durable and open for follow-up turns.  The
             // composer, however, belongs to the current AgentScope reply.
             setPhase('idle');
+            setMsgs((previous) => previous.map((message) => ({ ...message, streaming: false, stage: message.role === 'assistant' ? 'complete' : message.stage })));
           }
           return next;
         });
+        setMsgs((prev) => applyAgentEvent(prev, ev));
       };
       [
         'reply_start', 'reply_end', 'text_block_delta', 'text_block_end',

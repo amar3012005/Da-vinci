@@ -4,6 +4,7 @@ import {
   emptyWorkRunView,
   hasRunningTools,
   hydrateRegisteredArtifacts,
+  artifactDisplayName,
   isProductKind,
   productFailure,
   resolveApproval,
@@ -131,6 +132,20 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(view.artifacts).toHaveLength(1);
     expect(view.artifacts[0].payload.artifact_id).toBe(artifactId);
     expect(view.artifacts[0].payload.label).toBe('Registered artifact');
+  });
+
+  it('uses the durable artifact filename when metadata is available', () => {
+    const view = hydrateRegisteredArtifacts(emptyWorkRunView(runId), [{
+      artifact_id: 'a1', path: '/workspace/italy/prospects.md', content_type: 'text/markdown',
+    }]);
+    expect(view.artifacts[0].payload.label).toBe('prospects.md');
+    expect(artifactDisplayName(view.artifacts[0])).toBe('prospects.md');
+  });
+
+  it('seals the active assistant message when the durable reply goes idle', () => {
+    let msgs = startUserTurn([], 'hello');
+    msgs = applyAgentEvent(msgs, { t: 'agent.status', status: 'idle' });
+    expect(msgs.at(-1)).toMatchObject({ role: 'assistant', streaming: false, stage: 'complete' });
   });
 
   it('maps recall to a human label, not raw args', () => {
