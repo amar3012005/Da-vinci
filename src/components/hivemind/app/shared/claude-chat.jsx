@@ -68,7 +68,10 @@ export function reasoningRows(events = [], fallbackSteps = []) {
 function stagePresentation(row = {}) {
   const tool = String(row.tool || row.name || row.slug || '');
   const phase = String(row.phase || row.status || '');
-  const failed = ['error', 'failed', 'cancelled'].includes(phase);
+  // A timeout after scope selection is a recoverable write failure, not a
+  // completed save.  Keep it visually distinct so the retry card is
+  // authoritative and a stale completion label cannot contradict it.
+  const failed = ['error', 'failed', 'cancelled', 'retryable_error'].includes(phase);
   const waiting = ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval'].includes(phase);
   const completed = ['completed', 'draft_created'].includes(phase);
   const rawDetail = String(row.detail || row.result_summary || row.summary || '').trim();

@@ -103,6 +103,22 @@ test('memory scope selection is a compact deterministic stage', () => {
   expect(row.display_detail).toBe('Choose memory destination');
 });
 
+test('a retryable memory write failure is never rendered as saved', () => {
+  const [row] = reasoningRows([
+    {
+      type: 'tool_result',
+      name: 'hivemind_save_memory',
+      harness_version: 'langgraph-meta-loop-v2',
+      status: 'retryable_error',
+      summary: 'Memory save is temporarily unavailable. Retry the exact save or cancel it.',
+    },
+  ]);
+
+  expect(row.display_label).toBe('HIVE-MIND');
+  expect(row.display_detail).toMatch(/temporarily unavailable/i);
+  expect(row.display_detail).not.toBe('Memory saved');
+});
+
 test('does not render the legacy scope-picker boilerplate as an assistant answer', () => {
   expect(isDuplicateOperationalMessage('Memory destination was not stated. Ask the user to choose a personal, organization, team, or authorized project scope before saving; do not retry the save yourself.')).toBe(true);
   expect(isDuplicateOperationalMessage('Memory saved.')).toBe(false);

@@ -1,5 +1,12 @@
 const reserved = new Set(['user_id', 'userid', 'org_id', 'connected_account_id', 'entity_id', 'session_id', 'metadata', '__proto__', 'constructor', 'prototype']);
-const governedHarnesses = new Set(['progressive-v1', 'langgraph-native-v1']);
+const governedHarnesses = new Set([
+  'progressive-v1',
+  'langgraph-native-v1',
+  // The unified LangGraph event contract carries explicit non-terminal and
+  // retryable statuses. Treat it as governed so the mobile timeline never
+  // falls back to the legacy "tool_result means completed" heuristic.
+  'langgraph-meta-loop-v2',
+]);
 
 export function isGovernedHarness(value) {
   return governedHarnesses.has(String(value || ''));
