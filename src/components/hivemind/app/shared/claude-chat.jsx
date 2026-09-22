@@ -47,14 +47,10 @@ export function reasoningRows(events = [], fallbackSteps = []) {
       phase: row.phase || row.status || 'completed',
       detail: row.detail || row.result_summary || row.summary || String(row.phase || row.status || '').replace(/_/g, ' '),
     }));
-    // `hivemind_connected_task` and `COMPOSIO_SEARCH_TOOLS` are orchestration
-    // adapters, not useful user-facing steps once the selected provider has
-    // emitted its own receipt. Keep the audit events, but present the smallest
-    // truthful timeline in chat.
-    const hasProviderStep = rows.some((row) => /^(?:GMAIL|SLACK|GITHUB|NOTION|LINEAR|OUTLOOK|GOOGLE_)/i.test(String(row.tool || '')));
-    return rows
-      .filter((row) => !hasProviderStep || !['hivemind_connected_task', 'COMPOSIO_SEARCH_TOOLS'].includes(String(row.tool || '')))
-      .map((row) => ({ ...row, ...stagePresentation(row) }));
+    // Each governed receipt gets one visible stage. Lifecycle duplicates still
+    // collapse in `liveReasoningRows`; this preserves the meaningful bridge
+    // between planning, capability discovery, execution, and the final write.
+    return rows.map((row) => ({ ...row, ...stagePresentation(row) }));
   }
   return (fallbackSteps || []).map((step, index) => ({
     ...step,
@@ -113,6 +109,39 @@ export function isDuplicateOperationalMessage(content = '') {
   return /^Memory destination was not stated\. Ask the user to choose a personal, organization, team, or authorized project scope before saving; do not retry the save yourself\.?$/i.test(normalized);
 }
 
+const SAFE_STAGE_ARGUMENTS = new Set(['action', 'operation', 'query', 'tool_slug', 'toolkit', 'toolkits', 'limit', 'scope', 'project_id', 'entity_name', 'target']);
+const GENERIC_STAGE_DETAILS = new Set(['completed', 'complete', 'working', 'working…', 'in progress']);
+
+function stageArguments(value) {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(String(value));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch { return {}; }
+}
+
+function compactStageValue(value) {
+  if (Array.isArray(value)) return value.map(item => compactStageValue(item)).filter(Boolean).join(', ').slice(0, 180);
+  if (typeof value === 'object' && value) return '';
+  return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, 220);
+}
+
+// This is presentation data from the durable event itself. It never serializes
+// a schema, credentials, raw payload, or arbitrary tool argument object.
+export function stageDetails(row = {}) {
+  const args = stageArguments(row.arguments);
+  const input = Object.entries(args)
+    .filter(([key]) => SAFE_STAGE_ARGUMENTS.has(key))
+    .map(([key, value]) => ({ label: key.replace(/_/g, ' '), value: compactStageValue(value) }))
+    .filter(item => item.value);
+  const rawOutput = compactStageValue(row.result_summary || row.summary || row.detail);
+  const display = compactStageValue(row.display_detail);
+  const output = rawOutput && !GENERIC_STAGE_DETAILS.has(rawOutput.toLowerCase()) && rawOutput !== display
+    ? rawOutput : '';
+  return { input, output };
+}
+
 export function liveReasoningRows(events = []) {
   const rows = new Map();
   for (const event of events || []) {
@@ -133,7 +162,7 @@ export function liveReasoningRows(events = []) {
       continue;
     }
     const tool = event?.tool || event?.name;
-    if (tool && ['tool_selected', 'tool_started', 'tool_call', 'tool_completed', 'tool_result'].includes(type)) {
+    if (tool && ['tool_start', 'tool_selected', 'tool_started', 'tool_call', 'tool_completed', 'tool_result'].includes(type)) {
       const key = `tool:${tool}`;
       const previous = rows.get(key) || {};
       const completed = type === 'tool_completed' || type === 'tool_result';
@@ -166,6 +195,49 @@ export function liveReasoningRows(events = []) {
   return [...rows.values()];
 }
 
+function StageRow({ row }) {
+  const [expanded, setExpanded] = useState(false);
+  const connector = connectorKey(row);
+  const isNative = String(row.tool || '').startsWith('hivemind_') || (row.tool_groups || []).some((group) => String(group).startsWith('hivemind'));
+  const toolkitSlug = !isNative ? String(row.tool_groups?.[0] || '').trim().toLowerCase() : '';
+  const logo = connector ? BRAND_LOGOS[connector]
+    : toolkitSlug ? `https://logos.composio.dev/api/${encodeURIComponent(toolkitSlug)}` : null;
+  const complete = ['completed', 'draft_created'].includes(row.phase);
+  const details = stageDetails(row);
+  const hasDetails = details.input.length > 0 || Boolean(details.output);
+  const statusClass = ['error', 'failed', 'cancelled'].includes(row.phase) ? 'text-[#b91c1c]'
+    : ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval', 'awaiting_provider_event'].includes(row.phase) ? 'text-[#a16207]'
+      : complete ? 'text-[#329044]' : 'text-[#77736c]';
+  return (
+    <div className="min-w-0 text-[12px] leading-5">
+      <div className="flex items-start gap-2.5">
+        <span className="mt-1 flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+          {logo ? <img src={logo} alt="" className="h-3.5 w-3.5" />
+            : isNative ? <Brain size={13} className="text-[#117dff]" />
+              : row.phase === 'started' ? <Loader2 size={12} className="animate-spin text-[#117dff]" />
+                : <Sparkles size={12} className="text-[#117dff]" />}
+        </span>
+        <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-medium text-[#25221d]">{row.display_label || row.tool || row.label || row.operation || 'Working'}</span>
+          <span className={statusClass}>{row.display_detail || row.detail || (row.phase === 'started' ? 'Working…' : String(row.phase || '').replace(/_/g, ' '))}</span>
+          {hasDetails && (
+            <button type="button" onClick={() => setExpanded(value => !value)} aria-expanded={expanded}
+              className="inline-flex items-center gap-0.5 text-[11px] text-[#737373] hover:text-[#117dff] transition-colors">
+              {expanded ? 'Hide details' : 'Details'}<ChevronRight size={11} className={expanded ? 'rotate-90 transition-transform' : 'transition-transform'} />
+            </button>
+          )}
+        </div>
+      </div>
+      {expanded && hasDetails && (
+        <div className="ml-6 mt-1.5 border-l border-[#eae7e1] pl-2.5 space-y-0.5 text-[11px] text-[#737373]">
+          {details.input.map(item => <div key={item.label}><span className="text-[#a3a3a3] capitalize">{item.label}: </span>{item.value}</div>)}
+          {details.output && <div><span className="text-[#a3a3a3]">Result: </span>{details.output}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function OrchestrationReasoning({ events = [], steps = [], sealed = true, label = 'Reasoning', defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
   const rows = reasoningRows(events, steps);
@@ -180,32 +252,7 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
       </button>
       {open && (
         <div className="mt-2.5 ml-[7px] border-l border-[#e5dfd6] pl-4 space-y-1.5">
-          {rows.map((row) => {
-            const connector = connectorKey(row);
-            const isNative = String(row.tool || '').startsWith('hivemind_') || (row.tool_groups || []).some((group) => String(group).startsWith('hivemind'));
-            const toolkitSlug = !isNative ? String(row.tool_groups?.[0] || '').trim().toLowerCase() : '';
-            const logo = connector ? BRAND_LOGOS[connector]
-              : toolkitSlug ? `https://logos.composio.dev/api/${encodeURIComponent(toolkitSlug)}` : null;
-            const complete = ['completed', 'draft_created'].includes(row.phase);
-            return (
-              <div key={row.step_id || `${row.type || 'row'}:${row.state || row.tool || row.index}`} className="flex min-w-0 items-start gap-2.5 text-[12px] leading-5">
-                <span className="mt-1 flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-                  {logo ? <img src={logo} alt="" className="h-3.5 w-3.5" />
-                    : isNative ? <Brain size={13} className="text-[#117dff]" />
-                      : row.phase === 'started' ? <Loader2 size={12} className="animate-spin text-[#117dff]" />
-                        : <Sparkles size={12} className="text-[#117dff]" />}
-                </span>
-                <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="font-medium text-[#25221d]">
-                    {row.display_label || row.tool || row.label || row.operation || 'Working'}
-                  </span>
-                  <span className={['error', 'failed', 'cancelled'].includes(row.phase) ? 'text-[#b91c1c]' : ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval', 'awaiting_provider_event'].includes(row.phase) ? 'text-[#a16207]' : complete ? 'text-[#329044]' : 'text-[#77736c]'}>
-                    {row.display_detail || row.detail || (row.phase === 'started' ? 'Working…' : String(row.phase || '').replace(/_/g, ' '))}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+          {rows.map((row) => <StageRow key={row.step_id || `${row.type || 'row'}:${row.state || row.tool || row.index}`} row={row} />)}
         </div>
       )}
     </div>

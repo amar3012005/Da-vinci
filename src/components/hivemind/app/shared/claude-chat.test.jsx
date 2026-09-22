@@ -1,4 +1,4 @@
-import { isDuplicateOperationalMessage, liveReasoningRows, reasoningRows } from './claude-chat';
+import { isDuplicateOperationalMessage, liveReasoningRows, reasoningRows, stageDetails } from './claude-chat';
 
 test.each(['error', 'failed', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval'])('progressive %s receipts never become completed', (status) => {
   const [row] = liveReasoningRows([
@@ -54,7 +54,7 @@ test('native LangGraph states remain visible and truthful in the timeline', () =
   expect(rows[1]).toMatchObject({ tool: 'agent', detail: 'awaiting connection' });
 });
 
-test('mobile timeline keeps only meaningful provider receipts and never narrates them with an LLM', () => {
+test('mobile timeline keeps every meaningful governed stage and never narrates them with an LLM', () => {
   const rows = reasoningRows([
     { type: 'tool_started', name: 'hivemind_connected_task', arguments: { action: 'search' } },
     { type: 'tool_result', name: 'hivemind_connected_task', status: 'completed' },
@@ -63,11 +63,23 @@ test('mobile timeline keeps only meaningful provider receipts and never narrates
     { type: 'tool_started', name: 'hivemind_save_memory' },
     { type: 'tool_result', name: 'hivemind_save_memory', status: 'completed', summary: 'saved' },
   ]);
-  expect(rows.map((row) => row.tool)).toEqual(['GMAIL_FETCH_EMAILS', 'hivemind_save_memory']);
+  expect(rows.map((row) => row.tool)).toEqual(['hivemind_connected_task', 'GMAIL_FETCH_EMAILS', 'hivemind_save_memory']);
   expect(rows.map((row) => [row.display_label, row.display_detail])).toEqual([
+    ['Connected apps', 'Capability selected'],
     ['Gmail', 'Email retrieval complete'],
     ['HIVE-MIND', 'Memory saved'],
   ]);
+});
+
+test('stage details expose only a small safe input and receipt summary', () => {
+  expect(stageDetails({
+    arguments: { query: 'latest five emails', limit: 5, api_key: 'must-not-render', nested: { raw: 'must-not-render' } },
+    summary: '5 email records returned',
+    display_detail: 'Email retrieval complete',
+  })).toEqual({
+    input: [{ label: 'query', value: 'latest five emails' }, { label: 'limit', value: '5' }],
+    output: '5 email records returned',
+  });
 });
 
 test('memory scope selection is a compact deterministic stage', () => {
