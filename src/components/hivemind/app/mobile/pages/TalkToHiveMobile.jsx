@@ -4,7 +4,7 @@
  * Mirrors the desktop Chat.jsx logic (same /v1/proxy/chat call, same model
  * dropdown, same step timeline + sources rendering, same localStorage
  * persistence) but laid out for one-handed phone use:
- *   • Sticky compact header w/ back arrow, title, model chip, kebab menu
+ *   • Sticky compact header w/ back arrow, title, recent conversations, kebab menu
  *   • Full-height scrollable thread (safe-area insets respected)
  *   • Sticky pill composer pinned to the keyboard, virtual-viewport aware
  *   • iOS-style tap targets (min 44px), no hover-only affordances
@@ -23,7 +23,6 @@ import {
   Loader2,
   Trash2,
   ChevronDown,
-  Sparkles,
   Plus,
   CheckCircle2,
   FileWarning,
@@ -55,7 +54,14 @@ import {
 // mobile + desktop Overview + sidebar).
 import { UserBubble, AiBubble, Thinking } from '../../shared/claude-chat';
 import apiClient from '../../shared/api-client';
-import { getOrCreateChatThreadId, resetChatThreadId } from '../../shared/chat-thread-id';
+import {
+  clearConversationRecords,
+  listConversationRecords,
+  loadConversationRecord,
+  saveConversationRecord,
+  selectConversationRecord,
+  startConversationRecord,
+} from '../../shared/chat-session-records';
 import MobileShell from '../MobileShell';
 import SingulanceMark from '../../shared/SingulanceMark';
 // Same Web Studio research-report toolkit Overview.jsx reuses — one
@@ -119,7 +125,6 @@ function DeepResearchCard({ dr, onPreview, onOpenChrome }) {
 }
 
 const MAX_CHARS = 2000;
-const MAX_PERSIST = 200;
 // Keep the recorder implementation mounted and routable, but disable its
 // slide-in chat promotion until the product is ready to expose it again.
 const SHOW_MEETING_NOTES_PROMO = false;
@@ -258,15 +263,16 @@ function getStorageUserId() {
   } catch { return 'anon'; }
 }
 const storageKey = () => `hivemind:talk-to-hive:messages:${getStorageUserId()}`;
-function loadMsgs() {
-  try {
-    const raw = localStorage.getItem(storageKey());
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
-  } catch { return []; }
-}
-function saveMsgs(msgs) {
-  try { localStorage.setItem(storageKey(), JSON.stringify((msgs || []).slice(-MAX_PERSIST))); } catch {}
+function formatConversationTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const now = new Date();
+  const sameDay = date.toDateString() === now.toDateString();
+  if (sameDay) return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
 // ─── Subcomponents ─────────────────────────────────────────────────────────
@@ -309,12 +315,19 @@ export default function TalkToHiveMobile() {
   const { org, user } = useAuth() || {};
   const [profileName, setProfileName] = useState('');
   const userRole = user?.role || user?.org_role || user?.membership_role || 'member';
-  const [messages, setMessages] = useState(() => loadMsgs());
+  const initialConversationRef = useRef(null);
+  if (!initialConversationRef.current) initialConversationRef.current = loadConversationRecord(localStorage, storageKey());
+  const [messages, setMessages] = useState(() => initialConversationRef.current.messages);
+  const [activeConversationId, setActiveConversationId] = useState(() => initialConversationRef.current.conversationId);
+  const [recentConversations, setRecentConversations] = useState(() => listConversationRecords(localStorage, storageKey()));
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [agentEvents, setAgentEvents] = useState([]); // live tool_call/tool_result stream
-  const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
-  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  // Model selection remains a server contract; mobile no longer exposes it in
+  // the header, which is now reserved for user-facing conversation history.
+  const selectedModel = 'gpt-oss-120b';
+  const [recentsOpen, setRecentsOpen] = useState(false);
+  const [allConversationsOpen, setAllConversationsOpen] = useState(false);
   // Chat scope — org-wide (null) or one project; mirrors Overview.jsx. Follows
   // the global switcher, overridable per-conversation from the composer chip.
   const [chatScope, setChatScope] = useState(activeProjectId || null);
@@ -449,7 +462,7 @@ export default function TalkToHiveMobile() {
   // on Send/Retry from opening two streams before `loading` has rendered.
   const requestInFlightRef = useRef(false);
   const messagesRef = useRef(messages);
-  const conversationThreadIdRef = useRef(null);
+  const conversationThreadIdRef = useRef(activeConversationId);
   const sendTextRef = useRef(null);
 
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -592,8 +605,12 @@ export default function TalkToHiveMobile() {
     requestAnimationFrame(() => inputRef.current?.focus());
   });
 
-  // Persist messages.
-  useEffect(() => { saveMsgs(messages); }, [messages]);
+  // Persist user-facing conversations locally. These records are intentionally
+  // separate from LangGraph checkpoints and contain only chat/session state.
+  useEffect(() => {
+    const next = saveConversationRecord(localStorage, storageKey(), activeConversationId, messages);
+    setRecentConversations(next);
+  }, [activeConversationId, messages]);
 
   // Scroll to bottom on new messages / thinking.
   useEffect(() => {
@@ -663,7 +680,7 @@ export default function TalkToHiveMobile() {
           // Keep mobile on the same grounded tool-routing path as desktop chat.
           router: 'tool',
           use_tools: useTools,
-          thread_id: conversationThreadIdRef.current || (conversationThreadIdRef.current = getOrCreateChatThreadId(localStorage, storageKey())),
+          thread_id: conversationThreadIdRef.current || activeConversationId,
           history_turns: 6,
           // Recall scope from the chat selector: personal | organization (all) | project.
           scope: chatScopeMode,
@@ -741,7 +758,7 @@ export default function TalkToHiveMobile() {
       setLoading(false);
       setAgentEvents([]);
     }
-  }, [input, loading, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId, useTools, selectedToolkits]);
+  }, [input, loading, selectedModel, i18n.language, chatScope, chatScopeMode, activeConversationId, activeProjectId, useTools, selectedToolkits]);
 
   useEffect(() => { sendTextRef.current = sendText; }, [sendText]);
 
@@ -965,42 +982,73 @@ export default function TalkToHiveMobile() {
     setSelectedScope('personal');
   }, []);
 
-  const clearChat = () => {
+  const startNewChat = () => {
+    if (loading) return;
+    const next = startConversationRecord(localStorage, storageKey());
+    conversationThreadIdRef.current = next.conversationId;
+    setActiveConversationId(next.conversationId);
     setMessages([]);
     setInput('');
     setMentionQuery(null);
     setSelectedToolkits([]);
     setAgentEvents([]);
-    try { localStorage.removeItem(storageKey()); } catch {}
-    resetChatThreadId(localStorage, storageKey());
-    conversationThreadIdRef.current = null;
+    setRecentsOpen(false);
+    setAllConversationsOpen(false);
   };
 
-  const currentModel = MODELS.find((m) => m.id === selectedModel) || MODELS[0];
+  const selectConversation = (conversationId) => {
+    if (loading || conversationId === activeConversationId) { setRecentsOpen(false); return; }
+    const nextMessages = selectConversationRecord(localStorage, storageKey(), conversationId);
+    conversationThreadIdRef.current = conversationId;
+    setActiveConversationId(conversationId);
+    setMessages(nextMessages);
+    setInput('');
+    setMentionQuery(null);
+    setSelectedToolkits([]);
+    setAgentEvents([]);
+    setRecentsOpen(false);
+    setAllConversationsOpen(false);
+  };
+
+  const clearChatHistory = () => {
+    if (loading) return;
+    clearConversationRecords(localStorage, storageKey());
+    const next = startConversationRecord(localStorage, storageKey());
+    conversationThreadIdRef.current = next.conversationId;
+    setActiveConversationId(next.conversationId);
+    setMessages([]);
+    setRecentConversations([]);
+    setInput('');
+    setMentionQuery(null);
+    setSelectedToolkits([]);
+    setAgentEvents([]);
+    setRecentsOpen(false);
+    setAllConversationsOpen(false);
+  };
 
   const chatDrawerActions = (
     <>
-      <button onClick={clearChat} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] font-semibold bg-[#0a0a0a] text-white mb-2">
+      <button onClick={startNewChat} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] font-semibold bg-[#0a0a0a] text-white mb-2">
         <Plus size={16} /> New chat
       </button>
       <button onClick={() => window.dispatchEvent(new Event('hive:install'))} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] text-[#3d3d3a] active:bg-[#f1eee7]">
         <Download size={16} className="text-[#6b6b66]" /> Install app
       </button>
-      <button onClick={clearChat} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] text-[#dc2626] active:bg-red-50">
+      <button onClick={clearChatHistory} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] text-[#dc2626] active:bg-red-50">
         <Trash2 size={16} /> Clear chat history
       </button>
     </>
   );
   return (
     <MobileShell noScroll bareHeader showBareLogo={messages.length > 0} extraDrawerActions={chatDrawerActions}>
-      {/* Floating top-right cluster — language + model (drop-downs). The chosen
-          model drives the /chat synthesis; language sets the reply language. */}
+      {/* Floating top-right cluster — language + user-facing conversation
+          records. Recents never inspect LangGraph checkpoints. */}
       <div className="absolute right-2.5 z-40 flex items-center gap-1.5"
         style={{ top: 'calc(env(safe-area-inset-top, 0px) + 9px)' }}>
         <div className="relative">
           {langMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setLangMenuOpen(false)} />}
           <button
-            onClick={() => { setLangMenuOpen((v) => !v); setModelMenuOpen(false); setScopeMenuOpen(false); }}
+            onClick={() => { setLangMenuOpen((v) => !v); setRecentsOpen(false); setScopeMenuOpen(false); }}
             className="relative z-40 inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-[#faf9f4]/85 backdrop-blur-sm text-[11.5px] font-semibold text-[#3d3d3a] active:bg-[#ece9e2]"
             aria-label="Reply language"
           >
@@ -1024,29 +1072,69 @@ export default function TalkToHiveMobile() {
           )}
         </div>
         <div className="relative">
-          {modelMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setModelMenuOpen(false)} />}
+          {recentsOpen && <div className="fixed inset-0 z-30" onClick={() => setRecentsOpen(false)} />}
           <button
-            onClick={() => { setModelMenuOpen((v) => !v); setLangMenuOpen(false); setScopeMenuOpen(false); }}
+            onClick={() => { setRecentsOpen((v) => !v); setLangMenuOpen(false); setScopeMenuOpen(false); }}
             className="relative z-40 inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-[#faf9f4]/85 backdrop-blur-sm text-[11.5px] font-semibold text-[#3d3d3a] active:bg-[#ece9e2]"
-            aria-label="Model"
+            aria-label="Recent conversations"
+            aria-expanded={recentsOpen}
           >
-            <Sparkles size={12} className="text-[#117dff]" />
-            <span>{currentModel.label.replace('GPT-OSS ', '').replace('Llama ', 'L')}</span>
+            <Clock size={13} className="text-[#117dff]" />
+            <span>Recents</span>
             <ChevronDown size={11} className="text-[#a3a3a3]" />
           </button>
-          {modelMenuOpen && (
-            <div className="absolute top-full mt-1.5 right-0 z-40 w-[200px] bg-white border border-[#e8e5de] rounded-xl shadow-lg py-1" onClick={() => setModelMenuOpen(false)}>
-              {MODELS.map((m) => (
-                <button key={m.id} onClick={() => { setSelectedModel(m.id); setModelMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-2 flex items-center justify-between text-[13px] ${m.id === selectedModel ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} active:bg-[#f3f1ec]`}>
-                  <span>{m.label}</span>
-                  <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{m.tag}</span>
-                </button>
-              ))}
+          {recentsOpen && (
+            <div className="absolute top-full mt-1.5 right-0 z-40 w-[min(320px,calc(100vw-20px))] overflow-hidden rounded-[12px] border border-[#e3e0db] bg-white shadow-lg">
+              <div className="flex items-center justify-between border-b border-[#eae7e1] px-3 py-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#737373]">Recent conversations</span>
+                <button type="button" onClick={startNewChat} className="text-[11px] font-semibold text-[#117dff] active:text-[#0066e0]">New chat</button>
+              </div>
+              {recentConversations.slice(0, 5).length ? (
+                <div className="max-h-[300px] overflow-y-auto py-1">
+                  {recentConversations.slice(0, 5).map((conversation) => {
+                    const active = conversation.id === activeConversationId;
+                    return (
+                      <button key={conversation.id} type="button" onClick={() => selectConversation(conversation.id)}
+                        className={`flex w-full items-center gap-2 px-3 py-2.5 text-left active:bg-[#faf9f4] ${active ? 'bg-blue-50/60' : ''}`}>
+                        <span className={`h-1.5 w-1.5 flex-none rounded-full ${active ? 'bg-[#117dff]' : 'bg-[#d4d0ca]'}`} aria-hidden="true" />
+                        <span className={`min-w-0 flex-1 truncate text-[12px] ${active ? 'font-semibold text-[#0a0a0a]' : 'text-[#525252]'}`}>{conversation.title}</span>
+                        <span className="flex-none font-mono text-[9.5px] tabular-nums text-[#a3a3a3]">{formatConversationTime(conversation.updatedAt)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="px-3 py-5 text-center text-[11px] text-[#737373]">Your completed chats will appear here.</div>
+              )}
+              <button type="button" onClick={() => { setRecentsOpen(false); setAllConversationsOpen(true); }}
+                className="flex w-full items-center justify-between border-t border-[#eae7e1] px-3 py-2.5 text-[11px] font-semibold text-[#525252] active:bg-[#faf9f4]">
+                View all conversations <ChevronDown size={13} className="-rotate-90 text-[#a3a3a3]" />
+              </button>
             </div>
           )}
         </div>
       </div>
+      <AnimatePresence>
+        {allConversationsOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-[#faf9f4]" role="dialog" aria-modal="true" aria-label="Conversation history">
+            <div className="flex items-center justify-between border-b border-[#e3e0db] px-4" style={{ height: 'calc(env(safe-area-inset-top, 0px) + 54px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+              <div className="flex items-center gap-2 text-[14px] font-semibold text-[#0a0a0a]"><Clock size={16} className="text-[#117dff]" /> Conversation history</div>
+              <button type="button" onClick={() => setAllConversationsOpen(false)} className="rounded-[6px] px-2 py-1 text-[12px] font-semibold text-[#525252] active:bg-[#f3f1ec]">Done</button>
+            </div>
+            <div className="mx-auto max-w-lg divide-y divide-[#eae7e1] px-3 py-2">
+              {recentConversations.length ? recentConversations.map((conversation) => {
+                const active = conversation.id === activeConversationId;
+                return (
+                  <button key={conversation.id} type="button" onClick={() => selectConversation(conversation.id)} className={`flex w-full items-center gap-2 rounded-[8px] px-3 py-3 text-left active:bg-white ${active ? 'bg-blue-50/60' : ''}`}>
+                    <span className={`h-2 w-2 flex-none rounded-full ${active ? 'bg-[#117dff]' : 'bg-[#d4d0ca]'}`} />
+                    <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-medium text-[#0a0a0a]">{conversation.title}</span><span className="mt-0.5 block font-mono text-[10px] text-[#a3a3a3]">{formatConversationTime(conversation.updatedAt)}{active ? ' · Active' : ''}</span></span>
+                  </button>
+                );
+              }) : <div className="px-3 py-8 text-center text-[12px] text-[#737373]">No prior conversations yet.</div>}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* New-feature promo — top-right below the header; hides while recording */}
       {SHOW_MEETING_NOTES_PROMO && <MeetingNotesPromo mobile />}
 
@@ -1224,7 +1312,7 @@ export default function TalkToHiveMobile() {
               )}
             </AnimatePresence>
           </div>
-          <button type="button" onClick={clearChat} className="text-[11px] font-medium text-[#737373] active:text-[#0a0a0a]">
+          <button type="button" onClick={startNewChat} className="text-[11px] font-medium text-[#737373] active:text-[#0a0a0a]">
             Clear session
           </button>
         </div>
