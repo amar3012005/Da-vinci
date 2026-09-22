@@ -2,7 +2,21 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Check, LoaderCircle, Wrench } from 'lucide-react';
 
-export default function GenericTool({ name, label, state, result, onOpen, onToggle }) {
+function compactInput(input) {
+  if (input == null) return '';
+  if (typeof input === 'object') {
+    const useful = input.command || input.path || input.query || input.url || input.content || input.operation;
+    if (useful != null) return String(useful);
+    try { return JSON.stringify(input); } catch { return ''; }
+  }
+  return String(input);
+}
+
+export default function GenericTool({ name, label, state, input, result, onOpen, onToggle }) {
+  const rawName = String(name || 'tool');
+  const isCommand = /bash|shell|exec/i.test(rawName);
+  const action = label && label !== rawName ? label : (isCommand ? 'Ran' : 'Tool call');
+  const preview = compactInput(input).replace(/\s+/g, ' ').trim();
   return (
     <motion.button
       type="button"
@@ -18,7 +32,12 @@ export default function GenericTool({ name, label, state, result, onOpen, onTogg
       {state === 'running'
         ? <LoaderCircle size={17} className="shrink-0 animate-spin text-[#737373]" />
         : <Wrench size={17} className="shrink-0" strokeWidth={1.7} />}
-      <span className="min-w-0 flex-1 truncate text-[14px]">{label || name}</span>
+      <span className="min-w-0 flex-1 truncate text-[14px]">
+        <span className="text-[#525252]">{action}</span>
+        <span className="px-1.5 text-[#a3a3a3]">·</span>
+        <span className="font-mono text-[12px] text-[#737373]">{rawName}</span>
+        {preview ? <><span className="px-1.5 text-[#a3a3a3]">·</span><span className="text-[#737373]">{preview}</span></> : null}
+      </span>
       {state !== 'running' ? <Check size={14} className="shrink-0 text-[#737373]" /> : null}
     </motion.button>
   );

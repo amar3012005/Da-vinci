@@ -28,6 +28,7 @@ export default function ToolDisclosure({ tool, onOpen, hidden = false, collapseD
     name,
     label: tool?.label,
     state: tool?.state,
+    input: tool?.input,
     result: tool?.result,
     onOpen,
     onToggle: () => setOpen((value) => !value),

@@ -20,3 +20,13 @@ test('HM Rooms keeps Company navigation and preview as independent resizable she
   expect(inspector).toContain('aria-label="WorkRun preview"');
   expect(inspector).toContain('Artifacts, pages, computer sessions, and files from this run appear here.');
 });
+
+test('tool activity rows retain both the human label and the actual tool identifier', () => {
+  const genericTool = read('../workrun/tools/GenericTool.jsx');
+  const disclosure = read('../workrun/tools/ToolDisclosure.jsx');
+
+  expect(genericTool).toContain("const action = label && label !== rawName ? label : (isCommand ? 'Ran' : 'Tool call');");
+  expect(genericTool).toContain('font-mono text-[12px] text-[#737373]');
+  expect(genericTool).toContain('const preview = compactInput(input)');
+  expect(disclosure).toContain('input: tool?.input');
+});
