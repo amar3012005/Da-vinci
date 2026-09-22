@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from './api-client';
 
 /**
@@ -11,6 +12,7 @@ import apiClient from './api-client';
  * @param {{ text?: string, entities?: Array<{name:string,kind?:string}>, className?: string }} props
  */
 export default function EntityText({ text, entities, className = '' }) {
+  const navigate = useNavigate();
   const [pop, setPop] = useState(null); // { name, x, y, loading, mentions }
 
   const openEntity = useCallback(async (name, ev) => {
@@ -18,12 +20,18 @@ export default function EntityText({ text, entities, className = '' }) {
     const r = ev.currentTarget.getBoundingClientRect();
     setPop({ name, x: Math.min(r.left, window.innerWidth - 360), y: r.bottom + 6, loading: true, mentions: [] });
     try {
+      const discovered = await apiClient.core.get(`/api/entity-search?query=${encodeURIComponent(name)}&limit=3`);
+      const canonical = (discovered.data?.matches || []).find((match) => match?._canonical || match?.id);
+      if (canonical?.id) {
+        navigate(`/hivemind/app/entities/${canonical.id}`);
+        return;
+      }
       const { data } = await apiClient.core.get(`/api/meetings/entity-recall?name=${encodeURIComponent(name)}`);
       setPop((p) => (p && p.name === name ? { ...p, loading: false, mentions: data?.mentions || [] } : p));
     } catch {
       setPop((p) => (p && p.name === name ? { ...p, loading: false, mentions: [] } : p));
     }
-  }, []);
+  }, [navigate]);
 
   const parts = useMemo(() => {
     const s = String(text || '');
