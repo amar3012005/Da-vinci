@@ -105,6 +105,14 @@ function friendlyToolName(tool = '') {
   return raw.replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+// Scope selection is already a structured continuation card. The server's
+// legacy operational sentence duplicates that UI and reads like an error after
+// the user has made a choice, so do not render it as an assistant answer.
+export function isDuplicateOperationalMessage(content = '') {
+  const normalized = String(content || '').replace(/\s+/g, ' ').trim();
+  return /^Memory destination was not stated\. Ask the user to choose a personal, organization, team, or authorized project scope before saving; do not retry the save yourself\.?$/i.test(normalized);
+}
+
 export function liveReasoningRows(events = []) {
   const rows = new Map();
   for (const event of events || []) {
@@ -872,6 +880,7 @@ export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFol
     .filter((item) => typeof item === 'string')
     .map((item) => item.trim())
     .filter(Boolean))].slice(0, 3);
+  const showContent = !isDuplicateOperationalMessage(msg.content);
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(msg.content || ''); setCopied(true); setTimeout(() => setCopied(false), 1500); }
@@ -890,12 +899,14 @@ export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFol
         </div>
       )}
 
-      <div
-        className={`text-[16.5px] leading-[1.7] break-words space-y-2 ${msg.error ? 'text-[#b91c1c]' : 'text-[#1a1a17]'}`}
-        style={progressive ? undefined : { fontFamily: 'Georgia, "Times New Roman", serif' }}
-      >
-        {progressive ? <Suspense fallback={<div className="whitespace-pre-wrap">{msg.content}</div>}><MarkdownMessage>{msg.content}</MarkdownMessage></Suspense> : renderMarkdownMobile(msg.content)}
-      </div>
+      {showContent && (
+        <div
+          className={`text-[16.5px] leading-[1.7] break-words space-y-2 ${msg.error ? 'text-[#b91c1c]' : 'text-[#1a1a17]'}`}
+          style={progressive ? undefined : { fontFamily: 'Georgia, "Times New Roman", serif' }}
+        >
+          {progressive ? <Suspense fallback={<div className="whitespace-pre-wrap">{msg.content}</div>}><MarkdownMessage>{msg.content}</MarkdownMessage></Suspense> : renderMarkdownMobile(msg.content)}
+        </div>
+      )}
 
       {Array.isArray(msg.scopes_found) && msg.scopes_found.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[#8a8577]">

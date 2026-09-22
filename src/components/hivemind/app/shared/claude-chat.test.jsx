@@ -1,4 +1,4 @@
-import { liveReasoningRows, reasoningRows } from './claude-chat';
+import { isDuplicateOperationalMessage, liveReasoningRows, reasoningRows } from './claude-chat';
 
 test.each(['error', 'failed', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval'])('progressive %s receipts never become completed', (status) => {
   const [row] = liveReasoningRows([
@@ -82,4 +82,9 @@ test('memory scope selection is a compact deterministic stage', () => {
 
   expect(row.display_label).toBe('HIVE-MIND');
   expect(row.display_detail).toBe('Choose memory destination');
+});
+
+test('does not render the legacy scope-picker boilerplate as an assistant answer', () => {
+  expect(isDuplicateOperationalMessage('Memory destination was not stated. Ask the user to choose a personal, organization, team, or authorized project scope before saving; do not retry the save yourself.')).toBe(true);
+  expect(isDuplicateOperationalMessage('Memory saved.')).toBe(false);
 });
