@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, ChevronRight, GitFork, Lock } from 'lucide-react';
 import apiClient from '../../shared/api-client';
+import EntityProfileLink from '../../shared/EntityProfileLink';
 import MobileShell from '../MobileShell';
 import { useAuth } from '../../auth/AuthProvider';
 import { filterUserVisibleMemories } from '../../shared/memory-filters';
@@ -55,9 +56,9 @@ function EntityChips({ memory }) {
   return (
     <>
       {visible.map((e) => (
-        <span key={`ent-${e}`} className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200 uppercase tracking-wider">
+        <EntityProfileLink key={`ent-${e}`} name={e} mobile className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200 uppercase tracking-wider">
           @{String(e).slice(0, 18)}
-        </span>
+        </EntityProfileLink>
       ))}
       {overflow > 0 && <span className="text-[9px] font-mono px-1 py-0.5 text-violet-500">+{overflow}</span>}
     </>
@@ -77,9 +78,9 @@ function EntityInventory({ memory }) {
       </div>
       <div className="flex flex-wrap gap-1.5">
         {entities.map((entity) => (
-          <span key={entity} className="inline-flex items-center px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-mono uppercase tracking-[0.06em]">
+          <EntityProfileLink key={entity} name={entity} mobile className="inline-flex items-center px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-mono uppercase tracking-[0.06em]">
             @{entity}
-          </span>
+          </EntityProfileLink>
         ))}
       </div>
     </div>
