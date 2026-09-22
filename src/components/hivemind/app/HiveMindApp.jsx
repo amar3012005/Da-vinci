@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
 import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './auth/LoginPage';
@@ -106,6 +106,15 @@ function PageSuspense({ children }) {
       </React.Suspense>
     </PageErrorBoundary>
   );
+}
+
+// Older connector instructions linked to /mcp-server.  React Router treats a
+// relative deep link as another child of that path, producing the repeated
+// /overview/overview/... URLs seen in the browser.  Canonicalize the entire
+// legacy subtree before rendering the page so stale bookmarks remain safe.
+function LegacyMcpServerRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/hivemind/app/mcp${location.search || ''}`} replace />;
 }
 
 /**
@@ -242,6 +251,7 @@ export default function HiveMindApp() {
           <Route path="web-admin" element={<Navigate to="/hivemind/app/web?view=health" replace />} />
           <Route path="audit" element={<PageSuspense><AuditLog /></PageSuspense>} />
           <Route path="mcp" element={<PageSuspense><McpServer /></PageSuspense>} />
+          <Route path="mcp-server/*" element={<LegacyMcpServerRedirect />} />
           <Route path="graph" element={<PageSuspense><MemoryGraph /></PageSuspense>} />
           <Route path="graph-2d" element={<PageSuspense><MemoryGraph2D /></PageSuspense>} />
           <Route path="brain" element={<PageSuspense><Brain /></PageSuspense>} />

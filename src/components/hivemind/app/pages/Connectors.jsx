@@ -3335,7 +3335,7 @@ function ClaudeWebSetupModal({ onClose }) {
                   field.
                 </div>
                 <a
-                  href={`/hivemind/app/mcp-server?source=connectors&connector=claude-web&prompt=agent`}
+                  href={`/hivemind/app/mcp?source=connectors&connector=claude-web&prompt=agent`}
                   className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-[#0a0a0a] text-white text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#1a1a1a] transition-colors"
                 >
                   Open AI Agent Prompt →
