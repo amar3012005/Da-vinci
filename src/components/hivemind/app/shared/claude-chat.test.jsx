@@ -69,3 +69,17 @@ test('mobile timeline keeps only meaningful provider receipts and never narrates
     ['HIVE-MIND', 'Memory saved'],
   ]);
 });
+
+test('memory scope selection is a compact deterministic stage', () => {
+  const [row] = reasoningRows([
+    {
+      type: 'tool_result',
+      name: 'hivemind_save_memory',
+      status: 'waiting_user',
+      summary: 'Memory destination was not stated. Ask the user to choose a personal, organization, team, or authorized project scope before saving.',
+    },
+  ]);
+
+  expect(row.display_label).toBe('HIVE-MIND');
+  expect(row.display_detail).toBe('Choose memory destination');
+});

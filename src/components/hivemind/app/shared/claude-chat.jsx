@@ -76,7 +76,6 @@ function stagePresentation(row = {}) {
   const waiting = ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval'].includes(phase);
   const completed = ['completed', 'draft_created'].includes(phase);
   const rawDetail = String(row.detail || row.result_summary || row.summary || '').trim();
-  if (failed || waiting) return { display_label: friendlyToolName(tool), display_detail: rawDetail || phase.replace(/_/g, ' ') };
 
   if (/^GMAIL_(?:FETCH_EMAILS|LIST_THREADS|SEARCH)/i.test(tool)) {
     return { display_label: 'Gmail', display_detail: completed ? 'Email retrieval complete' : 'Retrieving requested emails' };
@@ -85,6 +84,9 @@ function stagePresentation(row = {}) {
     return { display_label: 'Outlook', display_detail: completed ? 'Email retrieval complete' : 'Retrieving requested emails' };
   }
   if (tool === 'hivemind_save_memory') {
+    const requiresScope = /memory destination was not stated|choose (?:a )?(?:memory )?(?:destination|scope)/i.test(rawDetail);
+    if (waiting || requiresScope) return { display_label: 'HIVE-MIND', display_detail: 'Choose memory destination' };
+    if (failed) return { display_label: 'HIVE-MIND', display_detail: rawDetail || 'Memory save needs attention' };
     return { display_label: 'HIVE-MIND', display_detail: completed ? 'Memory saved' : 'Preparing memory' };
   }
   if (tool === 'hivemind_meta' || tool === 'hivemind_recall') {
@@ -93,6 +95,7 @@ function stagePresentation(row = {}) {
   if (tool === 'hivemind_connected_task' || tool === 'COMPOSIO_SEARCH_TOOLS') {
     return { display_label: 'Connected apps', display_detail: completed ? 'Capability selected' : 'Finding the right capability' };
   }
+  if (failed || waiting) return { display_label: friendlyToolName(tool), display_detail: rawDetail || phase.replace(/_/g, ' ') };
   return { display_label: friendlyToolName(tool), display_detail: rawDetail || (completed ? 'Complete' : 'In progress') };
 }
 
@@ -136,7 +139,7 @@ export function liveReasoningRows(events = []) {
         detail: progressive
           ? (event.result_summary || event.detail || event.summary || String(phase).replace(/_/g, ' '))
           : completed
-          ? (event?.result_summary || event?.detail || 'Completed')
+          ? (event?.result_summary || event?.detail || event?.summary || 'Completed')
           : (event?.detail || 'Working…'),
       });
       continue;
