@@ -769,6 +769,7 @@ export default function TalkToHiveMobile() {
     setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: option.label }]);
     setLoading(true);
     const streamedEvents = [];
+    let streamedAnswer = '';
     setAgentEvents([]);
     try {
       const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
@@ -783,11 +784,29 @@ export default function TalkToHiveMobile() {
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `Resume failed (${response.status})`);
       const data = (await readChatStream(response, (event) => {
+        if (event.type === 'answer_delta' && typeof event.delta === 'string') {
+          streamedAnswer += event.delta;
+        }
         const next = { ...event, id: `${Date.now()}-${streamedEvents.length}` };
         streamedEvents.push(next); setAgentEvents([...streamedEvents]);
       })) || {};
-      setMessages((prev) => [...prev, {
-        id: Date.now() + 1, role: 'assistant', content: data.response || 'The orchestration resumed.',
+      if (data.type === 'error' || data.error) throw new Error(data.error || 'The continuation could not be completed. Please try again.');
+      const responseText = data.response || streamedAnswer.trim();
+      if (!responseText) throw new Error('The chat stream ended before the selected action completed. Please try again.');
+      setMessages((prev) => {
+        const updated = prev.map((item) => (
+          item.continuation?.token === continuation.token
+            ? {
+                ...item,
+                continuation: {
+                  ...item.continuation,
+                  selected_option: { id: option.id, label: option.label, value: option.value },
+                },
+              }
+            : item
+        ));
+        return [...updated, {
+        id: Date.now() + 1, role: 'assistant', content: responseText,
         steps: data.steps || [], draft_ids: data.draft_ids || [], sources: data.sources || [],
         harness_version: data.harness_version || data.execution?.harness_version || null,
         execution: data.execution || null,
@@ -795,7 +814,8 @@ export default function TalkToHiveMobile() {
         follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
         orchestration_events: streamedEvents.filter((event) => ['orchestration_step', 'tool_started', 'tool_call', 'tool_result', 'tool_completed', 'tool_selected'].includes(event.type)),
         continuation: data.continuation || null,
-      }]);
+        }];
+      });
     } catch (error) {
       setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', error: true, content: error.message, sources: [] }]);
     } finally { requestInFlightRef.current = false; setAgentEvents([]); setLoading(false); }

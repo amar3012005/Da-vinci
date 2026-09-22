@@ -165,6 +165,7 @@ function ContinuationChoices({ continuation, onContinue }) {
   const selectedRef = useRef(null);
   const request = continuation?.requests?.[0];
   const options = useMemo(() => (Array.isArray(request?.options) ? request.options : []), [request?.options]);
+  const persistedSelection = continuation?.selected_option || null;
   const fields = Array.isArray(request?.fields) ? request.fields : [];
   const fieldsComplete = fields.every((field) => !field.required || String(values[field.name] || '').trim());
   const banner = request?.kind === 'connect_account' ? connectBanner(request, BRAND_LOGOS) : null;
@@ -198,6 +199,16 @@ function ContinuationChoices({ continuation, onContinue }) {
     };
   }, [banner?.toolkit, continueWith, onContinue, options]);
   if ((!options.length && !fields.length) || !onContinue) return null;
+  // The completion message is appended separately. Keep the original card as
+  // a durable record of the user's governed decision so reopening the mobile
+  // conversation never presents the scope/action buttons as unanswered.
+  if (persistedSelection) {
+    return (
+      <div className="mt-5 rounded-[4px] border border-[#cde8d8] bg-[#f4fbf6] px-3 py-2.5 text-[13px] text-[#24623c]">
+        <span className="font-semibold">Selected:</span> {persistedSelection.label || persistedSelection.value || 'Choice recorded'}
+      </div>
+    );
+  }
   const openConnect = async (option) => {
     const toolkit = connectToolkitOf(request, option);
     setConnectError('');
