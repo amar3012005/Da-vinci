@@ -3306,6 +3306,25 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Proactive cognition ──────────────────────────────────────
+  // Explicit per-user consent for background HIVE reflections. These calls
+  // intentionally go to Control Plane: the browser never owns scheduling,
+  // activity compilation, JEV evaluation, or delivery receipts.
+  async getProactiveCognitionSettings() {
+    const { data } = await this.controlPlane.get('/v1/proactive-cognition/settings');
+    return data?.settings || data;
+  }
+
+  async updateProactiveCognitionSettings(payload) {
+    const { data } = await this.controlPlane.patch('/v1/proactive-cognition/settings', payload);
+    return data?.settings || data;
+  }
+
+  async getProactiveCognitionEvaluations(limit = 20) {
+    const { data } = await this.controlPlane.get('/v1/proactive-cognition/evaluations', { params: { limit } });
+    return data?.evaluations || [];
+  }
+
   /**
    * POST /api/cognition/synthesize-now — dev one-shot dream trigger.
    * Admin/owner gated. Optional { lookback_hours } for a wide cross-time dream.
