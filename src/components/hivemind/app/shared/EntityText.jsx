@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import apiClient from './api-client';
+import { openEntityProfile } from './EntityProfileModalHost';
 
 /**
  * EntityText — wraps any org-level entity name present in `text` with a subtle
@@ -12,7 +12,6 @@ import apiClient from './api-client';
  * @param {{ text?: string, entities?: Array<{name:string,kind?:string}>, className?: string }} props
  */
 export default function EntityText({ text, entities, className = '' }) {
-  const navigate = useNavigate();
   const [pop, setPop] = useState(null); // { name, x, y, loading, mentions }
 
   const openEntity = useCallback(async (name, ev) => {
@@ -23,7 +22,7 @@ export default function EntityText({ text, entities, className = '' }) {
       const discovered = await apiClient.core.get(`/api/entity-search?query=${encodeURIComponent(name)}&limit=3`);
       const canonical = (discovered.data?.matches || []).find((match) => match?.entity_id);
       if (canonical?.entity_id) {
-        navigate(`/hivemind/app/entities/${canonical.entity_id}`);
+        openEntityProfile(canonical.entity_id);
         return;
       }
       const { data } = await apiClient.core.get(`/api/meetings/entity-recall?name=${encodeURIComponent(name)}`);
@@ -31,7 +30,7 @@ export default function EntityText({ text, entities, className = '' }) {
     } catch {
       setPop((p) => (p && p.name === name ? { ...p, loading: false, mentions: [] } : p));
     }
-  }, [navigate]);
+  }, []);
 
   const parts = useMemo(() => {
     const s = String(text || '');

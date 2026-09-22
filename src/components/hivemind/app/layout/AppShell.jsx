@@ -20,6 +20,7 @@ import ServiceErrorToast from '../components/ServiceErrorToast';
 import CallContractModal from '../components/CallContractModal';
 import ProductAccessModal from '../components/ProductAccessModal';
 import ReferralTrialGateModal from '../components/ReferralTrialGateModal';
+import EntityProfileModalHost from '../shared/EntityProfileModalHost';
 import { NEW_WORKSPACE_LANDING, RETURNING_USER_LANDING } from '../shared/routes';
 
 /**
@@ -434,6 +435,7 @@ export default function AppShell() {
             navigate(`/hivemind/app/billing?upgrade=${plan}`);
           }}
         />
+        <EntityProfileModalHost />
       </div>
     </TeamProvider>
     </QuickRecorderProvider>

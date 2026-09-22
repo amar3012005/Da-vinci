@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import apiClient from './api-client';
+import { openEntityProfile } from './EntityProfileModalHost';
 
 /**
  * Opens a canonical entity dossier from a human-readable entity mention.
@@ -16,7 +16,6 @@ export default function EntityProfileLink({
   className = '',
   children,
 }) {
-  const navigate = useNavigate();
   const [opening, setOpening] = useState(false);
 
   const openProfile = useCallback(async (event) => {
@@ -38,12 +37,12 @@ export default function EntityProfileLink({
         resolvedId = canonical?.entity_id;
       }
       if (resolvedId) {
-        navigate(mobile ? `/hivemind/m/entities/${resolvedId}` : `/hivemind/app/entities/${resolvedId}`);
+        openEntityProfile(resolvedId);
       }
     } finally {
       setOpening(false);
     }
-  }, [entityId, mobile, name, navigate, opening]);
+  }, [entityId, name, opening]);
 
   return (
     <button
