@@ -31,6 +31,16 @@ describe('HyperAgents live turn adoption', () => {
     expect(source).toContain('RoomDomainIcon');
   });
 
+  it('always renders the Work rooms section and explains loading, empty, and API error states', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
+    expect(source).toContain("t('hyperAgents.workRooms', 'Work rooms')");
+    expect(source).toContain("t('hyperAgents.loadingWorkRooms', 'Loading workrooms…')");
+    expect(source).toContain("t('hyperAgents.noWorkRooms', 'No workrooms yet.')");
+    expect(source).toContain("t('hyperAgents.workRoomsUnavailable', 'Workrooms are unavailable right now. {{error}}', { error })");
+    expect(source).toContain('AgentScope runs unavailable: {workRunsError}');
+    expect(source).not.toContain('{workRooms.length > 0 && (');
+  });
+
   it('keeps campaign completion and its dashboard inside Campaign Intelligence', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
     expect(source).toContain("label: 'Campaign Intelligence'");
