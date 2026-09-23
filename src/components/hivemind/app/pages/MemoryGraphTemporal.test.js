@@ -4,6 +4,7 @@ import {
   getRadialMemoryColor,
   getTemporalBounds,
   getTemporalCutoff,
+  getTemporalTopDownPose,
 } from "./MemoryGraphTemporal";
 
 describe("Memory Graph bitemporal timeline", () => {
@@ -45,5 +46,12 @@ describe("Memory Graph bitemporal timeline", () => {
     expect(getTemporalCutoff(bounds, 1)).toBe(Date.parse("2025-01-01T00:00:00Z"));
     expect(getTemporalBounds([{ id: "x" }], "validFrom")).toBeNull();
     expect(getTemporalCutoff(null, 0.5)).toBeNull();
+  });
+
+  test("uses a stable pole-view camera pose centered over the selected target", () => {
+    expect(getTemporalTopDownPose({ x: 12, y: -4, z: 8 }, 500)).toEqual({
+      position: { x: 12, y: 1321, z: 8 },
+      up: { x: 0, y: 0, z: -1 },
+    });
   });
 });

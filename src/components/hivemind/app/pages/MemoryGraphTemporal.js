@@ -67,6 +67,19 @@ export function getTemporalCutoff(bounds, progress) {
   return bounds.min + (bounds.max - bounds.min) * Math.max(0, Math.min(1, progress));
 }
 
+/** Camera pose for the temporal atlas' pole view (Three.js is Y-up). */
+export function getTemporalTopDownPose(target = {}, radius = 240) {
+  const x = Number.isFinite(target.x) ? target.x : 0;
+  const y = Number.isFinite(target.y) ? target.y : 0;
+  const z = Number.isFinite(target.z) ? target.z : 0;
+  const distance = Math.max(420, (Number.isFinite(radius) ? radius : 240) * 2.65);
+  return {
+    position: { x, y: y + distance, z },
+    // Keep a stable north-up orientation while looking down the Y axis.
+    up: { x: 0, y: 0, z: -1 },
+  };
+}
+
 /** A bitemporal as-of view is the intersection of valid-time and recorded-time intervals. */
 export function getBitemporalVisibleIds(nodes = [], validCutoff, recordedCutoff) {
   const visible = new Set();

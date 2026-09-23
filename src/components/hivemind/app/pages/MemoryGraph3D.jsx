@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import ForceGraph3D from "3d-force-graph";
 import * as THREE from "three";
-import { getRadialMemoryColor } from "./MemoryGraphTemporal";
+import { getRadialMemoryColor, getTemporalTopDownPose } from "./MemoryGraphTemporal";
 
 const DEFAULT_BG = "rgba(0,0,0,0)";
 
@@ -780,6 +780,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   themeRef.current = theme;
   const radialTemporalRef = useRef(radialTemporal);
   radialTemporalRef.current = radialTemporal;
+  const temporalTopDownRequestedRef = useRef(false);
+  const temporalTopDownAppliedRef = useRef(false);
   // Upstream three.js OrbitControls race: a pointerup can reference a pointer
   // whose position record was already removed (multi-touch / pointercancel /
   // canvas re-mount mid-gesture) → uncaught "Cannot read properties of
@@ -1284,10 +1286,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
   const temporalCameraSnapshotRef = useRef(null);
   const setTemporalTopDown = useCallback((enabled) => {
+    temporalTopDownRequestedRef.current = enabled;
     const fg = fgRef.current;
     const camera = fg?.camera?.();
     const controls = fg?.controls?.();
-    if (!fg || !camera || !controls) return;
+    if (!fg || !camera || !controls || temporalTopDownAppliedRef.current === enabled) return false;
     const target = controls.target?.clone?.() || new THREE.Vector3();
 
     if (enabled) {
@@ -1302,15 +1305,17 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         if (!Number.isFinite(node.x) || !Number.isFinite(node.y) || !Number.isFinite(node.z)) return maxRadius;
         return Math.max(maxRadius, Math.hypot(node.x, node.y, node.z));
       }, 240);
+      const pose = getTemporalTopDownPose(target, radius);
       // Three.js is Y-up. Point the camera down the Y axis and set a stable
       // north vector so OrbitControls does not roll at the pole.
-      camera.up.set(0, 0, -1);
+      camera.up.set(pose.up.x, pose.up.y, pose.up.z);
       fg.cameraPosition(
-        new THREE.Vector3(target.x, target.y + Math.max(420, radius * 2.65), target.z),
+        new THREE.Vector3(pose.position.x, pose.position.y, pose.position.z),
         target,
         900,
       );
-      return;
+      temporalTopDownAppliedRef.current = true;
+      return true;
     }
 
     const saved = temporalCameraSnapshotRef.current;
@@ -1318,10 +1323,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       camera.up.copy(saved.up);
       fg.cameraPosition(saved.position, saved.target, 700);
       temporalCameraSnapshotRef.current = null;
-    } else {
+    } else if (temporalTopDownAppliedRef.current) {
       camera.up.set(0, 1, 0);
       fg.cameraPosition(new THREE.Vector3(0, 40, 300), new THREE.Vector3(), 700);
     }
+    temporalTopDownAppliedRef.current = false;
+    return true;
   }, []);
 
   const zoomBy = useCallback((factor, duration = 300) => {
@@ -1833,6 +1840,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         inst.height(h);
         if (radialTemporal && !didInitialFitRef.current && safeFit(500, 70)) {
           didInitialFitRef.current = true;
+        }
+        // A user can switch on Time Travel before the 3D renderer finishes
+        // mounting. Retry the requested pole view through the warm-up frames
+        // instead of losing that one-shot imperative call.
+        if (radialTemporal && temporalTopDownRequestedRef.current && !temporalTopDownAppliedRef.current) {
+          setTemporalTopDown(true);
         }
       }
       warmFrames += 1;

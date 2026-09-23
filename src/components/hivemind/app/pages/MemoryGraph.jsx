@@ -600,6 +600,9 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     if (memoryGraphV2Enabled && !selectedRadialByFlag.current) {
       selectedRadialByFlag.current = true;
       setGraphDim('radial');
+      // The flagged temporal-atlas experience opens directly in the
+      // bitemporal pole view, with its timeline visible on first load.
+      setBitemporalMode(true);
     }
   }, [memoryGraphV2Enabled]);
   useEffect(() => {
@@ -709,11 +712,17 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const [validTimeProgress, setValidTimeProgress] = useState(1);
   const [bitemporalMode, setBitemporalMode] = useState(false);
   const temporalTopDownActiveRef = useRef(false);
+  const setTemporalGraphRef = useCallback((instance) => {
+    graphRef.current = instance;
+    if (instance) instance.setTemporalTopDown?.(temporalTopDownActiveRef.current);
+  }, []);
   useEffect(() => {
     const nextActive = isRadialAtlas && bitemporalMode;
     if (nextActive === temporalTopDownActiveRef.current) return;
-    graphRef.current?.setTemporalTopDown?.(nextActive);
+    // Retain the requested camera mode even when the graph is still mounting;
+    // the callback ref applies it as soon as the 3D instance exists.
     temporalTopDownActiveRef.current = nextActive;
+    graphRef.current?.setTemporalTopDown?.(nextActive);
   }, [bitemporalMode, isRadialAtlas]);
   const [isLiveMode, setIsLiveMode] = useState(true);
   const [temporalMode, setTemporalMode] = useState('travel'); // 'travel' | 'diff'
@@ -1266,7 +1275,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     : "border-[#e6dfd3] bg-[#fff7ee]/92 text-[#9a8b7a] hover:text-[#d54d45] hover:border-[#e8b9a9] hover:bg-[#fff0e8]";
 
   return (
-    <div className="relative h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
+    <div className="relative h-full min-h-0 flex flex-col overflow-hidden" style={atmosphereStyle}>
       <PageWalkthrough pageKey="memory-graph-3d" steps={GRAPH_STEPS} />
       {/* ── Compact unified toolbar ── single row, theme-consistent ── */}
       <div
@@ -1667,7 +1676,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             <div className="absolute inset-y-0 left-0" style={{ right: detailPanelWidth }}>
               <MemoryGraph3D
                 key="memory-radial-3d"
-                ref={graphRef}
+                ref={setTemporalGraphRef}
                 graphData={radialGraphData}
                 selectedNode={selectedNode}
                 highlightNodes={highlightNodes}
