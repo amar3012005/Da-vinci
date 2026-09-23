@@ -759,6 +759,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     height,
     backgroundColor = DEFAULT_BG,
     theme: themeProp = "atlas",
+    radialTemporal = false,
   },
   ref,
 ) {
@@ -766,6 +767,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const theme = THEMES[themeProp] || THEMES.day;
   const themeRef = useRef(theme);
   themeRef.current = theme;
+  const radialTemporalRef = useRef(radialTemporal);
+  radialTemporalRef.current = radialTemporal;
   // Upstream three.js OrbitControls race: a pointerup can reference a pointer
   // whose position record was already removed (multi-touch / pointercancel /
   // canvas re-mount mid-gesture) → uncaught "Cannot read properties of
@@ -1073,6 +1076,17 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const getNodeColor = useCallback((node) => {
       const t = themeRef.current;
       const highlightedNodes = highlightedNodesRef.current;
+      const radialKindColors = {
+        fact: "#3184d8", decision: "#e49b25", preference: "#8a70cf", lesson: "#289a88",
+        goal: "#e36d55", event: "#687b91", relationship: "#c6658f", document: "#d99a1a", entity: "#596fc2",
+      };
+      if (radialTemporalRef.current) {
+        const kind = String(node?.kind || node?.type || "").toLowerCase();
+        const radialColor = radialKindColors[kind] || "#59718a";
+        if (highlightedNodes.has(node.id)) return selectedNodeRef.current?.id === node.id ? "#0a0a0a" : "#117dff";
+        if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) return `${radialColor}44`;
+        return radialColor;
+      }
       let baseColor = (t.name === "atlas" || t.name === "day" || t.name === "night")
         ? getAtlasNodeColor(node)
         : getNodeColorBase(node);
@@ -1486,7 +1500,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             if (sourceId === node.id || targetId === node.id) {
               highlightedLinks.add(link);
             }
-          });
+      });
+
         }
 
         onNodeHoverRef.current?.(node);
@@ -1513,6 +1528,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
     fgRef.current = fg;
 
+    if (radialTemporal) {
+      // Radial mode is a temporal map, not a force layout. Keep the supplied
+      // spherical coordinates fixed so age never drifts during interaction.
+      fg.d3Force("charge", null);
+      fg.d3Force("link", null);
+      fg.d3Force("center", null);
+      fg.cooldownTicks(0);
+    }
+
     // Perf: cap the renderer pixel ratio. On retina/4K displays the default
     // (2–3×) shades 4–9× the pixels — and the additive-blend glow spheres are
     // fill-rate heavy, so this is the single biggest smoothness win. 1.5 keeps
@@ -1532,6 +1556,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     } catch { /* noop */ }
 
     const scene = fg.scene?.();
+    let temporalShellGroup = null;
     if (scene) {
       scene.background = null;
       scene.fog = getThemeFog(themeRef.current);
@@ -1715,6 +1740,21 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     scene?.add?.(ambientLight);
     scene?.add?.(keyLight);
     scene?.add?.(rimLight);
+    if (radialTemporal && scene) {
+      const shells = new THREE.Group();
+      temporalShellGroup = shells;
+      shells.name = "memory-time-shells";
+      const shellColor = themeRef.current.name === "night" ? "#60758a" : "#829bb0";
+      [140, 270, 430].forEach((radius, index) => {
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(radius, 32, 20),
+          new THREE.MeshBasicMaterial({ color: shellColor, wireframe: true, transparent: true, opacity: index === 2 ? 0.12 : 0.075, depthWrite: false }),
+        );
+        mesh.name = `memory-time-shell-${radius}`;
+        shells.add(mesh);
+      });
+      scene.add(shells);
+    }
 
     resizeObserverRef.current = new ResizeObserver((entries) => {
       const entry = entries[0];
@@ -1742,13 +1782,16 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       if (w > 0 && h > 0) {
         inst.width(w);
         inst.height(h);
+        if (radialTemporal && !didInitialFitRef.current && safeFit(500, 70)) {
+          didInitialFitRef.current = true;
+        }
       }
       warmFrames += 1;
       if (warmFrames < 8) {
         warmFrameRef.current = window.requestAnimationFrame(warm);
       } else {
         try {
-          inst.d3ReheatSimulation?.();
+          if (!radialTemporal) inst.d3ReheatSimulation?.();
         } catch (_e) {
           // noop
         }
@@ -1776,6 +1819,14 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       }
       resizeObserverRef.current?.disconnect?.();
       resizeObserverRef.current = null;
+      if (temporalShellGroup) {
+        temporalShellGroup.traverse((object) => {
+          object.geometry?.dispose?.();
+          if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose?.());
+          else object.material?.dispose?.();
+        });
+        temporalShellGroup.removeFromParent?.();
+      }
       try {
         fg.pauseAnimation?.();
       } catch (_error) {
@@ -1868,7 +1919,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       current.height(nextH);
       try {
         current.resumeAnimation?.();
-        if (frame === 1 || frame === 4) current.d3ReheatSimulation?.();
+        if (!radialTemporal && (frame === 1 || frame === 4)) current.d3ReheatSimulation?.();
       } catch (_error) {
         // Repaint repair is best-effort; the graph remains usable if unsupported.
       }
@@ -1880,7 +1931,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     return () => {
       cancelled = true;
     };
-  }, [graphData, height, width]);
+  }, [graphData, height, radialTemporal, width]);
 
   useEffect(() => {
     withPausedAnimation((fg) => {
@@ -1888,14 +1939,27 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       // references so the per-frame opacity loop doesn't touch orphans.
       nodeTagSpritesRef.current.clear();
       fg.graphData(graphData);
+      if (radialTemporal) {
+        fg.d3Force("charge", null);
+        fg.d3Force("link", null);
+        fg.d3Force("center", null);
+        fg.cooldownTicks(0);
+      }
       refreshHighlight();
     });
     // New dataset → allow one fresh wide-shot fit when it next settles.
     didInitialFitRef.current = false;
-  }, [graphData, refreshHighlight, withPausedAnimation]);
+  }, [graphData, radialTemporal, refreshHighlight, withPausedAnimation]);
 
   useEffect(() => {
     withPausedAnimation((fg) => {
+      if (radialTemporal) {
+        fg.d3Force("charge", null);
+        fg.d3Force("link", null);
+        fg.d3Force("center", null);
+        fg.cooldownTicks(0);
+        return;
+      }
       const charge = fg.d3Force("charge");
       if (charge?.strength) {
         charge.strength((node) => {
@@ -1937,15 +2001,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
       fg.d3ReheatSimulation();
     });
-  }, [clusterCentroids, clusters.length, graphData.nodes, withPausedAnimation]);
+  }, [clusterCentroids, clusters.length, graphData.nodes, radialTemporal, withPausedAnimation]);
 
   useEffect(() => {
     refreshHighlight();
   }, [highlightNodes, selectedNode, refreshHighlight]);
 
   useEffect(() => {
-    if (selectedNode) focusNode(selectedNode, 700, 4.2);
-  }, [focusNode, selectedNode]);
+    if (selectedNode && !radialTemporal) focusNode(selectedNode, 700, 4.2);
+  }, [focusNode, radialTemporal, selectedNode]);
 
   const empty = useMemo(() => !graphData?.nodes?.length, [graphData]);
 

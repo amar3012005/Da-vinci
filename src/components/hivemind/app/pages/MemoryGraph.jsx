@@ -45,7 +45,7 @@ import LangSwitcher from "../layout/LangSwitcher";
 import { PageIndexViewer } from "../PageIndexViewer";
 import MemoryGraph3D from "./MemoryGraph3D";
 import MemoryGraph2DCanvas from "./MemoryGraph2DCanvas";
-import MemoryGraphRadialAtlas from "./MemoryGraphRadialAtlas";
+import { buildRadialAtlasLayout } from "./MemoryGraphRadialAtlas";
 import MemoryMoss from "./MemoryMoss";
 import { PageWalkthrough, GRAPH_STEPS } from "../shared/Walkthrough";
 
@@ -225,7 +225,7 @@ function LegendShape({ shape, color }) {
 }
 
 /* ─── Node Detail Sidecar ────────────────────────────────────────── */
-function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete, theme = "day" }) {
+function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete, theme = "day", radial = false }) {
   const deletable = node && node.id && node.kind !== 'document' && node.kind !== 'entity';
   // Create node lookup for resolving IDs to titles
   const nodeMap = useMemo(() => {
@@ -253,7 +253,9 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete, theme =
   const updatedLabel = node.updatedAt ? new Date(node.updatedAt).toLocaleString() : null;
   const dark = theme === "night";
   const ui = {
-    shell: dark
+    shell: radial
+      ? (dark ? "bg-[#101820] border-[#314354] text-[#eff5fa]" : "bg-white border-[#d5e0e8] text-[#172c42]")
+      : dark
       ? "bg-[#0d0b09] border-[#2f2925] text-[#fff0e5]"
       : "bg-[#faf9f4] border-[#e3e0db] text-[#0a0a0a]",
     header: dark ? "border-[#2f2925]" : "border-[#e3e0db]",
@@ -292,15 +294,15 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete, theme =
       animate={{ x: 0, opacity: 1 }}
       exit={{ opacity: 0, x: 40 }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="absolute inset-y-0 right-0 w-full max-w-lg z-50 flex flex-col"
+      className={`absolute inset-y-0 right-0 w-full ${radial ? "max-w-[min(420px,calc(100vw-16px))]" : "max-w-lg"} z-50 flex flex-col`}
     >
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 lg:hidden" onClick={onClose} />
 
-      <div className={`h-full border-l flex flex-col overflow-hidden shadow-2xl ${ui.shell}`}>
+      <div className={`h-full border-l flex flex-col overflow-hidden ${radial ? "shadow-lg" : "shadow-2xl"} ${ui.shell}`}>
         <div className={`flex items-center justify-between px-6 py-4 border-b ${ui.header}`}>
           <div className="flex items-center gap-2">
             <Network size={16} className={ui.icon} />
-            <span className={`text-sm font-bold font-['Space_Grotesk'] ${ui.title}`}>Memory Detail</span>
+            <span className={`text-sm font-bold font-['Space_Grotesk'] ${ui.title}`}>{radial ? "Memory inspector" : "Memory Detail"}</span>
           </div>
           <button
             onClick={onClose}
@@ -658,6 +660,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const [graphVisible, setGraphVisible] = useState(false);
   const [graphViewState, setGraphViewState] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [radialDetailVisible, setRadialDetailVisible] = useState(true);
   const autoSelectedLatestRef = useRef(null);
   const [searchInput, setSearchInput] = useState(""); // Immediate
   const [searchQuery, setSearchQuery] = useState(""); // Debounced
@@ -999,7 +1002,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // Node click
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
-  }, []);
+    if (isRadialAtlas) setRadialDetailVisible(true);
+  }, [isRadialAtlas]);
 
   // Hard-delete a memory node from the graph (confirm → delete → drop from
   // graphData). Guarded against document/entity nodes (not memory ids).
@@ -1169,6 +1173,24 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     return matches;
   }, [graphData.nodes, layerFilter, temporalFilteredNodes, canonicalOnly]);
 
+  const radialGraphData = useMemo(() => {
+    if (!isRadialAtlas) return graphData;
+    const { positions } = buildRadialAtlasLayout(graphData.nodes);
+    return {
+      nodes: graphData.nodes.map((node) => {
+        const point = positions.get(node.id);
+        return point
+          ? { ...node, x: point.x, y: point.y, z: point.z, vx: 0, vy: 0, vz: 0, radialUndated: point.undated }
+          : { ...node };
+      }),
+      links: graphData.links.map((link) => ({
+        ...link,
+        source: typeof link.source === "object" ? link.source.id : link.source,
+        target: typeof link.target === "object" ? link.target.id : link.target,
+      })),
+    };
+  }, [graphData, isRadialAtlas]);
+
   const toolbarControlClass = graphTheme === "night"
     ? "border-[#382f2a] bg-[#0b0a09]/72 text-[#d5c8bc] shadow-[inset_0_1px_0_rgba(255,240,229,0.06)]"
     : "border-[#e6e3dc] bg-white/88 text-[#5f5f5f] shadow-[0_10px_30px_rgba(21,20,18,0.05),inset_0_1px_0_rgba(255,255,255,0.9)]";
@@ -1185,7 +1207,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const panelSoftButton = graphTheme === "night"
     ? "border-[#2f2925] bg-[#151312]/90 text-[#cfc2b7] hover:text-[#fff0e5]"
     : "border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:text-[#0a0a0a]";
-  const detailPanelWidth = selectedNode ? 420 : 0;
+  const detailPanelWidth = selectedNode && (!isRadialAtlas || radialDetailVisible) && (typeof window === "undefined" || window.innerWidth >= 900) ? 420 : 0;
 
   // Floating back button — themed pill that floats just below the toolbar
   // at the top-left of the canvas area. Matches graphTheme (night = warm
@@ -1322,7 +1344,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                   ? toolbarActiveClass
                   : toolbarMutedClass
               }`}
-              title={dim === 'radial' ? 'Temporal radial atlas — radial distance represents time' : dim === '3d' ? '3D force graph' : dim === '2d' ? '2D force graph' : 'Organic moss view (curated)'}
+              title={dim === 'radial' ? '3D temporal brain — newer memories grow farther from the core' : dim === '3d' ? '3D force graph' : dim === '2d' ? '2D force graph' : 'Organic moss view (curated)'}
             >
               {dim.toUpperCase()}
             </button>
@@ -1567,20 +1589,65 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         )}
 
         {graphVisible && graphData.nodes.length > 0 && isRadialAtlas && (
-          <MemoryGraphRadialAtlas
-            ref={graphRef}
-            graphData={graphData}
-            selectedNode={selectedNode}
-            highlightNodes={highlightNodes}
-            filteredNodes={filteredNodes}
-            onNodeClick={handleNodeClick}
-            onNodeHover={setHoveredNode}
-            onBackgroundClick={() => {
-              setSelectedNode(null);
-              setHoveredNode(null);
-            }}
-            theme={graphTheme}
-          />
+          <>
+            <div className="absolute inset-y-0 left-0" style={{ right: detailPanelWidth }}>
+              <MemoryGraph3D
+                key="memory-radial-3d"
+                ref={graphRef}
+                graphData={radialGraphData}
+                selectedNode={selectedNode}
+                highlightNodes={highlightNodes}
+                filteredNodes={filteredNodes}
+                layerFilter={layerFilter}
+                clusterFilter={clusterFilter}
+                scope={scope}
+                userColorMap={userColorMap}
+                clusterCentroids={clusterCentroids}
+                clusters={clusters}
+                onNodeClick={handleNodeClick}
+                onNodeHover={setHoveredNode}
+                onBackgroundClick={() => { setSelectedNode(null); setHoveredNode(null); }}
+                onViewStateChange={setGraphViewState}
+                backgroundColor="rgba(0,0,0,0)"
+                theme={graphTheme === "night" ? "atlas" : "day"}
+                radialTemporal
+                width={typeof window !== "undefined" ? window.innerWidth - detailPanelWidth : 800}
+                height={typeof window !== "undefined" ? window.innerHeight - 66 : 600}
+              />
+            </div>
+            <div className={`pointer-events-none absolute left-5 top-5 z-10 rounded-[10px] border px-3 py-2 ${panelClass}`}>
+              <div className={`text-[11px] font-semibold uppercase tracking-wider ${panelMutedText}`}>Company brain · 3D temporal atlas</div>
+              <div className={`mt-1 text-[10px] ${panelMutedText}`}>Older memories sit near the core; newer memories grow outward.</div>
+            </div>
+            {selectedNode && !radialDetailVisible && (
+              <button
+                type="button"
+                className={`absolute right-4 top-4 z-20 rounded-lg border px-3 py-2 text-[11px] ${panelClass}`}
+                onClick={() => setRadialDetailVisible(true)}
+              >Open memory inspector</button>
+            )}
+            {showLegend && (
+              <div className={`absolute bottom-[88px] left-4 z-20 max-w-[min(330px,calc(100%-32px))] rounded-[10px] border p-3 ${panelClass}`} aria-label="Radial atlas legend">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider ${panelMutedText}`}>Reading the brain</span>
+                  <button type="button" onClick={() => setShowLegend(false)} aria-label="Close legend" className="text-[#8b857d]"><X size={13} /></button>
+                </div>
+                <div className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] ${graphTheme === "night" ? "text-[#e8dbcf]" : "text-[#525252]"}`}>
+                  {[ ["Fact", "#3184d8"], ["Decision", "#e49b25"], ["Lesson", "#289a88"], ["Event", "#687b91"], ["Document", "#d99a1a"] ].map(([label, color]) => <span key={label} className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full" style={{ background: color }} />{label}</span>)}
+                </div>
+                <div className={`mt-2 flex items-center gap-2 text-[10px] ${panelMutedText}`}><span className="h-px w-5 bg-[#8fa8bd]" />Recorded relationship</div>
+                <div className={`mt-2 border-t pt-2 text-[10px] ${panelMutedText}`}>Radial distance = time · newer → outward · undated memories use an outer shell</div>
+              </div>
+            )}
+            <div className={`absolute bottom-4 left-1/2 z-20 flex w-[min(760px,calc(100%-32px))] -translate-x-1/2 items-center gap-3 rounded-[10px] border px-3 py-2 ${panelClass}`}>
+              <button type="button" onClick={() => { if (temporalProgress >= 0.999) setTemporalProgress(0); setTemporalPlaying((value) => !value); }} className={`grid h-8 w-8 shrink-0 place-items-center rounded-md border ${panelSoftButton}`} aria-label={temporalPlaying ? "Pause timeline" : "Play timeline"}>{temporalPlaying ? <Pause size={13} /> : <Play size={13} />}</button>
+              <span className={`hidden shrink-0 text-[9px] font-mono uppercase sm:inline ${panelMutedText}`}>Older<br />near core</span>
+              <input type="range" min="0" max="1000" value={Math.round(temporalProgress * 1000)} onChange={(event) => { const progress = Number(event.target.value) / 1000; setTemporalProgress(progress); setIsLiveMode(progress >= 0.999); setTemporalPlaying(false); }} aria-label="Reveal memories from older to newer" className="min-w-0 flex-1 accent-[#117dff]" />
+              <span className={`hidden shrink-0 text-[9px] font-mono uppercase sm:inline ${panelMutedText}`}>Newer<br />outward</span>
+              <span className={`w-[82px] shrink-0 text-right text-[10px] tabular-nums ${graphTheme === "night" ? "text-[#e8dbcf]" : "text-[#525252]"}`}>{temporalCutoff ? new Date(temporalCutoff).toLocaleDateString() : "All time"}</span>
+              <button type="button" onClick={() => { setTemporalProgress(1); setTemporalPlaying(false); setIsLiveMode(true); }} className={`shrink-0 rounded-md border px-2 py-1 text-[10px] ${panelSoftButton}`}>Now</button>
+            </div>
+          </>
         )}
 
         {/* Organic constellation view — explicit viewport sizing (mirrors the
@@ -1640,7 +1707,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         )}
 
         {/* Legend */}
-        <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 max-w-[420px]">
+        {!isRadialAtlas && <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 max-w-[420px]">
           {showLegend && (
             <div className={`${panelClass} backdrop-blur-xl rounded-[20px] border px-3.5 py-3`}>
               <div className="flex items-center justify-between mb-1.5">
@@ -1692,10 +1759,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               </div>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Zoom + cluster panel controls */}
-        <div className="absolute bottom-4 right-4 flex items-end gap-3 z-10">
+        {!isRadialAtlas && <div className="absolute bottom-4 right-4 flex items-end gap-3 z-10">
           {false && (
             <div className={`${panelClass} rounded-[22px] border backdrop-blur-xl px-3 py-3 w-[268px]`}>
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -1883,19 +1950,20 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             </button>
           ))}
           </div>
-        </div>
+        </div>}
 
         {/* Node detail sidecar */}
         <AnimatePresence>
-          {selectedNode && (
+          {selectedNode && (!isRadialAtlas || radialDetailVisible) && (
             <NodeDetail
               node={selectedNode}
               edges={rawEdges}
               nodes={graphData.nodes}
-              onClose={() => setSelectedNode(null)}
+              onClose={() => isRadialAtlas ? setRadialDetailVisible(false) : setSelectedNode(null)}
               onNavigate={handleNavigate}
               onDelete={handleDeleteMemory}
               theme={graphTheme}
+              radial={isRadialAtlas}
             />
           )}
         </AnimatePresence>
