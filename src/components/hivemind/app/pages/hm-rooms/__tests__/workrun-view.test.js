@@ -5,7 +5,9 @@ import {
   hasRunningTools,
   hydrateRegisteredArtifacts,
   artifactDisplayName,
+  isCompanyOperatingPlan,
   isProductKind,
+  normalizeTurnUsage,
   productFailure,
   resolveApproval,
   startUserTurn,
@@ -16,7 +18,7 @@ import {
 describe('WorkRun identity-keyed block registry', () => {
   const runId = '11111111-1111-4111-8111-111111111111';
 
-  it('upserts many TaskCreate events onto one plan block', () => {
+  it('does not promote raw TaskCreate calls to an operating plan without an explicit scope', () => {
     let view = emptyWorkRunView(runId);
     for (let i = 0; i < 15; i += 1) {
       view = applyWorkRunEvent(view, {
@@ -26,8 +28,8 @@ describe('WorkRun identity-keyed block registry', () => {
       });
     }
     const plans = view.blockOrder.map((id) => view.blocks[id]).filter((b) => b.kind === 'plan');
-    expect(plans).toHaveLength(1);
-    expect(plans[0].revision).toBeGreaterThanOrEqual(15);
+    expect(plans).toHaveLength(0);
+    expect(view.activity).toHaveLength(15);
   });
 
   it('renders the compact AgentScope task snapshot without creating a second task store', () => {
@@ -35,6 +37,7 @@ describe('WorkRun identity-keyed block registry', () => {
     view = applyWorkRunEvent(view, {
       t: 'plan.updated',
       family: 'task',
+      execution_mode: 'operating_plan',
       tasks: [
         { id: 'task-1', subject: 'Gather context', state: 'completed' },
         { id: 'task-2', subject: 'Draft the report', state: 'in_progress', blocked_by: ['task-1'] },
@@ -50,10 +53,12 @@ describe('WorkRun identity-keyed block registry', () => {
   it('upserts the native PlanNotebook task projection into that same plan block', () => {
     let view = applyWorkRunEvent(emptyWorkRunView(runId), {
       t: 'plan.updated',
+      execution_mode: 'operating_plan',
       tasks: [{ id: 'old-task', subject: 'Old plan', state: 'todo' }],
     });
     view = applyWorkRunEvent(view, {
       t: 'task_plan',
+      execution_mode: 'operating_plan',
       source: 'agentscope_plan_notebook',
       name: 'Germany research',
       description: 'Find and verify target accounts.',
@@ -97,6 +102,31 @@ describe('WorkRun identity-keyed block registry', () => {
     expect(tools[0].payload.label).toBe('Checked company memory');
     expect(tools[0].payload.result).toBe('Amar Sai');
     expect(view.sources).toHaveLength(1);
+  });
+
+  it('normalizes only provider-reported per-turn usage and preserves cache truth', () => {
+    const usage = normalizeTurnUsage({
+      prompt_tokens: 58087,
+      completion_tokens: 940,
+      prompt_tokens_details: { cached_tokens: 16812 },
+      model: 'deepseek-v4-flash',
+      provider: 'cloudflare-openrouter',
+    });
+    expect(usage).toMatchObject({
+      totalTokens: 59027,
+      uncachedInputTokens: 41275,
+      cachedInputTokens: 16812,
+      outputTokens: 940,
+      model: 'deepseek-v4-flash',
+    });
+    expect(normalizeTurnUsage({})).toBeNull();
+    expect(normalizeTurnUsage({ input_tokens: 20, output_tokens: 5, cache_input_tokens: 7 }))
+      .toMatchObject({ cachedInputTokens: 7, uncachedInputTokens: 13, totalTokens: 25 });
+  });
+
+  it('recognizes only Core-marked company operating plans', () => {
+    expect(isCompanyOperatingPlan({ execution_mode: 'operating_plan' })).toBe(true);
+    expect(isCompanyOperatingPlan({ family: 'task' })).toBe(false);
   });
 
   it('keeps tool input and output inspectable across streamed deltas', () => {

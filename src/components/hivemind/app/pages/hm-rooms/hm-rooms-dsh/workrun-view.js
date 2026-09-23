@@ -83,6 +83,71 @@ export function eventType(ev) {
   return String(ev?.type || ev?.t || '').toUpperCase();
 }
 
+function usageNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+function firstUsageNumber(source, keys) {
+  for (const key of keys) {
+    const value = usageNumber(source?.[key]);
+    if (value != null) return value;
+  }
+  return null;
+}
+
+/**
+ * Normalize provider-reported usage without manufacturing a value.  A missing
+ * cache field remains unknown; it is never represented as a zero-percent hit.
+ */
+export function normalizeTurnUsage(value) {
+  const source = value?.usage && typeof value.usage === 'object' ? value.usage : value;
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return null;
+  const inputTokens = firstUsageNumber(source, ['input_tokens', 'prompt_tokens', 'inputTokens', 'promptTokens']);
+  const outputTokens = firstUsageNumber(source, ['output_tokens', 'completion_tokens', 'outputTokens', 'completionTokens']);
+  const cachedInputTokens = firstUsageNumber(source, ['cached_input_tokens', 'cache_input_tokens', 'cached_prompt_tokens', 'cachedInputTokens', 'cacheInputTokens'])
+    ?? firstUsageNumber(source.input_tokens_details, ['cached_tokens'])
+    ?? firstUsageNumber(source.prompt_tokens_details, ['cached_tokens']);
+  const totalTokens = firstUsageNumber(source, ['total_tokens', 'totalTokens'])
+    ?? (inputTokens != null && outputTokens != null ? inputTokens + outputTokens : null);
+  const durationMs = firstUsageNumber(source, ['duration_ms', 'durationMs', 'elapsed_ms', 'elapsedMs', 'run_ms', 'runMs']);
+  const ttftMs = firstUsageNumber(source, ['ttft_ms', 'ttftMs', 'time_to_first_token_ms']);
+  const tokenPerSecond = firstUsageNumber(source, ['tokens_per_second', 'tokensPerSecond']);
+  const cacheHitPercent = firstUsageNumber(source, ['cache_hit_percent', 'cacheHitPercent'])
+    ?? (inputTokens && cachedInputTokens != null ? (cachedInputTokens / inputTokens) * 100 : null);
+  const provider = String(source.provider || source.provider_name || '').trim() || null;
+  const model = String(source.model || source.model_name || source.served_model || '').trim() || null;
+  if ([inputTokens, outputTokens, cachedInputTokens, totalTokens, durationMs, ttftMs, tokenPerSecond, cacheHitPercent, provider, model].every((item) => item == null)) return null;
+  return {
+    inputTokens,
+    outputTokens,
+    cachedInputTokens,
+    uncachedInputTokens: inputTokens != null && cachedInputTokens != null ? Math.max(0, inputTokens - cachedInputTokens) : null,
+    totalTokens,
+    durationMs,
+    ttftMs,
+    tokenPerSecond,
+    cacheHitPercent,
+    provider,
+    model,
+  };
+}
+
+export function mergeTurnUsage(current, incoming) {
+  const next = normalizeTurnUsage(incoming);
+  if (!next) return current || null;
+  return Object.fromEntries(Object.entries({ ...(current || {}), ...next }).filter(([, value]) => value != null));
+}
+
+export function usageFromEvent(ev) {
+  return mergeTurnUsage(null, ev?.usage || ev?.metrics || ev?.telemetry || ev?.value?.usage || null);
+}
+
+export function isCompanyOperatingPlan(ev) {
+  const mode = ev?.execution_mode || ev?.scope?.execution_mode || ev?.value?.execution_mode;
+  return mode === 'operating_plan';
+}
+
 // Persisted AgentScope history is protocol data, not a React-child contract.
 // Older records can carry an envelope such as { type, text, id, created_at,
 // finished_at }; recursively extract printable content before it reaches a
@@ -259,7 +324,7 @@ export function applyWorkRunEvent(view, ev) {
   // hm-core turns AgentScope's state_updated event into this compact,
   // reconnect-safe snapshot. It intentionally contains only the fields that
   // belong in a WorkRun display, never AgentScope's private session state.
-  if (t === 'plan.updated' || t === 'task_plan') {
+  if ((t === 'plan.updated' || t === 'task_plan') && isCompanyOperatingPlan(ev)) {
     const tasks = Array.isArray(ev.tasks)
       ? ev.tasks
       : (Array.isArray(ev.subtasks) ? ev.subtasks : []);
@@ -272,6 +337,7 @@ export function applyWorkRunEvent(view, ev) {
         name: ev.name || 'TaskUpdate',
         label: ev.label || (t === 'task_plan' ? 'Operating plan' : 'Plan updated'),
         family: 'task',
+        execution_mode: 'operating_plan',
         description: ev.description || '',
         expected_outcome: ev.expected_outcome || '',
         tasks,
@@ -281,7 +347,7 @@ export function applyWorkRunEvent(view, ev) {
 
   if (t === 'tool.started' || type === 'TOOL_CALL_START') {
     const name = ev.tool_call_name || ev.tool_name || ev.tool || ev.name || 'tool';
-    const isTask = /^Task(Create|Update|List|Get)$/i.test(name) || t === 'plan.updated';
+    const isTask = (/^Task(Create|Update|List|Get)$/i.test(name) || t === 'plan.updated') && isCompanyOperatingPlan(ev);
     return upsertBlock(view, {
       block_id: isTask ? `plan:${workrunId}` : toolId(ev, workrunId),
       workrun_id: workrunId,
@@ -446,6 +512,7 @@ export function applyWorkRunEvent(view, ev) {
   }
 
   if (type === 'CUSTOM' && ev.name === 'state_updated') {
+    if (!isCompanyOperatingPlan(ev)) return view;
     const tasks = ev.value?.tasks_context?.tasks;
     if (!Array.isArray(tasks)) return view;
     return upsertBlock(view, {
@@ -453,7 +520,7 @@ export function applyWorkRunEvent(view, ev) {
       workrun_id: workrunId,
       kind: 'plan',
       status: 'complete',
-      payload: { name: 'TaskUpdate', label: 'Plan updated', family: 'task', tasks },
+      payload: { name: 'TaskUpdate', label: 'Plan updated', family: 'task', execution_mode: 'operating_plan', tasks },
     });
   }
 
@@ -536,6 +603,12 @@ export function applyAgentEvent(msgs, ev) {
     next.push(created);
     return created;
   };
+
+  const usage = usageFromEvent(ev);
+  if (usage) {
+    const cur = ensureAssistant();
+    cur.usage = mergeTurnUsage(cur.usage, usage);
+  }
 
   if (type === 'REPLY_START') {
     const replyId = ev.reply_id || ev.id;

@@ -24,8 +24,8 @@
   width: 100%;
   overflow: hidden;
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 14px;
-  background: var(--dsw-specific-input-major);
+  border-radius: 10px;
+  background: #ffffff;
   box-shadow: 0 1px 2px rgba(15, 17, 21, 0.04);
 }
 
@@ -42,7 +42,7 @@
   background: transparent;
   color: var(--dsw-alias-label-primary);
   caret-color: var(--dsw-alias-state-business-primary);
-  font: 400 14px/1.45 var(--dsw-font-family);
+  font: 400 13px/1.45 var(--dsw-font-family);
 }
 
 .input::placeholder {
@@ -73,14 +73,14 @@
   height: 32px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: var(--dsw-specific-selector);
+  background: #faf9f4;
 }
 
 .workspaceControl {
   gap: 5px;
   min-width: 0;
   padding: 4px 2px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -93,7 +93,7 @@
 
 .model {
   color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
 }
 

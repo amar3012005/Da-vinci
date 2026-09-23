@@ -20,6 +20,7 @@ import {
   startUserTurn,
   transcriptText,
   toolLabel,
+  normalizeTurnUsage,
 } from './hm-rooms-dsh/workrun-view';
 import { WorkRunShell } from './workrun';
 import * as WorkRunModules from './workrun';
@@ -160,7 +161,13 @@ export function flattenMsg(msg) {
     timeline.push({ kind: 'thinking', id: 'legacy-thinking', text: split.thinking });
   }
   return {
-    role, text: split.text, thinking: thinking || split.thinking, tools, timeline, raw: msg,
+    role,
+    text: split.text,
+    thinking: thinking || split.thinking,
+    tools,
+    timeline,
+    usage: normalizeTurnUsage(msg.usage || msg.metrics || msg.telemetry || msg.metadata?.usage),
+    raw: msg,
   };
 }
 
@@ -583,14 +590,14 @@ function HmRoomDesk({ runId }) {
         'THINKING_BLOCK_DELTA', 'THINKING_BLOCK_END', 'TOOL_CALL_START', 'TOOL_CALL_END', 'TOOL_RESULT_END',
         'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
         'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
-        'plan.updated', 'external_action.pending', 'external_action.resolved',
+        'plan.updated', 'turn.usage', 'usage', 'model.usage', 'external_action.pending', 'external_action.resolved',
       ].forEach((n) => es.addEventListener(n, onEvt));
       es.onmessage = onEvt;
       const progress = new EventSource(apiClient.workRunStreamUrl(runId), { withCredentials: true });
       [
         'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
         'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
-        'plan.updated', 'external_action.pending', 'external_action.resolved',
+        'plan.updated', 'turn.usage', 'usage', 'model.usage', 'external_action.pending', 'external_action.resolved',
       ].forEach((n) => progress.addEventListener(n, onEvt));
       progress.onmessage = onEvt;
       esRef.current = { session: es, progress };

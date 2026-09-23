@@ -40,6 +40,7 @@ export default function WorkRunStream({ msgs, onPreview, onResolveExternalAction
                   stage={m.stage}
                   tools={m.tools}
                   timeline={m.timeline}
+                  usage={m.usage}
                   onPreview={onPreview}
                   onResolveExternalAction={onResolveExternalAction}
                 />

@@ -4,6 +4,7 @@ import { renderMarkdownLite } from '../../../../hyperagents/rooms/shared';
 import StreamingText from './StreamingText';
 import ToolDisclosure from '../tools/ToolDisclosure';
 import ExternalActionCard from '../approval/ExternalActionCard';
+import TurnUsage from './TurnUsage';
 
 export default function AgentMessage({
   thinking,
@@ -12,6 +13,7 @@ export default function AgentMessage({
   stage,
   tools,
   timeline,
+  usage,
   onPreview,
   onResolveExternalAction,
 }) {
@@ -87,14 +89,17 @@ export default function AgentMessage({
             {streaming ? <StreamingText text="" streaming /> : null}
           </div>
           {!streaming ? (
-            <div className="flex items-center gap-1 pt-1 text-[#737373]" aria-label="Response actions">
-              <button type="button" onClick={copyAnswer} aria-label="Copy answer" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><Copy size={16} /></button>
-              <button type="button" onClick={() => setFeedback('up')} aria-label="Helpful" className={`rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a] ${feedback === 'up' ? 'text-[#117dff]' : ''}`}><ThumbsUp size={16} /></button>
-              <button type="button" onClick={() => setFeedback('down')} aria-label="Not helpful" className={`rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a] ${feedback === 'down' ? 'text-[#117dff]' : ''}`}><ThumbsDown size={16} /></button>
-              <button type="button" aria-label="Copy response link" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><Link size={16} /></button>
-              <button type="button" aria-label="Retry response" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><RefreshCw size={16} /></button>
-              <button type="button" aria-label="More response actions" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><Ellipsis size={16} /></button>
-            </div>
+            <>
+              <div className="flex items-center gap-1 pt-1 text-[#737373]" aria-label="Response actions">
+                <button type="button" onClick={copyAnswer} aria-label="Copy answer" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><Copy size={16} /></button>
+                <button type="button" onClick={() => setFeedback('up')} aria-label="Helpful" className={`rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a] ${feedback === 'up' ? 'text-[#117dff]' : ''}`}><ThumbsUp size={16} /></button>
+                <button type="button" onClick={() => setFeedback('down')} aria-label="Not helpful" className={`rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a] ${feedback === 'down' ? 'text-[#117dff]' : ''}`}><ThumbsDown size={16} /></button>
+                <button type="button" aria-label="Copy response link" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><Link size={16} /></button>
+                <button type="button" aria-label="Retry response" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><RefreshCw size={16} /></button>
+                <button type="button" aria-label="More response actions" className="rounded-[6px] p-1.5 hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"><Ellipsis size={16} /></button>
+              </div>
+              <TurnUsage usage={usage} />
+            </>
           ) : null}
         </>
       ) : null}
