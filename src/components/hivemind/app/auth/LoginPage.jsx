@@ -5,6 +5,7 @@ import { Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight,
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 import { clearInvitationContext, loadInvitationContext, saveInvitationContext } from './invitation-session';
+import { isMobileAuthClient } from './mobile-routing';
 
 /* ─── Provider icons ───────────────────────────────────────────────────── */
 function GoogleIcon({ size = 18 }) {
@@ -289,6 +290,9 @@ export default function LoginPage() {
     if (!from || !from.pathname) return null;
     // Don't bounce back to /login itself.
     if (from.pathname.startsWith('/hivemind/login')) return null;
+    // Protected desktop routes can be the sign-in origin even on a phone.
+    // Preserve invite/CLI and non-app deep links, but land mobile app sessions in chat.
+    if (isMobileAuthClient() && from.pathname.startsWith('/hivemind/app/')) return null;
     const search = from.search || '';
     const sep = search ? (search.includes('auth=callback') ? '' : '&') : '?';
     const authParam = search.includes('auth=callback') ? '' : `${sep}auth=callback`;
