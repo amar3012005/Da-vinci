@@ -274,6 +274,8 @@ export default function HiveMindApp() {
               /employees/rooms/:id (thread) · /employees (redirect→mycompany) */}
           <Route path="employees/operating-rooms" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
           <Route path="employees/operating-rooms/:roomId" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
+          <Route path="hm-rooms" element={<PageSuspense><HyperAgents /></PageSuspense>} />
+          <Route path="hm-rooms/:runId" element={<PageSuspense><HyperAgents /></PageSuspense>} />
           <Route path="employees/*" element={<PageSuspense><HyperAgents /></PageSuspense>} />
           {/* Legacy direct roster path — kept for back-compat */}
           <Route path="employees/roster" element={<PageSuspense><DigitalEmployees /></PageSuspense>} />

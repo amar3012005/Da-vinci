@@ -188,7 +188,7 @@ function TalkToHiveFAB({ onOpen, hidden }) {
 }
 
 function sectionForPath(pathname) {
-  if (pathname.startsWith('/hivemind/app/employees')) return 'hyperagents';
+  if (pathname.startsWith('/hivemind/app/employees') || pathname.startsWith('/hivemind/app/hm-rooms')) return 'hyperagents';
   if (pathname.startsWith('/hivemind/app/tara')) return 'tara';
   return 'hivemind';
 }
@@ -323,7 +323,8 @@ export default function AppShell() {
   const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
   // HyperAgents runs its own left rail (rooms + account) — the app sidebar is
   // hidden entirely there so the workspace reads as one dedicated surface.
-  const hyperFullscreen = location.pathname.startsWith('/hivemind/app/employees');
+  const hyperFullscreen = location.pathname.startsWith('/hivemind/app/employees')
+    || location.pathname.startsWith('/hivemind/app/hm-rooms');
   // Overview embeds the HIVE chat as the page centerpiece — the floating
   // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
   // every other page keeps the FAB.
@@ -399,7 +400,7 @@ export default function AppShell() {
           style={{ marginLeft: (compactViewport || graphFullscreen || hyperFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '260px' }}
         >
           <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />
-          <main className={graphFullscreen ? "h-[calc(100dvh-56px)] overflow-hidden" : onOverview ? "h-[calc(100dvh-56px)] min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          <main className={graphFullscreen || hyperFullscreen ? "h-[calc(100dvh-56px)] overflow-hidden" : onOverview && window.location.hostname === 'next.preview.singulancelabs.com' ? "h-[calc(100dvh-56px)] min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>

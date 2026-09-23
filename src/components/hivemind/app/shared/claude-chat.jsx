@@ -275,7 +275,7 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
   );
 }
 
-function ContinuationChoices({ continuation, onContinue }) {
+export function ContinuationChoices({ continuation, onContinue }) {
   const [selected, setSelected] = useState(null);
   const [values, setValues] = useState({});
   const [connectError, setConnectError] = useState('');

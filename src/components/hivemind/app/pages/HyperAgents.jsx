@@ -25,7 +25,7 @@ import {
   Network, Shield, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
-  UserPlus, LogOut, ExternalLink, Brain, FileText, Boxes, Paperclip,
+  UserPlus, LogOut, ExternalLink, Brain, FileText, Boxes, Paperclip, ChevronLeft, ChevronRight,
   ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
   Copy, Download, Power,
@@ -69,6 +69,7 @@ import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import { FIELDS, professionsForField, NAME_SUGGESTIONS } from '../shared/field-catalog';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import { emitUsageChanged } from '../shared/useUsage';
+import { HmRoomDesk, HmRoomList } from './HmRooms';
 
 // Compact relative-time for room last-used. Pure, no deps.
 // 3rd-party connector catalog (mirrors core/src/connectors/mcp/catalog-seed.js).
@@ -227,6 +228,7 @@ const DOMAIN_ROOM_STAGES = {
 export default function HyperAgents() {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, org, logout } = useAuth();
   // The Operating System owns its Rooms/account rail. The app-level sidebar is
   // still collapsed below so the OS workspace has one focused navigation rail.
@@ -239,7 +241,15 @@ export default function HyperAgents() {
     return () => window.dispatchEvent(new Event('hivemind:open-sidebar'));
   }, []);
 
+  useEffect(() => {
+    const toggle = () => setCompanyRailOpen((open) => !open);
+    window.addEventListener('hivemind:toggle-company-sidebar', toggle);
+    return () => window.removeEventListener('hivemind:toggle-company-sidebar', toggle);
+  }, []);
+
   const [rooms, setRooms] = useState([]);
+  const [workRuns, setWorkRuns] = useState([]);
+  const [companyRailOpen, setCompanyRailOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -254,6 +264,8 @@ export default function HyperAgents() {
   const _parsePath = () => {
     try {
       const p = window.location.pathname;
+      const workrun = p.match(/\/hm-rooms(?:\/([^/]+))?/);
+      if (workrun) return { mode: 'workrun', roomId: workrun[1] || null };
       const m = p.match(/\/employees\/rooms\/([0-9a-f-]{36})/i);
       if (m) return { mode: 'thread', roomId: m[1] };
       if (/\/employees\/agents/.test(p)) return { mode: 'roster', roomId: null };
@@ -264,13 +276,18 @@ export default function HyperAgents() {
     } catch { return { mode: 'hero', roomId: null }; }
   };
   const _init = _parsePath();
-  const [activeRoomId, setActiveRoomId] = useState(_init.roomId);
+  const [activeRoomId, setActiveRoomId] = useState(_init.mode === 'workrun' ? null : _init.roomId);
+  const [activeWorkRunId, setActiveWorkRunId] = useState(_init.mode === 'workrun' ? _init.roomId : null);
   const [viewMode, setViewMode] = useState(_init.mode);
   const goMode = useCallback((mode, roomId, query = {}) => {
     setViewMode(mode);
-    if (roomId !== undefined) setActiveRoomId(roomId);
+    if (roomId !== undefined) {
+      if (mode === 'workrun') setActiveWorkRunId(roomId);
+      else setActiveRoomId(roomId);
+    }
     const base = '/hivemind/app/employees';
     const url = mode === 'hero' ? `${base}/mycompany`
+      : mode === 'workrun' ? (roomId ? `/hivemind/app/hm-rooms/${roomId}` : '/hivemind/app/hm-rooms')
       : mode === 'roster' ? `${base}/agents`
         : mode === 'runtime' ? `${base}/runtime`
         : mode === 'leads' ? `${base}/leads`
@@ -316,6 +333,14 @@ export default function HyperAgents() {
       setLoading(false);
     }
   }, [activeRoomId]);
+
+  useEffect(() => {
+    let active = true;
+    apiClient.listWorkRuns({ limit: 30 }).then((data) => {
+      if (active) setWorkRuns(data?.workruns || []);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [location.pathname]);
 
   useEffect(() => { fetchRooms(); }, [fetchRooms]);
 
@@ -422,7 +447,7 @@ export default function HyperAgents() {
     fetchRooms();
     emitUsageChanged();
   }, [fetchRooms, goMode]);
-  const showOnboarding = !loading && !onboardDismissed && ((liveRooms.length === 0 && !onboardDone) || forceOnboard);
+  const showOnboarding = viewMode !== 'workrun' && !loading && !onboardDismissed && ((liveRooms.length === 0 && !onboardDone) || forceOnboard);
   if (showOnboarding) {
     return (
       <div className="max-w-[1280px] mx-auto">
@@ -434,7 +459,7 @@ export default function HyperAgents() {
   // ── Empty state: render existing DigitalEmployees roster + CTA ─────
   // Only when the org has never onboarded — an onboarded org with no rooms
   // still lands on the company hero (full rail layout below).
-  if (!loading && liveRooms.length === 0 && !onboardDone) {
+  if (viewMode !== 'workrun' && !loading && liveRooms.length === 0 && !onboardDone) {
     return (
       <div className="max-w-[1200px] mx-auto">
         <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
@@ -485,7 +510,10 @@ export default function HyperAgents() {
     <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
       <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
       {/* Left rail: rooms */}
-      <aside className={showOperatingSystemSidebar ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'}>
+      <aside className={showOperatingSystemSidebar ? `relative hidden ${companyRailOpen ? 'w-[240px] min-w-[240px]' : 'w-[56px] min-w-[56px]'} shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] overflow-hidden transition-[width] duration-200 md:flex` : 'hidden'}>
+        <button type="button" onClick={() => setCompanyRailOpen((open) => !open)} aria-label={companyRailOpen ? 'Collapse company sidebar' : 'Expand company sidebar'} title={companyRailOpen ? 'Collapse sidebar' : 'Expand sidebar'} className="absolute right-2 top-2 z-20 rounded-[6px] bg-white p-1 text-[#737373] hover:text-[#0a0a0a] border border-[#e3e0db]">
+          {companyRailOpen ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
+        </button>
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
@@ -585,6 +613,16 @@ export default function HyperAgents() {
               onDelete={handleDeleteRoom}
             />
           ))}
+          <div className="mt-1 border-y border-[#e3e0db] bg-white/45">
+            <div className="flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-[#525252]">
+              <span>AgentScope runs</span>
+              <button type="button" onClick={() => goMode('workrun', null)} className="rounded p-0.5 hover:bg-white" title="New AgentScope run" aria-label="New AgentScope run"><Plus size={13} /></button>
+            </div>
+            {workRuns.slice(0, 12).map((run) => <button key={run.id} type="button" onClick={() => goMode('workrun', run.id)}
+              className={`w-full px-3 py-1.5 flex items-center gap-2 text-left text-[11.5px] hover:bg-white ${viewMode === 'workrun' && activeWorkRunId === run.id ? 'bg-white text-[#0a0a0a]' : 'text-[#525252]'}`}>
+              <Hash size={12} className="shrink-0 text-[#a3a3a3]" /><span className="truncate">{run.goal || run.id}</span>
+            </button>)}
+          </div>
           {archivedRooms.length > 0 && (
             <details className="px-2 pt-3 text-[10px] text-[#a3a3a3]">
               <summary className="cursor-pointer hover:text-[#525252] flex items-center gap-1">
@@ -663,7 +701,9 @@ export default function HyperAgents() {
 
       {/* Middle: hero dashboard, thread or roster */}
       <main className="flex-1 min-w-0 min-h-0 flex flex-col">
-        {viewMode === 'hero' ? (
+        {viewMode === 'workrun' ? (
+          activeWorkRunId ? <HmRoomDesk key={activeWorkRunId} runId={activeWorkRunId} /> : <HmRoomList />
+        ) : viewMode === 'hero' ? (
           <CompanyDashboard
             onOpenRoom={(room) => {
               fetchRooms();

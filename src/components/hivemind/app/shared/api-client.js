@@ -1287,6 +1287,49 @@ class HiveMindApiClient {
     return `${this._controlPlaneBaseUrl()}/v1/proxy/visual-generation/jobs/${encodeURIComponent(jobId)}/assets/${encodeURIComponent(assetId)}`;
   }
 
+  async listWorkRuns({ limit = 50, status } = {}) {
+    const { data } = await this.controlPlane.get('/v1/workruns', {
+      params: { limit, ...(status ? { status } : {}) },
+    });
+    return data;
+  }
+
+  async getWorkRun(id) {
+    const { data } = await this.controlPlane.get(`/v1/workruns/${encodeURIComponent(id)}`);
+    return data;
+  }
+
+  async createWorkRun({ goal, hyperagent_slug } = {}) {
+    const { data } = await this.controlPlane.post('/v1/workruns', {
+      goal,
+      ...(hyperagent_slug ? { hyperagent_slug } : {}),
+    });
+    return data;
+  }
+
+  async cancelWorkRun(id) {
+    const { data } = await this.controlPlane.post(`/v1/workruns/${encodeURIComponent(id)}/cancel`, {});
+    return data;
+  }
+
+  workRunStreamUrl(id) {
+    return `${this._controlPlaneBaseUrl()}/v1/workruns/${encodeURIComponent(id)}/stream`;
+  }
+
+  workRunSessionStreamUrl(id) {
+    return `${this._controlPlaneBaseUrl()}/v1/workruns/${encodeURIComponent(id)}/session/stream`;
+  }
+
+  async getWorkRunSessionMessages(id) {
+    const { data } = await this.controlPlane.get(`/v1/workruns/${encodeURIComponent(id)}/session/messages`);
+    return data;
+  }
+
+  async sendWorkRunChat(id, text) {
+    const { data } = await this.controlPlane.post(`/v1/workruns/${encodeURIComponent(id)}/chat`, { text });
+    return data;
+  }
+
   hyperArtifactAssetUrl(path) {
     const value = String(path || '');
     if (!value.startsWith('/v1/hyper-artifacts/')) return '';

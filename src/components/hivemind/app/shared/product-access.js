@@ -26,7 +26,7 @@ export function productAccessForPlan(planId) {
 }
 
 export function productForPath(pathname = '') {
-  if (pathname.startsWith('/hivemind/app/employees')) return 'operatingSystem';
+  if (pathname.startsWith('/hivemind/app/employees') || pathname.startsWith('/hivemind/app/hm-rooms')) return 'operatingSystem';
   if (pathname.startsWith('/hivemind/app/tara')) return 'voice';
   return 'brain';
 }

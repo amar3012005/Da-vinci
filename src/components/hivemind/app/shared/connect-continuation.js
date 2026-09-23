@@ -52,6 +52,51 @@ export function httpConnectUrl(value) {
   return url;
 }
 
+const APP_ALIASES = {
+  slack: 'slack',
+  gmail: 'gmail',
+  github: 'github',
+  notion: 'notion',
+  linear: 'linear',
+  hubspot: 'hubspot',
+  sheets: 'googlesheets',
+  'google sheets': 'googlesheets',
+  googlesheets: 'googlesheets',
+};
+
+export function inferConnectContinuation({ text = '', tools = [] } = {}) {
+  const toolBlob = (tools || []).map((t) => `${t.name || ''} ${t.result || ''}`).join('\n');
+  const blob = `${text}\n${toolBlob}`;
+  let toolkit = '';
+  try {
+    const jsonHit = blob.match(/\{[^{}]*need_connect[^{}]*\}/);
+    if (jsonHit) {
+      const parsed = JSON.parse(jsonHit[0]);
+      if (parsed.need_connect) toolkit = String(parsed.toolkit || parsed.provider || '').toLowerCase();
+    }
+  } catch { /* not json */ }
+  if (!toolkit) {
+    const named = blob.match(/connect(?:ed)?\s+(slack|gmail|github|notion|hubspot|linear|google\s*sheets|sheets)/i)
+      || blob.match(/\b(slack|gmail|github|notion)\b[^\n]{0,40}(not connected|no grant|authorize|connect)/i);
+    if (named) toolkit = String(named[1] || named[0]).toLowerCase();
+  }
+  toolkit = APP_ALIASES[toolkit.replace(/\s+/g, ' ').trim()] || toolkit.replace(/\s+/g, '');
+  if (!toolkit) return null;
+  const name = toolkit.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  return {
+    requests: [{
+      kind: 'connect_account',
+      toolkit,
+      app_label: name,
+      prompt: `Connect ${name} to continue, then return here.`,
+      options: [
+        { id: 'connect', label: `Connect ${name}`, open_url: true },
+        { id: 'connected', label: `I've connected ${name} — continue` },
+      ],
+    }],
+  };
+}
+
 export function connectBanner(request = {}, logos = {}) {
   const toolkit = connectToolkitOf(request);
   const logo = request.logo_url

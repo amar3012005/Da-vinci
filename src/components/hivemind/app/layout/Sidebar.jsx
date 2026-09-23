@@ -17,18 +17,16 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
-  Globe,
   Server,
   Network,
   Cpu,
   BookOpen,
   Bot,
+  Radio,
   Mic,
   Building2,
   Gauge,
   FolderKanban,
-  Search,
-  FileSearch,
   Waypoints,
   Sliders,
   Star,
@@ -57,12 +55,16 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
   const adminItems = [
     { to: '/hivemind/app/workspace', icon: Building2, label: tt('workspaceAdmin', 'Workspace Admin') },
     { to: '/hivemind/app/employees', icon: Bot,      label: tt('hyperAgents', 'Hyper Agents') },
+    { to: '/hivemind/app/hm-rooms',  icon: Radio,    label: tt('hmRooms', 'HM Rooms') },
     { to: '/hivemind/app/hermes',    icon: Cpu,      label: tt('hermesAgents', 'Hermes Agents') },
   ];
 
   if (activeSection === 'hyperagents') {
     return [
-      { label: null, items: [{ to: '/hivemind/app/employees', icon: Bot, label: tt('hyperAgents', 'Hyper Agents') }] },
+      { label: null, items: [
+        { to: '/hivemind/app/employees', icon: Bot, label: tt('hyperAgents', 'Hyper Agents') },
+        { to: '/hivemind/app/hm-rooms', icon: Radio, label: tt('hmRooms', 'HM Rooms') },
+      ] },
       {
         label: tt('groups.workspaceAdmin', 'Workspace Admin'),
         items: adminItems,

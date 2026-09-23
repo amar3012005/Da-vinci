@@ -1,0 +1,240 @@
+/* Ported from Harness ui-chat / ui-tool row chrome. AgentScope still owns events. */
+
+.userRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.userStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: min(calc(var(--dsh-chat-content-width, 680px) * 0.702), 82%);
+}
+
+.bubble {
+  max-width: 100%;
+  background: var(--dsw-specific-bubble, rgb(237, 243, 254));
+  border-radius: 22px;
+  padding: 10px 16px;
+  font-size: var(--dsh-content-font-size, 14px);
+  line-height: calc(22px + var(--dsh-content-font-delta, 0px));
+  color: var(--dsw-alias-label-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: var(--dsh-chat-content-width, 680px);
+  margin: 0 auto;
+  width: 100%;
+  font-size: var(--dsh-content-font-size, 14px);
+  line-height: calc(24px + var(--dsh-content-font-delta, 0px));
+  color: var(--dsw-alias-label-primary);
+}
+
+.prose {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prose :global(pre) {
+  background: var(--dsw-specific-selector, #f5f6f7);
+  border-radius: 12px;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+
+.prose :global(h1),
+.prose :global(h2) {
+  font-weight: 600;
+  margin: 8px 0 4px;
+}
+
+.thinkRoot {
+  display: flex;
+  flex-direction: column;
+}
+
+.thinkRow {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  gap: 6px;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.thinkRoot[data-state='running'] .thinkRow::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 300px;
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--dsw-alias-bg-base) 60%, transparent) 55%, transparent 100%);
+  animation: dsh-reasoning-row-sweep 2.6s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes dsh-reasoning-row-sweep {
+  0% { left: -300px; }
+  90%, 100% { left: 100%; }
+}
+
+.thinkTitle {
+  font-size: 13px;
+  color: var(--dsw-alias-label-secondary);
+  flex-shrink: 0;
+}
+
+.sep {
+  flex: none;
+  width: 2px;
+  height: 2px;
+  margin: 0 8px;
+  border-radius: 1px;
+  background: var(--dsw-alias-label-caption);
+}
+
+.thinkSummary {
+  min-width: 0;
+  overflow: hidden;
+  flex: 1 1 auto;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.thinkSummaryText {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thinkSummary[data-follow-end] {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.thinkSummary[data-follow-end] .thinkSummaryText {
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: 100%;
+}
+
+.thinkBody {
+  padding: 4px 0 4px 22px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.toolRoot {
+  display: flex;
+  flex-direction: column;
+}
+
+.toolRow {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  gap: 6px;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.toolRoot[data-state='running'] .toolRow::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 300px;
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--dsw-alias-bg-base) 60%, transparent) 55%, transparent 100%);
+  animation: dsh-tool-row-sweep 2.6s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes dsh-tool-row-sweep {
+  0% { left: -300px; }
+  90%, 100% { left: 100%; }
+}
+
+.toolTitle {
+  font-size: 13px;
+  line-height: 24px;
+  color: var(--dsw-alias-label-primary);
+  flex-shrink: 0;
+}
+
+.toolSummary {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 24px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--dsw-alias-state-success-primary, #22c55e);
+}
+
+.toolRoot[data-state='running'] .dot {
+  background: var(--dsw-alias-state-business-primary);
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.action {
+  border: 0;
+  background: none;
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinkRoot[data-state='running'] .thinkRow::after,
+  .toolRoot[data-state='running'] .toolRow::after {
+    animation: none;
+  }
+}
