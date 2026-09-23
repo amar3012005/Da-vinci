@@ -21,7 +21,8 @@ import CallContractModal from '../components/CallContractModal';
 import ProductAccessModal from '../components/ProductAccessModal';
 import ReferralTrialGateModal from '../components/ReferralTrialGateModal';
 import EntityProfileModalHost from '../shared/EntityProfileModalHost';
-import { NEW_WORKSPACE_LANDING, RETURNING_USER_LANDING } from '../shared/routes';
+import { RETURNING_USER_LANDING } from '../shared/routes';
+import { newWorkspaceLanding } from '../auth/mobile-routing';
 
 /**
  * PlanLimitGate — listens for the global 'hm:plan-limit' window event
@@ -226,9 +227,9 @@ export default function AppShell() {
     let isNew = false;
     try { isNew = sessionStorage.getItem('hm_new_user') === '1'; } catch { /* noop */ }
     try { sessionStorage.removeItem('hm_new_user'); } catch { /* noop */ }
-    // A newly-created workspace starts with company onboarding. Returning
-    // users keep the stable BRAIN overview landing.
-    navigate(isNew ? NEW_WORKSPACE_LANDING : RETURNING_USER_LANDING, { replace: true });
+    // New workspaces start in mobile chat on phones; desktop keeps the company
+    // onboarding landing. Returning users keep the stable BRAIN overview.
+    navigate(isNew ? newWorkspaceLanding() : RETURNING_USER_LANDING, { replace: true });
     setGate('done');
   };
   // Self-host gate: the workspace opens only after the control plane confirms
