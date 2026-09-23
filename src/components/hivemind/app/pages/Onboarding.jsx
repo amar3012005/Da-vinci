@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import SelfHostSetup from './SelfHostSetup';
 import apiClient from '../shared/api-client';
-import { NEW_WORKSPACE_LANDING } from '../shared/routes';
+import { newWorkspaceLanding } from '../auth/mobile-routing';
 
 const ORG_MODES = {
   personal: {
@@ -133,7 +133,7 @@ export default function OnboardingFlow() {
         if (created?.organization?.enterprise_onboarding) {
           setEnterpriseActivation(created.organization.enterprise_onboarding);
           setAutoCreating(false);
-          window.setTimeout(() => { window.location.href = NEW_WORKSPACE_LANDING; }, 2400);
+          window.setTimeout(() => { window.location.href = newWorkspaceLanding(); }, 2400);
           return;
         }
         if (!saved.referral_token && !isEnt && selectedPlan !== 'free') {
@@ -141,7 +141,7 @@ export default function OnboardingFlow() {
           window.location.href = `/hivemind/app/billing?upgrade=${selectedPlan}&source=signup`;
           return;
         }
-        window.location.href = NEW_WORKSPACE_LANDING;
+        window.location.href = newWorkspaceLanding();
       } catch (err) {
         // Keep retries on the login/create-account surface. The saved intent
         // remains in localStorage so the form can restore every entered field.
@@ -201,7 +201,7 @@ export default function OnboardingFlow() {
     }
   };
 
-  if (showSelfHost) return <SelfHostSetup onDone={() => { window.location.href = NEW_WORKSPACE_LANDING; }} onBackToLogin={logout} />;
+  if (showSelfHost) return <SelfHostSetup onDone={() => { window.location.href = newWorkspaceLanding(); }} onBackToLogin={logout} />;
 
   if (enterpriseActivation) {
     const endsAt = new Date(enterpriseActivation.ends_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });

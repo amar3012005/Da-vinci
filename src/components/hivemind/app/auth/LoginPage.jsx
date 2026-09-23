@@ -296,6 +296,10 @@ export default function LoginPage() {
     if (!from || !from.pathname) return null;
     // Don't bounce back to /login itself.
     if (from.pathname.startsWith('/hivemind/login')) return null;
+    // Protected desktop routes can be the sign-in origin even on a phone.
+    // Keep invite/CLI and non-app deep links intact, but send mobile app
+    // sessions to their chat landing after authentication.
+    if (isMobileAuthClient() && from.pathname.startsWith('/hivemind/app/')) return null;
     const search = from.search || '';
     const sep = search ? (search.includes('auth=callback') ? '' : '&') : '?';
     const authParam = search.includes('auth=callback') ? '' : `${sep}auth=callback`;
