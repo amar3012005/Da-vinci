@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import UserMessage from './narrative/UserMessage';
 import AgentMessage from './narrative/AgentMessage';
 
-export default function WorkRunStream({ msgs, activity, tasks, approvals, onPreview, error, elapsedLabel, phase }) {
+export default function WorkRunStream({ msgs, activity, tasks, approvals, onPreview, error, elapsedLabel, phase, topPadding = 32 }) {
   const scroller = useRef(null);
   const followTail = useRef(true);
   const [showLatest, setShowLatest] = useState(false);
@@ -14,7 +14,7 @@ export default function WorkRunStream({ msgs, activity, tasks, approvals, onPrev
       const el = event.currentTarget;
       followTail.current = el.scrollHeight - el.scrollTop - el.clientHeight < 72;
       setShowLatest(!followTail.current);
-    }} className="relative flex-1 overflow-y-auto px-8 py-8 space-y-6" style={{ containerType: 'inline-size' }}>
+    }} className="relative flex-1 overflow-y-auto px-8 py-8 space-y-6" style={{ containerType: 'inline-size', paddingTop: topPadding }}>
       {(msgs || []).map((m, i) => (
         m.role === 'user'
           ? <UserMessage key={i} text={m.text} />

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Hash, PanelRightOpen, Users } from 'lucide-react';
 import WorkRunHeader from './WorkRunHeader';
 import WorkRunStream from './WorkRunStream';
 import WorkRunComposer from './WorkRunComposer';
@@ -54,6 +55,10 @@ export default function WorkRunShell({
   const [railWidth, setRailWidth] = useState(390);
   const elapsedLabel = working && startedAt ? formatElapsed(Date.now() - new Date(startedAt).getTime()) : '';
   const stats = working ? `${(msgs || []).filter((m) => m.role === 'user').length} turns · ${((activity || []).length)} steps` : '';
+  // Keep the compact run identity available while the inspector is closed or
+  // narrow. Once the preview takes more than 40% of the viewport, it owns that
+  // space and the floating card disappears instead of covering the preview.
+  const showRunStatus = !landing && (railMode !== 'open' || railWidth <= Math.floor(window.innerWidth * 0.4));
   const resizeRail = (event) => {
     if (event.buttons !== 1) return;
     setRailWidth(Math.min(Math.floor(window.innerWidth * 0.5), Math.max(320, window.innerWidth - event.clientX)));
@@ -95,6 +100,7 @@ export default function WorkRunShell({
                   error={error}
                   elapsedLabel={elapsedLabel}
                   phase={phase}
+                  topPadding={showRunStatus ? 112 : 32}
                 />
                 <div className="shrink-0 bg-transparent px-4 pb-3 pt-1">
                   <div className="max-w-[760px] mx-auto">
@@ -105,6 +111,32 @@ export default function WorkRunShell({
               </>
             )}
           </div>
+          {showRunStatus ? (
+            <section
+              aria-label="WorkRun status"
+              className="absolute right-3 top-3 z-20 w-[min(220px,calc(100%-24px))] rounded-[10px] border border-[#e3e0db] bg-white/95 p-3 shadow-sm backdrop-blur"
+            >
+              <div className="flex min-w-0 items-start gap-1.5">
+                <Hash size={13} className="mt-0.5 shrink-0 text-[#737373]" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[12px] font-semibold text-[#0a0a0a]">{goal || 'WorkRun'}</p>
+                  <span className="mt-1 inline-flex rounded-full bg-[#117dff]/10 px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wider text-[#117dff]">General</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRailMode((mode) => (mode === 'open' ? 'closed' : 'open'))}
+                  aria-label={railMode === 'open' ? 'Close preview' : 'Open preview'}
+                  className="rounded-[6px] p-1 text-[#737373] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"
+                >
+                  <PanelRightOpen size={15} className={railMode === 'open' ? 'rotate-180' : ''} />
+                </button>
+              </div>
+              <div className="mt-2 flex items-center justify-between border-t border-[#eae7e1] pt-2 text-[10px] text-[#737373]">
+                <span className="inline-flex items-center gap-1"><Users size={11} />{team?.length || 0} participants</span>
+                <span className={working ? 'text-[#117dff]' : ''}>{working ? 'working' : (status || 'idle')}</span>
+              </div>
+            </section>
+          ) : null}
           {!landing ? (
             <Inspector
               artifacts={artifacts}
