@@ -45,6 +45,7 @@ import LangSwitcher from "../layout/LangSwitcher";
 import { PageIndexViewer } from "../PageIndexViewer";
 import MemoryGraph3D from "./MemoryGraph3D";
 import MemoryGraph2DCanvas from "./MemoryGraph2DCanvas";
+import MemoryGraphRadialAtlas from "./MemoryGraphRadialAtlas";
 import MemoryMoss from "./MemoryMoss";
 import { PageWalkthrough, GRAPH_STEPS } from "../shared/Walkthrough";
 
@@ -553,6 +554,23 @@ function GraphTqdmBar({ dark, done }) {
 export default function MemoryGraph({ dimension = '3d' } = {}) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
+  const [memoryGraphV2Enabled, setMemoryGraphV2Enabled] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/__hivemind/feature-flags/memory-graph-v2', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => {
+        if (payload?.key === 'memory_graph_v2' && payload.enabled === true) {
+          setMemoryGraphV2Enabled(true);
+        }
+      })
+      .catch(() => {}); // Fail closed: the existing graph remains available.
+    return () => controller.abort();
+  }, []);
   // dimension: '3d' (default) | '2d' — initial mode, then user toggles via
   // the inline pill in the toolbar. Persisted to localStorage so the choice
   // sticks across reloads.
@@ -568,6 +586,14 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   });
   const is2D = graphDim === '2d';
   const isMoss = graphDim === 'moss';
+  const isRadialAtlas = memoryGraphV2Enabled && graphDim === 'radial';
+  const selectedRadialByFlag = useRef(false);
+  useEffect(() => {
+    if (memoryGraphV2Enabled && !selectedRadialByFlag.current) {
+      selectedRadialByFlag.current = true;
+      setGraphDim('radial');
+    }
+  }, [memoryGraphV2Enabled]);
   useEffect(() => {
     try { localStorage.setItem('hivemind:graphDim', graphDim); } catch {}
   }, [graphDim]);
@@ -1287,7 +1313,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
         {/* 3D / 2D toggle — segmented pill */}
         <div className={`shrink-0 inline-flex items-center rounded-lg border p-0.5 ${toolbarControlClass}`}>
-          {['3d', '2d', 'moss'].map((dim) => (
+          {[...(memoryGraphV2Enabled ? ['radial'] : []), '3d', '2d', 'moss'].map((dim) => (
             <button
               key={dim}
               onClick={() => setGraphDim(dim)}
@@ -1296,7 +1322,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                   ? toolbarActiveClass
                   : toolbarMutedClass
               }`}
-              title={dim === '3d' ? '3D force graph' : dim === '2d' ? '2D force graph' : 'Organic moss view (curated)'}
+              title={dim === 'radial' ? 'Temporal radial atlas — radial distance represents time' : dim === '3d' ? '3D force graph' : dim === '2d' ? '2D force graph' : 'Organic moss view (curated)'}
             >
               {dim.toUpperCase()}
             </button>
@@ -1538,6 +1564,23 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               }
             />
           </div>
+        )}
+
+        {graphVisible && graphData.nodes.length > 0 && isRadialAtlas && (
+          <MemoryGraphRadialAtlas
+            ref={graphRef}
+            graphData={graphData}
+            selectedNode={selectedNode}
+            highlightNodes={highlightNodes}
+            filteredNodes={filteredNodes}
+            onNodeClick={handleNodeClick}
+            onNodeHover={setHoveredNode}
+            onBackgroundClick={() => {
+              setSelectedNode(null);
+              setHoveredNode(null);
+            }}
+            theme={graphTheme}
+          />
         )}
 
         {/* Organic constellation view — explicit viewport sizing (mirrors the

@@ -3,6 +3,8 @@ const AGENT_SETUP_PREFIX = '/agent-setup/';
 const DISCOVERY_PATHS = new Set(['/robots.txt', '/llms.txt', '/llms-full.txt', '/sitemap.xml']);
 const PARTNER_REFERRALS_FLAG_PATH = '/__hivemind/feature-flags/partner-referrals';
 const PARTNER_REFERRALS_FLAG_KEY = 'partner_referrals_v1';
+const MEMORY_GRAPH_V2_FLAG_PATH = '/__hivemind/feature-flags/memory-graph-v2';
+const MEMORY_GRAPH_V2_FLAG_KEY = 'memory_graph_v2';
 const LANDING_MOBILE_V2_FLAG_PATH = '/__hivemind/feature-flags/landing-mobile-v2';
 const LANDING_MOBILE_V2_FLAG_KEY = 'landing_mobile_v2';
 const LANDING_MOBILE_V2_ENV_KEY = 'LANDING_MOBILE_V2';
@@ -412,6 +414,10 @@ export default {
 
     if (pathname === PARTNER_REFERRALS_FLAG_PATH) {
       return partnerReferralsFlagResponse(request, env);
+    }
+    if (pathname === MEMORY_GRAPH_V2_FLAG_PATH) {
+      if (request.method !== 'GET') return new Response(null, { status: 405, headers: { allow: 'GET' } });
+      return booleanFlagshipResponse(request, env, MEMORY_GRAPH_V2_FLAG_KEY);
     }
     if (pathname === LANDING_MOBILE_V2_FLAG_PATH) {
       if (request.method !== 'GET') return new Response(null, { status: 405, headers: { allow: 'GET' } });

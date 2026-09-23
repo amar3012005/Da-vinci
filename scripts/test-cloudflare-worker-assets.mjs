@@ -45,6 +45,33 @@ const unavailableFlag = await worker.fetch(
 );
 assert.equal((await unavailableFlag.json()).enabled, false);
 
+const memoryGraphV2Flag = await worker.fetch(
+  new Request('https://next.singulancelabs.com/__hivemind/feature-flags/memory-graph-v2'),
+  {
+    ASSETS: { fetch: async () => new Response('unused') },
+    FLAGS: { getBooleanValue: async (key, fallback, context) => {
+      assert.equal(key, 'memory_graph_v2');
+      assert.equal(fallback, false);
+      assert.equal(context.environment, 'production');
+      assert.equal(context.surface, 'hivemind-web');
+      return true;
+    } },
+  },
+);
+assert.equal(memoryGraphV2Flag.status, 200);
+assert.equal(memoryGraphV2Flag.headers.get('cache-control'), 'no-store');
+assert.deepEqual(await memoryGraphV2Flag.json(), {
+  key: 'memory_graph_v2',
+  enabled: true,
+  source: 'cloudflare-flagship',
+});
+
+const memoryGraphV2RejectsWrites = await worker.fetch(
+  new Request('https://next.singulancelabs.com/__hivemind/feature-flags/memory-graph-v2', { method: 'POST' }),
+  envReturning(new Response('unused'), true),
+);
+assert.equal(memoryGraphV2RejectsWrites.status, 405);
+
 const mobileLandingEnabled = await worker.fetch(
   new Request('https://next.singulancelabs.com/__hivemind/feature-flags/landing-mobile-v2'),
   {
