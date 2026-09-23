@@ -11,7 +11,7 @@ export const BLOCK_KINDS = Object.freeze([
 
 /** Product UI kinds — AgentScope class names never reach the workbench. */
 export const PRODUCT_KINDS = Object.freeze([
-  'started', 'message', 'plan', 'activity', 'team', 'approval', 'artifact', 'completed', 'failed',
+  'started', 'message', 'plan', 'activity', 'team', 'approval', 'artifact', 'completed', 'failed', 'cancelled',
 ]);
 
 export function isProductKind(kind) {
@@ -35,6 +35,71 @@ export function emptyWorkRunView(workrunId) {
 
 export function eventType(ev) {
   return String(ev?.type || ev?.t || '').toUpperCase();
+}
+
+export function transcriptText(value) {
+  if (value == null) return '';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(transcriptText).filter(Boolean).join('');
+  if (typeof value === 'object') {
+    if (typeof value.text === 'string') return value.text;
+    if (typeof value.delta === 'string') return value.delta;
+    if (typeof value.content === 'string' || Array.isArray(value.content)) return transcriptText(value.content);
+    if (/^tool[-_]result$/i.test(String(value.type || ''))) return transcriptText(value.result ?? value.output ?? value.content ?? '');
+  }
+  return '';
+}
+
+function usageNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+function firstUsageNumber(source, keys) {
+  for (const key of keys) {
+    const value = usageNumber(source?.[key]);
+    if (value != null) return value;
+  }
+  return null;
+}
+
+export function normalizeTurnUsage(value) {
+  const source = value?.usage && typeof value.usage === 'object' ? value.usage : value;
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return null;
+  const inputTokens = firstUsageNumber(source, ['input_tokens', 'prompt_tokens', 'inputTokens', 'promptTokens']);
+  const outputTokens = firstUsageNumber(source, ['output_tokens', 'completion_tokens', 'outputTokens', 'completionTokens']);
+  const cachedInputTokens = firstUsageNumber(source, ['cached_input_tokens', 'cache_input_tokens', 'cached_prompt_tokens', 'cachedInputTokens', 'cacheInputTokens'])
+    ?? firstUsageNumber(source.input_tokens_details, ['cached_tokens'])
+    ?? firstUsageNumber(source.prompt_tokens_details, ['cached_tokens']);
+  const totalTokens = firstUsageNumber(source, ['total_tokens', 'totalTokens'])
+    ?? (inputTokens != null && outputTokens != null ? inputTokens + outputTokens : null);
+  const durationMs = firstUsageNumber(source, ['duration_ms', 'durationMs', 'elapsed_ms', 'elapsedMs', 'run_ms', 'runMs']);
+  const ttftMs = firstUsageNumber(source, ['ttft_ms', 'ttftMs', 'time_to_first_token_ms']);
+  const tokenPerSecond = firstUsageNumber(source, ['tokens_per_second', 'tokensPerSecond']);
+  const cacheHitPercent = firstUsageNumber(source, ['cache_hit_percent', 'cacheHitPercent'])
+    ?? (inputTokens && cachedInputTokens != null ? (cachedInputTokens / inputTokens) * 100 : null);
+  const provider = String(source.provider || source.provider_name || '').trim() || null;
+  const model = String(source.model || source.model_name || source.served_model || '').trim() || null;
+  if ([inputTokens, outputTokens, cachedInputTokens, totalTokens, durationMs, ttftMs, tokenPerSecond, cacheHitPercent, provider, model].every((item) => item == null)) return null;
+  return {
+    inputTokens, outputTokens, cachedInputTokens,
+    uncachedInputTokens: inputTokens != null && cachedInputTokens != null ? Math.max(0, inputTokens - cachedInputTokens) : null,
+    totalTokens, durationMs, ttftMs, tokenPerSecond, cacheHitPercent, provider, model,
+  };
+}
+
+export function mergeTurnUsage(current, incoming) {
+  const next = normalizeTurnUsage(incoming);
+  if (!next) return current || null;
+  return Object.fromEntries(Object.entries({ ...(current || {}), ...next }).filter(([, value]) => value != null));
+}
+
+export function usageFromEvent(ev) {
+  return mergeTurnUsage(null, ev?.usage || ev?.metrics || ev?.telemetry || ev?.value?.usage || null);
+}
+
+export function isCompanyOperatingPlan(ev) {
+  return (ev?.execution_mode || ev?.scope?.execution_mode || ev?.value?.execution_mode) === 'operating_plan';
 }
 
 export function textOf(ev) {
@@ -120,13 +185,39 @@ function project(view) {
     kind: /web|search|browser/i.test(String(b.payload.name)) ? 'web' : 'memory',
   }));
   const activity = list
-    .filter((b) => b.kind === 'activity' || b.kind === 'plan' || b.kind === 'tool' || b.kind === 'team')
+    .filter((b) => b.kind === 'activity' || b.kind === 'tool' || b.kind === 'search' || b.kind === 'team')
     .map((b) => ({
       id: b.block_id,
+      block_id: b.block_id,
       kind: b.kind,
+      name: b.payload.name || null,
       label: b.payload.label || toolLabel(b.payload.name) || b.kind,
       status: b.status,
+      input: b.payload.input ?? null,
+      result: b.payload.result ?? b.payload.output ?? null,
+      text: b.payload.text ?? null,
+      execution_mode: b.payload.execution_mode || null,
+      tasks: b.payload.tasks || null,
     }));
+  const latestPlan = [...list].reverse().find((b) => (
+    b.kind === 'plan' && b.payload.execution_mode === 'operating_plan' && Array.isArray(b.payload.tasks)
+  ));
+  const tasks = (latestPlan?.payload?.tasks || []).map((task, index) => {
+    const state = String(task?.state || task?.status || '').toLowerCase();
+    const status = /complete|done|success/.test(state)
+      ? 'complete'
+      : /running|progress|active|working/.test(state)
+        ? 'streaming'
+        : 'pending';
+    return {
+      id: task?.id || `agentscope-task-${index}`,
+      label: task?.subject || task?.title || task?.description || `Task ${index + 1}`,
+      description: task?.description || '',
+      status,
+      blocked_by: Array.isArray(task?.blocked_by) ? task.blocked_by : [],
+      owner: task?.owner || null,
+    };
+  });
   const team = list.filter((b) => b.kind === 'team').map((b) => b.payload);
   const approvals = list.filter((b) => b.kind === 'approval');
   const computerBlock = list.find((b) => /computer_(query|run_task)/i.test(String(b.payload?.name || '')));
@@ -142,7 +233,7 @@ function project(view) {
       objective: result.objective || computerBlock.payload.input?.objective,
     };
   }
-  return { ...view, artifacts, sources, activity, team, approvals, computer };
+  return { ...view, artifacts, sources, activity, tasks, team, approvals, computer };
 }
 
 function mergeDelta(prev, incoming) {
@@ -172,6 +263,37 @@ function callInput(ev) {
   return ev.input ?? ev.arguments ?? ev.args ?? ev.tool_input ?? ev.parameters ?? {};
 }
 
+export function artifactDisplayName(artifact) {
+  const payload = artifact?.payload || artifact || {};
+  const candidate = payload.label || payload.title || payload.name || payload.filename || payload.path || 'Artifact';
+  const name = String(candidate).split(/[\\/]/).filter(Boolean).pop() || 'Artifact';
+  return name.length > 72 ? `${name.slice(0, 69)}…` : name;
+}
+
+export function hydrateRegisteredArtifacts(view, registered) {
+  const source = registered?.artifacts || registered?.items || registered;
+  const list = Array.isArray(source) ? source : source ? [source] : [];
+  return list.reduce((current, raw, index) => {
+    const item = typeof raw === 'string' ? { artifact_id: raw } : raw;
+    if (!item || typeof item !== 'object') return current;
+    const id = item.artifact_id || item.id || item.path || `registered-${index}`;
+    const block = {
+      block_id: `artifact:${id}`,
+      workrun_id: current.workrun_id,
+      kind: 'artifact',
+      status: 'complete',
+      payload: {
+        ...item,
+        artifact_id: id,
+        path: item.path || item.download_path || item.url || null,
+        content_type: item.content_type || item.mime_type || null,
+        label: artifactDisplayName(item),
+      },
+    };
+    return upsertBlock(current, block);
+  }, view);
+}
+
 /**
  * Apply one AgentScope session event or hm-core normalized event to the view.
  */
@@ -181,9 +303,20 @@ export function applyWorkRunEvent(view, ev) {
   const workrunId = view.workrun_id;
   const t = String(ev.t || '');
 
-  if (t === 'plan.updated' || t === 'tool.started' || type === 'TOOL_CALL_START' || type === 'TOOL.STARTED') {
+  if ((t === 'plan.updated' || t === 'task_plan') && isCompanyOperatingPlan(ev)) {
+    const tasks = Array.isArray(ev.tasks) ? ev.tasks : (Array.isArray(ev.subtasks) ? ev.subtasks : []);
+    return upsertBlock(view, {
+      block_id: `plan:${workrunId}`,
+      workrun_id: workrunId,
+      kind: 'plan',
+      status: 'complete',
+      payload: { name: ev.name || 'TaskUpdate', label: ev.label || 'Operating plan', family: 'task', execution_mode: 'operating_plan', description: ev.description || '', tasks },
+    });
+  }
+
+  if (t === 'tool.started' || type === 'TOOL_CALL_START' || type === 'TOOL.STARTED') {
     const name = ev.tool_call_name || ev.tool_name || ev.tool || ev.name || 'tool';
-    const isTask = /^Task(Create|Update|List|Get)$/i.test(name) || t === 'plan.updated';
+    const isTask = /^Task(Create|Update|List|Get)$/i.test(name) && isCompanyOperatingPlan(ev);
     const input = callInput(ev);
     const planId = input.task_id || input.id || ev.task_id || ev.tool_call_id || ev.call_id || ev.id || `${Date.now()}`;
     return upsertBlock(view, {
@@ -191,7 +324,7 @@ export function applyWorkRunEvent(view, ev) {
       workrun_id: workrunId,
       kind: isTask ? 'plan' : (/web_search/i.test(name) ? 'search' : 'tool'),
       status: 'streaming',
-      payload: { name, input, label: isTask ? (input.title || input.subject || input.description || toolLabel(name)) : toolLabel(name), family: isTask ? 'task' : null },
+      payload: { name, input, label: isTask ? (input.title || input.subject || input.description || toolLabel(name)) : toolLabel(name), family: isTask ? 'task' : null, ...(isTask ? { execution_mode: 'operating_plan' } : {}) },
     });
   }
 
@@ -225,7 +358,7 @@ export function applyWorkRunEvent(view, ev) {
     });
   }
 
-  if (t === 'tool.completed' || type === 'TOOL_CALL_END' || type === 'TOOL_RESULT_END' || type === 'TOOL.COMPLETED') {
+  if (t === 'tool.completed' || type === 'TOOL_RESULT_END' || type === 'TOOL.COMPLETED') {
     const name = ev.tool_call_name || ev.tool_name || ev.tool || ev.name;
     const result = (plainValue(ev.output ?? ev.result ?? textOf(ev) ?? ev.result_summary)).slice(0, 12000);
     const existing = view.blocks[toolId(ev, workrunId)];
@@ -244,6 +377,20 @@ export function applyWorkRunEvent(view, ev) {
     });
   }
 
+  // AgentScope's TOOL_CALL_END only closes the call-input event. Execution is
+  // still in flight until a result/end event arrives, so keep the stable row
+  // open instead of falsely painting it as a completed action.
+  if (type === 'TOOL_CALL_END') {
+    const id = toolId(ev, workrunId);
+    const existing = view.blocks[id];
+    if (!existing) return view;
+    return upsertBlock(view, {
+      ...existing,
+      status: 'streaming',
+      payload: { ...existing.payload, input: Object.keys(callInput(ev) || {}).length ? callInput(ev) : existing.payload.input },
+    });
+  }
+
   if (t === 'artifact.created' || type === 'ARTIFACT.CREATED' || (type === 'CUSTOM' && ev.name === 'artifact.created')) {
     const artifactId = ev.artifact_id || ev.value?.artifact_id || ev.path || ev.value?.path || `art-${Date.now()}`;
     return upsertBlock(view, {
@@ -255,7 +402,12 @@ export function applyWorkRunEvent(view, ev) {
         artifact_id: artifactId,
         path: ev.path || ev.value?.path,
         content_type: ev.content_type || ev.value?.content_type,
-        label: ev.title || ev.name || ev.value?.title || ev.value?.name || ev.path || ev.value?.path || 'Artifact',
+        label: artifactDisplayName({
+          title: ev.title || ev.value?.title,
+          filename: ev.filename || ev.value?.filename,
+          path: ev.path || ev.value?.path,
+          name: ev.value?.name,
+        }),
       },
     });
   }
@@ -282,13 +434,13 @@ export function applyWorkRunEvent(view, ev) {
     });
   }
 
-  if (type === 'CUSTOM' && ev.name === 'state_updated') {
+  if (type === 'CUSTOM' && ev.name === 'state_updated' && isCompanyOperatingPlan(ev)) {
     return upsertBlock(view, {
       block_id: `plan:${workrunId}`,
       workrun_id: workrunId,
       kind: 'plan',
       status: 'complete',
-      payload: { label: 'Plan updated', value: ev.value },
+      payload: { label: 'Operating plan', execution_mode: 'operating_plan', tasks: ev.value?.tasks_context?.tasks || [] },
     });
   }
 
@@ -317,11 +469,16 @@ export function applyWorkRunEvent(view, ev) {
   if (t === 'agent.status') {
     return { ...view, status: ev.status || view.status };
   }
-  if (t === 'workrun.failed' || type === 'WORKRUN.FAILED' || type === 'TURN.FAILED' || type === 'TURN.CANCELLED' || (type === 'REPLY_END' && (ev.finished_reason || ev.reason) && ev.finished_reason !== 'completed' && ev.reason !== 'completed')) {
+  if (t === 'workrun.failed' || t === 'workrun.cancelled' || t === 'turn.failed' || t === 'turn.cancelled' || type === 'WORKRUN.FAILED' || type === 'TURN.FAILED' || type === 'TURN.CANCELLED' || (type === 'REPLY_END' && (ev.finished_reason || ev.reason) && ev.finished_reason !== 'completed' && ev.reason !== 'completed')) {
     const fail = productFailure(ev);
-    return { ...view, status: 'failed', failure: fail };
+    const blocks = Object.fromEntries(Object.entries(view.blocks).map(([id, block]) => (
+      (block.kind === 'tool' || block.kind === 'search') && block.status === 'streaming'
+        ? [id, { ...block, status: 'failed' }]
+        : [id, block]
+    )));
+    return project({ ...view, blocks, status: 'failed', failure: fail });
   }
-  if (t === 'workrun.completed' || type === 'WORKRUN.COMPLETED' || type === 'TURN.COMPLETED') return { ...view, status: 'completed' };
+  if (t === 'workrun.completed' || t === 'turn.completed' || type === 'WORKRUN.COMPLETED' || type === 'TURN.COMPLETED') return { ...view, status: 'completed' };
 
   return view;
 }
@@ -337,7 +494,7 @@ export function blocksInOrder(view) {
 }
 
 function cloneMsgs(msgs) {
-  return msgs.map((m) => ({ ...m, tools: [...(m.tools || [])] }));
+  return msgs.map((m) => ({ ...m, tools: [...(m.tools || [])], timeline: (m.timeline || []).map((item) => ({ ...item })) }));
 }
 
 function toolsRunning(msg) {
@@ -357,10 +514,16 @@ export function applyAgentEvent(msgs, ev) {
       last.streaming = true;
       return last;
     }
-    const created = { role: 'assistant', text: '', thinking: '', tools: [], streaming: true };
+    const created = { role: 'assistant', text: '', thinking: '', tools: [], timeline: [], streaming: true };
     next.push(created);
     return created;
   };
+
+  const usage = usageFromEvent(ev);
+  if (usage) {
+    const current = ensureAssistant();
+    current.usage = mergeTurnUsage(current.usage, usage);
+  }
 
   if (type === 'REPLY_START' || type === 'TURN.STARTED') {
     const replyId = ev.reply_id || ev.turn_id || ev.id;
@@ -379,38 +542,79 @@ export function applyAgentEvent(msgs, ev) {
 
   if (
     type === 'TEXT_BLOCK_DELTA' || type === 'TEXT.DELTA' || type === 'THINKING_BLOCK_DELTA' || type === 'THINKING.DELTA' || type === 'THINKING_BLOCK_END'
-    || type === 'TOOL_CALL_START' || type === 'TOOL_CALL_END' || type === 'TOOL_RESULT_END'
-    || type === 'TEXT_BLOCK_END' || type === 'TOOL.STARTED' || type === 'TOOL.COMPLETED' || type === 'TOOL.OUTPUT.DELTA'
+    || type === 'TOOL_CALL_START' || type === 'TOOL_CALL_END' || type === 'TOOL_RESULT_END' || type === 'TOOL_CALL_DELTA' || type === 'TOOL_RESULT_TEXT_DELTA'
+    || type === 'TEXT_BLOCK_END' || type === 'TOOL.STARTED' || type === 'TOOL.COMPLETED' || type === 'TOOL.OUTPUT.DELTA' || type === 'TOOL.INPUT.DELTA'
   ) {
     const cur = ensureAssistant();
     if (type === 'TEXT_BLOCK_DELTA' || type === 'TEXT.DELTA') cur.text = mergeDelta(cur.text, textOf(ev));
     if (type === 'TEXT_BLOCK_END' && textOf(ev)) cur.text = mergeDelta(cur.text, textOf(ev));
-    if (type === 'THINKING_BLOCK_DELTA' || type === 'THINKING.DELTA') cur.thinking = mergeDelta(cur.thinking, textOf(ev));
+    if (type === 'THINKING_BLOCK_DELTA' || type === 'THINKING.DELTA') {
+      cur.thinking = mergeDelta(cur.thinking, textOf(ev));
+      const id = `thinking:${ev.turn_id || ev.reply_id || cur.reply_id || 'current'}`;
+      const existing = cur.timeline.find((item) => item.id === id);
+      const thinkingItem = { id, kind: 'thinking', text: mergeDelta(existing?.text, textOf(ev)), status: 'running' };
+      if (existing) Object.assign(existing, thinkingItem);
+      else cur.timeline.push(thinkingItem);
+    }
     if (type === 'THINKING_BLOCK_END' && textOf(ev)) cur.thinking = mergeDelta(cur.thinking, textOf(ev));
-    if (type === 'TOOL_CALL_START' || type === 'TOOL_CALL_END' || type === 'TOOL_RESULT_END' || type === 'TOOL.STARTED' || type === 'TOOL.COMPLETED' || type === 'TOOL.OUTPUT.DELTA') {
+    if (type === 'TOOL_CALL_START' || type === 'TOOL_CALL_END' || type === 'TOOL_RESULT_END' || type === 'TOOL.STARTED' || type === 'TOOL.COMPLETED' || type === 'TOOL.OUTPUT.DELTA' || type === 'TOOL.INPUT.DELTA') {
       const name = ev.tool_call_name || ev.name || ev.tool_name || 'tool';
       const id = ev.tool_call_id || ev.id;
       const existing = cur.tools.find((t) => (id && t.id === id) || (!id && t.name === name && t.state === 'running'));
-      const result = ['TOOL_RESULT_END', 'TOOL.COMPLETED', 'TOOL.OUTPUT.DELTA'].includes(type) ? plainValue(ev.output ?? ev.result ?? textOf(ev) ?? ev.result_summary).slice(0, 12000) : undefined;
+      const resultEvents = ['TOOL_RESULT_END', 'TOOL.COMPLETED'];
+      const resultDeltaEvents = ['TOOL.OUTPUT.DELTA', 'TOOL_RESULT_TEXT_DELTA'];
+      const isToolEvent = ['TOOL_CALL_START', 'TOOL_CALL_END', 'TOOL_RESULT_END', 'TOOL.STARTED', 'TOOL.COMPLETED', 'TOOL.OUTPUT.DELTA', 'TOOL_RESULT_TEXT_DELTA', 'TOOL_CALL_DELTA', 'TOOL.INPUT.DELTA'].includes(type);
+      const result = [...resultEvents, ...resultDeltaEvents].includes(type) ? plainValue(ev.output ?? ev.result ?? textOf(ev) ?? ev.result_summary).slice(0, 12000) : undefined;
       const input = callInput(ev);
       if (existing) {
-        existing.state = ['TOOL_CALL_START', 'TOOL.STARTED', 'TOOL.OUTPUT.DELTA'].includes(type) ? 'running' : 'done';
-        if (result) existing.result = type === 'TOOL.OUTPUT.DELTA' ? `${existing.result || ''}${result}` : result;
+        existing.state = resultEvents.includes(type) ? 'done' : 'running';
+        if (result) existing.result = resultDeltaEvents.includes(type) ? `${existing.result || ''}${result}` : result;
         if (input && Object.keys(input).length) existing.input = input;
+        if (type === 'TOOL.INPUT.DELTA') existing.input = `${existing.input || ''}${plainValue(textOf(ev))}`;
       } else {
-        cur.tools.push({ name, id, input, state: ['TOOL_CALL_START', 'TOOL.STARTED', 'TOOL.OUTPUT.DELTA'].includes(type) ? 'running' : 'done', result });
+        cur.tools.push({ name, id, input, state: resultEvents.includes(type) ? 'done' : 'running', result });
       }
       cur.streaming = true;
+      if (isToolEvent) {
+        const timelineId = `tool:${id || `${name}-${cur.timeline.filter((item) => item.kind === 'tool' && item.name === name).length}`}`;
+        const timelineItem = cur.timeline.find((item) => item.id === timelineId);
+        const nextItem = {
+          id: timelineId,
+          kind: 'tool',
+          name,
+          label: name,
+          input: type === 'TOOL.INPUT.DELTA'
+            ? `${timelineItem?.input || ''}${plainValue(textOf(ev))}`
+            : input && Object.keys(input || {}).length ? input : timelineItem?.input,
+          result: result
+            ? resultDeltaEvents.includes(type) ? `${timelineItem?.result || ''}${result}` : result
+            : timelineItem?.result,
+          status: resultEvents.includes(type) ? 'done' : 'running',
+        };
+        if (timelineItem) Object.assign(timelineItem, nextItem);
+        else cur.timeline.push(nextItem);
+      }
     }
   }
 
-  if (type === 'REPLY_END' || type === 'TURN.COMPLETED' || type === 'TURN.FAILED' || type === 'TURN.CANCELLED' || type === 'WORKRUN.FAILED' || type === 'WORKRUN_FAILED') {
+  const terminalStatus = String(ev?.status || '').toLowerCase();
+  const eventName = String(ev?.t || '').toLowerCase();
+  if (type === 'REPLY_END' || type === 'TURN.COMPLETED' || type === 'TURN.FAILED' || type === 'TURN.CANCELLED' || type === 'WORKRUN.FAILED' || type === 'WORKRUN_FAILED'
+    || ['workrun.completed', 'workrun.failed', 'workrun.cancelled'].includes(eventName)
+    || (eventName === 'workrun.state' && ['completed', 'failed', 'cancelled'].includes(terminalStatus))
+    || (eventName === 'agent.status' && ['idle', 'completed', 'failed', 'cancelled'].includes(terminalStatus))) {
     const cur = next[next.length - 1];
     const failed = ['TURN.FAILED', 'TURN.CANCELLED', 'WORKRUN.FAILED', 'WORKRUN_FAILED'].includes(type)
       || (ev.finished_reason && ev.finished_reason !== 'completed')
       || (ev.reason && ev.reason !== 'completed');
     if (cur && cur.role === 'assistant') {
-      cur.streaming = failed ? false : toolsRunning(cur);
+      cur.streaming = failed ? false : type === 'REPLY_END' ? toolsRunning(cur) : false;
+      if (!cur.streaming) cur.stage = 'complete';
+      cur.timeline = (cur.timeline || []).map((item) => (
+        item.kind === 'thinking' || (failed && item.kind === 'tool')
+          ? { ...item, status: failed ? 'failed' : 'complete' }
+          : item
+      ));
     }
   }
   return next;
@@ -420,6 +624,6 @@ export function startUserTurn(msgs, text) {
   return [
     ...msgs,
     { role: 'user', text, tools: [], thinking: '' },
-    { role: 'assistant', text: '', thinking: '', tools: [], streaming: true },
+    { role: 'assistant', text: '', thinking: '', tools: [], timeline: [], streaming: true, stage: 'acknowledging' },
   ];
 }

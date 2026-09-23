@@ -3,6 +3,9 @@ import {
   applyWorkRunEvent,
   emptyWorkRunView,
   hasRunningTools,
+  normalizeTurnUsage,
+  hydrateRegisteredArtifacts,
+  transcriptText,
   isProductKind,
   productFailure,
   startUserTurn,
@@ -20,11 +23,82 @@ describe('WorkRun identity-keyed block registry', () => {
         type: 'TOOL_CALL_START',
         tool_call_name: 'TaskCreate',
         tool_call_id: `t${i}`,
+        execution_mode: 'operating_plan',
       });
     }
     const plans = view.blockOrder.map((id) => view.blocks[id]).filter((b) => b.kind === 'plan');
     expect(plans).toHaveLength(15);
     expect(new Set(plans.map((block) => block.block_id)).size).toBe(15);
+  });
+
+  it('keeps ordinary Task tools out of the company operating-plan checklist', () => {
+    let view = emptyWorkRunView(runId);
+    view = applyWorkRunEvent(view, { type: 'TOOL_CALL_START', tool_call_name: 'TaskCreate', tool_call_id: 'direct-task' });
+    expect(view.tasks).toEqual([]);
+    expect(view.activity[0]).toMatchObject({ kind: 'tool', name: 'TaskCreate', id: `tool:${runId}:direct-task` });
+  });
+
+  it('projects tool identity, input, and result for expandable call rows', () => {
+    let view = emptyWorkRunView(runId);
+    view = applyWorkRunEvent(view, {
+      type: 'TOOL_CALL_START', tool_call_name: 'Bash', tool_call_id: 'shell-1', input: { command: 'pwd' },
+    });
+    view = applyWorkRunEvent(view, {
+      type: 'TOOL_RESULT_END', tool_call_id: 'shell-1', output: '/workspace/project',
+    });
+    expect(view.activity[0]).toMatchObject({
+      id: `tool:${runId}:shell-1`, kind: 'tool', name: 'Bash', input: { command: 'pwd' }, result: '/workspace/project', status: 'complete',
+    });
+  });
+
+  it('does not mark a tool complete when only its call arguments have ended', () => {
+    let view = emptyWorkRunView(runId);
+    view = applyWorkRunEvent(view, { type: 'TOOL_CALL_START', tool_call_name: 'Bash', tool_call_id: 'call-2', input: { command: 'echo hi' } });
+    view = applyWorkRunEvent(view, { type: 'TOOL_CALL_END', tool_call_id: 'call-2' });
+    expect(view.activity[0].status).toBe('streaming');
+    expect(hasRunningTools(view)).toBe(true);
+    view = applyWorkRunEvent(view, { type: 'TOOL_RESULT_END', tool_call_id: 'call-2', output: 'hi' });
+    expect(view.activity[0]).toMatchObject({ status: 'complete', result: 'hi' });
+  });
+
+  it('seals in-flight tools as failed when the run fails, so the UI can return to idle', () => {
+    let view = emptyWorkRunView(runId);
+    view = applyWorkRunEvent(view, { type: 'tool.started', tool_name: 'web_search', tool_call_id: 'stuck' });
+    view = applyWorkRunEvent(view, { t: 'workrun.failed', reason: 'provider unavailable' });
+    expect(hasRunningTools(view)).toBe(false);
+    expect(view.activity[0].status).toBe('failed');
+    expect(view.status).toBe('failed');
+  });
+
+  it('hydrates registered artifacts as named preview cards', () => {
+    const view = hydrateRegisteredArtifacts(emptyWorkRunView(runId), [{ id: 'a1', path: '/v1/hyper-artifacts/reports/Italy-prospects.csv', content_type: 'text/csv' }]);
+    expect(view.artifacts[0].payload).toMatchObject({ artifact_id: 'a1', label: 'Italy-prospects.csv', content_type: 'text/csv' });
+  });
+
+  it('flattens object content without rendering raw objects', () => {
+    expect(transcriptText({ type: 'text', text: 'Readable answer' })).toBe('Readable answer');
+    expect(transcriptText({ unexpected: 'payload' })).toBe('');
+  });
+
+  it('projects a task checklist only from an explicit company operating-plan snapshot', () => {
+    let view = emptyWorkRunView(runId);
+    view = applyWorkRunEvent(view, {
+      t: 'plan.updated', execution_mode: 'operating_plan', tasks: [
+        { id: 'a', subject: 'Research market', status: 'completed' },
+        { id: 'b', subject: 'Build target set', status: 'pending', blocked_by: ['a'] },
+      ],
+    });
+    expect(view.tasks).toEqual([
+      expect.objectContaining({ id: 'a', label: 'Research market', status: 'complete' }),
+      expect.objectContaining({ id: 'b', label: 'Build target set', status: 'pending', blocked_by: ['a'] }),
+    ]);
+  });
+
+  it('normalizes reported cached-token usage without inventing missing values', () => {
+    expect(normalizeTurnUsage({ input_tokens: 100, output_tokens: 20, cached_input_tokens: 25, provider: 'gateway' })).toMatchObject({
+      inputTokens: 100, outputTokens: 20, cachedInputTokens: 25, uncachedInputTokens: 75, totalTokens: 120, cacheHitPercent: 25,
+    });
+    expect(normalizeTurnUsage({ input_tokens: 100 })).toMatchObject({ cachedInputTokens: null, cacheHitPercent: null });
   });
 
   it('upserts the same tool call_id instead of appending a second row', () => {

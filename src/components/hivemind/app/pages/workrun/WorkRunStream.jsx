@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import UserMessage from './narrative/UserMessage';
 import AgentMessage from './narrative/AgentMessage';
 
@@ -6,15 +6,18 @@ export default function WorkRunStream({ msgs, activity, tasks, approvals, onPrev
   const scroller = useRef(null);
   const followTail = useRef(true);
   const [showLatest, setShowLatest] = useState(false);
-  useEffect(() => {
-    if (scroller.current && followTail.current) scroller.current.scrollTop = scroller.current.scrollHeight;
-  }, [msgs]);
+  useLayoutEffect(() => {
+    const node = scroller.current;
+    if (!node || !followTail.current) return undefined;
+    const frame = requestAnimationFrame(() => { node.scrollTop = node.scrollHeight; });
+    return () => cancelAnimationFrame(frame);
+  }, [msgs, activity, tasks]);
   return (
     <div ref={scroller} onScroll={(event) => {
       const el = event.currentTarget;
       followTail.current = el.scrollHeight - el.scrollTop - el.clientHeight < 72;
       setShowLatest(!followTail.current);
-    }} className="relative flex-1 overflow-y-auto px-8 py-8 space-y-6" style={{ containerType: 'inline-size', paddingTop: topPadding }}>
+    }} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-8 py-8 space-y-6" style={{ containerType: 'inline-size', paddingTop: topPadding }}>
       {(msgs || []).map((m, i) => (
         m.role === 'user'
           ? <UserMessage key={i} text={m.text} />
@@ -24,11 +27,13 @@ export default function WorkRunStream({ msgs, activity, tasks, approvals, onPrev
               thinking={m.thinking}
               text={m.text}
               streaming={m.streaming}
+              timeline={m.timeline}
               tools={m.tools}
               activity={i === (msgs.length - 1) ? activity : []}
               tasks={i === (msgs.length - 1) ? tasks : []}
               approvals={i === (msgs.length - 1) ? approvals : []}
               onPreview={onPreview}
+              usage={m.usage}
               elapsedLabel={i === (msgs.length - 1) ? elapsedLabel : ''}
               statusText={i === (msgs.length - 1) && phase === 'acknowledging' ? 'Acknowledging your request…' : ''}
             />
