@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import apiClient from '../shared/api-client';
 import posthog, { isPostHogEnabled } from '../../../../analytics/posthog';
 import { setStorageUser, clearUserScopedStorage } from '../shared/user-storage';
+import { defaultAuthReturnUrl } from './mobile-routing';
 
 const AuthContext = createContext(undefined);
 
@@ -135,7 +136,7 @@ export function AuthProvider({ children }) {
   const login = useCallback((options = {}) => {
     // Honor caller-provided returnTo (e.g. invitee bouncing through /hivemind/join/...)
     // and fall back to the default overview landing.
-    const defaultReturn = `${window.location.origin}/hivemind/app/overview?auth=callback`;
+    const defaultReturn = defaultAuthReturnUrl(window.location.origin);
     const returnTo = typeof options.returnTo === 'string' && options.returnTo
       ? options.returnTo
       : defaultReturn;
