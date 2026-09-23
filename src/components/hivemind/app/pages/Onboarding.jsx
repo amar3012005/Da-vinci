@@ -116,6 +116,17 @@ export default function OnboardingFlow() {
           referralCode: String(saved.referral_code || '').trim() || undefined,
           referralToken: String(saved.referral_token || '').trim() || undefined,
         });
+        // Consent is submitted only after an authenticated organization exists.
+        // Scheduling, eligibility, and delivery remain server-owned; failure to
+        // save this optional preference must never block workspace creation.
+        if (saved.proactive_reminders_enabled === true) {
+          await apiClient.updateProactiveCognitionSettings({
+            enabled: true,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+            quiet_start_hour: 21,
+            quiet_end_hour: 8,
+          }).catch(() => null);
+        }
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
         if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }

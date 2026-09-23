@@ -22,6 +22,7 @@ const MobileProjects = React.lazy(() => import('./mobile/pages/MobileProjects'))
 const MobileUsage = React.lazy(() => import('./mobile/pages/MobileUsage'));
 const MobileBilling = React.lazy(() => import('./mobile/pages/MobileBilling'));
 const MobileProfile = React.lazy(() => import('./mobile/pages/MobileProfile'));
+const MobileSettings = React.lazy(() => import('./mobile/pages/MobileSettings'));
 const MobileMemoryGraph = React.lazy(() => import('./mobile/pages/MobileMemoryGraph'));
 const MobileEntityProfile = React.lazy(() => import('./mobile/pages/MobileEntityProfile'));
 const Memories = React.lazy(() => import('./pages/Memories'));
@@ -206,6 +207,14 @@ export default function HiveMindApp() {
           element={
             <ProtectedRoute>
               <PageSuspense><MobileProfile /></PageSuspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="m/settings"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><MobileSettings /></PageSuspense>
             </ProtectedRoute>
           }
         />

@@ -342,6 +342,7 @@ export default function LoginPage() {
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [accountType, setAccountType] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [proactiveRemindersEnabled, setProactiveRemindersEnabled] = useState(false);
   const [hostingChoice, setHostingChoice] = useState(null); // 'managed' | 'self_hosted'
   const [userName, setUserName] = useState('');
   const [enterpriseName, setEnterpriseName] = useState('');
@@ -397,6 +398,7 @@ export default function LoginPage() {
     if (!saved?.type) return;
     setShowOnboarding(true);
     setAccountType(saved.type);
+    setProactiveRemindersEnabled(saved.proactive_reminders_enabled === true);
     setUserName(saved.name || '');
     setEnterpriseName(saved.enterprise || '');
     setHivemindName(saved.hivemind_name || '');
@@ -548,6 +550,7 @@ export default function LoginPage() {
       ...(accountType === 'personal' ? { referral_code: referralCode.trim() || null } : {}),
       ...(appliedReferralToken ? { referral_token: appliedReferralToken, selected_plan: referralInvitation?.offer?.plan || selectedPlan || 'free', referral_invitation: referralInvitation } : {}),
       ...(admission.invitation ? { enterprise_invitation: admission.invitation } : {}),
+      proactive_reminders_enabled: proactiveRemindersEnabled === true,
       signup_ticket: admission.signup_ticket,
     };
     // Save onboarding data for post-auth pickup
@@ -648,8 +651,8 @@ export default function LoginPage() {
 
         <div className={`flex flex-col md:flex-row items-stretch bg-white overflow-hidden ${showOnboarding ? 'h-full w-full border-0 rounded-none shadow-none' : 'border border-[#e3e0db] rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
           {/* Left: Login form */}
-          <div className={`transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'h-full overflow-y-auto p-7 md:w-1/2 md:border-r md:border-[#e3e0db] lg:p-10 xl:p-12' : 'p-8 md:w-[448px]'}`}>
-            <div className={showOnboarding ? 'mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center py-8 lg:py-12' : ''}>
+          <div className={`transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'h-full overflow-y-auto p-5 md:w-1/2 md:border-r md:border-[#e3e0db] md:p-7 lg:p-10 xl:p-12' : 'p-8 md:w-[448px]'}`}>
+            <div className={showOnboarding ? 'mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center py-8 max-md:min-h-[100dvh] md:py-10 lg:py-12' : ''}>
             {/* Logo */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
@@ -1001,6 +1004,18 @@ export default function LoginPage() {
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${userName || 'your'}_secondbrain`} className={INPUT_CLS} />
                         <p className="text-[11px] text-[#a3a3a3] mt-1">This is your memory workspace name</p>
                       </div>
+                      <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-[#e3e0db] bg-[#faf9f4] p-3">
+                        <input
+                          type="checkbox"
+                          checked={proactiveRemindersEnabled}
+                          onChange={(event) => setProactiveRemindersEnabled(event.target.checked)}
+                          className="mt-0.5 h-4 w-4 accent-[#117dff]"
+                        />
+                        <span>
+                          <span className="block text-[12px] font-semibold text-[#0a0a0a]">Let HIVE-MIND check in when something needs your attention</span>
+                          <span className="mt-1 block text-[10.5px] leading-relaxed text-[#737373]">Email check-ins are optional, respect quiet hours, and include one-click unsubscribe. You can change this any time in Settings.</span>
+                        </span>
+                      </label>
                       <div>
                         <label className={LABEL_CLS}>Invitation code</label>
                         <input
@@ -1172,6 +1187,18 @@ export default function LoginPage() {
                         <label className={LABEL_CLS}>Your Enterprise HIVEMIND</label>
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${(enterpriseName || 'company').toLowerCase().replace(/\s+/g, '')}_hivemind`} className={INPUT_CLS} />
                       </div>
+                      <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-[#e3e0db] bg-[#faf9f4] p-3">
+                        <input
+                          type="checkbox"
+                          checked={proactiveRemindersEnabled}
+                          onChange={(event) => setProactiveRemindersEnabled(event.target.checked)}
+                          className="mt-0.5 h-4 w-4 accent-[#117dff]"
+                        />
+                        <span>
+                          <span className="block text-[12px] font-semibold text-[#0a0a0a]">Let HIVE-MIND check in when something needs your attention</span>
+                          <span className="mt-1 block text-[10.5px] leading-relaxed text-[#737373]">Email check-ins are optional, respect quiet hours, and include one-click unsubscribe. You can change this any time in Settings.</span>
+                        </span>
+                      </label>
                       {!enterpriseInvitation && !referralInvitation && <div>
                         <label className={LABEL_CLS}>Enterprise access code</label>
                         <input
