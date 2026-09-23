@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import ForceGraph3D from "3d-force-graph";
 import * as THREE from "three";
+import { getRadialMemoryColor } from "./MemoryGraphTemporal";
 
 const DEFAULT_BG = "rgba(0,0,0,0)";
 
@@ -502,8 +503,18 @@ function getKindColor(node) {
 // Edge color by type (matches the image: purple=derived_from, red=contradicts, green=supports)
 // Edge palette parity with MemoryGraph.jsx EDGE_COLORS so the same edge
 // type reads the same color across 2D / 3D / detail views.
-function getEdgeColorByType(type, themeName = "day") {
+function getEdgeColorByType(type, themeName = "day", temporalPalette = false) {
   const t = String(type || '').toLowerCase();
+  if (temporalPalette) {
+    if (t === 'updates') return '#e59a18';
+    if (t === 'extends') return '#18a078';
+    if (t === 'derives' || t === 'derived_from') return '#8957d8';
+    if (t === 'contradicts') return '#df514b';
+    if (t === 'supports') return '#2878d4';
+    if (t === 'mentions') return '#8292a5';
+    if (t === 'needs_revision') return '#d97706';
+    if (t === 'peer_review') return '#0f9aaa';
+  }
   if (themeName === "atlas" || themeName === "night" || themeName === "day") {
     if (t === 'updates') return '#ff6560';
     if (t === 'extends') return '#c4bdb4';
@@ -1076,13 +1087,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const getNodeColor = useCallback((node) => {
       const t = themeRef.current;
       const highlightedNodes = highlightedNodesRef.current;
-      const radialKindColors = {
-        fact: "#3184d8", decision: "#e49b25", preference: "#8a70cf", lesson: "#289a88",
-        goal: "#e36d55", event: "#687b91", relationship: "#c6658f", document: "#d99a1a", entity: "#596fc2",
-      };
       if (radialTemporalRef.current) {
-        const kind = String(node?.kind || node?.type || "").toLowerCase();
-        const radialColor = radialKindColors[kind] || "#59718a";
+        const radialColor = getRadialMemoryColor(node);
         if (highlightedNodes.has(node.id)) return selectedNodeRef.current?.id === node.id ? "#0a0a0a" : "#117dff";
         if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) return `${radialColor}44`;
         return radialColor;
@@ -1123,7 +1129,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const t = themeRef.current;
     if (highlightedLinksRef.current.has(link)) return t.nodeAccent;
     // Type-specific colors take priority (Contradicts=red, derived_from=purple, etc.)
-    const typeColor = getEdgeColorByType(link?.type, t.name);
+    const typeColor = getEdgeColorByType(link?.type, t.name, radialTemporalRef.current);
     if (typeColor) return typeColor;
     const style = RELATION_WEIGHTS[link?.type] || RELATION_WEIGHTS.default;
     return mixHex(t.linkBase, t.nodeAccent, 1 - style.weight);
@@ -1276,6 +1282,48 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     fg.cameraPosition(next, target, duration);
   }, []);
 
+  const temporalCameraSnapshotRef = useRef(null);
+  const setTemporalTopDown = useCallback((enabled) => {
+    const fg = fgRef.current;
+    const camera = fg?.camera?.();
+    const controls = fg?.controls?.();
+    if (!fg || !camera || !controls) return;
+    const target = controls.target?.clone?.() || new THREE.Vector3();
+
+    if (enabled) {
+      if (!temporalCameraSnapshotRef.current) {
+        temporalCameraSnapshotRef.current = {
+          position: camera.position.clone(),
+          target: target.clone(),
+          up: camera.up.clone(),
+        };
+      }
+      const radius = (graphDataRef.current?.nodes || []).reduce((maxRadius, node) => {
+        if (!Number.isFinite(node.x) || !Number.isFinite(node.y) || !Number.isFinite(node.z)) return maxRadius;
+        return Math.max(maxRadius, Math.hypot(node.x, node.y, node.z));
+      }, 240);
+      // Three.js is Y-up. Point the camera down the Y axis and set a stable
+      // north vector so OrbitControls does not roll at the pole.
+      camera.up.set(0, 0, -1);
+      fg.cameraPosition(
+        new THREE.Vector3(target.x, target.y + Math.max(420, radius * 2.65), target.z),
+        target,
+        900,
+      );
+      return;
+    }
+
+    const saved = temporalCameraSnapshotRef.current;
+    if (saved) {
+      camera.up.copy(saved.up);
+      fg.cameraPosition(saved.position, saved.target, 700);
+      temporalCameraSnapshotRef.current = null;
+    } else {
+      camera.up.set(0, 1, 0);
+      fg.cameraPosition(new THREE.Vector3(0, 40, 300), new THREE.Vector3(), 700);
+    }
+  }, []);
+
   const zoomBy = useCallback((factor, duration = 300) => {
     const fg = fgRef.current;
     if (!fg) return;
@@ -1344,7 +1392,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     focusPoint,
     zoomBy,
     fitView,
-  }), [fitView, focusNode, focusPoint, zoomBy]);
+    setTemporalTopDown,
+  }), [fitView, focusNode, focusPoint, setTemporalTopDown, zoomBy]);
 
   useEffect(() => {
     if (!containerRef.current || fgRef.current) return;
