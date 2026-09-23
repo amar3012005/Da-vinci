@@ -4,6 +4,17 @@ import path from 'node:path';
 const source = fs.readFileSync(path.resolve(__dirname, '../HyperAgents.jsx'), 'utf8');
 
 describe('HyperAgents room chrome contract', () => {
+  test('does not offset the full-screen room shell under the company navigation rail', () => {
+    expect(source).toContain('flex h-full min-h-0 max-w-none');
+    expect(source).not.toContain('min-h-[600px] -m-6');
+  });
+
+  test('shows a retryable room-load error instead of a misleading not-found state', () => {
+    expect(source).toContain('role="alert"');
+    expect(source).toContain("t('common.retry', 'Retry')");
+    expect(source).toContain('onClick={() => load()}');
+  });
+
   test('keeps room metadata and actions in the persistent right rail', () => {
     const railStart = source.indexOf('data-room-metadata-sidebar');
     const participantsStart = source.indexOf("hyperAgents.participants', 'Participants'", railStart);

@@ -516,7 +516,7 @@ export default function HyperAgents() {
 
   // ── WhatsApp layout (post-first-room) ──────────────────────────────
   return (
-    <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
+    <div className="font-['Space_Grotesk'] flex h-full min-h-0 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
       <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
       {/* Left rail: rooms */}
       <aside className={showOperatingSystemSidebar ? `relative hidden ${companyRailOpen ? 'w-[240px] min-w-[240px]' : 'w-[56px] min-w-[56px]'} shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] overflow-hidden transition-[width] duration-200 md:flex` : 'hidden'}>
@@ -2494,7 +2494,18 @@ function RoomThread({ roomId, onArchived }) {
     );
   }
   if (!room) {
-    return <div className="flex-1 flex items-center justify-center text-[12px] text-[#a3a3a3]">{t('hyperAgents.roomNotFound', 'Room not found.')}</div>;
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-6 text-center">
+        <p role="alert" className="text-[12px] text-[#737373]">
+          {error || t('hyperAgents.roomNotFound', 'Room not found.')}
+        </p>
+        {error && (
+          <button type="button" onClick={() => load()} className="rounded-[6px] border border-[#e3e0db] px-3 py-1.5 text-[11px] text-[#525252] hover:bg-[#faf9f4]">
+            {t('common.retry', 'Retry')}
+          </button>
+        )}
+      </div>
+    );
   }
 
   const participants = room.participants || [];
