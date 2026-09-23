@@ -123,6 +123,23 @@ function EmailTurnstile({ siteKey, onToken, onStatus }) {
   return siteKey ? <div ref={host} className="min-h-[65px] w-full" aria-label="Bot verification" /> : null;
 }
 
+// A remote MCP authorization request is allowed to return only to Core's
+// authorization endpoint. This prevents the public login screen from being an
+// open redirect while allowing every configured identity provider to complete
+// the same handoff.
+function trustedMcpOAuthReturnTo(search) {
+  const value = new URLSearchParams(search).get('oauth_return_to');
+  if (!value) return null;
+  try {
+    const target = new URL(value);
+    const core = new URL(apiClient.core.defaults.baseURL);
+    if (target.origin === core.origin && target.pathname === '/oauth/authorize') return target.toString();
+  } catch {
+    // An invalid return target is treated as a normal login, never followed.
+  }
+  return null;
+}
+
 export default function LoginPage() {
   const { isAuthenticated, isUnreachable, loading, login, org, user, needsOnboarding } = useAuth();
   const navigate = useNavigate();
@@ -142,6 +159,7 @@ export default function LoginPage() {
   const [turnstileEpoch, setTurnstileEpoch] = useState(0);
   const [resendSeconds, setResendSeconds] = useState(0);
   const [emailState, setEmailState] = useState({ busy: false, message: '', error: false });
+  const oauthHandoffStarted = useRef(false);
   const emailEnabled = emailConfig.enabled;
   const emailOnly = emailConfig.email_only;
   const securityReady = !emailConfig.turnstile_site_key || Boolean(turnstileToken);
@@ -254,7 +272,12 @@ export default function LoginPage() {
   // we want OAuth to return to the control-plane URL (not the FE) so it can
   // mint the API key and complete the localhost handoff.
   const returnToFromState = useMemo(() => {
-    // CLI flow takes priority — URL param wins over location.state.
+    // MCP connections return only to Core's validated authorization endpoint.
+    // This path deliberately does not use the CLI session-storage recovery.
+    const oauthReturnTo = trustedMcpOAuthReturnTo(location.search);
+    if (oauthReturnTo) return oauthReturnTo;
+
+    // CLI flow takes priority over ordinary in-app navigation.
     const urlParams = new URLSearchParams(location.search);
     const cliReturnTo = urlParams.get('cli_return_to');
     if (cliReturnTo) {
@@ -277,6 +300,11 @@ export default function LoginPage() {
     () => new URLSearchParams(location.search).has('cli_return_to'),
     [location.search]
   );
+  const oauthReturnTo = useMemo(
+    () => trustedMcpOAuthReturnTo(location.search),
+    [location.search]
+  );
+  const isMcpOAuthFlow = Boolean(oauthReturnTo);
 
   // Persist cli_return_to into sessionStorage the moment the user lands
   // here. The OAuth round-trip (Google/Zitadel) can drop URL params on
@@ -451,6 +479,19 @@ export default function LoginPage() {
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         clearInvitationContext();
       }
+      // Remote MCP flow: ask the session issuer to reissue its shared browser
+      // cookie before Core receives the authorization request. This upgrades
+      // legacy host-only cookies and prevents visible login/consent loops.
+      // Core remains the final authority if this short refresh fails.
+      if (oauthReturnTo) {
+        if (oauthHandoffStarted.current) return;
+        oauthHandoffStarted.current = true;
+        apiClient.controlPlane.get('/auth/session')
+          .catch(() => null)
+          .finally(() => { window.location.href = oauthReturnTo; });
+        return;
+      }
+
       // CLI flow: jump to the cross-origin control-plane URL so it can
       // mint the API key and 302 to the verified page.
       const urlParams = new URLSearchParams(location.search);
@@ -465,7 +506,7 @@ export default function LoginPage() {
         : '/hivemind/app/overview';
       navigate(dest, { replace: true });
     }
-  }, [isAuthenticated, navigate, location.state, location.search, wantsCreate, needsOnboarding, org?.id]);
+  }, [isAuthenticated, navigate, location.state, location.search, oauthReturnTo, wantsCreate, needsOnboarding, org?.id]);
 
   // Auto-update hivemindName based on account type
   useEffect(() => {
@@ -638,6 +679,18 @@ export default function LoginPage() {
                 </div>
               </div>
             )}
+            {isMcpOAuthFlow && (
+              <div className="mb-6 p-3 rounded-[8px] bg-[#117dff]/8 border border-[#117dff]/20">
+                <div className="flex items-start gap-2">
+                  <Shield size={14} className="text-[#117dff] mt-0.5 shrink-0" />
+                  <div className="text-[12px] leading-relaxed text-[#0a5fcc]">
+                    <span className="font-semibold">Verify your HIVEMIND account to connect this app.</span>
+                    <br />
+                    <span className="text-[#3b6da3]">After sign-in, you will review the requested memory permissions before the app connects.</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <AnimatePresence mode="wait">
               {!showOnboarding ? (
@@ -650,10 +703,10 @@ export default function LoginPage() {
                 >
                   {/* Headline */}
                   <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
-                    <span className="text-[#a3a3a3]">〉</span> {isCliFlow ? 'CLI HANDSHAKE' : 'SIGN IN'}
+                    <span className="text-[#a3a3a3]">〉</span> {isCliFlow ? 'CLI HANDSHAKE' : isMcpOAuthFlow ? 'SECURE CONNECTION' : 'SIGN IN'}
                   </div>
                   <h2 className="text-[#0a0a0a] text-[26px] leading-tight font-medium font-['Space_Grotesk'] mb-2 tracking-tight">
-                    {isCliFlow ? 'Authorize HIVEMIND CLI' : 'Your memory is waiting'}
+                    {isCliFlow ? 'Authorize HIVEMIND CLI' : isMcpOAuthFlow ? 'Connect to HIVEMIND' : 'Your memory is waiting'}
                   </h2>
                   <p className="text-[#737373] text-[13px] mb-7 leading-relaxed">
                     One workspace that remembers everything — chat, agents, meetings, connectors.
