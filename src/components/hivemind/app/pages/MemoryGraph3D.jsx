@@ -9,6 +9,7 @@ import React, {
 import ForceGraph3D from "3d-force-graph";
 import * as THREE from "three";
 import { getRadialMemoryColor, getTemporalTopDownPose } from "./MemoryGraphTemporal";
+import { buildRadialAtlasLayout, formatRadialShellDate } from "./MemoryGraphRadialAtlas";
 
 const DEFAULT_BG = "rgba(0,0,0,0)";
 
@@ -1801,13 +1802,32 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       temporalShellGroup = shells;
       shells.name = "memory-time-shells";
       const shellColor = themeRef.current.name === "night" ? "#60758a" : "#829bb0";
-      [140, 270, 430].forEach((radius, index) => {
+      const { shellDates } = buildRadialAtlasLayout(graphDataRef.current?.nodes || []);
+      shellDates.forEach(({ radius, timestamp, latest }, index) => {
         const mesh = new THREE.Mesh(
           new THREE.SphereGeometry(radius, 32, 20),
           new THREE.MeshBasicMaterial({ color: shellColor, wireframe: true, transparent: true, opacity: index === 2 ? 0.12 : 0.075, depthWrite: false }),
         );
         mesh.name = `memory-time-shell-${radius}`;
         shells.add(mesh);
+
+        // Keep date ticks in world-space with their shell so the time axis
+        // remains legible as users orbit, zoom, or switch to the pole view.
+        const label = `${latest ? "LATEST · " : ""}${formatRadialShellDate(timestamp)}`;
+        const { texture, w, h } = getNodeTagTexture(label, themeRef.current.name, "normal");
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+          sizeAttenuation: true,
+          opacity: 0.96,
+        }));
+        sprite.name = `memory-time-shell-date-${radius}`;
+        sprite.position.set(radius, 0, 0);
+        sprite.scale.set(Math.min(w, 176), h, 1);
+        sprite.renderOrder = 20;
+        shells.add(sprite);
       });
       scene.add(shells);
     }
