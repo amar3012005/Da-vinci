@@ -21,6 +21,26 @@ export function getRadialShellVisibleIndices(count) {
   ));
 }
 
+/** Keep one label per distinct displayed date when several shell ticks fall on the same day. */
+export function getUniqueRadialShellDateIndices(shellDates = []) {
+  const lastIndexByDate = new Map();
+  shellDates.forEach(({ timestamp }, index) => {
+    lastIndexByDate.set(formatRadialShellDate(timestamp), index);
+  });
+  return [...lastIndexByDate.values()].sort((a, b) => a - b);
+}
+
+/** Reveal distinct date labels progressively with zoom, always retaining the newest date. */
+export function getVisibleRadialShellDateIndices(shellDates = [], count = 3) {
+  const uniqueIndices = getUniqueRadialShellDateIndices(shellDates);
+  const visibleCount = Math.max(1, Math.min(uniqueIndices.length, Number.isFinite(count) ? count : 3));
+  if (visibleCount === uniqueIndices.length) return uniqueIndices;
+  if (visibleCount === 1) return uniqueIndices.length ? [uniqueIndices[uniqueIndices.length - 1]] : [];
+  return Array.from({ length: visibleCount }, (_, index) =>
+    uniqueIndices[Math.round(index * (uniqueIndices.length - 1) / (visibleCount - 1))]
+  );
+}
+
 /** Place dated shell labels around the visible surface rather than stacking them on one axis. */
 export function getRadialShellDatePosition(radius, index, count, topDown = false, padding = 14, visibleIndices = null) {
   const shellRadius = Math.max(0, Number.isFinite(radius) ? radius : 0) + padding;
