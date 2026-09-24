@@ -1642,7 +1642,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
         {graphVisible && graphData.nodes.length > 0 && isRadialAtlas && (
           <>
-            <div className="absolute inset-y-0 left-0" style={{ right: detailPanelWidth }}>
+            <div className="absolute inset-0">
               <MemoryGraph3D
                 key="memory-radial-3d"
                 ref={setTemporalGraphRef}
@@ -1663,7 +1663,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                 backgroundColor="rgba(0,0,0,0)"
                 theme={graphTheme === "night" ? "atlas" : "day"}
                 radialTemporal
-                width={typeof window !== "undefined" ? window.innerWidth - detailPanelWidth : 800}
+                width={typeof window !== "undefined" ? window.innerWidth : 800}
                 height={typeof window !== "undefined" ? window.innerHeight - 66 : 600}
               />
             </div>
