@@ -21,6 +21,36 @@ export function getRadialShellVisibleIndices(count) {
   ));
 }
 
+/** Place dated shell labels around the visible surface rather than stacking them on one axis. */
+export function getRadialShellDatePosition(radius, index, count, topDown = false, padding = 14) {
+  const shellRadius = Math.max(0, Number.isFinite(radius) ? radius : 0) + padding;
+  const total = Math.max(1, Number.isFinite(count) ? count : 1);
+  const tick = Math.max(0, Math.min(total - 1, Number.isFinite(index) ? index : 0));
+
+  if (topDown) {
+    // Keep the newest date at the top of the pole view and distribute the
+    // remaining dates around the full tree-ring circumference.
+    const angle = -Math.PI / 2 + ((tick - (total - 1)) * (2 * Math.PI / total));
+    return {
+      x: Math.cos(angle) * shellRadius,
+      y: 0,
+      z: Math.sin(angle) * shellRadius,
+    };
+  }
+
+  // The default camera faces the positive-Z hemisphere. A shallow upper-front
+  // arc leaves labels legible and distinct while keeping them attached to shells.
+  const progress = total === 1 ? 1 : tick / (total - 1);
+  const azimuth = (progress - 0.5) * 1.7;
+  const elevation = 0.38;
+  const horizontalRadius = Math.cos(elevation) * shellRadius;
+  return {
+    x: Math.sin(azimuth) * horizontalRadius,
+    y: Math.sin(elevation) * shellRadius,
+    z: Math.cos(azimuth) * horizontalRadius,
+  };
+}
+
 function getTimestamp(node) {
   for (const value of [node.updatedAt, node.createdAt, node.timestamp, node.lastAccessedAt]) {
     const parsed = Date.parse(value);

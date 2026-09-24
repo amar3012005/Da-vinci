@@ -2,6 +2,7 @@ import {
   buildRadialAtlasLayout,
   buildRadialAtlasShellTicks,
   formatRadialShellDate,
+  getRadialShellDatePosition,
   getRadialShellTickCount,
   getRadialShellVisibleIndices,
 } from "./MemoryGraphRadialAtlas";
@@ -71,6 +72,30 @@ describe("MemoryGraph radial time encoding", () => {
     expect(getRadialShellVisibleIndices(3)).toEqual(new Set([1, 3, 7]));
     expect(getRadialShellVisibleIndices(5)).toEqual(new Set([0, 2, 3, 5, 7]));
     expect(getRadialShellVisibleIndices(8).size).toBe(8);
+  });
+
+  test("spreads date labels around the shell surface in orbit and pole views", () => {
+    const count = 8;
+    const orbitLabels = Array.from({ length: count }, (_, index) =>
+      getRadialShellDatePosition(270, index, count)
+    );
+    const poleLabels = Array.from({ length: count }, (_, index) =>
+      getRadialShellDatePosition(270, index, count, true)
+    );
+
+    expect(new Set(orbitLabels.map(({ x, y, z }) => `${x.toFixed(2)}:${y.toFixed(2)}:${z.toFixed(2)}`)).size).toBe(count);
+    expect(new Set(poleLabels.map(({ x, y, z }) => `${x.toFixed(2)}:${z.toFixed(2)}`)).size).toBe(count);
+    orbitLabels.forEach(({ x, y, z }) => {
+      expect(Math.hypot(x, y, z)).toBeCloseTo(284);
+      expect(y).toBeGreaterThan(0);
+      expect(z).toBeGreaterThan(0);
+    });
+    poleLabels.forEach(({ x, y, z }) => {
+      expect(Math.hypot(x, z)).toBeCloseTo(284);
+      expect(y).toBe(0);
+    });
+    expect(poleLabels.at(-1).z).toBeLessThan(0);
+    expect(Math.abs(poleLabels.at(-1).x)).toBeCloseTo(0);
   });
 
   test("adds dated shells between overview rings while keeping the latest at the surface", () => {
