@@ -54,6 +54,7 @@ import {
 // Chat turn presentation lives in shared/claude-chat (one source of truth for
 // mobile + desktop Overview + sidebar).
 import { UserBubble, AiBubble, Thinking } from '../../shared/claude-chat';
+import { isRenderableAnswerDelta } from '../../shared/chat-stream-contract';
 import apiClient from '../../shared/api-client';
 import { getOrCreateChatThreadId, resetChatThreadId } from '../../shared/chat-thread-id';
 import MobileShell from '../MobileShell';
@@ -649,7 +650,7 @@ export default function TalkToHiveMobile() {
       const data = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? (await readChatStream(chatRes, (event) => {
             if (event.type === 'answer_started') return;
-            if (event.type === 'answer_delta' && event.validated === true) {
+            if (isRenderableAnswerDelta(event)) {
               setMessages((prev) => {
                 const found = prev.some((item) => item.id === streamingId);
                 return found
