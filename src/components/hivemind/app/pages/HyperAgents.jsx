@@ -152,6 +152,7 @@ const RUNTIME_INTRO_CANARY = Object.freeze({
 });
 const OPERATING_ROOMS_V1 = true;
 const domainRoomDefinition = (key) => DOMAIN_ROOMS.find((domain) => domain.key === key) || DOMAIN_ROOMS[0];
+const isDomainHomeRoom = (room) => Boolean(room?.is_domain_home || room?.isDomainHome);
 
 const DOMAIN_ROOM_STAGES = {
   general: [
@@ -363,8 +364,8 @@ export default function HyperAgents() {
   const domainHomeRooms = useMemo(() => {
     const order = Object.fromEntries(DOMAIN_ROOMS.map((domain, index) => [domain.key, index]));
     return liveRooms
-      .filter(room => room.is_domain_home)
-      .sort((a, b) => (order[a.room_tag] ?? 99) - (order[b.room_tag] ?? 99));
+      .filter(isDomainHomeRoom)
+      .sort((a, b) => (order[a.room_tag || a.roomTag] ?? 99) - (order[b.room_tag || b.roomTag] ?? 99));
   }, [liveRooms]);
   const hqRoom = useMemo(
     () => domainHomeRooms.find((room) => (room.room_tag || room.roomTag || 'general') === 'general') || null,
@@ -392,7 +393,7 @@ export default function HyperAgents() {
     roomAssignments.has(String(room.room_tag || room.roomTag || '').toLowerCase())
   )), [agentHomeRooms, roomAssignments]);
   const displayedAgentRooms = showAgentRooms ? agentHomeRooms : assignedAgentRooms;
-  const workRooms = useMemo(() => liveRooms.filter(room => !room.is_domain_home), [liveRooms]);
+  const workRooms = useMemo(() => liveRooms.filter(room => !isDomainHomeRoom(room)), [liveRooms]);
 
   // ── First-run gate: Polsia-style company onboarding ────────────────
   // A brand-new org (no rooms yet, never onboarded/skipped) gets the
@@ -795,7 +796,7 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
   const participants = room.participants || [];
   const projectLabel = room.project?.name || room.project?.slug || null;
   const domain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
-  const domainLabel = room.is_domain_home && domain.key === 'general' ? 'HQ' : domain.label;
+  const domainLabel = isDomainHomeRoom(room) && domain.key === 'general' ? 'HQ' : domain.label;
   const DomainIcon = domain.icon;
   return (
     <div
@@ -1217,7 +1218,7 @@ function RoomThread({ roomId, onArchived }) {
     return roomCampaigns[0] || null;
   }, [pendingCampaignId, roomCampaigns, selectedCampaign]);
   const isCampaignRoom = Boolean(campaignReturn || roomVisualCampaignId || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
-  const isHqRoom = Boolean(room?.is_domain_home && (room?.room_tag || room?.roomTag) === 'general');
+  const isHqRoom = Boolean(isDomainHomeRoom(room) && (room?.room_tag || room?.roomTag) === 'general');
   const growthBaselineRequested = useMemo(() => new URLSearchParams(location.search).get('growthBaseline') === '1', [location.search]);
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
   // events don't yank them back down while they scroll up to read. Updated on manual scroll.
@@ -2465,7 +2466,7 @@ function RoomThread({ roomId, onArchived }) {
     || (Array.isArray(room.roomJournal) && room.roomJournal.length > 0);
   const isSeoRoom = roomDomain.key === 'seo';
   const RoomDomainIcon = roomDomain.icon;
-  const roomDomainLabel = room.is_domain_home && roomDomain.key === 'general' ? 'HQ' : roomDomain.label;
+  const roomDomainLabel = isDomainHomeRoom(room) && roomDomain.key === 'general' ? 'HQ' : roomDomain.label;
   const campaignProgressStages = (() => {
     if (!isCampaignRoom) return [];
     const active = turns.find(turn => turn.id === activeTurnId);

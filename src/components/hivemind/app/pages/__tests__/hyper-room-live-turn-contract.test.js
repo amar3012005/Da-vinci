@@ -38,6 +38,8 @@ describe('HyperAgents live turn adoption', () => {
     expect(source).toContain("t('hyperAgents.newWorkRun', 'New WorkRun')");
     expect(source).toContain("t('hyperAgents.noWorkRuns', 'No WorkRuns yet.')");
     expect(source).toContain('data-testid="workrun-create-empty"');
+    expect(source).toContain('const isDomainHomeRoom = (room) => Boolean(room?.is_domain_home || room?.isDomainHome);');
+    expect(source).toContain('liveRooms.filter(room => !isDomainHomeRoom(room))');
   });
 
   it('keeps campaign completion and its dashboard inside Campaign Intelligence', () => {
