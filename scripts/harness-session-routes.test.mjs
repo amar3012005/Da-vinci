@@ -155,13 +155,13 @@ test('native WebSocket upgrades are returned without losing their socket', async
 test('Day 0 admission is private, Flagship-owned, and fails closed', async () => {
   const day0Url = `${origin}/__hivemind/feature-flags/day0-onboarding`;
   const payload = { org_id: '67503d34-97e9-49a8-8c52-8ee30cc7603e', user_id: '54f5568b-4d6a-4ae1-9a33-48cb2909d59b' };
-  let evaluatedKey;
+  const evaluatedKeys = [];
   const env = {
     HIVE_HARNESS_EDGE_EVAL_SECRET: 'edge-secret',
     ENVIRONMENT: 'production',
     FLAGS: { getBooleanDetails: async (key) => {
-      evaluatedKey = key;
-      return { value: true, evaluationId: 'day0-eval' };
+      evaluatedKeys.push(key);
+      return { value: key === 'pre_onboarding_lifecycle_v1', evaluationId: `${key}-eval` };
     } },
   };
   const rejected = await worker.fetch(new Request(day0Url, {
@@ -172,7 +172,10 @@ test('Day 0 admission is private, Flagship-owned, and fails closed', async () =>
     method: 'POST', headers: { authorization: 'Bearer edge-secret', 'content-type': 'application/json' }, body: JSON.stringify(payload),
   }), env);
   assert.deepEqual(await admitted.json(), {
-    key: 'day0_onboarding_v1', source: 'cloudflare-flagship', enabled: true, evaluation_id: 'day0-eval',
+    key: 'pre_onboarding_lifecycle_v1', source: 'cloudflare-flagship', enabled: true,
+    evaluation_id: 'pre_onboarding_lifecycle_v1-eval',
+    report_flag_key: 'day0_report_editorial_v1', report_onepage_enabled: false,
+    report_evaluation_id: 'day0_report_editorial_v1-eval',
   });
-  assert.equal(evaluatedKey, 'singulance_day0_onboarding_v1');
+  assert.deepEqual(evaluatedKeys, ['pre_onboarding_lifecycle_v1', 'day0_report_editorial_v1']);
 });
