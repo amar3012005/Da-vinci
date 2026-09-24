@@ -14,7 +14,8 @@ import {
   formatRadialShellDate,
   getRadialShellDatePosition,
   getRadialShellTickCount,
-  getRadialShellVisibleIndices,
+  getUniqueRadialShellDateIndices,
+  getVisibleRadialShellDateIndices,
 } from "./MemoryGraphRadialAtlas";
 
 const DEFAULT_BG = "rgba(0,0,0,0)";
@@ -341,11 +342,11 @@ function makeTemporalShellTextTexture(text, themeName) {
   const dpr = typeof window !== "undefined" ? Math.max(1, Math.min(2, window.devicePixelRatio || 1)) : 1;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-  const fontSize = 26 * dpr;
+  const fontSize = 16 * dpr;
   ctx.font = `700 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
-  const padding = 8 * dpr;
+  const padding = 5 * dpr;
   canvas.width = Math.ceil(ctx.measureText(text).width + padding * 2);
-  canvas.height = 38 * dpr;
+  canvas.height = 30 * dpr;
   ctx.font = `700 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -356,6 +357,23 @@ function makeTemporalShellTextTexture(text, themeName) {
   texture.magFilter = THREE.LinearFilter;
   texture.generateMipmaps = false;
   return { texture, width: canvas.width / dpr, height: canvas.height / dpr };
+}
+
+function getRadialShellLabelRotation(camera, radius, index, count, topDown, visibleIndices) {
+  if (!camera || visibleIndices.length < 2) return 0;
+  const rank = visibleIndices.indexOf(index);
+  if (rank < 0) return 0;
+  const fromRank = Math.max(0, rank - 1);
+  const toRank = Math.min(visibleIndices.length - 1, rank + 1);
+  if (fromRank === toRank) return 0;
+  const from = getRadialShellDatePosition(radius, visibleIndices[fromRank], count, topDown, 2, visibleIndices);
+  const to = getRadialShellDatePosition(radius, visibleIndices[toRank], count, topDown, 2, visibleIndices);
+  const start = new THREE.Vector3(from.x, from.y, from.z).project(camera);
+  const end = new THREE.Vector3(to.x, to.y, to.z).project(camera);
+  let angle = Math.atan2(end.y - start.y, end.x - start.x);
+  if (angle > Math.PI / 2) angle -= Math.PI;
+  else if (angle < -Math.PI / 2) angle += Math.PI;
+  return angle;
 }
 
 function makeNodeTagSprite(text, themeName, variant = "normal") {
@@ -811,6 +829,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const temporalTopDownRequestedRef = useRef(false);
   const temporalTopDownAppliedRef = useRef(false);
   const temporalShellDateSpritesRef = useRef([]);
+  const radialShellDatesRef = useRef([]);
   // Upstream three.js OrbitControls race: a pointerup can reference a pointer
   // whose position record was already removed (multi-touch / pointercancel /
   // canvas re-mount mid-gesture) → uncaught "Cannot read properties of
@@ -1326,8 +1345,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .map(({ index }) => index);
     temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, radius, index, count }) => {
       if (!sprite) return;
-      const position = getRadialShellDatePosition(radius, index, count, enabled, 14, visibleIndices);
+      const position = getRadialShellDatePosition(radius, index, count, enabled, 2, visibleIndices);
       sprite.position.set(position.x, position.y, position.z);
+      if (sprite.material) sprite.material.rotation = getRadialShellLabelRotation(camera, radius, index, count, enabled, visibleIndices);
       if (mesh) mesh.visible = !enabled && sprite.visible;
       if (treeRing) treeRing.visible = enabled && sprite.visible;
     });
@@ -1758,17 +1778,21 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
           const distance = cameraNow.position.distanceTo(targetNow);
           if (radialTemporalRef.current) {
-            const visibleShells = getRadialShellVisibleIndices(getRadialShellTickCount(distance));
-            const visibleIndices = [...visibleShells].sort((a, b) => a - b);
+            const visibleIndices = getVisibleRadialShellDateIndices(
+              radialShellDatesRef.current,
+              getRadialShellTickCount(distance),
+            );
+            const visibleDateSet = new Set(visibleIndices);
             temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, radius, index, count, labelRatio }) => {
-              const visible = visibleShells.has(index);
+              const visible = visibleDateSet.has(index);
               sprite.visible = visible;
               const topDown = temporalTopDownAppliedRef.current;
-              const position = getRadialShellDatePosition(radius, index, count, topDown, 14, visibleIndices);
+              const position = getRadialShellDatePosition(radius, index, count, topDown, 2, visibleIndices);
               sprite.position.set(position.x, position.y, position.z);
+              if (sprite.material) sprite.material.rotation = getRadialShellLabelRotation(cameraNow, radius, index, count, topDown, visibleIndices);
               if (mesh) mesh.visible = visible && !topDown;
               if (treeRing) treeRing.visible = visible && topDown;
-              const width = visibleShells.size >= 8 ? 112 : visibleShells.size >= 5 ? 148 : 188;
+              const width = visibleIndices.length >= 8 ? 54 : visibleIndices.length >= 5 ? 48 : 42;
               sprite.scale.set(width, width * labelRatio, 1);
             });
           }
@@ -1893,15 +1917,17 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       const shellColor = themeRef.current.name === "night" ? "#60758a" : "#829bb0";
       const radialNodes = graphDataRef.current?.nodes || [];
       const shellDates = buildRadialAtlasShellTicks(radialNodes, 8);
-      const overviewShells = getRadialShellVisibleIndices(3);
-      const overviewIndices = [...overviewShells].sort((a, b) => a - b);
-      shellDates.forEach(({ radius, timestamp, latest }, index) => {
+      radialShellDatesRef.current = shellDates;
+      const datedIndices = getUniqueRadialShellDateIndices(shellDates);
+      const datedIndexSet = new Set(datedIndices);
+      const overviewIndices = getVisibleRadialShellDateIndices(shellDates, 3);
+      shellDates.forEach(({ radius, timestamp }, index) => {
         const mesh = new THREE.Mesh(
           new THREE.SphereGeometry(radius, 32, 20),
           new THREE.MeshBasicMaterial({ color: shellColor, wireframe: true, transparent: true, opacity: index === 3 ? 0.12 : 0.075, depthWrite: false }),
         );
         mesh.name = `memory-time-shell-${radius}`;
-        mesh.visible = overviewShells.has(index);
+        mesh.visible = overviewIndices.includes(index);
         shells.add(mesh);
 
         // The pole view swaps the globe wireframe for true concentric bands,
@@ -1922,8 +1948,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         treeRing.name = `memory-tree-time-ring-${radius}`;
         shells.add(treeRing);
 
+        // Multiple shells can fall on the same calendar day for short-lived
+        // datasets. Keep the outermost occurrence only so dates never repeat.
+        if (!datedIndexSet.has(index)) return;
+
         // Render clean text directly on the shell—no badge or tag background.
-        const label = `${latest ? "LATEST · " : ""}${formatRadialShellDate(timestamp)}`;
+        const label = formatRadialShellDate(timestamp);
         const { texture, width: labelWidth, height: labelHeight } = makeTemporalShellTextTexture(label, themeRef.current.name);
         const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
           map: texture,
@@ -1934,13 +1964,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           opacity: 0.96,
         }));
         sprite.name = `memory-time-shell-date-${radius}`;
-        const position = getRadialShellDatePosition(radius, index, shellDates.length, false, 14, overviewIndices);
+        const position = getRadialShellDatePosition(radius, index, shellDates.length, false, 2, overviewIndices);
         sprite.position.set(position.x, position.y, position.z);
-        sprite.visible = overviewShells.has(index);
+        sprite.visible = overviewIndices.includes(index);
         // Modest world-space type stays readable in the full view without
         // competing with the memories themselves.
         const labelRatio = labelHeight / labelWidth;
-        const width = Math.min(labelWidth * 0.52, 188);
+        const width = Math.min(labelWidth * 0.48, 54);
         const height = width * labelRatio;
         sprite.scale.set(width, height, 1);
         sprite.renderOrder = 20;
@@ -2029,6 +2059,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         temporalShellGroup.removeFromParent?.();
       }
       temporalShellDateSpritesRef.current = [];
+      radialShellDatesRef.current = [];
       try {
         fg.pauseAnimation?.();
       } catch (_error) {

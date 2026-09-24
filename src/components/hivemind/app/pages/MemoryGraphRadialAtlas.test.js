@@ -5,6 +5,8 @@ import {
   getRadialShellDatePosition,
   getRadialShellTickCount,
   getRadialShellVisibleIndices,
+  getUniqueRadialShellDateIndices,
+  getVisibleRadialShellDateIndices,
 } from "./MemoryGraphRadialAtlas";
 
 describe("MemoryGraph radial time encoding", () => {
@@ -72,6 +74,20 @@ describe("MemoryGraph radial time encoding", () => {
     expect(getRadialShellVisibleIndices(3)).toEqual(new Set([1, 3, 7]));
     expect(getRadialShellVisibleIndices(5)).toEqual(new Set([0, 2, 3, 5, 7]));
     expect(getRadialShellVisibleIndices(8).size).toBe(8);
+  });
+
+  test("prints each calendar date once and keeps the newest date visible", () => {
+    const ticks = [
+      { timestamp: Date.parse("2026-09-21T01:00:00Z") },
+      { timestamp: Date.parse("2026-09-21T08:00:00Z") },
+      { timestamp: Date.parse("2026-09-22T08:00:00Z") },
+      { timestamp: Date.parse("2026-09-22T16:00:00Z") },
+      { timestamp: Date.parse("2026-09-24T08:00:00Z") },
+    ];
+
+    expect(getUniqueRadialShellDateIndices(ticks)).toEqual([1, 3, 4]);
+    expect(getVisibleRadialShellDateIndices(ticks, 2)).toEqual([1, 4]);
+    expect(getVisibleRadialShellDateIndices(ticks, 1)).toEqual([4]);
   });
 
   test("spreads date labels around the shell surface in orbit and pole views", () => {
