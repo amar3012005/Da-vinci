@@ -331,6 +331,27 @@ function getNodeTagTexture(text, themeName, variant = "normal") {
   return entry;
 }
 
+function makeTemporalShellTextTexture(text, themeName) {
+  const dpr = typeof window !== "undefined" ? Math.max(1, Math.min(2, window.devicePixelRatio || 1)) : 1;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const fontSize = 26 * dpr;
+  ctx.font = `700 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
+  const padding = 8 * dpr;
+  canvas.width = Math.ceil(ctx.measureText(text).width + padding * 2);
+  canvas.height = 38 * dpr;
+  ctx.font = `700 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = themeName === "night" || themeName === "atlas" ? "#fffaf4" : "#171717";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  return { texture, width: canvas.width / dpr, height: canvas.height / dpr };
+}
+
 function makeNodeTagSprite(text, themeName, variant = "normal") {
   const { texture, w, h } = getNodeTagTexture(text, themeName, variant);
   const mat = new THREE.SpriteMaterial({
@@ -783,6 +804,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   radialTemporalRef.current = radialTemporal;
   const temporalTopDownRequestedRef = useRef(false);
   const temporalTopDownAppliedRef = useRef(false);
+  const temporalShellDateSpritesRef = useRef([]);
   // Upstream three.js OrbitControls race: a pointerup can reference a pointer
   // whose position record was already removed (multi-touch / pointercancel /
   // canvas re-mount mid-gesture) → uncaught "Cannot read properties of
@@ -1293,6 +1315,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const controls = fg?.controls?.();
     if (!fg || !camera || !controls || temporalTopDownAppliedRef.current === enabled) return false;
     const target = controls.target?.clone?.() || new THREE.Vector3();
+    temporalShellDateSpritesRef.current.forEach(({ sprite, radius }) => {
+      if (!sprite) return;
+      // In the normal orbit, date labels sit on the upper shell surface. In
+      // the pole view, lay them along the visible north arc of their shells.
+      sprite.position.set(0, enabled ? 0 : radius + 14, enabled ? -radius - 14 : 0);
+    });
 
     if (enabled) {
       if (!temporalCameraSnapshotRef.current) {
@@ -1362,8 +1390,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     fg.zoomToFit(duration, padding);
 
     // After the fit animation, sanitize + clamp the resulting camera distance.
-    const tier = getGraphSizeTier(nodeCount);
-    const MAX_FIT = tier === "massive" ? 1450 : tier === "large" ? 1050 : 850;
+      const tier = getGraphSizeTier(nodeCount);
+      const MAX_FIT = radialTemporalRef.current ? 1450 : tier === "massive" ? 1450 : tier === "large" ? 1050 : 850;
     const MIN_FIT = 150;
     window.setTimeout(() => {
       const inst = fgRef.current;
@@ -1811,10 +1839,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         mesh.name = `memory-time-shell-${radius}`;
         shells.add(mesh);
 
-        // Keep date ticks in world-space with their shell so the time axis
-        // remains legible as users orbit, zoom, or switch to the pole view.
+        // Render clean text directly on the shell—no badge or tag background.
         const label = `${latest ? "LATEST · " : ""}${formatRadialShellDate(timestamp)}`;
-        const { texture, w, h } = getNodeTagTexture(label, themeRef.current.name, "normal");
+        const { texture, width: labelWidth, height: labelHeight } = makeTemporalShellTextTexture(label, themeRef.current.name);
         const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
           map: texture,
           transparent: true,
@@ -1824,10 +1851,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           opacity: 0.96,
         }));
         sprite.name = `memory-time-shell-date-${radius}`;
-        sprite.position.set(radius, 0, 0);
-        sprite.scale.set(Math.min(w, 176), h, 1);
+        sprite.position.set(0, radius + 14, 0);
+        // Modest world-space type stays readable in the full view without
+        // competing with the memories themselves.
+        const width = Math.min(labelWidth * 0.52, 188);
+        const height = width * (labelHeight / labelWidth);
+        sprite.scale.set(width, height, 1);
         sprite.renderOrder = 20;
         shells.add(sprite);
+        temporalShellDateSpritesRef.current.push({ sprite, radius });
       });
       scene.add(shells);
     }
@@ -1904,11 +1936,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       if (temporalShellGroup) {
         temporalShellGroup.traverse((object) => {
           object.geometry?.dispose?.();
+          object.material?.map?.dispose?.();
           if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose?.());
           else object.material?.dispose?.();
         });
         temporalShellGroup.removeFromParent?.();
       }
+      temporalShellDateSpritesRef.current = [];
       try {
         fg.pauseAnimation?.();
       } catch (_error) {
