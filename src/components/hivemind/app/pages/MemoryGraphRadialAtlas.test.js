@@ -98,6 +98,21 @@ describe("MemoryGraph radial time encoding", () => {
     expect(Math.abs(poleLabels.at(-1).x)).toBeCloseTo(0);
   });
 
+  test("reflows only visible dates and anchors the newest label at the visual center", () => {
+    const overview = [1, 3, 7];
+    const older = getRadialShellDatePosition(140, 1, 8, false, 14, overview);
+    const middle = getRadialShellDatePosition(270, 3, 8, false, 14, overview);
+    const latest = getRadialShellDatePosition(430, 7, 8, false, 14, overview);
+    const latestPole = getRadialShellDatePosition(430, 7, 8, true, 14, overview);
+
+    expect(older.x).toBeGreaterThan(0);
+    expect(middle.x).toBeLessThan(0);
+    expect(latest.x).toBeCloseTo(0);
+    expect(latest.z).toBeGreaterThan(0);
+    expect(latestPole.x).toBeCloseTo(0);
+    expect(latestPole.z).toBeLessThan(0);
+  });
+
   test("adds dated shells between overview rings while keeping the latest at the surface", () => {
     const ticks = buildRadialAtlasShellTicks([
       { id: "old", kind: "fact", createdAt: "2025-01-01T00:00:00Z" },
