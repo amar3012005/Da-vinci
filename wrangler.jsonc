@@ -18,6 +18,8 @@
       "/assets/*",
       "/__hivemind/*",
       "/manifest.webmanifest",
+      "/hivemind/app/overview",
+      "/hivemind/app/overview/*",
       "/hivemind/*"
     ]
   },

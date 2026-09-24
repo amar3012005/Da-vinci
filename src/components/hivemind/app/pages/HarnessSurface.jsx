@@ -122,7 +122,7 @@ export const HARNESS_BOOT_STAGES = [
   'Securing your session',
   'Loading your workspace',
   'Preparing the native chat',
-  'Restoring your conversation',
+  'Opening chat',
 ];
 
 /**
@@ -131,7 +131,9 @@ export const HARNESS_BOOT_STAGES = [
  */
 export function LoadingSurface({ stage = 0 }) {
   const safeStage = Math.max(0, Math.min(stage, HARNESS_BOOT_STAGES.length - 1));
-  const completed = safeStage + 1;
+  // `stage` is the active boundary, not a completed one. The 4/4 state only
+  // exists after the overlay is removed and chat is interactive.
+  const completed = safeStage;
   const width = 20;
   const filled = Math.round((completed / HARNESS_BOOT_STAGES.length) * width);
   const bar = `${'█'.repeat(filled)}${'░'.repeat(width - filled)}`;
@@ -160,12 +162,9 @@ export function LoadingSurface({ stage = 0 }) {
   );
 }
 
-/** The host loader ends only when native Harness has painted an interactive seat. */
+/** Past-session navigation is independent of the first interactive composer. */
 export function nativeHarnessMounted(container) {
-  return Boolean(
-    container?.querySelector?.('[data-composer-seat]')
-    && container?.querySelector?.('aside[aria-label="HIVE chat sessions"]'),
-  );
+  return Boolean(container?.querySelector?.('[data-composer-seat]'));
 }
 
 function waitForNativeHarnessMount(container, signal) {
