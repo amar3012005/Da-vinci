@@ -1,13 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowUp, Bug, Building2, ChevronDown, ChevronRight, CreditCard, Eye,
-  FileText, Folder, Gauge, Hash, LayoutDashboard, ListChecks,
-  ListTodo, LogOut, Megaphone, PhoneCall, Plus, Power,
-  Rocket, Scale, Search, Settings, Sparkles, User, Users,
+  ArrowUp, Bug, ChevronRight, FileText, Folder, LayoutDashboard,
+  ListTodo, Plus, Sparkles, Users,
 } from 'lucide-react';
 import apiClient from '../../shared/api-client';
-import { useAuth } from '../../auth/AuthProvider';
 import './hm-rooms-dsh/tokens.css';
 import bar from './hm-rooms-dsh/InputBar.module.css';
 import {
@@ -24,20 +21,7 @@ import {
 } from './hm-rooms-dsh/workrun-view';
 import { WorkRunShell } from './workrun';
 import * as WorkRunModules from './workrun';
-import LegacyRoomsSidebar from './LegacyRoomsSidebar';
-
-const COMPANY_ROOM_FALLBACK = [
-  { key: 'campaign', label: 'Campaign Intelligence', Icon: Megaphone },
-  { key: 'seo', label: 'SEO', Icon: Search },
-  { key: 'marketing', label: 'Marketing', Icon: Megaphone },
-  { key: 'outreach', label: 'Outreach Intelligence', Icon: LayoutDashboard },
-  { key: 'branding', label: 'Branding', Icon: Eye },
-  { key: 'fundraising', label: 'Fundraising', Icon: CreditCard },
-  { key: 'research', label: 'Research', Icon: FileText },
-  { key: 'product', label: 'Product', Icon: Rocket },
-  { key: 'design', label: 'Design', Icon: LayoutDashboard },
-  { key: 'legal', label: 'Legal & Finance', Icon: Scale },
-];
+import CompanyWorkRunSidebar from './LegacyRoomsSidebar';
 
 const CANVAS_CARDS = [
   { title: 'Company Profile', meta: '12 items', sub: 'Company info, branding, team', tone: 'bg-[#dbeafe]', pos: 'left-[8%] top-[6%]' },
@@ -51,20 +35,6 @@ const CANVAS_CARDS = [
   { title: 'HQ Assets', meta: '19 items', sub: 'Logos, media, templates', tone: 'bg-[#dbeafe]', pos: 'left-[18%] bottom-[6%]' },
   { title: 'Roadmap.md', meta: '2 KB · Updated today', sub: 'Next steps and milestones', kind: 'md', pos: 'right-[12%] bottom-[6%]' },
 ];
-
-function roomIcon(tag) {
-  const hit = COMPANY_ROOM_FALLBACK.find((r) => r.key === String(tag || '').toLowerCase());
-  return hit?.Icon || Users;
-}
-
-function openHyperRoom(navigate, room) {
-  const id = String(room?.id || '');
-  if (/^[0-9a-f-]{36}$/i.test(id)) {
-    navigate(`/hivemind/app/employees/rooms/${id}`);
-    return;
-  }
-  navigate('/hivemind/app/employees/mycompany');
-}
 
 const AUTONOMY_MARK = 'Work autonomously to completion';
 const TOOL_NAME_RE = /\b(hivemind_[a-z0-9_]+|composio_[a-z0-9_]+)\b/gi;
@@ -216,13 +186,11 @@ function Composer({ value, onChange, onSubmit, busy, placeholder, hero }) {
 
 function HmRoomList() {
   const navigate = useNavigate();
-  const { user, org, logout } = useAuth();
   const [runs, setRuns] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [goal, setGoal] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const [showCompanyRooms, setShowCompanyRooms] = useState(true);
 
   const load = useCallback(async () => {
     try {
@@ -257,21 +225,6 @@ function HmRoomList() {
     }
   };
 
-  const liveRooms = Array.isArray(rooms) ? rooms.filter((r) => !r.archived_at && !r.archivedAt) : [];
-  const companyRooms = liveRooms.filter((r) => {
-    const tag = r.room_tag || r.roomTag;
-    return (r.is_domain_home || r.isDomainHome) && tag !== 'general';
-  });
-  const workRooms = liveRooms.filter((r) => !(r.is_domain_home || r.isDomainHome));
-  const companyNav = companyRooms.length
-    ? companyRooms.map((r) => ({
-        id: r.id,
-        label: r.name || r.title || r.room_tag,
-        tag: r.room_tag || r.roomTag,
-        Icon: roomIcon(r.room_tag || r.roomTag),
-      }))
-    : COMPANY_ROOM_FALLBACK.map((r) => ({ id: r.key, label: r.label, tag: r.key, Icon: r.Icon }));
-
   const starters = [
     { title: 'Start with a plan', sub: 'Align on implementation before writing code', Icon: ListTodo },
     { title: 'Debug an issue', sub: 'Find root causes and fix tricky bugs', Icon: Bug },
@@ -280,133 +233,14 @@ function HmRoomList() {
 
   return (
     <div className="hmDshHost h-full flex bg-[#f7f6f3]">
-      <aside className="w-[240px] min-w-[240px] shrink-0 flex flex-col border-r border-[#e3e0db] bg-[#faf9f4]">
-        <div className="px-2 pt-2">
-          <button
-            type="button"
-            onClick={() => navigate('/hivemind/app/employees/rooms')}
-            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold bg-[#0a0a0a] text-white"
-          >
-            <Building2 size={13} className="text-white" />
-            Your Company
-          </button>
-          <button type="button" onClick={() => navigate('/hivemind/app/employees/rooms')} className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] hover:bg-white border border-[#bcd0ef]">
-            <Power size={13} className="text-[#185bcc]" /> Runtime
-          </button>
-          <button type="button" onClick={() => navigate('/hivemind/app/employees/operating-rooms')} className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] hover:bg-white border border-[#bcd0ef]">
-            <PhoneCall size={13} className="text-[#117dff]" /> Operating Rooms
-          </button>
-          <button type="button" onClick={() => navigate('/hivemind/app/employees/rooms')} className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] hover:bg-white border border-[#e3e0db]">
-            <ListChecks size={13} className="text-[#117dff]" /> Your Leads
-          </button>
-          <button type="button" onClick={() => navigate('/hivemind/app/employees/rooms')} className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] hover:bg-white border border-[#e3e0db]">
-            <Megaphone size={13} className="text-[#c2410c]" /> Run your Social Media
-          </button>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto py-1">
-          <div className="mt-1 border-y border-[#e3e0db] bg-white/45">
-            <button
-              type="button"
-              onClick={() => setShowCompanyRooms((open) => !open)}
-              aria-expanded={showCompanyRooms}
-              className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[10px] font-semibold text-[#525252] transition-colors hover:bg-white ${showCompanyRooms ? 'ring-1 ring-inset ring-[#117dff]/40 bg-white' : ''}`}
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <Users size={11} className="text-[#525252]" />
-                Company rooms
-              </span>
-              <ChevronDown size={13} className={`text-[#737373] transition-transform ${showCompanyRooms ? 'rotate-180' : ''}`} />
-            </button>
-            {showCompanyRooms ? (
-              <div className="overflow-hidden border-t border-[#e3e0db] bg-[#faf9f4] pb-1">
-                {companyNav.map((room) => {
-                  const Icon = room.Icon;
-                  return (
-                    <button
-                      key={room.id}
-                      type="button"
-                      onClick={() => openHyperRoom(navigate, room)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-[12px] text-[#0a0a0a] hover:bg-white"
-                    >
-                      <Icon size={13} className="text-[#525252] shrink-0" />
-                      <span className="truncate">{room.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="px-3 pt-3 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] border-t border-[#e3e0db] mt-1">
-            Sessions
-          </div>
-          {runs.slice(0, 16).map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => navigate(`/hivemind/app/hm-rooms/${r.id}`)}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-white"
-            >
-              <Hash size={12} className="text-[#a3a3a3] shrink-0" />
-              <span className="text-[12px] text-[#0a0a0a] truncate">{stripWorkOrder(r.goal) || r.id.slice(0, 8)}</span>
-            </button>
-          ))}
-          {workRooms.length ? (
-            <>
-              <div className="px-3 pt-3 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">Work rooms</div>
-              {workRooms.slice(0, 6).map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => openHyperRoom(navigate, r)}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-white"
-                >
-                  <Hash size={12} className="text-[#a3a3a3] shrink-0" />
-                  <span className="text-[12px] text-[#0a0a0a] truncate">{r.name || r.title || 'Room'}</span>
-                </button>
-              ))}
-            </>
-          ) : null}
-        </div>
-
-        <div className="border-t border-[#e3e0db] px-2 pt-2.5 pb-2 shrink-0 bg-[#faf9f4]">
-          <div className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] px-2 mb-1">Account</div>
-          {[
-            { icon: User, label: 'Profile', to: '/hivemind/app/profile' },
-            { icon: Gauge, label: 'Usage', to: '/hivemind/app/usage' },
-            { icon: CreditCard, label: 'Billing', to: '/hivemind/app/billing', badge: 'PRO' },
-            { icon: Settings, label: 'Settings', to: '/hivemind/app/settings' },
-          ].map(({ icon: Icon, label, to, badge }) => (
-            <button
-              key={to}
-              type="button"
-              onClick={() => navigate(to)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] text-[#525252] hover:text-[#0a0a0a] hover:bg-white"
-            >
-              <Icon size={13} /> {label}
-              {badge ? <span className="ml-auto text-[8.5px] font-mono px-1.5 py-0.5 rounded bg-[#117dff]/10 text-[#117dff]">{badge}</span> : null}
-            </button>
-          ))}
-          <div className="flex items-center gap-2 px-2 py-2 mt-1 border-t border-[#e3e0db]">
-            <span className="w-7 h-7 rounded-lg bg-[#117dff]/10 text-[#117dff] flex items-center justify-center text-[11px] font-bold shrink-0">
-              {(user?.display_name || user?.email || '?')[0].toUpperCase()}
-            </span>
-            <div className="min-w-0">
-              <div className="text-[11.5px] font-semibold text-[#0a0a0a] truncate">{user?.display_name || user?.email}</div>
-              <div className="text-[9.5px] font-mono text-[#a3a3a3] capitalize">{(org?.plan || 'free')} Plan</div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={async () => { try { await logout(); } catch { /* noop */ } navigate('/hivemind/login'); }}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] text-[#525252] hover:text-[#dc2626]"
-          >
-            <LogOut size={13} /> Sign Out
-          </button>
-        </div>
-      </aside>
-
+      <CompanyWorkRunSidebar
+        runs={runs}
+        rooms={rooms}
+        onNewWork={() => {
+          setGoal('');
+          navigate('/hivemind/app/hm-rooms');
+        }}
+      />
       <div className="relative flex-1 overflow-hidden">
         {CANVAS_CARDS.map((card) => (
           <button
@@ -704,7 +538,7 @@ function HmRoomDesk({ runId }) {
       onDraft={setDraft}
       onSend={send}
       onStop={stop}
-      legacySidebar={<LegacyRoomsSidebar runs={runs} rooms={rooms} activeRunId={runId} onNewWork={() => navigate('/hivemind/app/hm-rooms')} />}
+      legacySidebar={<CompanyWorkRunSidebar runs={runs} rooms={rooms} activeRunId={runId} onNewWork={() => navigate('/hivemind/app/hm-rooms')} />}
     />
   );
 }

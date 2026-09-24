@@ -23,12 +23,16 @@ describe('HM Rooms WorkRun routing', () => {
     expect(rooms).toContain('navigate(`/hivemind/app/hm-rooms/${id}`)');
   });
 
-  it('uses the same legacy Rooms sidebar inside an active WorkRun session', () => {
+  it('uses one Company sidebar implementation on both the WorkRuns canvas and active session', () => {
     const rooms = source('pages/hm-rooms/HmRooms.jsx');
     const shell = source('pages/hm-rooms/workrun/WorkRunShell.jsx');
-    expect(rooms).toContain("import LegacyRoomsSidebar from './LegacyRoomsSidebar'");
-    expect(rooms).toContain('<LegacyRoomsSidebar runs={runs} rooms={rooms} activeRunId={runId}');
-    expect(shell).toContain('{legacySidebar}');
+    const sidebar = source('pages/hm-rooms/LegacyRoomsSidebar.jsx');
+    expect(rooms).toContain("import CompanyWorkRunSidebar from './LegacyRoomsSidebar'");
+    expect((rooms.match(/<CompanyWorkRunSidebar/g) || []).length).toBe(2);
+    expect(rooms).toContain('runs={runs}');
+    expect(sidebar).toContain('New WorkRun');
+    expect(sidebar).toContain('runs.slice(0, 16)');
+    expect(shell).toContain('cloneElement(legacySidebar, { collapsed: sidebarCollapsed, onCollapsedChange: setSidebarCollapsed })');
     expect(shell).toContain('Hyper Agents');
     expect(shell).not.toContain('<WorkRunHeader');
   });
@@ -47,11 +51,11 @@ describe('HM Rooms WorkRun routing', () => {
     expect(stream).toContain('node.scrollTop = node.scrollHeight');
     expect(stream).toContain('ArrowDown size={13} /> Latest');
     expect(stream).toContain('[msgs]');
-    expect(userMessage).toContain('items-end gap-2');
+    expect(userMessage).toContain('items-end gap-1.5');
     expect(agentMessage).not.toContain('Working through the request');
     expect(agentMessage).not.toContain('View working notes');
     expect(agentMessage).toContain('label: item.label || item.name');
-    expect(agentMessage).toContain("border-t border-[#e3e0db] pt-8");
+    expect(agentMessage).toContain("border-t border-[#e3e0db] pt-7");
   });
 
   it('offers a real stop control while a WorkRun is active', () => {

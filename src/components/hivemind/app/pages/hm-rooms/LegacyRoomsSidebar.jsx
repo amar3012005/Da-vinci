@@ -28,8 +28,8 @@ function cleanGoal(goal) {
   return String(goal || '').split('Work autonomously to completion')[0].trim();
 }
 
-/** Shared legacy Rooms rail for both the canvas and live WorkRun sessions. */
-export default function LegacyRoomsSidebar({
+/** One Company rail for the WorkRuns canvas and live WorkRun sessions. */
+export default function CompanyWorkRunSidebar({
   runs = [],
   rooms = [],
   activeRunId,
