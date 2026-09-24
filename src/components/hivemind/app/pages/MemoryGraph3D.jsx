@@ -19,6 +19,7 @@ import {
 } from "./MemoryGraphRadialAtlas";
 
 const DEFAULT_BG = "rgba(0,0,0,0)";
+const TEMPORAL_DATE_LABEL_PADDING = 20;
 
 // ─── Memory atlas theme system ─────────────────────────────────────────────
 // One visual language in both modes: coral edges/nodes, cream secondary
@@ -342,9 +343,9 @@ function makeTemporalShellTextTexture(text, themeName) {
   const dpr = typeof window !== "undefined" ? Math.max(1, Math.min(2, window.devicePixelRatio || 1)) : 1;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-  const fontSize = 16 * dpr;
+  const fontSize = 18 * dpr;
   ctx.font = `700 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
-  const padding = 5 * dpr;
+  const padding = 6 * dpr;
   canvas.width = Math.ceil(ctx.measureText(text).width + padding * 2);
   canvas.height = 30 * dpr;
   ctx.font = `700 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
@@ -1328,7 +1329,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .map(({ index }) => index);
     temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, radius, index, count }) => {
       if (!sprite) return;
-      const position = getRadialShellDatePosition(radius, index, count, enabled, 2, visibleIndices);
+      const position = getRadialShellDatePosition(radius, index, count, enabled, TEMPORAL_DATE_LABEL_PADDING, visibleIndices);
       sprite.position.set(position.x, position.y, position.z);
       if (sprite.material) sprite.material.rotation = 0;
       if (mesh) mesh.visible = !enabled && sprite.visible;
@@ -1770,12 +1771,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
               const visible = visibleDateSet.has(index);
               sprite.visible = visible;
               const topDown = temporalTopDownAppliedRef.current;
-              const position = getRadialShellDatePosition(radius, index, count, topDown, 2, visibleIndices);
+              const position = getRadialShellDatePosition(radius, index, count, topDown, TEMPORAL_DATE_LABEL_PADDING, visibleIndices);
               sprite.position.set(position.x, position.y, position.z);
               if (sprite.material) sprite.material.rotation = 0;
               if (mesh) mesh.visible = visible && !topDown;
               if (treeRing) treeRing.visible = visible && topDown;
-              const width = visibleIndices.length >= 8 ? 54 : visibleIndices.length >= 5 ? 48 : 42;
+              const width = visibleIndices.length >= 8 ? 60 : visibleIndices.length >= 5 ? 54 : 48;
               sprite.scale.set(width, width * labelRatio, 1);
             });
           }
@@ -1947,13 +1948,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           opacity: 0.96,
         }));
         sprite.name = `memory-time-shell-date-${radius}`;
-        const position = getRadialShellDatePosition(radius, index, shellDates.length, false, 2, overviewIndices);
+        const position = getRadialShellDatePosition(radius, index, shellDates.length, false, TEMPORAL_DATE_LABEL_PADDING, overviewIndices);
         sprite.position.set(position.x, position.y, position.z);
         sprite.visible = overviewIndices.includes(index);
         // Modest world-space type stays readable in the full view without
         // competing with the memories themselves.
         const labelRatio = labelHeight / labelWidth;
-        const width = Math.min(labelWidth * 0.48, 54);
+        const width = Math.min(labelWidth * 0.52, 60);
         const height = width * labelRatio;
         sprite.scale.set(width, height, 1);
         sprite.renderOrder = 20;
