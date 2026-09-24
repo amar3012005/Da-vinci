@@ -23,7 +23,7 @@ import {
 import { WorkRunShell } from './workrun';
 import * as WorkRunModules from './workrun';
 import CompanyWorkRunSidebar from './LegacyRoomsSidebar';
-import { persistedAssistantFailure } from './persisted-message';
+import { assistantFailureMessage, persistedAssistantFailure } from './persisted-message';
 
 const CANVAS_CARDS = [
   { title: 'Company Profile', meta: '12 items', sub: 'Company info, branding, team', tone: 'bg-[#dbeafe]', pos: 'left-[8%] top-[6%]' },
@@ -493,6 +493,19 @@ function HmRoomDesk({ runId }) {
       setError(err?.response?.data?.error || err.message);
       setPhase('idle');
       liveReplyRef.current = false;
+      setMsgs((previous) => {
+        const next = [...previous];
+        const last = next[next.length - 1];
+        if (last?.role === 'assistant' && last.streaming) {
+          next[next.length - 1] = {
+            ...last,
+            streaming: false,
+            stage: 'complete',
+            failure: assistantFailureMessage(err?.response?.data?.error?.type),
+          };
+        }
+        return next;
+      });
     }
   };
 

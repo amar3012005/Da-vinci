@@ -4,6 +4,8 @@
  * Same block_id is upserted (revision++); never append a duplicate row.
  */
 
+import { assistantFailureMessage } from '../persisted-message';
+
 export const BLOCK_KINDS = Object.freeze([
   'text', 'activity', 'plan', 'tool', 'search', 'sources',
   'artifact', 'approval', 'team', 'appAction', 'table', 'chart', 'result',
@@ -733,6 +735,17 @@ export function applyAgentEvent(msgs, ev) {
 
   const terminalStatus = String(ev?.status || '').toLowerCase();
   const t = String(ev?.t || '').toLowerCase();
+  const failed = t === 'workrun.failed'
+    || (type === 'REPLY_END' && (ev.finished_reason || ev.reason)
+      && ev.finished_reason !== 'completed' && ev.reason !== 'completed')
+    || (t === 'workrun.state' && terminalStatus === 'failed')
+    || (t === 'agent.status' && terminalStatus === 'failed');
+  if (failed) {
+    const cur = ensureAssistant();
+    cur.failure = assistantFailureMessage(ev.error?.type);
+    cur.streaming = false;
+    cur.stage = 'complete';
+  }
   if (type === 'REPLY_END'
     || ['workrun.completed', 'workrun.failed', 'workrun.cancelled'].includes(t)
     || (t === 'workrun.state' && ['completed', 'failed', 'cancelled'].includes(terminalStatus))

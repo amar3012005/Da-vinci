@@ -1,4 +1,4 @@
-import { persistedAssistantFailure } from '../persisted-message';
+import { assistantFailureMessage, persistedAssistantFailure } from '../persisted-message';
 
 describe('persisted assistant failure projection', () => {
   it('shows a safe setup failure instead of an invisible empty assistant turn', () => {
@@ -24,5 +24,11 @@ describe('persisted assistant failure projection', () => {
       role: 'assistant', finished_reason: 'completed', content: [{ type: 'text', text: 'ok' }],
     })).toBe('');
     expect(persistedAssistantFailure({ role: 'user', error: { type: 'setup' } })).toBe('');
+  });
+
+  it('uses the same safe copy for live and hydrated setup errors', () => {
+    expect(assistantFailureMessage('setup')).toBe(persistedAssistantFailure({
+      role: 'assistant', error: { type: 'setup', message: 'private provider detail' },
+    }));
   });
 });

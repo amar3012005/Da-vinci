@@ -17,6 +17,21 @@ import {
 } from '../hm-rooms-dsh/workrun-view';
 
 describe('transcript history and live stream reconciliation', () => {
+  it('keeps a safe failure on the live assistant bubble when AgentScope fails setup', () => {
+    const submitted = startUserTurn([], 'hi');
+    const failed = applyAgentEvent(submitted, {
+      t: 'workrun.failed',
+      error: { type: 'setup', message: 'private provider detail' },
+    });
+    expect(failed[1]).toMatchObject({
+      role: 'assistant',
+      streaming: false,
+      stage: 'complete',
+      failure: expect.stringContaining('failed during setup'),
+    });
+    expect(failed[1].failure).not.toContain('private provider detail');
+  });
+
   it('keeps a follow-up turn streamed locally when older history resolves later', () => {
     const history = [
       { role: 'user', text: 'Earlier question' },
