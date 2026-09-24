@@ -489,12 +489,14 @@ export default function HyperAgents() {
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
-            <span className="text-[12px] font-semibold text-[#0a0a0a]">{t('hyperAgents.rooms', 'Rooms')}</span>
+            <span className="text-[12px] font-semibold text-[#0a0a0a]">{t('hyperAgents.workRuns', 'WorkRuns')}</span>
           </div>
           <button
             onClick={() => setShowCreate(true)}
             className="text-[#525252] hover:text-[#0a0a0a]"
-            title={t('hyperAgents.newRoom', 'New room')}
+            aria-label={t('hyperAgents.newWorkRun', 'New WorkRun')}
+            data-testid="workrun-create"
+            title={t('hyperAgents.newWorkRun', 'New WorkRun')}
           >
             <Plus size={14} />
           </button>
@@ -571,20 +573,32 @@ export default function HyperAgents() {
               </AnimatePresence>
             </div>
           ) : null}
-          {workRooms.length > 0 && (
+          <section data-testid="workruns-history" aria-label={t('hyperAgents.workRuns', 'WorkRuns')}>
             <div className="px-3 pt-3 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] border-t border-[#e3e0db] mt-1">
-              {t('hyperAgents.workRooms', 'Work rooms')}
+              {t('hyperAgents.workRuns', 'WorkRuns')}
             </div>
-          )}
-          {workRooms.map(r => (
-            <RoomRow
-              key={r.id}
-              room={r}
-              active={r.id === activeRoomId && viewMode === 'thread'}
-              onClick={() => goMode('thread', r.id)}
-              onDelete={handleDeleteRoom}
-            />
-          ))}
+            {workRooms.length ? workRooms.map(r => (
+              <RoomRow
+                key={r.id}
+                room={r}
+                active={r.id === activeRoomId && viewMode === 'thread'}
+                onClick={() => goMode('thread', r.id)}
+                onDelete={handleDeleteRoom}
+              />
+            )) : (
+              <div className="px-3 py-3 text-[11px] text-[#737373]">
+                <p>{t('hyperAgents.noWorkRuns', 'No WorkRuns yet.')}</p>
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(true)}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-[6px] bg-[#0a0a0a] px-2.5 py-1.5 text-[11px] font-medium text-white hover:bg-[#262626]"
+                  data-testid="workrun-create-empty"
+                >
+                  <Plus size={12} /> {t('hyperAgents.newWorkRun', 'New WorkRun')}
+                </button>
+              </div>
+            )}
+          </section>
           {archivedRooms.length > 0 && (
             <details className="px-2 pt-3 text-[10px] text-[#a3a3a3]">
               <summary className="cursor-pointer hover:text-[#525252] flex items-center gap-1">

@@ -22,13 +22,22 @@ describe('HyperAgents live turn adoption', () => {
       .forEach((roomTag) => expect(source).toContain(`key: '${roomTag}'`));
     expect(source).toContain("t('hyperAgents.companyRooms', 'Company rooms')");
     expect(source).toContain("domain.key === 'general' ? 'HQ' : domain.label");
-    expect(source).toContain("t('hyperAgents.workRooms', 'Work rooms')");
+    expect(source).toContain("t('hyperAgents.workRuns', 'WorkRuns')");
     expect(source).toContain('const roomAssignments = useMemo');
     expect(source).toContain('const displayedAgentRooms = showAgentRooms ? agentHomeRooms : assignedAgentRooms;');
     expect(source).toContain('displayedAgentRooms.map');
     expect(source).toContain('CompanyRoomActivityRow');
     expect(source).toContain('workRooms.map');
     expect(source).toContain('RoomDomainIcon');
+  });
+
+  it('keeps WorkRuns and their create action visible in the company sidebar, including the empty state', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
+    expect(source).toContain('data-testid="workruns-history"');
+    expect(source).toContain("t('hyperAgents.workRuns', 'WorkRuns')");
+    expect(source).toContain("t('hyperAgents.newWorkRun', 'New WorkRun')");
+    expect(source).toContain("t('hyperAgents.noWorkRuns', 'No WorkRuns yet.')");
+    expect(source).toContain('data-testid="workrun-create-empty"');
   });
 
   it('keeps campaign completion and its dashboard inside Campaign Intelligence', () => {
