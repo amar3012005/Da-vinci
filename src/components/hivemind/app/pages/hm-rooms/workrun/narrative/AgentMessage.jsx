@@ -9,6 +9,7 @@ import TurnUsage from './TurnUsage';
 export default function AgentMessage({
   thinking,
   text,
+  failure,
   streaming,
   stage,
   tools,
@@ -50,6 +51,11 @@ export default function AgentMessage({
       {streaming && liveStatus && stage !== 'working' ? (
         <div className="inline-flex items-center gap-2 text-[13px] text-[#737373]">
           <LoaderCircle size={14} className="animate-spin" /> {liveStatus}
+        </div>
+      ) : null}
+      {failure ? (
+        <div role="alert" className="rounded-[10px] border border-[#f3d3c7] bg-[#fff8f5] px-4 py-3 text-[13px] leading-5 text-[#7c2d12]">
+          {failure}
         </div>
       ) : null}
       {hasWork ? (

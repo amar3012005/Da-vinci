@@ -23,6 +23,7 @@ import {
 import { WorkRunShell } from './workrun';
 import * as WorkRunModules from './workrun';
 import CompanyWorkRunSidebar from './LegacyRoomsSidebar';
+import { persistedAssistantFailure } from './persisted-message';
 
 const CANVAS_CARDS = [
   { title: 'Company Profile', meta: '12 items', sub: 'Company info, branding, team', tone: 'bg-[#dbeafe]', pos: 'left-[8%] top-[6%]' },
@@ -134,6 +135,7 @@ export function flattenMsg(msg) {
   return {
     role,
     text: split.text,
+    failure: persistedAssistantFailure(msg),
     thinking: thinking || split.thinking,
     tools,
     timeline,
@@ -539,8 +541,6 @@ function HmRoomDesk({ runId }) {
   const artifacts = view.artifacts || [];
   const team = view.team || [];
   const inspectOpen = true;
-  const runStatus = String(run?.status || '').toLowerCase();
-  const terminal = ['completed', 'failed', 'cancelled'].includes(runStatus);
   // Do not use the durable WorkRun status here. A successful reply leaves the
   // WorkRun running so the user can continue the same session; only a live
   // reply or tool call should replace Send with Stop.

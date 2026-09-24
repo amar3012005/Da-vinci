@@ -36,6 +36,7 @@ export default function WorkRunStream({ msgs, onPreview, onResolveExternalAction
                   key={i}
                   thinking={m.thinking}
                   text={m.text}
+                  failure={m.failure}
                   streaming={m.streaming}
                   stage={m.stage}
                   tools={m.tools}
