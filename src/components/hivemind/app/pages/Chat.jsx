@@ -26,6 +26,7 @@ import {
 import apiClient from '../shared/api-client';
 import SingulanceMark from '../shared/SingulanceMark';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
+import { isRenderableAnswerDelta } from '../shared/chat-stream-contract';
 import { getOrCreateChatThreadId, resetChatThreadId } from '../shared/chat-thread-id';
 import useDictation from '../shared/useDictation';
 import { useTeamContext } from '../shared/team-context';
@@ -466,7 +467,7 @@ export function ChatPanel({ isOpen, onClose }) {
       const data = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? (await readChatStream(chatRes, (event) => {
             if (event.type === 'answer_started') return;
-            if (event.type === 'answer_delta' && event.validated === true) {
+            if (isRenderableAnswerDelta(event)) {
               setMessages((prev) => {
                 const found = prev.some((item) => item.id === streamingId);
                 return found
