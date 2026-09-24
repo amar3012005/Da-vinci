@@ -37,7 +37,9 @@ describe('HyperAgents live turn adoption', () => {
     expect(source).toContain("t('hyperAgents.loadingWorkRooms', 'Loading workrooms…')");
     expect(source).toContain("t('hyperAgents.noWorkRooms', 'No workrooms yet.')");
     expect(source).toContain("t('hyperAgents.workRoomsUnavailable', 'Workrooms are unavailable right now. {{error}}', { error })");
-    expect(source).toContain('AgentScope runs unavailable: {workRunsError}');
+    expect(source).toContain('<span>HM Rooms</span>');
+    expect(source).toContain('HM Rooms unavailable: {workRunsError}');
+    expect(source).toContain('No WorkRuns yet.');
     expect(source).not.toContain('{workRooms.length > 0 && (');
   });
 

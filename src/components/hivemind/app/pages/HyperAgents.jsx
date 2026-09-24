@@ -629,12 +629,12 @@ export default function HyperAgents() {
           )}
           <div className="mt-1 border-y border-[#e3e0db] bg-white/45">
             <div className="flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-[#525252]">
-              <span>AgentScope runs</span>
-              <button type="button" onClick={() => goMode('workrun', null)} className="rounded p-0.5 hover:bg-white" title="New AgentScope run" aria-label="New AgentScope run"><Plus size={13} /></button>
+              <span>HM Rooms</span>
+              <button type="button" onClick={() => goMode('workrun', null)} className="rounded p-0.5 hover:bg-white" title="New WorkRun" aria-label="New WorkRun"><Plus size={13} /></button>
             </div>
-            {workRunsLoading && !workRuns.length ? <div className="px-3 pb-2 text-[11px] text-[#737373]">Loading AgentScope runs…</div> : null}
-            {!workRunsLoading && workRunsError ? <div role="alert" className="px-3 pb-2 text-[11px] text-[#b45309]">AgentScope runs unavailable: {workRunsError}</div> : null}
-            {!workRunsLoading && !workRunsError && !workRuns.length ? <div className="px-3 pb-2 text-[11px] text-[#737373]">No AgentScope runs yet.</div> : null}
+            {workRunsLoading && !workRuns.length ? <div className="px-3 pb-2 text-[11px] text-[#737373]">Loading WorkRuns…</div> : null}
+            {!workRunsLoading && workRunsError ? <div role="alert" className="px-3 pb-2 text-[11px] text-[#b45309]">HM Rooms unavailable: {workRunsError}</div> : null}
+            {!workRunsLoading && !workRunsError && !workRuns.length ? <div className="px-3 pb-2 text-[11px] text-[#737373]">No WorkRuns yet.</div> : null}
             {workRuns.slice(0, 12).map((run) => <button key={run.id} type="button" onClick={() => goMode('workrun', run.id)}
               className={`w-full px-3 py-1.5 flex items-center gap-2 text-left text-[11.5px] hover:bg-white ${viewMode === 'workrun' && activeWorkRunId === run.id ? 'bg-white text-[#0a0a0a]' : 'text-[#525252]'}`}>
               <Hash size={12} className="shrink-0 text-[#a3a3a3]" /><span className="truncate">{run.goal || run.id}</span>
