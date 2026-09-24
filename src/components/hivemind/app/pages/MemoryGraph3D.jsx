@@ -12,6 +12,7 @@ import { getRadialMemoryColor, getTemporalTopDownPose } from "./MemoryGraphTempo
 import {
   buildRadialAtlasShellTicks,
   formatRadialShellDate,
+  getRadialShellDatePosition,
   getRadialShellTickCount,
   getRadialShellVisibleIndices,
 } from "./MemoryGraphRadialAtlas";
@@ -1320,11 +1321,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const controls = fg?.controls?.();
     if (!fg || !camera || !controls || temporalTopDownAppliedRef.current === enabled) return false;
     const target = controls.target?.clone?.() || new THREE.Vector3();
-    temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, radius }) => {
+    temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, radius, index, count }) => {
       if (!sprite) return;
-      // In the normal orbit, date labels sit on the upper shell surface. In
-      // the pole view, lay them along the visible north arc of their shells.
-      sprite.position.set(0, enabled ? 0 : radius + 14, enabled ? -radius - 14 : 0);
+      const position = getRadialShellDatePosition(radius, index, count, enabled);
+      sprite.position.set(position.x, position.y, position.z);
       if (mesh) mesh.visible = !enabled && sprite.visible;
       if (treeRing) treeRing.visible = enabled && sprite.visible;
     });
@@ -1927,7 +1927,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           opacity: 0.96,
         }));
         sprite.name = `memory-time-shell-date-${radius}`;
-        sprite.position.set(0, radius + 14, 0);
+        const position = getRadialShellDatePosition(radius, index, shellDates.length);
+        sprite.position.set(position.x, position.y, position.z);
         sprite.visible = overviewShells.has(index);
         // Modest world-space type stays readable in the full view without
         // competing with the memories themselves.
@@ -1937,7 +1938,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         sprite.scale.set(width, height, 1);
         sprite.renderOrder = 20;
         shells.add(sprite);
-        temporalShellDateSpritesRef.current.push({ sprite, mesh, treeRing, radius, index, labelRatio });
+        temporalShellDateSpritesRef.current.push({ sprite, mesh, treeRing, radius, index, count: shellDates.length, labelRatio });
       });
       scene.add(shells);
     }
