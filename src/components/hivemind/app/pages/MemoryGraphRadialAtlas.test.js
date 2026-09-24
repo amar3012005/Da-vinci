@@ -1,4 +1,10 @@
-import { buildRadialAtlasLayout, formatRadialShellDate } from "./MemoryGraphRadialAtlas";
+import {
+  buildRadialAtlasLayout,
+  buildRadialAtlasShellTicks,
+  formatRadialShellDate,
+  getRadialShellTickCount,
+  getRadialShellVisibleIndices,
+} from "./MemoryGraphRadialAtlas";
 
 describe("MemoryGraph radial time encoding", () => {
   test("grows radially outward over time, with older memories near the core", () => {
@@ -56,5 +62,25 @@ describe("MemoryGraph radial time encoding", () => {
     const { shellDates } = buildRadialAtlasLayout([{ id: "undated", kind: "fact" }]);
     expect(shellDates.every(({ timestamp }) => timestamp == null)).toBe(true);
     expect(formatRadialShellDate(null)).toBe("UNDATED");
+  });
+
+  test("reveals more timestamp shells as camera distance decreases", () => {
+    expect(getRadialShellTickCount(1400)).toBe(3);
+    expect(getRadialShellTickCount(950)).toBe(5);
+    expect(getRadialShellTickCount(650)).toBe(8);
+    expect(getRadialShellVisibleIndices(3)).toEqual(new Set([1, 3, 7]));
+    expect(getRadialShellVisibleIndices(5)).toEqual(new Set([0, 2, 3, 5, 7]));
+    expect(getRadialShellVisibleIndices(8).size).toBe(8);
+  });
+
+  test("adds dated shells between overview rings while keeping the latest at the surface", () => {
+    const ticks = buildRadialAtlasShellTicks([
+      { id: "old", kind: "fact", createdAt: "2025-01-01T00:00:00Z" },
+      { id: "new", kind: "fact", createdAt: "2025-03-01T00:00:00Z" },
+    ], 8);
+    expect(ticks).toHaveLength(8);
+    expect(ticks.map(({ radius }) => radius)).toEqual([80, 140, 205, 270, 320, 365, 400, 430]);
+    expect(ticks.every((tick, index) => index === 0 || tick.timestamp > ticks[index - 1].timestamp)).toBe(true);
+    expect(ticks.at(-1)).toMatchObject({ timestamp: Date.parse("2025-03-01T00:00:00Z"), latest: true });
   });
 });
