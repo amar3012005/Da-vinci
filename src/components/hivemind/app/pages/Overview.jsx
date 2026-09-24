@@ -38,6 +38,7 @@ import { getOrCreateChatThreadId, resetChatThreadId } from '../shared/chat-threa
 import { QRCodeSVG } from 'qrcode.react';
 import { userScopedKey } from '../shared/user-storage';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
+import { isRenderableAnswerDelta } from '../shared/chat-stream-contract';
 import { useApiQuery } from '../shared/hooks';
 import { emitUsageChanged } from '../shared/useUsage';
 import { useTeamContext } from '../shared/team-context';
@@ -988,7 +989,7 @@ function OverviewChat({ inputRef }) {
       const chatData = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? await readChatStream(chatRes, (event) => {
             if (event.type === 'answer_started') return;
-            if (event.type === 'answer_delta' && event.validated === true) {
+            if (isRenderableAnswerDelta(event)) {
               setMessages((prev) => {
                 const found = prev.some((item) => item.id === streamingId);
                 return found
