@@ -1258,6 +1258,9 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const panelClass = graphTheme === "night"
     ? "border-[#2f2925] bg-[#080808]/82 text-[#e8dbcf] shadow-[0_24px_80px_rgba(0,0,0,0.38)]"
     : "border-[#e6e3dc] bg-white/90 text-[#1e1e1e] shadow-[0_18px_58px_rgba(21,20,18,0.08)]";
+  const legendGlassClass = graphTheme === "night"
+    ? "border-white/10 bg-[#0b0a09]/45 text-[#e8dbcf] shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-xl"
+    : "border-white/65 bg-white/55 text-[#1e1e1e] shadow-[0_8px_28px_rgba(21,20,18,0.06)] backdrop-blur-xl";
   const panelMutedText = graphTheme === "night" ? "text-[#9d9288]" : "text-[#8b857d]";
   const panelSoftButton = graphTheme === "night"
     ? "border-[#2f2925] bg-[#151312]/90 text-[#cfc2b7] hover:text-[#fff0e5]"
@@ -1672,7 +1675,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               >Open memory inspector</button>
             )}
             {showLegend && (
-              <div className={`absolute bottom-[88px] left-4 z-20 max-w-[min(330px,calc(100%-32px))] rounded-[10px] border p-3 ${panelClass}`} aria-label="Radial atlas legend">
+              <div className={`absolute bottom-[88px] md:bottom-5 left-4 z-20 max-w-[min(330px,calc(100%-32px))] rounded-[10px] border p-3 ${legendGlassClass}`} aria-label="Radial atlas legend">
                 <div className="mb-2 flex items-center justify-between">
                   <span className={`text-[10px] font-semibold uppercase tracking-wider ${panelMutedText}`}>Reading the brain</span>
                   <button type="button" onClick={() => setShowLegend(false)} aria-label="Close legend" className="text-[#8b857d]"><X size={13} /></button>

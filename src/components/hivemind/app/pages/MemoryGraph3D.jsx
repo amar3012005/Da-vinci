@@ -1387,11 +1387,39 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     if (nodeCount === 0) return false;
     if (el.clientWidth <= 0 || el.clientHeight <= 0) return false;
 
-    fg.zoomToFit(duration, padding);
+    if (radialTemporalRef.current) {
+      // The radial atlas has a known spherical frame; fitting only its memory
+      // points can vary noticeably as data changes. Use the viewport's actual
+      // aspect ratio (including the inspector width) to open on the complete
+      // brain at a consistent scale, matching the intended atlas POV.
+      const camera = fg.camera?.();
+      const controls = fg.controls?.();
+      if (!camera || !controls) return false;
+      const target = controls.target?.clone?.() || new THREE.Vector3();
+      const direction = camera.position.clone().sub(target);
+      if (direction.lengthSq() < 1) direction.set(0, 40, 300);
+      direction.normalize();
+      const nodeRadius = (graphDataRef.current?.nodes || []).reduce((max, node) => {
+        if (!Number.isFinite(node.x) || !Number.isFinite(node.y) || !Number.isFinite(node.z)) return max;
+        return Math.max(max, Math.hypot(node.x, node.y, node.z));
+      }, 430);
+      const frameRadius = nodeRadius + 24;
+      const halfFov = (camera.fov * Math.PI) / 360;
+      const fill = 0.82;
+      const aspect = el.clientWidth / el.clientHeight;
+      const distance = Math.max(
+        frameRadius / (fill * Math.tan(halfFov)),
+        frameRadius / (fill * Math.tan(halfFov) * aspect),
+      );
+      const position = target.clone().add(direction.multiplyScalar(distance));
+      fg.cameraPosition(position, target, duration);
+    } else {
+      fg.zoomToFit(duration, padding);
+    }
 
     // After the fit animation, sanitize + clamp the resulting camera distance.
       const tier = getGraphSizeTier(nodeCount);
-      const MAX_FIT = radialTemporalRef.current ? 1450 : tier === "massive" ? 1450 : tier === "large" ? 1050 : 850;
+      const MAX_FIT = radialTemporalRef.current ? 4000 : tier === "massive" ? 1450 : tier === "large" ? 1050 : 850;
     const MIN_FIT = 150;
     window.setTimeout(() => {
       const inst = fgRef.current;
