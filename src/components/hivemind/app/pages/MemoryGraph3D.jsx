@@ -9,7 +9,12 @@ import React, {
 import ForceGraph3D from "3d-force-graph";
 import * as THREE from "three";
 import { getRadialMemoryColor, getTemporalTopDownPose } from "./MemoryGraphTemporal";
-import { buildRadialAtlasLayout, formatRadialShellDate } from "./MemoryGraphRadialAtlas";
+import {
+  buildRadialAtlasShellTicks,
+  formatRadialShellDate,
+  getRadialShellTickCount,
+  getRadialShellVisibleIndices,
+} from "./MemoryGraphRadialAtlas";
 
 const DEFAULT_BG = "rgba(0,0,0,0)";
 
@@ -1315,11 +1320,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const controls = fg?.controls?.();
     if (!fg || !camera || !controls || temporalTopDownAppliedRef.current === enabled) return false;
     const target = controls.target?.clone?.() || new THREE.Vector3();
-    temporalShellDateSpritesRef.current.forEach(({ sprite, radius }) => {
+    temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, radius }) => {
       if (!sprite) return;
       // In the normal orbit, date labels sit on the upper shell surface. In
       // the pole view, lay them along the visible north arc of their shells.
       sprite.position.set(0, enabled ? 0 : radius + 14, enabled ? -radius - 14 : 0);
+      if (mesh) mesh.visible = !enabled && sprite.visible;
+      if (treeRing) treeRing.visible = enabled && sprite.visible;
     });
 
     if (enabled) {
@@ -1747,6 +1754,18 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           });
 
           const distance = cameraNow.position.distanceTo(targetNow);
+          if (radialTemporalRef.current) {
+            const visibleShells = getRadialShellVisibleIndices(getRadialShellTickCount(distance));
+            temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, index, labelRatio }) => {
+              const visible = visibleShells.has(index);
+              sprite.visible = visible;
+              const topDown = temporalTopDownAppliedRef.current;
+              if (mesh) mesh.visible = visible && !topDown;
+              if (treeRing) treeRing.visible = visible && topDown;
+              const width = visibleShells.size >= 8 ? 112 : visibleShells.size >= 5 ? 148 : 188;
+              sprite.scale.set(width, width * labelRatio, 1);
+            });
+          }
           const labelMode = distance > 1450 ? "hidden" : distance > 760 ? "focus" : "all";
           const linkMode = distance > 1180 ? "sparse" : distance > 560 ? "focus" : "all";
           const relationLabelMode = distance > 920 ? "hidden" : distance > 420 ? "focus" : "all";
@@ -1866,14 +1885,35 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       temporalShellGroup = shells;
       shells.name = "memory-time-shells";
       const shellColor = themeRef.current.name === "night" ? "#60758a" : "#829bb0";
-      const { shellDates } = buildRadialAtlasLayout(graphDataRef.current?.nodes || []);
+      const radialNodes = graphDataRef.current?.nodes || [];
+      const shellDates = buildRadialAtlasShellTicks(radialNodes, 8);
+      const overviewShells = getRadialShellVisibleIndices(3);
       shellDates.forEach(({ radius, timestamp, latest }, index) => {
         const mesh = new THREE.Mesh(
           new THREE.SphereGeometry(radius, 32, 20),
-          new THREE.MeshBasicMaterial({ color: shellColor, wireframe: true, transparent: true, opacity: index === 2 ? 0.12 : 0.075, depthWrite: false }),
+          new THREE.MeshBasicMaterial({ color: shellColor, wireframe: true, transparent: true, opacity: index === 3 ? 0.12 : 0.075, depthWrite: false }),
         );
         mesh.name = `memory-time-shell-${radius}`;
+        mesh.visible = overviewShells.has(index);
         shells.add(mesh);
+
+        // The pole view swaps the globe wireframe for true concentric bands,
+        // making temporal layers read like growth rings in a tree trunk.
+        const treeRing = new THREE.Mesh(
+          new THREE.RingGeometry(Math.max(1, radius - 1.4), radius + 1.4, 128),
+          new THREE.MeshBasicMaterial({
+            color: themeRef.current.name === "day" ? "#877253" : "#9e886f",
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: index % 2 === 0 ? 0.3 : 0.2,
+            depthWrite: false,
+          }),
+        );
+        treeRing.rotation.x = -Math.PI / 2;
+        treeRing.position.y = -0.8;
+        treeRing.visible = false;
+        treeRing.name = `memory-tree-time-ring-${radius}`;
+        shells.add(treeRing);
 
         // Render clean text directly on the shell—no badge or tag background.
         const label = `${latest ? "LATEST · " : ""}${formatRadialShellDate(timestamp)}`;
@@ -1888,14 +1928,16 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         }));
         sprite.name = `memory-time-shell-date-${radius}`;
         sprite.position.set(0, radius + 14, 0);
+        sprite.visible = overviewShells.has(index);
         // Modest world-space type stays readable in the full view without
         // competing with the memories themselves.
+        const labelRatio = labelHeight / labelWidth;
         const width = Math.min(labelWidth * 0.52, 188);
-        const height = width * (labelHeight / labelWidth);
+        const height = width * labelRatio;
         sprite.scale.set(width, height, 1);
         sprite.renderOrder = 20;
         shells.add(sprite);
-        temporalShellDateSpritesRef.current.push({ sprite, radius });
+        temporalShellDateSpritesRef.current.push({ sprite, mesh, treeRing, radius, index, labelRatio });
       });
       scene.add(shells);
     }
