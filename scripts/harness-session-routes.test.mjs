@@ -174,7 +174,7 @@ test('Day 0 admission is private, Flagship-owned, and fails closed', async () =>
   assert.deepEqual(await admitted.json(), {
     key: 'pre_onboarding_lifecycle_v1', source: 'cloudflare-flagship', enabled: true,
     evaluation_id: 'pre_onboarding_lifecycle_v1-eval',
-    report_flag_key: 'day0_report_editorial_v1', report_onepage_enabled: false,
+    report_flag_key: 'day0_report_editorial_v1', report_editorial_enabled: false,
     report_evaluation_id: 'day0_report_editorial_v1-eval',
   });
   assert.deepEqual(evaluatedKeys, ['pre_onboarding_lifecycle_v1', 'day0_report_editorial_v1']);

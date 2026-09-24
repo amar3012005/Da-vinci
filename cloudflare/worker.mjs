@@ -19,7 +19,7 @@ const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const HIVE_HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const HIVE_HARNESS_CHAT_FLAG_KEY = 'hivemind_harness_chat_v1';
 const DAY0_ONBOARDING_FLAG_PATH = '/__hivemind/feature-flags/day0-onboarding';
-const DAY0_REPORT_ONEPAGE_FLAG_KEY = 'day0_report_editorial_v1';
+const DAY0_REPORT_EDITORIAL_FLAG_KEY = 'day0_report_editorial_v1';
 // A single default-off Flagship gate owns every deterministic lifecycle stage
 // before activation.  Core only sees this stable contract and cannot enable a
 // stage if Cloudflare has rolled the lifecycle back.
@@ -295,7 +295,7 @@ async function dayZeroOnboardingFlagResponse(request, env) {
   const userId = typeof body?.user_id === 'string' ? body.user_id : '';
   let enabled = false;
   let evaluationId;
-  let reportOnepageEnabled = false;
+  let reportEditorialEnabled = false;
   let reportEvaluationId;
   if (orgId && userId) {
     const context = {
@@ -312,8 +312,8 @@ async function dayZeroOnboardingFlagResponse(request, env) {
       // A Flagship outage cannot start a lifecycle email.
     }
     try {
-      const details = await env.FLAGS.getBooleanDetails(DAY0_REPORT_ONEPAGE_FLAG_KEY, false, context);
-      reportOnepageEnabled = details.value === true;
+      const details = await env.FLAGS.getBooleanDetails(DAY0_REPORT_EDITORIAL_FLAG_KEY, false, context);
+      reportEditorialEnabled = details.value === true;
       reportEvaluationId = details.evaluationId;
     } catch {
       // A report-flag outage preserves the current PDF renderer.
@@ -324,8 +324,8 @@ async function dayZeroOnboardingFlagResponse(request, env) {
     source: 'cloudflare-flagship',
     enabled,
     ...(evaluationId ? { evaluation_id: evaluationId } : {}),
-    report_flag_key: DAY0_REPORT_ONEPAGE_FLAG_KEY,
-    report_onepage_enabled: reportOnepageEnabled,
+    report_flag_key: DAY0_REPORT_EDITORIAL_FLAG_KEY,
+    report_editorial_enabled: reportEditorialEnabled,
     ...(reportEvaluationId ? { report_evaluation_id: reportEvaluationId } : {}),
   }, {
     headers: {

@@ -31,13 +31,13 @@ test('the private Day 0 gate evaluates the unified pre-onboarding flag', async (
     enabled: true,
     evaluation_id: 'pre_onboarding_lifecycle_v1-evaluation',
     report_flag_key: 'day0_report_editorial_v1',
-    report_onepage_enabled: false,
+    report_editorial_enabled: false,
     report_evaluation_id: 'day0_report_editorial_v1-evaluation',
   });
   assert.deepEqual(evaluated, ['pre_onboarding_lifecycle_v1', 'day0_report_editorial_v1']);
 });
 
-test('the private Day 0 gate can enable the one-page report independently', async () => {
+test('the private Day 0 gate can enable the editorial report independently', async () => {
   const response = await worker.fetch(
     new Request('https://next.singulancelabs.com/__hivemind/feature-flags/day0-onboarding', {
       method: 'POST',
@@ -55,7 +55,7 @@ test('the private Day 0 gate can enable the one-page report independently', asyn
   assert.equal(response.status, 200);
   assert.equal(result.enabled, false);
   assert.equal(result.report_flag_key, 'day0_report_editorial_v1');
-  assert.equal(result.report_onepage_enabled, true);
+  assert.equal(result.report_editorial_enabled, true);
 });
 
 test('the private Day 0 gate fails closed without edge authorization', async () => {
