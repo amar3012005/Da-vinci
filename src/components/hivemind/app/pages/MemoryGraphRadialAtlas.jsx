@@ -41,27 +41,22 @@ export function getVisibleRadialShellDateIndices(shellDates = [], count = 3) {
   );
 }
 
-/** Place dated shell labels around the visible surface rather than stacking them on one axis. */
+/** Place dates on their shell surfaces; Time Travel lines them up on the projected vertical axis. */
 export function getRadialShellDatePosition(radius, index, count, topDown = false, padding = 14, visibleIndices = null) {
   const shellRadius = Math.max(0, Number.isFinite(radius) ? radius : 0) + padding;
   const total = Math.max(1, Number.isFinite(count) ? count : 1);
   const tick = Math.max(0, Math.min(total - 1, Number.isFinite(index) ? index : 0));
+  if (topDown) {
+    // The pole camera looks down world Y with world -Z as screen-up. Put each
+    // shell date on that projected axis, ordered from newest at the outside.
+    return { x: 0, y: 0, z: -shellRadius };
+  }
+
   const visible = Array.isArray(visibleIndices) && visibleIndices.length
     ? [...visibleIndices].sort((a, b) => a - b)
     : Array.from({ length: total }, (_, visibleIndex) => visibleIndex);
   const visibleRank = Math.max(0, visible.indexOf(tick));
   const visibleCount = visible.length;
-
-  if (topDown) {
-    // Keep the newest date at the top of the pole view and distribute the
-    // remaining dates around the full tree-ring circumference.
-    const angle = -Math.PI / 2 + ((visibleRank - (visibleCount - 1)) * (2 * Math.PI / visibleCount));
-    return {
-      x: Math.cos(angle) * shellRadius,
-      y: 0,
-      z: Math.sin(angle) * shellRadius,
-    };
-  }
 
   // The default camera faces the positive-Z hemisphere. A shallow upper-front
   // arc leaves labels legible and distinct while keeping them attached to shells.

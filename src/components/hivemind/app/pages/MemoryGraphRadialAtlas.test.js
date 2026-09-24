@@ -90,31 +90,30 @@ describe("MemoryGraph radial time encoding", () => {
     expect(getVisibleRadialShellDateIndices(ticks, 1)).toEqual([4]);
   });
 
-  test("spreads date labels around the shell surface in orbit and pole views", () => {
+  test("keeps orbit labels on their shells and orders horizontal pole labels along screen vertical", () => {
     const count = 8;
     const orbitLabels = Array.from({ length: count }, (_, index) =>
       getRadialShellDatePosition(270, index, count)
     );
     const poleLabels = Array.from({ length: count }, (_, index) =>
-      getRadialShellDatePosition(270, index, count, true)
+      getRadialShellDatePosition(80 + index * 50, index, count, true)
     );
 
     expect(new Set(orbitLabels.map(({ x, y, z }) => `${x.toFixed(2)}:${y.toFixed(2)}:${z.toFixed(2)}`)).size).toBe(count);
-    expect(new Set(poleLabels.map(({ x, y, z }) => `${x.toFixed(2)}:${z.toFixed(2)}`)).size).toBe(count);
     orbitLabels.forEach(({ x, y, z }) => {
       expect(Math.hypot(x, y, z)).toBeCloseTo(284);
       expect(y).toBeGreaterThan(0);
       expect(z).toBeGreaterThan(0);
     });
-    poleLabels.forEach(({ x, y, z }) => {
-      expect(Math.hypot(x, z)).toBeCloseTo(284);
+    poleLabels.forEach(({ x, y, z }, index) => {
+      expect(x).toBe(0);
       expect(y).toBe(0);
+      expect(z).toBeCloseTo(-(94 + index * 50));
+      if (index > 0) expect(Math.abs(z)).toBeGreaterThan(Math.abs(poleLabels[index - 1].z));
     });
-    expect(poleLabels.at(-1).z).toBeLessThan(0);
-    expect(Math.abs(poleLabels.at(-1).x)).toBeCloseTo(0);
   });
 
-  test("reflows only visible dates and anchors the newest label at the visual center", () => {
+  test("reflows visible orbit dates while pole dates use their own ordered shell radii", () => {
     const overview = [1, 3, 7];
     const older = getRadialShellDatePosition(140, 1, 8, false, 14, overview);
     const middle = getRadialShellDatePosition(270, 3, 8, false, 14, overview);
@@ -125,8 +124,9 @@ describe("MemoryGraph radial time encoding", () => {
     expect(middle.x).toBeLessThan(0);
     expect(latest.x).toBeCloseTo(0);
     expect(latest.z).toBeGreaterThan(0);
-    expect(latestPole.x).toBeCloseTo(0);
-    expect(latestPole.z).toBeLessThan(0);
+    expect(latestPole.x).toBe(0);
+    expect(latestPole.y).toBe(0);
+    expect(latestPole.z).toBeCloseTo(-444);
   });
 
   test("adds dated shells between overview rings while keeping the latest at the surface", () => {

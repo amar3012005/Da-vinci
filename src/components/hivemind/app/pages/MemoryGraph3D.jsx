@@ -359,23 +359,6 @@ function makeTemporalShellTextTexture(text, themeName) {
   return { texture, width: canvas.width / dpr, height: canvas.height / dpr };
 }
 
-function getRadialShellLabelRotation(camera, radius, index, count, topDown, visibleIndices) {
-  if (!camera || visibleIndices.length < 2) return 0;
-  const rank = visibleIndices.indexOf(index);
-  if (rank < 0) return 0;
-  const fromRank = Math.max(0, rank - 1);
-  const toRank = Math.min(visibleIndices.length - 1, rank + 1);
-  if (fromRank === toRank) return 0;
-  const from = getRadialShellDatePosition(radius, visibleIndices[fromRank], count, topDown, 2, visibleIndices);
-  const to = getRadialShellDatePosition(radius, visibleIndices[toRank], count, topDown, 2, visibleIndices);
-  const start = new THREE.Vector3(from.x, from.y, from.z).project(camera);
-  const end = new THREE.Vector3(to.x, to.y, to.z).project(camera);
-  let angle = Math.atan2(end.y - start.y, end.x - start.x);
-  if (angle > Math.PI / 2) angle -= Math.PI;
-  else if (angle < -Math.PI / 2) angle += Math.PI;
-  return angle;
-}
-
 function makeNodeTagSprite(text, themeName, variant = "normal") {
   const { texture, w, h } = getNodeTagTexture(text, themeName, variant);
   const mat = new THREE.SpriteMaterial({
@@ -1347,7 +1330,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       if (!sprite) return;
       const position = getRadialShellDatePosition(radius, index, count, enabled, 2, visibleIndices);
       sprite.position.set(position.x, position.y, position.z);
-      if (sprite.material) sprite.material.rotation = getRadialShellLabelRotation(camera, radius, index, count, enabled, visibleIndices);
+      if (sprite.material) sprite.material.rotation = 0;
       if (mesh) mesh.visible = !enabled && sprite.visible;
       if (treeRing) treeRing.visible = enabled && sprite.visible;
     });
@@ -1789,7 +1772,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
               const topDown = temporalTopDownAppliedRef.current;
               const position = getRadialShellDatePosition(radius, index, count, topDown, 2, visibleIndices);
               sprite.position.set(position.x, position.y, position.z);
-              if (sprite.material) sprite.material.rotation = getRadialShellLabelRotation(cameraNow, radius, index, count, topDown, visibleIndices);
+              if (sprite.material) sprite.material.rotation = 0;
               if (mesh) mesh.visible = visible && !topDown;
               if (treeRing) treeRing.visible = visible && topDown;
               const width = visibleIndices.length >= 8 ? 54 : visibleIndices.length >= 5 ? 48 : 42;
