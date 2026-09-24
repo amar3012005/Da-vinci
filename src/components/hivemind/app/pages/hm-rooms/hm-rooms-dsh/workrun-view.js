@@ -753,3 +753,54 @@ export function startUserTurn(msgs, text) {
     { role: 'assistant', text: '', thinking: '', tools: [], timeline: [], stage: 'acknowledging', streaming: true },
   ];
 }
+
+/**
+ * Reconcile a history response that raced with a live reply. Keep the fetched
+ * transcript as the base, but prefer the locally streamed active turn so a
+ * slower history request cannot replace visible deltas with an older snapshot.
+ */
+export function mergeHistoryWithLiveTurn(history, current, activeUserText, liveReply) {
+  const saved = Array.isArray(history) ? history : [];
+  const live = Array.isArray(current) ? current : [];
+  if (activeUserText) {
+    let currentUserIndex = -1;
+    let historyUserIndex = -1;
+    live.forEach((message, index) => {
+      if (message?.role === 'user' && message.text === activeUserText) currentUserIndex = index;
+    });
+    saved.forEach((message, index) => {
+      if (message?.role === 'user' && message.text === activeUserText) historyUserIndex = index;
+    });
+    if (currentUserIndex >= 0) {
+      return [
+        ...saved.slice(0, historyUserIndex >= 0 ? historyUserIndex : saved.length),
+        ...live.slice(currentUserIndex),
+      ];
+    }
+  }
+
+  if (liveReply) {
+    let currentAssistantIndex = -1;
+    let historyAssistantIndex = -1;
+    live.forEach((message, index) => {
+      if (message?.role === 'assistant' && message.streaming) currentAssistantIndex = index;
+    });
+    saved.forEach((message, index) => {
+      if (message?.role === 'assistant' && !message.raw?.finished_at && !message.raw?.completed_at) {
+        historyAssistantIndex = index;
+      }
+    });
+    if (currentAssistantIndex >= 0) {
+      const streamedTurn = live.slice(currentAssistantIndex);
+      if (historyAssistantIndex >= 0) {
+        return [
+          ...saved.slice(0, historyAssistantIndex),
+          ...streamedTurn,
+        ];
+      }
+      return [...saved, ...streamedTurn];
+    }
+  }
+
+  return saved;
+}

@@ -18,6 +18,7 @@ import {
   transcriptText,
   toolLabel,
   normalizeTurnUsage,
+  mergeHistoryWithLiveTurn,
 } from './hm-rooms-dsh/workrun-view';
 import { WorkRunShell } from './workrun';
 import * as WorkRunModules from './workrun';
@@ -332,13 +333,17 @@ function HmRoomDesk({ runId }) {
   // WorkRun is reopened. Keep that history in the inspector projection, but
   // never let it resurrect the already-completed assistant bubble as live.
   const liveReplyRef = useRef(false);
+  const submittedTurnRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       let row = null;
       try {
+        liveReplyRef.current = false;
+        submittedTurnRef.current = null;
         setView(emptyWorkRunView(runId));
+        setMsgs([]);
         const data = await apiClient.getWorkRun(runId);
         row = data?.workrun || data;
         if (cancelled) return;
@@ -348,27 +353,9 @@ function HmRoomDesk({ runId }) {
           setView((prev) => applyWorkRunEvent(prev, ev));
         });
         setView((prev) => hydrateRegisteredArtifacts(prev, row?.result_artifacts || row?.artifacts || row?.result_artifact_ids || row?.artifact_ids));
-        const history = await apiClient.getWorkRunSessionMessages(runId).catch(() => null);
-        const list = history?.messages || history?.items || [];
         const initialUser = { role: 'user', text: stripWorkOrder(row?.goal), tools: [], thinking: '' };
-        if (Array.isArray(list) && list.length) {
-          const normalized = list.map(flattenMsg).map((m) => (
-            row?.status === 'failed' || row?.status === 'completed'
-              ? { ...m, streaming: false }
-              : m
-          ));
-          const hasInitialPrompt = normalized.some((message) => (
-            message.role === 'user' && stripWorkOrder(message.text) === initialUser.text
-          ));
-          setMsgs(hasInitialPrompt || !initialUser.text ? normalized : [initialUser, ...normalized]);
-          liveReplyRef.current = normalized.some((message) => (
-            message.role === 'assistant' && !message.raw?.finished_at && !message.raw?.completed_at
-          ));
-          if (!liveReplyRef.current) setPhase('idle');
-        } else if (row?.goal) {
-          setMsgs([initialUser]);
-        }
-        if (row?.status === 'failed' || row?.status === 'completed' || row?.status === 'cancelled') {
+        if (row?.goal) setMsgs((current) => submittedTurnRef.current ? current : [initialUser]);
+        if (!liveReplyRef.current && (row?.status === 'failed' || row?.status === 'completed' || row?.status === 'cancelled')) {
           setPhase('idle');
         }
       } catch (err) {
@@ -376,12 +363,22 @@ function HmRoomDesk({ runId }) {
       }
 
       const terminal = ['failed', 'completed', 'cancelled'].includes(String(row?.status || ''));
-      if (terminal) return;
 
+      // Start both feeds before the slower transcript hydration request. The
+      // composer acknowledgement and any model deltas can now render without
+      // waiting for the session history endpoint.
+      const historyPromise = apiClient.getWorkRunSessionMessages(runId).catch(() => null);
+
+      // A WorkRun's lifecycle status is not the AgentScope session's chat
+      // lifecycle. The composer still accepts follow-ups on a failed or
+      // completed WorkRun, so keep the session stream attached for those turns.
+      // Ignore its replayed history until the user starts a fresh turn; the
+      // durable snapshot above already rendered prior messages and tool blocks.
       const es = new EventSource(apiClient.workRunSessionStreamUrl(runId), { withCredentials: true });
       const seen = new Set();
       const onEvt = (msg) => {
         if (!msg?.data) return;
+        if (terminal && !liveReplyRef.current) return;
         let ev;
         try { ev = JSON.parse(msg.data); } catch { return; }
         const type = eventType(ev) || String(msg.type || '').toUpperCase();
@@ -427,14 +424,44 @@ function HmRoomDesk({ runId }) {
         'plan.updated', 'turn.usage', 'usage', 'model.usage', 'external_action.pending', 'external_action.resolved',
       ].forEach((n) => es.addEventListener(n, onEvt));
       es.onmessage = onEvt;
-      const progress = new EventSource(apiClient.workRunStreamUrl(runId), { withCredentials: true });
-      [
-        'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
-        'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
-        'plan.updated', 'turn.usage', 'usage', 'model.usage', 'external_action.pending', 'external_action.resolved',
-      ].forEach((n) => progress.addEventListener(n, onEvt));
-      progress.onmessage = onEvt;
+      const progress = terminal ? null : new EventSource(apiClient.workRunStreamUrl(runId), { withCredentials: true });
+      if (progress) {
+        [
+          'tool.started', 'tool.completed', 'artifact.created', 'agent.status',
+          'approval.requested', 'team.member.started', 'team.updated', 'workrun.failed', 'workrun.completed', 'workrun.cancelled', 'workrun.state',
+          'plan.updated', 'turn.usage', 'usage', 'model.usage', 'external_action.pending', 'external_action.resolved',
+        ].forEach((n) => progress.addEventListener(n, onEvt));
+        progress.onmessage = onEvt;
+      }
       esRef.current = { session: es, progress };
+
+      const history = await historyPromise;
+      if (cancelled) return;
+      const list = history?.messages || history?.items || [];
+      const initialUser = { role: 'user', text: stripWorkOrder(row?.goal), tools: [], thinking: '' };
+      if (Array.isArray(list) && list.length) {
+        const normalized = list.map(flattenMsg).map((m) => (
+          row?.status === 'failed' || row?.status === 'completed' || row?.status === 'cancelled'
+            ? { ...m, streaming: false }
+            : m
+        ));
+        const hasInitialPrompt = normalized.some((message) => (
+          message.role === 'user' && stripWorkOrder(message.text) === initialUser.text
+        ));
+        const transcript = hasInitialPrompt || !initialUser.text ? normalized : [initialUser, ...normalized];
+        const historyHasLiveReply = !terminal && !submittedTurnRef.current && normalized.some((message) => (
+          message.role === 'assistant' && !message.raw?.finished_at && !message.raw?.completed_at
+        ));
+        liveReplyRef.current = liveReplyRef.current || historyHasLiveReply;
+        setMsgs((current) => mergeHistoryWithLiveTurn(
+          transcript,
+          current,
+          submittedTurnRef.current,
+          liveReplyRef.current,
+        ));
+        if (!liveReplyRef.current) setPhase('idle');
+        else setPhase('streaming');
+      }
     })();
     return () => {
       cancelled = true;
@@ -455,6 +482,7 @@ function HmRoomDesk({ runId }) {
     if (!text) return;
     setDraft('');
     setMsgs((prev) => startUserTurn(prev, text));
+    submittedTurnRef.current = text;
     liveReplyRef.current = true;
     setPhase('streaming');
     try {
@@ -462,12 +490,14 @@ function HmRoomDesk({ runId }) {
     } catch (err) {
       setError(err?.response?.data?.error || err.message);
       setPhase('idle');
+      liveReplyRef.current = false;
     }
   };
 
   const stop = async () => {
     setError(null);
     try {
+      liveReplyRef.current = false;
       const data = await apiClient.cancelWorkRun(runId);
       setRun(data?.workrun || ((current) => ({ ...current, status: 'cancelled' })));
       setPhase('idle');
@@ -514,7 +544,7 @@ function HmRoomDesk({ runId }) {
   // Do not use the durable WorkRun status here. A successful reply leaves the
   // WorkRun running so the user can continue the same session; only a live
   // reply or tool call should replace Send with Stop.
-  const working = !terminal && phase === 'streaming';
+  const working = phase === 'streaming';
   void inspectOpen;
 
   return (

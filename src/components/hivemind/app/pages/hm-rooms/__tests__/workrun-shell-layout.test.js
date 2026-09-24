@@ -30,3 +30,18 @@ test('tool activity rows retain both the human label and the actual tool identif
   expect(genericTool).toContain('const preview = compactInput(input)');
   expect(disclosure).toContain('input: tool?.input');
 });
+
+test('follow-up turns keep the AgentScope session stream attached after WorkRun terminal status', () => {
+  const rooms = read('../HmRooms.jsx');
+
+  expect(rooms).toContain('const terminal = [\'failed\', \'completed\', \'cancelled\'].includes(String(row?.status || \'\'));');
+  expect(rooms).toContain('new EventSource(apiClient.workRunSessionStreamUrl(runId), { withCredentials: true })');
+  expect(rooms).toContain('if (terminal && !liveReplyRef.current) return;');
+  expect(rooms).toContain('const progress = terminal ? null : new EventSource(apiClient.workRunStreamUrl(runId), { withCredentials: true });');
+  expect(rooms).toContain('const historyPromise = apiClient.getWorkRunSessionMessages(runId).catch(() => null);');
+  expect(rooms.indexOf('new EventSource(apiClient.workRunSessionStreamUrl(runId)')).toBeLessThan(rooms.indexOf('const history = await historyPromise;'));
+  expect(rooms.indexOf('const historyPromise =')).toBeLessThan(rooms.indexOf('const history = await historyPromise;'));
+  expect(rooms).toContain('const historyHasLiveReply = !terminal && !submittedTurnRef.current && normalized.some((message) => (');
+  expect(rooms).toContain('const working = phase === \'streaming\';');
+  expect(rooms).not.toContain('if (terminal) return;');
+});

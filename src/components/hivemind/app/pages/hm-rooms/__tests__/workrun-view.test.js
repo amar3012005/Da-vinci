@@ -8,12 +8,60 @@ import {
   isCompanyOperatingPlan,
   isProductKind,
   normalizeTurnUsage,
+  mergeHistoryWithLiveTurn,
   productFailure,
   resolveApproval,
   startUserTurn,
   toolLabel,
   upsertBlock,
 } from '../hm-rooms-dsh/workrun-view';
+
+describe('transcript history and live stream reconciliation', () => {
+  it('keeps a follow-up turn streamed locally when older history resolves later', () => {
+    const history = [
+      { role: 'user', text: 'Earlier question' },
+      { role: 'assistant', text: 'Earlier answer' },
+      { role: 'user', text: 'what do u do' },
+      { role: 'assistant', text: 'A stale partial', streaming: false },
+    ];
+    const current = [
+      { role: 'user', text: 'Earlier question' },
+      { role: 'assistant', text: 'Earlier answer' },
+      { role: 'user', text: 'what do u do' },
+      { role: 'assistant', text: 'I help run company workflows', streaming: true },
+    ];
+
+    expect(mergeHistoryWithLiveTurn(history, current, 'what do u do', true)).toEqual([
+      { role: 'user', text: 'Earlier question' },
+      { role: 'assistant', text: 'Earlier answer' },
+      ...current.slice(2),
+    ]);
+
+    const completed = [...current.slice(0, 3), {
+      ...current[3], text: 'The complete streamed answer.', streaming: false, stage: 'complete',
+    }];
+    expect(mergeHistoryWithLiveTurn(history, completed, 'what do u do', false)).toEqual([
+      ...completed.slice(0, 2),
+      ...completed.slice(2),
+    ]);
+  });
+
+  it('replaces a stale unfinished assistant snapshot with its live reconnect stream', () => {
+    const history = [
+      { role: 'user', text: 'Question', raw: {} },
+      { role: 'assistant', text: 'stale', raw: {} },
+    ];
+    const current = [
+      { role: 'user', text: 'Question' },
+      { role: 'assistant', text: 'streamed answer', streaming: true },
+    ];
+
+    expect(mergeHistoryWithLiveTurn(history, current, null, true)).toEqual([
+      history[0],
+      current[1],
+    ]);
+  });
+});
 
 describe('WorkRun identity-keyed block registry', () => {
   const runId = '11111111-1111-4111-8111-111111111111';
