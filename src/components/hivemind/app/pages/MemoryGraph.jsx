@@ -600,9 +600,9 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     if (memoryGraphV2Enabled && !selectedRadialByFlag.current) {
       selectedRadialByFlag.current = true;
       setGraphDim('radial');
-      // The flagged temporal-atlas experience opens directly in the
-      // bitemporal pole view, with its timeline visible on first load.
-      setBitemporalMode(true);
+      // Open the atlas in its normal orbit view. Time travel is an explicit
+      // user action that switches the camera to the pole view and reveals the
+      // bitemporal controls.
     }
   }, [memoryGraphV2Enabled]);
   useEffect(() => {
@@ -1279,43 +1279,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       <PageWalkthrough pageKey="memory-graph-3d" steps={GRAPH_STEPS} />
       {/* ── Compact unified toolbar ── single row, theme-consistent ── */}
       <div
-        className={`shrink-0 border-b px-3 sm:px-5 py-3 flex items-center gap-2.5 z-20 overflow-x-auto ${
-          graphTheme === "night"
-            ? "border-[#2f2925] bg-[linear-gradient(90deg,rgba(8,8,8,0.96),rgba(24,18,16,0.92)_48%,rgba(8,8,8,0.96))]"
-            : "border-[#e7e4dd] bg-[#fbfaf7]/95"
-        }`}
-        style={{
-          backdropFilter: "blur(18px) saturate(150%)",
-          boxShadow: graphTheme === "night"
-            ? "0 14px 52px rgba(0,0,0,0.32), inset 0 -1px 0 rgba(255,240,229,0.03)"
-            : "0 14px 44px rgba(21,20,18,0.06), inset 0 -1px 0 rgba(255,255,255,0.8)",
-        }}
+        className="shrink-0 px-3 sm:px-5 py-3 flex items-center gap-2.5 z-20 overflow-x-auto"
       >
-        {/* Brand */}
-        <div className={`flex items-center gap-3 shrink-0 rounded-2xl border px-3 py-2 ${toolbarControlClass}`}>
-          <span
-            className="grid h-8 w-8 place-items-center rounded-xl border"
-            style={{
-              background: graphTheme === "night"
-                ? "radial-gradient(circle at 35% 30%, rgba(255,240,229,0.22), rgba(255,105,97,0.18) 48%, rgba(255,105,97,0.04))"
-                : "linear-gradient(180deg, #fff0e8 0%, #ffe2d8 100%)",
-              borderColor: graphTheme === "night" ? "rgba(255,240,229,0.08)" : "#e8b9a9",
-            }}
-          >
-            <Network size={16} className={graphTheme === "night" ? "text-[#ff746d]" : "text-[#d54d45]"} />
-          </span>
-          <span className="flex flex-col leading-none">
-            <span className={`text-[14px] font-bold font-['Space_Grotesk'] whitespace-nowrap ${graphTheme === "night" ? "text-[#fff0e5]" : "text-[#111111]"}`}>
-              {t('memoryGraph.title', 'Memory Graph')}
-            </span>
-            <span className={`mt-1 text-[10px] font-mono uppercase tracking-[0.18em] whitespace-nowrap ${graphTheme === "night" ? "text-[#8f8378]" : "text-[#8f8f8f]"}`}>
-              3D memory atlas
-            </span>
-          </span>
-        </div>
-
-        <div className={`h-5 w-px mx-1 shrink-0 ${graphTheme === "night" ? "bg-[#2f2925]" : "bg-[#e3e0db]"}`} />
-
         {/* Search */}
         <div className="relative shrink-0 hidden sm:block" style={{ minWidth: 210, maxWidth: 300 }}>
           <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
@@ -1428,6 +1393,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[10px] font-mono font-semibold ${bitemporalMode ? "border-[#3c91ff] bg-[#e8f2ff] text-[#155fbe]" : toolbarControlClass}`}
             title="Switch to a top-down valid-time and recorded-time view"
             aria-pressed={bitemporalMode}
+            aria-controls={bitemporalMode ? "memory-graph-bitemporal-controls" : undefined}
           >
             <Clock size={11} />
             Time travel
@@ -1698,10 +1664,6 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                 height={typeof window !== "undefined" ? window.innerHeight - 66 : 600}
               />
             </div>
-            <div className={`pointer-events-none absolute left-5 top-5 z-10 rounded-[10px] border px-3 py-2 ${panelClass}`}>
-              <div className={`text-[11px] font-semibold uppercase tracking-wider ${panelMutedText}`}>Company brain · 3D temporal atlas</div>
-              <div className={`mt-1 text-[10px] ${panelMutedText}`}>Older memories sit near the core; newer memories grow outward.</div>
-            </div>
             {selectedNode && !radialDetailVisible && (
               <button
                 type="button"
@@ -1727,7 +1689,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               </div>
             )}
             {bitemporalMode ? (
-              <div className={`absolute bottom-4 left-1/2 z-20 flex w-[min(920px,calc(100%-32px))] -translate-x-1/2 flex-col gap-2 rounded-xl border px-4 py-3 shadow-xl backdrop-blur-xl ${panelClass}`} aria-label="Bitemporal time travel controls">
+              <div id="memory-graph-bitemporal-controls" className={`absolute bottom-4 left-1/2 z-20 flex w-[min(920px,calc(100%-32px))] -translate-x-1/2 flex-col gap-2 rounded-xl border px-4 py-3 shadow-xl backdrop-blur-xl ${panelClass}`} aria-label="Bitemporal time travel controls">
                 <div className="flex items-center justify-between gap-3">
                   <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${panelMutedText}`}>Bitemporal view · top-down</div>
                   <div className="flex items-center gap-2">
