@@ -10,9 +10,12 @@ describe('WorkRun legacy room handoff', () => {
     expect(source).toContain('onOpen={(selected) => navigate(legacyRoomPath(selected))}');
   });
 
-  it('keeps WorkRuns discoverable from the legacy rooms rail', () => {
+  it('keeps New and prior WorkRuns discoverable from the Company rail', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
-    expect(source).toContain("navigate('/hivemind/app/employees/workruns')");
+    expect(source).toContain('apiClient.listWorkRuns({ limit: 24 })');
+    expect(source).toContain('New WorkRun');
+    expect(source).toContain('workRuns.map((run) =>');
+    expect(source).toContain('navigate(`/hivemind/app/hm-rooms/${run.id}`)');
     expect(source).toContain('WorkRuns');
   });
 });

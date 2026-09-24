@@ -238,10 +238,12 @@ export default function HyperAgents() {
   }, []);
 
   const [rooms, setRooms] = useState([]);
+  const [workRuns, setWorkRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showAgentRooms, setShowAgentRooms] = useState(false);
+  const [showWorkRuns, setShowWorkRuns] = useState(true);
   const [runtimeWork, setRuntimeWork] = useState({ agent_runtime_tasks: [] });
   const [betaFeature, setBetaFeature] = useState(null);
   const domainRoomsEnsuredRef = useRef(false);
@@ -316,6 +318,19 @@ export default function HyperAgents() {
   }, [activeRoomId]);
 
   useEffect(() => { fetchRooms(); }, [fetchRooms]);
+
+  // The Company rail is the WorkRun index too. Keep durable sessions visible
+  // here instead of making operators switch to a second navigation surface.
+  const fetchWorkRuns = useCallback(async () => {
+    try {
+      const response = await apiClient.listWorkRuns({ limit: 24 });
+      setWorkRuns(response?.workruns || []);
+    } catch {
+      setWorkRuns([]);
+    }
+  }, []);
+
+  useEffect(() => { fetchWorkRuns(); }, [fetchWorkRuns]);
 
   useEffect(() => {
     let active = true;
@@ -531,6 +546,40 @@ export default function HyperAgents() {
             <Brain size={13} className="text-violet-500" />
             WorkRuns
           </button>
+          <div className="mt-1.5 overflow-hidden rounded-lg border border-[#e3e0db] bg-white/45">
+            <button
+              type="button"
+              onClick={() => setShowWorkRuns((open) => !open)}
+              aria-expanded={showWorkRuns}
+              className="flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left text-[10px] font-semibold text-[#525252] hover:bg-white"
+            >
+              <span className="inline-flex items-center gap-1.5"><Brain size={12} /> WorkRuns</span>
+              <ChevronDown size={13} className={`transition-transform ${showWorkRuns ? 'rotate-180' : ''}`} />
+            </button>
+            {showWorkRuns ? (
+              <div className="border-t border-[#e3e0db] bg-[#faf9f4] py-1">
+                <button
+                  type="button"
+                  onClick={() => navigate('/hivemind/app/hm-rooms')}
+                  className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12px] font-semibold text-[#0a0a0a] hover:bg-white"
+                >
+                  <Plus size={12} className="text-[#117dff]" /> New WorkRun
+                </button>
+                {workRuns.map((run) => (
+                  <button
+                    key={run.id}
+                    type="button"
+                    onClick={() => navigate(`/hivemind/app/hm-rooms/${run.id}`)}
+                    className="flex w-full items-center gap-2 border-l-2 border-transparent px-2.5 py-1.5 text-left hover:border-[#117dff] hover:bg-white"
+                  >
+                    <Hash size={11} className="shrink-0 text-[#a3a3a3]" />
+                    <span className="min-w-0 flex-1 truncate text-[12px] text-[#0a0a0a]">{String(run.goal || '').split('Work autonomously to completion')[0].trim() || run.id.slice(0, 8)}</span>
+                  </button>
+                ))}
+                {!workRuns.length ? <p className="px-2.5 py-1.5 text-[11px] text-[#737373]">No WorkRuns yet</p> : null}
+              </div>
+            ) : null}
+          </div>
           {/* YOUR LEADS — outreach progress board (Notion-style). */}
           <button
             onClick={() => goMode('leads', null)}
