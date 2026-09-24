@@ -22,15 +22,20 @@ export function getRadialShellVisibleIndices(count) {
 }
 
 /** Place dated shell labels around the visible surface rather than stacking them on one axis. */
-export function getRadialShellDatePosition(radius, index, count, topDown = false, padding = 14) {
+export function getRadialShellDatePosition(radius, index, count, topDown = false, padding = 14, visibleIndices = null) {
   const shellRadius = Math.max(0, Number.isFinite(radius) ? radius : 0) + padding;
   const total = Math.max(1, Number.isFinite(count) ? count : 1);
   const tick = Math.max(0, Math.min(total - 1, Number.isFinite(index) ? index : 0));
+  const visible = Array.isArray(visibleIndices) && visibleIndices.length
+    ? [...visibleIndices].sort((a, b) => a - b)
+    : Array.from({ length: total }, (_, visibleIndex) => visibleIndex);
+  const visibleRank = Math.max(0, visible.indexOf(tick));
+  const visibleCount = visible.length;
 
   if (topDown) {
     // Keep the newest date at the top of the pole view and distribute the
     // remaining dates around the full tree-ring circumference.
-    const angle = -Math.PI / 2 + ((tick - (total - 1)) * (2 * Math.PI / total));
+    const angle = -Math.PI / 2 + ((visibleRank - (visibleCount - 1)) * (2 * Math.PI / visibleCount));
     return {
       x: Math.cos(angle) * shellRadius,
       y: 0,
@@ -40,8 +45,14 @@ export function getRadialShellDatePosition(radius, index, count, topDown = false
 
   // The default camera faces the positive-Z hemisphere. A shallow upper-front
   // arc leaves labels legible and distinct while keeping them attached to shells.
-  const progress = total === 1 ? 1 : tick / (total - 1);
-  const azimuth = (progress - 0.5) * 1.7;
+  // Keep the latest visible date centered; alternate older dates to either
+  // side so a sparse overview remains legible and zooming in adds labels in
+  // progressively finer positions instead of revealing a pre-stacked column.
+  const ticksFromLatest = visibleCount - 1 - visibleRank;
+  const maxSideSlots = Math.max(1, Math.ceil((visibleCount - 1) / 2));
+  const sideSlot = Math.ceil(ticksFromLatest / 2);
+  const side = ticksFromLatest % 2 === 0 ? 1 : -1;
+  const azimuth = ticksFromLatest === 0 ? 0 : side * sideSlot / maxSideSlots * 1.2;
   const elevation = 0.38;
   const horizontalRadius = Math.cos(elevation) * shellRadius;
   return {

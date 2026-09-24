@@ -1321,9 +1321,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const controls = fg?.controls?.();
     if (!fg || !camera || !controls || temporalTopDownAppliedRef.current === enabled) return false;
     const target = controls.target?.clone?.() || new THREE.Vector3();
+    const visibleIndices = temporalShellDateSpritesRef.current
+      .filter(({ sprite }) => sprite?.visible)
+      .map(({ index }) => index);
     temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, radius, index, count }) => {
       if (!sprite) return;
-      const position = getRadialShellDatePosition(radius, index, count, enabled);
+      const position = getRadialShellDatePosition(radius, index, count, enabled, 14, visibleIndices);
       sprite.position.set(position.x, position.y, position.z);
       if (mesh) mesh.visible = !enabled && sprite.visible;
       if (treeRing) treeRing.visible = enabled && sprite.visible;
@@ -1756,10 +1759,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           const distance = cameraNow.position.distanceTo(targetNow);
           if (radialTemporalRef.current) {
             const visibleShells = getRadialShellVisibleIndices(getRadialShellTickCount(distance));
-            temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, index, labelRatio }) => {
+            const visibleIndices = [...visibleShells].sort((a, b) => a - b);
+            temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, radius, index, count, labelRatio }) => {
               const visible = visibleShells.has(index);
               sprite.visible = visible;
               const topDown = temporalTopDownAppliedRef.current;
+              const position = getRadialShellDatePosition(radius, index, count, topDown, 14, visibleIndices);
+              sprite.position.set(position.x, position.y, position.z);
               if (mesh) mesh.visible = visible && !topDown;
               if (treeRing) treeRing.visible = visible && topDown;
               const width = visibleShells.size >= 8 ? 112 : visibleShells.size >= 5 ? 148 : 188;
@@ -1888,6 +1894,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       const radialNodes = graphDataRef.current?.nodes || [];
       const shellDates = buildRadialAtlasShellTicks(radialNodes, 8);
       const overviewShells = getRadialShellVisibleIndices(3);
+      const overviewIndices = [...overviewShells].sort((a, b) => a - b);
       shellDates.forEach(({ radius, timestamp, latest }, index) => {
         const mesh = new THREE.Mesh(
           new THREE.SphereGeometry(radius, 32, 20),
@@ -1927,7 +1934,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           opacity: 0.96,
         }));
         sprite.name = `memory-time-shell-date-${radius}`;
-        const position = getRadialShellDatePosition(radius, index, shellDates.length);
+        const position = getRadialShellDatePosition(radius, index, shellDates.length, false, 14, overviewIndices);
         sprite.position.set(position.x, position.y, position.z);
         sprite.visible = overviewShells.has(index);
         // Modest world-space type stays readable in the full view without
