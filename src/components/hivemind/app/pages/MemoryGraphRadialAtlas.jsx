@@ -1,5 +1,6 @@
 const INNER_RADIUS = 42;
 const OUTER_RADIUS = 430;
+const TEMPORAL_SHELL_RADII = [140, 270, OUTER_RADIUS];
 
 function getTimestamp(node) {
   for (const value of [node.updatedAt, node.createdAt, node.timestamp, node.lastAccessedAt]) {
@@ -54,5 +55,23 @@ export function buildRadialAtlasLayout(nodes = []) {
     });
   });
 
-  return { positions, oldest, newest, innerRadius: INNER_RADIUS, outerRadius: OUTER_RADIUS };
+  const shellDates = TEMPORAL_SHELL_RADII.map((radius, index) => {
+    if (newest == null) return { radius, timestamp: null, latest: index === TEMPORAL_SHELL_RADII.length - 1 };
+    const progress = Math.max(0, Math.min(1, (radius - INNER_RADIUS) / (OUTER_RADIUS - INNER_RADIUS)));
+    return {
+      radius,
+      timestamp: oldest == null ? newest : oldest + (newest - oldest) * progress,
+      latest: index === TEMPORAL_SHELL_RADII.length - 1,
+    };
+  });
+  return { positions, oldest, newest, innerRadius: INNER_RADIUS, outerRadius: OUTER_RADIUS, shellDates };
+}
+
+/** Format the atlas' shell ticks as stable DD.MM.YYYY labels. */
+export function formatRadialShellDate(timestamp) {
+  if (!Number.isFinite(timestamp)) return "UNDATED";
+  const date = new Date(timestamp);
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${day}.${month}.${date.getUTCFullYear()}`;
 }

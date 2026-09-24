@@ -1,4 +1,4 @@
-import { buildRadialAtlasLayout } from "./MemoryGraphRadialAtlas";
+import { buildRadialAtlasLayout, formatRadialShellDate } from "./MemoryGraphRadialAtlas";
 
 describe("MemoryGraph radial time encoding", () => {
   test("grows radially outward over time, with older memories near the core", () => {
@@ -37,5 +37,24 @@ describe("MemoryGraph radial time encoding", () => {
     const next = buildRadialAtlasLayout(nodes).positions;
     expect(next.get("alpha")).toEqual(first.get("alpha"));
     expect(next.get("beta")).toEqual(first.get("beta"));
+  });
+
+  test("exposes three dated shell ticks and marks the outer shell as latest", () => {
+    const { shellDates } = buildRadialAtlasLayout([
+      { id: "old", kind: "fact", createdAt: "2025-01-01T00:00:00Z" },
+      { id: "new", kind: "fact", createdAt: "2025-03-01T00:00:00Z" },
+    ]);
+    expect(shellDates).toHaveLength(3);
+    expect(shellDates.map(({ radius }) => radius)).toEqual([140, 270, 430]);
+    expect(shellDates[0].timestamp).toBeLessThan(shellDates[1].timestamp);
+    expect(shellDates[1].timestamp).toBeLessThan(shellDates[2].timestamp);
+    expect(shellDates[2]).toMatchObject({ timestamp: Date.parse("2025-03-01T00:00:00Z"), latest: true });
+    expect(formatRadialShellDate(shellDates[2].timestamp)).toBe("01.03.2025");
+  });
+
+  test("keeps shell dates explicitly undated when there is no temporal evidence", () => {
+    const { shellDates } = buildRadialAtlasLayout([{ id: "undated", kind: "fact" }]);
+    expect(shellDates.every(({ timestamp }) => timestamp == null)).toBe(true);
+    expect(formatRadialShellDate(null)).toBe("UNDATED");
   });
 });
