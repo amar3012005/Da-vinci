@@ -1395,7 +1395,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       const camera = fg.camera?.();
       const controls = fg.controls?.();
       if (!camera || !controls) return false;
-      const target = controls.target?.clone?.() || new THREE.Vector3();
+      // Radial shells are centered on a fixed world origin. Keep the orbit
+      // target there so an inspector overlay or prior interaction cannot
+      // displace the temporal axis from the viewport center.
+      const target = new THREE.Vector3(0, 0, 0);
       const direction = camera.position.clone().sub(target);
       if (direction.lengthSq() < 1) direction.set(0, 40, 300);
       direction.normalize();
@@ -1689,6 +1692,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       controls.rotateSpeed = 1.18;
       controls.zoomSpeed = 1.22;
       controls.panSpeed = 1.12;
+      if (radialTemporalRef.current) {
+        controls.enablePan = false;
+        controls.target?.set?.(0, 0, 0);
+        controls.update?.();
+      }
       controls.minDistance = 24;
       controls.maxDistance = 3000;
 
