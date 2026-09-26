@@ -746,6 +746,7 @@ export default function HyperAgents() {
             key={activeRoomId}
             roomId={activeRoomId}
             onArchived={() => { fetchRooms(); setActiveRoomId(null); }}
+            onNewSession={() => goMode('session', null)}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center flex-col gap-3 text-[12px] text-[#a3a3a3]">
@@ -1138,7 +1139,7 @@ function mergeHyperEvents(base, overlay) {
   return merged || current;
 }
 
-function RoomThread({ roomId, onArchived }) {
+function RoomThread({ roomId, onArchived, onNewSession }) {
   const { t, i18n } = useTranslation('dashboard');
   const { user, org } = useAuth() || {};
   const [room, setRoom] = useState(null);
@@ -1248,7 +1249,7 @@ function RoomThread({ roomId, onArchived }) {
   }, [pendingCampaignId, roomCampaigns, selectedCampaign]);
   const isCampaignRoom = Boolean(campaignReturn || roomVisualCampaignId || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
   const isHqRoom = Boolean(room?.is_domain_home && (room?.room_tag || room?.roomTag) === 'general');
-  const taskRoom = isPreviewTaskRoom() && !isHqRoom;
+  const taskRoom = isPreviewTaskRoom() && !isHqRoom && Boolean(room?.id);
   const taskStream = useTaskAgentStream({
     enabled: taskRoom,
     orgId: org?.id || '',
@@ -1471,21 +1472,8 @@ function RoomThread({ roomId, onArchived }) {
       const liveTurn = [...nextTurns].reverse().find((turn) => turn?.status === 'live');
       setActiveTurnId(liveTurn?.id || null);
     } catch (err) {
-      if (isPreviewTaskRoom()) {
-        setRoom({
-          id: roomId,
-          name: 'New session',
-          goal: '',
-          participants: [],
-          room_tag: 'general',
-          localSession: true,
-        });
-        setTurns([]);
-        setWorkPlan([]);
-        setError(null);
-      } else {
-        setError(err.response?.data?.error || err.message);
-      }
+      setRoom(null);
+      setError(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);
     }
@@ -2539,7 +2527,10 @@ function RoomThread({ roomId, onArchived }) {
     );
   }
   if (!room) {
-    return <div className="flex-1 flex items-center justify-center text-[12px] text-[#a3a3a3]">{t('hyperAgents.roomNotFound', 'Room not found.')}</div>;
+    return <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[13px] text-[#777777]">
+      <span>{error || t('hyperAgents.roomNotFound', 'Room not found.')}</span>
+      <button type="button" onClick={onNewSession} className="text-[#117dff] hover:underline">Start a new session</button>
+    </div>;
   }
 
   const participants = room.participants || [];
