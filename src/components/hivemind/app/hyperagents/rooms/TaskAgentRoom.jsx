@@ -2,8 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { FileText, Link2, Globe2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import apiClient from "../../shared/api-client";
 
-const AGENT_HOST = "hivemind-task-agents.amarsai2005.workers.dev";
+const AGENT_HOST = isPreviewTaskRoom()
+  ? "hivemind-task-agents-preview.amarsai2005.workers.dev"
+  : "hivemind-task-agents.amarsai2005.workers.dev";
 
 export function isPreviewTaskRoom() {
   if (typeof window === "undefined") return false;
@@ -30,9 +33,9 @@ export function roomIdFromPath(pathname) {
 export function agentInstanceName(orgId, roomId) {
   try {
     const saved = roomId && sessionStorage.getItem(`hm-agent:${roomId}`);
-    if (saved) return saved;
+    if (saved === `session-${orgId}-${roomId}`) return saved;
   } catch { /* fall back to the shared company run */ }
-  return `day1-${orgId}-flow`;
+  return `session-${orgId}-${roomId}`;
 }
 
 function elapsedLabel(startedAt, now) {
@@ -61,13 +64,19 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
   const [startedAt, setStartedAt] = useState(null);
+  const [artifacts, setArtifacts] = useState([]);
+  const [selectedArtifact, setSelectedArtifact] = useState(null);
+  const [toolApproval, setToolApproval] = useState(null);
+  const [draft, setDraft] = useState({ type: "", text: "" });
   const socketRef = useRef(null);
   const queuedStart = useRef(null);
+  const selectedArtifactId = useRef("");
 
   useEffect(() => {
     if (!enabled || !orgId) return undefined;
     let closed = false;
     let retry;
+    let lastArtifactEvent = "";
     const flushQueued = () => {
       const queued = queuedStart.current;
       const socket = socketRef.current;
@@ -75,16 +84,59 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
       queuedStart.current = null;
       socket.send(JSON.stringify(queued));
     };
-    const connect = () => {
+    const connect = async () => {
       if (closed) return;
-      const socket = new WebSocket(`wss://${AGENT_HOST}/agents/hivemind-task-agent/${encodeURIComponent(agentInstanceName(orgId, roomId))}`);
+      const name = agentInstanceName(orgId, roomId);
+      if (!roomId || !name.startsWith(`session-${orgId}-`)) return;
+      let ticket;
+      try {
+        ({ data: { ticket } } = await apiClient.controlPlane.post("/v1/hyper/room-ticket", { agent_name: name }));
+      } catch {
+        if (!closed) { setError("Room authorization failed."); retry = window.setTimeout(connect, 3000); }
+        return;
+      }
+      if (closed) return;
+      const socket = new WebSocket(`wss://${AGENT_HOST}/agents/hivemind-task-agent/${encodeURIComponent(name)}?ticket=${encodeURIComponent(ticket)}`);
       socketRef.current = socket;
-      socket.onopen = () => { setError(""); flushQueued(); };
+      socket.onopen = () => { setError(""); socket.send(JSON.stringify({ type: "artifact-list" })); flushQueued(); };
       socket.onmessage = (event) => {
         let parsed = null;
         try { parsed = JSON.parse(event.data); } catch { parsed = null; }
         if (!parsed) return;
+        if (parsed.type === "progress-draft" || parsed.type === "report-draft") {
+          setDraft((current) => ({
+            type: parsed.type,
+            text: (parsed.reset || current.type !== parsed.type ? "" : current.text) + String(parsed.delta || ""),
+          }));
+          return;
+        }
+        if (parsed.type === "artifact-list-result") {
+          const items = Array.isArray(parsed.artifacts) ? parsed.artifacts.filter((item) => item.kind !== "note" && item.kind !== "reply") : [];
+          setArtifacts(items);
+          const current = items.find((item) => item.id === selectedArtifactId.current);
+          if (items[0]?.id && (!current || items[0].createdAt > current.createdAt)) {
+            selectedArtifactId.current = items[0].id;
+            socket.send(JSON.stringify({ type: "artifact-get", id: items[0].id }));
+          }
+          return;
+        }
+        if (parsed.type === "artifact-get-result") { setSelectedArtifact(parsed.artifact || null); return; }
+        if (parsed.type === "cf_agent_chat_messages") {
+          const pending = (parsed.messages || []).flatMap((message) => message.parts || []).find((part) => part.state === "approval-requested" && part.approval?.id);
+          setToolApproval(pending ? { toolCallId: pending.toolCallId, name: pending.toolName || String(pending.type || "tool").replace(/^tool-/, ""), input: pending.input } : null);
+          return;
+        }
         setAgentState((current) => applySocketMessage(current, parsed));
+        if (parsed.type === "cf_agent_state") {
+          const rows = parsed.state?.events || [];
+          const lastUser = rows.findLastIndex((item) => item.step === "user");
+          if (rows.slice(lastUser + 1).some((item) => item.step === "report" || item.step === "completion")) setDraft({ type: "", text: "" });
+        }
+        const newestArtifactEvent = [...(parsed.state?.events || [])].reverse().find((item) => item.step === "artifact")?.at || "";
+        if (parsed.type === "cf_agent_state" && newestArtifactEvent && newestArtifactEvent !== lastArtifactEvent) {
+          lastArtifactEvent = newestArtifactEvent;
+          socket.send(JSON.stringify({ type: "artifact-list" }));
+        }
       };
       socket.onerror = () => setError("The room could not reach the agent stream.");
       socket.onclose = () => { if (!closed) retry = window.setTimeout(connect, 1000); };
@@ -126,6 +178,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     const socket = socketRef.current;
     setError("");
     setStatus("working");
+    setDraft({ type: "", text: "" });
     setStartedAt(Date.now());
     setMessages((current) => [...current, { id: `${Date.now()}`, text, at: new Date().toISOString() }]);
     if (!socket || socket.readyState !== WebSocket.OPEN) {
@@ -158,7 +211,21 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     setStatus("working");
   }, []);
 
-  const events = Array.isArray(agentState?.events) ? agentState.events : [];
+  const selectArtifact = useCallback((id) => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      selectedArtifactId.current = id;
+      socketRef.current.send(JSON.stringify({ type: "artifact-get", id }));
+    }
+  }, []);
+
+  const decideToolApproval = useCallback((approved) => {
+    const socket = socketRef.current;
+    if (!toolApproval?.toolCallId || socket?.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify({ type: "cf_agent_tool_approval", toolCallId: toolApproval.toolCallId, approved, autoContinue: true }));
+    setToolApproval(null);
+  }, [toolApproval]);
+
+  const events = useMemo(() => Array.isArray(agentState?.events) ? agentState.events : [], [agentState?.events]);
   const report = useMemo(() => {
     const found = [...events].reverse().find((event) => event.step === "report" && event.detail);
     return found ? found.detail : "";
@@ -172,10 +239,16 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     catalogStage: agentState?.catalogStage || "",
     operatingPlan: agentState?.operatingPlan || null,
     report,
+    artifacts,
+    selectedArtifact,
+    toolApproval,
+    decideToolApproval,
+    selectArtifact,
     status,
     error,
     startedAt,
     messages,
+    draft,
     start,
     decideMemory,
     answer,
@@ -191,6 +264,8 @@ function toolLabel(step) {
     playbook_list_local: "Chose the task",
     playbook_get: "Opened a task",
     reset_tools: "Opened the tools",
+    hivemind_meta: "Checked HIVEMIND",
+    hivemind_connected_task: "Checked connected apps",
     hivemind_recall: "Recalled the company",
     hivemind_get_memory: "Read a memory",
     parallel_search: "Searched the web",
@@ -205,7 +280,7 @@ function toolLabel(step) {
 }
 
 function TaskRow({ event }) {
-  const thinking = event.step === "operating-plan";
+  const thinking = event.step === "operating-plan" || event.step === "progress";
   const detail = String(event.detail || "").trim();
   const isSearch = event.step === "parallel_search" || event.step === "composio_web_search";
   const [open, setOpen] = useState(false);
@@ -276,7 +351,7 @@ function OperatingPlan({ plan }) {
   );
 }
 
-function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, onMemoryDecision, onAnswer }) {
+function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, onMemoryDecision, onAnswer }) {
   const [open, setOpen] = useState(true);
   const pending = live && status === "working";
   return (
@@ -297,6 +372,7 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, onMemory
               {pending && !turn.tools.length ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#777777]"><span className="animate-pulse text-[#a7a7a7]">✳</span> Thinking through task…</li> : null}
               {turn.tools.map((event, index) => <TaskRow key={`${event.at}-${event.step}-${index}`} event={event} />)}
               {pending && turn.tools.length > 0 ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#777777]"><span className="animate-pulse text-[#a7a7a7]">✳</span> Working on response…</li> : null}
+              {pending && draft?.type === "progress-draft" && draft.text && !draft.text.trimStart().startsWith("{") ? <li role="status" className="whitespace-pre-wrap py-1 text-[13px] leading-5 text-[#555555]">{draft.text}</li> : null}
             </ol>
           ) : null}
         </div>
@@ -313,6 +389,7 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, onMemory
       {turn.report ? <div className="break-words text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-3 [&_h1]:text-[19px] [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:font-semibold [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[#f5f5f5] [&_pre]:p-3 [&_code]:text-[13px]">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.report}</ReactMarkdown>
       </div> : null}
+      {pending && !turn.report && draft?.type === "report-draft" && draft.text ? <div className="break-words text-[14px] leading-[1.7] text-[#242424]"><ReactMarkdown remarkPlugins={[remarkGfm]}>{draft.text}</ReactMarkdown></div> : null}
       {live && status === "approval" ? (
         <div className="border border-[#e3e0db] bg-white px-3 py-3">
           <p className="text-[13px] text-[#0a0a0a]">Save this to the company memory?</p>
@@ -326,7 +403,7 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, onMemory
   );
 }
 
-export function TaskTranscript({ messages, events, status, startedAt, operatingPlan, error, onMemoryDecision, onAnswer }) {
+export function TaskTranscript({ messages, events, status, startedAt, operatingPlan, draft, error, toolApproval, onToolApproval, onMemoryDecision, onAnswer }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (status !== "working") return undefined;
@@ -334,7 +411,7 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
     return () => clearInterval(timer);
   }, [status]);
   const turns = conversationTurns(events, messages);
-  if (!turns.length && !error) return null;
+  if (!turns.length && !error && !toolApproval) return null;
   return (
     <div className="mx-auto w-full max-w-[900px] space-y-12 pt-6 pb-8" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
       {turns.map((turn, index) => (
@@ -346,10 +423,19 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
           startedAt={startedAt}
           now={now}
           operatingPlan={operatingPlan}
+          draft={draft}
           onMemoryDecision={onMemoryDecision}
           onAnswer={onAnswer}
         />
       ))}
+      {toolApproval ? <div className="rounded-lg border border-[#e3e0db] bg-white p-4 text-[13px] text-[#262626]">
+        <p className="font-semibold">Approve {toolApproval.name}?</p>
+        <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[11px] text-[#666]">{JSON.stringify(toolApproval.input || {}, null, 2)}</pre>
+        <div className="mt-3 flex gap-2">
+          <button type="button" onClick={() => onToolApproval?.(true)} className="rounded bg-[#171717] px-3 py-1.5 text-white">Approve</button>
+          <button type="button" onClick={() => onToolApproval?.(false)} className="rounded border border-[#ddd] px-3 py-1.5">Deny</button>
+        </div>
+      </div> : null}
       {error ? <div className="border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">{error}</div> : null}
     </div>
   );
@@ -363,13 +449,22 @@ function linksIn(text) {
   return [...String(text || "").matchAll(/https?:\/\/[^\s<>"')\]]+/g)].map((match) => match[0].replace(/[.,]$/, ""));
 }
 
-export function TaskPreview({ status, events, places, sources, report }) {
+function artifactUrl(artifact) {
+  try {
+    const url = new URL(artifact?.storageLocation || "");
+    return url.protocol === "https:" ? url.href : "";
+  } catch { return ""; }
+}
+
+export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, onSelectArtifact }) {
   const [width, setWidth] = useState(520);
   const [showEnvironment, setShowEnvironment] = useState(true);
   const [tab, setTab] = useState("preview");
   const [openUrl, setOpenUrl] = useState("");
   const drag = useRef(null);
-  const artifacts = events.filter((event) => event.step === "artifact" || event.step === "report");
+  useEffect(() => {
+    if (selectedArtifact?.id) { setOpenUrl(""); setTab("preview"); }
+  }, [selectedArtifact?.id]);
   const sourceRows = useMemo(() => {
     const rows = [];
     const seen = new Set();
@@ -408,6 +503,8 @@ export function TaskPreview({ status, events, places, sources, report }) {
   }, []);
 
   const previewUrl = openUrl || sourceRows[0]?.url || "";
+  const showArtifact = !openUrl && Boolean(selectedArtifact);
+  const storedUrl = artifactUrl(selectedArtifact);
   return (
     <aside className="relative hidden min-h-0 shrink-0 bg-[#f6f5f1] lg:flex" style={{ width }}>
       <button
@@ -427,29 +524,47 @@ export function TaskPreview({ status, events, places, sources, report }) {
           <FileText size={14} className="text-[#8a847c]" />
           <span className="min-w-0 flex-1 truncate">{status === "working" ? "Agent is working" : status === "question" ? "Waiting for you" : status === "approval" ? "Waiting for approval" : status === "complete" ? "Run finished" : "Idle"}</span>
         </div>
-        {artifacts.slice(0, 5).map((event, index) => (
-          <div key={`${event.at}-${index}`} className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-[#262626]">
+        <div className="border-t border-[#f0ece6] px-3 py-2 text-[12px] font-semibold text-[#404040]">Artifacts</div>
+        {artifacts.length ? artifacts.map((artifact) => (
+          <button key={artifact.id} type="button" onClick={() => { setOpenUrl(""); onSelectArtifact?.(artifact.id); setTab("preview"); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[#262626] hover:bg-[#f7f6f3]">
             <FileText size={13} className="shrink-0 text-[#8a847c]" />
-            <span className="truncate">{event.step === "report" ? "Report" : event.detail}</span>
-          </div>
-        ))}
+            <span className="min-w-0 flex-1 truncate">{artifact.title}</span>
+          </button>
+        )) : <p className="px-3 pb-3 text-[12px] text-[#929292]">Reports and generated files appear here.</p>}
       </div> : null}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-[#e3e0db] bg-white">
         <div className="flex items-center gap-2 border-b border-[#eeeae4] px-3 py-2">
           <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-          {[["preview", "Preview"], ["computer", "Computer"], ["sources", "Sources"]].map(([id, label]) => (
+          {[["preview", "Preview"], ["artifacts", "Artifacts"], ["computer", "Computer"], ["sources", "Sources"]].map(([id, label]) => (
             <button key={id} type="button" onClick={() => setTab(id)} className={`ml-1 rounded-full px-2.5 py-1 text-[12px] ${tab === id ? "bg-[#171717] text-white" : "text-[#525252]"}`}>{label}</button>
           ))}
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
           {tab === "preview" ? (
-            previewUrl
-              ? <iframe title="Preview" src={previewUrl} className="h-full w-full border-0 bg-white" />
-              : <p className="p-6 text-[13px] text-[#737373]">A page opens here when the agent reads one.</p>
+            showArtifact ? (
+              <article className="mx-auto max-w-[780px] break-words px-7 py-8 text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-4 [&_h1]:text-[23px] [&_h1]:font-semibold [&_h2]:mb-3 [&_h2]:text-[19px] [&_h2]:font-semibold [&_table]:block [&_table]:overflow-x-auto [&_th]:border [&_th]:p-2 [&_td]:border [&_td]:p-2">
+                <p className="mb-2 text-[11px] uppercase tracking-wide text-[#858585]">{selectedArtifact.contentType === "text/markdown" ? "Markdown report" : selectedArtifact.contentType}</p>
+                <h1 className="mb-5 text-[18px] font-semibold">{selectedArtifact.title}</h1>
+                {selectedArtifact.contentType === "text/markdown" ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedArtifact.body}</ReactMarkdown>
+                  : selectedArtifact.contentType === "text/plain" ? <pre className="whitespace-pre-wrap font-sans">{selectedArtifact.body}</pre>
+                  : selectedArtifact.contentType === "text/html" ? <iframe title={selectedArtifact.title} sandbox="" srcDoc={selectedArtifact.body} className="h-[70vh] w-full border border-[#e3e0db]" />
+                  : selectedArtifact.contentType === "application/pdf" && storedUrl ? <iframe title={selectedArtifact.title} src={storedUrl} className="h-[75vh] w-full border-0" />
+                  : selectedArtifact.contentType?.startsWith("image/") && storedUrl ? <img src={storedUrl} alt={selectedArtifact.title} className="max-w-full" />
+                  : <p>Preview unavailable for {selectedArtifact.contentType}. {storedUrl ? <a href={storedUrl} target="_blank" rel="noopener noreferrer">Open stored output</a> : "No file was saved."}</p>}
+              </article>
+            ) : previewUrl ? <iframe title="Source website" src={previewUrl} className="h-full w-full border-0 bg-white" />
+              : <p className="p-6 text-[13px] text-[#737373]">Generated artifacts appear here. Select a source to view its website.</p>
           ) : null}
           {tab === "computer" ? <p className="p-6 text-[13px] text-[#737373]">The computer view opens when a step needs a screen the browser cannot read.</p> : null}
+          {tab === "artifacts" ? <ul className="divide-y divide-[#f0ece6]">
+            {artifacts.length === 0 ? <li className="px-4 py-3 text-[13px] text-[#a3a3a3]">No saved outputs yet.</li> : artifacts.map((artifact) => (
+              <li key={artifact.id}><button type="button" onClick={() => { setOpenUrl(""); onSelectArtifact?.(artifact.id); setTab("preview"); }} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[#faf9f4]">
+                <FileText size={16} className="shrink-0 text-[#8a847c]" /><span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-medium">{artifact.title}</span><span className="text-[11px] text-[#858585]">{artifact.kind} · {new Date(artifact.createdAt).toLocaleString()}</span></span>
+              </button></li>
+            ))}
+          </ul> : null}
           {tab === "sources" ? (
             <ul className="divide-y divide-[#f0ece6]">
               {sourceRows.length === 0 ? <li className="px-4 py-3 text-[13px] text-[#a3a3a3]">Web search links show up here.</li> : sourceRows.map((source) => (

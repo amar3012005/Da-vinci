@@ -712,12 +712,20 @@ export default function HyperAgents() {
         ) : viewMode === 'campaigns' ? (
           <CampaignsView onOpenRoom={(roomId, campaignId) => goMode('thread', roomId, { campaignReturn: campaignId })} />
         ) : viewMode === 'session' ? (
-          <NewSession onSubmit={(query) => {
-            const roomId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `room-${Date.now()}`;
+          <NewSession onSubmit={async (query) => {
+            const { room } = await apiClient.createHyperRoom({
+              name: query.slice(0, 120),
+              goal: query,
+              participant_ids: [],
+              template: 'auto',
+              room_tag: 'general',
+            });
+            const roomId = room.id;
             try {
               if (org?.id) sessionStorage.setItem(`hm-agent:${roomId}`, `session-${org.id}-${roomId}`);
               sessionStorage.setItem('hm-session-query', query);
-            } catch { /* the room still opens */ }
+            } catch { /* the persisted room still opens */ }
+            fetchRooms();
             goMode('thread', roomId);
           }} />
         ) : viewMode === 'roster' ? (
@@ -3099,8 +3107,11 @@ function RoomThread({ roomId, onArchived }) {
               status={taskStream.status}
               startedAt={taskStream.startedAt}
               operatingPlan={taskStream.operatingPlan}
+              draft={taskStream.draft}
               error={taskStream.error}
               report={taskStream.report}
+              toolApproval={taskStream.toolApproval}
+              onToolApproval={taskStream.decideToolApproval}
               onMemoryDecision={taskStream.decideMemory}
               onAnswer={taskStream.answer}
             />
@@ -3238,6 +3249,9 @@ function RoomThread({ roomId, onArchived }) {
           places={taskStream.places}
           sources={taskStream.sources}
           report={taskStream.report}
+          artifacts={taskStream.artifacts}
+          selectedArtifact={taskStream.selectedArtifact}
+          onSelectArtifact={taskStream.selectArtifact}
         />
       ) : null}
       {/* HQ owns a persistent runtime rail. Human rooms keep participants. */}

@@ -8,11 +8,20 @@ export default function NewSession({ onSubmit }) {
   const [mode, setMode] = useState("HyperAgents mode");
   const [lane, setLane] = useState("Web-intelligence");
   const [menu, setMenu] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
 
-  function send() {
+  async function send() {
     const query = text.trim();
-    if (!query) return;
-    onSubmit(query);
+    if (!query || sending) return;
+    setSending(true);
+    setError("");
+    try {
+      await onSubmit(query);
+    } catch (cause) {
+      setError(cause.response?.data?.error || cause.message || "Could not create room.");
+      setSending(false);
+    }
   }
 
   return (
@@ -25,6 +34,7 @@ export default function NewSession({ onSubmit }) {
           <h1 className="text-[28px] font-semibold tracking-[-0.03em] text-[#111]">Into the Unknown</h1>
           <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-[11px] font-medium text-[#4f46e5]">Preview</span>
         </div>
+        {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
 
         <div className="mb-3 flex items-center gap-4 px-1 text-[13px] text-[#3f3f46]">
           <MenuButton label={lane} open={menu === "lane"} onToggle={() => setMenu(menu === "lane" ? "" : "lane")} icon={<Folder size={14} />}>
@@ -66,7 +76,7 @@ export default function NewSession({ onSubmit }) {
             <button
               type="button"
               onClick={send}
-              disabled={!text.trim()}
+              disabled={!text.trim() || sending}
               aria-label="Send"
               className="ml-1 grid h-8 w-8 place-items-center rounded-full bg-[#c7d2fe] text-[#3730a3] disabled:opacity-50"
             >
