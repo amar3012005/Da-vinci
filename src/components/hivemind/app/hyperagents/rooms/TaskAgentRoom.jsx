@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Link2 } from "lucide-react";
+import { FileText, Link2, Globe2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -49,7 +49,7 @@ function applySocketMessage(current, parsed) {
     return parsed.state;
   }
   if (parsed && typeof parsed.step === "string" && typeof parsed.at === "string") {
-    const events = [...(current?.events || []), parsed].slice(-40);
+    const events = [...(current?.events || []), parsed].slice(-100);
     return { ...(current || {}), events };
   }
   return current;
@@ -206,14 +206,18 @@ function toolLabel(step) {
 
 function TaskRow({ event }) {
   const thinking = event.step === "operating-plan";
-  const [open, setOpen] = useState(thinking);
+  const detail = String(event.detail || "").trim();
+  const isSearch = event.step === "parallel_search" || event.step === "composio_web_search";
+  const [open, setOpen] = useState(false);
+  if (thinking) return <li className="py-2 text-[14px] leading-6 text-[#303030]">{detail}</li>;
+  const summary = isSearch && detail && !/^(parallel-ai-gateway|parallel|started)$/i.test(detail) ? detail : "";
   return (
     <li>
-      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-center gap-2 py-1.5 text-left text-[13px] text-[#777777] hover:text-[#262626]">
-        <span className="w-4 shrink-0 text-center text-[#a7a7a7]">{thinking ? "✳" : "▣"}</span>
-        <span className="min-w-0 flex-1 truncate">{toolLabel(event.step)}</span><span aria-hidden="true">{open ? "⌄" : "›"}</span>
+      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-center gap-2 py-1.5 text-left text-[13px] text-[#858b94] hover:text-[#262626]">
+        <span className="w-4 shrink-0 text-center text-[#a7a7a7]">{isSearch ? <Globe2 size={15} /> : "▣"}</span>
+        <span className="shrink-0">{toolLabel(event.step)}</span>{summary ? <><span>·</span><span className="min-w-0 flex-1 truncate">{summary}</span></> : null}<span aria-hidden="true" className="ml-auto">{open ? "⌄" : "›"}</span>
       </button>
-      {open && event.detail ? <pre className="mb-2 whitespace-pre-wrap break-words pl-6 text-[12px] leading-relaxed text-[#767676]">{event.detail}</pre> : null}
+      {open && detail ? <pre className="mb-2 whitespace-pre-wrap break-words rounded-lg bg-[#f7f8fa] px-3 py-2 text-[12px] leading-relaxed text-[#767676]">{detail}</pre> : null}
     </li>
   );
 }
@@ -240,10 +244,10 @@ function conversationTurns(events, messages) {
       continue;
     }
     if (event.step === "report") current.report = event.detail;
-    else if (!HIDDEN_STEPS.has(event.step)) current.tools.push(event);
+    else if (!HIDDEN_STEPS.has(event.step) && !(event.step === "parallel_search" && event.detail === "parallel-ai-gateway")) current.tools.push(event);
   }
   const said = new Set(turns.map((turn) => turn.text));
-  for (const message of messages) {
+  for (const message of messages.slice(-1)) {
     if (!said.has(message.text)) turns.push({ id: message.id, at: message.at, text: message.text, tools: [], report: "", question: "", options: [] });
   }
   return turns.filter((turn) => turn.text || turn.tools.length || turn.report);
@@ -280,13 +284,13 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, onMemory
       {turn.at ? <div className="text-center text-[12px] text-[#a0a0a0]">{new Date(turn.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</div> : null}
       {turn.text ? (
         <div className="flex justify-end">
-          <div className="max-w-[84%] whitespace-pre-wrap rounded-[20px] bg-[#080808] px-4 py-2.5 text-[14px] leading-[1.55] text-white">{turn.text}</div>
+          <div className="max-w-[84%] whitespace-pre-wrap rounded-[20px] bg-[#edf3ff] px-4 py-2.5 text-[14px] leading-[1.55] text-[#242933]">{turn.text}</div>
         </div>
       ) : null}
       {turn.tools.length || pending ? (
         <div>
           <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-center gap-2 border-b border-[#ededed] pb-1.5 text-left text-[13px] text-[#969696] hover:text-[#555555]">
-            <span>{pending ? "Working" : "Worked"}{live && startedAt ? ` for ${elapsedLabel(startedAt, now)}` : ""}</span><span aria-hidden="true">{open ? "⌄" : "›"}</span>
+            <span>{turn.tools.length} step{turn.tools.length === 1 ? "" : "s"}{pending ? " · Working" : ""}{live && startedAt ? ` · ${elapsedLabel(startedAt, now)}` : ""}</span><span aria-hidden="true">{open ? "⌄" : "›"}</span>
           </button>
           {open ? (
             <ol className="mt-2">
@@ -332,7 +336,7 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
   const turns = conversationTurns(events, messages);
   if (!turns.length && !error) return null;
   return (
-    <div className="mx-auto w-full max-w-[760px] space-y-12 pt-6 pb-8" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+    <div className="mx-auto w-full max-w-[900px] space-y-12 pt-6 pb-8" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
       {turns.map((turn, index) => (
         <TurnBlock
           key={turn.id || index}
