@@ -19,17 +19,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Terminal, ArrowRight, Loader2, AlertCircle, Hexagon } from 'lucide-react';
+import { CheckCircle2, Terminal, ArrowRight, Loader2, AlertCircle, Hexagon, Brain, Search, ShieldCheck } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
 export default function CliVerified() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { code, email } = useMemo(() => {
+  const { code, email, mode } = useMemo(() => {
     const p = new URLSearchParams(location.search);
-    return { code: p.get('code'), email: p.get('email') || '' };
+    return { code: p.get('code'), email: p.get('email') || '', mode: p.get('mode') || '' };
   }, [location.search]);
+  const isIcarus = mode === 'icarus';
 
   const [error, setError] = useState(null);
   const [continuing, setContinuing] = useState(false);
@@ -88,7 +89,7 @@ export default function CliVerified() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="w-full max-w-md"
+        className={`w-full ${isIcarus ? 'max-w-2xl' : 'max-w-md'}`}
       >
         <div className="bg-white border border-[#e3e0db] rounded-2xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           {/* Logo */}
@@ -97,8 +98,8 @@ export default function CliVerified() {
               <Hexagon size={22} className="text-[#117dff]" />
             </div>
             <div>
-              <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">HIVEMIND</h1>
-              <p className="text-[#a3a3a3] text-xs font-mono">CLI authorization</p>
+              <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">{isIcarus ? 'ICARUS × HIVEMIND' : 'HIVEMIND'}</h1>
+              <p className="text-[#a3a3a3] text-xs font-mono">{isIcarus ? 'developer identity' : 'CLI authorization'}</p>
             </div>
           </div>
 
@@ -119,7 +120,7 @@ export default function CliVerified() {
             <>
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle2 size={20} className="text-emerald-600" />
-                <h2 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk']">Verified</h2>
+                <h2 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk']">{isIcarus ? 'Your ICARUS developer identity is ready' : 'Verified'}</h2>
               </div>
 
               {email && (
@@ -128,15 +129,38 @@ export default function CliVerified() {
                 </p>
               )}
 
+              {isIcarus && (
+                <>
+                  <p className="mb-5 text-[13px] leading-relaxed text-[#737373]">
+                    Authentication complete. No HIVEMIND workspace, personal plan, or enterprise account was created.
+                    ICARUS stays your local memory filesystem; this identity connects developer services when needed.
+                  </p>
+                  <div className="mb-6 grid gap-2.5 sm:grid-cols-3">
+                    {[
+                      [Brain, 'Save durable decisions', 'Keep invariants, root causes, patches, and handoffs across sessions.'],
+                      [Search, 'Recall less, know more', 'Pull only task-relevant context; lexical recall works without embeddings.'],
+                      [ShieldCheck, 'Stay local-first', 'Your repository memory remains in .icarus unless you explicitly upload data.'],
+                    ].map(([Icon, title, body]) => (
+                      <div key={title} className="rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3">
+                        <Icon size={16} className="mb-2 text-[#117dff]" />
+                        <p className="text-[12px] font-semibold text-[#0a0a0a]">{title}</p>
+                        <p className="mt-1 text-[10.5px] leading-[1.55] text-[#737373]">{body}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
               <div className="mb-6 p-3 rounded-lg bg-[#117dff]/8 border border-[#117dff]/20">
                 <div className="flex items-start gap-2">
                   <Terminal size={14} className="text-[#117dff] mt-0.5 shrink-0" />
                   <div className="text-[12px] leading-relaxed text-[#0a5fcc]">
-                    <span className="font-semibold">Ready to hand off to your terminal.</span>
+                    <span className="font-semibold">{isIcarus ? 'ICARUS is ready to finish setup.' : 'Ready to hand off to your terminal.'}</span>
                     <br />
                     <span className="text-[#3b6da3]">
-                      The next step writes the MCP config to your client (Claude / Cursor / VS Code …)
-                      and verifies the endpoint. You can close this tab once you see the CLI confirm.
+                      {isIcarus
+                        ? 'Control now returns to your terminal. You can close this tab after ICARUS confirms the connection.'
+                        : 'The next step writes the MCP config to your client (Claude / Cursor / VS Code …) and verifies the endpoint. You can close this tab once you see the CLI confirm.'}
                     </span>
                   </div>
                 </div>
@@ -165,6 +189,7 @@ export default function CliVerified() {
                   Auto-continuing in {autoCountdown}s…
                 </p>
               )}
+              {isIcarus && !continuing && <p className="mt-4 text-center text-[12px] font-medium text-[#0a5fcc]">Best of luck building.</p>}
             </>
           )}
         </div>
