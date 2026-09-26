@@ -307,7 +307,8 @@ function conversationTurns(events, messages) {
     }
     if (event.step === "artifact") current.artifacts.push(event);
     else if (event.step === "report") current.report = event.detail;
-    else if (!HIDDEN_STEPS.has(event.step) && !(event.step === "parallel_search" && event.detail === "parallel-ai-gateway")) current.tools.push(event);
+    else if (!HIDDEN_STEPS.has(event.step) && !(event.step === "parallel_search" && event.detail === "parallel-ai-gateway")
+      && !(event.step === "progress" && current.tools.at(-1)?.step === "progress" && String(current.tools.at(-1).detail || "").trim() === String(event.detail || "").trim())) current.tools.push(event);
   }
   const said = new Set(turns.map((turn) => turn.text));
   for (const message of messages.slice(-1)) {
@@ -416,7 +417,7 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
   if (turns.length && status === "working") {
     const latest = turns[turns.length - 1];
     if (!latest.report && draft) latest.report = draft;
-    if (progressDraft && !latest.tools.some((event) => event.step === "progress" && String(event.detail || "").startsWith(progressDraft))) {
+    if (progressDraft && !latest.tools.some((event) => event.step === "progress" && String(event.detail || "").trim().startsWith(progressDraft.trim()))) {
       latest.tools.push({ at: "draft", step: "progress", detail: progressDraft });
     }
   }

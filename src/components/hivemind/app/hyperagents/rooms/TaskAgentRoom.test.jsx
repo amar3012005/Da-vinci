@@ -64,3 +64,18 @@ test("shows streamed draft before final report arrives", () => {
   expect(container.textContent).toContain("I’m checking company evidence");
   act(() => root.unmount());
 });
+
+test("does not repeat settled progress beside its stream", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const message = "I’m checking company evidence";
+  const events = [
+    { at: "2026-09-26T12:00:00Z", step: "user", detail: "Draft a campaign" },
+    { at: "2026-09-26T12:00:01Z", step: "progress", detail: message },
+    { at: "2026-09-26T12:00:02Z", step: "progress", detail: message },
+  ];
+  act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" progressDraft={message} />));
+  expect(container.textContent.split(message)).toHaveLength(2);
+  act(() => root.unmount());
+});
