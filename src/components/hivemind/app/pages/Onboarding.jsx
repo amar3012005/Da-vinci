@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import SelfHostSetup from './SelfHostSetup';
 import apiClient from '../shared/api-client';
-import { NEW_WORKSPACE_LANDING } from '../shared/routes';
+import { newWorkspaceLanding } from '../auth/mobile-routing';
 
 const ORG_MODES = {
   personal: {
@@ -32,15 +32,6 @@ function deriveSlug(name) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40);
-}
-
-function queueMobileAwakening() {
-  if (typeof window === 'undefined') return;
-  const isMobile = window.matchMedia?.('(max-width: 768px)').matches
-    || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
-  if (isMobile) {
-    try { window.localStorage.setItem('hm.mobile_awakening_pending', '1'); } catch { /* private mode */ }
-  }
 }
 
 export default function OnboardingFlow() {
@@ -125,14 +116,24 @@ export default function OnboardingFlow() {
           referralCode: String(saved.referral_code || '').trim() || undefined,
           referralToken: String(saved.referral_token || '').trim() || undefined,
         });
-        queueMobileAwakening();
+        // Consent is submitted only after an authenticated organization exists.
+        // Scheduling, eligibility, and delivery remain server-owned; failure to
+        // save this optional preference must never block workspace creation.
+        if (saved.proactive_reminders_enabled === true) {
+          await apiClient.updateProactiveCognitionSettings({
+            enabled: true,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+            quiet_start_hour: 21,
+            quiet_end_hour: 8,
+          }).catch(() => null);
+        }
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
         if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }
         if (created?.organization?.enterprise_onboarding) {
           setEnterpriseActivation(created.organization.enterprise_onboarding);
           setAutoCreating(false);
-          window.setTimeout(() => { window.location.href = NEW_WORKSPACE_LANDING; }, 2400);
+          window.setTimeout(() => { window.location.href = newWorkspaceLanding(); }, 2400);
           return;
         }
         if (!saved.referral_token && !isEnt && selectedPlan !== 'free') {
@@ -140,7 +141,7 @@ export default function OnboardingFlow() {
           window.location.href = `/hivemind/app/billing?upgrade=${selectedPlan}&source=signup`;
           return;
         }
-        window.location.href = NEW_WORKSPACE_LANDING;
+        window.location.href = newWorkspaceLanding();
       } catch (err) {
         // Keep retries on the login/create-account surface. The saved intent
         // remains in localStorage so the form can restore every entered field.
@@ -189,7 +190,6 @@ export default function OnboardingFlow() {
         enterprise_access_code: mode === 'enterprise' ? enterpriseAccessCode : undefined,
         referralCode: (referralCode || '').trim() || undefined,
       });
-      queueMobileAwakening();
       try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
       // Self-host → show the 2-step setup (clone+run, mint key) instead of going straight to dashboard.
       if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
@@ -201,7 +201,7 @@ export default function OnboardingFlow() {
     }
   };
 
-  if (showSelfHost) return <SelfHostSetup onDone={() => { window.location.href = NEW_WORKSPACE_LANDING; }} onBackToLogin={logout} />;
+  if (showSelfHost) return <SelfHostSetup onDone={() => { window.location.href = newWorkspaceLanding(); }} onBackToLogin={logout} />;
 
   if (enterpriseActivation) {
     const endsAt = new Date(enterpriseActivation.ends_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });

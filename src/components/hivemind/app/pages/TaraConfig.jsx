@@ -645,7 +645,6 @@ function CampaignPanel({ identity, language = 'en' }) {
 
 export default function TaraConfig() {
   const { t, i18n } = useTranslation('dashboard');
-  const voiceProvider = 'grok';
 
   // Identity for the self-hosted AaaS voice widget (tenant = user_id).
   const [identity, setIdentity] = useState({ userId: null, orgId: null });
@@ -666,6 +665,10 @@ export default function TaraConfig() {
   const [calls, setCalls] = useState([]);
   const [callDetail, setCallDetail] = useState(null); // { call, turns, insight }
   const [runtimeConfig, setRuntimeConfig] = useState(null);
+  // The server selects the provider from the organization's runtime policy.
+  // Keep the voice catalog/session request aligned with that policy instead of
+  // hard-coding Grok while the server starts a Deepgram session (or vice versa).
+  const voiceProvider = 'grok';
   const [providerSaving, setProviderSaving] = useState(false);
 
   const refreshCalls = () => apiClient.listTaraCalls(30).then(setCalls).catch(() => {});

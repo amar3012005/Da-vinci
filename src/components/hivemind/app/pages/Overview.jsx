@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import OverviewTour, { useOverviewTour } from '../shared/OverviewTour';
 import { useTranslation } from 'react-i18next';
 import {
@@ -38,6 +38,7 @@ import { getOrCreateChatThreadId, resetChatThreadId } from '../shared/chat-threa
 import { QRCodeSVG } from 'qrcode.react';
 import { userScopedKey } from '../shared/user-storage';
 import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
+import { isRenderableAnswerDelta } from '../shared/chat-stream-contract';
 import { useApiQuery } from '../shared/hooks';
 import { emitUsageChanged } from '../shared/useUsage';
 import { useTeamContext } from '../shared/team-context';
@@ -49,6 +50,49 @@ import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/up
 import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './WebStudio';
 import HarnessChatSurface from './HarnessChatSurface';
 import HarnessSurface from './HarnessSurface';
+
+const LAST_HARNESS_SESSION_KEY = 'hm.lastHarnessSession';
+
+function cachedHarnessSessionPath() {
+  try {
+    const value = window.sessionStorage.getItem(LAST_HARNESS_SESSION_KEY) || '';
+    return /^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberHarnessSessionPath(pathname) {
+  if (!/^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(pathname)) return;
+  try { window.sessionStorage.setItem(LAST_HARNESS_SESSION_KEY, pathname); } catch { /* storage may be unavailable */ }
+}
+
+function shouldUseMobileChat() {
+  if (typeof window === 'undefined') return false;
+  if (window.location.hostname === 'next.preview.singulancelabs.com') return false;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('desktop') === '1') return false;
+  const narrowViewport = window.matchMedia('(max-width: 768px)').matches;
+  const uaDataMobile = !!(navigator.userAgentData && navigator.userAgentData.mobile);
+  const uaSniff = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(navigator.userAgent || '');
+  return narrowViewport || uaDataMobile || uaSniff || Boolean(params.get('from'));
+}
+
+function MobileChatRedirect() {
+  useEffect(() => { window.location.replace('/hivemind/m/chat'); }, []);
+  return <section className="min-h-dvh w-full bg-[#f7f5f0]" aria-label="Loading mobile chat" />;
+}
+
+function ResumeHarnessSession({ path }) {
+  useEffect(() => {
+    // The embedded Harness owns a separate React root. Re-enter it in a clean
+    // document after OS/VOICE instead of attempting to reuse a disposed root.
+    // Static assets remain browser/Cloudflare cached, while the neutral shell
+    // prevents the legacy Overview from flashing during the handoff.
+    window.location.replace(path);
+  }, [path]);
+  return <section className="h-full min-h-0 w-full overflow-hidden bg-[#f7f5f0]" aria-label="Loading BRAIN" />;
+}
 
 // ─── Animation variants ──────────────────────────────────────────
 
@@ -945,7 +989,7 @@ function OverviewChat({ inputRef }) {
       const chatData = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
         ? await readChatStream(chatRes, (event) => {
             if (event.type === 'answer_started') return;
-            if (event.type === 'answer_delta' && event.validated === true) {
+            if (isRenderableAnswerDelta(event)) {
               setMessages((prev) => {
                 const found = prev.some((item) => item.id === streamingId);
                 return found
@@ -1456,10 +1500,17 @@ export default function Overview() {
   // Do not select Harness by hostname: Enigma and main share this build and
   // use the server-side feature flag at admission. Only an explicit admitted
   // route mounts the native client; the overview root retains legacy fallback.
-  if (/^\/hivemind\/app\/overview\/(?:new|session\/[^/]+)$/u.test(window.location.pathname)) {
+  const { pathname } = useLocation();
+  // Mobile routing is authoritative and must run before either an explicit or
+  // cached desktop Harness session is selected.
+  if (shouldUseMobileChat()) return <MobileChatRedirect />;
+  if (/^\/hivemind\/app\/overview\/(?:new|session\/[^/]+)$/u.test(pathname)) {
+    rememberHarnessSessionPath(pathname);
     return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
   }
-  return <LegacyOverview />;
+  const cachedSession = cachedHarnessSessionPath();
+  if (cachedSession) return <ResumeHarnessSession path={cachedSession} />;
+  return <HarnessChatSurface legacy={<LegacyOverview />} />;
 }
 
 function LegacyOverview() {
@@ -1481,26 +1532,6 @@ function LegacyOverview() {
     setQrCardDismissed(true);
     try { window.localStorage.setItem(MOBILE_QR_DISMISS_KEY, '1'); } catch { /* storage blocked */ }
   }, []);
-
-  // Auto-redirect to the dedicated mobile chat page on phones. The full
-  // Overview surface is hard to navigate one-handed; mobile users land on
-  // /hivemind/m/chat which is a full-screen Talk-to-HIVE.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    // Preview Overview launches the responsive full-page Harness application;
-    // it must not race the legacy mobile chat redirect.
-    if (window.location.hostname === 'next.preview.singulancelabs.com') return;
-    // Detect phones either by narrow viewport OR by UA — catches the
-    // "Request Desktop Site" case where the viewport widens beyond 768px
-    // but the device is still a phone.
-    const narrowViewport = window.matchMedia('(max-width: 768px)').matches;
-    const uaDataMobile = !!(navigator.userAgentData && navigator.userAgentData.mobile);
-    const uaSniff = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(navigator.userAgent || '');
-    const isMobile = narrowViewport || uaDataMobile || uaSniff;
-    const fromQR = new URLSearchParams(window.location.search).get('from');
-    const optOut = new URLSearchParams(window.location.search).get('desktop') === '1';
-    if ((isMobile || fromQR) && !optOut) navigate('/hivemind/m/chat', { replace: true });
-  }, [navigate]);
 
   // NOTE: the old auto-greet (sliding the Talk-to-HIVE panel out after 1.5s)
   // is intentionally gone — the chat IS the page now, and the floating
@@ -1702,8 +1733,8 @@ function LegacyOverview() {
         </motion.div>
       </div>
 
-      {/* The HIVE chat — the Overview centerpiece */}
-      <HarnessChatSurface legacy={<OverviewChat inputRef={chatInputRef} />} />
+      {/* The HIVE chat — shown only after the rollout authority selected legacy. */}
+      <OverviewChat inputRef={chatInputRef} />
 
       {/* Mobile QR promo — one bottom-right corner widget, desktop-only
           (mobile visitors never reach this page — see the redirect effect

@@ -21,6 +21,16 @@ const PLATFORM_ADMIN_BASES = Object.freeze({
   }),
 });
 
+const NETWORK_CHANGED_RETRY_DELAYS_MS = [300, 800];
+
+function isNetworkChangedError(error) {
+  return error?.code === 'ERR_NETWORK_CHANGED' || /network changed/i.test(String(error?.message || ''));
+}
+
+function waitForNetworkRecovery(delay) {
+  return new Promise((resolve) => window.setTimeout(resolve, delay));
+}
+
 function selectedPlatformAdminEnvironment() {
   if (typeof window === 'undefined' || window.location.hostname !== PLATFORM_ADMIN_HOST) return null;
   try {
@@ -574,6 +584,16 @@ class HiveMindApiClient {
 
   async markWorkspaceNotificationRead(notificationId) {
     const { data } = await this.controlPlane.post(`/v1/workspace/notifications/${encodeURIComponent(notificationId)}/read`, {});
+    return data;
+  }
+
+  async nextWorkspaceAnnouncement() {
+    const { data } = await this.controlPlane.get('/v1/workspace/announcements/next');
+    return data;
+  }
+
+  async recordWorkspaceAnnouncementEvent(announcementId, event) {
+    const { data } = await this.controlPlane.post(`/v1/workspace/announcements/${encodeURIComponent(announcementId)}/event`, { event });
     return data;
   }
 
@@ -1221,11 +1241,18 @@ class HiveMindApiClient {
   }
 
   async listVisualGenerationJobs(roomId, { limit = 12 } = {}) {
-    const { data } = await this.controlPlane.get('/v1/proxy/visual-generation/jobs', {
-      params: { room_id: roomId, limit },
-      suppressServiceError: true,
-    });
-    return data;
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        const { data } = await this.controlPlane.get('/v1/proxy/visual-generation/jobs', {
+          params: { room_id: roomId, limit },
+          suppressServiceError: true,
+        });
+        return data;
+      } catch (error) {
+        if (!isNetworkChangedError(error) || attempt >= NETWORK_CHANGED_RETRY_DELAYS_MS.length) throw error;
+        await waitForNetworkRecovery(NETWORK_CHANGED_RETRY_DELAYS_MS[attempt]);
+      }
+    }
   }
 
   async getVisualGenerationJob(jobId) {
@@ -1570,6 +1597,26 @@ class HiveMindApiClient {
 
   async listPlatformUsers({ q = '', limit = 200 } = {}) {
     const { data } = await this.controlPlane.get('/admin/api/platform/users', { params: { q, limit } });
+    return data;
+  }
+
+  async listPlatformAnnouncements() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/announcements');
+    return data;
+  }
+
+  async createPlatformAnnouncement(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/announcements', payload);
+    return data;
+  }
+
+  async updatePlatformAnnouncement(id, payload) {
+    const { data } = await this.controlPlane.patch(`/admin/api/platform/announcements/${encodeURIComponent(id)}`, payload);
+    return data;
+  }
+
+  async platformAnnouncementAction(id, action, payload = {}) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/announcements/${encodeURIComponent(id)}/${encodeURIComponent(action)}`, payload);
     return data;
   }
 
@@ -2036,6 +2083,29 @@ class HiveMindApiClient {
 
   async getProfile() {
     const { data } = await this.controlPlane.get('/v1/proxy/profile');
+    return data;
+  }
+
+  // ─── Entity dossiers ────────────────────────────────────────
+  // The server remains the authorization and evidence boundary; the browser
+  // receives bounded rendered facts only.
+  async getEntityProfile(entityId, { evidence = true } = {}) {
+    const { data } = await this.core.get(`/api/entities/${encodeURIComponent(entityId)}/profile?evidence=${evidence ? 'true' : 'false'}`);
+    return data;
+  }
+
+  async reviewEntityProfile(entityId, reviewId, action, note = '') {
+    const { data } = await this.core.post(`/api/entities/${encodeURIComponent(entityId)}/profile/reviews/${encodeURIComponent(reviewId)}/${action}`, { note });
+    return data;
+  }
+
+  async correctEntityProfile(entityId, payload) {
+    const { data } = await this.core.post(`/api/entities/${encodeURIComponent(entityId)}/profile/correct`, payload);
+    return data;
+  }
+
+  async linkUserToEntity(entityId, payload) {
+    const { data } = await this.core.post(`/api/entities/${encodeURIComponent(entityId)}/profile/link-user`, payload);
     return data;
   }
 
@@ -3257,6 +3327,25 @@ class HiveMindApiClient {
   async updateCognitionSettings(payload) {
     const { data } = await this.controlPlane.post('/v1/proxy/governance/cognition-settings', payload);
     return data;
+  }
+
+  // ─── Proactive cognition ──────────────────────────────────────
+  // Explicit per-user consent for background HIVE reflections. These calls
+  // intentionally go to Control Plane: the browser never owns scheduling,
+  // activity compilation, JEV evaluation, or delivery receipts.
+  async getProactiveCognitionSettings() {
+    const { data } = await this.controlPlane.get('/v1/proactive-cognition/settings');
+    return data?.settings || data;
+  }
+
+  async updateProactiveCognitionSettings(payload) {
+    const { data } = await this.controlPlane.patch('/v1/proactive-cognition/settings', payload);
+    return data?.settings || data;
+  }
+
+  async getProactiveCognitionEvaluations(limit = 20) {
+    const { data } = await this.controlPlane.get('/v1/proactive-cognition/evaluations', { params: { limit } });
+    return data?.evaluations || [];
   }
 
   /**

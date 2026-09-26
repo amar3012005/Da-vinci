@@ -1,4 +1,6 @@
-// Keep the post-auth landing decision in one place.  This runs before the
+import { NEW_WORKSPACE_LANDING } from '../shared/routes';
+
+// Keep the post-auth landing decision in one place. This runs before the
 // desktop app shell is mounted, so mobile users never flash the OS section.
 export function isMobileAuthClient() {
   if (typeof window === 'undefined') return false;
@@ -18,4 +20,8 @@ export function defaultAuthReturnUrl(origin = window.location.origin) {
 
 export function defaultAuthenticatedPath() {
   return isMobileAuthClient() ? '/hivemind/m/chat' : '/hivemind/app/overview';
+}
+
+export function newWorkspaceLanding(isMobile = isMobileAuthClient()) {
+  return isMobile ? '/hivemind/m/chat' : NEW_WORKSPACE_LANDING;
 }

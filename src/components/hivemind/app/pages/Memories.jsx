@@ -24,6 +24,7 @@ import {
   Lock,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import EntityProfileLink from '../shared/EntityProfileLink';
 import {
   documentIngestMode,
   documentIngestState,
@@ -281,13 +282,13 @@ function EntityChips({ memory }) {
   return (
     <>
       {visible.map((e) => (
-        <span
+        <EntityProfileLink
           key={`ent-${e}`}
-          title={`Mentioned entity: ${e}`}
           className="inline-flex items-center gap-1 text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200 uppercase tracking-wider"
+          name={e}
         >
           @ {String(e).slice(0, 24)}
-        </span>
+        </EntityProfileLink>
       ))}
       {overflow > 0 && (
         <span
@@ -314,12 +315,13 @@ function EntityInventory({ memory }) {
       </label>
       <div className="flex flex-wrap gap-1.5">
         {entities.map((entity) => (
-          <span
+          <EntityProfileLink
             key={entity}
+            name={entity}
             className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-mono uppercase tracking-[0.06em]"
           >
             @{entity}
-          </span>
+          </EntityProfileLink>
         ))}
       </div>
     </div>
@@ -977,14 +979,16 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {entities.slice(0, 12).map((t) => (
-                  <span key={t.id || t.topicKey}
+                  <EntityProfileLink key={t.id || t.topicKey}
+                    name={t.entity?.canonicalName || t.topicKey}
+                    entityId={t.entity?.id}
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono border border-[#e3e0db] bg-white text-[#525252]">
                     <Brain size={9} />
                     {t.entity?.canonicalName || t.topicKey}
                     {t.entity?.entityType && (
                       <span className="text-[#a3a3a3]">·{t.entity.entityType}</span>
                     )}
-                  </span>
+                  </EntityProfileLink>
                 ))}
               </div>
             </div>

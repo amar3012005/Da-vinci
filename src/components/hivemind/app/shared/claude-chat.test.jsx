@@ -1,4 +1,4 @@
-import { liveReasoningRows } from './claude-chat';
+import { isDuplicateOperationalMessage, liveReasoningRows, reasoningRows, stageDetails } from './claude-chat';
 
 test.each(['error', 'failed', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval'])('progressive %s receipts never become completed', (status) => {
   const [row] = liveReasoningRows([
@@ -52,4 +52,74 @@ test('native LangGraph states remain visible and truthful in the timeline', () =
   ]);
   expect(rows.map((row) => row.phase)).toEqual(['context_loaded', 'awaiting_connection', 'resumed']);
   expect(rows[1]).toMatchObject({ tool: 'agent', detail: 'awaiting connection' });
+});
+
+test('the selected LangGraph plan is a compact first stage', () => {
+  const [row] = reasoningRows([
+    { type: 'decision', stage: 'capability', selected: 'multi_task', authoritative: true },
+  ]);
+  expect(row).toMatchObject({ tool: 'plan', display_label: 'Plan', display_detail: 'Selected: Multi Task' });
+});
+
+test('mobile timeline keeps every meaningful governed stage and never narrates them with an LLM', () => {
+  const rows = reasoningRows([
+    { type: 'tool_started', name: 'hivemind_connected_task', arguments: { action: 'search' } },
+    { type: 'tool_result', name: 'hivemind_connected_task', status: 'completed' },
+    { type: 'tool_started', name: 'GMAIL_FETCH_EMAILS' },
+    { type: 'tool_result', name: 'GMAIL_FETCH_EMAILS', status: 'completed', summary: 'five raw subjects' },
+    { type: 'tool_started', name: 'hivemind_save_memory' },
+    { type: 'tool_result', name: 'hivemind_save_memory', status: 'completed', summary: 'saved' },
+  ]);
+  expect(rows.map((row) => row.tool)).toEqual(['hivemind_connected_task', 'GMAIL_FETCH_EMAILS', 'hivemind_save_memory']);
+  expect(rows.map((row) => [row.display_label, row.display_detail])).toEqual([
+    ['Connected apps', 'Capability selected'],
+    ['Gmail', 'Email retrieval complete'],
+    ['HIVE-MIND', 'Memory saved'],
+  ]);
+});
+
+test('stage details expose only a small safe input and receipt summary', () => {
+  expect(stageDetails({
+    arguments: { query: 'latest five emails', limit: 5, api_key: 'must-not-render', nested: { raw: 'must-not-render' } },
+    summary: '5 email records returned',
+    display_detail: 'Email retrieval complete',
+  })).toEqual({
+    input: [{ label: 'query', value: 'latest five emails' }, { label: 'limit', value: '5' }],
+    output: '5 email records returned',
+  });
+});
+
+test('memory scope selection is a compact deterministic stage', () => {
+  const [row] = reasoningRows([
+    {
+      type: 'tool_result',
+      name: 'hivemind_save_memory',
+      status: 'waiting_user',
+      summary: 'Memory destination was not stated. Ask the user to choose a personal, organization, team, or authorized project scope before saving.',
+    },
+  ]);
+
+  expect(row.display_label).toBe('HIVE-MIND');
+  expect(row.display_detail).toBe('Choose memory destination');
+});
+
+test('a retryable memory write failure is never rendered as saved', () => {
+  const [row] = reasoningRows([
+    {
+      type: 'tool_result',
+      name: 'hivemind_save_memory',
+      harness_version: 'langgraph-meta-loop-v2',
+      status: 'retryable_error',
+      summary: 'Memory save is temporarily unavailable. Retry the exact save or cancel it.',
+    },
+  ]);
+
+  expect(row.display_label).toBe('HIVE-MIND');
+  expect(row.display_detail).toMatch(/temporarily unavailable/i);
+  expect(row.display_detail).not.toBe('Memory saved');
+});
+
+test('does not render the legacy scope-picker boilerplate as an assistant answer', () => {
+  expect(isDuplicateOperationalMessage('Memory destination was not stated. Ask the user to choose a personal, organization, team, or authorized project scope before saving; do not retry the save yourself.')).toBe(true);
+  expect(isDuplicateOperationalMessage('Memory saved.')).toBe(false);
 });

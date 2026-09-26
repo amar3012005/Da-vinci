@@ -3,6 +3,11 @@ const AGENT_SETUP_PREFIX = '/agent-setup/';
 const DISCOVERY_PATHS = new Set(['/robots.txt', '/llms.txt', '/llms-full.txt', '/sitemap.xml']);
 const PARTNER_REFERRALS_FLAG_PATH = '/__hivemind/feature-flags/partner-referrals';
 const PARTNER_REFERRALS_FLAG_KEY = 'partner_referrals_v1';
+const MEMORY_GRAPH_V2_FLAG_PATH = '/__hivemind/feature-flags/memory-graph-v2';
+const MEMORY_GRAPH_V2_FLAG_KEY = 'memory_graph_v2';
+const LANDING_MOBILE_V2_FLAG_PATH = '/__hivemind/feature-flags/landing-mobile-v2';
+const LANDING_MOBILE_V2_FLAG_KEY = 'landing_mobile_v2';
+const LANDING_MOBILE_V2_ENV_KEY = 'LANDING_MOBILE_V2';
 const USE_TOOLS_UNIFIED_DAG_FLAG_PATH = '/__hivemind/feature-flags/use-tools-unified-dag';
 const USE_TOOLS_UNIFIED_DAG_FLAG_KEY = 'USE_TOOLS_UNIFIED_DAG';
 const USE_TOOLS_DURABLE_AGENT_FLAG_PATH = '/__hivemind/feature-flags/use-tools-durable-agent';
@@ -14,12 +19,10 @@ const ENABLE_TOOLS_HITL_ENV_KEY = 'ENABLE_TOOLS_HITL';
 const HIVE_HARNESS_CHAT_FLAG_PATH = '/__hivemind/feature-flags/harness-chat';
 const HIVE_HARNESS_CHAT_FLAG_KEY = 'hivemind_harness_chat_v1';
 const DAY0_ONBOARDING_FLAG_PATH = '/__hivemind/feature-flags/day0-onboarding';
-// Core speaks one stable Day-0 admission contract, while Flagship keeps the
-// two independently deployable server rollouts isolated. Never expose the
-// server-specific key to Core: it must only consume the canonical contract.
-const DAY0_ONBOARDING_CONTRACT_KEY = 'day0_onboarding_v1';
-const SINGULANCE_DAY0_ONBOARDING_FLAG_KEY = 'singulance_day0_onboarding_v1';
-const ENIGMA_DAY0_ONBOARDING_FLAG_KEY = 'enigma_day0_onboarding_v1';
+// A single default-off Flagship gate owns every deterministic lifecycle stage
+// before activation.  Core only sees this stable contract and cannot enable a
+// stage if Cloudflare has rolled the lifecycle back.
+const PRE_ONBOARDING_LIFECYCLE_FLAG_KEY = 'pre_onboarding_lifecycle_v1';
 // One rollout decides the conversation engine for a user.  "legacy" stays
 // on the existing LangGraph/LangChain orchestrator; "harness" enables the
 // native Cordis surface.  Do not add an intermediate browser-visible mode:
@@ -41,13 +44,6 @@ const PRIVATE_ROBOTS = `# This hostname serves an authenticated SINGULANCE appli
 function hostname(request) {
   const host = request.headers.get('host');
   return (host ? host.split(':')[0] : new URL(request.url).hostname).toLowerCase();
-}
-
-function dayZeroOnboardingFlagKey(env) {
-  const environment = env.FLAGSHIP_ENVIRONMENT || env.ENVIRONMENT || 'production';
-  return environment === 'dev'
-    ? ENIGMA_DAY0_ONBOARDING_FLAG_KEY
-    : SINGULANCE_DAY0_ONBOARDING_FLAG_KEY;
 }
 
 function noIndex(response) {
@@ -300,7 +296,7 @@ async function dayZeroOnboardingFlagResponse(request, env) {
   let evaluationId;
   if (orgId && userId) {
     try {
-      const details = await env.FLAGS.getBooleanDetails(dayZeroOnboardingFlagKey(env), false, {
+      const details = await env.FLAGS.getBooleanDetails(PRE_ONBOARDING_LIFECYCLE_FLAG_KEY, false, {
         targetingKey: `${orgId}:${userId}`, org_id: orgId, user_id: userId,
         environment: env.ENVIRONMENT || 'production', surface: 'hivemind-web', hostname: hostname(request),
       });
@@ -311,7 +307,7 @@ async function dayZeroOnboardingFlagResponse(request, env) {
     }
   }
   return Response.json({
-    key: DAY0_ONBOARDING_CONTRACT_KEY,
+    key: PRE_ONBOARDING_LIFECYCLE_FLAG_KEY,
     source: 'cloudflare-flagship',
     enabled,
     ...(evaluationId ? { evaluation_id: evaluationId } : {}),
@@ -352,6 +348,34 @@ async function partnerReferralsFlagResponse(request, env) {
   return booleanFlagshipResponse(request, env, PARTNER_REFERRALS_FLAG_KEY);
 }
 
+async function mobileLandingFlagResponse(request, env) {
+  // This launch is intentionally enabled for everyone. The Worker variable is
+  // the durable rollout baseline; Flagship can still return false for an
+  // immediate no-deploy rollback or later audience targeting.
+  const defaultEnabled = String(env[LANDING_MOBILE_V2_ENV_KEY] ?? 'true').toLowerCase() !== 'false';
+  let enabled = defaultEnabled;
+  try {
+    enabled = await env.FLAGS.getBooleanValue(LANDING_MOBILE_V2_FLAG_KEY, defaultEnabled, {
+      environment: env.ENVIRONMENT || 'production',
+      surface: 'hivemind-public-mobile',
+      hostname: hostname(request),
+    });
+  } catch {
+    // Preserve the globally-enabled launch baseline during a Flagship outage.
+  }
+
+  return Response.json({
+    key: LANDING_MOBILE_V2_FLAG_KEY,
+    enabled: enabled === true,
+    source: 'cloudflare-flagship',
+  }, {
+    headers: {
+      'cache-control': 'no-store',
+      'x-robots-tag': 'noindex, nofollow, noarchive, nosnippet',
+    },
+  });
+}
+
 export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
@@ -390,6 +414,14 @@ export default {
 
     if (pathname === PARTNER_REFERRALS_FLAG_PATH) {
       return partnerReferralsFlagResponse(request, env);
+    }
+    if (pathname === MEMORY_GRAPH_V2_FLAG_PATH) {
+      if (request.method !== 'GET') return new Response(null, { status: 405, headers: { allow: 'GET' } });
+      return booleanFlagshipResponse(request, env, MEMORY_GRAPH_V2_FLAG_KEY);
+    }
+    if (pathname === LANDING_MOBILE_V2_FLAG_PATH) {
+      if (request.method !== 'GET') return new Response(null, { status: 405, headers: { allow: 'GET' } });
+      return mobileLandingFlagResponse(request, env);
     }
     if (pathname === USE_TOOLS_UNIFIED_DAG_FLAG_PATH) {
       return booleanFlagshipResponse(request, env, USE_TOOLS_UNIFIED_DAG_FLAG_KEY);
@@ -462,7 +494,22 @@ export default {
       return privateDiscoveryResponse(pathname);
     }
 
-    const response = await env.ASSETS.fetch(request);
+    // All HIVE pages are client routes of the same current document. Fetch
+    // index explicitly instead of caching a separate SPA fallback per route.
+    // Only content-hashed assets, never the authenticated app shell, are cached.
+    const appDocument = request.method === 'GET'
+      && pathname.startsWith('/hivemind/')
+      && !pathname.split('/').pop().includes('.');
+    const assetRequest = appDocument
+      ? new Request(new URL('/', request.url), request)
+      : request;
+    let response = await env.ASSETS.fetch(assetRequest);
+    if (appDocument && isHtml(response)) {
+      const headers = new Headers(response.headers);
+      headers.set('cache-control', 'private, no-store');
+      headers.set('cdn-cache-control', 'no-store');
+      response = new Response(response.body, { status: response.status, headers });
+    }
 
     // Preserve an unauthenticated Overview deep link through the one-shot
     // admission exchange. It is navigation intent only, never authorization.

@@ -122,7 +122,7 @@ export const HARNESS_BOOT_STAGES = [
   'Securing your session',
   'Loading your workspace',
   'Preparing the native chat',
-  'Restoring your conversation',
+  'Opening chat',
 ];
 
 /**
@@ -131,7 +131,9 @@ export const HARNESS_BOOT_STAGES = [
  */
 export function LoadingSurface({ stage = 0 }) {
   const safeStage = Math.max(0, Math.min(stage, HARNESS_BOOT_STAGES.length - 1));
-  const completed = safeStage + 1;
+  // `stage` is the active boundary, not a completed one. The 4/4 state only
+  // exists after the overlay is removed and chat is interactive.
+  const completed = safeStage;
   const width = 20;
   const filled = Math.round((completed / HARNESS_BOOT_STAGES.length) * width);
   const bar = `${'█'.repeat(filled)}${'░'.repeat(width - filled)}`;
@@ -160,12 +162,9 @@ export function LoadingSurface({ stage = 0 }) {
   );
 }
 
-/** The host loader ends only when native Harness has painted an interactive seat. */
+/** Past-session navigation is independent of the first interactive composer. */
 export function nativeHarnessMounted(container) {
-  return Boolean(
-    container?.querySelector?.('[data-composer-seat]')
-    && container?.querySelector?.('aside[aria-label="HIVE chat sessions"]'),
-  );
+  return Boolean(container?.querySelector?.('[data-composer-seat]'));
 }
 
 function waitForNativeHarnessMount(container, signal) {
@@ -319,6 +318,13 @@ export default function HarnessSurface() {
         window.__HIVE_HARNESS_BOOT_REV__ = bootRevision;
       }
       if (cancelled) return;
+      // A fast OS → BRAIN transition can create the next host while the
+      // previous native app is still disposing. Wait for that teardown before
+      // remounting the cached module, otherwise the old dispose can erase the
+      // new DOM and leave a blank Overview canvas.
+      const pendingDispose = window.__HIVE_HARNESS_DISPOSE_PROMISE__;
+      if (pendingDispose && typeof pendingDispose.then === 'function') await pendingDispose;
+      if (cancelled) return;
       window.__DSH_EMBED_REQUEST__ = request;
       setLoadingStage(3);
       // The module URL changes only when the authenticated Harness release
@@ -358,8 +364,17 @@ export default function HarnessSurface() {
       window.__HIVEMIND_DELETE_SESSION__ = undefined;
       const app = window.__DSH_EMBED_APP__;
       window.__DSH_EMBED_APP__ = undefined;
-      if (app) void app.dispose();
-      mount.replaceChildren();
+      if (app) {
+        const disposePromise = Promise.resolve()
+          .then(() => app.dispose())
+          .catch(() => undefined)
+          .finally(() => {
+            if (window.__HIVE_HARNESS_DISPOSE_PROMISE__ === disposePromise) {
+              window.__HIVE_HARNESS_DISPOSE_PROMISE__ = undefined;
+            }
+          });
+        window.__HIVE_HARNESS_DISPOSE_PROMISE__ = disposePromise;
+      }
     };
   }, []);
 

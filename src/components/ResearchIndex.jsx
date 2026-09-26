@@ -15,19 +15,19 @@ const BORDER = '#E4E3DE';
 
 const ITEMS = [
   {
-    tags: ['BENCHMARK', 'LONGMEMEVAL', 'EVALUATION'],
-    title: '87.2% on LongMemEval',
-    desc: 'Published, reproducible recall benchmark against the industry-standard long-context memory eval — sub-50ms retrieval, live regression gates, methodology public.',
-    href: '/benchmark',
-    art: 'linear-gradient(135deg, #4a9fff 0%, #117dff 50%, #0a2a5e 100%)',
-  },
-  {
     tags: ['MEMORY', '.AMR', 'INFRASTRUCTURE'],
     title: 'ICARUS',
     desc: 'A memory filesystem for AI agents — where the byte layout, not the query engine, is the innovation. Equal recall to a live vector DB, 7.5× smaller, zero servers.',
     href: '/research/icarus',
     art: 'linear-gradient(135deg, #ff7a2f 0%, #ff5229 45%, #7a1f0a 100%)',
     img: '/thesis-greekgod.webp',
+  },
+  {
+    tags: ['BENCHMARK', 'LONGMEMEVAL', 'EVALUATION'],
+    title: '87.2% on LongMemEval',
+    desc: 'Published, reproducible recall benchmark against the industry-standard long-context memory eval — sub-50ms retrieval, live regression gates, methodology public.',
+    href: '/benchmark',
+    art: 'linear-gradient(135deg, #4a9fff 0%, #117dff 50%, #0a2a5e 100%)',
   },
   {
     tags: ['ARCHITECTURE', 'SWARM', 'MEMORY'],
@@ -46,10 +46,10 @@ const ITEMS = [
   },
 ];
 
-const Card = ({ item, onOpen }) => (
+const Card = ({ item, onOpen, standalone = false }) => (
   <article
     data-card
-    className="flex w-[88vw] shrink-0 snap-start flex-col overflow-hidden rounded-xl border md:w-[900px] md:flex-row"
+    className={`flex snap-start flex-col overflow-hidden rounded-xl border ${standalone ? 'w-full' : 'w-[88vw] shrink-0 md:w-[900px]'} md:flex-row`}
     style={{ borderColor: BORDER, background: '#fff' }}
   >
     {/* text panel */}
@@ -68,7 +68,7 @@ const Card = ({ item, onOpen }) => (
       </div>
     </div>
     {/* art panel — fixed height when stacked (mobile), fills the row half on desktop */}
-    <button onClick={() => onOpen(item.href)} className="relative h-40 w-full overflow-hidden md:h-auto md:w-1/2" style={{ background: item.art }} aria-label={item.title}>
+    <button onClick={() => onOpen(item.href)} className="relative h-48 w-full overflow-hidden md:h-auto md:w-1/2" style={{ background: item.art }} aria-label={item.title}>
       {item.img && <img src={item.img} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-luminosity" />}
       <span className="absolute bottom-5 left-5 font-['Space_Grotesk'] text-2xl font-bold text-white/90">{item.title.split(' ')[0]}</span>
     </button>
@@ -97,10 +97,10 @@ const ResearchIndex = () => {
       </nav>
 
       {/* hero heading */}
-      <header className="mx-auto max-w-[1280px] px-6 pb-10 pt-16 md:px-10 md:pt-24">
+      <header className="mx-auto max-w-[1280px] px-5 pb-8 pt-12 sm:px-6 md:px-10 md:pb-10 md:pt-24">
         <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-[#8a8a82]">SINGULANCE Labs</p>
-        <h1 className="font-['Space_Grotesk'] mt-4 text-5xl font-semibold tracking-tight md:text-7xl" style={{ color: INK }}>Research.</h1>
-        <p className="mt-5 max-w-2xl text-lg font-light leading-relaxed text-[#525252]">
+        <h1 className="font-['Space_Grotesk'] mt-4 text-[44px] font-semibold leading-none tracking-tight sm:text-5xl md:text-7xl" style={{ color: INK }}>Research.</h1>
+        <p className="mt-5 max-w-2xl text-[17px] font-light leading-7 text-[#525252] md:text-lg md:leading-relaxed">
           The work behind the sovereign workforce — memory you can prove, and a swarm that acts as one.
         </p>
       </header>
@@ -112,7 +112,18 @@ const ResearchIndex = () => {
         .research-belt:hover { animation-play-state: paused; }
         @media (prefers-reduced-motion: reduce) { .research-belt { animation: none; } }
       `}</style>
-      <div className="mt-7 overflow-hidden">
+      <div className="space-y-8 px-4 pb-4 md:hidden">
+        {ITEMS.map((item, index) => (
+          <div key={item.title}>
+            <div className="mb-3 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-[#8a8a82]">
+              <span>{index === 0 ? 'Featured research' : 'Research'}</span>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+            </div>
+            <Card item={item} onOpen={navigate} standalone />
+          </div>
+        ))}
+      </div>
+      <div className="mt-7 hidden overflow-hidden md:block">
         <div className="research-belt flex w-max gap-5 pb-3">
           {/* two copies → seamless wrap at -50% */}
           {[...ITEMS, ...ITEMS].map((it, i) => <Card key={`${it.title}-${i}`} item={it} onOpen={navigate} />)}
@@ -120,14 +131,14 @@ const ResearchIndex = () => {
       </div>
 
       {/* All research list */}
-      <section className="mx-auto max-w-[1280px] px-6 py-20 md:px-10 md:py-28">
-        <h2 className="font-['Space_Grotesk'] text-4xl font-semibold tracking-tight md:text-5xl">All research.</h2>
-        <div className="mt-10 divide-y rounded-xl border" style={{ borderColor: BORDER, background: '#fff' }}>
+      <section className="mx-auto hidden max-w-[1280px] px-5 py-16 sm:px-6 md:block md:px-10 md:py-28">
+        <h2 className="font-['Space_Grotesk'] text-[34px] font-semibold tracking-tight md:text-5xl">All research.</h2>
+        <div className="mt-7 divide-y overflow-hidden rounded-xl border md:mt-10" style={{ borderColor: BORDER, background: '#fff' }}>
           {ITEMS.map((it) => (
-            <button key={it.title} onClick={() => navigate(it.href)} className="flex w-full items-center justify-between gap-6 px-6 py-6 text-left transition-colors hover:bg-[#f6f5ef]">
-              <div>
+            <button key={it.title} onClick={() => navigate(it.href)} className="flex w-full items-center justify-between gap-4 px-4 py-5 text-left transition-colors hover:bg-[#f6f5ef] sm:px-6 sm:py-6">
+              <div className="min-w-0">
                 <div className="flex flex-wrap gap-2">{it.tags.map((t) => <span key={t} className="font-mono text-[10px] uppercase tracking-wider text-[#a3a3a3]">{t}</span>)}</div>
-                <h3 className="font-['Space_Grotesk'] mt-2 text-xl font-semibold" style={{ color: INK }}>{it.title}</h3>
+                <h3 className="font-['Space_Grotesk'] mt-2 text-[18px] font-semibold leading-tight sm:text-xl" style={{ color: INK }}>{it.title}</h3>
               </div>
               <ArrowRight size={18} className="shrink-0 text-[#8a8a82]" />
             </button>

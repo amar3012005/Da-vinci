@@ -124,6 +124,23 @@ function EmailTurnstile({ siteKey, onToken, onStatus }) {
   return siteKey ? <div ref={host} className="min-h-[65px] w-full" aria-label="Bot verification" /> : null;
 }
 
+// A remote MCP authorization request is allowed to return only to Core's
+// authorization endpoint. This prevents the public login screen from being an
+// open redirect while allowing every configured identity provider to complete
+// the same handoff.
+function trustedMcpOAuthReturnTo(search) {
+  const value = new URLSearchParams(search).get('oauth_return_to');
+  if (!value) return null;
+  try {
+    const target = new URL(value);
+    const core = new URL(apiClient.core.defaults.baseURL);
+    if (target.origin === core.origin && target.pathname === '/oauth/authorize') return target.toString();
+  } catch {
+    // An invalid return target is treated as a normal login, never followed.
+  }
+  return null;
+}
+
 export default function LoginPage() {
   const { isAuthenticated, isUnreachable, loading, login, org, user, needsOnboarding } = useAuth();
   const navigate = useNavigate();
@@ -143,6 +160,7 @@ export default function LoginPage() {
   const [turnstileEpoch, setTurnstileEpoch] = useState(0);
   const [resendSeconds, setResendSeconds] = useState(0);
   const [emailState, setEmailState] = useState({ busy: false, message: '', error: false });
+  const oauthHandoffStarted = useRef(false);
   const emailEnabled = emailConfig.enabled;
   const emailOnly = emailConfig.email_only;
   const securityReady = !emailConfig.turnstile_site_key || Boolean(turnstileToken);
@@ -220,9 +238,9 @@ export default function LoginPage() {
     setEmailState({ busy: true, message: '', error: false });
     try {
       const result = await apiClient.verifyEmailSignIn({ challengeId: emailChallenge, code, linkToken });
-      // The API may retain its desktop default.  Once the user is on a mobile
-      // client, keep the callback on the mobile chat route instead of allowing
-      // the desktop OS shell to mount first.
+      // Keep registration callbacks on their stored onboarding return URL so
+      // workspace creation still completes. Ordinary mobile sign-ins must not
+      // follow a stale desktop redirect supplied by the API.
       const fallback = defaultAuthReturnUrl(window.location.origin);
       const redirectTo = emailIntent !== 'register' && isMobileAuthClient() ? fallback
         : (result.redirect_to || emailConfig.default_redirect_to || fallback);
@@ -261,7 +279,12 @@ export default function LoginPage() {
   // we want OAuth to return to the control-plane URL (not the FE) so it can
   // mint the API key and complete the localhost handoff.
   const returnToFromState = useMemo(() => {
-    // CLI flow takes priority — URL param wins over location.state.
+    // MCP connections return only to Core's validated authorization endpoint.
+    // This path deliberately does not use the CLI session-storage recovery.
+    const oauthReturnTo = trustedMcpOAuthReturnTo(location.search);
+    if (oauthReturnTo) return oauthReturnTo;
+
+    // CLI flow takes priority over ordinary in-app navigation.
     const urlParams = new URLSearchParams(location.search);
     const cliReturnTo = urlParams.get('cli_return_to');
     if (cliReturnTo) {
@@ -273,6 +296,9 @@ export default function LoginPage() {
     if (!from || !from.pathname) return null;
     // Don't bounce back to /login itself.
     if (from.pathname.startsWith('/hivemind/login')) return null;
+    // Protected desktop routes can be the sign-in origin even on a phone.
+    // Preserve invite/CLI and non-app deep links, but land mobile app sessions in chat.
+    if (isMobileAuthClient() && from.pathname.startsWith('/hivemind/app/')) return null;
     const search = from.search || '';
     const sep = search ? (search.includes('auth=callback') ? '' : '&') : '?';
     const authParam = search.includes('auth=callback') ? '' : `${sep}auth=callback`;
@@ -284,6 +310,11 @@ export default function LoginPage() {
     () => new URLSearchParams(location.search).has('cli_return_to'),
     [location.search]
   );
+  const oauthReturnTo = useMemo(
+    () => trustedMcpOAuthReturnTo(location.search),
+    [location.search]
+  );
+  const isMcpOAuthFlow = Boolean(oauthReturnTo);
 
   // Persist cli_return_to into sessionStorage the moment the user lands
   // here. The OAuth round-trip (Google/Zitadel) can drop URL params on
@@ -321,6 +352,7 @@ export default function LoginPage() {
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [accountType, setAccountType] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [proactiveRemindersEnabled, setProactiveRemindersEnabled] = useState(false);
   const [hostingChoice, setHostingChoice] = useState(null); // 'managed' | 'self_hosted'
   const [userName, setUserName] = useState('');
   const [enterpriseName, setEnterpriseName] = useState('');
@@ -376,6 +408,7 @@ export default function LoginPage() {
     if (!saved?.type) return;
     setShowOnboarding(true);
     setAccountType(saved.type);
+    setProactiveRemindersEnabled(saved.proactive_reminders_enabled === true);
     setUserName(saved.name || '');
     setEnterpriseName(saved.enterprise || '');
     setHivemindName(saved.hivemind_name || '');
@@ -458,6 +491,19 @@ export default function LoginPage() {
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         clearInvitationContext();
       }
+      // Remote MCP flow: ask the session issuer to reissue its shared browser
+      // cookie before Core receives the authorization request. This upgrades
+      // legacy host-only cookies and prevents visible login/consent loops.
+      // Core remains the final authority if this short refresh fails.
+      if (oauthReturnTo) {
+        if (oauthHandoffStarted.current) return;
+        oauthHandoffStarted.current = true;
+        apiClient.controlPlane.get('/auth/session')
+          .catch(() => null)
+          .finally(() => { window.location.href = oauthReturnTo; });
+        return;
+      }
+
       // CLI flow: jump to the cross-origin control-plane URL so it can
       // mint the API key and 302 to the verified page.
       const urlParams = new URLSearchParams(location.search);
@@ -474,7 +520,7 @@ export default function LoginPage() {
         : defaultAuthenticatedPath();
       navigate(dest, { replace: true });
     }
-  }, [isAuthenticated, navigate, location.state, location.search, wantsCreate, needsOnboarding, org?.id]);
+  }, [isAuthenticated, navigate, location.state, location.search, oauthReturnTo, wantsCreate, needsOnboarding, org?.id]);
 
   // Auto-update hivemindName based on account type
   useEffect(() => {
@@ -516,6 +562,7 @@ export default function LoginPage() {
       ...(accountType === 'personal' ? { referral_code: referralCode.trim() || null } : {}),
       ...(appliedReferralToken ? { referral_token: appliedReferralToken, selected_plan: referralInvitation?.offer?.plan || selectedPlan || 'free', referral_invitation: referralInvitation } : {}),
       ...(admission.invitation ? { enterprise_invitation: admission.invitation } : {}),
+      proactive_reminders_enabled: proactiveRemindersEnabled === true,
       signup_ticket: admission.signup_ticket,
     };
     // Save onboarding data for post-auth pickup
@@ -616,8 +663,8 @@ export default function LoginPage() {
 
         <div className={`flex flex-col md:flex-row items-stretch bg-white overflow-hidden ${showOnboarding ? 'h-full w-full border-0 rounded-none shadow-none' : 'border border-[#e3e0db] rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
           {/* Left: Login form */}
-          <div className={`transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'h-full overflow-y-auto p-7 md:w-1/2 md:border-r md:border-[#e3e0db] lg:p-10 xl:p-12' : 'p-8 md:w-[448px]'}`}>
-            <div className={showOnboarding ? 'mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center py-8 lg:py-12' : ''}>
+          <div className={`transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'h-full overflow-y-auto p-5 md:w-1/2 md:border-r md:border-[#e3e0db] md:p-7 lg:p-10 xl:p-12' : 'p-8 md:w-[448px]'}`}>
+            <div className={showOnboarding ? 'mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center py-8 max-md:min-h-[100dvh] md:py-10 lg:py-12' : ''}>
             {/* Logo */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
@@ -647,6 +694,18 @@ export default function LoginPage() {
                 </div>
               </div>
             )}
+            {isMcpOAuthFlow && (
+              <div className="mb-6 p-3 rounded-[8px] bg-[#117dff]/8 border border-[#117dff]/20">
+                <div className="flex items-start gap-2">
+                  <Shield size={14} className="text-[#117dff] mt-0.5 shrink-0" />
+                  <div className="text-[12px] leading-relaxed text-[#0a5fcc]">
+                    <span className="font-semibold">Verify your HIVEMIND account to connect this app.</span>
+                    <br />
+                    <span className="text-[#3b6da3]">After sign-in, you will review the requested memory permissions before the app connects.</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <AnimatePresence mode="wait">
               {!showOnboarding ? (
@@ -659,10 +718,10 @@ export default function LoginPage() {
                 >
                   {/* Headline */}
                   <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
-                    <span className="text-[#a3a3a3]">〉</span> {isCliFlow ? 'CLI HANDSHAKE' : 'SIGN IN'}
+                    <span className="text-[#a3a3a3]">〉</span> {isCliFlow ? 'CLI HANDSHAKE' : isMcpOAuthFlow ? 'SECURE CONNECTION' : 'SIGN IN'}
                   </div>
                   <h2 className="text-[#0a0a0a] text-[26px] leading-tight font-medium font-['Space_Grotesk'] mb-2 tracking-tight">
-                    {isCliFlow ? 'Authorize HIVEMIND CLI' : 'Your memory is waiting'}
+                    {isCliFlow ? 'Authorize HIVEMIND CLI' : isMcpOAuthFlow ? 'Connect to HIVEMIND' : 'Your memory is waiting'}
                   </h2>
                   <p className="text-[#737373] text-[13px] mb-7 leading-relaxed">
                     One workspace that remembers everything — chat, agents, meetings, connectors.
@@ -957,6 +1016,18 @@ export default function LoginPage() {
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${userName || 'your'}_secondbrain`} className={INPUT_CLS} />
                         <p className="text-[11px] text-[#a3a3a3] mt-1">This is your memory workspace name</p>
                       </div>
+                      <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-[#e3e0db] bg-[#faf9f4] p-3">
+                        <input
+                          type="checkbox"
+                          checked={proactiveRemindersEnabled}
+                          onChange={(event) => setProactiveRemindersEnabled(event.target.checked)}
+                          className="mt-0.5 h-4 w-4 accent-[#117dff]"
+                        />
+                        <span>
+                          <span className="block text-[12px] font-semibold text-[#0a0a0a]">Let HIVE-MIND check in when something needs your attention</span>
+                          <span className="mt-1 block text-[10.5px] leading-relaxed text-[#737373]">Email check-ins are optional, respect quiet hours, and include one-click unsubscribe. You can change this any time in Settings.</span>
+                        </span>
+                      </label>
                       <div>
                         <label className={LABEL_CLS}>Invitation code</label>
                         <input
@@ -1128,6 +1199,18 @@ export default function LoginPage() {
                         <label className={LABEL_CLS}>Your Enterprise HIVEMIND</label>
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${(enterpriseName || 'company').toLowerCase().replace(/\s+/g, '')}_hivemind`} className={INPUT_CLS} />
                       </div>
+                      <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-[#e3e0db] bg-[#faf9f4] p-3">
+                        <input
+                          type="checkbox"
+                          checked={proactiveRemindersEnabled}
+                          onChange={(event) => setProactiveRemindersEnabled(event.target.checked)}
+                          className="mt-0.5 h-4 w-4 accent-[#117dff]"
+                        />
+                        <span>
+                          <span className="block text-[12px] font-semibold text-[#0a0a0a]">Let HIVE-MIND check in when something needs your attention</span>
+                          <span className="mt-1 block text-[10.5px] leading-relaxed text-[#737373]">Email check-ins are optional, respect quiet hours, and include one-click unsubscribe. You can change this any time in Settings.</span>
+                        </span>
+                      </label>
                       {!enterpriseInvitation && !referralInvitation && <div>
                         <label className={LABEL_CLS}>Enterprise access code</label>
                         <input

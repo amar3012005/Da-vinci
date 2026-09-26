@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import apiClient from './api-client';
+import { openEntityProfile } from './EntityProfileModalHost';
 
 /**
  * EntityText — wraps any org-level entity name present in `text` with a subtle
@@ -18,6 +19,12 @@ export default function EntityText({ text, entities, className = '' }) {
     const r = ev.currentTarget.getBoundingClientRect();
     setPop({ name, x: Math.min(r.left, window.innerWidth - 360), y: r.bottom + 6, loading: true, mentions: [] });
     try {
+      const discovered = await apiClient.core.get(`/api/entity-search?query=${encodeURIComponent(name)}&limit=3`);
+      const canonical = (discovered.data?.matches || []).find((match) => match?.entity_id);
+      if (canonical?.entity_id) {
+        openEntityProfile(canonical.entity_id);
+        return;
+      }
       const { data } = await apiClient.core.get(`/api/meetings/entity-recall?name=${encodeURIComponent(name)}`);
       setPop((p) => (p && p.name === name ? { ...p, loading: false, mentions: data?.mentions || [] } : p));
     } catch {

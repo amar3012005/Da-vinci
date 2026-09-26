@@ -37,16 +37,20 @@ function connectorKey(event) {
   return null;
 }
 
-function reasoningRows(events = [], fallbackSteps = []) {
+export function reasoningRows(events = [], fallbackSteps = []) {
   const live = liveReasoningRows(events);
   if (live.length) {
-    return live.map((row, index) => ({
+    const rows = live.map((row, index) => ({
       ...row,
       index: row.index ?? index,
       tool: row.tool || row.name || row.slug,
       phase: row.phase || row.status || 'completed',
       detail: row.detail || row.result_summary || row.summary || String(row.phase || row.status || '').replace(/_/g, ' '),
     }));
+    // Each governed receipt gets one visible stage. Lifecycle duplicates still
+    // collapse in `liveReasoningRows`; this preserves the meaningful bridge
+    // between planning, capability discovery, execution, and the final write.
+    return rows.map((row) => ({ ...row, ...stagePresentation(row) }));
   }
   return (fallbackSteps || []).map((step, index) => ({
     ...step,
@@ -55,7 +59,94 @@ function reasoningRows(events = [], fallbackSteps = []) {
     tool: step.tool || step.slug || step.operation || step.kind,
     label: step.tool || step.slug || step.operation || step.kind || 'Step',
     detail: step.summary || step.result_summary || step.detail || String(step.status || '').replace(/_/g, ' '),
-  }));
+  })).map((row) => ({ ...row, ...stagePresentation(row) }));
+}
+
+// Stage text comes from the durable event contract, not an LLM. This avoids
+// spending tokens narrating internal tool plumbing while keeping the user
+// informed about the governed action actually taking place.
+function stagePresentation(row = {}) {
+  const tool = String(row.tool || row.name || row.slug || '');
+  const phase = String(row.phase || row.status || '');
+  // A timeout after scope selection is a recoverable write failure, not a
+  // completed save.  Keep it visually distinct so the retry card is
+  // authoritative and a stale completion label cannot contradict it.
+  const failed = ['error', 'failed', 'cancelled', 'retryable_error'].includes(phase);
+  const waiting = ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval'].includes(phase);
+  const completed = ['completed', 'draft_created'].includes(phase);
+  const rawDetail = String(row.detail || row.result_summary || row.summary || '').trim();
+
+  if (tool === 'plan') {
+    return { display_label: 'Plan', display_detail: completed ? `Selected: ${friendlyToolName(rawDetail)}` : 'Selecting the right path' };
+  }
+
+  if (/^GMAIL_(?:FETCH_EMAILS|LIST_THREADS|SEARCH)/i.test(tool)) {
+    return { display_label: 'Gmail', display_detail: completed ? 'Email retrieval complete' : 'Retrieving requested emails' };
+  }
+  if (/^OUTLOOK_/i.test(tool)) {
+    return { display_label: 'Outlook', display_detail: completed ? 'Email retrieval complete' : 'Retrieving requested emails' };
+  }
+  if (tool === 'hivemind_save_memory') {
+    const requiresScope = /memory destination was not stated|choose (?:a )?(?:memory )?(?:destination|scope)/i.test(rawDetail);
+    if (waiting || requiresScope) return { display_label: 'HIVE-MIND', display_detail: 'Choose memory destination' };
+    if (failed) return { display_label: 'HIVE-MIND', display_detail: rawDetail || 'Memory save needs attention' };
+    return { display_label: 'HIVE-MIND', display_detail: completed ? 'Memory saved' : 'Preparing memory' };
+  }
+  if (tool === 'hivemind_meta' || tool === 'hivemind_recall') {
+    return { display_label: 'HIVE-MIND', display_detail: completed ? 'Memory evidence ready' : 'Retrieving memory evidence' };
+  }
+  if (tool === 'hivemind_connected_task' || tool === 'COMPOSIO_SEARCH_TOOLS') {
+    return { display_label: 'Connected apps', display_detail: completed ? 'Capability selected' : 'Finding the right capability' };
+  }
+  if (failed || waiting) return { display_label: friendlyToolName(tool), display_detail: rawDetail || phase.replace(/_/g, ' ') };
+  return { display_label: friendlyToolName(tool), display_detail: rawDetail || (completed ? 'Complete' : 'In progress') };
+}
+
+function friendlyToolName(tool = '') {
+  const raw = String(tool || '').replace(/^hivemind_/, '').replace(/_/g, ' ').trim();
+  if (!raw) return 'HIVE-MIND';
+  return raw.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+// Scope selection is already a structured continuation card. The server's
+// legacy operational sentence duplicates that UI and reads like an error after
+// the user has made a choice, so do not render it as an assistant answer.
+export function isDuplicateOperationalMessage(content = '') {
+  const normalized = String(content || '').replace(/\s+/g, ' ').trim();
+  return /^Memory destination was not stated\. Ask the user to choose a personal, organization, team, or authorized project scope before saving; do not retry the save yourself\.?$/i.test(normalized);
+}
+
+const SAFE_STAGE_ARGUMENTS = new Set(['action', 'operation', 'query', 'tool_slug', 'toolkit', 'toolkits', 'limit', 'scope', 'project_id', 'entity_name', 'target']);
+const GENERIC_STAGE_DETAILS = new Set(['completed', 'complete', 'working', 'working…', 'in progress']);
+
+function stageArguments(value) {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(String(value));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch { return {}; }
+}
+
+function compactStageValue(value) {
+  if (Array.isArray(value)) return value.map(item => compactStageValue(item)).filter(Boolean).join(', ').slice(0, 180);
+  if (typeof value === 'object' && value) return '';
+  return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, 220);
+}
+
+// This is presentation data from the durable event itself. It never serializes
+// a schema, credentials, raw payload, or arbitrary tool argument object.
+export function stageDetails(row = {}) {
+  const args = stageArguments(row.arguments);
+  const input = Object.entries(args)
+    .filter(([key]) => SAFE_STAGE_ARGUMENTS.has(key))
+    .map(([key, value]) => ({ label: key.replace(/_/g, ' '), value: compactStageValue(value) }))
+    .filter(item => item.value);
+  const rawOutput = compactStageValue(row.result_summary || row.summary || row.detail);
+  const display = compactStageValue(row.display_detail);
+  const output = rawOutput && !GENERIC_STAGE_DETAILS.has(rawOutput.toLowerCase()) && rawOutput !== display
+    ? rawOutput : '';
+  return { input, output };
 }
 
 export function liveReasoningRows(events = []) {
@@ -72,13 +163,22 @@ export function liveReasoningRows(events = []) {
       });
       continue;
     }
+    if (type === 'decision' && event.stage) {
+      rows.set(`decision:${event.stage}`, {
+        ...event,
+        tool: 'plan',
+        phase: event.authoritative === true ? 'completed' : 'pending',
+        detail: String(event.selected || event.reason || 'fallback_harness'),
+      });
+      continue;
+    }
     if (type === 'orchestration_step') {
       const key = `step:${event.step_id ?? event.index}`;
       rows.set(key, event);
       continue;
     }
     const tool = event?.tool || event?.name;
-    if (tool && ['tool_selected', 'tool_started', 'tool_call', 'tool_completed', 'tool_result'].includes(type)) {
+    if (tool && ['tool_start', 'tool_selected', 'tool_started', 'tool_call', 'tool_completed', 'tool_result'].includes(type)) {
       const key = `tool:${tool}`;
       const previous = rows.get(key) || {};
       const completed = type === 'tool_completed' || type === 'tool_result';
@@ -92,7 +192,7 @@ export function liveReasoningRows(events = []) {
         detail: progressive
           ? (event.result_summary || event.detail || event.summary || String(phase).replace(/_/g, ' '))
           : completed
-          ? (event?.result_summary || event?.detail || 'Completed')
+          ? (event?.result_summary || event?.detail || event?.summary || 'Completed')
           : (event?.detail || 'Working…'),
       });
       continue;
@@ -111,6 +211,49 @@ export function liveReasoningRows(events = []) {
   return [...rows.values()];
 }
 
+function StageRow({ row }) {
+  const [expanded, setExpanded] = useState(false);
+  const connector = connectorKey(row);
+  const isNative = String(row.tool || '').startsWith('hivemind_') || (row.tool_groups || []).some((group) => String(group).startsWith('hivemind'));
+  const toolkitSlug = !isNative ? String(row.tool_groups?.[0] || '').trim().toLowerCase() : '';
+  const logo = connector ? BRAND_LOGOS[connector]
+    : toolkitSlug ? `https://logos.composio.dev/api/${encodeURIComponent(toolkitSlug)}` : null;
+  const complete = ['completed', 'draft_created'].includes(row.phase);
+  const details = stageDetails(row);
+  const hasDetails = details.input.length > 0 || Boolean(details.output);
+  const statusClass = ['error', 'failed', 'cancelled'].includes(row.phase) ? 'text-[#b91c1c]'
+    : ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval', 'awaiting_provider_event'].includes(row.phase) ? 'text-[#a16207]'
+      : complete ? 'text-[#329044]' : 'text-[#77736c]';
+  return (
+    <div className="min-w-0 text-[12px] leading-5">
+      <div className="flex items-start gap-2.5">
+        <span className="mt-1 flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+          {logo ? <img src={logo} alt="" className="h-3.5 w-3.5" />
+            : isNative ? <Brain size={13} className="text-[#117dff]" />
+              : row.phase === 'started' ? <Loader2 size={12} className="animate-spin text-[#117dff]" />
+                : <Sparkles size={12} className="text-[#117dff]" />}
+        </span>
+        <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-medium text-[#25221d]">{row.display_label || row.tool || row.label || row.operation || 'Working'}</span>
+          <span className={statusClass}>{row.display_detail || row.detail || (row.phase === 'started' ? 'Working…' : String(row.phase || '').replace(/_/g, ' '))}</span>
+          {hasDetails && (
+            <button type="button" onClick={() => setExpanded(value => !value)} aria-expanded={expanded}
+              className="inline-flex items-center gap-0.5 text-[11px] text-[#737373] hover:text-[#117dff] transition-colors">
+              {expanded ? 'Hide details' : 'Details'}<ChevronRight size={11} className={expanded ? 'rotate-90 transition-transform' : 'transition-transform'} />
+            </button>
+          )}
+        </div>
+      </div>
+      {expanded && hasDetails && (
+        <div className="ml-6 mt-1.5 border-l border-[#eae7e1] pl-2.5 space-y-0.5 text-[11px] text-[#737373]">
+          {details.input.map(item => <div key={item.label}><span className="text-[#a3a3a3] capitalize">{item.label}: </span>{item.value}</div>)}
+          {details.output && <div><span className="text-[#a3a3a3]">Result: </span>{details.output}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function OrchestrationReasoning({ events = [], steps = [], sealed = true, label = 'Reasoning', defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
   const rows = reasoningRows(events, steps);
@@ -125,32 +268,7 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
       </button>
       {open && (
         <div className="mt-2.5 ml-[7px] border-l border-[#e5dfd6] pl-4 space-y-1.5">
-          {rows.map((row) => {
-            const connector = connectorKey(row);
-            const isNative = String(row.tool || '').startsWith('hivemind_') || (row.tool_groups || []).some((group) => String(group).startsWith('hivemind'));
-            const toolkitSlug = !isNative ? String(row.tool_groups?.[0] || '').trim().toLowerCase() : '';
-            const logo = connector ? BRAND_LOGOS[connector]
-              : toolkitSlug ? `https://logos.composio.dev/api/${encodeURIComponent(toolkitSlug)}` : null;
-            const complete = ['completed', 'draft_created'].includes(row.phase);
-            return (
-              <div key={row.step_id || `${row.type || 'row'}:${row.state || row.tool || row.index}`} className="flex min-w-0 items-start gap-2.5 text-[12px] leading-5">
-                <span className="mt-1 flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-                  {logo ? <img src={logo} alt="" className="h-3.5 w-3.5" />
-                    : isNative ? <Brain size={13} className="text-[#117dff]" />
-                      : row.phase === 'started' ? <Loader2 size={12} className="animate-spin text-[#117dff]" />
-                        : <Sparkles size={12} className="text-[#117dff]" />}
-                </span>
-                <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <code className="max-w-full break-all rounded-[4px] bg-[#e8f0ff] px-1.5 py-0.5 font-mono text-[11.5px] text-[#1764d8]">
-                    {row.tool || row.label || row.operation || 'Working'}
-                  </code>
-                  <span className={['error', 'failed', 'cancelled'].includes(row.phase) ? 'text-[#b91c1c]' : ['needs_input', 'pending', 'waiting_user', 'waiting_connection', 'waiting_approval', 'awaiting_provider_event'].includes(row.phase) ? 'text-[#a16207]' : complete ? 'text-[#329044]' : 'text-[#77736c]'}>
-                    → {row.detail || (row.phase === 'started' ? 'Working…' : String(row.phase || '').replace(/_/g, ' '))}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+          {rows.map((row) => <StageRow key={row.step_id || `${row.type || 'row'}:${row.state || row.tool || row.index}`} row={row} />)}
         </div>
       )}
     </div>
@@ -165,6 +283,7 @@ function ContinuationChoices({ continuation, onContinue }) {
   const selectedRef = useRef(null);
   const request = continuation?.requests?.[0];
   const options = useMemo(() => (Array.isArray(request?.options) ? request.options : []), [request?.options]);
+  const persistedSelection = continuation?.selected_option || null;
   const fields = Array.isArray(request?.fields) ? request.fields : [];
   const fieldsComplete = fields.every((field) => !field.required || String(values[field.name] || '').trim());
   const banner = request?.kind === 'connect_account' ? connectBanner(request, BRAND_LOGOS) : null;
@@ -198,6 +317,16 @@ function ContinuationChoices({ continuation, onContinue }) {
     };
   }, [banner?.toolkit, continueWith, onContinue, options]);
   if ((!options.length && !fields.length) || !onContinue) return null;
+  // The completion message is appended separately. Keep the original card as
+  // a durable record of the user's governed decision so reopening the mobile
+  // conversation never presents the scope/action buttons as unanswered.
+  if (persistedSelection) {
+    return (
+      <div className="mt-5 rounded-[4px] border border-[#cde8d8] bg-[#f4fbf6] px-3 py-2.5 text-[13px] text-[#24623c]">
+        <span className="font-semibold">Selected:</span> {persistedSelection.label || persistedSelection.value || 'Choice recorded'}
+      </div>
+    );
+  }
   const openConnect = async (option) => {
     const toolkit = connectToolkitOf(request, option);
     setConnectError('');
@@ -814,6 +943,7 @@ export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFol
     .filter((item) => typeof item === 'string')
     .map((item) => item.trim())
     .filter(Boolean))].slice(0, 3);
+  const showContent = !isDuplicateOperationalMessage(msg.content);
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(msg.content || ''); setCopied(true); setTimeout(() => setCopied(false), 1500); }
@@ -832,12 +962,14 @@ export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFol
         </div>
       )}
 
-      <div
-        className={`text-[16.5px] leading-[1.7] break-words space-y-2 ${msg.error ? 'text-[#b91c1c]' : 'text-[#1a1a17]'}`}
-        style={progressive ? undefined : { fontFamily: 'Georgia, "Times New Roman", serif' }}
-      >
-        {progressive ? <Suspense fallback={<div className="whitespace-pre-wrap">{msg.content}</div>}><MarkdownMessage>{msg.content}</MarkdownMessage></Suspense> : renderMarkdownMobile(msg.content)}
-      </div>
+      {showContent && (
+        <div
+          className={`text-[16.5px] leading-[1.7] break-words space-y-2 ${msg.error ? 'text-[#b91c1c]' : 'text-[#1a1a17]'}`}
+          style={progressive ? undefined : { fontFamily: 'Georgia, "Times New Roman", serif' }}
+        >
+          {progressive ? <Suspense fallback={<div className="whitespace-pre-wrap">{msg.content}</div>}><MarkdownMessage>{msg.content}</MarkdownMessage></Suspense> : renderMarkdownMobile(msg.content)}
+        </div>
+      )}
 
       {Array.isArray(msg.scopes_found) && msg.scopes_found.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[#8a8577]">
@@ -1022,7 +1154,11 @@ export function Thinking({ events = [] }) {
     const timer = window.setInterval(() => setElapsedStep((value) => value + 1), 3200);
     return () => window.clearInterval(timer);
   }, []);
-  const rows = liveReasoningRows(events);
+  // Agent state transitions are preserved server-side, but they are audit
+  // noise in a mobile chat. The visible timeline contains only governed
+  // actions and receipts; a stage starts appearing as soon as its tool event
+  // is streamed.
+  const rows = liveReasoningRows(events.filter((event) => event?.type !== 'agent_state'));
   const thought = PATIENCE_COPY[elapsedStep % PATIENCE_COPY.length];
   useEffect(() => {
     setTyped('');
@@ -1043,10 +1179,12 @@ export function Thinking({ events = [] }) {
             <Loader2 size={15} className="animate-spin text-[#117dff]" />
             <span className="text-[13px] font-medium">Reasoning</span>
           </div>}
-      <motion.div key={thought} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        className="ml-6 mt-1 min-h-[20px] text-[12.5px] italic text-[#737373]" aria-live="polite">
-        {typed}<span className="ml-0.5 inline-block h-3.5 w-px translate-y-0.5 bg-[#a3a3a3] animate-pulse" />
-      </motion.div>
+      {!rows.length && (
+        <motion.div key={thought} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="ml-6 mt-1 min-h-[20px] text-[12.5px] italic text-[#737373]" aria-live="polite">
+          {typed}<span className="ml-0.5 inline-block h-3.5 w-px translate-y-0.5 bg-[#a3a3a3] animate-pulse" />
+        </motion.div>
+      )}
     </div>
   );
 }

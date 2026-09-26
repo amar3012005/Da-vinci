@@ -4,6 +4,21 @@ import worker from '../cloudflare/worker.mjs';
 
 const origin = 'https://next.preview.singulancelabs.com';
 
+test('product documents use the current index and cannot cache an old SPA shell', async () => {
+  for (const route of ['/hivemind/app/overview', '/hivemind/app/overview/new', '/hivemind/app/employees/mycompany', '/hivemind/app/tara', '/hivemind/m/chat']) {
+    let fetched;
+    const response = await worker.fetch(new Request(`${origin}${route}`), {
+      ASSETS: { fetch: async request => {
+        fetched = new URL(request.url).pathname;
+        return new Response('<html>current shell</html>', { headers: { 'content-type': 'text/html', 'cache-control': 'public' } });
+      } },
+    });
+    assert.equal(fetched, '/');
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    assert.equal(response.headers.get('cdn-cache-control'), 'no-store');
+  }
+});
+
 function environment(harnessFetch) {
   return {
     HARNESS_CHAT: { fetch: harnessFetch },

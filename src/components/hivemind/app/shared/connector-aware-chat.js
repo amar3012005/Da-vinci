@@ -40,11 +40,26 @@ export function composeToolkitPrompt(text, toolkits) {
 }
 
 export function buildToolkitSuggestions(toolkits, limit = 4) {
-  const connected = (toolkits || []).filter((toolkit) => toolkit.connected);
-  const source = connected.length ? connected : (toolkits || []).filter((toolkit) => toolkit.toolsCount > 0);
+  const promptBySlug = {
+    gmail: 'Find the latest important email that needs my reply',
+    slack: 'Summarize the latest important work from Slack',
+    notion: 'Find the Notion page most relevant to my current work',
+    googledrive: 'Find the latest relevant document in Google Drive',
+    'google-drive': 'Find the latest relevant document in Google Drive',
+    google_drive: 'Find the latest relevant document in Google Drive',
+    googlecalendar: 'Summarize my upcoming calendar and preparation tasks',
+    'google-calendar': 'Summarize my upcoming calendar and preparation tasks',
+    google_calendar: 'Summarize my upcoming calendar and preparation tasks',
+    github: 'Show the latest GitHub work that needs my attention',
+    salesforce: 'Summarize the latest customer and pipeline updates',
+    hubspot: 'Show the latest HubSpot leads that need follow-up',
+  };
+  const source = (toolkits || [])
+    .filter((toolkit) => toolkit.toolsCount > 0 || toolkit.connected)
+    .sort((left, right) => Number(Boolean(right.connected)) - Number(Boolean(left.connected)));
   return source.slice(0, limit).map((toolkit) => ({
     toolkit,
-    prompt: `Use ${toolkit.name} to help me with my latest work`,
+    prompt: promptBySlug[normalize(toolkit.slug)] || `Use ${toolkit.name} to help me with my latest work`,
     label: toolkit.connected ? `Work with ${toolkit.name}` : `Try ${toolkit.name}`,
   }));
 }

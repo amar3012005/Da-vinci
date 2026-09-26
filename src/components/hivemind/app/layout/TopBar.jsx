@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
-import { UserPlus, BrainCircuit, Orbit, AudioWaveform } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
+import AgentAvatar from '../hyperagents/AgentAvatar';
+import apiClient from '../shared/api-client';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -53,10 +55,66 @@ const pageDescriptions = {
 };
 
 const SECTIONS = [
-  { key: 'hivemind', label: 'BRAIN', icon: BrainCircuit },
-  { key: 'hyperagents', label: 'OS', icon: Orbit },
-  { key: 'tara', label: 'VOICE', icon: AudioWaveform },
+  { key: 'hivemind', label: 'BRAIN', tint: '#f3eaff' },
+  { key: 'hyperagents', label: 'OS', tint: '#eaf3ff' },
+  { key: 'tara', label: 'VOICE', tint: '#eaf8ef' },
 ];
+
+const FALLBACK_HUMATION_TEAM = [
+  { id: 'hivemind-brain', name: 'Priya', role_archetype: 'strategist' },
+  { id: 'hivemind-os', name: 'Omar', role_archetype: 'investigator' },
+  { id: 'hivemind-voice', name: 'Lena', role_archetype: 'generalist' },
+];
+
+function normalizeEmployees(payload) {
+  const employees = Array.isArray(payload?.employees) ? payload.employees : Array.isArray(payload) ? payload : [];
+  return employees.filter((employee) => employee && (employee.id || employee.slug || employee.name));
+}
+
+export function HumationSystemSwitcher({ activeSection, onSectionChange, employees = [] }) {
+  const team = useMemo(
+    () => SECTIONS.map((_, index) => employees[index] || FALLBACK_HUMATION_TEAM[index]),
+    [employees],
+  );
+
+  return (
+    <nav className="flex items-end" aria-label="Switch product">
+      {SECTIONS.map((section, index) => {
+        const active = activeSection === section.key;
+        const agent = team[index];
+        const agentName = agent?.name || agent?.slug || 'Humation agent';
+        return (
+          <button
+            key={section.key}
+            type="button"
+            onClick={() => onSectionChange?.(section.key)}
+            className={`group relative flex w-[48px] flex-col items-center outline-none transition-[filter,opacity,transform] duration-300 focus-visible:z-10 focus-visible:rounded-xl focus-visible:ring-2 focus-visible:ring-[#117dff] focus-visible:ring-offset-2 ${index ? '-ml-1.5' : ''} ${active ? 'z-[3]' : 'z-[1] opacity-62 grayscale-[0.12] hover:z-[2] hover:opacity-90 hover:grayscale-0'}`}
+            aria-current={active ? 'page' : undefined}
+            aria-label={`${section.label}, represented by ${agentName}`}
+            title={`${section.label} · ${agentName}`}
+          >
+            <span
+              className={`hm-system-avatar relative grid place-items-center overflow-hidden rounded-full border-2 border-white shadow-[0_2px_8px_rgba(10,10,10,0.10)] transition-[transform,box-shadow] duration-300 ${active ? 'hm-system-avatar-active h-[46px] w-[46px] -translate-y-0.5 shadow-[0_5px_13px_rgba(10,10,10,0.15)]' : 'h-[41px] w-[41px] group-hover:-translate-y-0.5'}`}
+              style={{ backgroundColor: section.tint }}
+              aria-hidden="true"
+            >
+              <AgentAvatar
+                agent={agent}
+                size={active ? 44 : 39}
+                crop="face"
+                facing={index === 0 ? 'right' : index === 2 ? 'left' : 'front'}
+                ring={false}
+              />
+            </span>
+            <span className={`mt-0.5 font-mono text-[7px] font-semibold uppercase tracking-[0.13em] transition-colors ${active ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'}`}>
+              {section.label}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
 
 const SECTION_TITLES = {
   hivemind: 'HIVEMIND',
@@ -76,6 +134,19 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
   const location = useLocation();
   const navigate = useNavigate();
   const healthy = useHealthStatus();
+  const [organizationEmployees, setOrganizationEmployees] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiClient.listEmployees()
+      .then((payload) => {
+        if (!cancelled) setOrganizationEmployees(normalizeEmployees(payload));
+      })
+      .catch(() => {
+        // The switcher remains usable with deterministic Humation fallbacks.
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const pagePath = pageTitles[location.pathname]
     ? location.pathname
@@ -108,19 +179,11 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
 
       {/* Section Toggle */}
       <div className="pointer-events-auto relative justify-self-center">
-        <div className="flex h-10 items-stretch overflow-hidden rounded-[10px] border border-[#d4d0ca] bg-white shadow-[0_8px_20px_rgba(10,10,10,0.10)]">
-          {SECTIONS.map((s, index) => {
-            const active = activeSection === s.key;
-            const Icon = s.icon;
-            return (
-              <button key={s.key} onClick={() => onSectionChange?.(s.key)} className={`relative flex min-w-[72px] items-center justify-center gap-2 border-[#e3e0db] px-3 text-[10px] font-semibold tracking-[0.08em] transition-colors font-['Space_Grotesk'] sm:min-w-[104px] sm:px-5 ${index ? 'border-l' : ''} ${active ? 'bg-[#0a0a0a] text-white' : 'bg-white text-[#525252] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]'}`}>
-                <Icon size={15} strokeWidth={1.75} className={active ? 'text-white' : 'text-[#0a0a0a]'} />
-                <span>{s.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        <span className="pointer-events-none absolute left-full top-1/2 ml-1.5 -translate-y-1/2 font-mono text-[7px] uppercase tracking-[0.12em] text-[#a3a3a3] sm:ml-2 sm:text-[8px]">Soon</span>
+        <HumationSystemSwitcher
+          activeSection={activeSection}
+          onSectionChange={onSectionChange}
+          employees={organizationEmployees}
+        />
       </div>
 
       {/* Right: Actions */}

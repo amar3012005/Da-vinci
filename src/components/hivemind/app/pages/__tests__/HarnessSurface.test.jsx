@@ -43,18 +43,25 @@ describe('HarnessSurface module cache', () => {
 
     const progress = root.querySelector('[role="progressbar"]');
     expect(progress).not.toBeNull();
-    expect(progress.getAttribute('aria-valuenow')).toBe('3');
+    expect(progress.getAttribute('aria-valuenow')).toBe('2');
     expect(root.textContent).toContain(HARNESS_BOOT_STAGES[2]);
-    expect(root.textContent).toContain('███████████████');
+    expect(root.textContent).toContain('██████████');
+
+    act(() => reactRoot.render(<LoadingSurface stage={3} />));
+    expect(root.textContent).toContain('3/4');
+    expect(root.textContent).not.toContain('4/4');
 
     act(() => reactRoot.unmount());
     root.remove();
   });
 
-  it('keeps the host boot surface until native Harness has an interactive chat seat', () => {
+  it('reveals an interactive composer without waiting for the history sidebar', () => {
     const root = document.createElement('div');
     expect(nativeHarnessMounted(root)).toBe(false);
-    root.innerHTML = '<aside aria-label="HIVE chat sessions"></aside><div data-composer-seat=""></div>';
+    root.innerHTML = '<aside aria-label="HIVE chat sessions"></aside>';
+    expect(nativeHarnessMounted(root)).toBe(false);
+    root.innerHTML = '<div data-composer-seat=""></div>';
     expect(nativeHarnessMounted(root)).toBe(true);
+    expect(HARNESS_BOOT_STAGES.at(-1)).toBe('Opening chat');
   });
 });

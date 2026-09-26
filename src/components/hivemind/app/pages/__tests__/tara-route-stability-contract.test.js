@@ -19,7 +19,7 @@ test('the provider control stays implemented but hidden from users', () => {
   assert.match(tara, /const switchProvider = async/);
 });
 
-test('the TARA page always initializes the Grok catalog and session UI', () => {
+test('the TARA page keeps Grok as the only enabled catalog and session provider', () => {
   assert.match(tara, /const voiceProvider = 'grok';/);
   assert.match(tara, /provider=\{voiceProvider\}/);
 });

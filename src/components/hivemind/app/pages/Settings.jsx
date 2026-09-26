@@ -1,15 +1,15 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon,
-  Globe,
-  Copy,
   Check,
   AlertTriangle,
   Trash2,
   ExternalLink,
   Info,
   Shield,
+  Bell,
+  Clock3,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
@@ -26,49 +26,6 @@ const fadeUp = {
   hidden: { opacity: 0, y: 12 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 };
-
-// ─── Copy button with per-field tracking ────────────────────────────────────
-function CopyButton({ value, field, copiedField, onCopy }) {
-  const { t } = useTranslation('dashboard');
-  const isCopied = copiedField === field;
-  return (
-    <button
-      onClick={() => onCopy(value, field)}
-      className="ml-2 p-1.5 rounded-lg hover:bg-[#117dff]/10 transition-colors group flex-shrink-0"
-      title={t('settings.copyToClipboard', 'Copy to clipboard')}
-    >
-      {isCopied ? (
-        <Check size={14} className="text-[#117dff]" />
-      ) : (
-        <Copy size={14} className="text-[#a3a3a3] group-hover:text-[#117dff] transition-colors" />
-      )}
-    </button>
-  );
-}
-
-// ─── Read-only field row ────────────────────────────────────────────────────
-function ReadOnlyField({ label, value, field, copiedField, onCopy }) {
-  return (
-    <div>
-      <label className="block text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-1.5">
-        {label}
-      </label>
-      <div className="flex items-center bg-[#faf9f4] border border-[#e3e0db] rounded-xl px-3 py-2.5">
-        <span className="text-[#525252] text-sm font-mono truncate flex-1 select-all">
-          {value || '—'}
-        </span>
-        {value && (
-          <CopyButton
-            value={value}
-            field={field}
-            copiedField={copiedField}
-            onCopy={onCopy}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ─── Section card wrapper ───────────────────────────────────────────────────
 function SectionCard({ children, className = '' }) {
@@ -102,7 +59,6 @@ function SectionHeader({ icon: Icon, title, description }) {
 export default function Settings() {
   const { t } = useTranslation('dashboard');
   const { user, org, logout } = useAuth();
-  const [copiedField, setCopiedField] = useState(null);
   const [revoking, setRevoking] = useState(false);
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   const [showClearMemConfirm, setShowClearMemConfirm] = useState(false);
@@ -113,10 +69,11 @@ export default function Settings() {
   const [memoryPolicy, setMemoryPolicy] = useState('private');
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policySaved, setPolicySaved] = useState(false);
-  const timeoutRef = useRef(null);
-
-  const controlPlaneUrl = apiClient.controlPlane.defaults.baseURL;
-  const coreApiUrl = apiClient.core.defaults.baseURL;
+  const [proactiveSettings, setProactiveSettings] = useState({ enabled: false, timezone: 'UTC', quiet_start_hour: 21, quiet_end_hour: 8 });
+  const [proactiveLoading, setProactiveLoading] = useState(true);
+  const [proactiveSaving, setProactiveSaving] = useState(false);
+  const [proactiveError, setProactiveError] = useState(null);
+  const [proactiveSaved, setProactiveSaved] = useState(false);
 
   // Load current org policies from canonical endpoint (covers both axes:
   // project provisioning + memory-save routing).
@@ -136,22 +93,21 @@ export default function Settings() {
     return () => { abort = true; };
   }, [org]);
 
-  const handleCopy = useCallback(async (text, field) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-    setCopiedField(field);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setCopiedField(null), 2000);
+  // Consent is read and written independently of the global rollout flag.
+  // This lets a person opt in before a deliberately narrow shadow/canary
+  // rollout, but never causes a background message by itself.
+  useEffect(() => {
+    let cancelled = false;
+    apiClient.getProactiveCognitionSettings()
+      .then((settings) => {
+        if (!cancelled && settings) setProactiveSettings((current) => ({ ...current, ...settings }));
+      })
+      .catch(() => {
+        if (!cancelled) setProactiveError('Proactive reflections are unavailable right now.');
+      })
+      .finally(() => { if (!cancelled) setProactiveLoading(false); });
+    return () => { cancelled = true; };
   }, []);
-
   const handleSavePolicy = useCallback(async () => {
     setPolicyLoading(true);
     setPolicySaved(false);
@@ -168,6 +124,27 @@ export default function Settings() {
       setPolicyLoading(false);
     }
   }, [projectPolicy, memoryPolicy]);
+
+  const saveProactiveSettings = useCallback(async () => {
+    setProactiveSaving(true);
+    setProactiveSaved(false);
+    setProactiveError(null);
+    try {
+      const saved = await apiClient.updateProactiveCognitionSettings({
+        enabled: proactiveSettings.enabled === true,
+        timezone: proactiveSettings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        quiet_start_hour: Number(proactiveSettings.quiet_start_hour),
+        quiet_end_hour: Number(proactiveSettings.quiet_end_hour),
+      });
+      setProactiveSettings((current) => ({ ...current, ...saved }));
+      setProactiveSaved(true);
+      setTimeout(() => setProactiveSaved(false), 3000);
+    } catch (error) {
+      setProactiveError(error?.response?.data?.error || 'Could not save your reflection preference.');
+    } finally {
+      setProactiveSaving(false);
+    }
+  }, [proactiveSettings]);
 
   const handleRevokeAllKeys = useCallback(async () => {
     setRevoking(true);
@@ -253,7 +230,7 @@ export default function Settings() {
           {t('settings.title', 'Settings')}
         </h1>
         <p className="text-[#525252] text-sm mt-1 font-['Space_Grotesk']">
-          {t('settings.subtitle', 'Workspace configuration and connection details')}
+          Workspace configuration, policies, and privacy controls
         </p>
       </div>
 
@@ -287,45 +264,6 @@ export default function Settings() {
                 Members, invitations, roles, projects and access
               </p>
             </div>
-          </div>
-        </SectionCard>
-
-        {/* ── Connection Details ──────────────────────────────────── */}
-        <SectionCard>
-          <SectionHeader
-            icon={Globe}
-            title={t('settings.connectionDetails', 'Connection Details')}
-            description={t('settings.connectionDetailsDesc', 'Use these values to configure API clients and integrations')}
-          />
-          <div className="space-y-3">
-            <ReadOnlyField
-              label={t('settings.labelControlPlaneUrl', 'Control Plane URL')}
-              value={controlPlaneUrl}
-              field="controlPlane"
-              copiedField={copiedField}
-              onCopy={handleCopy}
-            />
-            <ReadOnlyField
-              label={t('settings.labelCoreApiBaseUrl', 'Core API Base URL')}
-              value={coreApiUrl}
-              field="coreApi"
-              copiedField={copiedField}
-              onCopy={handleCopy}
-            />
-            <ReadOnlyField
-              label={t('settings.labelUserId', 'User ID')}
-              value={user?.id}
-              field="userId"
-              copiedField={copiedField}
-              onCopy={handleCopy}
-            />
-            <ReadOnlyField
-              label={t('settings.labelOrgId', 'Org ID')}
-              value={org?.id}
-              field="orgId"
-              copiedField={copiedField}
-              onCopy={handleCopy}
-            />
           </div>
         </SectionCard>
 
@@ -403,6 +341,56 @@ export default function Settings() {
             </div>
           </SectionCard>
         )}
+
+        {/* ── Proactive HIVE reflections ─────────────────────────── */}
+        <SectionCard>
+          <SectionHeader
+            icon={Bell}
+            title="HIVE reflections"
+            description="Let HIVE-MIND occasionally ask about a recent decision or unfinished work. You control this completely."
+          />
+          <div className="space-y-4">
+            <label className="flex items-start justify-between gap-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-4 cursor-pointer">
+              <div>
+                <div className="text-sm font-semibold text-[#0a0a0a]">Reflect on what matters</div>
+                <p className="mt-1 text-xs leading-relaxed text-[#525252]">HIVE only considers a bounded recent activity window. It never sends a reflection without your opt-in, and you can stop at any time.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={proactiveSettings.enabled === true}
+                disabled={proactiveLoading || proactiveSaving}
+                onChange={(event) => setProactiveSettings((current) => ({ ...current, enabled: event.target.checked }))}
+                className="mt-1 h-4 w-4 accent-[#117dff]"
+              />
+            </label>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#525252]"><Clock3 size={12} /> Quiet from</span>
+                <select value={proactiveSettings.quiet_start_hour} disabled={proactiveLoading || proactiveSaving}
+                  onChange={(event) => setProactiveSettings((current) => ({ ...current, quiet_start_hour: Number(event.target.value) }))}
+                  className="w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 text-sm text-[#0a0a0a]">
+                  {Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{String(hour).padStart(2, '0')}:00</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#525252]"><Clock3 size={12} /> Until</span>
+                <select value={proactiveSettings.quiet_end_hour} disabled={proactiveLoading || proactiveSaving}
+                  onChange={(event) => setProactiveSettings((current) => ({ ...current, quiet_end_hour: Number(event.target.value) }))}
+                  className="w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 text-sm text-[#0a0a0a]">
+                  {Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{String(hour).padStart(2, '0')}:00</option>)}
+                </select>
+              </label>
+            </div>
+            <p className="text-xs leading-relaxed text-[#737373]">At most one reflection can be delivered in any rolling 24-hour period. During the initial rollout, activity is evaluated in shadow mode first and no message is sent.</p>
+            {proactiveError && <p className="text-xs text-[#dc2626]">{proactiveError}</p>}
+            <button type="button" onClick={saveProactiveSettings} disabled={proactiveLoading || proactiveSaving}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#117dff] px-4 text-sm font-medium text-white transition-colors hover:bg-[#0066e0] disabled:opacity-50">
+              {proactiveSaving ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : proactiveSaved ? <Check size={14} /> : <Bell size={14} />}
+              {proactiveSaving ? 'Saving…' : proactiveSaved ? 'Saved' : 'Save reflection preference'}
+            </button>
+          </div>
+        </SectionCard>
 
         {/* ── Danger Zone ─────────────────────────────────────────── */}
         <SectionCard className="!border-red-200 !bg-red-50">

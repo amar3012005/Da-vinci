@@ -20,7 +20,9 @@ import ServiceErrorToast from '../components/ServiceErrorToast';
 import CallContractModal from '../components/CallContractModal';
 import ProductAccessModal from '../components/ProductAccessModal';
 import ReferralTrialGateModal from '../components/ReferralTrialGateModal';
-import { NEW_WORKSPACE_LANDING, RETURNING_USER_LANDING } from '../shared/routes';
+import EntityProfileModalHost from '../shared/EntityProfileModalHost';
+import { RETURNING_USER_LANDING } from '../shared/routes';
+import { newWorkspaceLanding } from '../auth/mobile-routing';
 
 /**
  * PlanLimitGate — listens for the global 'hm:plan-limit' window event
@@ -40,13 +42,14 @@ function PlanLimitGate() {
     // upgrade modal used by every other product surface.
     const onHarnessTurnError = (e) => {
       const detail = e?.detail;
-      if (detail?.code !== PLAN_LIMIT_CODE) return;
+      if (![PLAN_LIMIT_CODE, 'credits_exhausted'].includes(detail?.code)) return;
       setState({
         resource: 'credits',
         plan: org?.plan || 'free',
         message: typeof detail.message === 'string' ? detail.message : null,
         suggestedPlan: 'pro',
         upgradeUrl: '/hivemind/app/billing',
+        referralTrial: detail?.referral_trial === true || detail?.referralTrial === true || detail?.commercial_action === 'talk_to_founder',
       });
     };
     window.addEventListener(PLAN_LIMIT_EVENT, onLimit);
@@ -224,9 +227,9 @@ export default function AppShell() {
     let isNew = false;
     try { isNew = sessionStorage.getItem('hm_new_user') === '1'; } catch { /* noop */ }
     try { sessionStorage.removeItem('hm_new_user'); } catch { /* noop */ }
-    // A newly-created workspace starts with company onboarding. Returning
-    // users keep the stable BRAIN overview landing.
-    navigate(isNew ? NEW_WORKSPACE_LANDING : RETURNING_USER_LANDING, { replace: true });
+    // New workspaces start in mobile chat on phones; desktop keeps the company
+    // onboarding landing. Returning users keep the stable BRAIN overview.
+    navigate(isNew ? newWorkspaceLanding() : RETURNING_USER_LANDING, { replace: true });
     setGate('done');
   };
   // Self-host gate: the workspace opens only after the control plane confirms
@@ -282,10 +285,35 @@ export default function AppShell() {
     try { localStorage.setItem('hm_active_section', section); } catch { /* noop */ }
   }, [location.pathname]);
   const handleSectionChange = (s) => {
+    if (s === sectionForPath(location.pathname)) return;
     setActiveSection(s);
     try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }
     const landing = { hivemind: '/hivemind/app/overview', hyperagents: '/hivemind/app/employees/mycompany', tara: '/hivemind/app/tara' };
-    if (landing[s]) navigate(landing[s]);
+    if (!landing[s]) return;
+
+    // BRAIN embeds the native Harness, which owns an independent React root.
+    // Cross its boundary with one clean document handoff so React Router never
+    // tries to dismantle or revive that root in place. Resume the exact cached
+    // session directly—do not stop at Overview and redirect a second time.
+    const crossingHarnessBoundary = s === 'hivemind' || sectionForPath(location.pathname) === 'hivemind';
+    if (crossingHarnessBoundary) {
+      let target = landing[s];
+      // Native Harness owns history updates inside its independent router.
+      // Capture its current URL, not the host router's older /new location.
+      const currentPath = window.location.pathname;
+      if (/^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(currentPath)) {
+        try { sessionStorage.setItem('hm.lastHarnessSession', currentPath); } catch { /* storage may be unavailable */ }
+      }
+      if (s === 'hivemind') {
+        try {
+          const cached = sessionStorage.getItem('hm.lastHarnessSession') || '';
+          if (/^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(cached)) target = cached;
+        } catch { /* storage may be unavailable */ }
+      }
+      window.location.assign(target);
+      return;
+    }
+    navigate(landing[s]);
   };
   useEffect(() => {
     apiClient.setProductAccessPlan(org?.plan);
@@ -408,6 +436,7 @@ export default function AppShell() {
             navigate(`/hivemind/app/billing?upgrade=${plan}`);
           }}
         />
+        <EntityProfileModalHost />
       </div>
     </TeamProvider>
     </QuickRecorderProvider>

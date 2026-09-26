@@ -13,6 +13,7 @@ import { useApiQuery } from '../../shared/hooks';
 import apiClient from '../../shared/api-client';
 import CreditBalance from '../../shared/CreditBalance';
 import MobileShell from '../MobileShell';
+import { isEnterpriseBillingWorkspace, orderedPersonalPlans } from '../../shared/billing-presentation';
 
 const PLANS = [
   {
@@ -122,11 +123,12 @@ export default function MobileBilling() {
   const subscription = billing?.subscription || {};
   const currentPlan = billing?.plan?.id || org?.plan || 'free';
   const canManageBilling = Boolean(billing?.can_manage_billing);
-  const isEnterpriseWorkspace = billing?.billing_model === 'enterprise_contract' || currentPlan === 'enterprise';
+  const isEnterpriseWorkspace = isEnterpriseBillingWorkspace({ billing, org, currentPlan });
   const checkoutState = searchParams.get('checkout');
-  const planOptions = Array.isArray(billing?.all_plans) && billing.all_plans.length
-    ? billing.all_plans.map(planFromBackend).filter((p) => p.id !== 'enterprise')
+  const availablePlans = Array.isArray(billing?.all_plans) && billing.all_plans.length
+    ? billing.all_plans.map(planFromBackend)
     : PLANS;
+  const planOptions = orderedPersonalPlans(availablePlans);
   const currentPlanDef = billing?.plan ? planFromBackend(billing.plan) : planOptions.find((p) => p.id === currentPlan);
 
   useEffect(() => {
@@ -253,6 +255,11 @@ export default function MobileBilling() {
         {/* Plans */}
         {!isEnterpriseWorkspace && (
           <div className="space-y-3 pt-2">
+            <div className="pb-1">
+              <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-[#a3a3a3]">Personal plans</p>
+              <h2 className="mt-1 text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Choose your capacity</h2>
+              <p className="mt-1 text-[11px] leading-4 text-[#737373]">Ordered from individual memory to autonomous execution.</p>
+            </div>
             {planOptions.map((plan) => (
               <PlanCard key={plan.id} plan={plan} isCurrent={currentPlan === plan.id}
                 onSelect={(id) => canManageBilling ? setUpgradeModal(id) : setBillingError('Only an organization owner or admin can change the subscription.')} />

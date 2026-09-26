@@ -18,8 +18,7 @@
       "/assets/*",
       "/__hivemind/*",
       "/manifest.webmanifest",
-      "/hivemind/app/overview",
-      "/hivemind/app/overview/*"
+      "/hivemind/*"
     ]
   },
   "flagship": [
@@ -30,6 +29,7 @@
   ],
   "vars": {
     "ENVIRONMENT": "production",
+    "LANDING_MOBILE_V2": "true",
     "RUNNER_ORIGIN": "https://harness-chat-origin.singulancelabs.com"
   },
   "routes": [

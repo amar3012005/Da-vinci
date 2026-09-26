@@ -13,12 +13,6 @@ const navLinks = [
   { label: 'Benchmark', href: '/benchmark', technical: true },
 ];
 
-const proofMetrics = [
-  { value: '<50ms', label: 'recall' },
-  { value: '100%', label: 'yours' },
-  { value: '∞', label: 'retention' },
-];
-
 const MENU_CONTENT = {
   Solutions: [
     { title: 'Sovereign intelligence', label: 'EU-READY', brief: 'Keep intelligence inside the boundary you control.', href: '#solutions', icon: Landmark },
@@ -124,14 +118,6 @@ const Navbar = () => {
 
             {/* Center Links — Desktop */}
             <div className="hidden min-w-0 flex-1 items-center justify-center gap-4 lg:flex" onMouseLeave={closeMenuSoon}>
-              <div className="hidden shrink-0 items-center gap-2 border-r border-[#d9d6d0] pr-4 xl:flex">
-                {proofMetrics.map((metric) => (
-                  <div key={metric.label} className="min-w-[42px] text-center leading-none">
-                    <div className="font-['Space_Grotesk'] text-[11px] font-bold text-[#0a0a0a]">{metric.value}</div>
-                    <div className="mt-1 font-mono text-[7px] uppercase tracking-[0.15em] text-[#9b968d]">{metric.label}</div>
-                  </div>
-                ))}
-              </div>
               {navLinks.map((item) => (
                 <motion.button
                   key={item.label}
@@ -227,9 +213,6 @@ const Navbar = () => {
             className="fixed inset-0 z-[99] bg-[#faf9f4]/98 backdrop-blur-xl lg:hidden"
           >
             <div className="pt-20 px-4 flex flex-col gap-1 max-h-screen overflow-y-auto">
-              <div className="mb-3 flex items-center justify-center gap-5 border-b border-[#e3e0db] pb-4">
-                {proofMetrics.map((metric) => <div key={metric.label} className="text-center"><div className="font-['Space_Grotesk'] text-sm font-bold">{metric.value}</div><div className="mt-1 font-mono text-[8px] uppercase tracking-[0.15em] text-[#9b968d]">{metric.label}</div></div>)}
-              </div>
               {navLinks.map((item, i) => (
                 <motion.button
                   key={item.label}

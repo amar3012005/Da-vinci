@@ -8,7 +8,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  AlertTriangle, Brain, Building2, Check, ChevronDown, Cloud,
+  AlertTriangle, Bell, Brain, Building2, Check, ChevronDown, Clock3, Cloud,
   Download, ExternalLink, Globe, Link as LinkIcon, LogOut, MapPin,
   Pencil, Plus, RefreshCw, Save, Server, Settings2, Shield, Sparkles,
   Target, Trash2, User,
@@ -455,6 +455,71 @@ function DataPrivacyCard() {
   );
 }
 
+function ProactiveReflectionCard() {
+  const [settings, setSettings] = useState({ enabled: false, timezone: 'UTC', quiet_start_hour: 21, quiet_end_hour: 8 });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiClient.getProactiveCognitionSettings()
+      .then((next) => { if (!cancelled && next) setSettings((current) => ({ ...current, ...next })); })
+      .catch(() => { if (!cancelled) setNotice({ type: 'error', text: 'Reflections are unavailable right now.' }); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const save = async () => {
+    setSaving(true); setNotice(null);
+    try {
+      const next = await apiClient.updateProactiveCognitionSettings({
+        ...settings,
+        timezone: settings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        quiet_start_hour: Number(settings.quiet_start_hour), quiet_end_hour: Number(settings.quiet_end_hour),
+      });
+      setSettings((current) => ({ ...current, ...next }));
+      setNotice({ type: 'success', text: 'Reflection preference saved.' });
+    } catch (error) {
+      setNotice({ type: 'error', text: error?.response?.data?.error || 'Could not save your preference.' });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="rounded-[16px] border border-[#e3e0db] bg-white p-4">
+      <div className="flex items-start gap-2.5">
+        <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-[9px] bg-[#117dff]/10"><Bell size={14} className="text-[#117dff]" /></div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">HIVE reflections</div>
+          <p className="mt-0.5 text-[10.5px] leading-relaxed text-[#525252]">Let HIVE-MIND ask about a recent decision or unfinished work. This is always your choice.</p>
+        </div>
+        <input type="checkbox" aria-label="Enable HIVE reflections" checked={settings.enabled === true} disabled={loading || saving}
+          onChange={(event) => setSettings((current) => ({ ...current, enabled: event.target.checked }))}
+          className="mt-1 h-4 w-4 accent-[#117dff]" />
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <label className="block"><span className="mb-1 flex items-center gap-1 text-[9px] font-mono uppercase tracking-wide text-[#737373]"><Clock3 size={10} /> Quiet from</span>
+          <select value={settings.quiet_start_hour} disabled={loading || saving} onChange={(event) => setSettings((current) => ({ ...current, quiet_start_hour: Number(event.target.value) }))}
+            className="h-9 w-full rounded-[9px] border border-[#e3e0db] bg-[#faf9f4] px-2 text-[11px] text-[#0a0a0a]">
+            {Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{String(hour).padStart(2, '0')}:00</option>)}
+          </select>
+        </label>
+        <label className="block"><span className="mb-1 flex items-center gap-1 text-[9px] font-mono uppercase tracking-wide text-[#737373]"><Clock3 size={10} /> Until</span>
+          <select value={settings.quiet_end_hour} disabled={loading || saving} onChange={(event) => setSettings((current) => ({ ...current, quiet_end_hour: Number(event.target.value) }))}
+            className="h-9 w-full rounded-[9px] border border-[#e3e0db] bg-[#faf9f4] px-2 text-[11px] text-[#0a0a0a]">
+            {Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{String(hour).padStart(2, '0')}:00</option>)}
+          </select>
+        </label>
+      </div>
+      <p className="mt-2 text-[10px] leading-relaxed text-[#737373]">One maximum per rolling day. The first rollout evaluates in shadow mode before anything is delivered.</p>
+      {notice && <p className={`mt-2 text-[10px] ${notice.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>{notice.text}</p>}
+      <button onClick={save} disabled={loading || saving} className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-[#117dff] text-[11.5px] font-semibold text-white disabled:opacity-40">
+        {saving ? <RefreshCw size={12} className="animate-spin" /> : <Bell size={12} />} {saving ? 'Saving…' : 'Save reflection preference'}
+      </button>
+    </div>
+  );
+}
+
 export default function MobileProfile() {
   const { user, org, logout } = useAuth();
   const profilesQuery = useApiQuery(async () => { const { data } = await apiClient.controlPlane.get('/v1/proxy/profiles'); return data; });
@@ -472,6 +537,7 @@ export default function MobileProfile() {
         <CreditBalance credits={billing?.usage_summary?.credits} />
         <OrganizationContextCard org={org} user={user} />
         <ProfileFactsCard facts={facts} onRefresh={refetchProfiles} />
+        <ProactiveReflectionCard />
         <DataPrivacyCard />
       </div>
     </MobileShell>

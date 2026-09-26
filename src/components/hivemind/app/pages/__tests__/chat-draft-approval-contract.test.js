@@ -37,11 +37,11 @@ test('choices, arbitrary fields, and save scope use inline rectangular controls'
   expect(overview).toContain("rounded-[4px] border border-[#bdb8b0] bg-transparent");
 });
 
-test('mobile keyboard path defers connector catalog recognition and layout measurement', () => {
+test('mobile keyboard path only opens connector discovery for explicit app mentions', () => {
   const mobile = read('mobile/pages/TalkToHiveMobile.jsx');
-  expect(mobile).toContain('useDeferredValue(input)');
-  expect(mobile).toContain('resolvePromptToolkits(deferredInput, selectedToolkits, toolkits)');
-  expect(mobile).toContain('const absorbToolkitMentions = useCallback((nextText) => {\n    setInput(nextText.slice(0, MAX_CHARS));');
-  expect(mobile).toContain('const frame = requestAnimationFrame(() => {');
-  expect(mobile).toContain('return () => cancelAnimationFrame(frame);');
+  expect(mobile).not.toContain('useDeferredValue(input)');
+  expect(mobile).not.toContain('resolvePromptToolkits(');
+  expect(mobile).toContain("const match = bounded.match(/(?:^|\\s)@([^\\s@]*)$/u);");
+  expect(mobile).toContain('aria-label="Apps and connectors"');
+  expect(mobile).toContain('Choose a connected app, or connect a new one.');
 });

@@ -8,8 +8,18 @@ import React, {
 } from "react";
 import ForceGraph3D from "3d-force-graph";
 import * as THREE from "three";
+import { getRadialMemoryColor, getTemporalTopDownPose } from "./MemoryGraphTemporal";
+import {
+  buildRadialAtlasShellTicks,
+  formatRadialShellDate,
+  getRadialShellDatePosition,
+  getRadialShellTickCount,
+  getUniqueRadialShellDateIndices,
+  getVisibleRadialShellDateIndices,
+} from "./MemoryGraphRadialAtlas";
 
 const DEFAULT_BG = "rgba(0,0,0,0)";
+const TEMPORAL_DATE_LABEL_PADDING = 20;
 
 // ─── Memory atlas theme system ─────────────────────────────────────────────
 // One visual language in both modes: coral edges/nodes, cream secondary
@@ -329,6 +339,27 @@ function getNodeTagTexture(text, themeName, variant = "normal") {
   return entry;
 }
 
+function makeTemporalShellTextTexture(text, themeName) {
+  const dpr = typeof window !== "undefined" ? Math.max(1, Math.min(2, window.devicePixelRatio || 1)) : 1;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const fontSize = 18 * dpr;
+  ctx.font = `700 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
+  const padding = 6 * dpr;
+  canvas.width = Math.ceil(ctx.measureText(text).width + padding * 2);
+  canvas.height = 30 * dpr;
+  ctx.font = `700 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = themeName === "night" || themeName === "atlas" ? "#fffaf4" : "#171717";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  return { texture, width: canvas.width / dpr, height: canvas.height / dpr };
+}
+
 function makeNodeTagSprite(text, themeName, variant = "normal") {
   const { texture, w, h } = getNodeTagTexture(text, themeName, variant);
   const mat = new THREE.SpriteMaterial({
@@ -502,8 +533,18 @@ function getKindColor(node) {
 // Edge color by type (matches the image: purple=derived_from, red=contradicts, green=supports)
 // Edge palette parity with MemoryGraph.jsx EDGE_COLORS so the same edge
 // type reads the same color across 2D / 3D / detail views.
-function getEdgeColorByType(type, themeName = "day") {
+function getEdgeColorByType(type, themeName = "day", temporalPalette = false) {
   const t = String(type || '').toLowerCase();
+  if (temporalPalette) {
+    if (t === 'updates') return '#e59a18';
+    if (t === 'extends') return '#18a078';
+    if (t === 'derives' || t === 'derived_from') return '#8957d8';
+    if (t === 'contradicts') return '#df514b';
+    if (t === 'supports') return '#2878d4';
+    if (t === 'mentions') return '#8292a5';
+    if (t === 'needs_revision') return '#d97706';
+    if (t === 'peer_review') return '#0f9aaa';
+  }
   if (themeName === "atlas" || themeName === "night" || themeName === "day") {
     if (t === 'updates') return '#ff6560';
     if (t === 'extends') return '#c4bdb4';
@@ -759,6 +800,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     height,
     backgroundColor = DEFAULT_BG,
     theme: themeProp = "atlas",
+    radialTemporal = false,
   },
   ref,
 ) {
@@ -766,6 +808,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const theme = THEMES[themeProp] || THEMES.day;
   const themeRef = useRef(theme);
   themeRef.current = theme;
+  const radialTemporalRef = useRef(radialTemporal);
+  radialTemporalRef.current = radialTemporal;
+  const temporalTopDownRequestedRef = useRef(false);
+  const temporalTopDownAppliedRef = useRef(false);
+  const temporalShellDateSpritesRef = useRef([]);
+  const radialShellDatesRef = useRef([]);
   // Upstream three.js OrbitControls race: a pointerup can reference a pointer
   // whose position record was already removed (multi-touch / pointercancel /
   // canvas re-mount mid-gesture) → uncaught "Cannot read properties of
@@ -1073,6 +1121,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const getNodeColor = useCallback((node) => {
       const t = themeRef.current;
       const highlightedNodes = highlightedNodesRef.current;
+      if (radialTemporalRef.current) {
+        const radialColor = getRadialMemoryColor(node);
+        if (highlightedNodes.has(node.id)) return selectedNodeRef.current?.id === node.id ? "#0a0a0a" : "#117dff";
+        if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) return `${radialColor}44`;
+        return radialColor;
+      }
       let baseColor = (t.name === "atlas" || t.name === "day" || t.name === "night")
         ? getAtlasNodeColor(node)
         : getNodeColorBase(node);
@@ -1109,7 +1163,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const t = themeRef.current;
     if (highlightedLinksRef.current.has(link)) return t.nodeAccent;
     // Type-specific colors take priority (Contradicts=red, derived_from=purple, etc.)
-    const typeColor = getEdgeColorByType(link?.type, t.name);
+    const typeColor = getEdgeColorByType(link?.type, t.name, radialTemporalRef.current);
     if (typeColor) return typeColor;
     const style = RELATION_WEIGHTS[link?.type] || RELATION_WEIGHTS.default;
     return mixHex(t.linkBase, t.nodeAccent, 1 - style.weight);
@@ -1262,6 +1316,64 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     fg.cameraPosition(next, target, duration);
   }, []);
 
+  const temporalCameraSnapshotRef = useRef(null);
+  const setTemporalTopDown = useCallback((enabled) => {
+    temporalTopDownRequestedRef.current = enabled;
+    const fg = fgRef.current;
+    const camera = fg?.camera?.();
+    const controls = fg?.controls?.();
+    if (!fg || !camera || !controls || temporalTopDownAppliedRef.current === enabled) return false;
+    const target = controls.target?.clone?.() || new THREE.Vector3();
+    const visibleIndices = temporalShellDateSpritesRef.current
+      .filter(({ sprite }) => sprite?.visible)
+      .map(({ index }) => index);
+    temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, radius, index, count }) => {
+      if (!sprite) return;
+      const position = getRadialShellDatePosition(radius, index, count, enabled, TEMPORAL_DATE_LABEL_PADDING, visibleIndices);
+      sprite.position.set(position.x, position.y, position.z);
+      if (sprite.material) sprite.material.rotation = 0;
+      if (mesh) mesh.visible = !enabled && sprite.visible;
+      if (treeRing) treeRing.visible = enabled && sprite.visible;
+    });
+
+    if (enabled) {
+      if (!temporalCameraSnapshotRef.current) {
+        temporalCameraSnapshotRef.current = {
+          position: camera.position.clone(),
+          target: target.clone(),
+          up: camera.up.clone(),
+        };
+      }
+      const radius = (graphDataRef.current?.nodes || []).reduce((maxRadius, node) => {
+        if (!Number.isFinite(node.x) || !Number.isFinite(node.y) || !Number.isFinite(node.z)) return maxRadius;
+        return Math.max(maxRadius, Math.hypot(node.x, node.y, node.z));
+      }, 240);
+      const pose = getTemporalTopDownPose(target, radius);
+      // Three.js is Y-up. Point the camera down the Y axis and set a stable
+      // north vector so OrbitControls does not roll at the pole.
+      camera.up.set(pose.up.x, pose.up.y, pose.up.z);
+      fg.cameraPosition(
+        new THREE.Vector3(pose.position.x, pose.position.y, pose.position.z),
+        target,
+        900,
+      );
+      temporalTopDownAppliedRef.current = true;
+      return true;
+    }
+
+    const saved = temporalCameraSnapshotRef.current;
+    if (saved) {
+      camera.up.copy(saved.up);
+      fg.cameraPosition(saved.position, saved.target, 700);
+      temporalCameraSnapshotRef.current = null;
+    } else if (temporalTopDownAppliedRef.current) {
+      camera.up.set(0, 1, 0);
+      fg.cameraPosition(new THREE.Vector3(0, 40, 300), new THREE.Vector3(), 700);
+    }
+    temporalTopDownAppliedRef.current = false;
+    return true;
+  }, []);
+
   const zoomBy = useCallback((factor, duration = 300) => {
     const fg = fgRef.current;
     if (!fg) return;
@@ -1289,11 +1401,42 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     if (nodeCount === 0) return false;
     if (el.clientWidth <= 0 || el.clientHeight <= 0) return false;
 
-    fg.zoomToFit(duration, padding);
+    if (radialTemporalRef.current) {
+      // The radial atlas has a known spherical frame; fitting only its memory
+      // points can vary noticeably as data changes. Use the viewport's actual
+      // aspect ratio (including the inspector width) to open on the complete
+      // brain at a consistent scale, matching the intended atlas POV.
+      const camera = fg.camera?.();
+      const controls = fg.controls?.();
+      if (!camera || !controls) return false;
+      // Radial shells are centered on a fixed world origin. Keep the orbit
+      // target there so an inspector overlay or prior interaction cannot
+      // displace the temporal axis from the viewport center.
+      const target = new THREE.Vector3(0, 0, 0);
+      const direction = camera.position.clone().sub(target);
+      if (direction.lengthSq() < 1) direction.set(0, 40, 300);
+      direction.normalize();
+      const nodeRadius = (graphDataRef.current?.nodes || []).reduce((max, node) => {
+        if (!Number.isFinite(node.x) || !Number.isFinite(node.y) || !Number.isFinite(node.z)) return max;
+        return Math.max(max, Math.hypot(node.x, node.y, node.z));
+      }, 430);
+      const frameRadius = nodeRadius + 24;
+      const halfFov = (camera.fov * Math.PI) / 360;
+      const fill = 0.82;
+      const aspect = el.clientWidth / el.clientHeight;
+      const distance = Math.max(
+        frameRadius / (fill * Math.tan(halfFov)),
+        frameRadius / (fill * Math.tan(halfFov) * aspect),
+      );
+      const position = target.clone().add(direction.multiplyScalar(distance));
+      fg.cameraPosition(position, target, duration);
+    } else {
+      fg.zoomToFit(duration, padding);
+    }
 
     // After the fit animation, sanitize + clamp the resulting camera distance.
-    const tier = getGraphSizeTier(nodeCount);
-    const MAX_FIT = tier === "massive" ? 1450 : tier === "large" ? 1050 : 850;
+      const tier = getGraphSizeTier(nodeCount);
+      const MAX_FIT = radialTemporalRef.current ? 4000 : tier === "massive" ? 1450 : tier === "large" ? 1050 : 850;
     const MIN_FIT = 150;
     window.setTimeout(() => {
       const inst = fgRef.current;
@@ -1330,7 +1473,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     focusPoint,
     zoomBy,
     fitView,
-  }), [fitView, focusNode, focusPoint, zoomBy]);
+    setTemporalTopDown,
+  }), [fitView, focusNode, focusPoint, setTemporalTopDown, zoomBy]);
 
   useEffect(() => {
     if (!containerRef.current || fgRef.current) return;
@@ -1486,7 +1630,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             if (sourceId === node.id || targetId === node.id) {
               highlightedLinks.add(link);
             }
-          });
+      });
+
         }
 
         onNodeHoverRef.current?.(node);
@@ -1513,6 +1658,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
     fgRef.current = fg;
 
+    if (radialTemporal) {
+      // Radial mode is a temporal map, not a force layout. Keep the supplied
+      // spherical coordinates fixed so age never drifts during interaction.
+      fg.d3Force("charge", null);
+      fg.d3Force("link", null);
+      fg.d3Force("center", null);
+      fg.cooldownTicks(0);
+    }
+
     // Perf: cap the renderer pixel ratio. On retina/4K displays the default
     // (2–3×) shades 4–9× the pixels — and the additive-blend glow spheres are
     // fill-rate heavy, so this is the single biggest smoothness win. 1.5 keeps
@@ -1532,6 +1686,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     } catch { /* noop */ }
 
     const scene = fg.scene?.();
+    let temporalShellGroup = null;
     if (scene) {
       scene.background = null;
       scene.fog = getThemeFog(themeRef.current);
@@ -1551,6 +1706,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       controls.rotateSpeed = 1.18;
       controls.zoomSpeed = 1.22;
       controls.panSpeed = 1.12;
+      if (radialTemporalRef.current) {
+        controls.enablePan = false;
+        controls.target?.set?.(0, 0, 0);
+        controls.update?.();
+      }
       controls.minDistance = 24;
       controls.maxDistance = 3000;
 
@@ -1601,6 +1761,25 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           });
 
           const distance = cameraNow.position.distanceTo(targetNow);
+          if (radialTemporalRef.current) {
+            const visibleIndices = getVisibleRadialShellDateIndices(
+              radialShellDatesRef.current,
+              getRadialShellTickCount(distance),
+            );
+            const visibleDateSet = new Set(visibleIndices);
+            temporalShellDateSpritesRef.current.forEach(({ sprite, mesh, treeRing, radius, index, count, labelRatio }) => {
+              const visible = visibleDateSet.has(index);
+              sprite.visible = visible;
+              const topDown = temporalTopDownAppliedRef.current;
+              const position = getRadialShellDatePosition(radius, index, count, topDown, TEMPORAL_DATE_LABEL_PADDING, visibleIndices);
+              sprite.position.set(position.x, position.y, position.z);
+              if (sprite.material) sprite.material.rotation = 0;
+              if (mesh) mesh.visible = visible && !topDown;
+              if (treeRing) treeRing.visible = visible && topDown;
+              const width = visibleIndices.length >= 8 ? 60 : visibleIndices.length >= 5 ? 54 : 48;
+              sprite.scale.set(width, width * labelRatio, 1);
+            });
+          }
           const labelMode = distance > 1450 ? "hidden" : distance > 760 ? "focus" : "all";
           const linkMode = distance > 1180 ? "sparse" : distance > 560 ? "focus" : "all";
           const relationLabelMode = distance > 920 ? "hidden" : distance > 420 ? "focus" : "all";
@@ -1715,6 +1894,75 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     scene?.add?.(ambientLight);
     scene?.add?.(keyLight);
     scene?.add?.(rimLight);
+    if (radialTemporal && scene) {
+      const shells = new THREE.Group();
+      temporalShellGroup = shells;
+      shells.name = "memory-time-shells";
+      const shellColor = themeRef.current.name === "night" ? "#60758a" : "#829bb0";
+      const radialNodes = graphDataRef.current?.nodes || [];
+      const shellDates = buildRadialAtlasShellTicks(radialNodes, 8);
+      radialShellDatesRef.current = shellDates;
+      const datedIndices = getUniqueRadialShellDateIndices(shellDates);
+      const datedIndexSet = new Set(datedIndices);
+      const overviewIndices = getVisibleRadialShellDateIndices(shellDates, 3);
+      shellDates.forEach(({ radius, timestamp }, index) => {
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(radius, 32, 20),
+          new THREE.MeshBasicMaterial({ color: shellColor, wireframe: true, transparent: true, opacity: index === 3 ? 0.12 : 0.075, depthWrite: false }),
+        );
+        mesh.name = `memory-time-shell-${radius}`;
+        mesh.visible = overviewIndices.includes(index);
+        shells.add(mesh);
+
+        // The pole view swaps the globe wireframe for true concentric bands,
+        // making temporal layers read like growth rings in a tree trunk.
+        const treeRing = new THREE.Mesh(
+          new THREE.RingGeometry(Math.max(1, radius - 1.4), radius + 1.4, 128),
+          new THREE.MeshBasicMaterial({
+            color: themeRef.current.name === "day" ? "#877253" : "#9e886f",
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: index % 2 === 0 ? 0.3 : 0.2,
+            depthWrite: false,
+          }),
+        );
+        treeRing.rotation.x = -Math.PI / 2;
+        treeRing.position.y = -0.8;
+        treeRing.visible = false;
+        treeRing.name = `memory-tree-time-ring-${radius}`;
+        shells.add(treeRing);
+
+        // Multiple shells can fall on the same calendar day for short-lived
+        // datasets. Keep the outermost occurrence only so dates never repeat.
+        if (!datedIndexSet.has(index)) return;
+
+        // Render clean text directly on the shell—no badge or tag background.
+        const label = formatRadialShellDate(timestamp);
+        const { texture, width: labelWidth, height: labelHeight } = makeTemporalShellTextTexture(label, themeRef.current.name);
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+          sizeAttenuation: true,
+          opacity: 0.96,
+        }));
+        sprite.name = `memory-time-shell-date-${radius}`;
+        const position = getRadialShellDatePosition(radius, index, shellDates.length, false, TEMPORAL_DATE_LABEL_PADDING, overviewIndices);
+        sprite.position.set(position.x, position.y, position.z);
+        sprite.visible = overviewIndices.includes(index);
+        // Modest world-space type stays readable in the full view without
+        // competing with the memories themselves.
+        const labelRatio = labelHeight / labelWidth;
+        const width = Math.min(labelWidth * 0.52, 60);
+        const height = width * labelRatio;
+        sprite.scale.set(width, height, 1);
+        sprite.renderOrder = 20;
+        shells.add(sprite);
+        temporalShellDateSpritesRef.current.push({ sprite, mesh, treeRing, radius, index, count: shellDates.length, labelRatio });
+      });
+      scene.add(shells);
+    }
 
     resizeObserverRef.current = new ResizeObserver((entries) => {
       const entry = entries[0];
@@ -1742,13 +1990,22 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       if (w > 0 && h > 0) {
         inst.width(w);
         inst.height(h);
+        if (radialTemporal && !didInitialFitRef.current && safeFit(500, 70)) {
+          didInitialFitRef.current = true;
+        }
+        // A user can switch on Time Travel before the 3D renderer finishes
+        // mounting. Retry the requested pole view through the warm-up frames
+        // instead of losing that one-shot imperative call.
+        if (radialTemporal && temporalTopDownRequestedRef.current && !temporalTopDownAppliedRef.current) {
+          setTemporalTopDown(true);
+        }
       }
       warmFrames += 1;
       if (warmFrames < 8) {
         warmFrameRef.current = window.requestAnimationFrame(warm);
       } else {
         try {
-          inst.d3ReheatSimulation?.();
+          if (!radialTemporal) inst.d3ReheatSimulation?.();
         } catch (_e) {
           // noop
         }
@@ -1776,6 +2033,17 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       }
       resizeObserverRef.current?.disconnect?.();
       resizeObserverRef.current = null;
+      if (temporalShellGroup) {
+        temporalShellGroup.traverse((object) => {
+          object.geometry?.dispose?.();
+          object.material?.map?.dispose?.();
+          if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose?.());
+          else object.material?.dispose?.();
+        });
+        temporalShellGroup.removeFromParent?.();
+      }
+      temporalShellDateSpritesRef.current = [];
+      radialShellDatesRef.current = [];
       try {
         fg.pauseAnimation?.();
       } catch (_error) {
@@ -1868,7 +2136,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       current.height(nextH);
       try {
         current.resumeAnimation?.();
-        if (frame === 1 || frame === 4) current.d3ReheatSimulation?.();
+        if (!radialTemporal && (frame === 1 || frame === 4)) current.d3ReheatSimulation?.();
       } catch (_error) {
         // Repaint repair is best-effort; the graph remains usable if unsupported.
       }
@@ -1880,7 +2148,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     return () => {
       cancelled = true;
     };
-  }, [graphData, height, width]);
+  }, [graphData, height, radialTemporal, width]);
 
   useEffect(() => {
     withPausedAnimation((fg) => {
@@ -1888,14 +2156,27 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       // references so the per-frame opacity loop doesn't touch orphans.
       nodeTagSpritesRef.current.clear();
       fg.graphData(graphData);
+      if (radialTemporal) {
+        fg.d3Force("charge", null);
+        fg.d3Force("link", null);
+        fg.d3Force("center", null);
+        fg.cooldownTicks(0);
+      }
       refreshHighlight();
     });
     // New dataset → allow one fresh wide-shot fit when it next settles.
     didInitialFitRef.current = false;
-  }, [graphData, refreshHighlight, withPausedAnimation]);
+  }, [graphData, radialTemporal, refreshHighlight, withPausedAnimation]);
 
   useEffect(() => {
     withPausedAnimation((fg) => {
+      if (radialTemporal) {
+        fg.d3Force("charge", null);
+        fg.d3Force("link", null);
+        fg.d3Force("center", null);
+        fg.cooldownTicks(0);
+        return;
+      }
       const charge = fg.d3Force("charge");
       if (charge?.strength) {
         charge.strength((node) => {
@@ -1937,15 +2218,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
       fg.d3ReheatSimulation();
     });
-  }, [clusterCentroids, clusters.length, graphData.nodes, withPausedAnimation]);
+  }, [clusterCentroids, clusters.length, graphData.nodes, radialTemporal, withPausedAnimation]);
 
   useEffect(() => {
     refreshHighlight();
   }, [highlightNodes, selectedNode, refreshHighlight]);
 
   useEffect(() => {
-    if (selectedNode) focusNode(selectedNode, 700, 4.2);
-  }, [focusNode, selectedNode]);
+    if (selectedNode && !radialTemporal) focusNode(selectedNode, 700, 4.2);
+  }, [focusNode, radialTemporal, selectedNode]);
 
   const empty = useMemo(() => !graphData?.nodes?.length, [graphData]);
 
