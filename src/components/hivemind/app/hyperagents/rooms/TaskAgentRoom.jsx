@@ -179,6 +179,8 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     if (!text) return;
     const payload = { type: "human-answer", answer: text };
     const socket = socketRef.current;
+    setDraft("");
+    setProgressDraft("");
     setStatus("working");
     setMessages((current) => [...current, { id: `${Date.now()}`, text, at: new Date().toISOString() }]);
     if (!socket || socket.readyState !== WebSocket.OPEN) {
