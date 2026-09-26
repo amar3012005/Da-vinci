@@ -141,6 +141,19 @@ function trustedMcpOAuthReturnTo(search) {
   return null;
 }
 
+function isIcarusDeveloperCliFlow(search) {
+  const value = new URLSearchParams(search).get('cli_return_to');
+  if (!value) return false;
+  try {
+    const target = new URL(value);
+    return target.pathname === '/auth/cli/start'
+      && target.searchParams.get('client') === 'icarus'
+      && target.searchParams.get('mode') === 'developer';
+  } catch {
+    return false;
+  }
+}
+
 export default function LoginPage() {
   const { isAuthenticated, isUnreachable, loading, login, org, user, needsOnboarding } = useAuth();
   const navigate = useNavigate();
@@ -199,7 +212,7 @@ export default function LoginPage() {
       const returnTo = emailReturnTo || returnToFromState
         || defaultAuthReturnUrl(window.location.origin);
       const result = await apiClient.startEmailSignIn({
-        email, returnTo, intent: emailIntent, turnstileToken,
+        email, returnTo, intent: isIcarusDeveloperFlow(location.search) ? 'developer' : emailIntent, turnstileToken,
         signupTicket: emailIntent === 'register' ? emailSignupTicket : '',
       });
       setEmailChallenge(result.challenge_id);
@@ -308,6 +321,10 @@ export default function LoginPage() {
   // CLI flow: show a banner so the user knows why we asked them to sign in.
   const isCliFlow = useMemo(
     () => new URLSearchParams(location.search).has('cli_return_to'),
+    [location.search]
+  );
+  const isIcarusDeveloperFlow = useMemo(
+    () => isIcarusDeveloperCliFlow(location.search),
     [location.search]
   );
   const oauthReturnTo = useMemo(
@@ -687,9 +704,9 @@ export default function LoginPage() {
                 <div className="flex items-start gap-2">
                   <Zap size={14} className="text-[#117dff] mt-0.5 shrink-0" />
                   <div className="text-[12px] leading-relaxed text-[#0a5fcc]">
-                    <span className="font-semibold">Signing you in to wire HIVEMIND into your CLI.</span>
+                    <span className="font-semibold">{isIcarusDeveloperFlow ? 'Connect to HIVEMIND to continue ICARUS.' : 'Signing you in to wire HIVEMIND into your CLI.'}</span>
                     <br />
-                    <span className="text-[#3b6da3]">After this you'll see a confirmation screen, then control returns to your terminal.</span>
+                    <span className="text-[#3b6da3]">{isIcarusDeveloperFlow ? 'Developer mode only — no HIVEMIND workspace, subscription, or enterprise account will be created.' : "After this you'll see a confirmation screen, then control returns to your terminal."}</span>
                   </div>
                 </div>
               </div>
@@ -718,13 +735,13 @@ export default function LoginPage() {
                 >
                   {/* Headline */}
                   <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
-                    <span className="text-[#a3a3a3]">〉</span> {isCliFlow ? 'CLI HANDSHAKE' : isMcpOAuthFlow ? 'SECURE CONNECTION' : 'SIGN IN'}
+                    <span className="text-[#a3a3a3]">〉</span> {isIcarusDeveloperFlow ? 'ICARUS · DEVELOPER MODE' : isCliFlow ? 'CLI HANDSHAKE' : isMcpOAuthFlow ? 'SECURE CONNECTION' : 'SIGN IN'}
                   </div>
                   <h2 className="text-[#0a0a0a] text-[26px] leading-tight font-medium font-['Space_Grotesk'] mb-2 tracking-tight">
-                    {isCliFlow ? 'Authorize HIVEMIND CLI' : isMcpOAuthFlow ? 'Connect to HIVEMIND' : 'Your memory is waiting'}
+                    {isIcarusDeveloperFlow ? 'Connect to HIVEMIND to continue ICARUS' : isCliFlow ? 'Authorize HIVEMIND CLI' : isMcpOAuthFlow ? 'Connect to HIVEMIND' : 'Your memory is waiting'}
                   </h2>
                   <p className="text-[#737373] text-[13px] mb-7 leading-relaxed">
-                    One workspace that remembers everything — chat, agents, meetings, connectors.
+                    {isIcarusDeveloperFlow ? 'One secure developer identity for your local ICARUS memory filesystem.' : 'One workspace that remembers everything — chat, agents, meetings, connectors.'}
                   </p>
 
                   {/* State: control_plane_unreachable */}
@@ -827,7 +844,7 @@ export default function LoginPage() {
                   </div>
 
                   {/* Create New Account */}
-                  {emailView === 'methods' && <div className="text-center mt-5">
+                  {!isIcarusDeveloperFlow && emailView === 'methods' && <div className="text-center mt-5">
                     <p className="text-[13px] text-[#737373]">
                       New here?{' '}
                       <button onClick={() => { if (emailEnabled) { setEmailIntent('register'); setEmailView('email'); } else setShowOnboarding(true); }} className="text-[#117dff] font-semibold hover:underline">
