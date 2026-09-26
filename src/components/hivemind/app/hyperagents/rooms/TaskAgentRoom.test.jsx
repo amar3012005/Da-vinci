@@ -21,6 +21,17 @@ test("renders saved report in preview and opens artifacts from the rail", () => 
   act(() => root.unmount());
 });
 
+test("renders captured PNG from artifact body without external storage URL", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const artifact = { id: "image-1", kind: "image", title: "ICARUS screenshot.png", contentType: "image/png", body: "iVBORw0KGgo=", createdAt: "2026-09-26T12:00:00Z" };
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  act(() => root.render(<TaskPreview status="complete" events={[]} places={[]} sources={[]} report="" artifacts={[artifact]} selectedArtifact={artifact} />));
+  expect(container.querySelector("img[alt='ICARUS screenshot.png']")?.getAttribute("src")).toBe("data:image/png;base64,iVBORw0KGgo=");
+  expect(container.textContent).toContain("Download PNG");
+  act(() => root.unmount());
+});
+
 test("shows pending tool approval and keeps room identity scoped", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const onToolApproval = jest.fn();

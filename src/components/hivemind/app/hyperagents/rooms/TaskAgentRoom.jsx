@@ -506,6 +506,9 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
   const previewUrl = openUrl || sourceRows[0]?.url || "";
   const showArtifact = !openUrl && Boolean(selectedArtifact);
   const storedUrl = artifactUrl(selectedArtifact);
+  const imageUrl = /^image\/(png|jpeg|webp|gif)$/.test(selectedArtifact?.contentType || "")
+    ? (storedUrl || (selectedArtifact?.body ? `data:${selectedArtifact.contentType};base64,${selectedArtifact.body}` : ""))
+    : "";
   return (
     <aside className="relative hidden min-h-0 shrink-0 bg-[#f6f5f1] lg:flex" style={{ width }}>
       <button
@@ -544,7 +547,15 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
           {tab === "preview" ? (
-            showArtifact ? (
+            showArtifact && imageUrl ? (
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="flex items-center justify-between gap-3 border-b border-[#eeeae4] px-3 py-2 text-[12px]">
+                  <span className="min-w-0 truncate font-medium">{selectedArtifact.title}</span>
+                  <a href={imageUrl} download={selectedArtifact.title} className="shrink-0 text-[#2563a6] underline">Download PNG</a>
+                </div>
+                <div className="min-h-0 flex-1 overflow-auto"><img src={imageUrl} alt={selectedArtifact.title} className="block h-auto w-full" /></div>
+              </div>
+            ) : showArtifact ? (
               <article className="mx-auto max-w-[780px] break-words px-7 py-8 text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-4 [&_h1]:text-[23px] [&_h1]:font-semibold [&_h2]:mb-3 [&_h2]:text-[19px] [&_h2]:font-semibold [&_table]:block [&_table]:overflow-x-auto [&_th]:border [&_th]:p-2 [&_td]:border [&_td]:p-2">
                 <p className="mb-2 text-[11px] uppercase tracking-wide text-[#858585]">{selectedArtifact.contentType === "text/markdown" ? "Markdown report" : selectedArtifact.contentType}</p>
                 <h1 className="mb-5 text-[18px] font-semibold">{selectedArtifact.title}</h1>
@@ -552,7 +563,6 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
                   : selectedArtifact.contentType === "text/plain" ? <pre className="whitespace-pre-wrap font-sans">{selectedArtifact.body}</pre>
                   : selectedArtifact.contentType === "text/html" ? <iframe title={selectedArtifact.title} sandbox="" srcDoc={selectedArtifact.body} className="h-[70vh] w-full border border-[#e3e0db]" />
                   : selectedArtifact.contentType === "application/pdf" && storedUrl ? <iframe title={selectedArtifact.title} src={storedUrl} className="h-[75vh] w-full border-0" />
-                  : selectedArtifact.contentType?.startsWith("image/") && storedUrl ? <img src={storedUrl} alt={selectedArtifact.title} className="max-w-full" />
                   : <p>Preview unavailable for {selectedArtifact.contentType}. {storedUrl ? <a href={storedUrl} target="_blank" rel="noopener noreferrer">Open stored output</a> : "No file was saved."}</p>}
               </article>
             ) : previewUrl ? <iframe title="Source website" src={previewUrl} className="h-full w-full border-0 bg-white" />
