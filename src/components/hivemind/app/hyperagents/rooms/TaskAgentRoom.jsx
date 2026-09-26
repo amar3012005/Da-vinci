@@ -416,7 +416,9 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
   if (turns.length && status === "working") {
     const latest = turns[turns.length - 1];
     if (!latest.report && draft) latest.report = draft;
-    if (progressDraft) latest.tools.push({ at: "draft", step: "progress", detail: progressDraft });
+    if (progressDraft && !latest.tools.some((event) => event.step === "progress" && String(event.detail || "").startsWith(progressDraft))) {
+      latest.tools.push({ at: "draft", step: "progress", detail: progressDraft });
+    }
   }
   if (!turns.length && !error) return null;
   return (
