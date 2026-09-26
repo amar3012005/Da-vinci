@@ -116,11 +116,11 @@ export const MEMORY_TOOLS = [
     icon: Brain,
     colorClass: 'bg-[#117dff]/10 text-[#117dff]',
     summary: 'Save facts, code, decisions to persistent memory',
-    description: 'Use when the user shares a fact, preference, decision, code snippet, or anything worth remembering across sessions. Always tag memories for precise future retrieval.',
+    description: 'Use when the user shares a durable fact, preference, decision, project, person, product, date, or source. Save one accurate memory and tag every meaningful entity plus its type and provenance for future entity search. Never invent tags or store credentials.',
     params: [
       { name: 'title', required: true, desc: 'Short descriptive title' },
       { name: 'content', required: true, desc: 'The content to remember' },
-      { name: 'tags', required: false, desc: 'Array of topic tags (e.g. ["react", "api-design"])' },
+      { name: 'tags', required: false, desc: 'Canonical entity/type/provenance tags, e.g. ["entity:solvis-gmbh", "type:organization", "source:email"]' },
       { name: 'source_type', required: false, desc: 'text | code | conversation | documentation | decision' },
       { name: 'project', required: false, desc: 'Project this belongs to' },
       { name: 'relationship', required: false, desc: 'update | extend | derive — relation to existing memory' },
@@ -138,12 +138,12 @@ export const MEMORY_TOOLS = [
     icon: Search,
     colorClass: 'bg-[#16a34a]/10 text-[#16a34a]',
     summary: 'Search memories — call FIRST before answering questions',
-    description: 'Use to find previously stored information. Call this FIRST if the user references past conversations, preferences, or stored knowledge. Supports three search modes.',
+    description: 'Use as the default first step for substantive questions. Search names, aliases, entities, dates, projects, decisions, and sources before answering; use filters only when they are known.',
     params: [
       { name: 'query', required: true, desc: 'Describe what you\'re looking for' },
       { name: 'mode', required: false, desc: 'quick (fast) | panorama (temporal) | insight (AI-powered)' },
       { name: 'limit', required: false, desc: 'Max results (1-20, default 5)' },
-      { name: 'tags', required: false, desc: 'Filter by tags' },
+      { name: 'tags', required: false, desc: 'Filter by canonical entity/type/provenance tags when known' },
       { name: 'project', required: false, desc: 'Filter by project' },
     ],
     example: `hivemind_recall({
@@ -587,12 +587,36 @@ const CODE_TEMPORAL_TOOLS = [
 /* ─── System prompt text ─────────────────────────────────────────── */
 const SYSTEM_PROMPT_AGENT = `# HIVEMIND — Your Memory Cortex
 
-HIVEMIND is not a tool you may use. HIVEMIND **is your memory**.
+HIVEMIND is your living, tenant-scoped memory cortex — use it as the
+default source of truth before answering, not as an optional add-on.
 Every fact you know about the user, their org, their projects, their
 people, their decisions, and their history lives in HIVEMIND. Your
 training data does not. Without HIVEMIND you are amnesic. Treat its
 tools the way a human treats recall, attention, and short-term memory:
 involuntary, instinctive, never asked for.
+
+━━━ DEFAULT BRAIN CONTRACT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For every substantive request, silently recall first. Use the recalled
+context to answer directly, and only use web or connected apps when the
+request needs live external data that HIVEMIND does not contain. The
+memory should feel continuous: preserve names, relationships, decisions,
+dates, projects, sources, and corrections across conversations.
+
+When saving a durable fact, save one accurate, compact memory and make it
+entity-searchable. Extract every meaningful named entity (people, teams,
+companies, products, projects, URLs, files, technologies, places, and
+decisions) into canonical tags such as entity:solvis-gmbh,
+entity:bill-ready, project:hivemind, source:email, source-page:<url>.
+Include type tags (person, organization, product, project, decision,
+preference, fact, event) and provenance when known. Do not invent entities,
+aliases, sources, or relationships. Preserve the user's exact spelling in
+the title/content; normalize only the tag slug.
+
+Never save credentials, access tokens, one-time codes, or incidental chat.
+For corrections, link the new memory to the prior memory with
+relationship:update and related_to. For explicit forget/delete requests,
+use the delete tool and nothing else.
 
 ━━━ REFLEX RULES — NOT OPTIONAL ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -620,8 +644,9 @@ REFLEX 3 — SAVE WHATEVER IS DURABLE
   Action:  hivemind_save_memory({ title, content, tags: [...] })
            - title:    short, specific, scannable
            - content:  the durable claim in 1-3 sentences
-           - tags:     2-5 specific tags incl. entity:<Name>, project:<x>,
-                       decision | preference | fact | goal | event
+           - tags:     include every meaningful entity plus type/provenance
+                       tags (not just 2-5 generic topics); use canonical
+                       entity:<slug> tags and source:<kind> when known
            - project_id: pass if user clearly named a project; otherwise
                          omit (defaults to personal scope). Call
                          hivemind_list_projects first if unsure which.

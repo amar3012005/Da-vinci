@@ -48,6 +48,8 @@ import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard'
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
 import FeatureBetaModal from './FeatureBetaModal';
+import { isPreviewTaskRoom, roomIdFromPath, useTaskAgentStream, TaskTranscript, ActiveTaskPlan, TaskPreview } from '../hyperagents/rooms/TaskAgentRoom';
+import NewSession from '../hyperagents/rooms/NewSession';
 import {
   CAMPAIGN_INTELLIGENCE_V2,
   CampaignConnectionsRail,
@@ -244,6 +246,12 @@ export default function HyperAgents() {
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showAgentRooms, setShowAgentRooms] = useState(false);
+  const [previewWide, setPreviewWide] = useState(false);
+  useEffect(() => {
+    const onPreview = (event) => setPreviewWide(Boolean(event.detail?.wide));
+    window.addEventListener("hm-task-preview", onPreview);
+    return () => window.removeEventListener("hm-task-preview", onPreview);
+  }, []);
   const [runtimeWork, setRuntimeWork] = useState({ agent_runtime_tasks: [] });
   const [betaFeature, setBetaFeature] = useState(null);
   const domainRoomsEnsuredRef = useRef(false);
@@ -254,8 +262,9 @@ export default function HyperAgents() {
   const _parsePath = () => {
     try {
       const p = window.location.pathname;
-      const m = p.match(/\/employees\/rooms\/([0-9a-f-]{36})/i);
-      if (m) return { mode: 'thread', roomId: m[1] };
+      const roomId = roomIdFromPath(p);
+      if (roomId) return { mode: 'thread', roomId };
+      if (/\/employees\/session\/?$/.test(p)) return { mode: 'session', roomId: null };
       if (/\/employees\/agents/.test(p)) return { mode: 'roster', roomId: null };
       if (/\/employees\/runtime/.test(p)) return { mode: 'hero', roomId: null };
       if (/\/employees\/leads/.test(p)) return { mode: 'leads', roomId: null };
@@ -275,6 +284,7 @@ export default function HyperAgents() {
         : mode === 'runtime' ? `${base}/runtime`
         : mode === 'leads' ? `${base}/leads`
           : mode === 'campaigns' ? `${base}/campaigns`
+          : mode === 'session' ? `${base}/session`
           : (roomId ? `${base}/rooms/${roomId}` : base);
     const params = new URLSearchParams();
     if (query.campaignReturn) params.set('campaignReturn', query.campaignReturn);
@@ -283,6 +293,14 @@ export default function HyperAgents() {
   }, [navigate]);
   // Canonicalize the bare /employees URL to /employees/mycompany (keep ?onboard=1).
   useEffect(() => {
+    const roomId = roomIdFromPath(window.location.pathname);
+    if (roomId) {
+      const clean = `/hivemind/app/employees/rooms/${roomId}`;
+      if (window.location.pathname !== clean) {
+        navigate(`${clean}${window.location.search}`, { replace: true });
+      }
+      return;
+    }
     if (/\/employees\/?$/.test(window.location.pathname)) {
       navigate(`/hivemind/app/employees/mycompany${window.location.search}`, { replace: true });
     }
@@ -485,7 +503,7 @@ export default function HyperAgents() {
     <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
       <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
       {/* Left rail: rooms */}
-      <aside className={showOperatingSystemSidebar ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'}>
+      <aside className={showOperatingSystemSidebar && !previewWide ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'}>
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
@@ -502,6 +520,14 @@ export default function HyperAgents() {
 
         {/* YOUR COMPANY — always-present entry to the company/onboarding hero. */}
         <div className="px-2 pt-2">
+          <button
+            type="button"
+            onClick={() => goMode('session', null)}
+            className={`mb-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${viewMode === 'session' ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#e3e0db]'}`}
+          >
+            <Plus size={13} />
+            New room
+          </button>
           <button
             onClick={() => goMode('hero', null)}
             className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${viewMode === 'hero' ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#e3e0db]'}`}
@@ -685,6 +711,15 @@ export default function HyperAgents() {
           <LeadsView />
         ) : viewMode === 'campaigns' ? (
           <CampaignsView onOpenRoom={(roomId, campaignId) => goMode('thread', roomId, { campaignReturn: campaignId })} />
+        ) : viewMode === 'session' ? (
+          <NewSession onSubmit={(query) => {
+            const roomId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `room-${Date.now()}`;
+            try {
+              if (org?.id) sessionStorage.setItem(`hm-agent:${roomId}`, `session-${org.id}-${roomId}`);
+              sessionStorage.setItem('hm-session-query', query);
+            } catch { /* the room still opens */ }
+            goMode('thread', roomId);
+          }} />
         ) : viewMode === 'roster' ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-2 sticky top-0 z-10">
@@ -1105,6 +1140,7 @@ function RoomThread({ roomId, onArchived }) {
   const [workPlanResolution, setWorkPlanResolution] = useState({});
   const workPlanEventRef = useRef('');
   const [companyContext, setCompanyContext] = useState(null);
+  const [companyContextLoaded, setCompanyContextLoaded] = useState(false);
   const [seoJobAudit, setSeoJobAudit] = useState(null);
   const [seoConnection, setSeoConnection] = useState(null);
   const [growthBaseline, setGrowthBaseline] = useState(null);
@@ -1121,6 +1157,7 @@ function RoomThread({ roomId, onArchived }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const taskSubmitLock = useRef(false);
   const [activeTurnId, setActiveTurnId] = useState(null);
   const visualGeneration = useRoomVisualGeneration(roomId, Boolean(activeTurnId));
   const visualPlacement = useMemo(
@@ -1204,6 +1241,29 @@ function RoomThread({ roomId, onArchived }) {
   }, [pendingCampaignId, roomCampaigns, selectedCampaign]);
   const isCampaignRoom = Boolean(campaignReturn || roomVisualCampaignId || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
   const isHqRoom = Boolean(room?.is_domain_home && (room?.room_tag || room?.roomTag) === 'general');
+  const taskRoom = isPreviewTaskRoom() && !isHqRoom;
+  const taskStream = useTaskAgentStream({
+    enabled: taskRoom,
+    orgId: org?.id || '',
+    userId: user?.id || '',
+    roomId,
+  });
+  const sessionQueryStarted = useRef(false);
+  useEffect(() => {
+    if (!taskRoom || !companyContextLoaded || sessionQueryStarted.current) return undefined;
+    let pending = '';
+    try { pending = sessionStorage.getItem('hm-session-query') || ''; } catch { pending = ''; }
+    if (!pending.trim()) return undefined;
+    sessionQueryStarted.current = true;
+    try { sessionStorage.removeItem('hm-session-query'); } catch { /* already consumed */ }
+    taskStream.start({
+      message: pending,
+      company: companyContext?.company || companyContext?.name || companyContext?.company_name || '',
+      website: companyContext?.website || '',
+      market: companyContext?.profile?.location || companyContext?.location || companyContext?.market || companyContext?.city || '',
+    }).catch(() => {});
+    return undefined;
+  }, [taskRoom, taskStream, companyContext, companyContextLoaded]);
   const growthBaselineRequested = useMemo(() => new URLSearchParams(location.search).get('growthBaseline') === '1', [location.search]);
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
   // events don't yank them back down while they scroll up to read. Updated on manual scroll.
@@ -1404,7 +1464,21 @@ function RoomThread({ roomId, onArchived }) {
       const liveTurn = [...nextTurns].reverse().find((turn) => turn?.status === 'live');
       setActiveTurnId(liveTurn?.id || null);
     } catch (err) {
-      setError(err.response?.data?.error || err.message);
+      if (isPreviewTaskRoom()) {
+        setRoom({
+          id: roomId,
+          name: 'New session',
+          goal: '',
+          participants: [],
+          room_tag: 'general',
+          localSession: true,
+        });
+        setTurns([]);
+        setWorkPlan([]);
+        setError(null);
+      } else {
+        setError(err.response?.data?.error || err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -1461,9 +1535,11 @@ function RoomThread({ roomId, onArchived }) {
   }, [liveLines, room?.roomMode, room?.room_mode, roomId]);
 
   useEffect(() => {
+    setCompanyContextLoaded(false);
     apiClient.hyperCompany()
       .then((data) => setCompanyContext(data?.company || null))
-      .catch(() => setCompanyContext(null));
+      .catch(() => setCompanyContext(null))
+      .finally(() => setCompanyContextLoaded(true));
   }, [roomId]);
 
   useEffect(() => {
@@ -2175,16 +2251,38 @@ function RoomThread({ roomId, onArchived }) {
     const doneAtts = attachments.filter(a => a.status === 'done');
     if (attachments.some(a => a.status === 'uploading')) return;   // wait for uploads
     if ((!base && doneAtts.length === 0) || submitting) return;
-    if (!room?.goal?.trim()) {
+    if (!taskRoom && !room?.goal?.trim()) {
       setError(t('hyperAgents.goalRequiredBeforeSend', 'Set a room goal before sending the next turn.'));
       return;
     }
-    // Reference the just-ingested docs so the team recalls their content this turn.
     const names = doneAtts.map(a => a.name).join(', ');
     const attNote = doneAtts.length
       ? `\n\n[Attached document${doneAtts.length > 1 ? 's' : ''} (now in HIVEMIND — recall ${doneAtts.length > 1 ? 'them' : 'it'} to read the content): ${names}]`
       : '';
     const msg = (base || `Please review the attached ${doneAtts.length > 1 ? 'documents' : 'document'}.`) + attNote;
+    if (taskRoom) {
+      if (taskSubmitLock.current) return;
+      taskSubmitLock.current = true;
+      setSubmitting(true);
+      pinnedRef.current = true;
+      setDraft('');
+      setAttachments([]);
+      try {
+        if (taskStream.status === 'question') taskStream.answer(msg);
+        else await taskStream.start({
+          message: msg,
+          company: companyContext?.company || companyContext?.name || companyContext?.company_name || '',
+          website: companyContext?.website || '',
+          market: companyContext?.profile?.location || companyContext?.location || companyContext?.market || companyContext?.city || '',
+        });
+      } catch (err) {
+        setError(err.message || 'The agent could not start.');
+      } finally {
+        taskSubmitLock.current = false;
+        setSubmitting(false);
+      }
+      return;
+    }
     const echo = (base || `Please review the attached ${doneAtts.length > 1 ? 'documents' : 'document'}.`)
       + (doneAtts.length ? `   📎 ${names}` : '');
     setSubmitting(true);
@@ -2839,8 +2937,8 @@ function RoomThread({ roomId, onArchived }) {
         )}
 
         {/* Thread */}
-        <div ref={scrollRef} onScroll={onThreadScroll} className={`flex-1 min-h-0 overflow-y-auto bg-[#fbfaf7] ${isHqRoom ? 'px-4 py-4' : 'px-4 py-4 space-y-4'}`}>
-          {showRoomIntro && !isSeoRoom && !isHqRoom && (
+        <div ref={scrollRef} onScroll={onThreadScroll} className={`flex-1 min-h-0 overflow-y-auto px-4 py-4 ${taskRoom ? 'bg-white' : 'bg-[#fbfaf7]'} ${isHqRoom ? '' : 'space-y-4'}`}>
+          {showRoomIntro && !isSeoRoom && !isHqRoom && !taskRoom && (
             <DomainRoomIntro
               room={room}
               company={companyContext}
@@ -2853,7 +2951,7 @@ function RoomThread({ roomId, onArchived }) {
             />
           )}
           <div ref={discussionStartRef} />
-          {!isHqRoom && room.goal?.trim() && (
+          {!isHqRoom && !taskRoom && room.goal?.trim() && (
             <div className="flex flex-col items-end" data-room-goal-message>
               <div className="max-w-[80%] rounded-2xl rounded-br-md bg-violet-500 px-4 py-2.5 text-[13px] leading-relaxed text-white shadow-sm">
                 {room.goal.trim()}
@@ -2867,7 +2965,7 @@ function RoomThread({ roomId, onArchived }) {
             objective={growthOperatingState?.goals?.find((goal) => goal.status === 'ACTIVE')?.objective || room?.goal || companyContext?.mission}
             baselineReady={Boolean(growthBaseline)}
           />}
-          {latestLaunchedCampaign && (
+          {!taskRoom && latestLaunchedCampaign && (
             <div className="sticky top-0 z-20 -mx-1 border-b border-[#b7d0ff] bg-[#f5f9ff]/95 px-1 py-2 backdrop-blur" aria-label="Current launched campaign">
               <button
                 type="button"
@@ -2888,7 +2986,7 @@ function RoomThread({ roomId, onArchived }) {
             </div>
           )}
           {/* HQ control-room feed — agents reporting their room activity to you. */}
-          {!isHqRoom && hqActivity.length > 0 && (
+          {!isHqRoom && !taskRoom && hqActivity.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
                 <Network size={11} className="text-violet-500" />
@@ -2900,7 +2998,7 @@ function RoomThread({ roomId, onArchived }) {
               ))}
             </div>
           )}
-          {!isHqRoom && workPlan.length > 0 && (
+          {!isHqRoom && !taskRoom && workPlan.length > 0 && (
             <section className="border border-[#dedbd6] bg-white" aria-label="Work plan">
               <div className="flex items-center justify-between border-b border-[#ece9e3] px-3 py-2">
                 <span className="text-[9px] font-mono uppercase tracking-[0.12em] text-[#625f58]">Work plan</span>
@@ -2960,12 +3058,12 @@ function RoomThread({ roomId, onArchived }) {
               </div>
             </section>
           )}
-          {!isHqRoom && !showRoomIntro && turns.length === 0 && hqActivity.length === 0 && (
+          {!isHqRoom && !taskRoom && !showRoomIntro && turns.length === 0 && hqActivity.length === 0 && (
             <div className="text-center text-[12px] text-[#a3a3a3] py-8">
               {t('hyperAgents.startConversation', 'Start the conversation — ask your team anything.')}
             </div>
           )}
-          {!isHqRoom && turns.map(turn => (
+          {!isHqRoom && !taskRoom && turns.map(turn => (
             <div key={turn.id} className="space-y-2">
               {turn.runtimePlaybookRunId ? <div className="flex items-center justify-between border border-[#dedbd6] bg-white px-3 py-2 text-[9px] text-[#625f58]" aria-label="Runtime lifecycle phase"><span className="font-mono uppercase tracking-[0.12em]">Runtime · {String(turn.runtimeStageId || 'phase').replaceAll('_', ' ')}</span><span className="font-mono">checkpoint {turn.runtimeCheckpointSequence || '-'} · attempt {turn.runtimeAttempt || 1}</span></div> : null}
             <TurnView
@@ -2991,13 +3089,30 @@ function RoomThread({ roomId, onArchived }) {
             />
             </div>
           ))}
-          {isCampaignRoom && activeRoomCampaign ? (
+          {!taskRoom && isCampaignRoom && activeRoomCampaign ? (
             <CampaignRoomVisualProgress
               campaign={activeRoomCampaign}
               onOpenCampaign={() => openRoomCampaign(activeRoomCampaign.id)}
             />
           ) : null}
-          <RoomVisualGeneration controller={visualGeneration} jobs={visualPlacement.unassigned} />
+          {!taskRoom && <RoomVisualGeneration controller={visualGeneration} jobs={visualPlacement.unassigned} />}
+          {taskRoom ? (
+            <TaskTranscript
+              messages={taskStream.messages}
+              events={taskStream.events}
+              status={taskStream.status}
+              startedAt={taskStream.startedAt}
+              operatingPlan={taskStream.operatingPlan}
+              artifacts={taskStream.artifacts}
+              onSelectArtifact={taskStream.selectArtifact}
+              error={taskStream.error}
+              report={taskStream.report}
+              draft={taskStream.draft}
+              progressDraft={taskStream.progressDraft}
+              onMemoryDecision={taskStream.decideMemory}
+              onAnswer={taskStream.answer}
+            />
+          ) : null}
           {error && (
             <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               <AlertTriangle size={11} className="inline mr-1" /> {error}
@@ -3024,7 +3139,9 @@ function RoomThread({ roomId, onArchived }) {
 
         {/* Composer */}
         {!archived && !isHqRoom && (
-          <form onSubmit={handleSubmit} className="border-t border-[#e3e0db] bg-[#faf9f4] px-4 py-3">
+          <form onSubmit={handleSubmit} className={taskRoom ? 'bg-white px-4 pb-4 pt-2' : 'border-t border-[#e3e0db] bg-[#faf9f4] px-4 py-3'}>
+            {taskRoom && <div className="mx-auto mb-2 max-w-[760px]"><ActiveTaskPlan events={taskStream.events} messages={taskStream.messages} status={taskStream.status} operatingPlan={taskStream.operatingPlan} /></div>}
+            <div className={taskRoom ? 'mx-auto max-w-[760px] rounded-[22px] border border-[#e9e9e9] bg-white px-3 py-2 shadow-[0_8px_28px_-20px_rgba(0,0,0,0.25)]' : ''}>
             <input
               ref={fileInputRef}
               type="file"
@@ -3054,7 +3171,7 @@ function RoomThread({ roomId, onArchived }) {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={submitting}
                 title={t('hyperAgents.attachHint', 'Attach a document or image — ingested into HIVEMIND and used by the team this turn')}
-                className="h-9 w-9 grid place-items-center border border-[#e3e0db] bg-white rounded-lg text-[#525252] hover:text-[#117dff] hover:border-[#117dff]/40 transition-colors shrink-0 disabled:opacity-50"
+                className={`h-9 w-9 grid place-items-center bg-white text-[#525252] hover:text-[#117dff] transition-colors shrink-0 disabled:opacity-50 ${taskRoom ? 'rounded-full' : 'rounded-lg border border-[#e3e0db] hover:border-[#117dff]/40'}`}
               >
                 <Paperclip size={15} />
               </button>
@@ -3062,11 +3179,11 @@ function RoomThread({ roomId, onArchived }) {
                 type="button"
                 onClick={() => setShowConnectors(true)}
                 title={t('hyperAgents.roomConnectorsHint', 'Room connectors — give each agent 3rd-party tools (Gmail, GitHub, Slack…)')}
-                className="h-9 w-9 grid place-items-center border border-[#e3e0db] bg-white rounded-lg text-[#525252] hover:text-[#117dff] hover:border-[#117dff]/40 transition-colors shrink-0"
+                className={`h-9 w-9 grid place-items-center bg-white text-[#525252] hover:text-[#117dff] transition-colors shrink-0 ${taskRoom ? 'rounded-full' : 'rounded-lg border border-[#e3e0db] hover:border-[#117dff]/40'}`}
               >
                 <Boxes size={15} />
               </button>
-              <div className="flex-1 relative bg-white border border-[#e3e0db] rounded-xl px-3 py-2 focus-within:border-violet-500">
+              <div className={`flex-1 relative bg-white px-3 py-2 ${taskRoom ? '' : 'border border-[#e3e0db] rounded-xl focus-within:border-violet-500'}`}>
                 {/* @mention picker — typing "@..." lists the room's agents; pick one to
                     address them DIRECTLY (backend fast-path: that agent answers alone). */}
                 {(() => {
@@ -3104,26 +3221,41 @@ function RoomThread({ roomId, onArchived }) {
                   rows={1}
                   placeholder={t('hyperAgents.composerPlaceholder', 'Message the team…  use @slug to address one agent')}
                   disabled={submitting}
-                  className="w-full bg-transparent resize-none outline-none text-[13px] text-[#0a0a0a] placeholder:text-[#a3a3a3]"
+                  className="w-full bg-transparent resize-none outline-none text-[14px] leading-relaxed text-[#171717] placeholder:text-[#b3b3b3]"
                 />
               </div>
               <button
                 type="submit"
-                disabled={(!draft.trim() && !attachments.some(a => a.status === 'done')) || submitting || !room?.goal?.trim() || attachments.some(a => a.status === 'uploading')}
-                title={!room?.goal?.trim() ? t('hyperAgents.goalRequiredBeforeSend', 'Set a room goal before sending the next turn.') : undefined}
-                className="h-9 px-3 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold rounded-lg flex items-center gap-1.5"
+                disabled={(!draft.trim() && !attachments.some(a => a.status === 'done')) || submitting || (!taskRoom && !room?.goal?.trim()) || attachments.some(a => a.status === 'uploading')}
+                title={!taskRoom && !room?.goal?.trim() ? t('hyperAgents.goalRequiredBeforeSend', 'Set a room goal before sending the next turn.') : undefined}
+                className={`h-9 px-3 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold flex items-center gap-1.5 ${taskRoom ? 'rounded-full' : 'rounded-lg'}`}
               >
                 {submitting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
                 {t('hyperAgents.send', 'Send')}
               </button>
             </div>
-            <div className="text-[9px] text-[#a3a3a3] mt-1 font-mono">{t('hyperAgents.composerHint', 'Enter to send · Shift+Enter newline · @slug to force lead')}</div>
+            </div>
+            {!taskRoom && <div className="text-[9px] text-[#a3a3a3] mt-1 font-mono">{t('hyperAgents.composerHint', 'Enter to send · Shift+Enter newline · @slug to force lead')}</div>}
           </form>
         )}
       </section>
 
+      {taskRoom ? (
+        <TaskPreview
+          status={taskStream.status}
+          events={taskStream.events}
+          places={taskStream.places}
+          sources={taskStream.sources}
+          report={taskStream.report}
+          artifacts={taskStream.artifacts}
+          selectedArtifact={taskStream.selectedArtifact}
+          onSelectArtifact={taskStream.selectArtifact}
+          onCreatePdf={taskStream.createPdf}
+          pdfError={taskStream.pdfError}
+        />
+      ) : null}
       {/* HQ owns a persistent runtime rail. Human rooms keep participants. */}
-      <aside className={`${isHqRoom ? 'hidden lg:flex' : 'flex'} w-[300px] min-w-[300px] border-l border-[#e3e0db] bg-[#faf9f4] flex-col shrink-0`}>
+      <aside className={`${taskRoom ? 'hidden' : isHqRoom ? 'hidden lg:flex' : 'flex'} w-[300px] min-w-[300px] border-l border-[#e3e0db] bg-[#faf9f4] flex-col shrink-0`}>
         {!isHqRoom && (
           <section className="shrink-0 border-b border-[#e3e0db] bg-[#fbfaf7] p-3" data-room-metadata-sidebar>
             <div className="flex items-start gap-2">
@@ -3194,7 +3326,7 @@ function RoomThread({ roomId, onArchived }) {
               </span>
             </div>
 
-            <div className="mt-3 border-t border-[#ece9e3] pt-2.5">
+            {!taskRoom && <div className="mt-3 border-t border-[#ece9e3] pt-2.5">
               <div className="text-[9px] font-mono uppercase tracking-wider text-[#117dff]">{t('hyperAgents.goalLbl', 'Goal')}</div>
               {room.goal ? (
                 <p className="mt-1 max-h-16 overflow-y-auto text-[10px] leading-relaxed text-[#525252]">{room.goal}</p>
@@ -3214,7 +3346,7 @@ function RoomThread({ roomId, onArchived }) {
                   </button>
                 </div>
               )}
-            </div>
+            </div>}
 
             <div className="mt-3 grid grid-cols-2 gap-1.5">
               {!archived && (
