@@ -49,7 +49,7 @@ function applySocketMessage(current, parsed) {
     return parsed.state;
   }
   if (parsed && typeof parsed.step === "string" && typeof parsed.at === "string") {
-    const events = [...(current?.events || []), parsed].slice(-100);
+    const events = [...(current?.events || []), parsed].slice(-300);
     return { ...(current || {}), events };
   }
   return current;
