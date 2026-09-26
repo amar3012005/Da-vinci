@@ -3099,6 +3099,8 @@ function RoomThread({ roomId, onArchived }) {
               status={taskStream.status}
               startedAt={taskStream.startedAt}
               operatingPlan={taskStream.operatingPlan}
+              artifacts={taskStream.artifacts}
+              onSelectArtifact={taskStream.selectArtifact}
               error={taskStream.error}
               report={taskStream.report}
               onMemoryDecision={taskStream.decideMemory}

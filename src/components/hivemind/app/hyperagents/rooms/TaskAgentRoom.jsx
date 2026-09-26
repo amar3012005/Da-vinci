@@ -271,12 +271,12 @@ function conversationTurns(events, messages) {
   let current = null;
   for (const event of events) {
     if (event.step === "user") {
-      current = { id: event.at, at: event.at, text: event.detail, tools: [], report: "", question: "", options: [] };
+      current = { id: event.at, at: event.at, text: event.detail, tools: [], artifacts: [], report: "", question: "", options: [] };
       turns.push(current);
       continue;
     }
     if (!current) {
-      current = { id: "earlier", text: "", tools: [], report: "", question: "", options: [] };
+      current = { id: "earlier", text: "", tools: [], artifacts: [], report: "", question: "", options: [] };
       turns.push(current);
     }
     if (event.step === "question") {
@@ -287,14 +287,22 @@ function conversationTurns(events, messages) {
       } catch { current.question = event.detail; }
       continue;
     }
-    if (event.step === "report") current.report = event.detail;
+    if (event.step === "artifact") current.artifacts.push(event);
+    else if (event.step === "report") current.report = event.detail;
     else if (!HIDDEN_STEPS.has(event.step) && !(event.step === "parallel_search" && event.detail === "parallel-ai-gateway")) current.tools.push(event);
   }
   const said = new Set(turns.map((turn) => turn.text));
   for (const message of messages.slice(-1)) {
-    if (!said.has(message.text)) turns.push({ id: message.id, at: message.at, text: message.text, tools: [], report: "", question: "", options: [] });
+    if (!said.has(message.text)) turns.push({ id: message.id, at: message.at, text: message.text, tools: [], artifacts: [], report: "", question: "", options: [] });
   }
-  return turns.filter((turn) => turn.text || turn.tools.length || turn.report);
+  return turns.filter((turn) => turn.text || turn.tools.length || turn.report || turn.artifacts.length);
+}
+
+function artifactForEvent(event, artifacts) {
+  let receipt;
+  try { receipt = JSON.parse(event.detail); } catch { receipt = null; }
+  return artifacts.find((artifact) => artifact.id === receipt?.id)
+    || artifacts.find((artifact) => event.detail === `${artifact.kind} ${artifact.title}`);
 }
 
 function OperatingPlan({ plan }) {
@@ -320,7 +328,7 @@ function OperatingPlan({ plan }) {
   );
 }
 
-function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, onMemoryDecision, onAnswer }) {
+function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, artifacts, onSelectArtifact, onMemoryDecision, onAnswer }) {
   const [open, setOpen] = useState(true);
   const pending = live && status === "working";
   return (
@@ -366,11 +374,20 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, onMemory
           </div>
         </div>
       ) : null}
+      {turn.artifacts?.map((event, index) => {
+        const artifact = artifactForEvent(event, artifacts);
+        if (!artifact || artifact.kind === "note" || artifact.kind === "reply") return null;
+        return <button key={`${event.at}-${index}`} type="button" onClick={() => onSelectArtifact?.(artifact.id)} className="flex w-full items-center gap-3 rounded-2xl border border-[#e7e5e2] bg-[#faf9f7] px-4 py-3 text-left hover:bg-[#f2f0ec]">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#4387db]"><FileText size={20} /></span>
+          <span className="min-w-0 flex-1"><span className="block truncate text-[14px] font-medium text-[#202020]">{artifact.title}</span><span className="block text-[12px] text-[#858585]">{artifact.contentType === "application/pdf" ? "PDF" : artifact.contentType?.startsWith("image/") ? "Image" : "Document"} · Saved artifact</span></span>
+          <span className="shrink-0 text-[12px] text-[#555555]">Open in Preview ↗</span>
+        </button>;
+      })}
     </div>
   );
 }
 
-export function TaskTranscript({ messages, events, status, startedAt, operatingPlan, error, onMemoryDecision, onAnswer }) {
+export function TaskTranscript({ messages, events, status, startedAt, operatingPlan, artifacts = [], onSelectArtifact, error, onMemoryDecision, onAnswer }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (status !== "working") return undefined;
@@ -390,6 +407,8 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
           startedAt={startedAt}
           now={now}
           operatingPlan={operatingPlan}
+          artifacts={artifacts}
+          onSelectArtifact={onSelectArtifact}
           onMemoryDecision={onMemoryDecision}
           onAnswer={onAnswer}
         />
@@ -527,7 +546,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
                 {selectedArtifact.contentType === "text/markdown" ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedArtifact.body}</ReactMarkdown>
                   : selectedArtifact.contentType === "text/plain" ? <pre className="whitespace-pre-wrap font-sans">{selectedArtifact.body}</pre>
                   : selectedArtifact.contentType === "text/html" ? <iframe title={selectedArtifact.title} sandbox="" srcDoc={selectedArtifact.body} className="h-[70vh] w-full border border-[#e3e0db]" />
-                  : selectedArtifact.contentType?.startsWith("image/") && storedUrl ? <img src={storedUrl} alt={selectedArtifact.title} className="max-w-full" />
+                  : selectedArtifact.contentType?.startsWith("image/") && (storedUrl || selectedArtifact.body) ? <img src={storedUrl || `data:${selectedArtifact.contentType};base64,${selectedArtifact.body}`} alt={selectedArtifact.title} className="max-w-full" />
                   : <p>Preview unavailable for {selectedArtifact.contentType}. {storedUrl ? <a href={storedUrl} target="_blank" rel="noopener noreferrer">Open stored output</a> : "No file was saved."}</p>}
               </article>
             ) : previewUrl ? <iframe title="Source website" src={previewUrl} className="h-full w-full border-0 bg-white" />
