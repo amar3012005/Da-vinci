@@ -1,0 +1,22 @@
+import React, { act } from "react";
+import { createRoot } from "react-dom/client";
+import { TaskPreview } from "./TaskAgentRoom";
+
+jest.mock("react-markdown", () => ({ __esModule: true, default: ({ children }) => <div>{children}</div> }));
+jest.mock("remark-gfm", () => () => null);
+
+test("renders saved report in preview and opens artifacts from the rail", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const artifact = { id: "11111111-1111-4111-8111-111111111111", kind: "report", title: "German competitors", contentType: "text/markdown", body: "## Verified vendors\n\nParloa", createdAt: "2026-09-26T12:00:00Z" };
+  const onSelectArtifact = jest.fn();
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  act(() => root.render(<TaskPreview status="complete" events={[]} places={[]} sources={[{ url: "https://example.com", title: "Example" }]} report="" artifacts={[artifact]} selectedArtifact={artifact} onSelectArtifact={onSelectArtifact} />));
+  expect(container.textContent).toContain("Verified vendors");
+  const artifactButton = [...container.querySelectorAll("button")].find((button) => button.textContent === "Artifacts");
+  act(() => artifactButton.click());
+  const reportButtons = [...container.querySelectorAll("button")].filter((button) => button.textContent.includes("German competitors"));
+  act(() => reportButtons[reportButtons.length - 1].click());
+  expect(onSelectArtifact).toHaveBeenCalledWith(artifact.id);
+  act(() => root.unmount());
+});
