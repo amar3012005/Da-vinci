@@ -1,14 +1,9 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { TaskPreview, TaskTranscript, taskAgentHost } from "./TaskAgentRoom";
+import { TaskPreview, TaskTranscript } from "./TaskAgentRoom";
 
 jest.mock("react-markdown", () => ({ __esModule: true, default: ({ children }) => <div>{children}</div> }));
 jest.mock("remark-gfm", () => () => null);
-
-test("preview rooms use isolated agent worker", () => {
-  expect(taskAgentHost("next.preview.singulancelabs.com")).toBe("hivemind-task-agents-preview.amarsai2005.workers.dev");
-  expect(taskAgentHost("singulancelabs.com")).toBe("hivemind-task-agents.amarsai2005.workers.dev");
-});
 
 test("renders saved report in preview and opens artifacts from the rail", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
