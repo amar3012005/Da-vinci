@@ -249,7 +249,7 @@ function toolLabel(step) {
 }
 
 function TaskRow({ event }) {
-  const thinking = event.step === "operating-plan";
+  const thinking = event.step === "operating-plan" || event.step === "progress";
   const detail = String(event.detail || "").trim();
   const isSearch = event.step === "parallel_search" || event.step === "composio_web_search";
   const [open, setOpen] = useState(false);
