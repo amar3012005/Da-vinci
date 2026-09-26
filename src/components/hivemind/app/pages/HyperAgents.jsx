@@ -1157,6 +1157,7 @@ function RoomThread({ roomId, onArchived }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const taskSubmitLock = useRef(false);
   const [activeTurnId, setActiveTurnId] = useState(null);
   const visualGeneration = useRoomVisualGeneration(roomId, Boolean(activeTurnId));
   const visualPlacement = useMemo(
@@ -2260,6 +2261,8 @@ function RoomThread({ roomId, onArchived }) {
       : '';
     const msg = (base || `Please review the attached ${doneAtts.length > 1 ? 'documents' : 'document'}.`) + attNote;
     if (taskRoom) {
+      if (taskSubmitLock.current) return;
+      taskSubmitLock.current = true;
       setSubmitting(true);
       pinnedRef.current = true;
       setDraft('');
@@ -2275,6 +2278,7 @@ function RoomThread({ roomId, onArchived }) {
       } catch (err) {
         setError(err.message || 'The agent could not start.');
       } finally {
+        taskSubmitLock.current = false;
         setSubmitting(false);
       }
       return;

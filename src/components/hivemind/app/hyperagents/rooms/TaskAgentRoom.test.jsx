@@ -65,6 +65,16 @@ test("shows streamed draft before final report arrives", () => {
   act(() => root.unmount());
 });
 
+test("reconciles optimistic send with echoed user event and ignores duplicate echo", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const user = { at: "2026-09-26T12:00:00Z", step: "user", detail: "What personal information is stored?" };
+  act(() => root.render(<TaskTranscript messages={[{ id: "pending", text: user.detail, at: user.at }]} events={[user, user]} status="working" />));
+  expect(container.textContent.split(user.detail)).toHaveLength(2);
+  act(() => root.unmount());
+});
+
 test("does not repeat settled progress beside its stream", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const container = document.createElement("div");

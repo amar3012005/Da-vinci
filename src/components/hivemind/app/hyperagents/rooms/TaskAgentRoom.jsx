@@ -49,6 +49,7 @@ function applySocketMessage(current, parsed) {
     return parsed.state;
   }
   if (parsed && typeof parsed.step === "string" && typeof parsed.at === "string") {
+    if (current?.events?.some((event) => event.at === parsed.at && event.step === parsed.step && event.detail === parsed.detail)) return current;
     const events = [...(current?.events || []), parsed].slice(-300);
     return { ...(current || {}), events };
   }
@@ -287,8 +288,12 @@ function TaskRow({ event }) {
 function conversationTurns(events, messages, latestPlan) {
   const turns = [];
   let current = null;
+  const seenUserEvents = new Set();
   for (const event of events) {
     if (event.step === "user") {
+      const key = `${event.at}\u0000${event.detail}`;
+      if (seenUserEvents.has(key)) continue;
+      seenUserEvents.add(key);
       current = { id: event.at, at: event.at, text: event.detail, tools: [], artifacts: [], report: "", question: "", options: [], plan: null };
       turns.push(current);
       continue;
