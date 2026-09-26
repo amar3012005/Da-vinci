@@ -4,12 +4,15 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 const AGENT_HOST = "hivemind-task-agents.amarsai2005.workers.dev";
+const PREVIEW_AGENT_HOST = "hivemind-task-agents-preview.amarsai2005.workers.dev";
 
-export function isPreviewTaskRoom() {
-  if (typeof window === "undefined") return false;
-  const host = window.location.hostname;
+export function isPreviewTaskRoom(host = typeof window === "undefined" ? "" : window.location.hostname) {
   return host === "next.preview.singulancelabs.com"
     || host === "hivemind-web-preview.amarsai2005.workers.dev";
+}
+
+export function taskAgentHost(host = typeof window === "undefined" ? "" : window.location.hostname) {
+  return isPreviewTaskRoom(host) ? PREVIEW_AGENT_HOST : AGENT_HOST;
 }
 
 export function roomIdFromPath(pathname) {
@@ -82,7 +85,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     };
     const connect = () => {
       if (closed) return;
-      const socket = new WebSocket(`wss://${AGENT_HOST}/agents/hivemind-task-agent/${encodeURIComponent(agentInstanceName(orgId, roomId))}`);
+      const socket = new WebSocket(`wss://${taskAgentHost()}/agents/hivemind-task-agent/${encodeURIComponent(agentInstanceName(orgId, roomId))}`);
       socketRef.current = socket;
       socket.onopen = () => { setError(""); socket.send(JSON.stringify({ type: "artifact-list" })); flushQueued(); };
       socket.onmessage = (event) => {
