@@ -50,9 +50,11 @@ test("shows agent progress text without expanding a tool row", () => {
   const root = createRoot(container);
   const events = [
     { at: "2026-09-26T12:00:00Z", step: "user", detail: "Check Gmail status" },
+    { at: "2026-09-26T12:00:00Z", step: "workrun", detail: "Loading authenticated context" },
     { at: "2026-09-26T12:00:01Z", step: "progress", detail: "I’ll check the Gmail connection receipt." },
   ];
   act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" />));
+  expect(container.textContent).toContain("Loading authenticated context");
   expect(container.textContent).toContain("I’ll check the Gmail connection receipt.");
   expect(container.querySelectorAll("button[aria-expanded]")).toHaveLength(1);
   act(() => root.unmount());

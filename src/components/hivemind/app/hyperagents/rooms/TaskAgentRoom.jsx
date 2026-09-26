@@ -255,7 +255,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
   };
 }
 
-const HIDDEN_STEPS = new Set(["workrun", "artifact", "completion", "approval", "user", "task_updated"]);
+const HIDDEN_STEPS = new Set(["artifact", "completion", "approval", "user", "task_updated"]);
 
 function toolLabel(step) {
   const labels = {
@@ -284,6 +284,7 @@ function TaskRow({ event }) {
   const detail = String(event.detail || "").trim();
   const isSearch = event.step === "parallel_search" || event.step === "composio_web_search";
   const [open, setOpen] = useState(false);
+  if (event.step === "workrun") return <li role="status" className="py-1 text-[13px] text-[#777777]">{detail === "queued" ? "Task queued" : detail.startsWith("starting ") ? "Preparing task" : detail}</li>;
   if (thinking) return <li className="py-2 text-[14px] leading-6 text-[#303030]">{detail}</li>;
   const summary = isSearch && detail && !/^(parallel-ai-gateway|parallel|started)$/i.test(detail) ? detail : "";
   return (
