@@ -3241,6 +3241,8 @@ function RoomThread({ roomId, onArchived }) {
           artifacts={taskStream.artifacts}
           selectedArtifact={taskStream.selectedArtifact}
           onSelectArtifact={taskStream.selectArtifact}
+          onCreatePdf={taskStream.createPdf}
+          pdfError={taskStream.pdfError}
         />
       ) : null}
       {/* HQ owns a persistent runtime rail. Human rooms keep participants. */}

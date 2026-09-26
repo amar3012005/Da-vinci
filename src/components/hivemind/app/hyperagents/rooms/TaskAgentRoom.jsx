@@ -63,6 +63,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
   const [startedAt, setStartedAt] = useState(null);
   const [artifacts, setArtifacts] = useState([]);
   const [selectedArtifact, setSelectedArtifact] = useState(null);
+  const [pdfError, setPdfError] = useState("");
   const socketRef = useRef(null);
   const queuedStart = useRef(null);
   const selectedArtifactId = useRef("");
@@ -89,7 +90,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
         try { parsed = JSON.parse(event.data); } catch { parsed = null; }
         if (!parsed) return;
         if (parsed.type === "artifact-list-result") {
-          const items = Array.isArray(parsed.artifacts) ? parsed.artifacts : [];
+          const items = Array.isArray(parsed.artifacts) ? parsed.artifacts.filter((item) => item.kind !== "note" && item.kind !== "reply") : [];
           setArtifacts(items);
           const current = items.find((item) => item.id === selectedArtifactId.current);
           if (items[0]?.id && (!current || items[0].createdAt > current.createdAt)) {
@@ -99,6 +100,11 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
           return;
         }
         if (parsed.type === "artifact-get-result") { setSelectedArtifact(parsed.artifact || null); return; }
+        if (parsed.type === "artifact-create-pdf-result") {
+          if (parsed.error) setPdfError(parsed.error);
+          else { setPdfError(""); socket.send(JSON.stringify({ type: "artifact-list" })); }
+          return;
+        }
         setAgentState((current) => applySocketMessage(current, parsed));
         const newestArtifactEvent = [...(parsed.state?.events || [])].reverse().find((item) => item.step === "artifact")?.at || "";
         if (parsed.type === "cf_agent_state" && newestArtifactEvent && newestArtifactEvent !== lastArtifactEvent) {
@@ -185,6 +191,12 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     }
   }, []);
 
+  const createPdf = useCallback((id) => {
+    setPdfError("");
+    if (socketRef.current?.readyState === WebSocket.OPEN) socketRef.current.send(JSON.stringify({ type: "artifact-create-pdf", id }));
+    else setPdfError("Agent connection unavailable.");
+  }, []);
+
   const events = useMemo(() => Array.isArray(agentState?.events) ? agentState.events : [], [agentState?.events]);
   const report = useMemo(() => {
     const found = [...events].reverse().find((event) => event.step === "report" && event.detail);
@@ -202,6 +214,8 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     artifacts,
     selectedArtifact,
     selectArtifact,
+    createPdf,
+    pdfError,
     status,
     error,
     startedAt,
@@ -400,12 +414,20 @@ function artifactUrl(artifact) {
   } catch { return ""; }
 }
 
-export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, onSelectArtifact }) {
+export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, onSelectArtifact, onCreatePdf, pdfError }) {
   const [width, setWidth] = useState(520);
   const [showEnvironment, setShowEnvironment] = useState(true);
   const [tab, setTab] = useState("preview");
   const [openUrl, setOpenUrl] = useState("");
+  const [pdfUrl, setPdfUrl] = useState("");
   const drag = useRef(null);
+  useEffect(() => {
+    if (selectedArtifact?.contentType !== "application/pdf" || !selectedArtifact.body) { setPdfUrl(""); return undefined; }
+    const bytes = Uint8Array.from(atob(selectedArtifact.body), (char) => char.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    setPdfUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedArtifact]);
   useEffect(() => {
     if (selectedArtifact?.id) { setOpenUrl(""); setTab("preview"); }
   }, [selectedArtifact?.id]);
@@ -489,11 +511,15 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
           {tab === "preview" ? (
             showArtifact ? (
               <article className="mx-auto max-w-[780px] break-words px-7 py-8 text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-4 [&_h1]:text-[23px] [&_h1]:font-semibold [&_h2]:mb-3 [&_h2]:text-[19px] [&_h2]:font-semibold [&_table]:block [&_table]:overflow-x-auto [&_th]:border [&_th]:p-2 [&_td]:border [&_td]:p-2">
+                <p className="mb-2 text-[11px] uppercase tracking-wide text-[#858585]">{selectedArtifact.contentType === "text/markdown" ? "Markdown report" : selectedArtifact.contentType}</p>
                 <h1 className="mb-5 text-[18px] font-semibold">{selectedArtifact.title}</h1>
+                {selectedArtifact.contentType === "text/markdown" ? <button type="button" onClick={() => onCreatePdf?.(selectedArtifact.id)} className="mb-5 rounded-md border border-[#d7d7d7] px-3 py-1.5 text-[12px] hover:bg-[#f5f5f5]">Generate PDF</button> : null}
+                {pdfError ? <p role="alert" className="text-red-700">PDF failed: {pdfError}</p> : null}
+                {selectedArtifact.contentType === "application/pdf" && (pdfUrl || storedUrl) ? <a href={pdfUrl || storedUrl} download={selectedArtifact.title} className="mb-5 inline-block text-[12px] underline">Download PDF</a> : null}
                 {selectedArtifact.contentType === "text/markdown" ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedArtifact.body}</ReactMarkdown>
                   : selectedArtifact.contentType === "text/plain" ? <pre className="whitespace-pre-wrap font-sans">{selectedArtifact.body}</pre>
                   : selectedArtifact.contentType === "text/html" ? <iframe title={selectedArtifact.title} sandbox="" srcDoc={selectedArtifact.body} className="h-[70vh] w-full border border-[#e3e0db]" />
-                  : selectedArtifact.contentType === "application/pdf" && storedUrl ? <iframe title={selectedArtifact.title} src={storedUrl} className="h-[75vh] w-full border-0" />
+                  : selectedArtifact.contentType === "application/pdf" && (pdfUrl || storedUrl) ? <iframe title={selectedArtifact.title} src={pdfUrl || storedUrl} className="h-[75vh] w-full border-0" />
                   : selectedArtifact.contentType?.startsWith("image/") && storedUrl ? <img src={storedUrl} alt={selectedArtifact.title} className="max-w-full" />
                   : <p>Preview unavailable for {selectedArtifact.contentType}. {storedUrl ? <a href={storedUrl} target="_blank" rel="noopener noreferrer">Open stored output</a> : "No file was saved."}</p>}
               </article>
