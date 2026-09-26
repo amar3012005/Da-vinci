@@ -20,3 +20,14 @@ test("renders saved report in preview and opens artifacts from the rail", () => 
   expect(onSelectArtifact).toHaveBeenCalledWith(artifact.id);
   act(() => root.unmount());
 });
+
+test("PDF fills preview beneath tabs", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const artifact = { id: "22222222-2222-4222-8222-222222222222", kind: "pdf", title: "German competitor report.pdf", contentType: "application/pdf", storageLocation: "https://example.com/report.pdf", body: "" };
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  act(() => root.render(<TaskPreview status="complete" events={[]} places={[]} sources={[]} report="" artifacts={[artifact]} selectedArtifact={artifact} />));
+  expect(container.querySelector("article")).toBeNull();
+  expect(container.querySelector('iframe[title="German competitor report.pdf"]')?.className).toContain("flex-1");
+  act(() => root.unmount());
+});

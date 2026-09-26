@@ -507,19 +507,26 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
             <button key={id} type="button" onClick={() => setTab(id)} className={`ml-1 rounded-full px-2.5 py-1 text-[12px] ${tab === id ? "bg-[#171717] text-white" : "text-[#525252]"}`}>{label}</button>
           ))}
         </div>
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className={`min-h-0 flex-1 ${tab === "preview" && selectedArtifact?.contentType === "application/pdf" && !openUrl ? "overflow-hidden" : "overflow-auto"}`}>
           {tab === "preview" ? (
             showArtifact ? (
+              selectedArtifact.contentType === "application/pdf" && (pdfUrl || storedUrl) ? (
+                <div className="flex h-full min-h-0 flex-col bg-white">
+                  <div className="flex min-h-0 shrink-0 items-center gap-3 border-b border-[#eeeae4] px-3 py-2">
+                    <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#303030]" title={selectedArtifact.title}>{selectedArtifact.title}</span>
+                    <a href={pdfUrl || storedUrl} download={selectedArtifact.title} className="shrink-0 text-[12px] text-[#2563a6] underline">Download PDF</a>
+                  </div>
+                  <iframe title={selectedArtifact.title} src={pdfUrl || storedUrl} className="min-h-0 w-full flex-1 border-0" />
+                </div>
+              ) :
               <article className="mx-auto max-w-[780px] break-words px-7 py-8 text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-4 [&_h1]:text-[23px] [&_h1]:font-semibold [&_h2]:mb-3 [&_h2]:text-[19px] [&_h2]:font-semibold [&_table]:block [&_table]:overflow-x-auto [&_th]:border [&_th]:p-2 [&_td]:border [&_td]:p-2">
                 <p className="mb-2 text-[11px] uppercase tracking-wide text-[#858585]">{selectedArtifact.contentType === "text/markdown" ? "Markdown report" : selectedArtifact.contentType}</p>
                 <h1 className="mb-5 text-[18px] font-semibold">{selectedArtifact.title}</h1>
                 {selectedArtifact.contentType === "text/markdown" ? <button type="button" onClick={() => onCreatePdf?.(selectedArtifact.id)} className="mb-5 rounded-md border border-[#d7d7d7] px-3 py-1.5 text-[12px] hover:bg-[#f5f5f5]">Generate PDF</button> : null}
                 {pdfError ? <p role="alert" className="text-red-700">PDF failed: {pdfError}</p> : null}
-                {selectedArtifact.contentType === "application/pdf" && (pdfUrl || storedUrl) ? <a href={pdfUrl || storedUrl} download={selectedArtifact.title} className="mb-5 inline-block text-[12px] underline">Download PDF</a> : null}
                 {selectedArtifact.contentType === "text/markdown" ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedArtifact.body}</ReactMarkdown>
                   : selectedArtifact.contentType === "text/plain" ? <pre className="whitespace-pre-wrap font-sans">{selectedArtifact.body}</pre>
                   : selectedArtifact.contentType === "text/html" ? <iframe title={selectedArtifact.title} sandbox="" srcDoc={selectedArtifact.body} className="h-[70vh] w-full border border-[#e3e0db]" />
-                  : selectedArtifact.contentType === "application/pdf" && (pdfUrl || storedUrl) ? <iframe title={selectedArtifact.title} src={pdfUrl || storedUrl} className="h-[75vh] w-full border-0" />
                   : selectedArtifact.contentType?.startsWith("image/") && storedUrl ? <img src={storedUrl} alt={selectedArtifact.title} className="max-w-full" />
                   : <p>Preview unavailable for {selectedArtifact.contentType}. {storedUrl ? <a href={storedUrl} target="_blank" rel="noopener noreferrer">Open stored output</a> : "No file was saved."}</p>}
               </article>
