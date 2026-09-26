@@ -48,7 +48,7 @@ import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard'
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
 import FeatureBetaModal from './FeatureBetaModal';
-import { isPreviewTaskRoom, roomIdFromPath, useTaskAgentStream, TaskTranscript, TaskPreview } from '../hyperagents/rooms/TaskAgentRoom';
+import { isPreviewTaskRoom, roomIdFromPath, useTaskAgentStream, TaskTranscript, ActiveTaskPlan, TaskPreview } from '../hyperagents/rooms/TaskAgentRoom';
 import NewSession from '../hyperagents/rooms/NewSession';
 import {
   CAMPAIGN_INTELLIGENCE_V2,
@@ -3136,6 +3136,7 @@ function RoomThread({ roomId, onArchived }) {
         {/* Composer */}
         {!archived && !isHqRoom && (
           <form onSubmit={handleSubmit} className={taskRoom ? 'bg-white px-4 pb-4 pt-2' : 'border-t border-[#e3e0db] bg-[#faf9f4] px-4 py-3'}>
+            {taskRoom && <div className="mx-auto mb-2 max-w-[760px]"><ActiveTaskPlan events={taskStream.events} messages={taskStream.messages} status={taskStream.status} operatingPlan={taskStream.operatingPlan} /></div>}
             <div className={taskRoom ? 'mx-auto max-w-[760px] rounded-[22px] border border-[#e9e9e9] bg-white px-3 py-2 shadow-[0_8px_28px_-20px_rgba(0,0,0,0.25)]' : ''}>
             <input
               ref={fileInputRef}

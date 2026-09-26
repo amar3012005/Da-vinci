@@ -242,7 +242,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
   };
 }
 
-const HIDDEN_STEPS = new Set(["workrun", "artifact", "completion", "approval", "user", "task_updated"]);
+const HIDDEN_STEPS = new Set(["workrun", "artifact", "completion", "approval", "user", "task_updated", "operating-plan-state"]);
 
 function toolLabel(step) {
   const labels = {
@@ -284,18 +284,22 @@ function TaskRow({ event }) {
   );
 }
 
-function conversationTurns(events, messages) {
+function conversationTurns(events, messages, latestPlan) {
   const turns = [];
   let current = null;
   for (const event of events) {
     if (event.step === "user") {
-      current = { id: event.at, at: event.at, text: event.detail, tools: [], artifacts: [], report: "", question: "", options: [] };
+      current = { id: event.at, at: event.at, text: event.detail, tools: [], artifacts: [], report: "", question: "", options: [], plan: null };
       turns.push(current);
       continue;
     }
     if (!current) {
-      current = { id: "earlier", text: "", tools: [], artifacts: [], report: "", question: "", options: [] };
+      current = { id: "earlier", text: "", tools: [], artifacts: [], report: "", question: "", options: [], plan: null };
       turns.push(current);
+    }
+    if (event.step === "operating-plan-state") {
+      try { current.plan = JSON.parse(event.detail); } catch { /* ignore malformed snapshot */ }
+      continue;
     }
     if (event.step === "question") {
       try {
@@ -312,7 +316,12 @@ function conversationTurns(events, messages) {
   }
   const said = new Set(turns.map((turn) => turn.text));
   for (const message of messages.slice(-1)) {
-    if (!said.has(message.text)) turns.push({ id: message.id, at: message.at, text: message.text, tools: [], artifacts: [], report: "", question: "", options: [] });
+    if (!said.has(message.text)) turns.push({ id: message.id, at: message.at, text: message.text, tools: [], artifacts: [], report: "", question: "", options: [], plan: null });
+  }
+  // Older rooms have only a room-wide plan. Attach it to its plan event's turn.
+  if (latestPlan?.tasks?.length) {
+    const owner = [...turns].reverse().find((turn) => turn.tools.some((event) => event.step === "operating-plan"));
+    if (owner && !owner.plan) owner.plan = latestPlan;
   }
   return turns.filter((turn) => turn.text || turn.tools.length || turn.report || turn.artifacts.length);
 }
@@ -324,7 +333,7 @@ function artifactForEvent(event, artifacts) {
     || artifacts.find((artifact) => event.detail === `${artifact.kind} ${artifact.title}`);
 }
 
-function OperatingPlan({ plan }) {
+export function OperatingPlan({ plan }) {
   if (!plan?.tasks?.length) return null;
   const done = plan.tasks.filter((task) => task.status === "completed").length;
   return (
@@ -347,7 +356,7 @@ function OperatingPlan({ plan }) {
   );
 }
 
-function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, artifacts, onSelectArtifact, onMemoryDecision, onAnswer }) {
+function TurnBlock({ turn, live, status, startedAt, now, artifacts, onSelectArtifact, onMemoryDecision, onAnswer }) {
   const [open, setOpen] = useState(true);
   const pending = live && status === "working";
   return (
@@ -372,7 +381,7 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, artifact
           ) : null}
         </div>
       ) : null}
-      {live ? <OperatingPlan plan={operatingPlan} /> : null}
+      {turn.plan && !(live && status === "working") ? <OperatingPlan plan={turn.plan} /> : null}
       {turn.question ? <div className="whitespace-pre-wrap text-[15px] leading-7 text-[#1c1a16]">{turn.question}</div> : null}
       {live && status === "question" && turn.options?.length ? (
         <div className="flex flex-wrap gap-2">
@@ -413,7 +422,7 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [status]);
-  const turns = conversationTurns(events, messages);
+  const turns = conversationTurns(events, messages, operatingPlan);
   if (turns.length && status === "working") {
     const latest = turns[turns.length - 1];
     if (!latest.report && draft) latest.report = draft;
@@ -432,7 +441,6 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
           status={status}
           startedAt={startedAt}
           now={now}
-          operatingPlan={operatingPlan}
           artifacts={artifacts}
           onSelectArtifact={onSelectArtifact}
           onMemoryDecision={onMemoryDecision}
@@ -442,6 +450,12 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
       {error ? <div className="border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">{error}</div> : null}
     </div>
   );
+}
+
+export function ActiveTaskPlan({ events, messages, status, operatingPlan }) {
+  if (status !== "working") return null;
+  const turns = conversationTurns(events, messages, operatingPlan);
+  return <OperatingPlan plan={turns.at(-1)?.plan} />;
 }
 
 function hostOf(url) {

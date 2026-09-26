@@ -1,6 +1,6 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { TaskPreview, TaskTranscript } from "./TaskAgentRoom";
+import { ActiveTaskPlan, TaskPreview, TaskTranscript } from "./TaskAgentRoom";
 
 jest.mock("react-markdown", () => ({ __esModule: true, default: ({ children }) => <div>{children}</div> }));
 jest.mock("remark-gfm", () => () => null);
@@ -77,5 +77,28 @@ test("does not repeat settled progress beside its stream", () => {
   ];
   act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" progressDraft={message} />));
   expect(container.textContent.split(message)).toHaveLength(2);
+  act(() => root.unmount());
+});
+
+test("keeps completed plan with its original turn and active plan beside composer", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const oldPlan = { runId: "room", tasks: [{ id: 1, title: "Old strategy step", status: "completed" }] };
+  const newPlan = { runId: "room", tasks: [{ id: 1, title: "Current research step", status: "active" }] };
+  const events = [
+    { at: "2026-09-26T12:00:00Z", step: "user", detail: "Make strategy" },
+    { at: "2026-09-26T12:00:01Z", step: "operating-plan-state", detail: JSON.stringify(oldPlan) },
+    { at: "2026-09-26T12:00:02Z", step: "completion", detail: "complete" },
+    { at: "2026-09-26T12:01:00Z", step: "user", detail: "What is in HIVEMIND?" },
+  ];
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const render = () => root.render(<><TaskTranscript messages={[]} events={events} status="working" operatingPlan={oldPlan} /><ActiveTaskPlan events={events} messages={[]} status="working" operatingPlan={oldPlan} /></>);
+  act(render);
+  expect(container.textContent.indexOf("Old strategy step")).toBeLessThan(container.textContent.indexOf("What is in HIVEMIND?"));
+  expect(container.textContent.split("Old strategy step")).toHaveLength(2);
+  events.push({ at: "2026-09-26T12:01:01Z", step: "operating-plan-state", detail: JSON.stringify(newPlan) });
+  act(() => root.render(<><TaskTranscript messages={[]} events={events} status="working" operatingPlan={newPlan} /><ActiveTaskPlan events={events} messages={[]} status="working" operatingPlan={newPlan} /></>));
+  expect(container.textContent.split("Current research step")).toHaveLength(2);
+  expect(container.textContent.indexOf("Current research step")).toBeGreaterThan(container.textContent.indexOf("What is in HIVEMIND?"));
   act(() => root.unmount());
 });
