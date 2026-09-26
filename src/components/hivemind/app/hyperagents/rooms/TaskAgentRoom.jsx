@@ -64,6 +64,8 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
   const [artifacts, setArtifacts] = useState([]);
   const [selectedArtifact, setSelectedArtifact] = useState(null);
   const [pdfError, setPdfError] = useState("");
+  const [draft, setDraft] = useState("");
+  const [progressDraft, setProgressDraft] = useState("");
   const socketRef = useRef(null);
   const queuedStart = useRef(null);
   const selectedArtifactId = useRef("");
@@ -89,6 +91,12 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
         let parsed = null;
         try { parsed = JSON.parse(event.data); } catch { parsed = null; }
         if (!parsed) return;
+        if (parsed.type === "report-draft" || parsed.type === "progress-draft") {
+          const update = (current) => parsed.reset ? String(parsed.delta || "") : current + String(parsed.delta || "");
+          if (parsed.type === "report-draft") setDraft(update);
+          else setProgressDraft(update);
+          return;
+        }
         if (parsed.type === "artifact-list-result") {
           const items = Array.isArray(parsed.artifacts) ? parsed.artifacts.filter((item) => item.kind !== "note" && item.kind !== "reply") : [];
           setArtifacts(items);
@@ -106,6 +114,8 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
           return;
         }
         setAgentState((current) => applySocketMessage(current, parsed));
+        if (parsed.step === "report") setDraft("");
+        if (parsed.step === "progress") setProgressDraft("");
         const newestArtifactEvent = [...(parsed.state?.events || [])].reverse().find((item) => item.step === "artifact")?.at || "";
         if (parsed.type === "cf_agent_state" && newestArtifactEvent && newestArtifactEvent !== lastArtifactEvent) {
           lastArtifactEvent = newestArtifactEvent;
@@ -151,6 +161,8 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     };
     const socket = socketRef.current;
     setError("");
+    setDraft("");
+    setProgressDraft("");
     setStatus("working");
     setStartedAt(Date.now());
     setMessages((current) => [...current, { id: `${Date.now()}`, text, at: new Date().toISOString() }]);
@@ -211,6 +223,8 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     catalogStage: agentState?.catalogStage || "",
     operatingPlan: agentState?.operatingPlan || null,
     report,
+    draft,
+    progressDraft,
     artifacts,
     selectedArtifact,
     selectArtifact,
@@ -236,6 +250,8 @@ function toolLabel(step) {
     playbook_get: "Opened a task",
     reset_tools: "Opened the tools",
     hivemind_recall: "Recalled the company",
+    get_user_profile: "Loaded company profile",
+    governance: "Reviewed the report",
     hivemind_get_memory: "Read a memory",
     parallel_search: "Searched the web",
     composio_web_search: "Searched the web",
@@ -387,7 +403,7 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, artifact
   );
 }
 
-export function TaskTranscript({ messages, events, status, startedAt, operatingPlan, artifacts = [], onSelectArtifact, error, onMemoryDecision, onAnswer }) {
+export function TaskTranscript({ messages, events, status, startedAt, operatingPlan, artifacts = [], onSelectArtifact, error, onMemoryDecision, onAnswer, draft = "", progressDraft = "" }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (status !== "working") return undefined;
@@ -395,6 +411,11 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
     return () => clearInterval(timer);
   }, [status]);
   const turns = conversationTurns(events, messages);
+  if (turns.length && status === "working") {
+    const latest = turns[turns.length - 1];
+    if (!latest.report && draft) latest.report = draft;
+    if (progressDraft) latest.tools.push({ at: "draft", step: "progress", detail: progressDraft });
+  }
   if (!turns.length && !error) return null;
   return (
     <div className="mx-auto w-full max-w-[900px] space-y-12 pt-6 pb-8" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>

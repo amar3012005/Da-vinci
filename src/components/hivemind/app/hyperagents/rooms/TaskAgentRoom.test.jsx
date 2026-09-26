@@ -53,3 +53,14 @@ test("saved artifact appears beneath its creating turn", () => {
   expect(select).toHaveBeenCalledWith(artifact.id);
   act(() => root.unmount());
 });
+
+test("shows streamed draft before final report arrives", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const events = [{ at: "2026-09-26T12:00:00Z", step: "user", detail: "Draft a campaign" }];
+  act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" draft="# Campaign\nFirst section" progressDraft="I’m checking company evidence" />));
+  expect(container.textContent).toContain("First section");
+  expect(container.textContent).toContain("I’m checking company evidence");
+  act(() => root.unmount());
+});
