@@ -3098,6 +3098,8 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
               status={taskStream.status}
               startedAt={taskStream.startedAt}
               operatingPlan={taskStream.operatingPlan}
+              artifacts={taskStream.artifacts}
+              onSelectArtifact={taskStream.selectArtifact}
               draft={taskStream.draft}
               error={taskStream.error}
               report={taskStream.report}
@@ -3243,6 +3245,8 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
           artifacts={taskStream.artifacts}
           selectedArtifact={taskStream.selectedArtifact}
           onSelectArtifact={taskStream.selectArtifact}
+          onCreatePdf={taskStream.createPdf}
+          pdfError={taskStream.pdfError}
         />
       ) : null}
       {/* HQ owns a persistent runtime rail. Human rooms keep participants. */}
