@@ -84,13 +84,13 @@ export default function AgentAvatar({ agent, size = 28, shape = 'circle', ring =
       data-lane={lane}
     >
       {img ? (
-        <img src={img} alt="" className="w-full h-full object-cover" style={{ borderRadius: radius, objectPosition: faceOnly ? 'center 25%' : 'center' }} />
+        <img src={img} alt="" className="w-full h-full object-cover" style={{ borderRadius: radius, objectPosition: faceOnly ? 'center 12%' : 'center', transform: faceOnly ? 'scale(2.5)' : undefined, transformOrigin: 'center 20%' }} />
       ) : (
         <Avatar
           assets={humation1}
           seed={seed}
-          size={faceOnly ? Math.round(size * 1.8) : size}
-          style={faceOnly ? { flexShrink: 0, transform: 'translateY(22%)' } : undefined}
+          size={faceOnly ? Math.round(size * 3.2) : size}
+          style={faceOnly ? { flexShrink: 0, transform: 'translateY(14%)' } : undefined}
           colors={colors}
           background="transparent"
           title={name}

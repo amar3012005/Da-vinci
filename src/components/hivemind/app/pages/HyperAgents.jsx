@@ -2606,6 +2606,7 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
         connecting={gmailConnecting}
       />
       <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-[#fbfaf7]">
+        {taskRoom ? <div id="hm-room-environment-slot" className="hidden shrink-0 justify-end bg-white px-4 pt-3 lg:flex" /> : null}
         {/* Room chrome now lives in the persistent right rail. Keep modal portals
             mounted here without reserving a fixed header above the conversation. */}
         {!isHqRoom && <div className="contents">

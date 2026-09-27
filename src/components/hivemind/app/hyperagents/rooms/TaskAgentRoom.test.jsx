@@ -12,7 +12,9 @@ test("renders saved report in preview and opens artifacts from the rail", () => 
   const artifact = { id: "11111111-1111-4111-8111-111111111111", kind: "report", title: "German competitors", contentType: "text/markdown", body: "## Verified vendors\n\nParloa", createdAt: "2026-09-26T12:00:00Z" };
   const onSelectArtifact = jest.fn();
   const container = document.createElement("div");
-  const root = createRoot(container);
+  container.innerHTML = '<div id="hm-room-environment-slot"></div><div id="preview-root"></div>';
+  document.body.appendChild(container);
+  const root = createRoot(container.querySelector("#preview-root"));
   const onConnectApps = jest.fn();
   act(() => root.render(<TaskPreview status="complete" events={[]} places={[]} sources={[{ url: "https://example.com", title: "Example" }]} report="" artifacts={[artifact]} selectedArtifact={artifact} onSelectArtifact={onSelectArtifact} employee={{ name: "Maya" }} onConnectApps={onConnectApps} />));
   expect(container.textContent).toContain("Maya");
@@ -31,6 +33,7 @@ test("renders saved report in preview and opens artifacts from the rail", () => 
   act(() => reportButtons[reportButtons.length - 1].click());
   expect(onSelectArtifact).toHaveBeenCalledWith(artifact.id);
   act(() => root.unmount());
+  container.remove();
 });
 
 test("orb follows live task phase", () => {

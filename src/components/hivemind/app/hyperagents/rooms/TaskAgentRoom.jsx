@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ChevronRight, FileText, Globe2, Grid2X2Plus, Link2, Settings2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { createPortal } from "react-dom";
 import { ThinkingOrb } from "thinking-orbs";
+import { macArrow } from "./cursors";
 import apiClient from "../../shared/api-client";
 
 const PdfCanvasPreview = React.lazy(() => import("./PdfCanvasPreview"));
@@ -578,10 +580,38 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
   const previewUrl = openUrl || sourceRows[0]?.url || "";
   const showArtifact = !openUrl && Boolean(selectedArtifact) && (selection.type !== "artifact" || selection.id === selectedArtifact.id);
   const storedUrl = artifactUrl(selectedArtifact);
+  const environmentSlot = typeof document === "undefined" ? null : document.getElementById("hm-room-environment-slot");
+  const orbState = taskOrbState(status, events);
+  const activeOrb = status === "working" && ["solving", "connecting", "searching"].includes(orbState);
+  const orbGravity = activeOrb && typeof navigator !== "undefined" && /Macintosh|Mac OS X/.test(navigator.userAgent) ? { sprite: macArrow } : false;
   const imageUrl = /^image\/(png|jpeg|webp|gif)$/.test(selectedArtifact?.contentType || "")
     ? (storedUrl || (selectedArtifact?.body ? `data:${selectedArtifact.contentType};base64,${selectedArtifact.body}` : ""))
     : "";
-  return (
+  return (<>
+    {environmentSlot ? createPortal(showEnvironment ? (
+      <div className="w-[288px] rounded-[18px] border border-[#dedede] bg-white px-3 py-2.5 text-[#252525] shadow-[0_10px_28px_rgba(0,0,0,0.09)]" aria-label="Room environment">
+        <div className="flex items-center gap-1.5 border-b border-[#f0f0f0] pb-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#ff5f57]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[#febc2e]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[#28c840]" />
+          <span className="ml-2 flex-1 text-[11px] text-[#858585]">Environment</span>
+          <button type="button" onClick={() => setShowEnvironment(false)} aria-label="Hide environment" className="text-[11px] text-[#777] hover:text-[#222]">Hide</button>
+        </div>
+        <div className="flex items-center gap-2.5 py-2 text-[13px]">
+          {employeeAvatar || <span className="grid h-7 w-7 place-items-center rounded-full bg-[#e7efff] text-sm">✦</span>}
+          <span className="min-w-0 flex-1 truncate font-medium">{employee?.name || "HyperAgent"}</span>
+          <ThinkingOrb state={orbState} size={activeOrb ? 64 : 20} gravity={orbGravity} paused={status !== "working"} aria-label={`Agent ${status || "idle"}`} />
+          {onOpenSettings ? <button type="button" onClick={onOpenSettings} aria-label="Room instructions" className="text-[#777] hover:text-[#222]"><Settings2 size={16} /></button> : null}
+        </div>
+        <button type="button" onClick={onConnectApps} disabled={!onConnectApps} className="flex w-full items-center gap-2 border-t border-[#f0f0f0] py-2 text-left text-[12px] hover:text-[#2563a6] disabled:cursor-default">
+          <Grid2X2Plus size={15} /><span className="flex-1">Connect apps</span><ChevronRight size={14} className="text-[#aaa]" />
+        </button>
+        <div className="flex items-center gap-3 border-t border-[#f0f0f0] pt-2 text-[11px] text-[#777]">
+          <button type="button" onClick={() => setTab("artifacts")} className="hover:text-[#252525]">Files {artifacts.length}</button>
+          <a href="/hivemind/app/usage" className="hover:text-[#252525]">Credits used</a>
+        </div>
+      </div>
+    ) : <button type="button" onClick={() => setShowEnvironment(true)} aria-label="Show environment" className="rounded-full border border-[#dedede] bg-white px-3 py-1 text-[11px] text-[#777] shadow-sm">Environment</button>, environmentSlot) : null}
     <aside className="relative hidden min-h-0 shrink-0 bg-[#f6f5f1] lg:flex" style={{ width }}>
       <button
         type="button"
@@ -597,26 +627,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
           {[["preview", "Preview"], ["artifacts", "Artifacts"], ["computer", "Computer"], ["sources", "Sources"]].map(([id, label]) => (
             <button key={id} type="button" onClick={() => setTab(id)} className={`ml-1 rounded-full px-2.5 py-1 text-[12px] ${tab === id ? "bg-[#171717] text-white" : "text-[#525252]"}`}>{label}</button>
           ))}
-          <button type="button" onClick={() => setShowEnvironment((visible) => !visible)} aria-expanded={showEnvironment} aria-label={showEnvironment ? "Hide environment" : "Show environment"} className="ml-auto shrink-0 rounded-full px-2 py-1 text-[12px] text-[#525252] hover:bg-[#f4f4f5]">{showEnvironment ? "Hide" : "Environment"}</button>
         </div>
-        {showEnvironment ? <div className="shrink-0 border-b border-[#eeeae4] p-3">
-          <div className="mx-auto w-full max-w-[360px] rounded-[24px] border border-[#dedede] bg-white px-4 py-4 text-[#252525] shadow-[0_12px_30px_rgba(0,0,0,0.07)]">
-            <h2 className="mb-3 text-[16px] text-[#737373]">General</h2>
-            <div className="flex min-h-11 items-center gap-3 px-1 text-[15px]">
-              {employeeAvatar || <span className="grid h-7 w-7 place-items-center rounded-full bg-[#e7efff] text-sm">✦</span>}
-              <span className="min-w-0 flex-1 truncate">{employee?.name || "HyperAgent"}</span>
-              <ThinkingOrb state={taskOrbState(status, events)} size={20} paused={status !== "working"} aria-label={`Agent ${status || "idle"}`} />
-              {onOpenSettings ? <button type="button" onClick={onOpenSettings} aria-label="Room instructions" className="text-[#777] hover:text-[#222]"><Settings2 size={18} /></button> : null}
-            </div>
-            <button type="button" onClick={onConnectApps} disabled={!onConnectApps} className="flex min-h-11 w-full items-center gap-3 px-1 text-left text-[15px] hover:text-[#2563a6] disabled:cursor-default disabled:hover:text-inherit">
-              <Grid2X2Plus size={20} className="text-[#777]" /><span className="flex-1">Connect apps</span><ChevronRight size={17} className="text-[#aaa]" />
-            </button>
-            <button type="button" onClick={() => setTab("artifacts")} className="mt-4 flex min-h-12 w-full items-center gap-2 border-t border-[#e9e9e9] text-left text-[15px] text-[#737373] hover:text-[#252525]">
-              Files <span className="text-[#aaa]">{artifacts.length}</span><ChevronRight size={17} />
-            </button>
-            <a href="/hivemind/app/usage" className="flex min-h-12 items-center gap-2 border-t border-[#e9e9e9] text-[15px] text-[#737373] hover:text-[#252525]">Credits used <ChevronRight size={17} /></a>
-          </div>
-        </div> : null}
         <div className={`min-h-0 flex-1 ${tab === "preview" && selectedArtifact?.contentType === "application/pdf" && !openUrl ? "overflow-hidden" : "overflow-auto"}`}>
           {tab === "preview" ? (
             showArtifact && selectedArtifact.contentType === "application/pdf" && (pdfUrl || storedUrl) ? (
@@ -677,5 +688,5 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
         </div>
       </div>
     </aside>
-  );
+  </>);
 }
