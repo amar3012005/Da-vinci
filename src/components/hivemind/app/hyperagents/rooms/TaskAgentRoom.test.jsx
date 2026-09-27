@@ -5,7 +5,7 @@ import { TaskPreview, TaskTranscript, agentInstanceName, taskOrbState } from "./
 jest.mock("react-markdown", () => ({ __esModule: true, default: ({ children }) => <div>{children}{String(children).includes("https://source.example") ? <a href="https://source.example/page">Source</a> : null}</div> }));
 jest.mock("remark-gfm", () => () => null);
 jest.mock("./PdfCanvasPreview", () => ({ __esModule: true, default: () => <span>PDF pages</span> }));
-jest.mock("thinking-orbs", () => ({ ThinkingOrb: ({ state, size, gravity }) => <span data-orb-state={state} data-orb-size={size} data-orb-gravity={gravity?.sprite ? "pointer" : "none"} /> }));
+jest.mock("thinking-orbs", () => ({ ThinkingOrb: ({ state, size, gravity, style, color }) => <span data-orb-state={state} data-orb-size={size} data-orb-gravity={gravity?.sprite ? "pointer" : "none"} data-orb-color={color} style={style} /> }));
 
 test("renders saved report in preview and opens artifacts from the rail", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -18,7 +18,7 @@ test("renders saved report in preview and opens artifacts from the rail", () => 
   const onConnectApps = jest.fn();
   act(() => root.render(<TaskPreview status="complete" events={[]} places={[]} sources={[{ url: "https://example.com", title: "Example" }]} report="" artifacts={[artifact]} selectedArtifact={artifact} onSelectArtifact={onSelectArtifact} employee={{ name: "Maya" }} onConnectApps={onConnectApps} />));
   expect(container.textContent).toContain("Maya");
-  expect(container.querySelector('[data-orb-state="breathing"]')).toBeTruthy();
+  expect(container.querySelector('[data-orb-state="solving"]')).toBeTruthy();
   act(() => [...container.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Hide environment").click());
   expect(container.textContent).not.toContain("Connect apps");
   act(() => [...container.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Show environment").click());
@@ -38,9 +38,9 @@ test("renders saved report in preview and opens artifacts from the rail", () => 
 
 test("orb follows live task phase", () => {
   expect(taskOrbState("working", [{ step: "parallel_search" }])).toBe("searching");
-  expect(taskOrbState("working", [{ step: "hivemind_connected_task" }])).toBe("connecting");
+  expect(taskOrbState("working", [{ step: "hivemind_connected_task" }])).toBe("searching");
   expect(taskOrbState("working", [{ step: "report" }])).toBe("composing");
-  expect(taskOrbState("question", [])).toBe("listening");
+  expect(taskOrbState("question", [])).toBe("solving");
   expect(taskOrbState("working", [{ step: "workrun", detail: "queued" }])).toBe("solving");
 });
 
@@ -146,6 +146,8 @@ test("setup events stay out of transcript while 64px solving orb appears", () =>
   act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" />));
   expect(container.textContent).not.toMatch(/Loading authenticated context|Task queued|Preparing task/);
   expect(container.querySelector('[data-orb-state="solving"][data-orb-size="64"]')).toBeTruthy();
+  expect(container.querySelector('[data-orb-state="solving"]').style.width).toBe("36px");
+  expect(container.querySelector('[data-orb-state="solving"]').getAttribute("data-orb-color")).toBe("#111111");
   act(() => root.unmount());
 });
 
