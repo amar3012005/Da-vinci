@@ -306,10 +306,15 @@ function toolLabel(step) {
 function TaskRow({ event }) {
   const thinking = event.step === "operating-plan" || event.step === "progress";
   const detail = String(event.detail || "").trim();
+  let call = null;
+  if (event.step === "tool-call") {
+    try { call = JSON.parse(detail); } catch { /* show raw event below */ }
+  }
   const isSearch = event.step === "parallel_search" || event.step === "composio_web_search";
   const [open, setOpen] = useState(false);
   if (event.step === "workrun") return <li role="status" className="py-1 text-[13px] text-[#777777]">{detail === "queued" ? "Task queued" : detail.startsWith("starting ") ? "Preparing task" : detail}</li>;
   if (thinking) return <li className="py-2 text-[14px] leading-6 text-[#303030]">{detail}</li>;
+  if (call?.name) return <li className="flex items-center gap-2 py-1.5 text-[13px] text-[#858b94]"><span aria-hidden="true" className="w-4 shrink-0 text-center">▣</span><span>{call.name}</span><span>· {call.phase === "started" ? "Running" : call.phase === "failed" ? "Failed" : "Returned"}</span>{call.target ? <span className="min-w-0 truncate">· {call.target}</span> : null}</li>;
   const summary = isSearch && detail && !/^(parallel-ai-gateway|parallel|started)$/i.test(detail) ? detail : "";
   return (
     <li>
@@ -348,6 +353,17 @@ function conversationTurns(events, messages) {
       continue;
     }
     if (event.step === "completion") current.finishedAt = event.at;
+    if (event.step === "tool-call") {
+      let call;
+      try { call = JSON.parse(event.detail); } catch { call = null; }
+      const existing = call?.id && current.tools.findIndex((item) => {
+        if (item.step !== "tool-call") return false;
+        try { return JSON.parse(item.detail).id === call.id; } catch { return false; }
+      });
+      if (typeof existing === "number" && existing >= 0) current.tools[existing] = event;
+      else current.tools.push(event);
+      continue;
+    }
     if (event.step === "artifact") current.artifacts.push(event);
     else if (event.step === "report") current.report = event.detail;
     else if (!HIDDEN_STEPS.has(event.step) && !isSetupEvent(event) && !(event.step === "parallel_search" && event.detail === "parallel-ai-gateway")) current.tools.push(event);
