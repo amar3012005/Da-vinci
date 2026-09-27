@@ -71,7 +71,7 @@ export default function NewSession({ onSubmit }) {
               <button type="button" aria-label="Choose HyperAgent" aria-haspopup="menu" aria-expanded={menu === "employee"}
                 onClick={() => setMenu(menu === "employee" ? "" : "employee")}
                 className="inline-flex max-w-[190px] items-center gap-1.5 rounded-full px-2 py-1 text-[13px] text-[#3f3f46] hover:bg-[#f4f4f5]">
-                <AgentAvatar agent={selectedEmployee} size={22} />
+                <AgentAvatar agent={selectedEmployee} size={22} faceOnly />
                 <span className="truncate">{selectedEmployee?.name || "Choose HyperAgent"}</span>
                 <ChevronDown size={13} className="shrink-0 text-[#a1a1aa]" />
               </button>
@@ -80,7 +80,7 @@ export default function NewSession({ onSubmit }) {
                   <button key={employee.id} type="button" role="menuitemradio" aria-checked={ownerId === employee.id}
                     onClick={() => { setOwnerId(employee.id); setMenu(""); }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#f4f4f5]">
-                    <AgentAvatar agent={employee} size={28} />
+                    <AgentAvatar agent={employee} size={28} faceOnly />
                     <span className="min-w-0"><span className="block truncate text-[13px] font-medium text-[#18181b]">{employee.name}</span><span className="block truncate text-[11px] text-[#71717a]">{employee.roleArchetype || "HyperAgent"}</span></span>
                   </button>
                 ))}

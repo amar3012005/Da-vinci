@@ -3256,7 +3256,7 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
           onCreatePdf={taskStream.createPdf}
           pdfError={taskStream.pdfError}
           employee={taskRoomEmployee}
-          employeeAvatar={<AgentAvatar agent={taskRoomEmployee} size={28} />}
+          employeeAvatar={<AgentAvatar agent={taskRoomEmployee} size={28} faceOnly />}
           onConnectApps={() => setShowConnectors(true)}
           onOpenSettings={() => { setSwarmDraft(room.swarm_instructions || ''); setShowSwarm(true); }}
         />

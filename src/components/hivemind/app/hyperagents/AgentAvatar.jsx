@@ -55,7 +55,7 @@ function resolveImg(agent) {
  * @param ring    show the lane-colored ring/background (default true)
  * @param active  live speaker → soft pulsing ring (default false)
  */
-export default function AgentAvatar({ agent, size = 28, shape = 'circle', ring = true, active = false, className = '' }) {
+export default function AgentAvatar({ agent, size = 28, shape = 'circle', ring = true, active = false, faceOnly = false, className = '' }) {
   const lane = resolveLane(agent);
   const meta = LANE_META[lane] || LANE_META.Communicator;
   const seed = resolveSeed(agent);
@@ -84,12 +84,13 @@ export default function AgentAvatar({ agent, size = 28, shape = 'circle', ring =
       data-lane={lane}
     >
       {img ? (
-        <img src={img} alt="" className="w-full h-full object-cover" style={{ borderRadius: radius }} />
+        <img src={img} alt="" className="w-full h-full object-cover" style={{ borderRadius: radius, objectPosition: faceOnly ? 'center 25%' : 'center' }} />
       ) : (
         <Avatar
           assets={humation1}
           seed={seed}
-          size={size}
+          size={faceOnly ? Math.round(size * 1.8) : size}
+          style={faceOnly ? { flexShrink: 0, transform: 'translateY(22%)' } : undefined}
           colors={colors}
           background="transparent"
           title={name}

@@ -1,10 +1,11 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { TaskPreview, TaskTranscript, agentInstanceName } from "./TaskAgentRoom";
+import { TaskPreview, TaskTranscript, agentInstanceName, taskOrbState } from "./TaskAgentRoom";
 
 jest.mock("react-markdown", () => ({ __esModule: true, default: ({ children }) => <div>{children}{String(children).includes("https://source.example") ? <a href="https://source.example/page">Source</a> : null}</div> }));
 jest.mock("remark-gfm", () => () => null);
 jest.mock("./PdfCanvasPreview", () => ({ __esModule: true, default: () => <span>PDF pages</span> }));
+jest.mock("thinking-orbs", () => ({ ThinkingOrb: ({ state }) => <span data-orb-state={state} /> }));
 
 test("renders saved report in preview and opens artifacts from the rail", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -15,6 +16,10 @@ test("renders saved report in preview and opens artifacts from the rail", () => 
   const onConnectApps = jest.fn();
   act(() => root.render(<TaskPreview status="complete" events={[]} places={[]} sources={[{ url: "https://example.com", title: "Example" }]} report="" artifacts={[artifact]} selectedArtifact={artifact} onSelectArtifact={onSelectArtifact} employee={{ name: "Maya" }} onConnectApps={onConnectApps} />));
   expect(container.textContent).toContain("Maya");
+  expect(container.querySelector('[data-orb-state="breathing"]')).toBeTruthy();
+  act(() => [...container.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Hide environment").click());
+  expect(container.textContent).not.toContain("Connect apps");
+  act(() => [...container.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Show environment").click());
   expect(container.textContent).toContain("Verified vendors");
   act(() => [...container.querySelectorAll("button")].find((button) => button.textContent.includes("Connect apps")).click());
   expect(onConnectApps).toHaveBeenCalledTimes(1);
@@ -26,6 +31,13 @@ test("renders saved report in preview and opens artifacts from the rail", () => 
   act(() => reportButtons[reportButtons.length - 1].click());
   expect(onSelectArtifact).toHaveBeenCalledWith(artifact.id);
   act(() => root.unmount());
+});
+
+test("orb follows live task phase", () => {
+  expect(taskOrbState("working", [{ step: "parallel_search" }])).toBe("searching");
+  expect(taskOrbState("working", [{ step: "hivemind_connected_task" }])).toBe("connecting");
+  expect(taskOrbState("working", [{ step: "report" }])).toBe("composing");
+  expect(taskOrbState("question", [])).toBe("listening");
 });
 
 test("source and report links open in Preview; artifact selection restores artifact", () => {

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ChevronRight, FileText, Globe2, Grid2X2Plus, Link2, Settings2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ThinkingOrb } from "thinking-orbs";
 import apiClient from "../../shared/api-client";
 
 const PdfCanvasPreview = React.lazy(() => import("./PdfCanvasPreview"));
@@ -398,9 +399,9 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, a
           </button>
           {open ? (
             <ol className="mt-2">
-              {pending && !turn.tools.length ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#777777]"><span className="animate-pulse text-[#a7a7a7]">✳</span> Thinking through task…</li> : null}
+              {pending && !turn.tools.length ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#777777]"><ThinkingOrb state="working" size={20} /> Thinking through task…</li> : null}
               {turn.tools.map((event, index) => <TaskRow key={`${event.at}-${event.step}-${index}`} event={event} />)}
-              {pending && turn.tools.length > 0 ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#777777]"><span className="animate-pulse text-[#a7a7a7]">✳</span> Working on response…</li> : null}
+              {pending && turn.tools.length > 0 ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#777777]"><ThinkingOrb state={taskOrbState(status, turn.tools)} size={20} /> Working on response…</li> : null}
               {pending && draft?.type === "progress-draft" && draft.text && !draft.text.trimStart().startsWith("{") ? <li role="status" className="whitespace-pre-wrap py-1 text-[13px] leading-5 text-[#555555]">{draft.text}</li> : null}
             </ol>
           ) : null}
@@ -496,6 +497,19 @@ function artifactUrl(artifact) {
   } catch { return ""; }
 }
 
+export function taskOrbState(status, events = []) {
+  if (status === "question" || status === "approval") return "listening";
+  if (status !== "working") return "breathing";
+  const step = [...events].reverse().find((event) => !["user", "workrun"].includes(event.step))?.step || "";
+  if (/search|recall|browser|maps|hivemind_meta/.test(step)) return "searching";
+  if (/connected|composio|connector/.test(step)) return "connecting";
+  if (/artifact|pdf|render/.test(step)) return "shaping";
+  if (/plan|playbook|skill/.test(step)) return "weaving";
+  if (/report|draft/.test(step)) return "composing";
+  if (/governance|score|verification/.test(step)) return "solving";
+  return "working";
+}
+
 export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, previewRequest, onSelectArtifact, onCreatePdf, pdfError, employee, employeeAvatar, onConnectApps, onOpenSettings }) {
   const [width, setWidth] = useState(520);
   const [showEnvironment, setShowEnvironment] = useState(true);
@@ -549,10 +563,8 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
       const screen = window.innerWidth || 1;
       const max = Math.floor(screen * 0.5);
       const next = Math.min(max, Math.max(300, drag.current.startWidth + (drag.current.x - event.clientX)));
-      const wide = next / screen >= 0.4;
       setWidth(next);
-      setShowEnvironment(!wide);
-      window.dispatchEvent(new CustomEvent("hm-task-preview", { detail: { wide } }));
+      window.dispatchEvent(new CustomEvent("hm-task-preview", { detail: { wide: next / screen >= 0.4 } }));
     }
     function up() { drag.current = null; }
     window.addEventListener("mousemove", move);
@@ -577,21 +589,6 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
         className="absolute bottom-0 left-0 top-0 z-30 w-1.5 cursor-col-resize hover:bg-[#117dff]"
         onMouseDown={(event) => { drag.current = { x: event.clientX, startWidth: width }; }}
       />
-      {showEnvironment ? <div className="absolute right-full top-5 z-20 mr-3 w-[300px] rounded-[24px] border border-[#dedede] bg-white px-4 py-4 text-[#252525] shadow-[0_16px_36px_rgba(0,0,0,0.08)]">
-        <h2 className="mb-3 text-[16px] text-[#737373]">General</h2>
-        <div className="flex min-h-11 items-center gap-3 px-1 text-[15px]">
-          {employeeAvatar || <span className="grid h-7 w-7 place-items-center rounded-full bg-[#e7efff] text-sm">✦</span>}
-          <span className="min-w-0 flex-1 truncate">{employee?.name || "HyperAgent"}</span>
-          {onOpenSettings ? <button type="button" onClick={onOpenSettings} aria-label="Room instructions" className="text-[#777] hover:text-[#222]"><Settings2 size={18} /></button> : null}
-        </div>
-        <button type="button" onClick={onConnectApps} disabled={!onConnectApps} className="flex min-h-11 w-full items-center gap-3 px-1 text-left text-[15px] hover:text-[#2563a6] disabled:cursor-default disabled:hover:text-inherit">
-          <Grid2X2Plus size={20} className="text-[#777]" /><span className="flex-1">Connect apps</span><ChevronRight size={17} className="text-[#aaa]" />
-        </button>
-        <button type="button" onClick={() => setTab("artifacts")} className="mt-4 flex min-h-12 w-full items-center gap-2 border-t border-[#e9e9e9] text-left text-[15px] text-[#737373] hover:text-[#252525]">
-          Files <span className="text-[#aaa]">{artifacts.length}</span><ChevronRight size={17} />
-        </button>
-        <a href="/hivemind/app/usage" className="flex min-h-12 items-center gap-2 border-t border-[#e9e9e9] text-[15px] text-[#737373] hover:text-[#252525]">Credits used <ChevronRight size={17} /></a>
-      </div> : null}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-[#e3e0db] bg-white">
         <div className="flex items-center gap-2 border-b border-[#eeeae4] px-3 py-2">
           <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
@@ -600,7 +597,26 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
           {[["preview", "Preview"], ["artifacts", "Artifacts"], ["computer", "Computer"], ["sources", "Sources"]].map(([id, label]) => (
             <button key={id} type="button" onClick={() => setTab(id)} className={`ml-1 rounded-full px-2.5 py-1 text-[12px] ${tab === id ? "bg-[#171717] text-white" : "text-[#525252]"}`}>{label}</button>
           ))}
+          <button type="button" onClick={() => setShowEnvironment((visible) => !visible)} aria-expanded={showEnvironment} aria-label={showEnvironment ? "Hide environment" : "Show environment"} className="ml-auto shrink-0 rounded-full px-2 py-1 text-[12px] text-[#525252] hover:bg-[#f4f4f5]">{showEnvironment ? "Hide" : "Environment"}</button>
         </div>
+        {showEnvironment ? <div className="shrink-0 border-b border-[#eeeae4] p-3">
+          <div className="mx-auto w-full max-w-[360px] rounded-[24px] border border-[#dedede] bg-white px-4 py-4 text-[#252525] shadow-[0_12px_30px_rgba(0,0,0,0.07)]">
+            <h2 className="mb-3 text-[16px] text-[#737373]">General</h2>
+            <div className="flex min-h-11 items-center gap-3 px-1 text-[15px]">
+              {employeeAvatar || <span className="grid h-7 w-7 place-items-center rounded-full bg-[#e7efff] text-sm">✦</span>}
+              <span className="min-w-0 flex-1 truncate">{employee?.name || "HyperAgent"}</span>
+              <ThinkingOrb state={taskOrbState(status, events)} size={20} paused={status !== "working"} aria-label={`Agent ${status || "idle"}`} />
+              {onOpenSettings ? <button type="button" onClick={onOpenSettings} aria-label="Room instructions" className="text-[#777] hover:text-[#222]"><Settings2 size={18} /></button> : null}
+            </div>
+            <button type="button" onClick={onConnectApps} disabled={!onConnectApps} className="flex min-h-11 w-full items-center gap-3 px-1 text-left text-[15px] hover:text-[#2563a6] disabled:cursor-default disabled:hover:text-inherit">
+              <Grid2X2Plus size={20} className="text-[#777]" /><span className="flex-1">Connect apps</span><ChevronRight size={17} className="text-[#aaa]" />
+            </button>
+            <button type="button" onClick={() => setTab("artifacts")} className="mt-4 flex min-h-12 w-full items-center gap-2 border-t border-[#e9e9e9] text-left text-[15px] text-[#737373] hover:text-[#252525]">
+              Files <span className="text-[#aaa]">{artifacts.length}</span><ChevronRight size={17} />
+            </button>
+            <a href="/hivemind/app/usage" className="flex min-h-12 items-center gap-2 border-t border-[#e9e9e9] text-[15px] text-[#737373] hover:text-[#252525]">Credits used <ChevronRight size={17} /></a>
+          </div>
+        </div> : null}
         <div className={`min-h-0 flex-1 ${tab === "preview" && selectedArtifact?.contentType === "application/pdf" && !openUrl ? "overflow-hidden" : "overflow-auto"}`}>
           {tab === "preview" ? (
             showArtifact && selectedArtifact.contentType === "application/pdf" && (pdfUrl || storedUrl) ? (
