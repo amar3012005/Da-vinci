@@ -26,7 +26,7 @@ for (const relativePath of externalizedAssets) {
 // becomes Cloudflare upload work without being imported by the application.
 const allowedExtensions = new Set([
   '', '.avif', '.cjs', '.css', '.csv', '.gif', '.html', '.ico', '.jpeg', '.jpg',
-  '.js', '.json', '.map', '.md', '.mp3', '.mp4', '.png', '.sh', '.svg',
+  '.js', '.json', '.map', '.md', '.mjs', '.mp3', '.mp4', '.png', '.sh', '.svg',
   '.txt', '.wasm', '.webp', '.woff', '.woff2', '.xml',
 ]);
 const maxFileBytes = 25 * 1024 * 1024;
