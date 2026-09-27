@@ -712,7 +712,7 @@ export default function HyperAgents() {
         ) : viewMode === 'campaigns' ? (
           <CampaignsView onOpenRoom={(roomId, campaignId) => goMode('thread', roomId, { campaignReturn: campaignId })} />
         ) : viewMode === 'session' ? (
-          <NewSession onSubmit={async (query) => {
+          <NewSession onSubmit={async (query, { mode = 'auto' } = {}) => {
             const { room } = await apiClient.createHyperRoom({
               name: query.slice(0, 120),
               goal: query,
@@ -723,7 +723,8 @@ export default function HyperAgents() {
             const roomId = room.id;
             try {
               if (org?.id) sessionStorage.setItem(`hm-agent:${roomId}`, `session-${org.id}-${roomId}`);
-              sessionStorage.setItem('hm-session-query', query);
+              sessionStorage.setItem(`hm-session-query:${roomId}`, query);
+              sessionStorage.setItem(`hm-session-mode:${roomId}`, mode);
             } catch { /* the persisted room still opens */ }
             fetchRooms();
             goMode('thread', roomId);
@@ -1257,21 +1258,25 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
     roomId,
   });
   const sessionQueryStarted = useRef(false);
+  useEffect(() => { sessionQueryStarted.current = false; }, [roomId]);
   useEffect(() => {
     if (!taskRoom || !companyContextLoaded || sessionQueryStarted.current) return undefined;
     let pending = '';
-    try { pending = sessionStorage.getItem('hm-session-query') || ''; } catch { pending = ''; }
+    let mode = 'auto';
+    try { pending = sessionStorage.getItem(`hm-session-query:${roomId}`) || ''; } catch { pending = ''; }
+    try { mode = sessionStorage.getItem(`hm-session-mode:${roomId}`) || 'auto'; } catch { mode = 'auto'; }
     if (!pending.trim()) return undefined;
     sessionQueryStarted.current = true;
-    try { sessionStorage.removeItem('hm-session-query'); } catch { /* already consumed */ }
+    try { sessionStorage.removeItem(`hm-session-query:${roomId}`); sessionStorage.removeItem(`hm-session-mode:${roomId}`); } catch { /* already consumed */ }
     taskStream.start({
       message: pending,
+      modePreference: mode,
       company: companyContext?.company || companyContext?.name || companyContext?.company_name || '',
       website: companyContext?.website || '',
       market: companyContext?.profile?.location || companyContext?.location || companyContext?.market || companyContext?.city || '',
     }).catch(() => {});
     return undefined;
-  }, [taskRoom, taskStream, companyContext, companyContextLoaded]);
+  }, [taskRoom, taskStream, companyContext, companyContextLoaded, roomId]);
   const growthBaselineRequested = useMemo(() => new URLSearchParams(location.search).get('growthBaseline') === '1', [location.search]);
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
   // events don't yank them back down while they scroll up to read. Updated on manual scroll.
@@ -3098,6 +3103,8 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
               status={taskStream.status}
               startedAt={taskStream.startedAt}
               operatingPlan={taskStream.operatingPlan}
+              artifacts={taskStream.artifacts}
+              onSelectArtifact={taskStream.selectArtifact}
               draft={taskStream.draft}
               error={taskStream.error}
               report={taskStream.report}
@@ -3242,7 +3249,10 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
           report={taskStream.report}
           artifacts={taskStream.artifacts}
           selectedArtifact={taskStream.selectedArtifact}
+          previewRequest={taskStream.previewRequest}
           onSelectArtifact={taskStream.selectArtifact}
+          onCreatePdf={taskStream.createPdf}
+          pdfError={taskStream.pdfError}
         />
       ) : null}
       {/* HQ owns a persistent runtime rail. Human rooms keep participants. */}

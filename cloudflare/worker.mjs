@@ -352,9 +352,32 @@ async function partnerReferralsFlagResponse(request, env) {
   return booleanFlagshipResponse(request, env, PARTNER_REFERRALS_FLAG_KEY);
 }
 
+const TASK_AGENT_ORIGIN = 'https://hivemind-task-agents-preview.amarsai2005.workers.dev';
+
+async function previewTaskRun(request, env) {
+  if (env.ENVIRONMENT !== 'preview') return new Response('Not found', { status: 404 });
+  const token = String(env.ROOM_STREAM_TOKEN || '').trim();
+  if (!token) return Response.json({ error: 'room_stream_disabled' }, { status: 503 });
+  if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
+  const body = await request.text();
+  return fetch(`${TASK_AGENT_ORIGIN}/v1/tasks/day1-research`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'user-agent': 'Mozilla/5.0',
+      'x-hivemind-room-token': token,
+    },
+    body,
+  });
+}
+
 export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
+
+    if (pathname === '/__hivemind/task-run') {
+      return previewTaskRun(request, env);
+    }
 
     if (pathname.startsWith('/hivemind/app/login')) {
       return Response.redirect(new URL('/hivemind/login', request.url), 302);

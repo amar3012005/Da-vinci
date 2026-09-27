@@ -66,6 +66,8 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
   const [startedAt, setStartedAt] = useState(null);
   const [artifacts, setArtifacts] = useState([]);
   const [selectedArtifact, setSelectedArtifact] = useState(null);
+  const [previewRequest, setPreviewRequest] = useState({ id: "", serial: 0 });
+  const [pdfError, setPdfError] = useState("");
   const [toolApproval, setToolApproval] = useState(null);
   const [draft, setDraft] = useState({ type: "", text: "" });
   const socketRef = useRef(null);
@@ -121,6 +123,11 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
           return;
         }
         if (parsed.type === "artifact-get-result") { setSelectedArtifact(parsed.artifact || null); return; }
+        if (parsed.type === "artifact-create-pdf-result") {
+          if (parsed.error) setPdfError(parsed.error);
+          else { setPdfError(""); socket.send(JSON.stringify({ type: "artifact-list" })); }
+          return;
+        }
         if (parsed.type === "cf_agent_chat_messages") {
           const pending = (parsed.messages || []).flatMap((message) => message.parts || []).find((part) => part.state === "approval-requested" && part.approval?.id);
           setToolApproval(pending ? { toolCallId: pending.toolCallId, name: pending.toolName || String(pending.type || "tool").replace(/^tool-/, ""), input: pending.input } : null);
@@ -159,7 +166,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     setStartedAt(Date.parse(events[userIndex].at));
   }, [agentState]);
 
-  const start = useCallback(async ({ message, company, website, market }) => {
+  const start = useCallback(async ({ message, company, website, market, modePreference = "auto" }) => {
     const text = String(message || "").trim();
     if (!text) return null;
     if (!orgId || !userId) {
@@ -174,6 +181,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
       website: website || "",
       market: market || "",
       task: text,
+      modePreference: ["auto", "company", "direct"].includes(modePreference) ? modePreference : "auto",
     };
     const socket = socketRef.current;
     setError("");
@@ -212,10 +220,17 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
   }, []);
 
   const selectArtifact = useCallback((id) => {
+    setPreviewRequest((current) => ({ id, serial: current.serial + 1 }));
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       selectedArtifactId.current = id;
       socketRef.current.send(JSON.stringify({ type: "artifact-get", id }));
     }
+  }, []);
+
+  const createPdf = useCallback((id) => {
+    setPdfError("");
+    if (socketRef.current?.readyState === WebSocket.OPEN) socketRef.current.send(JSON.stringify({ type: "artifact-create-pdf", id }));
+    else setPdfError("Agent connection unavailable.");
   }, []);
 
   const decideToolApproval = useCallback((approved) => {
@@ -241,6 +256,9 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     report,
     artifacts,
     selectedArtifact,
+    previewRequest,
+    createPdf,
+    pdfError,
     toolApproval,
     decideToolApproval,
     selectArtifact,
@@ -303,12 +321,12 @@ function conversationTurns(events, messages) {
   let current = null;
   for (const event of events) {
     if (event.step === "user") {
-      current = { id: event.at, at: event.at, text: event.detail, tools: [], report: "", question: "", options: [] };
+      current = { id: event.at, at: event.at, text: event.detail, tools: [], artifacts: [], report: "", question: "", options: [] };
       turns.push(current);
       continue;
     }
     if (!current) {
-      current = { id: "earlier", text: "", tools: [], report: "", question: "", options: [] };
+      current = { id: "earlier", text: "", tools: [], artifacts: [], report: "", question: "", options: [] };
       turns.push(current);
     }
     if (event.step === "question") {
@@ -319,14 +337,22 @@ function conversationTurns(events, messages) {
       } catch { current.question = event.detail; }
       continue;
     }
-    if (event.step === "report") current.report = event.detail;
+    if (event.step === "artifact") current.artifacts.push(event);
+    else if (event.step === "report") current.report = event.detail;
     else if (!HIDDEN_STEPS.has(event.step) && !(event.step === "parallel_search" && event.detail === "parallel-ai-gateway")) current.tools.push(event);
   }
   const said = new Set(turns.map((turn) => turn.text));
   for (const message of messages.slice(-1)) {
-    if (!said.has(message.text)) turns.push({ id: message.id, at: message.at, text: message.text, tools: [], report: "", question: "", options: [] });
+    if (!said.has(message.text)) turns.push({ id: message.id, at: message.at, text: message.text, tools: [], artifacts: [], report: "", question: "", options: [] });
   }
-  return turns.filter((turn) => turn.text || turn.tools.length || turn.report);
+  return turns.filter((turn) => turn.text || turn.tools.length || turn.report || turn.artifacts.length);
+}
+
+function artifactForEvent(event, artifacts) {
+  let receipt;
+  try { receipt = JSON.parse(event.detail); } catch { receipt = null; }
+  return artifacts.find((artifact) => artifact.id === receipt?.id)
+    || artifacts.find((artifact) => event.detail === `${artifact.kind} ${artifact.title}`);
 }
 
 function OperatingPlan({ plan }) {
@@ -352,7 +378,7 @@ function OperatingPlan({ plan }) {
   );
 }
 
-function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, onMemoryDecision, onAnswer }) {
+function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, artifacts, onSelectArtifact, onMemoryDecision, onAnswer }) {
   const [open, setOpen] = useState(true);
   const pending = live && status === "working";
   return (
@@ -391,6 +417,15 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, o
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.report}</ReactMarkdown>
       </div> : null}
       {pending && !turn.report && draft?.type === "report-draft" && draft.text ? <div className="break-words text-[14px] leading-[1.7] text-[#242424]"><ReactMarkdown remarkPlugins={[remarkGfm]}>{draft.text}</ReactMarkdown></div> : null}
+      {turn.artifacts?.map((event, index) => {
+        const artifact = artifactForEvent(event, artifacts);
+        if (!artifact || artifact.kind === "note" || artifact.kind === "reply") return null;
+        return <button key={`${event.at}-${index}`} type="button" onClick={() => onSelectArtifact?.(artifact.id)} className="flex w-full items-center gap-3 rounded-2xl border border-[#e7e5e2] bg-[#faf9f7] px-4 py-3 text-left hover:bg-[#f2f0ec]">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#4387db]"><FileText size={20} /></span>
+          <span className="min-w-0 flex-1"><span className="block truncate text-[14px] font-medium text-[#202020]">{artifact.title}</span><span className="block text-[12px] text-[#858585]">{artifact.contentType === "application/pdf" ? "PDF" : artifact.contentType?.startsWith("image/") ? "Image" : "Document"} · Saved artifact</span></span>
+          <span className="shrink-0 text-[12px] text-[#555555]">Open in Preview ↗</span>
+        </button>;
+      })}
       {live && status === "approval" ? (
         <div className="border border-[#e3e0db] bg-white px-3 py-3">
           <p className="text-[13px] text-[#0a0a0a]">Save this to the company memory?</p>
@@ -404,7 +439,7 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, o
   );
 }
 
-export function TaskTranscript({ messages, events, status, startedAt, operatingPlan, draft, error, toolApproval, onToolApproval, onMemoryDecision, onAnswer }) {
+export function TaskTranscript({ messages, events, status, startedAt, operatingPlan, draft, artifacts = [], onSelectArtifact, error, toolApproval, onToolApproval, onMemoryDecision, onAnswer }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (status !== "working") return undefined;
@@ -425,6 +460,8 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
           now={now}
           operatingPlan={operatingPlan}
           draft={draft}
+          artifacts={artifacts}
+          onSelectArtifact={onSelectArtifact}
           onMemoryDecision={onMemoryDecision}
           onAnswer={onAnswer}
         />
@@ -457,22 +494,43 @@ function artifactUrl(artifact) {
   } catch { return ""; }
 }
 
-export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, onSelectArtifact }) {
+export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, previewRequest, onSelectArtifact, onCreatePdf, pdfError }) {
   const [width, setWidth] = useState(520);
   const [showEnvironment, setShowEnvironment] = useState(true);
   const [tab, setTab] = useState("preview");
-  const [openUrl, setOpenUrl] = useState("");
+  const [selection, setSelection] = useState({ type: "auto" });
+  const [pdfUrl, setPdfUrl] = useState("");
   const drag = useRef(null);
   useEffect(() => {
-    if (selectedArtifact?.id) { setOpenUrl(""); setTab("preview"); }
-  }, [selectedArtifact?.id]);
+    if (previewRequest?.id) { setSelection({ type: "artifact", id: previewRequest.id }); setTab("preview"); }
+  }, [previewRequest?.id, previewRequest?.serial]);
+  useEffect(() => {
+    if (selectedArtifact?.contentType !== "application/pdf" || !selectedArtifact.body) { setPdfUrl(""); return undefined; }
+    const bytes = Uint8Array.from(atob(selectedArtifact.body), (char) => char.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    setPdfUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedArtifact]);
+  const openUrl = selection.type === "source" ? selection.url : "";
+  const openArtifact = (id) => { setSelection({ type: "artifact", id }); onSelectArtifact?.(id); setTab("preview"); };
+  const openSource = (url) => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return;
+      setSelection({ type: "source", url: parsed.href });
+      setTab("preview");
+    } catch { /* Ignore invalid source URLs. */ }
+  };
   const sourceRows = useMemo(() => {
     const rows = [];
     const seen = new Set();
     const add = (url, title) => {
-      if (!url || seen.has(url)) return;
-      seen.add(url);
-      rows.push({ url, title: title || hostOf(url) });
+      try {
+        const parsed = new URL(url);
+        if (!["https:", "http:"].includes(parsed.protocol) || seen.has(parsed.href)) return;
+        seen.add(parsed.href);
+        rows.push({ url: parsed.href, title: title || hostOf(parsed.href) });
+      } catch { /* Ignore invalid source URLs. */ }
     };
     for (const source of sources || []) add(source.url, source.title);
     for (const place of places || []) add(place.website, place.name);
@@ -504,8 +562,11 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
   }, []);
 
   const previewUrl = openUrl || sourceRows[0]?.url || "";
-  const showArtifact = !openUrl && Boolean(selectedArtifact);
+  const showArtifact = !openUrl && Boolean(selectedArtifact) && (selection.type !== "artifact" || selection.id === selectedArtifact.id);
   const storedUrl = artifactUrl(selectedArtifact);
+  const imageUrl = /^image\/(png|jpeg|webp|gif)$/.test(selectedArtifact?.contentType || "")
+    ? (storedUrl || (selectedArtifact?.body ? `data:${selectedArtifact.contentType};base64,${selectedArtifact.body}` : ""))
+    : "";
   return (
     <aside className="relative hidden min-h-0 shrink-0 bg-[#f6f5f1] lg:flex" style={{ width }}>
       <button
@@ -527,7 +588,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
         </div>
         <div className="border-t border-[#f0ece6] px-3 py-2 text-[12px] font-semibold text-[#404040]">Artifacts</div>
         {artifacts.length ? artifacts.map((artifact) => (
-          <button key={artifact.id} type="button" onClick={() => { setOpenUrl(""); onSelectArtifact?.(artifact.id); setTab("preview"); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[#262626] hover:bg-[#f7f6f3]">
+          <button key={artifact.id} type="button" onClick={() => openArtifact(artifact.id)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[#262626] hover:bg-[#f7f6f3]">
             <FileText size={13} className="shrink-0 text-[#8a847c]" />
             <span className="min-w-0 flex-1 truncate">{artifact.title}</span>
           </button>
@@ -542,26 +603,43 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
             <button key={id} type="button" onClick={() => setTab(id)} className={`ml-1 rounded-full px-2.5 py-1 text-[12px] ${tab === id ? "bg-[#171717] text-white" : "text-[#525252]"}`}>{label}</button>
           ))}
         </div>
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className={`min-h-0 flex-1 ${tab === "preview" && selectedArtifact?.contentType === "application/pdf" && !openUrl ? "overflow-hidden" : "overflow-auto"}`}>
           {tab === "preview" ? (
-            showArtifact ? (
-              <article className="mx-auto max-w-[780px] break-words px-7 py-8 text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-4 [&_h1]:text-[23px] [&_h1]:font-semibold [&_h2]:mb-3 [&_h2]:text-[19px] [&_h2]:font-semibold [&_table]:block [&_table]:overflow-x-auto [&_th]:border [&_th]:p-2 [&_td]:border [&_td]:p-2">
+            showArtifact && selectedArtifact.contentType === "application/pdf" && (pdfUrl || storedUrl) ? (
+              <div className="flex h-full min-h-0 flex-col bg-white">
+                <div className="flex min-h-0 shrink-0 items-center gap-3 border-b border-[#eeeae4] px-3 py-2">
+                  <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#303030]" title={selectedArtifact.title}>{selectedArtifact.title}</span>
+                  <a href={pdfUrl || storedUrl} download={selectedArtifact.title} className="shrink-0 text-[12px] text-[#2563a6] underline">Download PDF</a>
+                </div>
+                <iframe title={selectedArtifact.title} src={pdfUrl || storedUrl} className="min-h-0 w-full flex-1 border-0" />
+              </div>
+            ) : showArtifact && imageUrl ? (
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="flex items-center justify-between gap-3 border-b border-[#eeeae4] px-3 py-2 text-[12px]">
+                  <span className="min-w-0 truncate font-medium">{selectedArtifact.title}</span>
+                  <a href={imageUrl} download={selectedArtifact.title} className="shrink-0 text-[#2563a6] underline">Download PNG</a>
+                </div>
+                <div className="min-h-0 flex-1 overflow-auto"><img src={imageUrl} alt={selectedArtifact.title} className="block h-auto w-full" /></div>
+              </div>
+            ) : showArtifact ? (
+              <article onClick={(event) => { const link = event.target.closest?.("a[href]"); if (link && event.currentTarget.contains(link)) { const url = link.getAttribute("href"); if (/^https?:\/\//i.test(url || "")) { event.preventDefault(); openSource(url); } } }} className="mx-auto max-w-[780px] break-words px-7 py-8 text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-4 [&_h1]:text-[23px] [&_h1]:font-semibold [&_h2]:mb-3 [&_h2]:text-[19px] [&_h2]:font-semibold [&_table]:block [&_table]:overflow-x-auto [&_th]:border [&_th]:p-2 [&_td]:border [&_td]:p-2">
                 <p className="mb-2 text-[11px] uppercase tracking-wide text-[#858585]">{selectedArtifact.contentType === "text/markdown" ? "Markdown report" : selectedArtifact.contentType}</p>
                 <h1 className="mb-5 text-[18px] font-semibold">{selectedArtifact.title}</h1>
+                {selectedArtifact.contentType === "text/markdown" ? <button type="button" onClick={() => onCreatePdf?.(selectedArtifact.id)} className="mb-5 rounded-md border border-[#d7d7d7] px-3 py-1.5 text-[12px] hover:bg-[#f5f5f5]">Generate PDF</button> : null}
+                {pdfError ? <p role="alert" className="text-red-700">PDF failed: {pdfError}</p> : null}
                 {selectedArtifact.contentType === "text/markdown" ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedArtifact.body}</ReactMarkdown>
                   : selectedArtifact.contentType === "text/plain" ? <pre className="whitespace-pre-wrap font-sans">{selectedArtifact.body}</pre>
                   : selectedArtifact.contentType === "text/html" ? <iframe title={selectedArtifact.title} sandbox="" srcDoc={selectedArtifact.body} className="h-[70vh] w-full border border-[#e3e0db]" />
-                  : selectedArtifact.contentType === "application/pdf" && storedUrl ? <iframe title={selectedArtifact.title} src={storedUrl} className="h-[75vh] w-full border-0" />
-                  : selectedArtifact.contentType?.startsWith("image/") && storedUrl ? <img src={storedUrl} alt={selectedArtifact.title} className="max-w-full" />
                   : <p>Preview unavailable for {selectedArtifact.contentType}. {storedUrl ? <a href={storedUrl} target="_blank" rel="noopener noreferrer">Open stored output</a> : "No file was saved."}</p>}
               </article>
-            ) : previewUrl ? <iframe title="Source website" src={previewUrl} className="h-full w-full border-0 bg-white" />
+            ) : selection.type === "artifact" ? <p className="p-6 text-[13px] text-[#737373]">Loading artifact preview…</p>
+              : previewUrl ? <div className="flex h-full min-h-0 flex-col"><div className="flex items-center gap-2 border-b border-[#eeeae4] px-3 py-2 text-[12px]"><span className="min-w-0 flex-1 truncate" title={previewUrl}>{previewUrl}</span><a href={previewUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[#2563a6] underline">Open site</a></div><iframe key={previewUrl} title="Source website" src={previewUrl} className="min-h-0 w-full flex-1 border-0 bg-white" /></div>
               : <p className="p-6 text-[13px] text-[#737373]">Generated artifacts appear here. Select a source to view its website.</p>
           ) : null}
           {tab === "computer" ? <p className="p-6 text-[13px] text-[#737373]">The computer view opens when a step needs a screen the browser cannot read.</p> : null}
           {tab === "artifacts" ? <ul className="divide-y divide-[#f0ece6]">
             {artifacts.length === 0 ? <li className="px-4 py-3 text-[13px] text-[#a3a3a3]">No saved outputs yet.</li> : artifacts.map((artifact) => (
-              <li key={artifact.id}><button type="button" onClick={() => { setOpenUrl(""); onSelectArtifact?.(artifact.id); setTab("preview"); }} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[#faf9f4]">
+              <li key={artifact.id}><button type="button" onClick={() => openArtifact(artifact.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[#faf9f4]">
                 <FileText size={16} className="shrink-0 text-[#8a847c]" /><span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-medium">{artifact.title}</span><span className="text-[11px] text-[#858585]">{artifact.kind} · {new Date(artifact.createdAt).toLocaleString()}</span></span>
               </button></li>
             ))}
@@ -570,7 +648,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
             <ul className="divide-y divide-[#f0ece6]">
               {sourceRows.length === 0 ? <li className="px-4 py-3 text-[13px] text-[#a3a3a3]">Web search links show up here.</li> : sourceRows.map((source) => (
                 <li key={source.url}>
-                  <button type="button" onClick={() => { setOpenUrl(source.url); setTab("preview"); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left hover:bg-[#faf9f4]">
+                  <button type="button" onClick={() => openSource(source.url)} className="flex w-full items-center gap-2 px-4 py-2.5 text-left hover:bg-[#faf9f4]">
                     <Link2 size={14} className="shrink-0 text-[#8a847c]" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] text-[#171717]">{source.title}</span>

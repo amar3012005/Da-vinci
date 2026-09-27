@@ -17,7 +17,7 @@ export default function NewSession({ onSubmit }) {
     setSending(true);
     setError("");
     try {
-      await onSubmit(query);
+      await onSubmit(query, { mode: mode === "Company task" ? "company" : mode === "Direct answer" ? "direct" : "auto" });
     } catch (cause) {
       setError(cause.response?.data?.error || cause.message || "Could not create room.");
       setSending(false);
@@ -43,7 +43,7 @@ export default function NewSession({ onSubmit }) {
             ))}
           </MenuButton>
           <MenuButton label={mode} open={menu === "mode"} onToggle={() => setMenu(menu === "mode" ? "" : "mode")} icon={<Sparkles size={14} />}>
-            {["HyperAgents mode", "Direct answer"].map((item) => (
+            {["HyperAgents mode", "Company task", "Direct answer"].map((item) => (
               <button key={item} type="button" onClick={() => { setMode(item); setMenu(""); }} className="block w-full px-3 py-1.5 text-left text-[13px] hover:bg-[#f4f4f5]">{item}</button>
             ))}
           </MenuButton>
