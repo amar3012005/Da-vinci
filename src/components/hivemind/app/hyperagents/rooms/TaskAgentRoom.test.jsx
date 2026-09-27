@@ -43,6 +43,22 @@ test("orb follows live task phase", () => {
   expect(taskOrbState("question", [])).toBe("listening");
 });
 
+test("empty room keeps Preview closed and hides environment after user speaks", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  container.innerHTML = '<div id="hm-room-environment-slot"></div><div id="preview-root"></div>';
+  document.body.appendChild(container);
+  const root = createRoot(container.querySelector("#preview-root"));
+  act(() => root.render(<TaskPreview status="idle" events={[]} places={[]} sources={[]} report="" artifacts={[]} hasContent={false} employee={{ name: "Maya" }} />));
+  expect(container.querySelector("aside")?.className).toContain("hidden");
+  expect(container.querySelector('[aria-label="Room environment"]')).toBeTruthy();
+  act(() => root.render(<TaskPreview status="working" events={[{ step: "user", detail: "Hello" }]} places={[]} sources={[]} report="" artifacts={[]} hasContent={false} employee={{ name: "Maya" }} />));
+  expect(container.querySelector('[aria-label="Room environment"]')).toBeNull();
+  expect(container.querySelector('[aria-label="Show environment"]')).toBeTruthy();
+  act(() => root.unmount());
+  container.remove();
+});
+
 test("source and report links open in Preview; artifact selection restores artifact", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const artifact = { id: "report-1", kind: "report", title: "Market report", contentType: "text/markdown", body: "Evidence: https://source.example/page", createdAt: "2026-09-26T12:00:00Z" };

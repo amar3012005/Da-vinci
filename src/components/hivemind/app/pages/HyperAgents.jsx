@@ -3260,6 +3260,7 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
           employeeAvatar={<AgentAvatar agent={taskRoomEmployee} size={28} faceOnly />}
           onConnectApps={() => setShowConnectors(true)}
           onOpenSettings={() => { setSwarmDraft(room.swarm_instructions || ''); setShowSwarm(true); }}
+          hasContent={Boolean(taskStream.artifacts?.length || taskStream.sources?.length || taskStream.places?.length || taskStream.selectedArtifact || taskStream.previewRequest?.id)}
         />
       ) : null}
       {/* HQ owns a persistent runtime rail. Human rooms keep participants. */}

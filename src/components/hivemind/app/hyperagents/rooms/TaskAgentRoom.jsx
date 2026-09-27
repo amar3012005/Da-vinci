@@ -512,13 +512,16 @@ export function taskOrbState(status, events = []) {
   return "working";
 }
 
-export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, previewRequest, onSelectArtifact, onCreatePdf, pdfError, employee, employeeAvatar, onConnectApps, onOpenSettings }) {
+export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, previewRequest, onSelectArtifact, onCreatePdf, pdfError, employee, employeeAvatar, onConnectApps, onOpenSettings, hasContent = true }) {
   const [width, setWidth] = useState(520);
   const [showEnvironment, setShowEnvironment] = useState(true);
   const [tab, setTab] = useState("preview");
   const [selection, setSelection] = useState({ type: "auto" });
   const [pdfUrl, setPdfUrl] = useState("");
   const drag = useRef(null);
+  useEffect(() => {
+    if (events?.some((event) => event.step === "user")) setShowEnvironment(false);
+  }, [events]);
   useEffect(() => {
     if (previewRequest?.id) { setSelection({ type: "artifact", id: previewRequest.id }); setTab("preview"); }
   }, [previewRequest?.id, previewRequest?.serial]);
@@ -612,7 +615,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
         </div>
       </div>
     ) : <button type="button" onClick={() => setShowEnvironment(true)} aria-label="Show environment" className="rounded-full border border-[#dedede] bg-white px-3 py-1 text-[11px] text-[#777] shadow-sm">Environment</button>, environmentSlot) : null}
-    <aside className="relative hidden min-h-0 shrink-0 bg-[#f6f5f1] lg:flex" style={{ width }}>
+    <aside className={`relative min-h-0 shrink-0 bg-[#f6f5f1] ${hasContent ? 'hidden lg:flex' : 'hidden'}`} style={{ width }}>
       <button
         type="button"
         aria-label="Resize preview"
