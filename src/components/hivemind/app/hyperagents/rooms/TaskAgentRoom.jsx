@@ -405,9 +405,9 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, a
           </button>
           {open ? (
             <ol className="mt-2">
-              {pending && !turn.tools.length ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#555]"><ThinkingOrb state="solving" size={64} style={{ width: 36, height: 36 }} theme="light" color="#111111" dotSize={1.2} /> Thinking…</li> : null}
+              {pending && !turn.tools.length ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#555]"><ThinkingOrb state="solving" size={20} theme="light" color="#111111" dotSize={1.2} /> Thinking…</li> : null}
               {turn.tools.map((event, index) => <TaskRow key={`${event.at}-${event.step}-${index}`} event={event} />)}
-              {pending && turn.tools.length > 0 ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#555]"><ThinkingOrb state={taskOrbState(status, turn.tools)} size={64} style={{ width: 36, height: 36 }} theme="light" color="#111111" dotSize={1.2} gravity={orbGravity(taskOrbState(status, turn.tools))} /> {orbLabel(taskOrbState(status, turn.tools))}</li> : null}
+              {pending && turn.tools.length > 0 ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#555]"><ThinkingOrb state={taskOrbState(status, turn.tools)} size={20} theme="light" color="#111111" dotSize={1.2} gravity={orbGravity(taskOrbState(status, turn.tools))} /> {orbLabel(taskOrbState(status, turn.tools))}</li> : null}
               {pending && draft?.type === "progress-draft" && draft.text && !draft.text.trimStart().startsWith("{") ? <li role="status" className="whitespace-pre-wrap py-1 text-[13px] leading-5 text-[#555555]">{draft.text}</li> : null}
             </ol>
           ) : null}
@@ -602,7 +602,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
         <div className="flex items-center gap-2.5 py-2 text-[13px]">
           {employeeAvatar || <span className="grid h-7 w-7 place-items-center rounded-full bg-[#e7efff] text-sm">✦</span>}
           <span className="min-w-0 flex-1 truncate font-medium">{employee?.name || "HyperAgent"}</span>
-          <ThinkingOrb state={orbState} size={64} style={{ width: 36, height: 36 }} theme="light" color="#111111" dotSize={1.2} gravity={orbGravity(orbState)} paused={!activeOrb} aria-label={`Agent ${status || "idle"}`} />
+          <ThinkingOrb state={orbState} size={20} theme="light" color="#111111" dotSize={1.2} gravity={orbGravity(orbState)} paused={!activeOrb} aria-label={`Agent ${status || "idle"}`} />
           {onOpenSettings ? <button type="button" onClick={onOpenSettings} aria-label="Room instructions" className="text-[#777] hover:text-[#222]"><Settings2 size={16} /></button> : null}
         </div>
         <button type="button" onClick={onConnectApps} disabled={!onConnectApps} className="flex w-full items-center gap-2 border-t border-[#f0f0f0] py-2 text-left text-[12px] hover:text-[#2563a6] disabled:cursor-default">

@@ -133,7 +133,7 @@ test("shows agent progress text without expanding a tool row", () => {
   act(() => root.unmount());
 });
 
-test("setup events stay out of transcript while 64px solving orb appears", () => {
+test("setup events stay out of transcript while compact solving orb appears", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const container = document.createElement("div");
   const root = createRoot(container);
@@ -145,8 +145,7 @@ test("setup events stay out of transcript while 64px solving orb appears", () =>
   ];
   act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" />));
   expect(container.textContent).not.toMatch(/Loading authenticated context|Task queued|Preparing task/);
-  expect(container.querySelector('[data-orb-state="solving"][data-orb-size="64"]')).toBeTruthy();
-  expect(container.querySelector('[data-orb-state="solving"]').style.width).toBe("36px");
+  expect(container.querySelector('[data-orb-state="solving"][data-orb-size="20"]')).toBeTruthy();
   expect(container.querySelector('[data-orb-state="solving"]').getAttribute("data-orb-color")).toBe("#111111");
   act(() => root.unmount());
 });
