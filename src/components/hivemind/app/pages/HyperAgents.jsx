@@ -712,11 +712,12 @@ export default function HyperAgents() {
         ) : viewMode === 'campaigns' ? (
           <CampaignsView onOpenRoom={(roomId, campaignId) => goMode('thread', roomId, { campaignReturn: campaignId })} />
         ) : viewMode === 'session' ? (
-          <NewSession onSubmit={async (query, { mode = 'auto' } = {}) => {
+          <NewSession onSubmit={async (query, { mode = 'auto', employeeId = '', employeeIds = [] } = {}) => {
             const { room } = await apiClient.createHyperRoom({
               name: query.slice(0, 120),
               goal: query,
-              participant_ids: [],
+              participant_ids: employeeIds,
+              permanent_lead_id: employeeId || undefined,
               template: 'auto',
               room_tag: 'general',
             });
