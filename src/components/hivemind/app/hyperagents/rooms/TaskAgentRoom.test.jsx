@@ -5,7 +5,7 @@ import { TaskPreview, TaskTranscript, agentInstanceName, taskOrbState } from "./
 jest.mock("react-markdown", () => ({ __esModule: true, default: ({ children }) => <div>{children}{String(children).includes("https://source.example") ? <a href="https://source.example/page">Source</a> : null}</div> }));
 jest.mock("remark-gfm", () => () => null);
 jest.mock("./PdfCanvasPreview", () => ({ __esModule: true, default: () => <span>PDF pages</span> }));
-jest.mock("thinking-orbs", () => ({ ThinkingOrb: ({ state }) => <span data-orb-state={state} /> }));
+jest.mock("thinking-orbs", () => ({ ThinkingOrb: ({ state, size, gravity }) => <span data-orb-state={state} data-orb-size={size} data-orb-gravity={gravity?.sprite ? "pointer" : "none"} /> }));
 
 test("renders saved report in preview and opens artifacts from the rail", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -41,6 +41,7 @@ test("orb follows live task phase", () => {
   expect(taskOrbState("working", [{ step: "hivemind_connected_task" }])).toBe("connecting");
   expect(taskOrbState("working", [{ step: "report" }])).toBe("composing");
   expect(taskOrbState("question", [])).toBe("listening");
+  expect(taskOrbState("working", [{ step: "workrun", detail: "queued" }])).toBe("solving");
 });
 
 test("empty room keeps Preview closed and hides environment after user speaks", () => {
@@ -126,9 +127,25 @@ test("shows agent progress text without expanding a tool row", () => {
     { at: "2026-09-26T12:00:01Z", step: "progress", detail: "I’ll check the Gmail connection receipt." },
   ];
   act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" />));
-  expect(container.textContent).toContain("Loading authenticated context");
+  expect(container.textContent).not.toContain("Loading authenticated context");
   expect(container.textContent).toContain("I’ll check the Gmail connection receipt.");
   expect(container.querySelectorAll("button[aria-expanded]")).toHaveLength(1);
+  act(() => root.unmount());
+});
+
+test("setup events stay out of transcript while 64px solving orb appears", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const events = [
+    { at: "2026-09-26T12:00:00Z", step: "user", detail: "Who are you?" },
+    { at: "2026-09-26T12:00:01Z", step: "workrun", detail: "Loading authenticated context" },
+    { at: "2026-09-26T12:00:02Z", step: "workrun", detail: "queued" },
+    { at: "2026-09-26T12:00:03Z", step: "workrun", detail: "starting Singulance" },
+  ];
+  act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" />));
+  expect(container.textContent).not.toMatch(/Loading authenticated context|Task queued|Preparing task/);
+  expect(container.querySelector('[data-orb-state="solving"][data-orb-size="64"]')).toBeTruthy();
   act(() => root.unmount());
 });
 

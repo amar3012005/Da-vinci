@@ -279,6 +279,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
 }
 
 const HIDDEN_STEPS = new Set(["artifact", "completion", "approval", "user", "task_updated"]);
+const isSetupEvent = (event) => event.step === "workrun" && (event.detail === "queued" || event.detail === "Loading authenticated context" || String(event.detail || "").startsWith("starting "));
 
 function toolLabel(step) {
   const labels = {
@@ -344,7 +345,7 @@ function conversationTurns(events, messages) {
     }
     if (event.step === "artifact") current.artifacts.push(event);
     else if (event.step === "report") current.report = event.detail;
-    else if (!HIDDEN_STEPS.has(event.step) && !(event.step === "parallel_search" && event.detail === "parallel-ai-gateway")) current.tools.push(event);
+    else if (!HIDDEN_STEPS.has(event.step) && !isSetupEvent(event) && !(event.step === "parallel_search" && event.detail === "parallel-ai-gateway")) current.tools.push(event);
   }
   const said = new Set(turns.map((turn) => turn.text));
   for (const message of messages.slice(-1)) {
@@ -397,13 +398,13 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, a
       {turn.tools.length || pending ? (
         <div>
           <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-center gap-2 border-b border-[#ededed] pb-1.5 text-left text-[13px] text-[#969696] hover:text-[#555555]">
-            <span>{turn.tools.length} step{turn.tools.length === 1 ? "" : "s"}{pending ? " · Working" : ""}{live && startedAt ? ` · ${elapsedLabel(startedAt, now)}` : ""}</span><span aria-hidden="true">{open ? "⌄" : "›"}</span>
+            <span>{turn.tools.length ? `${turn.tools.length} step${turn.tools.length === 1 ? "" : "s"}` : "Thinking"}{pending ? " · Working" : ""}{live && startedAt ? ` · ${elapsedLabel(startedAt, now)}` : ""}</span><span aria-hidden="true">{open ? "⌄" : "›"}</span>
           </button>
           {open ? (
             <ol className="mt-2">
-              {pending && !turn.tools.length ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#777777]"><ThinkingOrb state="working" size={20} /> Thinking through task…</li> : null}
+              {pending && !turn.tools.length ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#777777]"><ThinkingOrb state="solving" size={64} /> Thinking…</li> : null}
               {turn.tools.map((event, index) => <TaskRow key={`${event.at}-${event.step}-${index}`} event={event} />)}
-              {pending && turn.tools.length > 0 ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#777777]"><ThinkingOrb state={taskOrbState(status, turn.tools)} size={20} /> Working on response…</li> : null}
+              {pending && turn.tools.length > 0 ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#777777]"><ThinkingOrb state={taskOrbState(status, turn.tools)} size={64} gravity={["connecting", "searching"].includes(taskOrbState(status, turn.tools)) ? { sprite: macArrow } : undefined} /> Working…</li> : null}
               {pending && draft?.type === "progress-draft" && draft.text && !draft.text.trimStart().startsWith("{") ? <li role="status" className="whitespace-pre-wrap py-1 text-[13px] leading-5 text-[#555555]">{draft.text}</li> : null}
             </ol>
           ) : null}
@@ -509,7 +510,7 @@ export function taskOrbState(status, events = []) {
   if (/plan|playbook|skill/.test(step)) return "weaving";
   if (/report|draft/.test(step)) return "composing";
   if (/governance|score|verification/.test(step)) return "solving";
-  return "working";
+  return "solving";
 }
 
 export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, previewRequest, onSelectArtifact, onCreatePdf, pdfError, employee, employeeAvatar, onConnectApps, onOpenSettings, hasContent = true }) {
@@ -586,7 +587,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
   const environmentSlot = typeof document === "undefined" ? null : document.getElementById("hm-room-environment-slot");
   const orbState = taskOrbState(status, events);
   const activeOrb = status === "working" && ["solving", "connecting", "searching"].includes(orbState);
-  const orbGravity = activeOrb && typeof navigator !== "undefined" && /Macintosh|Mac OS X/.test(navigator.userAgent) ? { sprite: macArrow } : false;
+  const orbGravity = ["connecting", "searching"].includes(orbState) ? { sprite: macArrow } : undefined;
   const imageUrl = /^image\/(png|jpeg|webp|gif)$/.test(selectedArtifact?.contentType || "")
     ? (storedUrl || (selectedArtifact?.body ? `data:${selectedArtifact.contentType};base64,${selectedArtifact.body}` : ""))
     : "";
