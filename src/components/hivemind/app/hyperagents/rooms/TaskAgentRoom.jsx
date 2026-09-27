@@ -496,6 +496,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
   const [tab, setTab] = useState("preview");
   const [openUrl, setOpenUrl] = useState("");
   const [pdfUrl, setPdfUrl] = useState("");
+  const [pdfFallback, setPdfFallback] = useState(false);
   const drag = useRef(null);
   useEffect(() => {
     if (selectedArtifact?.contentType !== "application/pdf" || !selectedArtifact.body) { setPdfUrl(""); return undefined; }
@@ -505,8 +506,11 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
     return () => URL.revokeObjectURL(url);
   }, [selectedArtifact]);
   useEffect(() => {
-    if (selectedArtifact?.id) { setOpenUrl(""); setTab("preview"); }
-  }, [selectedArtifact?.id]);
+    if (selectedArtifact?.id) {
+      setOpenUrl(""); setTab("preview");
+      setPdfFallback(selectedArtifact.contentType === "application/pdf" && String(report || "").includes(selectedArtifact.title?.replace(/\.pdf$/i, "") || "\0"));
+    }
+  }, [selectedArtifact?.id, report]);
   const sourceRows = useMemo(() => {
     const rows = [];
     const seen = new Set();
@@ -547,6 +551,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
   const previewUrl = openUrl || sourceRows[0]?.url || "";
   const showArtifact = !openUrl && Boolean(selectedArtifact);
   const storedUrl = artifactUrl(selectedArtifact);
+  const pdfReportMatches = String(report || "").includes(selectedArtifact?.title?.replace(/\.pdf$/i, "") || "\0");
   const imageUrl = /^image\/(png|jpeg|webp|gif)$/.test(selectedArtifact?.contentType || "")
     ? (storedUrl || (selectedArtifact?.body ? `data:${selectedArtifact.contentType};base64,${selectedArtifact.body}` : ""))
     : "";
@@ -592,9 +597,15 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
               <div className="flex h-full min-h-0 flex-col bg-white">
                 <div className="flex min-h-0 shrink-0 items-center gap-3 border-b border-[#eeeae4] px-3 py-2">
                   <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#303030]" title={selectedArtifact.title}>{selectedArtifact.title}</span>
+                  {pdfReportMatches ? <button type="button" onClick={() => setPdfFallback((value) => !value)} className="shrink-0 text-[12px] text-[#2563a6] underline">{pdfFallback ? "PDF pages" : "Report preview"}</button> : null}
                   <a href={pdfUrl || storedUrl} download={selectedArtifact.title} className="shrink-0 text-[12px] text-[#2563a6] underline">Download PDF</a>
                 </div>
-                <iframe title={selectedArtifact.title} src={pdfUrl || storedUrl} className="min-h-0 w-full flex-1 border-0" />
+                {pdfFallback ? (
+                  <div className="min-h-0 flex-1 overflow-auto">
+                    {pdfReportMatches ? <article className="mx-auto max-w-[780px] break-words px-7 py-8 text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-4 [&_h1]:text-[23px] [&_h1]:font-semibold [&_h2]:mb-3 [&_h2]:text-[19px] [&_h2]:font-semibold"><ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown></article>
+                      : <p className="p-5 text-sm text-[#555]">PDF viewer unavailable in this browser. Download PDF to view its pages.</p>}
+                  </div>
+                ) : <iframe title={selectedArtifact.title} src={pdfUrl || storedUrl} className="min-h-0 w-full flex-1 border-0" />}
               </div>
             ) : showArtifact && imageUrl ? (
               <div className="flex h-full min-h-0 flex-col">

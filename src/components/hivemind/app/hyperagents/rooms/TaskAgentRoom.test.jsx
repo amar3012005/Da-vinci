@@ -105,3 +105,20 @@ test("renders saved PDF bytes across full Preview height", () => {
   delete URL.createObjectURL;
   delete URL.revokeObjectURL;
 });
+
+test("shows report content with PDF download and optional native pages", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  URL.createObjectURL = jest.fn().mockReturnValue("blob:report-pdf");
+  URL.revokeObjectURL = jest.fn();
+  const artifact = { id: "pdf-2", kind: "pdf", title: "Market report.pdf", contentType: "application/pdf", body: btoa("%PDF-test") };
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  act(() => root.render(<TaskPreview status="complete" events={[]} places={[]} sources={[]} report="# Market report\n\nDecision: proceed." artifacts={[artifact]} selectedArtifact={artifact} />));
+  expect(container.textContent).toContain("Decision: proceed.");
+  expect(container.querySelector('a[download="Market report.pdf"]')).toBeTruthy();
+  act(() => [...container.querySelectorAll("button")].find((button) => button.textContent === "PDF pages").click());
+  expect(container.querySelector('iframe[title="Market report.pdf"]')).toBeTruthy();
+  act(() => root.unmount());
+  delete URL.createObjectURL;
+  delete URL.revokeObjectURL;
+});
