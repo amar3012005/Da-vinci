@@ -2595,6 +2595,7 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
     && (trn.lines || []).some(l => l && l.t === 'seal'));
   const totalTokens = sealedTokens + (liveTurnAlreadyCounted ? 0 : (Number(liveSeal?.cost_tokens) || 0));
   const fmtTokens = totalTokens >= 1000 ? `${(totalTokens / 1000).toFixed(1)}k` : `${totalTokens}`;
+  const taskRoomEmployee = (room.participants || []).find((participant) => participant.id === room.permanent_lead_id) || room.participants?.[0];
 
   return (
     <div className="flex flex-1 min-w-0 min-h-0 h-full">
@@ -3254,6 +3255,10 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
           onSelectArtifact={taskStream.selectArtifact}
           onCreatePdf={taskStream.createPdf}
           pdfError={taskStream.pdfError}
+          employee={taskRoomEmployee}
+          employeeAvatar={<AgentAvatar agent={taskRoomEmployee} size={28} />}
+          onConnectApps={() => setShowConnectors(true)}
+          onOpenSettings={() => { setSwarmDraft(room.swarm_instructions || ''); setShowSwarm(true); }}
         />
       ) : null}
       {/* HQ owns a persistent runtime rail. Human rooms keep participants. */}

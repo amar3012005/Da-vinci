@@ -1,15 +1,14 @@
 import React, { useState } from "react";
-import { ChevronDown, Folder, Mic, Paperclip, Plus, Sparkles } from "lucide-react";
+import { ChevronDown, Mic, Paperclip, Plus } from "lucide-react";
 import { NativeSessionLayout } from "../../../../../packages/native-session-layout";
 import apiClient from "../../shared/api-client";
 import SingulanceMark from "../../shared/SingulanceMark";
+import AgentAvatar from "../AgentAvatar";
 
 const MODEL_LABEL = "@cf/zai-org/glm-5.3-flash";
 
 export default function NewSession({ onSubmit }) {
   const [text, setText] = useState("");
-  const [mode, setMode] = useState("HyperAgents mode");
-  const [lane, setLane] = useState("Full scope");
   const [menu, setMenu] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -35,7 +34,7 @@ export default function NewSession({ onSubmit }) {
     setSending(true);
     setError("");
     try {
-      await onSubmit(query, { mode: mode === "Company task" ? "company" : mode === "Direct answer" ? "direct" : "auto", employeeId: ownerId, employeeIds: employees.map(({ id }) => id) });
+      await onSubmit(query, { mode: "auto", employeeId: ownerId, employeeIds: employees.map(({ id }) => id) });
     } catch (cause) {
       setError(cause.response?.data?.error || cause.message || "Could not create room.");
       setSending(false);
@@ -50,19 +49,6 @@ export default function NewSession({ onSubmit }) {
           <h1 className="text-[30px] font-normal leading-9 tracking-[-0.025em] text-[#808080]">OS · Remember what matters.</h1>
         </div>
         {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
-
-        <div className="mb-3 flex items-center gap-4 px-1 text-[13px] text-[#5f6368]">
-          <MenuButton label={lane} open={menu === "lane"} onToggle={() => setMenu(menu === "lane" ? "" : "lane")} icon={<Folder size={14} />}>
-            {["Full scope", "Company memory", "Browser"].map((item) => (
-              <button key={item} type="button" onClick={() => { setLane(item); setMenu(""); }} className="block w-full px-3 py-1.5 text-left text-[13px] hover:bg-[#f4f4f5]">{item}</button>
-            ))}
-          </MenuButton>
-          <MenuButton label={mode} open={menu === "mode"} onToggle={() => setMenu(menu === "mode" ? "" : "mode")} icon={<Sparkles size={14} />}>
-            {["HyperAgents mode", "Company task", "Direct answer"].map((item) => (
-              <button key={item} type="button" onClick={() => { setMode(item); setMenu(""); }} className="block w-full px-3 py-1.5 text-left text-[13px] hover:bg-[#f4f4f5]">{item}</button>
-            ))}
-          </MenuButton>
-        </div>
 
         <div className="rounded-[20px] border border-[#e9e9e9] bg-white shadow-[0_7px_22px_rgba(15,23,42,0.06)]">
           <textarea
@@ -85,7 +71,7 @@ export default function NewSession({ onSubmit }) {
               <button type="button" aria-label="Choose HyperAgent" aria-haspopup="menu" aria-expanded={menu === "employee"}
                 onClick={() => setMenu(menu === "employee" ? "" : "employee")}
                 className="inline-flex max-w-[190px] items-center gap-1.5 rounded-full px-2 py-1 text-[13px] text-[#3f3f46] hover:bg-[#f4f4f5]">
-                <EmployeeAvatar employee={selectedEmployee} />
+                <AgentAvatar agent={selectedEmployee} size={22} />
                 <span className="truncate">{selectedEmployee?.name || "Choose HyperAgent"}</span>
                 <ChevronDown size={13} className="shrink-0 text-[#a1a1aa]" />
               </button>
@@ -94,7 +80,7 @@ export default function NewSession({ onSubmit }) {
                   <button key={employee.id} type="button" role="menuitemradio" aria-checked={ownerId === employee.id}
                     onClick={() => { setOwnerId(employee.id); setMenu(""); }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#f4f4f5]">
-                    <EmployeeAvatar employee={employee} />
+                    <AgentAvatar agent={employee} size={28} />
                     <span className="min-w-0"><span className="block truncate text-[13px] font-medium text-[#18181b]">{employee.name}</span><span className="block truncate text-[11px] text-[#71717a]">{employee.roleArchetype || "HyperAgent"}</span></span>
                   </button>
                 ))}
@@ -124,24 +110,5 @@ export default function NewSession({ onSubmit }) {
 function RoundIcon({ children }) {
   return (
     <span className="grid h-8 w-8 place-items-center rounded-full text-[#3f3f46] hover:bg-[#f4f4f5]">{children}</span>
-  );
-}
-
-function EmployeeAvatar({ employee }) {
-  const avatarUrl = employee?.avatarUrl || employee?.avatar_url;
-  return <span className="relative grid h-5 w-5 shrink-0 place-items-center overflow-hidden rounded-full bg-[#e4e4e7] text-[10px] font-semibold text-[#27272a]">
-    {employee?.name?.charAt(0) || "H"}
-    {avatarUrl && <img src={avatarUrl} alt="" className="absolute inset-0 h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />}
-  </span>;
-}
-
-function MenuButton({ label, icon, open, onToggle, children }) {
-  return (
-    <div className="relative">
-      <button type="button" onClick={onToggle} className="inline-flex items-center gap-1.5 rounded-md px-1 py-1 hover:bg-[#f4f4f5]">
-        {icon} {label} <ChevronDown size={13} className="text-[#a1a1aa]" />
-      </button>
-      {open ? <div className="absolute left-0 top-full z-10 mt-1 min-w-[180px] rounded-xl border border-[#ececef] bg-white py-1 shadow-lg">{children}</div> : null}
-    </div>
   );
 }

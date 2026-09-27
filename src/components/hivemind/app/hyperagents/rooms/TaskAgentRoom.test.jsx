@@ -4,6 +4,7 @@ import { TaskPreview, TaskTranscript, agentInstanceName } from "./TaskAgentRoom"
 
 jest.mock("react-markdown", () => ({ __esModule: true, default: ({ children }) => <div>{children}{String(children).includes("https://source.example") ? <a href="https://source.example/page">Source</a> : null}</div> }));
 jest.mock("remark-gfm", () => () => null);
+jest.mock("./PdfCanvasPreview", () => ({ __esModule: true, default: () => <span>PDF pages</span> }));
 
 test("renders saved report in preview and opens artifacts from the rail", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -11,8 +12,14 @@ test("renders saved report in preview and opens artifacts from the rail", () => 
   const onSelectArtifact = jest.fn();
   const container = document.createElement("div");
   const root = createRoot(container);
-  act(() => root.render(<TaskPreview status="complete" events={[]} places={[]} sources={[{ url: "https://example.com", title: "Example" }]} report="" artifacts={[artifact]} selectedArtifact={artifact} onSelectArtifact={onSelectArtifact} />));
+  const onConnectApps = jest.fn();
+  act(() => root.render(<TaskPreview status="complete" events={[]} places={[]} sources={[{ url: "https://example.com", title: "Example" }]} report="" artifacts={[artifact]} selectedArtifact={artifact} onSelectArtifact={onSelectArtifact} employee={{ name: "Maya" }} onConnectApps={onConnectApps} />));
+  expect(container.textContent).toContain("Maya");
   expect(container.textContent).toContain("Verified vendors");
+  act(() => [...container.querySelectorAll("button")].find((button) => button.textContent.includes("Connect apps")).click());
+  expect(onConnectApps).toHaveBeenCalledTimes(1);
+  act(() => [...container.querySelectorAll("button")].find((button) => button.textContent.includes("Files 1")).click());
+  expect(container.textContent).toContain("German competitors");
   const artifactButton = [...container.querySelectorAll("button")].find((button) => button.textContent === "Artifacts");
   act(() => artifactButton.click());
   const reportButtons = [...container.querySelectorAll("button")].filter((button) => button.textContent.includes("German competitors"));
@@ -113,15 +120,15 @@ test("attaches saved output to creating turn and opens it in Preview", () => {
   act(() => root.unmount());
 });
 
-test("renders saved PDF bytes across full Preview height", () => {
+test("renders saved PDF bytes across full Preview height", async () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   URL.createObjectURL = jest.fn().mockReturnValue("blob:report-pdf");
   URL.revokeObjectURL = jest.fn();
   const artifact = { id: "pdf-1", kind: "pdf", title: "Market report.pdf", contentType: "application/pdf", body: btoa("%PDF-test") };
   const container = document.createElement("div");
   const root = createRoot(container);
-  act(() => root.render(<TaskPreview status="complete" events={[]} places={[]} sources={[]} report="" artifacts={[artifact]} selectedArtifact={artifact} />));
-  expect(container.querySelector('iframe[title="Market report.pdf"]').getAttribute("src")).toBe("blob:report-pdf");
+  await act(async () => { root.render(<TaskPreview status="complete" events={[]} places={[]} sources={[]} report="" artifacts={[artifact]} selectedArtifact={artifact} />); });
+  expect(container.textContent).toContain("PDF pages");
   expect(container.querySelector('a[download="Market report.pdf"]')).toBeTruthy();
   act(() => root.unmount());
   expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:report-pdf");

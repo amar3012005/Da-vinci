@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Link2, Globe2 } from "lucide-react";
+import { ChevronRight, FileText, Globe2, Grid2X2Plus, Link2, Settings2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import apiClient from "../../shared/api-client";
@@ -496,7 +496,7 @@ function artifactUrl(artifact) {
   } catch { return ""; }
 }
 
-export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, previewRequest, onSelectArtifact, onCreatePdf, pdfError }) {
+export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, previewRequest, onSelectArtifact, onCreatePdf, pdfError, employee, employeeAvatar, onConnectApps, onOpenSettings }) {
   const [width, setWidth] = useState(520);
   const [showEnvironment, setShowEnvironment] = useState(true);
   const [tab, setTab] = useState("preview");
@@ -577,24 +577,20 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
         className="absolute bottom-0 left-0 top-0 z-30 w-1.5 cursor-col-resize hover:bg-[#117dff]"
         onMouseDown={(event) => { drag.current = { x: event.clientX, startWidth: width }; }}
       />
-      {showEnvironment ? <div className="absolute right-full top-4 z-20 mr-3 w-[260px] overflow-hidden rounded-2xl border border-[#e6e2da] bg-white shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)]">
-        <div className="flex items-center gap-2 border-b border-[#f0ece6] px-3 py-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-          <span className="ml-1 text-[13px] font-semibold text-[#171717]">Environment</span>
+      {showEnvironment ? <div className="absolute right-full top-5 z-20 mr-3 w-[300px] rounded-[24px] border border-[#dedede] bg-white px-4 py-4 text-[#252525] shadow-[0_16px_36px_rgba(0,0,0,0.08)]">
+        <h2 className="mb-3 text-[16px] text-[#737373]">General</h2>
+        <div className="flex min-h-11 items-center gap-3 px-1 text-[15px]">
+          {employeeAvatar || <span className="grid h-7 w-7 place-items-center rounded-full bg-[#e7efff] text-sm">✦</span>}
+          <span className="min-w-0 flex-1 truncate">{employee?.name || "HyperAgent"}</span>
+          {onOpenSettings ? <button type="button" onClick={onOpenSettings} aria-label="Room instructions" className="text-[#777] hover:text-[#222]"><Settings2 size={18} /></button> : null}
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 text-[12px] text-[#404040]">
-          <FileText size={14} className="text-[#8a847c]" />
-          <span className="min-w-0 flex-1 truncate">{status === "working" ? "Agent is working" : status === "question" ? "Waiting for you" : status === "approval" ? "Waiting for approval" : status === "complete" ? "Run finished" : "Idle"}</span>
-        </div>
-        <div className="border-t border-[#f0ece6] px-3 py-2 text-[12px] font-semibold text-[#404040]">Artifacts</div>
-        {artifacts.length ? artifacts.map((artifact) => (
-          <button key={artifact.id} type="button" onClick={() => openArtifact(artifact.id)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[#262626] hover:bg-[#f7f6f3]">
-            <FileText size={13} className="shrink-0 text-[#8a847c]" />
-            <span className="min-w-0 flex-1 truncate">{artifact.title}</span>
-          </button>
-        )) : <p className="px-3 pb-3 text-[12px] text-[#929292]">Reports and generated files appear here.</p>}
+        <button type="button" onClick={onConnectApps} disabled={!onConnectApps} className="flex min-h-11 w-full items-center gap-3 px-1 text-left text-[15px] hover:text-[#2563a6] disabled:cursor-default disabled:hover:text-inherit">
+          <Grid2X2Plus size={20} className="text-[#777]" /><span className="flex-1">Connect apps</span><ChevronRight size={17} className="text-[#aaa]" />
+        </button>
+        <button type="button" onClick={() => setTab("artifacts")} className="mt-4 flex min-h-12 w-full items-center gap-2 border-t border-[#e9e9e9] text-left text-[15px] text-[#737373] hover:text-[#252525]">
+          Files <span className="text-[#aaa]">{artifacts.length}</span><ChevronRight size={17} />
+        </button>
+        <a href="/hivemind/app/usage" className="flex min-h-12 items-center gap-2 border-t border-[#e9e9e9] text-[15px] text-[#737373] hover:text-[#252525]">Credits used <ChevronRight size={17} /></a>
       </div> : null}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-[#e3e0db] bg-white">
         <div className="flex items-center gap-2 border-b border-[#eeeae4] px-3 py-2">
