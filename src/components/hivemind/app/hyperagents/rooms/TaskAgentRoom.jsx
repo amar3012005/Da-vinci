@@ -4,6 +4,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import apiClient from "../../shared/api-client";
 
+const PdfCanvasPreview = React.lazy(() => import("./PdfCanvasPreview"));
+
 const AGENT_HOST = isPreviewTaskRoom()
   ? "hivemind-task-agents-preview.amarsai2005.workers.dev"
   : "hivemind-task-agents.amarsai2005.workers.dev";
@@ -611,7 +613,8 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
                   <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#303030]" title={selectedArtifact.title}>{selectedArtifact.title}</span>
                   <a href={pdfUrl || storedUrl} download={selectedArtifact.title} className="shrink-0 text-[12px] text-[#2563a6] underline">Download PDF</a>
                 </div>
-                <iframe title={selectedArtifact.title} src={pdfUrl || storedUrl} className="min-h-0 w-full flex-1 border-0" />
+                {selectedArtifact.body ? <div className="min-h-0 flex-1 overflow-auto"><React.Suspense fallback={<p className="p-4 text-sm text-[#737373]">Loading PDF…</p>}><PdfCanvasPreview body={selectedArtifact.body} /></React.Suspense></div>
+                  : <iframe title={selectedArtifact.title} src={storedUrl} className="min-h-0 w-full flex-1 border-0" />}
               </div>
             ) : showArtifact && imageUrl ? (
               <div className="flex h-full min-h-0 flex-col">
