@@ -73,7 +73,9 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
   const [selectedArtifact, setSelectedArtifact] = useState(null);
   const [previewRequest, setPreviewRequest] = useState({ id: "", serial: 0 });
   const [pdfError, setPdfError] = useState("");
+  const [workRun, setWorkRun] = useState(null);
   const [toolApproval, setToolApproval] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState("");
   const [draft, setDraft] = useState({ type: "", text: "" });
   const socketRef = useRef(null);
   const queuedStart = useRef(null);
@@ -105,11 +107,20 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
       if (closed) return;
       const socket = new WebSocket(`wss://${AGENT_HOST}/agents/hivemind-task-agent/${encodeURIComponent(name)}?ticket=${encodeURIComponent(ticket)}`);
       socketRef.current = socket;
-      socket.onopen = () => { setError(""); socket.send(JSON.stringify({ type: "artifact-list" })); flushQueued(); };
+      socket.onopen = () => { setError(""); socket.send(JSON.stringify({ type: "artifact-list" })); socket.send(JSON.stringify({ type: "workrun-control", decision: "status" })); flushQueued(); };
       socket.onmessage = (event) => {
         let parsed = null;
         try { parsed = JSON.parse(event.data); } catch { parsed = null; }
         if (!parsed) return;
+        if (parsed.type === "workrun-control-result") {
+          if (parsed.error) setError(parsed.error);
+          else { setWorkRun(parsed.result); setError(""); }
+          return;
+        }
+        if (parsed.type === "connection-continue-result") {
+          setConnectionStatus(parsed.status || "NOT_CONNECTED");
+          return;
+        }
         if (parsed.type === "progress-draft" || parsed.type === "report-draft") {
           setDraft((current) => ({
             type: parsed.type,
@@ -166,7 +177,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     const events = agentState?.events || [];
     const userIndex = events.findLastIndex((item) => item.step === "user");
     if (userIndex < 0) return;
-    const terminal = events.slice(userIndex + 1).reverse().find((item) => ["question", "approval", "completion"].includes(item.step));
+    const terminal = events.slice(userIndex + 1).reverse().find((item) => ["question", "approval", "completion", "workrun-recovery"].includes(item.step));
     setStatus(terminal?.step === "completion" ? "complete" : terminal?.step || "working");
     setStartedAt(Date.parse(events[userIndex].at));
   }, [agentState]);
@@ -224,6 +235,10 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     setStatus("working");
   }, []);
 
+  const controlWorkRun = useCallback((decision) => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) socketRef.current.send(JSON.stringify({ type: "workrun-control", decision }));
+  }, []);
+
   const selectArtifact = useCallback((id) => {
     setPreviewRequest((current) => ({ id, serial: current.serial + 1 }));
     if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -245,6 +260,10 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     setToolApproval(null);
   }, [toolApproval]);
 
+  const continueConnection = useCallback((toolkit) => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) socketRef.current.send(JSON.stringify({ type: "connection-continue", decision: toolkit }));
+  }, []);
+
   const events = useMemo(() => Array.isArray(agentState?.events) ? agentState.events : [], [agentState?.events]);
   const report = useMemo(() => {
     const found = [...events].reverse().find((event) => event.step === "report" && event.detail);
@@ -252,6 +271,8 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
   }, [events]);
 
   return {
+    workRun,
+    controlWorkRun,
     events,
     places: Array.isArray(agentState?.places) ? agentState.places : [],
     sources: Array.isArray(agentState?.sources) ? agentState.sources : [],
@@ -265,6 +286,8 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     createPdf,
     pdfError,
     toolApproval,
+    connectionStatus,
+    continueConnection,
     decideToolApproval,
     selectArtifact,
     status,
@@ -353,6 +376,7 @@ function conversationTurns(events, messages) {
       continue;
     }
     if (event.step === "completion") current.finishedAt = event.at;
+    if (event.step === "workrun-recovery") current.finishedAt = undefined;
     if (event.step === "tool-call") {
       let call;
       try { call = JSON.parse(event.detail); } catch { call = null; }
@@ -470,7 +494,7 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, a
   );
 }
 
-export function TaskTranscript({ messages, events, status, startedAt, operatingPlan, draft, artifacts = [], onSelectArtifact, error, toolApproval, onToolApproval, onMemoryDecision, onAnswer }) {
+export function TaskTranscript({ messages, events, status, startedAt, operatingPlan, draft, artifacts = [], onSelectArtifact, error, toolApproval, onToolApproval, onMemoryDecision, onAnswer, workRun, onControlWorkRun, connectionStatus, onContinueConnection }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (status !== "working") return undefined;
@@ -478,6 +502,22 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
     return () => clearInterval(timer);
   }, [status]);
   const turns = conversationTurns(events, messages);
+  const connectionEvents = events.filter((event) => ["connection-required", "connection-ready"].includes(event.step));
+  const lastConnection = connectionEvents.at(-1);
+  let connection = null;
+  if (lastConnection?.step === "connection-required") {
+    try { connection = JSON.parse(lastConnection.detail); } catch { /* malformed receipt */ }
+  }
+  if (!connection && toolApproval?.input?.action === "execute_write") {
+    const guidance = [...events].reverse().find((event) => /https:\/\/connect\.composio\.dev\/link\//i.test(event.detail || ""));
+    const url = guidance?.detail?.match(/https:\/\/connect\.composio\.dev\/link\/[a-zA-Z0-9_-]+/)?.[0];
+    if (url) connection = { toolkit: String(toolApproval.input.toolkit || toolApproval.input.toolSlug || "app").split("_")[0].toLowerCase(), url };
+  }
+  const connectionUrl = (() => { try { const url = new URL(connection?.url); return url.protocol === "https:" && url.hostname === "connect.composio.dev" ? url.href : ""; } catch { return ""; } })();
+  const connectionActive = connectionStatus?.toUpperCase() === "ACTIVE" || lastConnection?.step === "connection-ready";
+  const writeInput = toolApproval?.input?.action === "execute_write" ? toolApproval.input : null;
+  const writeArguments = writeInput?.arguments && typeof writeInput.arguments === "object" ? writeInput.arguments : {};
+  const writeAction = writeInput?.toolSlug === "GMAIL_CREATE_EMAIL_DRAFT" ? "Create one Gmail draft" : String(writeInput?.toolSlug || "Connected app write").replaceAll("_", " ").toLowerCase();
   if (!turns.length && !error && !toolApproval) return null;
   return (
     <div className="mx-auto w-full max-w-[900px] space-y-12 pt-6 pb-8" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
@@ -497,14 +537,36 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
           onAnswer={onAnswer}
         />
       ))}
-      {toolApproval ? <div className="rounded-lg border border-[#e3e0db] bg-white p-4 text-[13px] text-[#262626]">
-        <p className="font-semibold">Approve {toolApproval.name}?</p>
-        <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[11px] text-[#666]">{JSON.stringify(toolApproval.input || {}, null, 2)}</pre>
+      {connection && !connectionActive ? <div className="rounded-xl border border-[#dedee2] bg-[#fafaf9] p-4 text-[13px] text-[#262626]" role="status">
+        <p className="font-semibold">Connect {connection.toolkit} to continue</p>
+        <p className="mt-1 text-[#666]">Authorize account in connection window. Then confirm connection here. Work stays in this room.</p>
+        <div className="mt-3 flex gap-3">
+          {connectionUrl ? <a href={connectionUrl} target="_blank" rel="noreferrer" className="rounded bg-[#171717] px-3 py-1.5 text-white">Connect {connection.toolkit}</a> : null}
+          <button type="button" onClick={() => onContinueConnection?.(connection.toolkit)} className="rounded border border-[#ddd] px-3 py-1.5">{connectionStatus?.toUpperCase() === "EXPIRED" ? "Refresh connection" : "Continue"}</button>
+        </div>
+        {connectionStatus && connectionStatus.toUpperCase() !== "ACTIVE" ? <p className="mt-2 text-[#777]">Connection: {connectionStatus.toLowerCase()}</p> : null}
+      </div> : null}
+      {toolApproval && (!connection || connectionActive) ? <div className="rounded-lg border border-[#e3e0db] bg-white p-4 text-[13px] text-[#262626]">
+        <p className="font-semibold">Approve {writeInput ? writeAction : toolApproval.name}?</p>
+        {writeInput ? <div className="mt-2 space-y-1 text-[#666]">
+          {Object.entries(writeArguments).filter(([key]) => !["user_id", "account_id"].includes(key)).map(([key, value]) => <p key={key}><span className="font-medium">{key.replaceAll("_", " ")}:</span> {typeof value === "string" ? value : JSON.stringify(value)}</p>)}
+          {writeInput.toolSlug === "GMAIL_CREATE_EMAIL_DRAFT" ? <p>No email will be sent.</p> : null}
+        </div> : <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[11px] text-[#666]">{JSON.stringify(toolApproval.input || {}, null, 2)}</pre>}
         <div className="mt-3 flex gap-2">
           <button type="button" onClick={() => onToolApproval?.(true)} className="rounded bg-[#171717] px-3 py-1.5 text-white">Approve</button>
           <button type="button" onClick={() => onToolApproval?.(false)} className="rounded border border-[#ddd] px-3 py-1.5">Deny</button>
         </div>
       </div> : null}
+      {onControlWorkRun && turns.length ? <details className="text-xs text-[#666]" onToggle={(event) => { if (event.currentTarget.open) onControlWorkRun("status"); }}>
+        <summary className="cursor-pointer">WorkRun recovery</summary>
+        <p className="mt-2">{workRun?.status || "Checking…"} · {workRun?.checkpoints?.length || 0} durable checkpoints</p>
+        <div className="my-2 flex gap-3">
+          <button type="button" onClick={() => onControlWorkRun("status")}>Refresh status</button>
+          {workRun?.status === "running" ? <button type="button" onClick={() => onControlWorkRun("pause")}>Pause work</button> : null}
+          {["paused", "errored", "terminated"].includes(workRun?.status) ? <button type="button" onClick={() => onControlWorkRun("resume")}>Resume work</button> : null}
+        </div>
+        <ol>{(workRun?.checkpoints || []).map((item) => <li key={item.stage}>{item.stage}</li>)}</ol>
+      </details> : null}
       {error ? <div className="border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">{error}</div> : null}
     </div>
   );

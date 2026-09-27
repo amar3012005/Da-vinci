@@ -3112,7 +3112,11 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
               error={taskStream.error}
               report={taskStream.report}
               toolApproval={taskStream.toolApproval}
+              connectionStatus={taskStream.connectionStatus}
+              onContinueConnection={taskStream.continueConnection}
               onToolApproval={taskStream.decideToolApproval}
+              workRun={taskStream.workRun}
+              onControlWorkRun={taskStream.controlWorkRun}
               onMemoryDecision={taskStream.decideMemory}
               onAnswer={taskStream.answer}
             />

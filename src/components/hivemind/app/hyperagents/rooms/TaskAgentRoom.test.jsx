@@ -100,7 +100,7 @@ test("shows pending tool approval and keeps room identity scoped", () => {
   const container = document.createElement("div");
   const root = createRoot(container);
   act(() => root.render(<TaskTranscript messages={[]} events={[]} status="working" toolApproval={{ toolCallId: "call-1", name: "hivemind_connected_task", input: { action: "execute_write" } }} onToolApproval={onToolApproval} />));
-  expect(container.textContent).toContain("Approve hivemind_connected_task?");
+  expect(container.textContent).toContain("Approve connected app write?");
   act(() => container.querySelector("button").click());
   expect(onToolApproval).toHaveBeenCalledWith(true);
   expect(agentInstanceName("org", "room")).toBe("session-org-room");
@@ -215,4 +215,33 @@ test("renders saved PDF bytes across full Preview height", async () => {
   expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:report-pdf");
   delete URL.createObjectURL;
   delete URL.revokeObjectURL;
+});
+
+test("connection banner precedes write approval until provider reports active", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const events = [{ step: "user", at: "2026-09-27T23:00:00Z", detail: "Create Gmail draft" }, { step: "connection-required", at: "2026-09-27T23:00:01Z", detail: JSON.stringify({ toolkit: "gmail", url: "https://connect.composio.dev/link/test" }) }];
+  const props = { messages: [], events, status: "working", toolApproval: { toolCallId: "call-1", name: "hivemind_connected_task", input: { action: "execute_write" } } };
+  const onContinueConnection = jest.fn();
+  act(() => root.render(<TaskTranscript {...props} onContinueConnection={onContinueConnection} />));
+  expect(container.textContent).toContain("Connect gmail to continue");
+  expect(container.textContent).not.toContain("Approve hivemind_connected_task?");
+  expect(container.querySelector('a[href="https://connect.composio.dev/link/test"]')).toBeTruthy();
+  act(() => [...container.querySelectorAll("button")].find((button) => button.textContent === "Continue").click());
+  expect(onContinueConnection).toHaveBeenCalledWith("gmail");
+  act(() => root.render(<TaskTranscript {...props} connectionStatus="ACTIVE" />));
+  expect(container.textContent).toContain("Approve connected app write?");
+  act(() => root.unmount());
+});
+
+test("old connected turn with link shows connection card before pending approval", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const events = [{ step: "user", at: "2026-09-27T23:00:00Z", detail: "Create draft" }, { step: "progress", at: "2026-09-27T23:00:01Z", detail: "Connect https://connect.composio.dev/link/legacy123 first." }];
+  act(() => root.render(<TaskTranscript events={events} messages={[]} toolApproval={{ toolCallId: "call-1", name: "hivemind_connected_task", input: { action: "execute_write", toolSlug: "GMAIL_CREATE_EMAIL_DRAFT" } }} />));
+  expect(container.textContent).toContain("Connect gmail to continue");
+  expect(container.textContent).not.toContain("Approve hivemind_connected_task?");
+  act(() => root.unmount());
 });
