@@ -15,6 +15,7 @@ export default function NewSession({ onSubmit }) {
   const [error, setError] = useState("");
   const [employees, setEmployees] = React.useState([]);
   const [ownerId, setOwnerId] = React.useState("");
+  const selectedEmployee = employees.find((employee) => employee.id === ownerId);
 
   React.useEffect(() => {
     let active = true;
@@ -44,17 +45,7 @@ export default function NewSession({ onSubmit }) {
   return (
     <NativeSessionLayout>
       <div className="w-full">
-        <div className="mb-8 flex justify-center gap-2" role="group" aria-label="Choose HyperAgent">
-          {employees.map((employee) => (
-            <button key={employee.id} type="button" aria-pressed={ownerId === employee.id}
-              onClick={() => setOwnerId(employee.id)}
-              className={`flex min-w-0 max-w-[190px] items-center gap-2 rounded-xl border px-3 py-2 text-left ${ownerId === employee.id ? "border-[#18181b] bg-[#f4f4f5]" : "border-[#e4e4e7] bg-white"}`}>
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#e4e4e7] text-[13px] font-semibold text-[#27272a]">{employee.name?.charAt(0) || "H"}</span>
-              <span className="min-w-0"><span className="block truncate text-[13px] font-medium text-[#18181b]">{employee.name}</span><span className="block truncate text-[11px] text-[#71717a]">{employee.roleArchetype || "HyperAgent"}</span></span>
-            </button>
-          ))}
-        </div>
-        <div className="mb-7 flex items-center justify-center gap-2.5">
+        <div className="mb-7 flex items-center justify-start gap-2.5">
           <SingulanceMark size={32} />
           <h1 className="text-[30px] font-normal leading-9 tracking-[-0.025em] text-[#808080]">OS · Remember what matters.</h1>
         </div>
@@ -90,9 +81,25 @@ export default function NewSession({ onSubmit }) {
           <div className="flex items-center gap-1.5 px-3 pb-3">
             <RoundIcon><Plus size={16} /></RoundIcon>
             <RoundIcon><Paperclip size={15} /></RoundIcon>
-            <button type="button" className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[13px] text-[#3f3f46] hover:bg-[#f4f4f5]">
-              <Folder size={14} /> Workspace Write <ChevronDown size={13} className="text-[#a1a1aa]" />
-            </button>
+            <div className="relative">
+              <button type="button" aria-label="Choose HyperAgent" aria-haspopup="menu" aria-expanded={menu === "employee"}
+                onClick={() => setMenu(menu === "employee" ? "" : "employee")}
+                className="inline-flex max-w-[190px] items-center gap-1.5 rounded-full px-2 py-1 text-[13px] text-[#3f3f46] hover:bg-[#f4f4f5]">
+                <EmployeeAvatar employee={selectedEmployee} />
+                <span className="truncate">{selectedEmployee?.name || "Choose HyperAgent"}</span>
+                <ChevronDown size={13} className="shrink-0 text-[#a1a1aa]" />
+              </button>
+              {menu === "employee" && <div role="menu" aria-label="HyperAgents" className="absolute bottom-full left-0 z-20 mb-2 min-w-[230px] rounded-xl border border-[#ececef] bg-white py-1 shadow-lg">
+                {employees.map((employee) => (
+                  <button key={employee.id} type="button" role="menuitemradio" aria-checked={ownerId === employee.id}
+                    onClick={() => { setOwnerId(employee.id); setMenu(""); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#f4f4f5]">
+                    <EmployeeAvatar employee={employee} />
+                    <span className="min-w-0"><span className="block truncate text-[13px] font-medium text-[#18181b]">{employee.name}</span><span className="block truncate text-[11px] text-[#71717a]">{employee.roleArchetype || "HyperAgent"}</span></span>
+                  </button>
+                ))}
+              </div>}
+            </div>
             <RoundIcon><Mic size={15} /></RoundIcon>
             <button type="button" className="ml-auto inline-flex max-w-[240px] items-center gap-1 truncate text-[12px] text-[#71717a]">
               <span className="truncate">{MODEL_LABEL}</span>
@@ -118,6 +125,14 @@ function RoundIcon({ children }) {
   return (
     <span className="grid h-8 w-8 place-items-center rounded-full text-[#3f3f46] hover:bg-[#f4f4f5]">{children}</span>
   );
+}
+
+function EmployeeAvatar({ employee }) {
+  const avatarUrl = employee?.avatarUrl || employee?.avatar_url;
+  return <span className="relative grid h-5 w-5 shrink-0 place-items-center overflow-hidden rounded-full bg-[#e4e4e7] text-[10px] font-semibold text-[#27272a]">
+    {employee?.name?.charAt(0) || "H"}
+    {avatarUrl && <img src={avatarUrl} alt="" className="absolute inset-0 h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />}
+  </span>;
 }
 
 function MenuButton({ label, icon, open, onToggle, children }) {

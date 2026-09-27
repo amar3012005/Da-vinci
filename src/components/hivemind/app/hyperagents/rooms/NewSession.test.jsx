@@ -21,6 +21,9 @@ test('new session passes selected employee and company task mode with prompt', a
   act(() => { root.render(<NewSession onSubmit={onSubmit} />); });
   await act(async () => { await Promise.resolve(); });
   const button = (label) => [...host.querySelectorAll('button')].find((item) => item.textContent.includes(label));
+  expect(host.querySelector('h1').textContent).toBe('OS · Remember what matters.');
+  expect(host.querySelectorAll('[role="menuitemradio"]')).toHaveLength(0);
+  act(() => { Simulate.click(host.querySelector('button[aria-label="Choose HyperAgent"]')); });
   act(() => { Simulate.click(button('Aster')); });
   act(() => { Simulate.click(button('HyperAgents mode')); });
   act(() => { Simulate.click(button('Company task')); });
