@@ -330,6 +330,7 @@ function conversationTurns(events, messages) {
   let current = null;
   for (const event of events) {
     if (event.step === "user") {
+      if (current && !current.finishedAt) current.finishedAt = event.at;
       current = { id: event.at, at: event.at, text: event.detail, tools: [], artifacts: [], report: "", question: "", options: [] };
       turns.push(current);
       continue;
@@ -346,6 +347,7 @@ function conversationTurns(events, messages) {
       } catch { current.question = event.detail; }
       continue;
     }
+    if (event.step === "completion") current.finishedAt = event.at;
     if (event.step === "artifact") current.artifacts.push(event);
     else if (event.step === "report") current.report = event.detail;
     else if (!HIDDEN_STEPS.has(event.step) && !isSetupEvent(event) && !(event.step === "parallel_search" && event.detail === "parallel-ai-gateway")) current.tools.push(event);
@@ -390,6 +392,10 @@ function OperatingPlan({ plan }) {
 function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, artifacts, onSelectArtifact, onMemoryDecision, onAnswer }) {
   const [open, setOpen] = useState(true);
   const pending = live && status === "working";
+  const finished = Boolean(turn.finishedAt) || (live && status === "complete");
+  const duration = turn.at && (turn.finishedAt || (pending && startedAt))
+    ? elapsedLabel(Date.parse(turn.at), turn.finishedAt ? Date.parse(turn.finishedAt) : now)
+    : "";
   return (
     <div className="space-y-5">
       {turn.at ? <div className="text-center text-[12px] text-[#a0a0a0]">{new Date(turn.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</div> : null}
@@ -398,10 +404,10 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, a
           <div className="max-w-[84%] whitespace-pre-wrap rounded-[20px] bg-[#edf3ff] px-4 py-2.5 text-[14px] leading-[1.55] text-[#242933]">{turn.text}</div>
         </div>
       ) : null}
-      {turn.tools.length || pending ? (
+      {turn.tools.length || pending || finished ? (
         <div>
           <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-center gap-2 border-b border-[#ededed] pb-1.5 text-left text-[13px] text-[#969696] hover:text-[#555555]">
-            <span>{turn.tools.length ? `${turn.tools.length} step${turn.tools.length === 1 ? "" : "s"}` : "Thinking"}{pending ? " · Working" : ""}{live && startedAt ? ` · ${elapsedLabel(startedAt, now)}` : ""}</span><span aria-hidden="true">{open ? "⌄" : "›"}</span>
+            <span>{turn.tools.length ? `${turn.tools.length} step${turn.tools.length === 1 ? "" : "s"}` : finished ? "Thought" : "Thinking"}{pending ? " · Working" : finished ? " · Worked" : ""}{duration ? ` · ${duration}` : ""}</span><span aria-hidden="true">{open ? "⌄" : "›"}</span>
           </button>
           {open ? (
             <ol className="mt-2">

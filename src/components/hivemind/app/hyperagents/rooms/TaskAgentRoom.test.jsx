@@ -117,6 +117,22 @@ test("shows streamed progress before final report", () => {
   act(() => root.unmount());
 });
 
+test("keeps completed thought and duration visible after answer and next turn", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const events = [
+    { at: "2026-09-26T12:00:00Z", step: "user", detail: "Who are you?" },
+    { at: "2026-09-26T12:00:03Z", step: "report", detail: "I am Milo." },
+    { at: "2026-09-26T12:00:04Z", step: "completion", detail: "done" },
+    { at: "2026-09-26T12:01:00Z", step: "user", detail: "Next question" },
+  ];
+  act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" />));
+  expect(container.textContent).toContain("Thought · Worked · 4s");
+  expect(container.textContent).toContain("I am Milo.");
+  act(() => root.unmount());
+});
+
 test("shows agent progress text without expanding a tool row", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const container = document.createElement("div");
