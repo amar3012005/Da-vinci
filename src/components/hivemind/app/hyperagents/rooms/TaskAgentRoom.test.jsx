@@ -5,7 +5,7 @@ import { TaskPreview, TaskTranscript, agentInstanceName, taskOrbState } from "./
 jest.mock("react-markdown", () => ({ __esModule: true, default: ({ children }) => <div>{children}{String(children).includes("https://source.example") ? <a href="https://source.example/page">Source</a> : null}</div> }));
 jest.mock("remark-gfm", () => () => null);
 jest.mock("./PdfCanvasPreview", () => ({ __esModule: true, default: () => <span>PDF pages</span> }));
-jest.mock("thinking-orbs", () => ({ ThinkingOrb: ({ state, size, gravity, style, color }) => <span data-orb-state={state} data-orb-size={size} data-orb-gravity={gravity?.sprite ? "pointer" : "none"} data-orb-color={color} style={style} /> }));
+jest.mock("thinking-orbs", () => ({ ThinkingOrb: ({ state, size, gravity, style, color }) => <span data-orb-state={state} data-orb-size={size} data-orb-gravity={gravity?.sprite ? "pointer" : "none"} data-orb-color={color} style={style} /> }), { virtual: true });
 
 test("renders saved report in preview and opens artifacts from the rail", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -144,8 +144,29 @@ test("shows each real tool call once with final status", () => {
     { at: "2026-09-26T12:00:03Z", step: "completion", detail: "complete" },
   ];
   act(() => root.render(<TaskTranscript messages={[]} events={events} status="complete" />));
-  expect(container.textContent.match(/browser_get/g)).toHaveLength(1);
-  expect(container.textContent).toContain("Returned");
+  expect(container.textContent.match(/browser get/g)).toHaveLength(1);
+  expect(container.textContent).not.toContain("Returned");
+  act(() => root.unmount());
+});
+
+test("keeps each plan with its originating turn and holds artifact cards until completion", () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const artifact = { id: "report-1", kind: "report", title: "Research report", contentType: "text/markdown" };
+  const first = [
+    { at: "2026-09-26T12:00:00Z", step: "user", detail: "Research competitors" },
+    { at: "2026-09-26T12:00:01Z", step: "operating-plan-state", detail: JSON.stringify({ tasks: [{ id: 1, title: "Check sources", status: "active" }] }) },
+    { at: "2026-09-26T12:00:02Z", step: "artifact", detail: JSON.stringify({ id: artifact.id }), },
+  ];
+  act(() => root.render(<TaskTranscript messages={[]} events={first} status="working" artifacts={[artifact]} />));
+  expect(container.textContent).toContain("Check sources");
+  expect(container.textContent).not.toContain("Research report");
+  const next = [...first, { at: "2026-09-26T12:00:03Z", step: "completion", detail: "done" }, { at: "2026-09-26T12:01:00Z", step: "user", detail: "Hello" }];
+  act(() => root.render(<TaskTranscript messages={[]} events={next} status="working" artifacts={[artifact]} operatingPlan={{ tasks: [{ id: 2, title: "Wrong next plan", status: "active" }] }} />));
+  expect(container.textContent).toContain("Check sources");
+  expect(container.textContent).not.toContain("Wrong next plan");
+  expect(container.textContent).toContain("Research report");
   act(() => root.unmount());
 });
 

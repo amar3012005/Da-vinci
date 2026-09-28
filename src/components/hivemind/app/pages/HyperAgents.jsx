@@ -246,6 +246,7 @@ export default function HyperAgents() {
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showAgentRooms, setShowAgentRooms] = useState(false);
+  const [roomRailOpen, setRoomRailOpen] = useState(true);
   const [previewWide, setPreviewWide] = useState(false);
   useEffect(() => {
     const onPreview = (event) => setPreviewWide(Boolean(event.detail?.wide));
@@ -503,19 +504,20 @@ export default function HyperAgents() {
     <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
       <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
       {/* Left rail: rooms */}
-      <aside className={showOperatingSystemSidebar && !previewWide ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'}>
+      {showOperatingSystemSidebar && !previewWide && !roomRailOpen ? <button type="button" aria-label="Open rooms sidebar" onClick={() => setRoomRailOpen(true)} className="hidden shrink-0 border-r border-[#e3e0db] bg-[#faf9f4] px-2 text-[12px] text-[#555] hover:text-[#171717] md:block">Rooms ›</button> : null}
+      <aside className={showOperatingSystemSidebar && !previewWide && roomRailOpen ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'}>
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
             <span className="text-[12px] font-semibold text-[#0a0a0a]">{t('hyperAgents.rooms', 'Rooms')}</span>
           </div>
-          <button
+          <div className="flex items-center gap-2"><button type="button" aria-label="Close rooms sidebar" onClick={() => setRoomRailOpen(false)} className="text-[#777] hover:text-[#0a0a0a]"><X size={15} /></button><button
             onClick={() => setShowCreate(true)}
             className="text-[#525252] hover:text-[#0a0a0a]"
             title={t('hyperAgents.newRoom', 'New room')}
           >
             <Plus size={14} />
-          </button>
+          </button></div>
         </header>
 
         {/* YOUR COMPANY — always-present entry to the company/onboarding hero. */}

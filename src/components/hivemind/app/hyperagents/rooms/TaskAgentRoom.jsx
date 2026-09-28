@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, FileText, Globe2, Grid2X2Plus, Link2, Settings2 } from "lucide-react";
+import { ChevronRight, FileText, Globe2, Grid2X2Plus, Link2, Settings2, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { createPortal } from "react-dom";
@@ -337,7 +337,7 @@ function TaskRow({ event }) {
   const [open, setOpen] = useState(false);
   if (event.step === "workrun") return <li role="status" className="py-1 text-[13px] text-[#777777]">{detail === "queued" ? "Task queued" : detail.startsWith("starting ") ? "Preparing task" : detail}</li>;
   if (thinking) return <li className="py-2 text-[14px] leading-6 text-[#303030]">{detail}</li>;
-  if (call?.name) return <li className="flex items-center gap-2 py-1.5 text-[13px] text-[#858b94]"><span aria-hidden="true" className="w-4 shrink-0 text-center">▣</span><span>{call.name}</span><span>· {call.phase === "started" ? "Running" : call.phase === "failed" ? "Failed" : "Returned"}</span>{call.target ? <span className="min-w-0 truncate">· {call.target}</span> : null}</li>;
+  if (call?.name) return <li className="flex items-center gap-2 py-1.5 text-[13px] text-[#858b94]"><span aria-hidden="true" className="w-4 shrink-0 text-center">▣</span><span>{toolLabel(call.name)}</span>{call.phase === "failed" ? <span>· Failed</span> : call.phase === "started" ? <span>· Running</span> : null}{call.target ? <span className="min-w-0 truncate">· {call.target}</span> : null}</li>;
   const summary = isSearch && detail && !/^(parallel-ai-gateway|parallel|started)$/i.test(detail) ? detail : "";
   return (
     <li>
@@ -359,12 +359,12 @@ function conversationTurns(events, messages) {
   for (const event of events) {
     if (event.step === "user") {
       if (current && !current.finishedAt) current.finishedAt = event.at;
-      current = { id: event.at, at: event.at, text: event.detail, tools: [], artifacts: [], report: "", question: "", options: [] };
+      current = { id: event.at, at: event.at, text: event.detail, tools: [], artifacts: [], report: "", question: "", options: [], plan: null };
       turns.push(current);
       continue;
     }
     if (!current) {
-      current = { id: "earlier", text: "", tools: [], artifacts: [], report: "", question: "", options: [] };
+      current = { id: "earlier", text: "", tools: [], artifacts: [], report: "", question: "", options: [], plan: null };
       turns.push(current);
     }
     if (event.step === "question") {
@@ -377,6 +377,10 @@ function conversationTurns(events, messages) {
     }
     if (event.step === "completion") current.finishedAt = event.at;
     if (event.step === "workrun-recovery") current.finishedAt = undefined;
+    if (event.step === "operating-plan-state") {
+      try { current.plan = JSON.parse(event.detail); } catch { /* Keep the last valid plan for this turn. */ }
+      continue;
+    }
     if (event.step === "tool-call") {
       let call;
       try { call = JSON.parse(event.detail); } catch { call = null; }
@@ -388,13 +392,20 @@ function conversationTurns(events, messages) {
       else current.tools.push(event);
       continue;
     }
+    // A tool's native receipt sits between its started and returned events.
+    // Keep the distinct call row and avoid rendering that receipt twice.
+    if (current.tools.some((item) => {
+      if (item.step !== "tool-call") return false;
+      try { const call = JSON.parse(item.detail); return call.name === event.step && call.phase === "started"; }
+      catch { return false; }
+    })) continue;
     if (event.step === "artifact") current.artifacts.push(event);
     else if (event.step === "report") current.report = event.detail;
     else if (!HIDDEN_STEPS.has(event.step) && !isSetupEvent(event) && !(event.step === "parallel_search" && event.detail === "parallel-ai-gateway")) current.tools.push(event);
   }
   const said = new Set(turns.map((turn) => turn.text));
   for (const message of messages.slice(-1)) {
-    if (!said.has(message.text)) turns.push({ id: message.id, at: message.at, text: message.text, tools: [], artifacts: [], report: "", question: "", options: [] });
+    if (!said.has(message.text)) turns.push({ id: message.id, at: message.at, text: message.text, tools: [], artifacts: [], report: "", question: "", options: [], plan: null });
   }
   return turns.filter((turn) => turn.text || turn.tools.length || turn.report || turn.artifacts.length);
 }
@@ -429,7 +440,7 @@ function OperatingPlan({ plan }) {
   );
 }
 
-function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, artifacts, onSelectArtifact, onMemoryDecision, onAnswer }) {
+function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSelectArtifact, onMemoryDecision, onAnswer }) {
   const [open, setOpen] = useState(true);
   const pending = live && status === "working";
   const finished = Boolean(turn.finishedAt) || (live && status === "complete");
@@ -454,12 +465,12 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, a
               {pending && !turn.tools.length ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#555]"><ThinkingOrb state="solving" size={20} theme="light" color="#111111" dotSize={1.2} /> Thinking…</li> : null}
               {turn.tools.map((event, index) => <TaskRow key={`${event.at}-${event.step}-${index}`} event={event} />)}
               {pending && turn.tools.length > 0 ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#555]"><ThinkingOrb state={taskOrbState(status, turn.tools)} size={20} theme="light" color="#111111" dotSize={1.2} gravity={orbGravity(taskOrbState(status, turn.tools))} /> {orbLabel(taskOrbState(status, turn.tools))}</li> : null}
-              {pending && draft?.type === "progress-draft" && draft.text && !draft.text.trimStart().startsWith("{") ? <li role="status" className="whitespace-pre-wrap py-1 text-[13px] leading-5 text-[#555555]">{draft.text}</li> : null}
+              {pending && draft?.type === "progress-draft" && draft.text && !draft.text.trimStart().startsWith("{") && !turn.tools.some((event) => event.step === "progress" && event.detail === draft.text) ? <li role="status" className="whitespace-pre-wrap py-1 text-[13px] leading-5 text-[#555555]">{draft.text}</li> : null}
             </ol>
           ) : null}
         </div>
       ) : null}
-      {live ? <OperatingPlan plan={operatingPlan} /> : null}
+      <OperatingPlan plan={turn.plan} />
       {turn.question ? <div className="whitespace-pre-wrap text-[15px] leading-7 text-[#1c1a16]">{turn.question}</div> : null}
       {live && status === "question" && turn.options?.length ? (
         <div className="flex flex-wrap gap-2">
@@ -472,7 +483,7 @@ function TurnBlock({ turn, live, status, startedAt, now, operatingPlan, draft, a
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.report}</ReactMarkdown>
       </div> : null}
       {pending && !turn.report && draft?.type === "report-draft" && draft.text ? <div className="break-words text-[14px] leading-[1.7] text-[#242424]"><ReactMarkdown remarkPlugins={[remarkGfm]}>{draft.text}</ReactMarkdown></div> : null}
-      {turn.artifacts?.map((event, index) => {
+      {finished && turn.artifacts?.map((event, index) => {
         const artifact = artifactForEvent(event, artifacts);
         if (!artifact || artifact.kind === "note" || artifact.kind === "reply") return null;
         return <button key={`${event.at}-${index}`} type="button" onClick={() => onSelectArtifact?.(artifact.id)} className="flex w-full items-center gap-3 rounded-2xl border border-[#e7e5e2] bg-[#faf9f7] px-4 py-3 text-left hover:bg-[#f2f0ec]">
@@ -529,7 +540,6 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
           status={status}
           startedAt={startedAt}
           now={now}
-          operatingPlan={operatingPlan}
           draft={draft}
           artifacts={artifacts}
           onSelectArtifact={onSelectArtifact}
@@ -598,6 +608,7 @@ export function taskOrbState(status, events = []) {
 
 export function TaskPreview({ status, events, places, sources, report, artifacts = [], selectedArtifact, previewRequest, onSelectArtifact, onCreatePdf, pdfError, employee, employeeAvatar, onConnectApps, onOpenSettings, hasContent = true }) {
   const [width, setWidth] = useState(520);
+  const [panelOpen, setPanelOpen] = useState(true);
   const [showEnvironment, setShowEnvironment] = useState(true);
   const [tab, setTab] = useState("preview");
   const [selection, setSelection] = useState({ type: "auto" });
@@ -607,7 +618,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
     if (events?.some((event) => event.step === "user")) setShowEnvironment(false);
   }, [events]);
   useEffect(() => {
-    if (previewRequest?.id) { setSelection({ type: "artifact", id: previewRequest.id }); setTab("preview"); }
+    if (previewRequest?.id) { setSelection({ type: "artifact", id: previewRequest.id }); setTab("preview"); setPanelOpen(true); }
   }, [previewRequest?.id, previewRequest?.serial]);
   useEffect(() => {
     if (selectedArtifact?.contentType !== "application/pdf" || !selectedArtifact.body) { setPdfUrl(""); return undefined; }
@@ -617,7 +628,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
     return () => URL.revokeObjectURL(url);
   }, [selectedArtifact]);
   const openUrl = selection.type === "source" ? selection.url : "";
-  const openArtifact = (id) => { setSelection({ type: "artifact", id }); onSelectArtifact?.(id); setTab("preview"); };
+  const openArtifact = (id) => { setSelection({ type: "artifact", id }); onSelectArtifact?.(id); setTab("preview"); setPanelOpen(true); };
   const openSource = (url) => {
     try {
       const parsed = new URL(url);
@@ -698,7 +709,8 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
         </div>
       </div>
     ) : <button type="button" onClick={() => setShowEnvironment(true)} aria-label="Show environment" className="rounded-full border border-[#dedede] bg-white px-3 py-1 text-[11px] text-[#777] shadow-sm">Environment</button>, environmentSlot) : null}
-    <aside className={`relative min-h-0 shrink-0 bg-[#f6f5f1] ${hasContent ? 'hidden lg:flex' : 'hidden'}`} style={{ width }}>
+    {hasContent && !panelOpen ? <button type="button" aria-label="Open preview panel" onClick={() => setPanelOpen(true)} className="hidden shrink-0 border-l border-[#e3e0db] bg-white px-3 text-[12px] text-[#555] hover:text-[#171717] lg:block">Preview ›</button> : null}
+    <aside className={`relative min-h-0 shrink-0 bg-[#f6f5f1] ${hasContent && panelOpen ? 'hidden lg:flex' : 'hidden'}`} style={{ width }}>
       <button
         type="button"
         aria-label="Resize preview"
@@ -713,6 +725,7 @@ export function TaskPreview({ status, events, places, sources, report, artifacts
           {[["preview", "Preview"], ["artifacts", "Artifacts"], ["computer", "Computer"], ["sources", "Sources"]].map(([id, label]) => (
             <button key={id} type="button" onClick={() => setTab(id)} className={`ml-1 rounded-full px-2.5 py-1 text-[12px] ${tab === id ? "bg-[#171717] text-white" : "text-[#525252]"}`}>{label}</button>
           ))}
+          <button type="button" aria-label="Close preview panel" onClick={() => setPanelOpen(false)} className="ml-auto rounded p-1 text-[#777] hover:bg-[#f1f1f1] hover:text-[#171717]"><X size={16} /></button>
         </div>
         <div className={`min-h-0 flex-1 ${tab === "preview" && selectedArtifact?.contentType === "application/pdf" && !openUrl ? "overflow-hidden" : "overflow-auto"}`}>
           {tab === "preview" ? (
