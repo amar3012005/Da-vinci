@@ -193,6 +193,32 @@ test("completing a live run does not flush its final sentence at once", () => {
   jest.useRealTimers();
 });
 
+test("company final answer follows tool and governance receipts, then reveals progressively", () => {
+  jest.useFakeTimers();
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const user = { at: "2026-09-26T12:00:00Z", step: "user", detail: "Create a pitch deck" };
+  const playbook = { at: "2026-09-26T12:00:01Z", step: "playbook_get", detail: "local:fundraising.pitch-deck" };
+  const report = { at: "2026-09-26T12:00:02Z", step: "report", detail: "# Investor deck\n\nThe completed slide narrative." };
+  const review = { at: "2026-09-26T12:00:03Z", step: "post_run_jev", detail: '{"status":"evaluated"}' };
+  const render = (events, status) => root.render(<TaskTranscript messages={[]} events={events} status={status} draft={{ report: report.detail, native: "Raw intermediate model text" }} />);
+  act(() => render([user, playbook, report], "working"));
+  act(() => jest.advanceTimersByTime(1200));
+  expect(container.textContent).toContain("Opened a task");
+  expect(container.textContent).not.toContain("Investor deck");
+  expect(container.textContent).not.toContain("Raw intermediate model text");
+  act(() => render([user, playbook, report, review], "working"));
+  expect(container.textContent).toContain("post run jev");
+  expect(container.textContent).not.toContain("Investor deck");
+  act(() => render([user, playbook, report, review, { at: "2026-09-26T12:00:04Z", step: "completion", detail: "deliverable_ready" }], "complete"));
+  expect(container.textContent).not.toContain("The completed slide narrative.");
+  act(() => jest.advanceTimersByTime(1200));
+  expect(container.textContent).toContain("The completed slide narrative.");
+  act(() => root.unmount());
+  jest.useRealTimers();
+});
+
 test("draft handoff neither blanks nor restarts a sentence when the saved wording changes", () => {
   jest.useFakeTimers();
   global.IS_REACT_ACT_ENVIRONMENT = true;

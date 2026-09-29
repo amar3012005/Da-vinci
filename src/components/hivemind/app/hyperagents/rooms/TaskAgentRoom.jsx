@@ -543,9 +543,13 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
   const [open, setOpen] = useState(true);
   const pending = live && status === "working";
   const finished = Boolean(turn.finishedAt) || (live && status === "complete");
-  const reportText = turn.report || (pending ? draft?.report || "" : "");
+  // A company report is saved before artifact, governance, and review receipts
+  // finish. Keep its final answer behind those steps; direct replies still show
+  // their provider draft as soon as it arrives.
+  const companyRun = Boolean(turn.plan?.tasks?.length) || turn.tools.some((event) => ["playbook_get", "workrun-index"].includes(event.step));
+  const reportText = companyRun && !finished ? "" : turn.report || (pending ? draft?.report || "" : "");
   const smoothReport = useSmoothText(reportText, pending, pending || Boolean(turn.report));
-  const progressDraft = pending ? draft?.progress || draft?.native || "" : "";
+  const progressDraft = pending ? draft?.progress || (companyRun ? "" : draft?.native || "") : "";
   const smoothProgressDraft = useSmoothText(progressDraft, pending);
   const duration = turn.at && (turn.finishedAt || (pending && startedAt))
     ? elapsedLabel(Date.parse(turn.at), turn.finishedAt ? Date.parse(turn.finishedAt) : now)
@@ -582,10 +586,9 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
           ))}
         </div>
       ) : null}
-      {turn.report && smoothReport === turn.report ? <div className="break-words text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-3 [&_h1]:text-[19px] [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:font-semibold [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[#f5f5f5] [&_pre]:p-3 [&_code]:text-[13px]">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.report}</ReactMarkdown>
+      {smoothReport ? <div className="break-words text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-3 [&_h1]:text-[19px] [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:font-semibold [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[#f5f5f5] [&_pre]:p-3 [&_code]:text-[13px]">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{smoothReport}</ReactMarkdown>
       </div> : null}
-      {smoothReport && smoothReport !== turn.report ? <div className="whitespace-pre-wrap break-words text-[14px] leading-[1.7] text-[#242424]">{smoothReport}</div> : null}
       {finished && turn.artifacts?.map((event, index) => {
         const artifact = artifactForEvent(event, artifacts);
         if (!artifact || artifact.kind === "note" || artifact.kind === "reply") return null;
