@@ -1,6 +1,6 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { TaskPreview, TaskTranscript, agentInstanceName, applySocketMessage, taskOrbState } from "./TaskAgentRoom";
+import { TaskPreview, TaskTranscript, agentInstanceName, applyNativeStreamFrame, applySocketMessage, taskOrbState } from "./TaskAgentRoom";
 
 jest.mock("react-markdown", () => ({ __esModule: true, default: ({ children }) => <div>{children}{String(children).includes("https://source.example") ? <a href="https://source.example/page">Source</a> : null}</div> }));
 jest.mock("remark-gfm", () => () => null);
@@ -124,6 +124,18 @@ test("a direct event frame is visible immediately and does not duplicate its dur
   expect(live.events).toEqual([event]);
   expect(applySocketMessage(live, event).events).toHaveLength(1);
   expect(applySocketMessage(live, { type: "cf_agent_state", state: { events: [event] } }).events).toHaveLength(1);
+});
+
+test("native Agent stream frames show partial text before persisted report arrives", () => {
+  const started = applyNativeStreamFrame({ progress: "", report: "", native: "old" }, { type: "cf_agent_use_chat_response", body: JSON.stringify({ type: "text-start", id: "text-1" }) });
+  const partial = applyNativeStreamFrame(started, { type: "cf_agent_use_chat_response", body: JSON.stringify({ type: "text-delta", id: "text-1", delta: "Checking" }) });
+  expect(partial.native).toBe("Checking");
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  act(() => root.render(<TaskTranscript messages={[]} events={[{ at: "2026-09-26T12:00:00Z", step: "user", detail: "Research" }]} status="working" draft={partial} />));
+  expect(container.textContent).toContain("Checking");
+  act(() => root.unmount());
 });
 
 test("keeps completed thought and duration visible after answer and next turn", () => {
