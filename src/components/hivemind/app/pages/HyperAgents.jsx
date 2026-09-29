@@ -2942,7 +2942,13 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
         )}
 
         {/* Thread */}
-        <div ref={scrollRef} onScroll={onThreadScroll} className={`flex-1 min-h-0 overflow-y-auto px-4 py-4 ${taskRoom ? 'bg-white' : 'bg-[#fbfaf7]'} ${isHqRoom ? '' : 'space-y-4'}`}>
+        <div
+          ref={scrollRef}
+          onScroll={onThreadScroll}
+          data-room-thread
+          style={{ overflowAnchor: 'none' }}
+          className={`flex-1 min-h-0 overflow-y-auto px-4 py-4 ${taskRoom ? 'bg-white' : 'bg-[#fbfaf7]'} ${isHqRoom ? '' : 'space-y-4'}`}
+        >
           {showRoomIntro && !isSeoRoom && !isHqRoom && !taskRoom && (
             <DomainRoomIntro
               room={room}

@@ -387,8 +387,19 @@ function toolLabel(step) {
   return labels[step] || String(step || "").replace(/_/g, " ");
 }
 
+export function normalizeStreamText(target) {
+  return String(target || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\t ]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/^\s+/, "");
+}
+
 function useSmoothText(target, active, holdOnEmpty = false) {
-  const text = String(target || "");
+  // Provider reasoning and partial structured fields can contain very large
+  // runs of whitespace. Rendering those raw makes the transcript grow an
+  // empty scroll region while the actual words are still arriving.
+  const text = active ? normalizeStreamText(target) : String(target || "");
   const [visible, setVisible] = useState(() => active ? "" : text);
   const animated = useRef(active);
   const targetRef = useRef(text);

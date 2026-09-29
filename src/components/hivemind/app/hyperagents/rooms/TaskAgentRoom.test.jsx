@@ -1,11 +1,16 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { TaskPreview, TaskTranscript, agentInstanceName, applyNativeStreamFrame, applySocketMessage, taskOrbState } from "./TaskAgentRoom";
+import { TaskPreview, TaskTranscript, agentInstanceName, applyNativeStreamFrame, applySocketMessage, normalizeStreamText, taskOrbState } from "./TaskAgentRoom";
 
 jest.mock("react-markdown", () => ({ __esModule: true, default: ({ children }) => <div>{children}{String(children).includes("https://source.example") ? <a href="https://source.example/page">Source</a> : null}</div> }));
 jest.mock("remark-gfm", () => () => null);
 jest.mock("./PdfCanvasPreview", () => ({ __esModule: true, default: () => <span>PDF pages</span> }));
 jest.mock("thinking-orbs", () => ({ ThinkingOrb: ({ state, size, gravity, style, color }) => <span data-orb-state={state} data-orb-size={size} data-orb-gravity={gravity?.sprite ? "pointer" : "none"} data-orb-color={color} style={style} /> }), { virtual: true });
+
+test("streaming text cannot create an unbounded blank transcript tail", () => {
+  expect(normalizeStreamText("\n\n\n\n     \n\nFirst words\n\n\n\nNext")).toBe("First words\n\nNext");
+  expect(normalizeStreamText("   \r\n\t\r\nAnswer")).toBe("Answer");
+});
 
 test("renders saved report in preview and opens artifacts from the rail", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
