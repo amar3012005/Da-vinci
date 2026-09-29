@@ -137,7 +137,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
           if (parsed.error) setError(parsed.error);
           else {
             setWorkRun(parsed.result);
-            if (parsed.result?.status === "paused") setStatus("paused");
+            if (["paused", "terminated"].includes(parsed.result?.status)) setStatus("paused");
             else if (parsed.result?.status === "running" && parsed.result?.continuationOf) setStatus("working");
             setError("");
           }
@@ -690,7 +690,8 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
         {workRun?.status === "incomplete" && workRun?.reason ? <p className="mt-1">Unfinished: {workRun.reason}</p> : null}
         <div className="my-2 flex gap-3">
           <button type="button" onClick={() => onControlWorkRun("status")}>Refresh status</button>
-          {workRun?.status === "running" ? <button type="button" onClick={() => onControlWorkRun("pause")}>Pause work</button> : null}
+          {workRun?.status === "running" ? <button type="button" onClick={() => onControlWorkRun("stop")}>Stop work</button> : null}
+          {workRun?.status === "paused" ? <button type="button" onClick={() => onControlWorkRun("stop")}>Stop paused work</button> : null}
           {["paused", "errored", "terminated"].includes(workRun?.status) ? <button type="button" onClick={() => onControlWorkRun("resume")}>Resume work</button> : null}
           {workRun?.status === "incomplete" ? <button type="button" onClick={() => onControlWorkRun("continue-plan")}>Continue unfinished plan</button> : null}
         </div>
