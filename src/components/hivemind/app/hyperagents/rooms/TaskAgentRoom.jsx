@@ -675,6 +675,7 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
       {onControlWorkRun && turns.length ? <details className="text-xs text-[#666]" onToggle={(event) => { if (event.currentTarget.open) onControlWorkRun("status"); }}>
         <summary className="cursor-pointer">WorkRun recovery</summary>
         <p className="mt-2">{workRun?.status || "Checking…"} · {workRun?.checkpoints?.length || 0} durable checkpoints</p>
+        {workRun?.status === "incomplete" && workRun?.reason ? <p className="mt-1">Unfinished: {workRun.reason}</p> : null}
         <div className="my-2 flex gap-3">
           <button type="button" onClick={() => onControlWorkRun("status")}>Refresh status</button>
           {workRun?.status === "running" ? <button type="button" onClick={() => onControlWorkRun("pause")}>Pause work</button> : null}
