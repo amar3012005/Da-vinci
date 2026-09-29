@@ -20,7 +20,7 @@ import Nango from '@nangohq/frontend';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Sparkles, Send, Users, Hash, X, Archive, Globe, FolderOpen, ChevronDown,
+  Plus, Sparkles, Send, Pause, Play, Users, Hash, X, Archive, Globe, FolderOpen, ChevronDown,
   AlertTriangle, CheckCircle2, Loader2, Trash2, Eraser, RotateCcw,
   Network, Shield, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, Zap, CheckCheck,
@@ -3233,6 +3233,18 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
                   className="w-full bg-transparent resize-none outline-none text-[14px] leading-relaxed text-[#171717] placeholder:text-[#b3b3b3]"
                 />
               </div>
+              {taskRoom && ((taskStream.status === 'working' && taskStream.workRun?.status === 'running') || taskStream.workRun?.status === 'paused') ? (
+                <button
+                  type="button"
+                  onClick={() => taskStream.controlWorkRun(taskStream.workRun?.status === 'paused' ? 'resume' : 'pause')}
+                  aria-label={taskStream.workRun?.status === 'paused' ? 'Resume work' : 'Pause work'}
+                  title={taskStream.workRun?.status === 'paused' ? 'Resume this WorkRun' : 'Pause this WorkRun at its durable checkpoint'}
+                  className="flex h-9 items-center gap-1.5 rounded-full border border-[#d6d6d6] bg-white px-3 text-[12px] font-medium text-[#333] hover:bg-[#f5f5f5]"
+                >
+                  {taskStream.workRun?.status === 'paused' ? <Play size={13} /> : <Pause size={13} />}
+                  {taskStream.workRun?.status === 'paused' ? 'Resume' : 'Pause'}
+                </button>
+              ) : null}
               <button
                 type="submit"
                 disabled={(!draft.trim() && !attachments.some(a => a.status === 'done')) || submitting || (!taskRoom && !room?.goal?.trim()) || attachments.some(a => a.status === 'uploading')}

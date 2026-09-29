@@ -106,6 +106,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     let closed = false;
     let retry;
     let lastArtifactEvent = "";
+    let lastWorkflowId = "";
     const flushQueued = () => {
       const queued = queuedStart.current;
       const socket = socketRef.current;
@@ -134,7 +135,12 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
         if (!parsed) return;
         if (parsed.type === "workrun-control-result") {
           if (parsed.error) setError(parsed.error);
-          else { setWorkRun(parsed.result); setError(""); }
+          else {
+            setWorkRun(parsed.result);
+            if (parsed.result?.status === "paused") setStatus("paused");
+            else if (parsed.result?.status === "running" && parsed.result?.continuationOf) setStatus("working");
+            setError("");
+          }
           return;
         }
         if (parsed.type === "connection-continue-result") {
@@ -177,6 +183,11 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
         }
         setAgentState((current) => applySocketMessage(current, parsed));
         if (parsed.type === "cf_agent_state") {
+          const workflowId = parsed.state?.workflowId || "";
+          if (workflowId && workflowId !== lastWorkflowId) {
+            lastWorkflowId = workflowId;
+            socket.send(JSON.stringify({ type: "workrun-control", decision: "status" }));
+          }
           const rows = parsed.state?.events || [];
           const lastUser = rows.findLastIndex((item) => item.step === "user");
           if (rows.slice(lastUser + 1).some((item) => item.step === "report" || item.step === "completion")) setDraft({ progress: "", report: "", native: "" });
@@ -228,6 +239,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     const socket = socketRef.current;
     setError("");
     setStatus("working");
+    setWorkRun(null);
     setDraft({ progress: "", report: "", native: "" });
     setStartedAt(Date.now());
     setMessages((current) => [...current, { id: `${Date.now()}`, text, at: new Date().toISOString() }]);
