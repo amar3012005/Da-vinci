@@ -410,7 +410,7 @@ function TaskRow({ event, live }) {
   const isSearch = event.step === "parallel_search" || event.step === "composio_web_search";
   const [open, setOpen] = useState(false);
   if (event.step === "workrun") return <li role="status" className="py-1 text-[13px] text-[#777777]">{detail === "queued" ? "Task queued" : detail.startsWith("starting ") ? "Preparing task" : detail}</li>;
-  if (thinking) return <li className="py-2 text-[14px] leading-6 text-[#303030]"><MarkdownMessage streaming={live}>{smoothDetail}</MarkdownMessage></li>;
+  if (thinking) return <li className="py-2 text-[14px] leading-6 text-[#303030]"><MarkdownMessage variant="room" streaming={live}>{smoothDetail}</MarkdownMessage></li>;
   if (call?.name) {
     const result = (() => {
       if (call.result == null) return "No result details recorded for this call.";
@@ -579,7 +579,7 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
         </div>
       ) : null}
       <OperatingPlan plan={turn.plan} />
-      {turn.question ? <MarkdownMessage className="text-[15px] text-[#1c1a16]">{turn.question}</MarkdownMessage> : null}
+      {turn.question ? <MarkdownMessage variant="room" className="text-[15px] text-[#1c1a16]">{turn.question}</MarkdownMessage> : null}
       {live && status === "question" && turn.options?.length ? (
         <div className="flex flex-wrap gap-2">
           {turn.options.map((option) => (
@@ -587,7 +587,7 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
           ))}
         </div>
       ) : null}
-      {smoothReport ? <MarkdownMessage streaming={pending} className="text-[14px] text-[#242424]">{smoothReport}</MarkdownMessage> : null}
+      {smoothReport ? <MarkdownMessage variant="room" streaming={pending} className="text-[14px] text-[#242424]">{smoothReport}</MarkdownMessage> : null}
       {finished && turn.artifacts?.map((event, index) => {
         const artifact = artifactForEvent(event, artifacts);
         if (!artifact || artifact.kind === "note" || artifact.kind === "reply") return null;
