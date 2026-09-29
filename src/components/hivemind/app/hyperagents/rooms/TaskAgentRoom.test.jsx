@@ -143,6 +143,23 @@ test("rapid company-report chunks paint before the provider pauses", () => {
   jest.useRealTimers();
 });
 
+test("company report draft is visible while the durable run is still working", () => {
+  jest.useFakeTimers();
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const events = [
+    { at: "2026-09-26T12:00:00Z", step: "user", detail: "Research Hannover insurers" },
+    { at: "2026-09-26T12:00:01Z", step: "workrun-index", detail: "run active" },
+  ];
+  act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" draft={{ report: "First verified finding" }} />));
+  act(() => jest.advanceTimersByTime(1200));
+  expect(container.textContent).toContain("Drafting answer…");
+  expect(container.textContent).toContain("First verified finding");
+  act(() => root.unmount());
+  jest.useRealTimers();
+});
+
 test("a direct event frame is visible immediately and does not duplicate its durable state replay", () => {
   const event = { at: "2026-09-26T12:00:01Z", step: "tool-call", detail: '{"id":"call-1","phase":"started"}' };
   const live = applySocketMessage({ events: [] }, event);
@@ -206,13 +223,16 @@ test("company final answer follows tool and governance receipts, then reveals pr
   act(() => render([user, playbook, report], "working"));
   act(() => jest.advanceTimersByTime(1200));
   expect(container.textContent).toContain("Opened a task");
-  expect(container.textContent).not.toContain("Investor deck");
+  expect(container.textContent).toContain("Drafting answer…");
+  expect(container.textContent).toContain("Investor deck");
   expect(container.textContent).not.toContain("Raw intermediate model text");
   act(() => render([user, playbook, report, review], "working"));
   expect(container.textContent).toContain("post run jev");
-  expect(container.textContent).not.toContain("Investor deck");
+  expect(container.textContent).toContain("Drafting answer…");
   act(() => render([user, playbook, report, review, { at: "2026-09-26T12:00:04Z", step: "completion", detail: "deliverable_ready" }], "complete"));
-  expect(container.textContent).not.toContain("The completed slide narrative.");
+  expect(container.textContent).not.toContain("Drafting answer…");
+  // The visible draft becomes the saved answer in place; it must not replay.
+  expect(container.textContent).toContain("The completed slide narrative.");
   act(() => jest.advanceTimersByTime(1200));
   expect(container.textContent).toContain("The completed slide narrative.");
   act(() => root.unmount());

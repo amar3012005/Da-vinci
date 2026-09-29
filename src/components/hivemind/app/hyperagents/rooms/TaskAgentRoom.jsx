@@ -579,11 +579,11 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
   const [open, setOpen] = useState(true);
   const pending = live && status === "working";
   const finished = Boolean(turn.finishedAt) || (live && status === "complete");
-  // A company report is saved before artifact, governance, and review receipts
-  // finish. Keep its final answer behind those steps; direct replies still show
-  // their provider draft as soon as it arrives.
+  // The saved answer and artifact remain behind the completion receipt. During
+  // company work, show provider deltas as an explicitly provisional draft so
+  // the room does not appear idle and then flush the whole report at once.
   const companyRun = Boolean(turn.plan?.tasks?.length) || turn.tools.some((event) => ["playbook_get", "workrun-index"].includes(event.step));
-  const reportText = companyRun && !finished ? "" : turn.report || (pending ? draft?.report || "" : "");
+  const reportText = companyRun && pending ? draft?.report || "" : turn.report || (pending ? draft?.report || "" : "");
   const smoothReport = useSmoothText(reportText, pending, pending || Boolean(turn.report));
   const progressDraft = pending ? draft?.progress || (companyRun ? "" : draft?.native || "") : "";
   const smoothProgressDraft = useSmoothText(progressDraft, pending);
@@ -622,7 +622,7 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
           ))}
         </div>
       ) : null}
-      {smoothReport ? <MarkdownMessage variant="room" streaming={pending} className="text-[14px] text-[#242424]">{smoothReport}</MarkdownMessage> : null}
+      {smoothReport ? <div>{companyRun && pending ? <span className="mb-1 block text-[11px] text-[#909090]">Drafting answer…</span> : null}<MarkdownMessage variant="room" streaming={pending} className="text-[14px] text-[#242424]">{smoothReport}</MarkdownMessage></div> : null}
       {finished && turn.artifacts?.map((event, index) => {
         const artifact = artifactForEvent(event, artifacts);
         if (!artifact || artifact.kind === "note" || artifact.kind === "reply") return null;
