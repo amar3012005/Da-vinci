@@ -347,29 +347,46 @@ function useSmoothText(target, active, holdOnEmpty = false) {
   const text = String(target || "");
   const [visible, setVisible] = useState(() => active ? "" : text);
   const animated = useRef(active);
+  const targetRef = useRef(text);
+  const visibleRef = useRef(visible);
+  const timerRef = useRef(null);
   if (active) animated.current = true;
+  targetRef.current = text;
+  visibleRef.current = visible;
   useEffect(() => {
-    if (!text && holdOnEmpty) return undefined;
+    const stop = () => {
+      if (timerRef.current !== null) window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    };
+    if (!text && holdOnEmpty) { stop(); return; }
     if (!animated.current || !text) {
+      stop();
       setVisible(text);
-      return undefined;
+      return;
     }
-    const timer = window.setInterval(() => {
+    // Keep one clock while provider chunks update the target. Restarting this
+    // interval on every token starves painting when chunks arrive <12ms apart.
+    if (timerRef.current !== null) return;
+    timerRef.current = window.setInterval(() => {
+      const nextText = targetRef.current;
+      if (visibleRef.current === nextText) { stop(); return; }
       setVisible((current) => {
-        if (current === text) return current;
+        if (current === nextText) return current;
         // A saved report can differ slightly from the provider's partial JSON
         // draft. Rebase at the already displayed length instead of typing it
         // again from the first character.
-        if (!text.startsWith(current)) return text.slice(0, Math.min(current.length, text.length));
-        const remaining = text.length - current.length;
+        if (!nextText.startsWith(current)) return nextText.slice(0, Math.min(current.length, nextText.length));
+        const remaining = nextText.length - current.length;
         // One character for short bursts; catch up within about a second for
         // larger provider chunks so display animation never stalls the run.
         const count = Math.min(24, Math.max(1, Math.ceil(remaining / 80)));
-        return text.slice(0, current.length + count);
+        return nextText.slice(0, current.length + count);
       });
     }, 12);
-    return () => window.clearInterval(timer);
   }, [text, holdOnEmpty]);
+  useEffect(() => () => {
+    if (timerRef.current !== null) window.clearInterval(timerRef.current);
+  }, []);
   return visible;
 }
 

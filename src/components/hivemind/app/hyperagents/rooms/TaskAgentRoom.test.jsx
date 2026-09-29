@@ -125,6 +125,24 @@ test("shows streamed progress before final report", () => {
   jest.useRealTimers();
 });
 
+test("rapid company-report chunks paint before the provider pauses", () => {
+  jest.useFakeTimers();
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const events = [{ at: "2026-09-26T12:00:00Z", step: "user", detail: "Research Hamburg banks" }];
+  for (let count = 1; count <= 8; count += 1) {
+    act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" draft={{ report: "Hamburg prospect report".slice(0, count * 3) }} />));
+    act(() => jest.advanceTimersByTime(5));
+  }
+  expect(container.textContent).toContain("Ham");
+  expect(container.textContent).not.toContain("Hamburg prospect report");
+  act(() => jest.advanceTimersByTime(1200));
+  expect(container.textContent).toContain("Hamburg prospect report");
+  act(() => root.unmount());
+  jest.useRealTimers();
+});
+
 test("a direct event frame is visible immediately and does not duplicate its durable state replay", () => {
   const event = { at: "2026-09-26T12:00:01Z", step: "tool-call", detail: '{"id":"call-1","phase":"started"}' };
   const live = applySocketMessage({ events: [] }, event);
