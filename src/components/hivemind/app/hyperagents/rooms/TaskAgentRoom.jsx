@@ -343,12 +343,13 @@ function toolLabel(step) {
   return labels[step] || String(step || "").replace(/_/g, " ");
 }
 
-function useSmoothText(target, active) {
+function useSmoothText(target, active, holdOnEmpty = false) {
   const text = String(target || "");
   const [visible, setVisible] = useState(() => active ? "" : text);
   const animated = useRef(active);
   if (active) animated.current = true;
   useEffect(() => {
+    if (!text && holdOnEmpty) return undefined;
     if (!animated.current || !text) {
       setVisible(text);
       return undefined;
@@ -356,7 +357,10 @@ function useSmoothText(target, active) {
     const timer = window.setInterval(() => {
       setVisible((current) => {
         if (current === text) return current;
-        if (!text.startsWith(current)) return text.slice(0, 1);
+        // A saved report can differ slightly from the provider's partial JSON
+        // draft. Rebase at the already displayed length instead of typing it
+        // again from the first character.
+        if (!text.startsWith(current)) return text.slice(0, Math.min(current.length, text.length));
         const remaining = text.length - current.length;
         // One character for short bursts; catch up within about a second for
         // larger provider chunks so display animation never stalls the run.
@@ -365,7 +369,7 @@ function useSmoothText(target, active) {
       });
     }, 12);
     return () => window.clearInterval(timer);
-  }, [text]);
+  }, [text, holdOnEmpty]);
   return visible;
 }
 
@@ -418,10 +422,15 @@ const orbGravity = (state) => state === "searching" ? { sprite: macArrow } : und
 function conversationTurns(events, messages) {
   const turns = [];
   let current = null;
+  const matchedMessages = new Set();
   for (const event of events) {
     if (event.step === "user") {
       if (current && !current.finishedAt) current.finishedAt = event.at;
-      current = { id: event.at, at: event.at, text: event.detail, tools: [], artifacts: [], report: "", question: "", options: [], plan: null };
+      const matchingMessage = messages
+        .filter((message) => message.text === event.detail && !matchedMessages.has(message.id) && Math.abs(Date.parse(message.at) - Date.parse(event.at)) < 120000)
+        .sort((a, b) => Math.abs(Date.parse(a.at) - Date.parse(event.at)) - Math.abs(Date.parse(b.at) - Date.parse(event.at)))[0];
+      if (matchingMessage) matchedMessages.add(matchingMessage.id);
+      current = { id: matchingMessage?.id || event.at, at: event.at, text: event.detail, tools: [], artifacts: [], report: "", question: "", options: [], plan: null };
       turns.push(current);
       continue;
     }
@@ -469,9 +478,8 @@ function conversationTurns(events, messages) {
     else if (event.step === "report") current.report = event.detail;
     else if (!HIDDEN_STEPS.has(event.step) && !isSetupEvent(event) && !(event.step === "parallel_search" && event.detail === "parallel-ai-gateway")) current.tools.push(event);
   }
-  const said = new Set(turns.map((turn) => turn.text));
   for (const message of messages.slice(-1)) {
-    if (!said.has(message.text)) turns.push({ id: message.id, at: message.at, text: message.text, tools: [], artifacts: [], report: "", question: "", options: [], plan: null });
+    if (!matchedMessages.has(message.id)) turns.push({ id: message.id, at: message.at, text: message.text, tools: [], artifacts: [], report: "", question: "", options: [], plan: null });
   }
   return turns.filter((turn) => turn.text || turn.tools.length || turn.report || turn.artifacts.length);
 }
@@ -511,7 +519,7 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
   const pending = live && status === "working";
   const finished = Boolean(turn.finishedAt) || (live && status === "complete");
   const reportText = turn.report || (pending ? draft?.report || "" : "");
-  const smoothReport = useSmoothText(reportText, pending);
+  const smoothReport = useSmoothText(reportText, pending, pending || Boolean(turn.report));
   const progressDraft = pending ? draft?.progress || draft?.native || "" : "";
   const smoothProgressDraft = useSmoothText(progressDraft, pending);
   const duration = turn.at && (turn.finishedAt || (pending && startedAt))

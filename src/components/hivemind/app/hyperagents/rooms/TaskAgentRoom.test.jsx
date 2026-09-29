@@ -165,6 +165,46 @@ test("completing a live run does not flush its final sentence at once", () => {
   jest.useRealTimers();
 });
 
+test("draft handoff neither blanks nor restarts a sentence when the saved wording changes", () => {
+  jest.useFakeTimers();
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const user = { at: "2026-09-26T12:00:00Z", step: "user", detail: "Greet me" };
+  act(() => root.render(<TaskTranscript messages={[]} events={[user]} status="working" draft={{ report: "Hello from a streaming draft." }} />));
+  act(() => jest.advanceTimersByTime(240));
+  expect(container.textContent).toContain("Hello from a stream");
+  act(() => root.render(<TaskTranscript messages={[]} events={[user]} status="working" draft={{}} />));
+  expect(container.textContent).toContain("Hello from a stream");
+  const report = { at: "2026-09-26T12:00:01Z", step: "report", detail: "Hello from Elena, the employee." };
+  act(() => root.render(<TaskTranscript messages={[]} events={[user, report]} status="complete" draft={{}} />));
+  act(() => jest.advanceTimersByTime(12));
+  expect(container.textContent).toContain("Hello from Elena");
+  act(() => jest.advanceTimersByTime(1200));
+  expect(container.textContent).toContain(report.detail);
+  act(() => root.unmount());
+  jest.useRealTimers();
+});
+
+test("server confirmation of an optimistic turn keeps its text animation", () => {
+  jest.useFakeTimers();
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const message = { id: "local-turn", at: "2026-09-26T12:00:00Z", text: "Greet me" };
+  const draft = { report: "Streaming continues through confirmation." };
+  act(() => root.render(<TaskTranscript messages={[message]} events={[]} status="working" draft={draft} />));
+  act(() => jest.advanceTimersByTime(120));
+  const before = container.textContent.match(/Streaming[^·]*/)?.[0] || "";
+  expect(before.length).toBeGreaterThan(5);
+  act(() => root.render(<TaskTranscript messages={[message]} events={[{ at: "2026-09-26T12:00:01Z", step: "user", detail: message.text }]} status="working" draft={draft} />));
+  expect(container.textContent).toContain(before);
+  act(() => jest.advanceTimersByTime(1200));
+  expect(container.textContent).toContain(draft.report);
+  act(() => root.unmount());
+  jest.useRealTimers();
+});
+
 test("keeps completed thought and duration visible after answer and next turn", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const container = document.createElement("div");
