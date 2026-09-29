@@ -136,7 +136,14 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
         try { parsed = JSON.parse(event.data); } catch { parsed = null; }
         if (!parsed) return;
         if (parsed.type === "workrun-control-result") {
-          if (parsed.error) setError(parsed.error);
+          if (parsed.error) {
+            setError(parsed.error);
+            if (parsed.operation === "room-start") {
+              setStatus("error");
+              setDraft({ progress: "", report: "", native: "" });
+              socket.send(JSON.stringify({ type: "workrun-control", decision: "status" }));
+            }
+          }
           else {
             setWorkRun(parsed.result);
             if (["paused", "terminated"].includes(parsed.result?.status)) setStatus("paused");

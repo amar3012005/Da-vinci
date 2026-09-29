@@ -275,22 +275,22 @@ test("keeps completed thought and duration visible after answer and next turn", 
   act(() => root.unmount());
 });
 
-test("shows each real tool call once with final status", () => {
+test("shows an in-flight runtime browser capture once, then its saved result", () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const container = document.createElement("div");
   const root = createRoot(container);
   const events = [
     { at: "2026-09-26T12:00:00Z", step: "user", detail: "Fetch example.com" },
-    { at: "2026-09-26T12:00:01Z", step: "tool-call", detail: JSON.stringify({ id: "call-1", name: "browser_get", phase: "started", target: "https://example.com" }) },
-    { at: "2026-09-26T12:00:02Z", step: "tool-call", detail: JSON.stringify({ id: "call-1", name: "browser_get", phase: "returned", durationMs: 900, result: '{"title":"Example page"}' }) },
+    { at: "2026-09-26T12:00:01Z", step: "tool-call", detail: JSON.stringify({ id: "call-1", name: "browser_capture", phase: "started", target: "https://example.com" }) },
+    { at: "2026-09-26T12:00:02Z", step: "tool-call", detail: JSON.stringify({ id: "call-1", name: "browser_capture", phase: "returned", durationMs: 900, result: '{"artifactId":"image-1","title":"Example screenshot.jpg"}' }) },
     { at: "2026-09-26T12:00:03Z", step: "completion", detail: "complete" },
   ];
   act(() => root.render(<TaskTranscript messages={[]} events={events} status="complete" />));
-  expect(container.textContent.match(/browser_get/g)).toHaveLength(1);
+  expect(container.textContent.match(/browser_capture/g)).toHaveLength(1);
   expect(container.textContent).toContain("Returned");
-  const row = [...container.querySelectorAll("button")].find((button) => button.textContent.includes("browser_get"));
+  const row = [...container.querySelectorAll("button")].find((button) => button.textContent.includes("browser_capture"));
   act(() => row.click());
-  expect(container.textContent).toContain("Example page");
+  expect(container.textContent).toContain("Example screenshot.jpg");
   expect(container.textContent).toContain("900 ms");
   expect(container.textContent).toContain("https://example.com");
   act(() => root.unmount());
