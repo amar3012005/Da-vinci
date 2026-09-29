@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ChevronRight, FileText, Globe2, Grid2X2Plus, Link2, Settings2, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import MarkdownMessage from "../../shared/MarkdownMessage";
 import { createPortal } from "react-dom";
 import { ThinkingOrb } from "thinking-orbs";
 import { macArrow } from "./cursors";
@@ -409,7 +410,7 @@ function TaskRow({ event, live }) {
   const isSearch = event.step === "parallel_search" || event.step === "composio_web_search";
   const [open, setOpen] = useState(false);
   if (event.step === "workrun") return <li role="status" className="py-1 text-[13px] text-[#777777]">{detail === "queued" ? "Task queued" : detail.startsWith("starting ") ? "Preparing task" : detail}</li>;
-  if (thinking) return <li className="py-2 text-[14px] leading-6 text-[#303030]">{smoothDetail}</li>;
+  if (thinking) return <li className="py-2 text-[14px] leading-6 text-[#303030]"><MarkdownMessage streaming={live}>{smoothDetail}</MarkdownMessage></li>;
   if (call?.name) {
     const result = (() => {
       if (call.result == null) return "No result details recorded for this call.";
@@ -578,7 +579,7 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
         </div>
       ) : null}
       <OperatingPlan plan={turn.plan} />
-      {turn.question ? <div className="whitespace-pre-wrap text-[15px] leading-7 text-[#1c1a16]">{turn.question}</div> : null}
+      {turn.question ? <MarkdownMessage className="text-[15px] text-[#1c1a16]">{turn.question}</MarkdownMessage> : null}
       {live && status === "question" && turn.options?.length ? (
         <div className="flex flex-wrap gap-2">
           {turn.options.map((option) => (
@@ -586,9 +587,7 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
           ))}
         </div>
       ) : null}
-      {smoothReport ? <div className="break-words text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-3 [&_h1]:text-[19px] [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:font-semibold [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[#f5f5f5] [&_pre]:p-3 [&_code]:text-[13px]">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{smoothReport}</ReactMarkdown>
-      </div> : null}
+      {smoothReport ? <MarkdownMessage streaming={pending} className="text-[14px] text-[#242424]">{smoothReport}</MarkdownMessage> : null}
       {finished && turn.artifacts?.map((event, index) => {
         const artifact = artifactForEvent(event, artifacts);
         if (!artifact || artifact.kind === "note" || artifact.kind === "reply") return null;
