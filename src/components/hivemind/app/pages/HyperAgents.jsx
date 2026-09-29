@@ -3233,13 +3233,14 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
                   className="w-full bg-transparent resize-none outline-none text-[14px] leading-relaxed text-[#171717] placeholder:text-[#b3b3b3]"
                 />
               </div>
-              {taskRoom && ['queued', 'running', 'paused', 'waiting'].includes(taskStream.workRun?.status) && (taskStream.status === 'working' || taskStream.workRun?.status === 'paused') ? (
+              {taskRoom && ['queued', 'running', 'paused', 'waiting', 'stopping'].includes(taskStream.workRun?.status) && (taskStream.status === 'working' || taskStream.workRun?.status === 'paused') ? (
                 <button
                   type="button"
                   onClick={() => taskStream.controlWorkRun('stop')}
-                  aria-label="Stop work"
+                  disabled={taskStream.workRun?.status === 'stopping'}
+                  aria-label={taskStream.workRun?.status === 'stopping' ? 'Stopping work' : 'Stop work'}
                   title="Stop this WorkRun; saved progress remains available in WorkRun recovery"
-                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#d6d6d6] bg-white text-[#111] hover:bg-[#f5f5f5]"
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#d6d6d6] bg-white text-[#111] hover:bg-[#f5f5f5] disabled:opacity-50"
                 >
                   <Square size={15} fill="currentColor" strokeWidth={1} />
                 </button>

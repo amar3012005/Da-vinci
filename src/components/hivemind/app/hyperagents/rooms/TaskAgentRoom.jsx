@@ -140,6 +140,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
           else {
             setWorkRun(parsed.result);
             if (["paused", "terminated"].includes(parsed.result?.status)) setStatus("paused");
+            else if (parsed.result?.status === "stopping") setStatus("working");
             else if (parsed.result?.status === "running" && parsed.result?.continuationOf) setStatus("working");
             setError("");
           }
@@ -284,7 +285,12 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
   }, []);
 
   const controlWorkRun = useCallback((decision) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) socketRef.current.send(JSON.stringify({ type: "workrun-control", decision }));
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: "workrun-control", decision }));
+      if (decision === "stop") for (const delay of [1000, 3000]) window.setTimeout(() => {
+        if (socketRef.current?.readyState === WebSocket.OPEN) socketRef.current.send(JSON.stringify({ type: "workrun-control", decision: "status" }));
+      }, delay);
+    }
   }, []);
 
   const selectArtifact = useCallback((id) => {
