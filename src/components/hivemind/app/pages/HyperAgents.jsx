@@ -48,6 +48,7 @@ import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard'
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
 import FeatureBetaModal from './FeatureBetaModal';
+import HarnessSurface from './HarnessSurface';
 import {
   CAMPAIGN_INTELLIGENCE_V2,
   CampaignConnectionsRail,
@@ -224,13 +225,25 @@ const DOMAIN_ROOM_STAGES = {
 
 /* ─── Top-level page ─────────────────────────────────────────────────── */
 
-export default function HyperAgents() {
+export default function HyperAgents({ harnessRooms = false }) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const { user, org, logout } = useAuth();
   // The Operating System owns its Rooms/account rail. The app-level sidebar is
   // still collapsed below so the OS workspace has one focused navigation rail.
   const showOperatingSystemSidebar = true;
+
+  useEffect(() => {
+    if (!harnessRooms) return undefined;
+    const rememberSession = () => {
+      const path = window.location.pathname;
+      if (!/^\/hivemind\/app\/employee\/harness\/session\/[^/]+$/u.test(path)) return;
+      try { sessionStorage.setItem('hm.lastOsHarnessSession', path); } catch { /* storage may be unavailable */ }
+    };
+    rememberSession();
+    window.addEventListener('pagehide', rememberSession);
+    return () => { rememberSession(); window.removeEventListener('pagehide', rememberSession); };
+  }, [harnessRooms]);
 
   // Collapse the sidebar to a rail in the Hyper Agents room (more canvas for
   // the live swarm). Sidebar's ChevronRight re-opens it. Restore on leave.
@@ -267,6 +280,21 @@ export default function HyperAgents() {
   const [activeRoomId, setActiveRoomId] = useState(_init.roomId);
   const [viewMode, setViewMode] = useState(_init.mode);
   const goMode = useCallback((mode, roomId, query = {}) => {
+    // Native Harness owns a separate React root. Leave its route with a clean
+    // document handoff so OS room navigation cannot dispose that root in place.
+    if (harnessRooms) {
+      const path = window.location.pathname;
+      if (/^\/hivemind\/app\/employee\/harness\/session\/[^/]+$/u.test(path)) {
+        try { sessionStorage.setItem('hm.lastOsHarnessSession', path); } catch { /* storage may be unavailable */ }
+      }
+      const destination = mode === 'hero' ? '/hivemind/app/employees/mycompany'
+        : mode === 'leads' ? '/hivemind/app/employees/leads'
+          : mode === 'campaigns' ? '/hivemind/app/employees/campaigns'
+            : mode === 'roster' ? '/hivemind/app/employees/agents'
+              : roomId ? `/hivemind/app/employees/rooms/${roomId}` : '/hivemind/app/employees/mycompany';
+      window.location.assign(destination);
+      return;
+    }
     setViewMode(mode);
     if (roomId !== undefined) setActiveRoomId(roomId);
     const base = '/hivemind/app/employees';
@@ -280,7 +308,7 @@ export default function HyperAgents() {
     if (query.campaignReturn) params.set('campaignReturn', query.campaignReturn);
     if (query.campaign) params.set('campaign', query.campaign);
     navigate(`${url}${params.size ? `?${params.toString()}` : ''}`, { replace: true });
-  }, [navigate]);
+  }, [navigate, harnessRooms]);
   // Canonicalize the bare /employees URL to /employees/mycompany (keep ?onboard=1).
   useEffect(() => {
     if (/\/employees\/?$/.test(window.location.pathname)) {
@@ -423,7 +451,7 @@ export default function HyperAgents() {
     emitUsageChanged();
   }, [fetchRooms, goMode]);
   const showOnboarding = !loading && !onboardDismissed && ((liveRooms.length === 0 && !onboardDone) || forceOnboard);
-  if (showOnboarding) {
+  if (showOnboarding && !harnessRooms) {
     return (
       <div className="max-w-[1280px] mx-auto">
         <HyperOnboarding onComplete={finishOnboarding} onSkip={() => finishOnboarding(null)} />
@@ -434,7 +462,7 @@ export default function HyperAgents() {
   // ── Empty state: render existing DigitalEmployees roster + CTA ─────
   // Only when the org has never onboarded — an onboarded org with no rooms
   // still lands on the company hero (full rail layout below).
-  if (!loading && liveRooms.length === 0 && !onboardDone) {
+  if (!harnessRooms && !loading && liveRooms.length === 0 && !onboardDone) {
     return (
       <div className="max-w-[1200px] mx-auto">
         <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
@@ -482,10 +510,10 @@ export default function HyperAgents() {
 
   // ── WhatsApp layout (post-first-room) ──────────────────────────────
   return (
-    <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
-      <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
+    <div className={`font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] ${harnessRooms ? '' : '-m-6'} max-w-none bg-white border-t border-[#e3e0db] overflow-hidden`} data-os-harness-rooms={harnessRooms || undefined}>
+      {!harnessRooms && <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />}
       {/* Left rail: rooms */}
-      <aside className={showOperatingSystemSidebar ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'}>
+      <aside className={showOperatingSystemSidebar ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'} data-product-sidebar="os" style={{ viewTransitionName: 'product-sidebar' }}>
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
@@ -509,6 +537,28 @@ export default function HyperAgents() {
             <Building2 size={13} className={viewMode === 'hero' ? 'text-white' : 'text-violet-500'} />
             {t('hyperAgents.yourCompany', 'Your Company')}
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (harnessRooms) return;
+              let destination = '/hivemind/app/employee/harness/new';
+              try {
+                const cached = sessionStorage.getItem('hm.lastOsHarnessSession') || '';
+                if (/^\/hivemind\/app\/employee\/harness\/session\/[^/]+$/u.test(cached)) destination = cached;
+              } catch { /* storage may be unavailable */ }
+              window.location.assign(destination);
+            }}
+            aria-current={harnessRooms ? 'page' : undefined}
+            className={`mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${harnessRooms ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#bcd0ef]'}`}
+          >
+            <Brain size={13} className={harnessRooms ? 'text-white' : 'text-[#185bcc]'} />
+            Harness Rooms
+          </button>
+          {harnessRooms && <button
+            type="button"
+            onClick={() => window.location.assign('/hivemind/app/employee/harness/new')}
+            className="mt-1 w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] text-[#525252] hover:bg-white"
+          ><Plus size={12} /> New Harness session</button>}
           <button
             type="button"
             onClick={() => setBetaFeature('runtime')}
@@ -663,7 +713,11 @@ export default function HyperAgents() {
 
       {/* Middle: hero dashboard, thread or roster */}
       <main className="flex-1 min-w-0 min-h-0 flex flex-col">
-        {viewMode === 'hero' ? (
+        {harnessRooms ? (
+          <section className="flex-1 min-h-0 overflow-hidden" aria-label="Harness Rooms">
+            <HarnessSurface />
+          </section>
+        ) : viewMode === 'hero' ? (
           <CompanyDashboard
             onOpenRoom={(room) => {
               fetchRooms();

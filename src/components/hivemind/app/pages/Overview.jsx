@@ -52,7 +52,7 @@ import HarnessChatSurface from './HarnessChatSurface';
 import HarnessSurface from './HarnessSurface';
 
 const LAST_HARNESS_SESSION_KEY = 'hm.lastHarnessSession';
-const HARNESS_SESSION_ROUTE = /^\/hivemind\/app\/(?:overview|employee\/harness)\/session\/[^/]+$/u;
+const HARNESS_SESSION_ROUTE = /^\/hivemind\/app\/overview\/session\/[^/]+$/u;
 
 function cachedHarnessSessionPath() {
   try {

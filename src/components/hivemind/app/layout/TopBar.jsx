@@ -124,7 +124,7 @@ const SECTION_TITLES = {
 
 const PAGE_PREFIXES = [
   ['/hivemind/app/overview', '/hivemind/app/overview'],
-  ['/hivemind/app/employee/harness', '/hivemind/app/overview'],
+  ['/hivemind/app/employee/harness', '/hivemind/app/employee/harness'],
   ['/hivemind/app/employees/operating-rooms', '/hivemind/app/employees/operating-rooms'],
   ['/hivemind/app/employees', '/hivemind/app/employees'],
   ['/hivemind/app/team/members', '/hivemind/app/team/members'],
@@ -152,7 +152,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
   const pagePath = pageTitles[location.pathname]
     ? location.pathname
     : PAGE_PREFIXES.find(([prefix]) => location.pathname.startsWith(`${prefix}/`))?.[1] || location.pathname;
-  const title = pageTitles[pagePath] || SECTION_TITLES[activeSection] || 'HIVEMIND';
+  const title = pagePath === '/hivemind/app/employee/harness' ? 'Harness Rooms' : pageTitles[pagePath] || SECTION_TITLES[activeSection] || 'HIVEMIND';
   const description = pageDescriptions[pagePath] || '';
 
   const { t } = useTranslation('dashboard');
@@ -160,7 +160,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
   const routeSlug = (pagePath || '').replace(/^\/+/, '').replace(/\//g, '.') || 'home';
   const tTitle = t(`topbar.titles.${routeSlug}`, { defaultValue: title });
   const tDesc = description ? t(`topbar.descriptions.${routeSlug}`, { defaultValue: description }) : '';
-  const harnessCanvas = pagePath === '/hivemind/app/overview';
+  const harnessCanvas = pagePath === '/hivemind/app/overview' || pagePath === '/hivemind/app/employee/harness';
 
   return (
     <header className={`pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-white' : 'bg-transparent'}`}>

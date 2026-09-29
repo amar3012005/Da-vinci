@@ -240,7 +240,7 @@ export default function HiveMindApp() {
               route instead of falling through to the relative catch-all,
               which otherwise recursively appends `overview`. */}
           <Route path="overview/*" element={<PageSuspense><Overview /></PageSuspense>} />
-          <Route path="employee/harness/*" element={<PageSuspense><Overview /></PageSuspense>} />
+          <Route path="employee/harness/*" element={<PageSuspense><HyperAgents harnessRooms /></PageSuspense>} />
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />

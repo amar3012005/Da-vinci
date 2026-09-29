@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
+import './product-transition.css';
 import TopBar from './TopBar';
 import { useAuth } from '../auth/AuthProvider';
 import OnboardingFlow from '../pages/Onboarding';
@@ -189,7 +190,7 @@ function TalkToHiveFAB({ onOpen, hidden }) {
 }
 
 function sectionForPath(pathname) {
-  if (pathname.startsWith('/hivemind/app/employee/harness')) return 'hivemind';
+  if (pathname.startsWith('/hivemind/app/employee/harness')) return 'hyperagents';
   if (pathname.startsWith('/hivemind/app/employees')) return 'hyperagents';
   if (pathname.startsWith('/hivemind/app/tara')) return 'tara';
   return 'hivemind';
@@ -286,32 +287,31 @@ export default function AppShell() {
     try { localStorage.setItem('hm_active_section', section); } catch { /* noop */ }
   }, [location.pathname]);
   const handleSectionChange = (s) => {
-    if (s === sectionForPath(location.pathname)
-      && !(s === 'hivemind' && location.pathname.startsWith('/hivemind/app/overview'))) return;
+    if (s === sectionForPath(location.pathname)) return;
     setActiveSection(s);
     try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }
-    const landing = { hivemind: '/hivemind/app/employee/harness/new', hyperagents: '/hivemind/app/employees/mycompany', tara: '/hivemind/app/tara' };
+    const landing = { hivemind: '/hivemind/app/overview/new', hyperagents: '/hivemind/app/employees/mycompany', tara: '/hivemind/app/tara' };
     if (!landing[s]) return;
 
     // BRAIN embeds the native Harness, which owns an independent React root.
     // Cross its boundary with one clean document handoff so React Router never
     // tries to dismantle or revive that root in place. Resume the exact cached
     // session directly—do not stop at Overview and redirect a second time.
-    const crossingHarnessBoundary = s === 'hivemind' || sectionForPath(location.pathname) === 'hivemind';
+    const crossingHarnessBoundary = s === 'hivemind' || /^\/hivemind\/app\/(?:overview|employee\/harness)\/(?:new|session\/)/u.test(window.location.pathname);
     if (crossingHarnessBoundary) {
       let target = landing[s];
       // Native Harness owns history updates inside its independent router.
       // Capture its current URL, not the host router's older /new location.
       const currentPath = window.location.pathname;
-      const sessionMatch = currentPath.match(/^\/hivemind\/app\/(?:overview|employee\/harness)\/session\/([^/]+)$/u);
+      const sessionMatch = currentPath.match(/^\/hivemind\/app\/overview\/session\/([^/]+)$/u);
       if (sessionMatch) {
-        try { sessionStorage.setItem('hm.lastHarnessSession', `/hivemind/app/employee/harness/session/${sessionMatch[1]}`); } catch { /* storage may be unavailable */ }
+        try { sessionStorage.setItem('hm.lastHarnessSession', `/hivemind/app/overview/session/${sessionMatch[1]}`); } catch { /* storage may be unavailable */ }
       }
       if (s === 'hivemind') {
         try {
           const cached = sessionStorage.getItem('hm.lastHarnessSession') || '';
-          const match = cached.match(/^\/hivemind\/app\/(?:overview|employee\/harness)\/session\/([^/]+)$/u);
-          if (match) target = `/hivemind/app/employee/harness/session/${match[1]}`;
+          const match = cached.match(/^\/hivemind\/app\/overview\/session\/([^/]+)$/u);
+          if (match) target = `/hivemind/app/overview/session/${match[1]}`;
         } catch { /* storage may be unavailable */ }
       }
       window.location.assign(target);
@@ -328,7 +328,7 @@ export default function AppShell() {
   const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
   // HyperAgents runs its own left rail (rooms + account) — the app sidebar is
   // hidden entirely there so the workspace reads as one dedicated surface.
-  const hyperFullscreen = location.pathname.startsWith('/hivemind/app/employees');
+  const hyperFullscreen = location.pathname.startsWith('/hivemind/app/employees') || location.pathname.startsWith('/hivemind/app/employee/harness');
   // Overview embeds the HIVE chat as the page centerpiece — the floating
   // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
   // every other page keeps the FAB.

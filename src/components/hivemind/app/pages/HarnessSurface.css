@@ -27,3 +27,12 @@ html[data-dsh-mode='hivemind-chat']
     margin-left: 0;
   }
 }
+
+/* OS owns navigation on employee Harness routes. Keep the native session
+   switcher mounted for its state, but let the OS Rooms rail own the canvas. */
+[data-os-harness-rooms] [data-hivemind-harness-surface] aside[aria-label='HIVE chat sessions'] {
+  display: none;
+}
+[data-os-harness-rooms] [data-hivemind-harness-surface] aside[aria-label='HIVE chat sessions'] + div {
+  margin-left: 0;
+}
