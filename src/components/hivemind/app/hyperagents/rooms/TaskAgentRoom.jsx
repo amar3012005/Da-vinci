@@ -52,12 +52,14 @@ function elapsedLabel(startedAt, now) {
   return `${minutes}m ${String(rest).padStart(2, "0")}s`;
 }
 
-function applySocketMessage(current, parsed) {
+export function applySocketMessage(current, parsed) {
   if (parsed && parsed.type === "cf_agent_state" && parsed.state && typeof parsed.state === "object") {
     return parsed.state;
   }
   if (parsed && typeof parsed.step === "string" && typeof parsed.at === "string") {
-    const events = [...(current?.events || []), parsed].slice(-100);
+    const prior = current?.events || [];
+    if (prior.some((event) => event.at === parsed.at && event.step === parsed.step && event.detail === parsed.detail)) return current;
+    const events = [...prior, parsed].slice(-300);
     return { ...(current || {}), events };
   }
   return current;
@@ -76,7 +78,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
   const [workRun, setWorkRun] = useState(null);
   const [toolApproval, setToolApproval] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("");
-  const [draft, setDraft] = useState({ type: "", text: "" });
+  const [draft, setDraft] = useState({ progress: "", report: "" });
   const socketRef = useRef(null);
   const queuedStart = useRef(null);
   const selectedArtifactId = useRef("");
@@ -123,8 +125,9 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
         }
         if (parsed.type === "progress-draft" || parsed.type === "report-draft") {
           setDraft((current) => ({
-            type: parsed.type,
-            text: (parsed.reset || current.type !== parsed.type ? "" : current.text) + String(parsed.delta || ""),
+            ...current,
+            [parsed.type === "report-draft" ? "report" : "progress"]:
+              (parsed.reset ? "" : current[parsed.type === "report-draft" ? "report" : "progress"]) + String(parsed.delta || ""),
           }));
           return;
         }
@@ -153,7 +156,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
         if (parsed.type === "cf_agent_state") {
           const rows = parsed.state?.events || [];
           const lastUser = rows.findLastIndex((item) => item.step === "user");
-          if (rows.slice(lastUser + 1).some((item) => item.step === "report" || item.step === "completion")) setDraft({ type: "", text: "" });
+          if (rows.slice(lastUser + 1).some((item) => item.step === "report" || item.step === "completion")) setDraft({ progress: "", report: "" });
         }
         const newestArtifactEvent = [...(parsed.state?.events || [])].reverse().find((item) => item.step === "artifact")?.at || "";
         if (parsed.type === "cf_agent_state" && newestArtifactEvent && newestArtifactEvent !== lastArtifactEvent) {
@@ -202,7 +205,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     const socket = socketRef.current;
     setError("");
     setStatus("working");
-    setDraft({ type: "", text: "" });
+    setDraft({ progress: "", report: "" });
     setStartedAt(Date.now());
     setMessages((current) => [...current, { id: `${Date.now()}`, text, at: new Date().toISOString() }]);
     if (!socket || socket.readyState !== WebSocket.OPEN) {
@@ -465,7 +468,7 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
               {pending && !turn.tools.length ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#555]"><ThinkingOrb state="solving" size={20} theme="light" color="#111111" dotSize={1.2} /> Thinking…</li> : null}
               {turn.tools.map((event, index) => <TaskRow key={`${event.at}-${event.step}-${index}`} event={event} />)}
               {pending && turn.tools.length > 0 ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#555]"><ThinkingOrb state={taskOrbState(status, turn.tools)} size={20} theme="light" color="#111111" dotSize={1.2} gravity={orbGravity(taskOrbState(status, turn.tools))} /> {orbLabel(taskOrbState(status, turn.tools))}</li> : null}
-              {pending && draft?.type === "progress-draft" && draft.text && !draft.text.trimStart().startsWith("{") && !turn.tools.some((event) => event.step === "progress" && event.detail === draft.text) ? <li role="status" className="whitespace-pre-wrap py-1 text-[13px] leading-5 text-[#555555]">{draft.text}</li> : null}
+              {pending && draft?.progress && !draft.progress.trimStart().startsWith("{") && !turn.tools.some((event) => event.step === "progress" && event.detail === draft.progress) ? <li role="status" className="whitespace-pre-wrap py-1 text-[13px] leading-5 text-[#555555]">{draft.progress}</li> : null}
             </ol>
           ) : null}
         </div>
@@ -482,7 +485,7 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
       {turn.report ? <div className="break-words text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-3 [&_h1]:text-[19px] [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:font-semibold [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[#f5f5f5] [&_pre]:p-3 [&_code]:text-[13px]">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.report}</ReactMarkdown>
       </div> : null}
-      {pending && !turn.report && draft?.type === "report-draft" && draft.text ? <div className="break-words text-[14px] leading-[1.7] text-[#242424]"><ReactMarkdown remarkPlugins={[remarkGfm]}>{draft.text}</ReactMarkdown></div> : null}
+      {pending && !turn.report && draft?.report ? <div className="break-words text-[14px] leading-[1.7] text-[#242424]"><ReactMarkdown remarkPlugins={[remarkGfm]}>{draft.report}</ReactMarkdown></div> : null}
       {finished && turn.artifacts?.map((event, index) => {
         const artifact = artifactForEvent(event, artifacts);
         if (!artifact || artifact.kind === "note" || artifact.kind === "reply") return null;

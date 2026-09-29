@@ -1,6 +1,6 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { TaskPreview, TaskTranscript, agentInstanceName, taskOrbState } from "./TaskAgentRoom";
+import { TaskPreview, TaskTranscript, agentInstanceName, applySocketMessage, taskOrbState } from "./TaskAgentRoom";
 
 jest.mock("react-markdown", () => ({ __esModule: true, default: ({ children }) => <div>{children}{String(children).includes("https://source.example") ? <a href="https://source.example/page">Source</a> : null}</div> }));
 jest.mock("remark-gfm", () => () => null);
@@ -112,9 +112,18 @@ test("shows streamed progress before final report", () => {
   const container = document.createElement("div");
   const root = createRoot(container);
   const events = [{ at: "2026-09-26T12:00:00Z", step: "user", detail: "Check Gmail status" }];
-  act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" draft={{ type: "progress-draft", text: "I’m checking the connection receipt." }} />));
+  act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" draft={{ progress: "I’m checking the connection receipt.", report: "Draft answer is arriving." }} />));
   expect(container.textContent).toContain("I’m checking the connection receipt.");
+  expect(container.textContent).toContain("Draft answer is arriving.");
   act(() => root.unmount());
+});
+
+test("a direct event frame is visible immediately and does not duplicate its durable state replay", () => {
+  const event = { at: "2026-09-26T12:00:01Z", step: "tool-call", detail: '{"id":"call-1","phase":"started"}' };
+  const live = applySocketMessage({ events: [] }, event);
+  expect(live.events).toEqual([event]);
+  expect(applySocketMessage(live, event).events).toHaveLength(1);
+  expect(applySocketMessage(live, { type: "cf_agent_state", state: { events: [event] } }).events).toHaveLength(1);
 });
 
 test("keeps completed thought and duration visible after answer and next turn", () => {
