@@ -1,26 +1,28 @@
-/* HIVE owns the outer application chrome. The native session rail remains
-   projected inside Harness, so reserve a real lane for it instead of letting
-   it float over the active conversation. Semantic attributes keep this rule
-   independent of Harness CSS-module hashes. */
+/* HIVE owns the outer application chrome. The native session rail floats in
+   the canvas, while the composer remains centered against the full screen. */
 html[data-dsh-mode='hivemind-chat']
   [data-hivemind-harness-surface]
   aside[aria-label='HIVE chat sessions'] {
   width: 220px;
+  pointer-events: none;
+}
+html[data-dsh-mode='hivemind-chat']
+  [data-hivemind-harness-surface]
+  aside[aria-label='HIVE chat sessions'] :is(button, nav, [role='tab']) {
+  pointer-events: auto;
 }
 
 html[data-dsh-mode='hivemind-chat']
   [data-hivemind-harness-surface]
   aside[aria-label='HIVE chat sessions'] + div {
   box-sizing: border-box;
-  margin-left: 244px;
+  margin-left: 0;
 }
 
-/* Center the composer on the full viewport, including the product sidebar.
-   The native session rail's 244px reserved lane shifts BRAIN's canvas by
-   about 117px; OS has no native rail lane. */
+/* Center the composer on the full viewport, including the product sidebar. */
 html[data-dsh-mode='hivemind-chat']
   [data-hivemind-harness-surface] [class*='_composerStack'] {
-  transform: translateX(calc(var(--hm-harness-center-offset, 0px) - 117px));
+  transform: translateX(var(--hm-harness-center-offset, 0px));
 }
 
 @keyframes hm-harness-tqdm-shimmer {
