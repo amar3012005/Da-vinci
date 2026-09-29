@@ -354,7 +354,25 @@ function TaskRow({ event }) {
   const [open, setOpen] = useState(false);
   if (event.step === "workrun") return <li role="status" className="py-1 text-[13px] text-[#777777]">{detail === "queued" ? "Task queued" : detail.startsWith("starting ") ? "Preparing task" : detail}</li>;
   if (thinking) return <li className="py-2 text-[14px] leading-6 text-[#303030]">{detail}</li>;
-  if (call?.name) return <li className="flex items-center gap-2 py-1.5 text-[13px] text-[#858b94]"><span aria-hidden="true" className="w-4 shrink-0 text-center">▣</span><span>{toolLabel(call.name)}</span>{call.phase === "failed" ? <span>· Failed</span> : call.phase === "started" ? <span>· Running</span> : null}{call.target ? <span className="min-w-0 truncate">· {call.target}</span> : null}</li>;
+  if (call?.name) {
+    const result = (() => {
+      if (call.result == null) return "No result details recorded for this call.";
+      try { return JSON.stringify(JSON.parse(call.result), null, 2); } catch { return String(call.result); }
+    })();
+    return <li>
+      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-center gap-2 py-1.5 text-left text-[13px] text-[#858b94] hover:text-[#262626]">
+        <span aria-hidden="true" className="w-4 shrink-0 text-center">▣</span>
+        <code className="min-w-0 truncate text-[12px]">{call.name}</code>
+        <span>{call.phase === "failed" ? "· Failed" : call.phase === "started" ? "· Running" : "· Returned"}</span>
+        <span aria-hidden="true" className="ml-auto">{open ? "⌄" : "›"}</span>
+      </button>
+      {open ? <div className="mb-2 rounded-lg bg-[#f7f8fa] px-3 py-2 text-[12px] leading-relaxed text-[#767676]">
+        {call.target ? <p className="mb-1 break-all">Target: {call.target}</p> : null}
+        {Number.isFinite(call.durationMs) ? <p className="mb-1">Duration: {call.durationMs} ms</p> : null}
+        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words">{call.phase === "started" ? "Waiting for result…" : result}</pre>
+      </div> : null}
+    </li>;
+  }
   const summary = isSearch && detail && !/^(parallel-ai-gateway|parallel|started)$/i.test(detail) ? detail : "";
   return (
     <li>
@@ -405,7 +423,11 @@ function conversationTurns(events, messages) {
         if (item.step !== "tool-call") return false;
         try { return JSON.parse(item.detail).id === call.id; } catch { return false; }
       });
-      if (typeof existing === "number" && existing >= 0) current.tools[existing] = event;
+      if (typeof existing === "number" && existing >= 0) {
+        let previous;
+        try { previous = JSON.parse(current.tools[existing].detail); } catch { previous = {}; }
+        current.tools[existing] = { ...event, detail: JSON.stringify({ ...previous, ...call }) };
+      }
       else current.tools.push(event);
       continue;
     }

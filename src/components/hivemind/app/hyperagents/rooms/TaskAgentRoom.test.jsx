@@ -161,12 +161,17 @@ test("shows each real tool call once with final status", () => {
   const events = [
     { at: "2026-09-26T12:00:00Z", step: "user", detail: "Fetch example.com" },
     { at: "2026-09-26T12:00:01Z", step: "tool-call", detail: JSON.stringify({ id: "call-1", name: "browser_get", phase: "started", target: "https://example.com" }) },
-    { at: "2026-09-26T12:00:02Z", step: "tool-call", detail: JSON.stringify({ id: "call-1", name: "browser_get", phase: "returned", durationMs: 900 }) },
+    { at: "2026-09-26T12:00:02Z", step: "tool-call", detail: JSON.stringify({ id: "call-1", name: "browser_get", phase: "returned", durationMs: 900, result: '{"title":"Example page"}' }) },
     { at: "2026-09-26T12:00:03Z", step: "completion", detail: "complete" },
   ];
   act(() => root.render(<TaskTranscript messages={[]} events={events} status="complete" />));
-  expect(container.textContent.match(/browser get/g)).toHaveLength(1);
-  expect(container.textContent).not.toContain("Returned");
+  expect(container.textContent.match(/browser_get/g)).toHaveLength(1);
+  expect(container.textContent).toContain("Returned");
+  const row = [...container.querySelectorAll("button")].find((button) => button.textContent.includes("browser_get"));
+  act(() => row.click());
+  expect(container.textContent).toContain("Example page");
+  expect(container.textContent).toContain("900 ms");
+  expect(container.textContent).toContain("https://example.com");
   act(() => root.unmount());
 });
 
