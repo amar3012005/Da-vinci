@@ -54,7 +54,15 @@ function elapsedLabel(startedAt, now) {
 
 export function applySocketMessage(current, parsed) {
   if (parsed && parsed.type === "cf_agent_state" && parsed.state && typeof parsed.state === "object") {
-    return parsed.state;
+    const saved = Array.isArray(parsed.state.events) ? parsed.state.events : [];
+    const latestSavedAt = saved.length ? Date.parse(saved[saved.length - 1].at) : -Infinity;
+    const keys = new Set(saved.map((event) => `${event.at}\u0000${event.step}\u0000${event.detail}`));
+    // The direct event frame can outrun an older durable-state replay. Keep
+    // those newer rows until the next snapshot includes them, without reviving
+    // events pruned from the server's bounded history.
+    const pending = (current?.events || []).filter((event) =>
+      Date.parse(event.at) >= latestSavedAt && !keys.has(`${event.at}\u0000${event.step}\u0000${event.detail}`));
+    return { ...parsed.state, events: [...saved, ...pending].slice(-300) };
   }
   if (parsed && typeof parsed.step === "string" && typeof parsed.at === "string") {
     const prior = current?.events || [];

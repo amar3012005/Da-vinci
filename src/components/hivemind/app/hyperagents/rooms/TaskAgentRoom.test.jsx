@@ -151,6 +151,16 @@ test("a direct event frame is visible immediately and does not duplicate its dur
   expect(applySocketMessage(live, { type: "cf_agent_state", state: { events: [event] } }).events).toHaveLength(1);
 });
 
+test("an older state replay does not erase a newer live tool call", () => {
+  const user = { at: "2026-09-26T12:00:00Z", step: "user", detail: "Research Hamburg" };
+  const call = { at: "2026-09-26T12:00:02Z", step: "tool-call", detail: '{"id":"call-2","name":"browser_markdown","phase":"started"}' };
+  const live = applySocketMessage({ events: [user] }, call);
+  const replayed = applySocketMessage(live, { type: "cf_agent_state", state: { events: [user] } });
+  expect(replayed.events).toEqual([user, call]);
+  const caughtUp = applySocketMessage(replayed, { type: "cf_agent_state", state: { events: [user, call] } });
+  expect(caughtUp.events).toEqual([user, call]);
+});
+
 test("native Agent stream frames show partial text before persisted report arrives", () => {
   jest.useFakeTimers();
   const started = applyNativeStreamFrame({ progress: "", report: "", native: "old" }, { type: "cf_agent_use_chat_response", body: JSON.stringify({ type: "text-start", id: "text-1" }) });
