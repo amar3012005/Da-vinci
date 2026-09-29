@@ -5,7 +5,7 @@ import worker from '../cloudflare/worker.mjs';
 const origin = 'https://next.preview.singulancelabs.com';
 
 test('product documents use the current index and cannot cache an old SPA shell', async () => {
-  for (const route of ['/hivemind/app/overview', '/hivemind/app/overview/new', '/hivemind/app/employees/mycompany', '/hivemind/app/tara', '/hivemind/m/chat']) {
+  for (const route of ['/hivemind/app/overview', '/hivemind/app/overview/new', '/hivemind/app/employee/harness/session/session-opaque', '/hivemind/app/employees/mycompany', '/hivemind/app/tara', '/hivemind/m/chat']) {
     let fetched;
     const response = await worker.fetch(new Request(`${origin}${route}`), {
       ASSETS: { fetch: async request => {
@@ -43,20 +43,21 @@ test('admitted opaque session routes retain the Da-vinci embedding document', as
 });
 
 test('a deep link survives the one-shot admission exchange', async () => {
-  const target = '/hivemind/app/overview/session/session-opaque';
-  const env = environment(async () => new Response(null, { status: 303, headers: { location: '/old' } }));
-  const landing = await worker.fetch(new Request(`${origin}${target}`), env);
-  const returnCookie = landing.headers.getSetCookie().find(value => value.startsWith('hm_harness_return='));
-  assert.ok(returnCookie);
+  for (const target of ['/hivemind/app/overview/session/session-opaque', '/hivemind/app/employee/harness/session/session-opaque']) {
+    const env = environment(async () => new Response(null, { status: 303, headers: { location: '/old' } }));
+    const landing = await worker.fetch(new Request(`${origin}${target}`), env);
+    const returnCookie = landing.headers.getSetCookie().find(value => value.startsWith('hm_harness_return='));
+    assert.ok(returnCookie);
 
-  const encoded = returnCookie.match(/^hm_harness_return=([^;]+)/)?.[1];
-  const exchange = await worker.fetch(new Request(`${origin}/api/hivemind/embed/exchange`, {
-    method: 'POST', headers: { cookie: `hm_harness_return=${encoded}` }, body: '{}',
-  }), env);
-  assert.equal(exchange.status, 303);
-  assert.equal(exchange.headers.get('location'), target);
-  assert.equal(exchange.headers.getSetCookie().some(value => value.startsWith('hm_harness_admitted=1')), true);
-  assert.equal(exchange.headers.getSetCookie().some(value => value.startsWith('hm_harness_return=;')), true);
+    const encoded = returnCookie.match(/^hm_harness_return=([^;]+)/)?.[1];
+    const exchange = await worker.fetch(new Request(`${origin}/api/hivemind/embed/exchange`, {
+      method: 'POST', headers: { cookie: `hm_harness_return=${encoded}` }, body: '{}',
+    }), env);
+    assert.equal(exchange.status, 303);
+    assert.equal(exchange.headers.get('location'), target);
+    assert.equal(exchange.headers.getSetCookie().some(value => value.startsWith('hm_harness_admitted=1')), true);
+    assert.equal(exchange.headers.getSetCookie().some(value => value.startsWith('hm_harness_return=;')), true);
+  }
 });
 
 test('invalid session paths stay on Da-vinci and never reach Harness', async () => {

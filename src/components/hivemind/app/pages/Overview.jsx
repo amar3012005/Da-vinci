@@ -52,18 +52,19 @@ import HarnessChatSurface from './HarnessChatSurface';
 import HarnessSurface from './HarnessSurface';
 
 const LAST_HARNESS_SESSION_KEY = 'hm.lastHarnessSession';
+const HARNESS_SESSION_ROUTE = /^\/hivemind\/app\/(?:overview|employee\/harness)\/session\/[^/]+$/u;
 
 function cachedHarnessSessionPath() {
   try {
     const value = window.sessionStorage.getItem(LAST_HARNESS_SESSION_KEY) || '';
-    return /^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(value) ? value : null;
+    return HARNESS_SESSION_ROUTE.test(value) ? value : null;
   } catch {
     return null;
   }
 }
 
 function rememberHarnessSessionPath(pathname) {
-  if (!/^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(pathname)) return;
+  if (!HARNESS_SESSION_ROUTE.test(pathname)) return;
   try { window.sessionStorage.setItem(LAST_HARNESS_SESSION_KEY, pathname); } catch { /* storage may be unavailable */ }
 }
 
@@ -1504,7 +1505,7 @@ export default function Overview() {
   // Mobile routing is authoritative and must run before either an explicit or
   // cached desktop Harness session is selected.
   if (shouldUseMobileChat()) return <MobileChatRedirect />;
-  if (/^\/hivemind\/app\/overview\/(?:new|session\/[^/]+)$/u.test(pathname)) {
+  if (/^\/hivemind\/app\/(?:overview|employee\/harness)\/(?:new|session\/[^/]+)$/u.test(pathname)) {
     rememberHarnessSessionPath(pathname);
     return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
   }

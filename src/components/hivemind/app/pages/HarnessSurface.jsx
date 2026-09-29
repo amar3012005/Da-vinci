@@ -7,6 +7,7 @@ const HARNESS_SESSION_PATH = '/api/hivemind/session/establish';
 const HARNESS_SHELL_PATH = '/assets/harness-shell.js';
 const HARNESS_LIVENESS_INTERVAL_MS = 5000;
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
+const HARNESS_EMPLOYEE_PATH = '/hivemind/app/employee/harness';
 
 /** Resolve one release-stable module URL from the authenticated boot graph. */
 export function harnessShellUrl(rows) {
@@ -200,7 +201,8 @@ function waitForNativeHarnessMount(container, signal) {
 }
 
 function isFreshHarnessRoute() {
-  return window.location.pathname === `${HARNESS_OVERVIEW_PATH}/new`;
+  return window.location.pathname === `${HARNESS_OVERVIEW_PATH}/new`
+    || window.location.pathname === `${HARNESS_EMPLOYEE_PATH}/new`;
 }
 
 async function establishHarnessSession({ fresh = false } = {}) {

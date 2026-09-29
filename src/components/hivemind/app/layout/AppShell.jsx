@@ -189,6 +189,7 @@ function TalkToHiveFAB({ onOpen, hidden }) {
 }
 
 function sectionForPath(pathname) {
+  if (pathname.startsWith('/hivemind/app/employee/harness')) return 'hivemind';
   if (pathname.startsWith('/hivemind/app/employees')) return 'hyperagents';
   if (pathname.startsWith('/hivemind/app/tara')) return 'tara';
   return 'hivemind';
@@ -285,10 +286,11 @@ export default function AppShell() {
     try { localStorage.setItem('hm_active_section', section); } catch { /* noop */ }
   }, [location.pathname]);
   const handleSectionChange = (s) => {
-    if (s === sectionForPath(location.pathname)) return;
+    if (s === sectionForPath(location.pathname)
+      && !(s === 'hivemind' && location.pathname.startsWith('/hivemind/app/overview'))) return;
     setActiveSection(s);
     try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }
-    const landing = { hivemind: '/hivemind/app/overview', hyperagents: '/hivemind/app/employees/mycompany', tara: '/hivemind/app/tara' };
+    const landing = { hivemind: '/hivemind/app/employee/harness/new', hyperagents: '/hivemind/app/employees/mycompany', tara: '/hivemind/app/tara' };
     if (!landing[s]) return;
 
     // BRAIN embeds the native Harness, which owns an independent React root.
@@ -301,13 +303,15 @@ export default function AppShell() {
       // Native Harness owns history updates inside its independent router.
       // Capture its current URL, not the host router's older /new location.
       const currentPath = window.location.pathname;
-      if (/^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(currentPath)) {
-        try { sessionStorage.setItem('hm.lastHarnessSession', currentPath); } catch { /* storage may be unavailable */ }
+      const sessionMatch = currentPath.match(/^\/hivemind\/app\/(?:overview|employee\/harness)\/session\/([^/]+)$/u);
+      if (sessionMatch) {
+        try { sessionStorage.setItem('hm.lastHarnessSession', `/hivemind/app/employee/harness/session/${sessionMatch[1]}`); } catch { /* storage may be unavailable */ }
       }
       if (s === 'hivemind') {
         try {
           const cached = sessionStorage.getItem('hm.lastHarnessSession') || '';
-          if (/^\/hivemind\/app\/overview\/session\/[^/]+$/u.test(cached)) target = cached;
+          const match = cached.match(/^\/hivemind\/app\/(?:overview|employee\/harness)\/session\/([^/]+)$/u);
+          if (match) target = `/hivemind/app/employee/harness/session/${match[1]}`;
         } catch { /* storage may be unavailable */ }
       }
       window.location.assign(target);
@@ -328,7 +332,7 @@ export default function AppShell() {
   // Overview embeds the HIVE chat as the page centerpiece — the floating
   // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
   // every other page keeps the FAB.
-  const onOverview = /\/hivemind\/app(?:\/overview(?:\/.*)?)?\/?$/.test(location.pathname);
+  const onOverview = /\/hivemind\/app(?:\/(?:overview|employee\/harness)(?:\/.*)?)?\/?$/.test(location.pathname);
   const onMeetingNotes = /\/hivemind\/app\/meeting-notes\/?$/.test(location.pathname);
 
   // Track sidebar state for dynamic margin

@@ -124,6 +124,7 @@ const SECTION_TITLES = {
 
 const PAGE_PREFIXES = [
   ['/hivemind/app/overview', '/hivemind/app/overview'],
+  ['/hivemind/app/employee/harness', '/hivemind/app/overview'],
   ['/hivemind/app/employees/operating-rooms', '/hivemind/app/employees/operating-rooms'],
   ['/hivemind/app/employees', '/hivemind/app/employees'],
   ['/hivemind/app/team/members', '/hivemind/app/team/members'],

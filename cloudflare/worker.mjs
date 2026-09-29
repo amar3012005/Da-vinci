@@ -30,6 +30,7 @@ const PRE_ONBOARDING_LIFECYCLE_FLAG_KEY = 'pre_onboarding_lifecycle_v1';
 // valid native admission.
 const HIVE_HARNESS_MODES = new Set(['legacy', 'harness']);
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
+const HARNESS_EMPLOYEE_PATH = '/hivemind/app/employee/harness';
 const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
 const HARNESS_RETURN_COOKIE = 'hm_harness_return';
 const PUBLIC_MARKETING_HOSTS = new Set([
@@ -110,9 +111,12 @@ function hasHarnessAdmission(request) {
 }
 
 function harnessDocumentPath(pathname) {
-  if (pathname === HARNESS_OVERVIEW_PATH || pathname === `${HARNESS_OVERVIEW_PATH}/new`) return pathname;
-  if (!pathname.startsWith(`${HARNESS_OVERVIEW_PATH}/session/`)) return null;
-  const encoded = pathname.slice(`${HARNESS_OVERVIEW_PATH}/session/`.length);
+  if (pathname === HARNESS_OVERVIEW_PATH || pathname === `${HARNESS_OVERVIEW_PATH}/new`
+    || pathname === `${HARNESS_EMPLOYEE_PATH}/new`) return pathname;
+  const base = pathname.startsWith(`${HARNESS_EMPLOYEE_PATH}/session/`)
+    ? HARNESS_EMPLOYEE_PATH : HARNESS_OVERVIEW_PATH;
+  if (!pathname.startsWith(`${base}/session/`)) return null;
+  const encoded = pathname.slice(`${base}/session/`.length);
   if (!encoded || encoded.includes('/') || encoded.length > 512) return null;
   try {
     const sessionId = decodeURIComponent(encoded);
@@ -125,7 +129,8 @@ function harnessDocumentPath(pathname) {
 function canonicalHarnessDocumentPath(pathname) {
   const exact = harnessDocumentPath(pathname);
   if (exact !== null) return exact;
-  const prefix = `${HARNESS_OVERVIEW_PATH}/session/`;
+  const prefix = pathname.startsWith(`${HARNESS_EMPLOYEE_PATH}/session/`)
+    ? `${HARNESS_EMPLOYEE_PATH}/session/` : `${HARNESS_OVERVIEW_PATH}/session/`;
   if (!pathname.startsWith(prefix)) return null;
   const [encoded, ...suffix] = pathname.slice(prefix.length).split('/');
   if (!encoded || suffix.length === 0 || suffix.some(segment => segment !== 'overview')) return null;
