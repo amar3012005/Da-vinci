@@ -679,7 +679,9 @@ export function TaskTranscript({ messages, events, status, startedAt, operatingP
           <button type="button" onClick={() => onControlWorkRun("status")}>Refresh status</button>
           {workRun?.status === "running" ? <button type="button" onClick={() => onControlWorkRun("pause")}>Pause work</button> : null}
           {["paused", "errored", "terminated"].includes(workRun?.status) ? <button type="button" onClick={() => onControlWorkRun("resume")}>Resume work</button> : null}
+          {workRun?.status === "incomplete" ? <button type="button" onClick={() => onControlWorkRun("continue-plan")}>Continue unfinished plan</button> : null}
         </div>
+        {workRun?.status === "incomplete" ? <p className="mb-2">Send a new request to replace this plan instead.</p> : null}
         <ol>{(workRun?.checkpoints || []).map((item) => <li key={item.stage}>{item.stage}</li>)}</ol>
       </details> : null}
       {error ? <div className="border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">{error}</div> : null}
