@@ -343,9 +343,36 @@ function toolLabel(step) {
   return labels[step] || String(step || "").replace(/_/g, " ");
 }
 
-function TaskRow({ event }) {
+function useSmoothText(target, active) {
+  const text = String(target || "");
+  const [visible, setVisible] = useState(() => active ? "" : text);
+  const animated = useRef(active);
+  if (active) animated.current = true;
+  useEffect(() => {
+    if (!animated.current || !text) {
+      setVisible(text);
+      return undefined;
+    }
+    const timer = window.setInterval(() => {
+      setVisible((current) => {
+        if (current === text) return current;
+        if (!text.startsWith(current)) return text.slice(0, 1);
+        const remaining = text.length - current.length;
+        // One character for short bursts; catch up within about a second for
+        // larger provider chunks so display animation never stalls the run.
+        const count = Math.min(24, Math.max(1, Math.ceil(remaining / 80)));
+        return text.slice(0, current.length + count);
+      });
+    }, 12);
+    return () => window.clearInterval(timer);
+  }, [text]);
+  return visible;
+}
+
+function TaskRow({ event, live }) {
   const thinking = event.step === "operating-plan" || event.step === "progress";
   const detail = String(event.detail || "").trim();
+  const smoothDetail = useSmoothText(detail, live && thinking);
   let call = null;
   if (event.step === "tool-call") {
     try { call = JSON.parse(detail); } catch { /* show raw event below */ }
@@ -353,7 +380,7 @@ function TaskRow({ event }) {
   const isSearch = event.step === "parallel_search" || event.step === "composio_web_search";
   const [open, setOpen] = useState(false);
   if (event.step === "workrun") return <li role="status" className="py-1 text-[13px] text-[#777777]">{detail === "queued" ? "Task queued" : detail.startsWith("starting ") ? "Preparing task" : detail}</li>;
-  if (thinking) return <li className="py-2 text-[14px] leading-6 text-[#303030]">{detail}</li>;
+  if (thinking) return <li className="py-2 text-[14px] leading-6 text-[#303030]">{smoothDetail}</li>;
   if (call?.name) {
     const result = (() => {
       if (call.result == null) return "No result details recorded for this call.";
@@ -483,6 +510,10 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
   const [open, setOpen] = useState(true);
   const pending = live && status === "working";
   const finished = Boolean(turn.finishedAt) || (live && status === "complete");
+  const reportText = turn.report || (pending ? draft?.report || "" : "");
+  const smoothReport = useSmoothText(reportText, pending);
+  const progressDraft = pending ? draft?.progress || draft?.native || "" : "";
+  const smoothProgressDraft = useSmoothText(progressDraft, pending);
   const duration = turn.at && (turn.finishedAt || (pending && startedAt))
     ? elapsedLabel(Date.parse(turn.at), turn.finishedAt ? Date.parse(turn.finishedAt) : now)
     : "";
@@ -502,9 +533,9 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
           {open ? (
             <ol className="mt-2">
               {pending && !turn.tools.length ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#555]"><ThinkingOrb state="solving" size={20} theme="light" color="#111111" dotSize={1.2} /> Thinking…</li> : null}
-              {turn.tools.map((event, index) => <TaskRow key={`${event.at}-${event.step}-${index}`} event={event} />)}
+              {turn.tools.map((event, index) => <TaskRow key={`${event.at}-${event.step}-${index}`} event={event} live={pending} />)}
               {pending && turn.tools.length > 0 ? <li role="status" className="flex items-center gap-2 py-1 text-[13px] text-[#555]"><ThinkingOrb state={taskOrbState(status, turn.tools)} size={20} theme="light" color="#111111" dotSize={1.2} gravity={orbGravity(taskOrbState(status, turn.tools))} /> {orbLabel(taskOrbState(status, turn.tools))}</li> : null}
-              {pending && (draft?.progress || draft?.native) && !(draft.progress || draft.native).trimStart().startsWith("{") && !turn.tools.some((event) => event.step === "progress" && event.detail === (draft.progress || draft.native)) ? <li role="status" className="whitespace-pre-wrap py-1 text-[13px] leading-5 text-[#555555]">{draft.progress || draft.native}</li> : null}
+              {pending && progressDraft && !progressDraft.trimStart().startsWith("{") && !turn.tools.some((event) => event.step === "progress" && event.detail === progressDraft) ? <li role="status" className="whitespace-pre-wrap py-1 text-[13px] leading-5 text-[#555555]">{smoothProgressDraft}</li> : null}
             </ol>
           ) : null}
         </div>
@@ -518,10 +549,10 @@ function TurnBlock({ turn, live, status, startedAt, now, draft, artifacts, onSel
           ))}
         </div>
       ) : null}
-      {turn.report ? <div className="break-words text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-3 [&_h1]:text-[19px] [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:font-semibold [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[#f5f5f5] [&_pre]:p-3 [&_code]:text-[13px]">
+      {turn.report && smoothReport === turn.report ? <div className="break-words text-[14px] leading-[1.7] text-[#242424] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_a]:text-[#2563a6] [&_a]:underline [&_h1]:mb-3 [&_h1]:text-[19px] [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:font-semibold [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[#f5f5f5] [&_pre]:p-3 [&_code]:text-[13px]">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.report}</ReactMarkdown>
       </div> : null}
-      {pending && !turn.report && draft?.report ? <div className="whitespace-pre-wrap break-words text-[14px] leading-[1.7] text-[#242424]">{draft.report}</div> : null}
+      {smoothReport && smoothReport !== turn.report ? <div className="whitespace-pre-wrap break-words text-[14px] leading-[1.7] text-[#242424]">{smoothReport}</div> : null}
       {finished && turn.artifacts?.map((event, index) => {
         const artifact = artifactForEvent(event, artifacts);
         if (!artifact || artifact.kind === "note" || artifact.kind === "reply") return null;

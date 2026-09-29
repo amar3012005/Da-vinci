@@ -108,14 +108,21 @@ test("shows pending tool approval and keeps room identity scoped", () => {
 });
 
 test("shows streamed progress before final report", () => {
+  jest.useFakeTimers();
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const container = document.createElement("div");
   const root = createRoot(container);
   const events = [{ at: "2026-09-26T12:00:00Z", step: "user", detail: "Check Gmail status" }];
   act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" draft={{ progress: "I’m checking the connection receipt.", report: "Draft answer is arriving." }} />));
+  expect(container.textContent).not.toContain("Draft answer is arriving.");
+  act(() => jest.advanceTimersByTime(24));
+  expect(container.textContent).toContain("Dr");
+  expect(container.textContent).not.toContain("Draft answer is arriving.");
+  act(() => jest.advanceTimersByTime(1200));
   expect(container.textContent).toContain("I’m checking the connection receipt.");
   expect(container.textContent).toContain("Draft answer is arriving.");
   act(() => root.unmount());
+  jest.useRealTimers();
 });
 
 test("a direct event frame is visible immediately and does not duplicate its durable state replay", () => {
@@ -127,6 +134,7 @@ test("a direct event frame is visible immediately and does not duplicate its dur
 });
 
 test("native Agent stream frames show partial text before persisted report arrives", () => {
+  jest.useFakeTimers();
   const started = applyNativeStreamFrame({ progress: "", report: "", native: "old" }, { type: "cf_agent_use_chat_response", body: JSON.stringify({ type: "text-start", id: "text-1" }) });
   const partial = applyNativeStreamFrame(started, { type: "cf_agent_use_chat_response", body: JSON.stringify({ type: "text-delta", id: "text-1", delta: "Checking" }) });
   expect(partial.native).toBe("Checking");
@@ -134,8 +142,27 @@ test("native Agent stream frames show partial text before persisted report arriv
   const root = createRoot(container);
   global.IS_REACT_ACT_ENVIRONMENT = true;
   act(() => root.render(<TaskTranscript messages={[]} events={[{ at: "2026-09-26T12:00:00Z", step: "user", detail: "Research" }]} status="working" draft={partial} />));
+  act(() => jest.advanceTimersByTime(120));
   expect(container.textContent).toContain("Checking");
   act(() => root.unmount());
+  jest.useRealTimers();
+});
+
+test("completing a live run does not flush its final sentence at once", () => {
+  jest.useFakeTimers();
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const user = { at: "2026-09-26T12:00:00Z", step: "user", detail: "Explain" };
+  act(() => root.render(<TaskTranscript messages={[]} events={[user]} status="working" draft={{ report: "The first" }} />));
+  act(() => jest.advanceTimersByTime(24));
+  const report = { at: "2026-09-26T12:00:01Z", step: "report", detail: "The first sentence arrives smoothly." };
+  act(() => root.render(<TaskTranscript messages={[]} events={[user, report, { at: "2026-09-26T12:00:02Z", step: "completion", detail: "complete" }]} status="complete" draft={{}} />));
+  expect(container.textContent).not.toContain(report.detail);
+  act(() => jest.advanceTimersByTime(1200));
+  expect(container.textContent).toContain(report.detail);
+  act(() => root.unmount());
+  jest.useRealTimers();
 });
 
 test("keeps completed thought and duration visible after answer and next turn", () => {
@@ -197,6 +224,7 @@ test("keeps each plan with its originating turn and holds artifact cards until c
 });
 
 test("shows agent progress text without expanding a tool row", () => {
+  jest.useFakeTimers();
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const container = document.createElement("div");
   const root = createRoot(container);
@@ -207,9 +235,11 @@ test("shows agent progress text without expanding a tool row", () => {
   ];
   act(() => root.render(<TaskTranscript messages={[]} events={events} status="working" />));
   expect(container.textContent).not.toContain("Loading authenticated context");
+  act(() => jest.advanceTimersByTime(1200));
   expect(container.textContent).toContain("I’ll check the Gmail connection receipt.");
   expect(container.querySelectorAll("button[aria-expanded]")).toHaveLength(1);
   act(() => root.unmount());
+  jest.useRealTimers();
 });
 
 test("setup events stay out of transcript while compact solving orb appears", () => {
