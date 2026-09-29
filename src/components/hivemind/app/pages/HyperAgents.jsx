@@ -3233,7 +3233,7 @@ function RoomThread({ roomId, onArchived, onNewSession }) {
                   className="w-full bg-transparent resize-none outline-none text-[14px] leading-relaxed text-[#171717] placeholder:text-[#b3b3b3]"
                 />
               </div>
-              {taskRoom && ['queued', 'running', 'paused', 'waiting'].includes(taskStream.workRun?.status) ? (
+              {taskRoom && ['queued', 'running', 'paused', 'waiting'].includes(taskStream.workRun?.status) && (taskStream.status === 'working' || taskStream.workRun?.status === 'paused') ? (
                 <button
                   type="button"
                   onClick={() => taskStream.controlWorkRun('stop')}

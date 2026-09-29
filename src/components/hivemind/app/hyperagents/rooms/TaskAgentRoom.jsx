@@ -107,6 +107,8 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     let retry;
     let lastArtifactEvent = "";
     let lastWorkflowId = "";
+    let lastCompletionEvent = "";
+    const statusTimers = [];
     const flushQueued = () => {
       const queued = queuedStart.current;
       const socket = socketRef.current;
@@ -191,6 +193,13 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
           const rows = parsed.state?.events || [];
           const lastUser = rows.findLastIndex((item) => item.step === "user");
           if (rows.slice(lastUser + 1).some((item) => item.step === "report" || item.step === "completion")) setDraft({ progress: "", report: "", native: "" });
+          const completion = [...rows.slice(lastUser + 1)].reverse().find((item) => item.step === "completion");
+          if (completion?.at && completion.at !== lastCompletionEvent) {
+            lastCompletionEvent = completion.at;
+            for (const delay of [600, 2400]) statusTimers.push(window.setTimeout(() => {
+              if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "workrun-control", decision: "status" }));
+            }, delay));
+          }
         }
         const newestArtifactEvent = [...(parsed.state?.events || [])].reverse().find((item) => item.step === "artifact")?.at || "";
         if (parsed.type === "cf_agent_state" && newestArtifactEvent && newestArtifactEvent !== lastArtifactEvent) {
@@ -205,6 +214,7 @@ export function useTaskAgentStream({ enabled, orgId, userId, roomId }) {
     return () => {
       closed = true;
       window.clearTimeout(retry);
+      statusTimers.forEach(window.clearTimeout);
       socketRef.current?.close();
       socketRef.current = null;
     };
