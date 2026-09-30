@@ -12,6 +12,7 @@ import {
   Clock3,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import DreamingSettings from '../components/DreamingSettings';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 
@@ -240,6 +241,8 @@ export default function Settings() {
         animate="visible"
         className="space-y-6 max-w-3xl"
       >
+        <SectionCard><DreamingSettings organizationId={org?.id} /></SectionCard>
+
         {/* ── Settings scope ───────────────────────────────────────── */}
         <SectionCard>
           <SectionHeader

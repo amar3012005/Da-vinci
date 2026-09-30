@@ -407,6 +407,15 @@ export default {
       if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
       return dayZeroOnboardingFlagResponse(request, env);
     }
+    // Company Settings uses the native tenant principal without mounting chat.
+    if (pathname === '/hivemind/dreamer/settings') {
+      if (!hasHarnessSession(request) || !hasHarnessAdmission(request)) {
+        return new Response(JSON.stringify({ error: 'authentication_required' }), {
+          status: 401, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+        });
+      }
+      return noIndex(await harnessResponse(request, env));
+    }
     // Establishment is the one runner route that necessarily precedes the
     // admission cookie.  The runner validates the signed, short-lived ticket
     // carried in this request; every later runner route remains cookie-gated.
