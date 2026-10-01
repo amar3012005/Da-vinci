@@ -490,7 +490,7 @@ export default function EmployeePlayground() {
   ), [employees, loading, mode, fetch]);
 
   return (
-    <div className="flex h-[calc(100vh-56px)] bg-white">
+    <div className="flex h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] bg-white">
       {sidebar}
       <main className="flex-1 flex flex-col">
         {error && (

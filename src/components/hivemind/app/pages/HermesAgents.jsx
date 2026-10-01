@@ -207,7 +207,7 @@ export default function HermesAgents() {
   // ── Loading spinner ─────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]">
+      <div className="flex items-center justify-center h-[calc(var(--hm-app-viewport-height,100dvh)-3.5rem)]">
         <RefreshCw size={20} className="animate-spin text-[#a3a3a3]" />
       </div>
     );
@@ -216,7 +216,7 @@ export default function HermesAgents() {
   // ── Not-enabled calm state (flat, no rail) ──────────────────────────────────
   if (notEnabled) {
     return (
-      <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden items-center justify-center">
+      <div className="font-['Space_Grotesk'] flex h-[calc(var(--hm-app-viewport-height,100dvh)-3.5rem)] min-h-0 -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden items-center justify-center">
         <NotEnabled t={t} />
       </div>
     );
@@ -224,7 +224,7 @@ export default function HermesAgents() {
 
   // ── Two-pane shell ──────────────────────────────────────────────────────────
   return (
-    <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
+    <div className="font-['Space_Grotesk'] flex h-[calc(var(--hm-app-viewport-height,100dvh)-3.5rem)] min-h-0 -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
 
       {/* ── Left rail ────────────────────────────────────────────────────────── */}
       <aside className="w-[240px] min-w-[240px] border-r border-[#e3e0db] bg-[#faf9f4] flex flex-col shrink-0">
