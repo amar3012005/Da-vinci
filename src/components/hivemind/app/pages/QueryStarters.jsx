@@ -19,8 +19,8 @@ function candidates(memories, t) {
     if (seen.has(key)) return null;
     seen.add(key);
     const dream = tags.some(tag => /^(flashback|derived|dreamer:)/i.test(tag));
-    const sourceText = [memory.source_platform, memory.sourcePlatform, memory.platform, ...tags].join(' ');
-    const source = /gmail/i.test(sourceText) ? 'Gmail' : /slack/i.test(sourceText) ? 'Slack' : /google.?docs/i.test(sourceText) ? 'Google Docs' : dream ? t('overview.starters.flashback', 'Flashback') : t('overview.starters.memory', 'Memory');
+    const sourceText = [memory.source_platform, memory.sourcePlatform, memory.platform, ...tags.filter(tag => /^(platform|source):/i.test(tag))].join(' ');
+    const source = dream ? t('overview.starters.flashback', 'Flashback') : /gmail/i.test(sourceText) ? 'Gmail' : /slack/i.test(sourceText) ? 'Slack' : /google.?docs/i.test(sourceText) ? 'Google Docs' : dream ? t('overview.starters.flashback', 'Flashback') : t('overview.starters.memory', 'Memory');
     const query = dream
       ? t('overview.starters.check', 'Help me check the evidence and uncertainty behind “{{topic}}”. What is worth following up?', { topic })
       : t('overview.starters.catchUp', 'Bring me up to date on “{{topic}}”, using the relevant memories and any connected apps I have allowed. What could I do next?', { topic });
@@ -121,13 +121,13 @@ export default function QueryStarters({ mount, ready }) {
     { id: 'remember', topic: t('overview.starters.firstMemory', 'Find something I remember'), query: t('overview.starters.firstMemoryQuery', 'Help me find something in my memories. Ask me what I remember about it.') },
     { id: 'project', topic: t('overview.starters.firstProject', 'Catch up on a project'), query: t('overview.starters.firstProjectQuery', 'Help me catch up on a project. Ask me which project, then bring together its relevant context.') },
   ];
-  return createPortal(<section className="hm-query-starters" aria-label={t('overview.starters.label', 'Suggested questions')}>
-    {ghost && <button type="button" className="hm-query-ghost" style={{ top: target.top, left: target.left, width: target.width }} onClick={() => accept(items[0].query)} aria-label={t('overview.starters.use', 'Use suggested question')}><span aria-hidden="true">{ghost}<span className="hm-query-caret">│</span></span></button>}
+  return <>{ghost && createPortal(<button type="button" className="hm-query-ghost" style={{ top: target.top, left: target.left, width: target.width }} onClick={() => accept(items[0].query)} aria-label={t('overview.starters.use', 'Use suggested question')}><span aria-hidden="true">{ghost}<span className="hm-query-caret">│</span></span></button>, target.seat)}{createPortal(<section className="hm-query-starters" aria-label={t('overview.starters.label', 'Suggested questions')}>
+
     <div className="hm-query-heading">{items.length ? t('overview.starters.heading', 'A starting point from your context') : t('overview.starters.firstHeading', 'What would you like help with?')}</div>
     <div className="hm-query-options">{options.map(item => <button key={item.id} type="button" onClick={() => accept(item.query)} title={item.query}>
       <span className="hm-query-topic">{item.dream ? '🌙 ' : ''}{item.source ? (item.dream ? t('overview.starters.checkLabel', 'Check: {{topic}}', { topic: item.topic }) : t('overview.starters.catchUpLabel', 'Catch up: {{topic}}', { topic: item.topic })) : item.topic}</span>
       <span className="hm-query-source">{item.source || t('overview.starters.try', 'Try this')}{item.timestamp ? ` · ${new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(item.timestamp)}` : ''}</span>
     </button>)}</div>
     {notice && <p role="status">{notice}</p>}
-  </section>, target.seat);
+  </section>, target.seat)}</>;
 }
