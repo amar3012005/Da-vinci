@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
@@ -34,7 +34,7 @@ export default function QueryStarters({ mount, ready }) {
   const { t, i18n } = useTranslation('dashboard');
   const [items, setItems] = useState([]);
   const [target, setTarget] = useState(null);
-  const [ghost, setGhost] = useState('');
+  const typedEditors = useRef(new WeakSet());
   const identity = `${org?.id || ''}:${user?.id || ''}:${i18n.language}`;
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function QueryStarters({ mount, ready }) {
         const scale = Number.parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
         const field = editor?.getBoundingClientRect();
         const bounds = seat?.getBoundingClientRect();
-        setTarget(overview && editor && seat && !editor.textContent.trim() ? { editor, seat, top: (field.top - bounds.top) / scale, left: (field.left - bounds.left) / scale, width: editor.clientWidth } : null);
+        setTarget(overview && editor && seat ? { editor, seat, top: (field.top - bounds.top) / scale, left: (field.left - bounds.left) / scale, width: editor.clientWidth } : null);
       });
     };
     refresh();
@@ -91,20 +91,39 @@ export default function QueryStarters({ mount, ready }) {
   }, [ready, mount]);
 
   useEffect(() => {
-    setGhost('');
-    if (!target || !items[0]) return;
+    const editor = target?.editor;
+    if (!editor || !items[0] || editor.textContent.trim() || typedEditors.current.has(editor)) return;
+    typedEditors.current.add(editor);
     const text = items[0].query;
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setGhost(text); return; }
     let index = 0;
-    const timer = setInterval(() => {
-      index = Math.min(text.length, index + 3);
-      setGhost(text.slice(0, index));
+    let timer;
+    const stop = event => { if (!event || event.isTrusted) clearInterval(timer); };
+    const insert = value => {
+      const clipboard = new DataTransfer();
+      clipboard.setData('text/plain', value);
+      editor.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: clipboard }));
+    };
+    editor.addEventListener('keydown', stop);
+    editor.addEventListener('pointerdown', stop);
+    editor.addEventListener('paste', stop);
+    editor.focus();
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) insert(text);
+    else timer = setInterval(() => {
+      if (!editor.isConnected) { clearInterval(timer); return; }
+      const next = Math.min(text.length, index + 3);
+      insert(text.slice(index, next));
+      index = next;
       if (index === text.length) clearInterval(timer);
-    }, 32);
-    return () => clearInterval(timer);
+    }, 40);
+    return () => {
+      clearInterval(timer);
+      editor.removeEventListener('keydown', stop);
+      editor.removeEventListener('pointerdown', stop);
+      editor.removeEventListener('paste', stop);
+    };
   }, [target?.editor, items]);
 
-  if (!target) return null;
+  if (!target || target.editor.textContent.trim()) return null;
   const accept = query => {
     const editor = target.editor;
     if (!editor.isConnected || editor.textContent.trim()) return;
@@ -119,12 +138,12 @@ export default function QueryStarters({ mount, ready }) {
     { id: 'remember', topic: t('overview.starters.firstMemory', 'Find something I remember'), query: t('overview.starters.firstMemoryQuery', 'Help me find something in my memories. Ask me what I remember about it.') },
     { id: 'project', topic: t('overview.starters.firstProject', 'Catch up on a project'), query: t('overview.starters.firstProjectQuery', 'Help me catch up on a project. Ask me which project, then bring together its relevant context.') },
   ];
-  return <>{ghost && createPortal(<button type="button" className="hm-query-ghost" style={{ top: target.top, left: target.left, width: target.width }} onClick={() => accept(items[0].query)} aria-label={t('overview.starters.use', 'Use suggested question')}><span aria-hidden="true">{ghost}<span className="hm-query-caret">│</span></span></button>, target.seat)}{createPortal(<section className="hm-query-starters" aria-label={t('overview.starters.label', 'Suggested questions')}>
+  return createPortal(<section className="hm-query-starters" aria-label={t('overview.starters.label', 'Suggested questions')}>
 
     <div className="hm-query-heading">{items.length ? t('overview.starters.heading', 'A starting point from your context') : t('overview.starters.firstHeading', 'What would you like help with?')}</div>
     <div className="hm-query-options">{options.map(item => <button key={item.id} type="button" onClick={() => accept(item.query)} title={item.query}>
       <span className="hm-query-topic">{item.dream ? '🌙 ' : ''}{item.source ? (item.dream ? t('overview.starters.checkLabel', 'Check: {{topic}}', { topic: item.topic }) : t('overview.starters.catchUpLabel', 'Catch up: {{topic}}', { topic: item.topic })) : item.topic}</span>
       <span className="hm-query-source">{item.source || t('overview.starters.try', 'Try this')}{item.timestamp ? ` · ${new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(item.timestamp)}` : ''}</span>
     </button>)}</div>
-  </section>, target.seat)}</>;
+  </section>, target.seat);
 }
