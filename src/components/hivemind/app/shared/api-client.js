@@ -259,8 +259,8 @@ class HiveMindApiClient {
     return `${this.controlPlane.defaults.baseURL}/auth/google${qs ? `?${qs}` : ''}`;
   }
 
-  async hivemindTriggers(payload) {
-    const { data } = await this.controlPlane.post('/v1/hivemind/triggers', payload);
+  async hivemindTriggers(payload, { timeoutMs = 60000 } = {}) {
+    const { data } = await this.controlPlane.post('/v1/hivemind/triggers', payload, { timeout: timeoutMs });
     return data;
   }
 

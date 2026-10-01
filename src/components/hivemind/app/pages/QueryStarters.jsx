@@ -52,7 +52,7 @@ export default function QueryStarters({ mount, ready }) {
     Promise.allSettled([
       apiClient.listMemories({ limit: 24 }),
       apiClient.listMemories({ tags: 'flashback', limit: 6 }),
-      apiClient.hivemindTriggers({ operation: 'suggestions', limit: 8 }),
+      apiClient.hivemindTriggers({ operation: 'suggestions', limit: 8 }, { timeoutMs: 4000 }),
     ]).then(results => {
       if (cancelled) return;
       const memories = results.flatMap(result => result.status === 'fulfilled' ? rows(result.value) : []);

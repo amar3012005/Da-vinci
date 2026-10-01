@@ -41,7 +41,7 @@ export default function ConnectedActivity() {
     {catalog?.events?.length > 0 && <>
       <label>Event <select value={event} disabled={busy} onChange={e=>inspect(e.target.value)}><option value="">Choose an event</option>{catalog.events.map(item=><option key={item.slug} value={item.slug}>{item.toolkit} · {item.name}</option>)}</select></label>
       {type && <>
-        <label>Account <select value={account} disabled={busy} onChange={e=>setAccount(e.target.value)}>{type.accounts.map(item=><option key={item.id} value={item.id}>{item.email || item.toolkit} · {item.id.slice(-5)}</option>)}</select></label>
+        <label>Account <select value={account} disabled={busy} onChange={e=>setAccount(e.target.value)}>{type.accounts.map(item=><option key={item.id} value={item.id}>{item.email || item.toolkit} · {item.scope === 'organization' ? 'Company account' : 'Personal account'} · {item.id.slice(-5)}</option>)}</select></label>
         {Object.entries(type.config_schema.properties || {}).map(([key,spec])=><label key={key}>{spec.title || key.replaceAll('_',' ')}{type.config_schema.required?.includes(key) ? ' *' : ''}
           {spec.enum ? <select value={config[key] || ''} onChange={e=>setConfig({...config,[key]:e.target.value})}><option value="">Choose</option>{spec.enum.map(value=><option key={value} value={value}>{String(value)}</option>)}</select>
           : spec.type === 'boolean' ? <input type="checkbox" checked={Boolean(config[key])} onChange={e=>setConfig({...config,[key]:e.target.checked})}/>
