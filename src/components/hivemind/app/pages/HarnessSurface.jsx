@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../shared/api-client';
 import './HarnessSurface.css';
+import QueryStarters from './QueryStarters';
 
 const HARNESS_BOOT_PATH = '/api/hivemind/boot';
 const HARNESS_SESSION_PATH = '/api/hivemind/session/establish';
@@ -429,5 +430,6 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
   return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface>
     {state.phase === 'loading' && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} dreaming={window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`} /></div>}
     <div ref={mountRef} className="h-full min-h-0" style={{ visibility: state.phase === 'ready' ? 'visible' : 'hidden' }} />
+    <QueryStarters mount={mountRef.current} ready={state.phase === 'ready'} />
   </div>;
 }
