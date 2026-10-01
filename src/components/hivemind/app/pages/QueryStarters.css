@@ -21,3 +21,13 @@
 .hm-connected-activity input,.hm-connected-activity select { border:1px solid #ddd; border-radius:6px; padding:6px; max-width:70%; }
 .hm-connected-activity button { color:#117dff; padding:6px; }
 .hm-activity-subscription { display:flex; justify-content:space-between; margin:8px 0; }
+
+.hm-query-options button { display:grid; grid-template-columns:20px minmax(140px,auto) minmax(0,1fr); align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid #e7e7e7; }
+.hm-query-options button:last-child { border-bottom:0; }
+.hm-query-logo { width:18px; height:18px; object-fit:contain; flex-shrink:0; }
+.hm-query-symbol { display:flex; align-items:center; justify-content:center; color:#68717c; }
+.hm-query-topic { font-size:14px; font-weight:500; }
+.hm-query-source { margin:0; font-size:12px; line-height:20px; }
+.hm-query-draft-source { display:flex; align-items:center; gap:7px; font-size:11px; color:#68717c; margin-bottom:12px; }
+.hm-query-draft-source .hm-query-logo { width:14px; height:14px; }
+@media(max-width:700px) { .hm-query-options button { grid-template-columns:18px minmax(0,1fr); gap:9px; } .hm-query-source { grid-column:2; } }

@@ -4,6 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
 import './QueryStarters.css';
+import { BRAND_LOGOS } from '../shared/connectors-catalog';
+
+const appKey = source => ({ googledocs: 'google-docs', googledrive: 'google-drive' })[source] || source;
+const appLogo = source => BRAND_LOGOS[appKey(source)] || (source ? `https://logos.composio.dev/api/${encodeURIComponent(source)}` : null);
+function SourceLogo({ app, dream }) {
+  return app ? <img className="hm-query-logo" src={appLogo(app)} alt="" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} /> : <span className="hm-query-logo hm-query-symbol" aria-hidden="true">{dream ? '🌙' : '↗'}</span>;
+}
 
 const rows = value => Array.isArray(value) ? value : value?.memories || value?.data || [];
 const clean = value => String(value || '').replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, '').replace(/\s+/g, ' ').trim();
@@ -20,12 +27,13 @@ function candidates(memories, t) {
     seen.add(key);
     const dream = tags.some(tag => /^(flashback|derived|dreamer:)/i.test(tag));
     const sourceText = [memory.source_platform, memory.sourcePlatform, memory.platform, ...tags.filter(tag => /^(platform|source):/i.test(tag))].join(' ');
+    const app = dream ? null : /gmail/i.test(sourceText) ? 'gmail' : /slack/i.test(sourceText) ? 'slack' : /google.?docs/i.test(sourceText) ? 'googledocs' : /google.?drive/i.test(sourceText) ? 'googledrive' : /github/i.test(sourceText) ? 'github' : null;
     const source = dream ? t('overview.starters.flashback', 'Flashback') : /gmail/i.test(sourceText) ? 'Gmail' : /slack/i.test(sourceText) ? 'Slack' : /google.?docs/i.test(sourceText) ? 'Google Docs' : dream ? t('overview.starters.flashback', 'Flashback') : t('overview.starters.memory', 'Memory');
     const query = dream
       ? t('overview.starters.check', 'Help me check the evidence and uncertainty behind “{{topic}}”. What is worth following up?', { topic })
       : t('overview.starters.catchUp', 'Bring me up to date on “{{topic}}”, using the relevant memories and any connected apps I have allowed. What could I do next?', { topic });
     const timestamp = Date.parse(dateOf(memory));
-    return { id: memory.id, topic, query, source, dream, timestamp: Number.isFinite(timestamp) ? timestamp : 0 };
+    return { id: memory.id, topic, query, source, app, dream, timestamp: Number.isFinite(timestamp) ? timestamp : 0 };
   }).filter(Boolean).sort((a, b) => b.timestamp - a.timestamp);
 }
 
@@ -33,6 +41,7 @@ export default function QueryStarters({ mount, ready }) {
   const { user, org } = useAuth() || {};
   const { t, i18n } = useTranslation('dashboard');
   const [items, setItems] = useState([]);
+  const [draftSource, setDraftSource] = useState(null);
   const [finishedTyping, setFinishedTyping] = useState(false);
   const [target, setTarget] = useState(null);
   const [loadedEditor, setLoadedEditor] = useState(null);
@@ -56,7 +65,7 @@ export default function QueryStarters({ mount, ready }) {
       if (cancelled) return;
       const memories = results.flatMap(result => result.status === 'fulfilled' ? rows(result.value) : []);
       const events = results[2]?.status === 'fulfilled' ? results[2].value?.suggestions || [] : [];
-      const activity = events.map(event => ({ ...event, topic: clean(event.topic), timestamp: Date.parse(event.timestamp) || 0, source: ({ gmail: 'Gmail', slack: 'Slack', github: 'GitHub', googledocs: 'Google Docs' })[event.source] || event.source, dream: false }));
+      const activity = events.map(event => ({ ...event, topic: clean(event.topic), timestamp: Date.parse(event.timestamp) || 0, app: event.source, source: ({ googledrive: 'Google Drive', gmail: 'Gmail', slack: 'Slack', github: 'GitHub', googledocs: 'Google Docs' })[event.source] || event.source, dream: false }));
       const all = [...activity, ...candidates(memories, t)];
       const picked = [];
       const sources = new Set();
@@ -108,6 +117,7 @@ export default function QueryStarters({ mount, ready }) {
     const restored = editor.textContent.trim();
     if (restored && restored !== previous.trim()) return;
     generatedDraft.current = '';
+    setDraftSource(items[0]);
     if (restored) {
       editor.focus();
       const selection = window.getSelection();
@@ -150,7 +160,9 @@ export default function QueryStarters({ mount, ready }) {
   }, [target?.editor, items, loadedEditor]);
 
   if (!target) return null;
-  const accept = query => {
+  const accept = item => {
+    const query = item.query;
+    setDraftSource(item);
     const editor = target.editor;
     if (!editor.isConnected) return;
     const draft = editor.textContent.trim();
@@ -180,9 +192,10 @@ export default function QueryStarters({ mount, ready }) {
   ];
   return createPortal(<section className="hm-query-starters" aria-label={t('overview.starters.label', 'Suggested questions')}>
 
+    {draftSource?.app && <div className="hm-query-draft-source"><SourceLogo app={draftSource.app} /><span>{t('overview.starters.basedOn', 'Based on {{app}}', { app: draftSource.source })}</span></div>}
     <div className="hm-query-heading">{items.length ? t('overview.starters.heading', 'A starting point from your context') : t('overview.starters.firstHeading', 'What would you like help with?')}</div>
-    <div className="hm-query-options">{options.map(item => <button key={item.id} type="button" onClick={() => accept(item.query)} title={item.query}>
-      <span className="hm-query-topic">{item.dream ? '🌙 ' : ''}{item.source ? (item.dream ? t('overview.starters.checkLabel', 'Check: {{topic}}', { topic: item.topic }) : t('overview.starters.catchUpLabel', 'Catch up: {{topic}}', { topic: item.topic })) : item.topic}</span>
+    <div className="hm-query-options">{options.map(item => <button key={item.id} type="button" onClick={() => accept(item)} title={item.query}>
+      <SourceLogo app={item.app} dream={item.dream} /><span className="hm-query-topic">{item.source ? (item.dream ? t('overview.starters.checkLabel', 'Check: {{topic}}', { topic: item.topic }) : t('overview.starters.catchUpLabel', 'Catch up: {{topic}}', { topic: item.topic })) : item.topic}</span>
       <span className="hm-query-source">{item.source || t('overview.starters.try', 'Try this')}{item.timestamp ? ` · ${new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(item.timestamp)}` : ''}</span>
     </button>)}</div>
     {finishedTyping && <p className="hm-query-ready" role="status">{t('overview.starters.ready', 'Edit this question, or send it when you’re ready.')}</p>}
