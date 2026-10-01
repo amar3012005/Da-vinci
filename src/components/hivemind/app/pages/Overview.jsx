@@ -1504,7 +1504,7 @@ export default function Overview() {
   if (pathname === '/hivemind/app/overview/dreaming') {
     return <DreamingPage />;
   }
-  if (/^\/hivemind\/app\/(?:overview|employee\/harness)\/(?:new|session\/[^/]+)$/u.test(pathname)) {
+  if (pathname === '/hivemind/app/employee/harness' || /^\/hivemind\/app\/(?:overview|employee\/harness)\/(?:new|session\/[^/]+)$/u.test(pathname)) {
     rememberHarnessSessionPath(pathname);
     return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
   }

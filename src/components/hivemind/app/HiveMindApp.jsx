@@ -55,7 +55,6 @@ const AuditLog = React.lazy(() => import('./pages/AuditLog'));
 const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
 const AdminSso = React.lazy(() => import('./pages/AdminSso'));
 const DigitalEmployees = React.lazy(() => import('./pages/DigitalEmployees'));
-const HarnessSurface = React.lazy(() => import('./pages/HarnessSurface'));
 const HyperAgents = React.lazy(() => import('./pages/HyperAgents'));
 const OperatingRooms = React.lazy(() => import('./pages/OperatingRooms'));
 const HermesAgents = React.lazy(() => import('./pages/HermesAgents'));
@@ -241,7 +240,7 @@ export default function HiveMindApp() {
               route instead of falling through to the relative catch-all,
               which otherwise recursively appends `overview`. */}
           <Route path="overview/*" element={<PageSuspense><Overview /></PageSuspense>} />
-          <Route path="employee/harness/*" element={<PageSuspense><HarnessSurface /></PageSuspense>} />
+          <Route path="employee/harness/*" element={<PageSuspense><Overview /></PageSuspense>} />
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
