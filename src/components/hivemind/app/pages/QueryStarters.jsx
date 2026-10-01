@@ -1,3 +1,4 @@
+import ConnectedActivity from './ConnectedActivity';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -35,6 +36,7 @@ export default function QueryStarters({ mount, ready }) {
   const [items, setItems] = useState([]);
   const [finishedTyping, setFinishedTyping] = useState(false);
   const [target, setTarget] = useState(null);
+  const [loadedEditor, setLoadedEditor] = useState(null);
   const typedEditors = useRef(new WeakSet());
   const generatedDraft = useRef('');
   const stopTyping = useRef(() => {});
@@ -42,17 +44,21 @@ export default function QueryStarters({ mount, ready }) {
 
   useEffect(() => {
     setItems([]);
-    if (!ready || !user?.id) return;
+    setLoadedEditor(null);
+    if (!ready || !user?.id || !target?.editor) return;
     let cancelled = false;
     // Reuse only in this authenticated tab; revalidate authorization before display.
     const key = `hivemind:query-starters:${identity}`;
     Promise.allSettled([
       apiClient.listMemories({ limit: 24 }),
       apiClient.listMemories({ tags: 'flashback', limit: 6 }),
+      apiClient.hivemindTriggers({ operation: 'suggestions', limit: 8 }),
     ]).then(results => {
       if (cancelled) return;
       const memories = results.flatMap(result => result.status === 'fulfilled' ? rows(result.value) : []);
-      const all = candidates(memories, t);
+      const events = results[2]?.status === 'fulfilled' ? results[2].value?.suggestions || [] : [];
+      const activity = events.map(event => ({ ...event, topic: clean(event.topic), timestamp: Date.parse(event.timestamp) || 0, source: ({ gmail: 'Gmail', slack: 'Slack', github: 'GitHub', googledocs: 'Google Docs' })[event.source] || event.source, dream: false }));
+      const all = [...activity, ...candidates(memories, t)];
       const picked = [];
       const sources = new Set();
       for (const item of all) {
@@ -65,10 +71,11 @@ export default function QueryStarters({ mount, ready }) {
         if (!picked.some(value => value.id === item.id)) picked.push(item);
       }
       setItems(picked);
+      setLoadedEditor(target.editor);
       try { sessionStorage.setItem(key, JSON.stringify({ generatedAt: Date.now(), items: picked })); } catch { /* storage is optional */ }
     });
     return () => { cancelled = true; };
-  }, [ready, identity, user?.id, t]);
+  }, [ready, identity, user?.id, target?.editor, t]);
 
   useEffect(() => {
     if (!ready || !mount) return;
@@ -95,7 +102,7 @@ export default function QueryStarters({ mount, ready }) {
 
   useEffect(() => {
     const editor = target?.editor;
-    if (!editor || !items[0] || editor.textContent.trim() || typedEditors.current.has(editor)) return;
+    if (!editor || loadedEditor !== editor || !items[0] || editor.textContent.trim() || typedEditors.current.has(editor)) return;
     typedEditors.current.add(editor);
     const text = items[0].query;
     let index = 0;
@@ -126,7 +133,7 @@ export default function QueryStarters({ mount, ready }) {
       editor.removeEventListener('pointerdown', stop);
       editor.removeEventListener('paste', stop);
     };
-  }, [target?.editor, items]);
+  }, [target?.editor, items, loadedEditor]);
 
   if (!target) return null;
   const accept = query => {
@@ -166,5 +173,6 @@ export default function QueryStarters({ mount, ready }) {
       <span className="hm-query-source">{item.source || t('overview.starters.try', 'Try this')}{item.timestamp ? ` · ${new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(item.timestamp)}` : ''}</span>
     </button>)}</div>
     {finishedTyping && <p className="hm-query-ready" role="status">{t('overview.starters.ready', 'Edit this question, or send it when you’re ready.')}</p>}
+    <ConnectedActivity />
   </section>, target.seat);
 }

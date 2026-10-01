@@ -14,3 +14,10 @@
 .hm-query-ready { font-size:12px; color:#626b78; margin:12px 0 0; animation:hm-query-ready-pulse 1.2s ease-in-out 3; }
 @keyframes hm-query-ready-pulse { 50% { opacity:.45; } }
 @media(prefers-reduced-motion:reduce) { .hm-query-ready { animation:none; } }
+
+.hm-connected-activity { margin-top:18px; font-size:12px; color:#626b78; }
+.hm-connected-activity summary { cursor:pointer; }
+.hm-connected-activity label { display:flex; gap:10px; align-items:center; margin:10px 0; }
+.hm-connected-activity input,.hm-connected-activity select { border:1px solid #ddd; border-radius:6px; padding:6px; max-width:70%; }
+.hm-connected-activity button { color:#117dff; padding:6px; }
+.hm-activity-subscription { display:flex; justify-content:space-between; margin:8px 0; }

@@ -259,6 +259,11 @@ class HiveMindApiClient {
     return `${this.controlPlane.defaults.baseURL}/auth/google${qs ? `?${qs}` : ''}`;
   }
 
+  async hivemindTriggers(payload) {
+    const { data } = await this.controlPlane.post('/v1/hivemind/triggers', payload);
+    return data;
+  }
+
   async requestLocalPreviewSignIn(email, returnTo) {
     const { data } = await this.controlPlane.post('/auth/local-preview/request', {
       email,
