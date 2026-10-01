@@ -202,6 +202,10 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
           fgRef.current?.zoom(2.4, ms);
         }
       },
+      focusNodes: (ids) => {
+        const selected = new Set(ids);
+        fgRef.current?.zoomToFit?.(700, 80, (node) => selected.has(node.id));
+      },
       refresh: () => fgRef.current?.refresh?.(),
     }),
     []
@@ -247,14 +251,15 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
   // ─── paintNode — MiroFish replica ─────────────────────────────────────────
   const paintNode = useCallback(
     (node, ctx, globalScale) => {
-      const baseColor = getNodeColor(node);
+      const baseColor = highlightSet.size && !highlightSet.has(node.id) ? '#aaa49c' : getNodeColor(node);
       const r = getNodeRadius(node);
       const shape = getNodeShape(node);
 
       const isSelected = selectedNode?.id === node.id;
       const isHighlight = highlightSet.has(node.id);
       const isDim = ((hasFilter && !filteredSet.has(node.id))
-        || (hasTraversal && !traversalSet.has(node.id))) && !isSelected && !isHighlight;
+        || (hasTraversal && !traversalSet.has(node.id))
+        || (highlightSet.size > 0 && !isHighlight)) && !isSelected && !isHighlight;
       const glow = 0.3;
 
       // ── Concentric rings (3 layers) ──

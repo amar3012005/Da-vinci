@@ -1952,6 +1952,21 @@ class HiveMindApiClient {
     return data;
   }
 
+  async recallGraphMemories(query, { scope, project } = {}, signal) {
+    const tier = String(scope || '').replace(/^tier:/, '');
+    const { data } = await this.controlPlane.post('/v1/proxy/recall', {
+      query,
+      mode: 'quick',
+      limit: 25,
+      include_live: false,
+      inject_parent_chunks: false,
+      ...(project ? { project } : {}),
+      ...(['personal', 'project', 'team', 'organization'].includes(tier)
+        ? { scope_filter: tier } : {}),
+    }, { signal });
+    return data;
+  }
+
   async quickSearch(query) {
     const { data } = await this.controlPlane.post('/v1/proxy/search/quick', { query });
     return data;

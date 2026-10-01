@@ -1136,7 +1136,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         const radialColor = getRadialMemoryColor(node);
         if (highlightedNodes.has(node.id)) return selectedNodeRef.current?.id === node.id ? "#0a0a0a" : "#117dff";
         if (traversalNodeIdRef.current && !traversalNodeIdsRef.current.has(node.id)) return "#74695f";
-        if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) return `${radialColor}44`;
+        if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) return "#aaa49c";
         return radialColor;
       }
       let baseColor = (t.name === "atlas" || t.name === "day" || t.name === "night")
@@ -1157,8 +1157,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         return t.name === "night" || t.name === "atlas" ? "#403b36" : "#b8b1a8";
       }
       if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) {
-        const fallback = baseColor.startsWith("#") ? hexToRgb(baseColor) : { r: 136, g: 136, b: 136 };
-        return `rgba(${fallback.r},${fallback.g},${fallback.b},${t.name === "atlas" ? 0.18 : 0.14})`;
+        return t.name === "night" || t.name === "atlas" ? "#403b36" : "#b8b1a8";
       }
       return baseColor;
     },
@@ -1495,6 +1494,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     d3Force: (...args) => fgRef.current?.d3Force?.(...args),
     d3ReheatSimulation: () => fgRef.current?.d3ReheatSimulation?.(),
     focusNode,
+    focusNodes: (ids) => {
+      const selected = new Set(ids);
+      fgRef.current?.zoomToFit?.(700, 100, (node) => selected.has(node.id));
+    },
     focusPoint,
     zoomBy,
     fitView,

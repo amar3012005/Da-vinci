@@ -10,7 +10,7 @@ import {
   Network,
   ArrowLeft,
   X,
-  Search,
+  ArrowUp,
   // eslint-disable-next-line no-unused-vars
   Filter,
   RefreshCw,
@@ -56,6 +56,9 @@ import MemoryMoss from "./MemoryMoss";
 import { PageWalkthrough, GRAPH_STEPS } from "../shared/Walkthrough";
 
 /* ─── Constants ──────────────────────────────────────────────────── */
+// Presentation switch: preserve the timeline for a future UI, but keep the
+// current bottom area dedicated to memory queries.
+const SHOW_GRAPH_TIMELINE = false;
 // Edge palette — semantically distinct hues so self-evolution chains are
 // visible at a glance. Tuned for white background; opacity tweaked per type
 // in the render path (Derives is the softest since most numerous).
@@ -731,8 +734,11 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const [traversalNodeId, setTraversalNodeId] = useState(null);
   const [radialDetailVisible, setRadialDetailVisible] = useState(true);
   const autoSelectedLatestRef = useRef(null);
-  const [searchInput, setSearchInput] = useState(""); // Immediate
-  const [searchQuery, setSearchQuery] = useState(""); // Debounced
+  const [searchInput, setSearchInput] = useState("");
+  const [queryBusy, setQueryBusy] = useState(false);
+  const [queryMessage, setQueryMessage] = useState("");
+  const [queryResults, setQueryResults] = useState([]);
+  const queryRequestRef = useRef(null);
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   // eslint-disable-next-line no-unused-vars
   const [projectFilter, setProjectFilter] = useState("");
@@ -1051,43 +1057,95 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // every visibility change was jarring (graph reset under the user). The graph
   // stays intact for the whole visit; a manual Refresh button is the only reload.
 
-  // Debounce search input
+  // A graph query is one bounded, authorized recall, never a chat/model turn.
+  // Cancel stale responses when the user changes the workspace or graph scope.
   useEffect(() => {
-    const timer = setTimeout(() => setSearchQuery(searchInput), 300);
+    queryRequestRef.current?.abort();
+    setQueryBusy(false);
+    setQueryResults([]);
+    setQueryMessage("");
+    setHighlightNodes(new Set());
+    return () => queryRequestRef.current?.abort();
+  }, [scope, tierProject, projectFilter, activeProject?.id]);
+
+  const submitGraphQuery = async (event) => {
+    event.preventDefault();
+    const query = searchInput.trim();
+    if (!query || queryBusy) return;
+    const request = new AbortController();
+    queryRequestRef.current?.abort();
+    queryRequestRef.current = request;
+    setQueryBusy(true);
+    setQueryMessage("Finding related memories…");
+    try {
+      const data = await apiClient.recallGraphMemories(query, {
+        scope,
+        project: scope === 'tier:project' ? tierProject : projectFilter,
+      }, request.signal);
+      if (request.signal.aborted) return;
+      const seen = new Set();
+      const results = (data.memories || []).filter((row) => {
+        const id = row.id || row.memory_id || row.memoryId;
+        if (!id || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      }).slice(0, 25).map((row) => ({
+        ...row,
+        id: row.id || row.memory_id || row.memoryId,
+        kind: 'memory',
+        title: row.title || row.content?.slice(0, 80) || 'Memory',
+        createdAt: row.created_at || row.createdAt,
+        group: row.memory_type || 'memory',
+      }));
+      // Recalled records outside the current node budget still belong on the
+      // graph. Merge them without dropping any existing spatial/edge context.
+      const missing = results.filter((row) => !graphData.nodes.some((node) => node.id === row.id));
+      const relations = await Promise.allSettled(missing.map((row) => apiClient.getMemoryRelations(row.id)));
+      if (request.signal.aborted) return;
+      const extraEdges = [];
+      relations.forEach((result) => {
+        if (result.status !== 'fulfilled') return;
+        Object.entries(result.value.by_type || {}).forEach(([type, rows]) => {
+          if (!isTraversalRelation({ type })) return;
+          rows.forEach((row) => extraEdges.push({
+            source: row.source_id, target: row.target_id, type, confidence: row.confidence,
+          }));
+        });
+      });
+      setGraphData((previous) => {
+        const nodeMap = new Map(previous.nodes.map((node) => [node.id, node]));
+        results.forEach((row) => {
+          if (!nodeMap.has(row.id)) nodeMap.set(row.id, { ...row, val: 4 });
+        });
+        const edgeMap = new Map([...previous.links, ...extraEdges].map((edge) => {
+          const source = typeof edge.source === 'object' ? edge.source.id : edge.source;
+          const target = typeof edge.target === 'object' ? edge.target.id : edge.target;
+          return [`${source}:${target}:${edge.type}`, { ...edge, source, target }];
+        }));
+        return normalizeGraphPayload([...nodeMap.values()], [...edgeMap.values()]);
+      });
+      setTraversalNodeId(null);
+      setSelectedNode(null);
+      setHighlightNodes(new Set(results.map((row) => row.id)));
+      setQueryResults(results);
+      setTemporalProgress(1);
+      setValidTimeProgress(1);
+      setTemporalPlaying(false);
+      setQueryMessage(results.length ? `${results.length} related memories · Explore the top matches` : 'No matching memories found. Try another topic.');
+    } catch (error) {
+      if (!request.signal.aborted) setQueryMessage('Could not search memories. Please try again.');
+    } finally {
+      if (!request.signal.aborted) setQueryBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!queryResults.length) return;
+    const timer = setTimeout(() => {
+      graphRef.current?.focusNodes?.(queryResults.slice(0, 5).map((row) => row.id));
+    }, 200);
     return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  // Search highlighting
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setHighlightNodes(new Set());
-      return;
-    }
-    const q = searchQuery.toLowerCase();
-    const matches = new Set();
-    graphData.nodes.forEach((n) => {
-      // Intelligent-graph nodes include kind=entity/document with .label, .aliases
-      if (
-        n.title?.toLowerCase().includes(q) ||
-        n.content?.toLowerCase().includes(q) ||
-        n.label?.toLowerCase().includes(q) ||
-        n.aliases?.some?.((a) => String(a).toLowerCase().includes(q)) ||
-        n.tags?.some((t) => t.toLowerCase().includes(q))
-      ) {
-        matches.add(n.id);
-      }
-    });
-    setHighlightNodes(matches);
-
-    // Zoom to first match
-    if (matches.size > 0 && graphRef.current) {
-      const firstId = [...matches][0];
-      const node = graphData.nodes.find((n) => n.id === firstId);
-      if (node) {
-        graphRef.current.focusNode?.(node, 700, 3.6);
-      }
-    }
-  }, [searchQuery, graphData.nodes]);
+  }, [queryResults]);
 
   // Node click
   const handleNodeClick = useCallback((node) => {
@@ -1139,7 +1197,6 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     };
   }, [meta, graphData]);
 
-  const matchCount = highlightNodes.size;
 
   const hubCounts = useMemo(() => {
     const counts = { projects: 0, meetings: 0, connectors: 0, employees: 0, personal: 0, knowledge: 0 };
@@ -1359,22 +1416,6 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       <div
         className="shrink-0 px-3 sm:px-5 py-3 flex items-center gap-2.5 z-20 overflow-x-auto"
       >
-        {/* Search */}
-        <div className="relative shrink-0 hidden sm:block" style={{ minWidth: 210, maxWidth: 300 }}>
-          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={matchCount > 0 ? t('memoryGraph.matches', '{{count}} matches', { count: matchCount }) : t('memoryGraph.search', 'Search memories')}
-            className={`w-full pl-7 pr-2 py-1.5 border rounded-lg text-[11px] font-['Space_Grotesk'] focus:outline-none ${
-              graphTheme === "night"
-                ? "border-[#2f2925] bg-[#080808] text-[#fff0e5] placeholder:text-[#746b63] focus:border-[#ff746d]/50"
-                : "border-[#e6dfd3] bg-[#fffaf4] text-[#111111] placeholder:text-[#a99b8d] focus:border-[#d54d45]/55 focus:ring-2 focus:ring-[#d54d45]/10"
-            }`}
-          />
-        </div>
-
         {/* Node budget */}
         <div className={`flex items-center gap-0.5 rounded-lg border p-0.5 shrink-0 ${toolbarControlClass}`}>
           {[
@@ -1574,7 +1615,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       </div>
 
       {/* Graph canvas */}
-      <div ref={graphShellRef} className="flex-1 relative">
+      <div ref={graphShellRef} className="flex-1 min-h-0 relative overflow-hidden">
         <button
           type="button"
           onClick={() => {
@@ -1774,7 +1815,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                 <div className={`mt-2 border-t pt-2 text-[10px] ${panelMutedText}`}>Radial distance = time · newer → outward · undated memories use an outer shell</div>
               </div>
             )}
-            {bitemporalMode ? (
+            {SHOW_GRAPH_TIMELINE && (bitemporalMode ? (
               <div id="memory-graph-bitemporal-controls" className={`absolute bottom-4 left-1/2 z-20 flex w-[min(920px,calc(100%-32px))] -translate-x-1/2 flex-col gap-2 rounded-xl border px-4 py-3 shadow-xl backdrop-blur-xl ${panelClass}`} aria-label="Bitemporal time travel controls">
                 <div className="flex items-center justify-between gap-3">
                   <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${panelMutedText}`}>Bitemporal view · top-down</div>
@@ -1813,7 +1854,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                 <span className={`w-[82px] shrink-0 text-right text-[10px] tabular-nums ${graphTheme === "night" ? "text-[#e8dbcf]" : "text-[#525252]"}`}>{temporalCutoff ? new Date(temporalCutoff).toLocaleDateString() : "All time"}</span>
                 <button type="button" onClick={() => { setTemporalProgress(1); setTemporalPlaying(false); setIsLiveMode(true); }} className={`shrink-0 rounded-md border px-2 py-1 text-[10px] ${panelSoftButton}`}>Now</button>
               </div>
-            )}
+            ))}
           </>
         )}
 
@@ -2288,6 +2329,38 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="shrink-0 px-4 pb-4 pt-2 z-20">
+        <div className="mx-auto max-w-3xl">
+          <div aria-live="polite" className={`text-center text-xs mb-2 ${panelMutedText}`}>{queryMessage}</div>
+          {queryResults.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto mb-2 pb-1">
+              {queryResults.slice(0, 5).map((row, index) => (
+                <button key={row.id} type="button" onClick={() => handleNavigate(row.id)}
+                  className={`shrink-0 max-w-[180px] truncate rounded-full px-3 py-1 text-xs ${panelSoftButton}`}
+                  title={row.title}>{index + 1}. {row.title}</button>
+              ))}
+            </div>
+          )}
+          <form onSubmit={submitGraphQuery} className={`flex items-center gap-3 rounded-full border px-5 py-2 shadow-sm ${graphTheme === 'night' ? 'bg-[#151311] border-[#302c28]' : 'bg-white border-[#e5e5e5]'}`}>
+            <input value={searchInput} onChange={(event) => {
+              setSearchInput(event.target.value);
+              if (!event.target.value.trim()) {
+                queryRequestRef.current?.abort();
+                setQueryBusy(false);
+                setQueryResults([]);
+                setQueryMessage('');
+                setHighlightNodes(new Set());
+              }
+            }} aria-label="Search your memories" placeholder="Explore your memories…" maxLength={2000}
+              className={`flex-1 min-w-0 bg-transparent border-0 py-2 text-base outline-none ${graphTheme === 'night' ? 'text-white' : 'text-[#222]'}`} />
+            <button type="submit" disabled={queryBusy || !searchInput.trim()} aria-label="Send"
+              className="shrink-0 h-10 w-10 rounded-full bg-[#277be2] text-white flex items-center justify-center disabled:opacity-40 transition-opacity">
+              <ArrowUp size={22} className={queryBusy ? 'animate-pulse' : ''} />
+            </button>
+          </form>
+        </div>
       </div>
 
       {/* PageIndex Mind Map Modal */}
