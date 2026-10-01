@@ -360,7 +360,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete, theme =
       animate={{ x: 0, opacity: 1 }}
       exit={{ opacity: 0, x: 40 }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className={`absolute inset-y-0 right-0 w-full ${radial ? "max-w-[min(420px,calc(100vw-16px))]" : "max-w-lg"} z-50 flex flex-col`}
+      className={`absolute top-0 bottom-[160px] right-0 w-full ${radial ? "max-w-[min(420px,calc(100vw-16px))]" : "max-w-lg"} z-50 flex flex-col`}
     >
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 lg:hidden" onClick={onClose} />
 
@@ -2333,7 +2333,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         )}
       </div>
 
-      <div className="absolute bottom-5 left-0 px-4 z-20 pointer-events-none" style={{ right: detailPanelWidth }}>
+      <div className="absolute bottom-5 inset-x-0 px-4 z-20 pointer-events-none">
         <div className="mx-auto max-w-3xl pointer-events-auto">
           <div aria-live="polite" className={`text-center text-xs mb-2 ${panelMutedText}`}>{queryMessage}</div>
           {queryResults.length > 0 && (
