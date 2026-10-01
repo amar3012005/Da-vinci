@@ -24,3 +24,23 @@ test('admitted Dreaming settings preserve tenant cookie, browser origin and exac
   assert.equal(response.status, 200);
   assert.equal((await response.json()).enabled, false);
 });
+
+for (const path of ['agenda', 'connectors']) {
+  test(`Dreaming ${path} is admission-gated JSON and never SPA HTML`, async () => {
+    const address = `https://next.singulancelabs.com/hivemind/dreamer/${path}`;
+    const denied = await worker.fetch(new Request(address), {});
+    assert.equal(denied.status, 401);
+    assert.equal(denied.headers.get('cache-control'), 'no-store');
+    const body = { enabled: true, accountIds: ['ca_fixture'] };
+    const admitted = await worker.fetch(new Request(address, { method: 'PUT',
+      headers: { cookie: 'dsh-auth-test=signed; hm_harness_admitted=1', origin: 'https://next.singulancelabs.com', 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }), { HARNESS_CHAT: { fetch: async request => {
+      assert.equal(new URL(request.url).pathname, `/hivemind/dreamer/${path}`);
+      assert.deepEqual(await request.json(), body);
+      return Response.json({ enabled: true });
+    } } });
+    assert.equal(admitted.status, 200);
+    assert.equal((await admitted.json()).enabled, true);
+  });
+}
