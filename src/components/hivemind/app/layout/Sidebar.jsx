@@ -201,7 +201,7 @@ export default function Sidebar({
               className="flex flex-col overflow-hidden"
             >
               {org && (
-                <span className="text-[#a3a3a3] text-[10px] font-mono truncate max-w-[140px]">
+                <span className="text-[#737373] text-[10px] font-mono truncate max-w-[140px]">
                   {activeSection === 'hyperagents' ? 'HYPERAGENTS' : activeSection === 'tara' ? 'TARA' : 'HIVEMIND'} · {org.name || org.slug || org.id?.slice(0, 8)}
                 </span>
               )}
@@ -213,7 +213,7 @@ export default function Sidebar({
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-expanded={!collapsed}
           onClick={() => onCollapsedChange?.(!collapsed)}
-          className="p-1 rounded-md hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors flex-shrink-0"
+          className="p-1 rounded-md hover:bg-[#f3f1ec] text-[#737373] hover:text-[#333333] transition-colors flex-shrink-0"
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
@@ -225,7 +225,7 @@ export default function Sidebar({
           <div key={si}>
             {section.label && !collapsed && (
               <div className="px-2.5 mb-1.5">
-                <span className="text-[#a3a3a3] text-[10px] font-medium uppercase tracking-[0.08em]">
+                <span className="text-[#737373] text-[11px] font-semibold uppercase tracking-[0.08em]">
                   {section.label}
                 </span>
               </div>
@@ -246,14 +246,14 @@ export default function Sidebar({
                   <div key={item.to}>
                     {hasChildren && !collapsed ? (
                       <div
-                        className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] group`}
+                        className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[15px] group`}
                       >
                         <item.icon
                           size={18}
                           strokeWidth={1.75}
-                          className="text-[#a3a3a3] flex-shrink-0"
+                          className="text-[#737373] flex-shrink-0"
                         />
-                        <span className="text-[#525252] font-medium truncate">
+                        <span className="text-[#333333] font-medium truncate">
                           {item.label}
                         </span>
                       </div>
@@ -261,7 +261,7 @@ export default function Sidebar({
                       <NavLink
                         to={item.to}
                         data-tour-id={item.to}
-                        className={`relative flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all duration-150 group`}
+                        className={`relative flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[15px] transition-all duration-150 group`}
                         title={collapsed ? item.label : undefined}
                       >
                         {isActive && (
@@ -275,13 +275,13 @@ export default function Sidebar({
                           size={18}
                           strokeWidth={1.75}
                           className={`relative z-10 transition-colors flex-shrink-0 ${
-                            isActive ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'
+                            isActive ? 'text-[#0a0a0a]' : 'text-[#737373] group-hover:text-[#333333]'
                           }`}
                         />
                         {!collapsed && (
                           <span
                             className={`relative z-10 transition-colors truncate ${
-                              isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#525252] group-hover:text-[#0a0a0a]'
+                              isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#333333] group-hover:text-[#0a0a0a]'
                             }`}
                           >
                             {item.label}
@@ -300,14 +300,14 @@ export default function Sidebar({
                             <NavLink
                               key={child.to}
                               to={child.to}
-                              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] transition-all duration-150 group ${
-                                cIsActive ? 'bg-[#f3f1ec] text-[#0a0a0a] font-medium' : 'text-[#525252] hover:text-[#0a0a0a] hover:bg-[#f3f1ec]/50'
+                              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-[14px] transition-all duration-150 group ${
+                                cIsActive ? 'bg-[#f3f1ec] text-[#0a0a0a] font-medium' : 'text-[#333333] hover:text-[#0a0a0a] hover:bg-[#f3f1ec]/50'
                               }`}
                             >
                               <child.icon
                                 size={14}
                                 strokeWidth={1.75}
-                                className={`flex-shrink-0 ${cIsActive ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'}`}
+                                className={`flex-shrink-0 ${cIsActive ? 'text-[#0a0a0a]' : 'text-[#737373] group-hover:text-[#333333]'}`}
                               />
                               <span className="truncate">{child.label}</span>
                             </NavLink>
@@ -334,7 +334,7 @@ export default function Sidebar({
         <div className="px-2.5 pt-2.5 pb-1">
           {!collapsed && (
             <div className="px-2.5 mb-1.5">
-              <span className="text-[#a3a3a3] text-[10px] font-medium uppercase tracking-[0.08em]">
+              <span className="text-[#737373] text-[11px] font-semibold uppercase tracking-[0.08em]">
                 {tt('groups.account', 'Account')}
               </span>
             </div>
@@ -350,7 +350,7 @@ export default function Sidebar({
                   key={item.to}
                   to={item.to}
                   data-tour-id={item.to}
-                  className={`relative flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all duration-150 group`}
+                  className={`relative flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[15px] transition-all duration-150 group`}
                   title={collapsed ? item.label : undefined}
                 >
                   {isActive && (
@@ -364,13 +364,13 @@ export default function Sidebar({
                     size={18}
                     strokeWidth={1.75}
                     className={`relative z-10 transition-colors flex-shrink-0 ${
-                      isActive ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'
+                      isActive ? 'text-[#0a0a0a]' : 'text-[#737373] group-hover:text-[#333333]'
                     }`}
                   />
                   {!collapsed && (
                     <span
                       className={`relative z-10 transition-colors truncate ${
-                        isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#525252] group-hover:text-[#0a0a0a]'
+                        isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#333333] group-hover:text-[#0a0a0a]'
                       }`}
                     >
                       {item.label}
@@ -395,7 +395,7 @@ export default function Sidebar({
                 <p className="text-[#0a0a0a] text-xs truncate">
                   {user.display_name || user.email || 'User'}
                 </p>
-                <p className="text-[#a3a3a3] text-[10px] font-mono truncate">
+                <p className="text-[#737373] text-[10px] font-mono truncate">
                   {planLabel}
                 </p>
                 <CreditBalance credits={usage?.credits} inline />
@@ -404,7 +404,7 @@ export default function Sidebar({
           )}
           <button
             onClick={logout}
-            className={`flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 w-full px-2.5 py-2 rounded-lg text-[13px] text-[#a3a3a3] hover:text-[#dc2626] hover:bg-[#dc2626]/5 transition-all`}
+            className={`flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 w-full px-2.5 py-2 rounded-lg text-[15px] text-[#737373] hover:text-[#dc2626] hover:bg-[#dc2626]/5 transition-all`}
             title={collapsed ? 'Sign Out' : undefined}
           >
             <LogOut size={16} />
