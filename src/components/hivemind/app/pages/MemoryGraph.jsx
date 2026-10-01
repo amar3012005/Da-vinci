@@ -1126,12 +1126,13 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       });
       setTraversalNodeId(null);
       setSelectedNode(null);
+      setRadialDetailVisible(false);
       setHighlightNodes(new Set(results.map((row) => row.id)));
       setQueryResults(results);
       setTemporalProgress(1);
       setValidTimeProgress(1);
       setTemporalPlaying(false);
-      setQueryMessage(results.length ? `${results.length} related memories · Explore the top matches` : 'No matching memories found. Try another topic.');
+      setQueryMessage(results.length ? `${results.length} related ${results.length === 1 ? 'memory' : 'memories'} · Explore the top matches` : 'No matching memories found. Try another topic.');
     } catch (error) {
       if (!request.signal.aborted) setQueryMessage('Could not search memories. Please try again.');
     } finally {
@@ -1295,6 +1296,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   }, [temporalMode, temporalCutoff, diffWindowMs, graphData.nodes]);
 
   useEffect(() => {
+    if (highlightNodes.size > 0) return;
     const candidate = graphData.nodes
       .filter((node) => node && node.kind !== "document" && node.kind !== "entity")
       .map((node) => ({ node, ts: getNodeTimestamp(node) || 0 }))
@@ -1312,7 +1314,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       autoSelectedLatestRef.current = candidate.id;
       setSelectedNode(candidate);
     }
-  }, [graphData.nodes, selectedNode]);
+  }, [graphData.nodes, selectedNode, highlightNodes]);
 
   // Auto-play: advance temporalProgress on a rAF loop while playing.
   // Total animation duration scales w/ speed: base 12s, /speed.

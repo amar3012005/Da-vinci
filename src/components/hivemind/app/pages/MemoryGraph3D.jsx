@@ -1496,7 +1496,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     focusNode,
     focusNodes: (ids) => {
       const selected = new Set(ids);
-      fgRef.current?.zoomToFit?.(700, 100, (node) => selected.has(node.id));
+      const fg = fgRef.current;
+      const nodes = (graphDataRef.current?.nodes || []).filter((node) => selected.has(node.id));
+      if (!fg || !nodes.length) return;
+      const points = nodes.map((node) => new THREE.Vector3(node.x || 0, node.y || 0, node.z || 0));
+      const center = new THREE.Box3().setFromPoints(points).getCenter(new THREE.Vector3());
+      const radius = Math.max(...points.map((point) => point.distanceTo(center)), 100);
+      const direction = fg.camera().position.clone().sub(fg.controls().target).normalize();
+      if (!direction.lengthSq()) direction.set(0, 0, 1);
+      fg.cameraPosition(center.clone().add(direction.multiplyScalar(Math.max(450, radius * 3.2))), center, 700);
     },
     focusPoint,
     zoomBy,
