@@ -9,6 +9,7 @@ import AgentAvatar from '../hyperagents/AgentAvatar';
 import apiClient from '../shared/api-client';
 
 const pageTitles = {
+  '/hivemind/app/overview/dreaming': 'Dreaming',
   '/hivemind/app/overview': 'Overview',
   '/hivemind/app/memories': 'Memories',
   '/hivemind/app/keys': 'API Keys',
@@ -32,6 +33,7 @@ const pageTitles = {
 };
 
 const pageDescriptions = {
+  '/hivemind/app/overview/dreaming': 'Company memory exploration → Flashbacks',
   '/hivemind/app/overview': 'Your memory engine at a glance',
   '/hivemind/app/memories': 'Browse and manage stored knowledge',
   '/hivemind/app/keys': 'Manage API authentication keys',

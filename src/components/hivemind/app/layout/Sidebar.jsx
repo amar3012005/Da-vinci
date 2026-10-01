@@ -5,6 +5,7 @@ import SingulanceMark from '../shared/SingulanceMark';
 import SingulanceBrand from '../shared/SingulanceBrand';
 import {
   LayoutDashboard,
+  Moon,
   Brain,
   Key,
   Cable,
@@ -101,6 +102,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
       label: null,
       items: [
         { to: '/hivemind/app/overview', icon: LayoutDashboard, label: tt('overview', 'Overview') },
+        { to: '/hivemind/app/overview/dreaming', icon: Moon, label: tt('dreaming', 'Dreaming') },
       ],
     },
     {
@@ -236,7 +238,8 @@ export default function Sidebar({
                 const pathOnly = item.to.split('?')[0];
                 const isActive =
                   location.pathname === pathOnly ||
-                  location.pathname.startsWith(`${pathOnly}/`);
+                  (location.pathname.startsWith(`${pathOnly}/`)
+                    && !(pathOnly === '/hivemind/app/overview' && location.pathname === '/hivemind/app/overview/dreaming'));
                 const hasChildren = item.children && item.children.length > 0;
 
                 return (
