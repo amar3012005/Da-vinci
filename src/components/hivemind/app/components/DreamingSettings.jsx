@@ -18,15 +18,22 @@ export default function DreamingSettings({ organizationId }) {
   const [state, setState] = useState(null);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [connectors, setConnectors] = useState(null);
+  const [connectorBusy, setConnectorBusy] = useState(false);
+  const [connectorMessage, setConnectorMessage] = useState('');
   useEffect(() => {
     const controller = new AbortController();
-    setState(null); setError(null);
+    setState(null); setError(null); setConnectors(null); setConnectorMessage('');
     (async () => {
       await authenticate(controller.signal);
       const response = await fetch('/hivemind/dreamer/settings', { credentials: 'include', signal: controller.signal });
       if (!response.ok) throw new Error('Dreaming settings are unavailable right now.');
       const value = await response.json();
       if (!controller.signal.aborted) setState(value);
+      const appsResponse = await fetch('/hivemind/dreamer/connectors', { credentials: 'include', signal: controller.signal });
+      if (!appsResponse.ok) throw new Error('Connected apps could not be loaded.');
+      const apps = await appsResponse.json();
+      if (!controller.signal.aborted) setConnectors(apps);
     })().catch((failure) => { if (!controller.signal.aborted) setError(failure.message); });
     return () => controller.abort();
   }, [organizationId]);
@@ -43,6 +50,19 @@ export default function DreamingSettings({ organizationId }) {
       setState(await response.json());
     } catch (failure) { setError(failure.message); }
     finally { setSaving(false); }
+  }
+  async function saveConnectors(enabled, accountIds) {
+    if (connectorBusy || !connectors) return;
+    setConnectorBusy(true); setConnectorMessage('');
+    try {
+      const response = await fetch('/hivemind/dreamer/connectors', { method: 'PUT', credentials: 'include',
+        headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled, accountIds }) });
+      const value = await response.json();
+      if (!response.ok) throw new Error(value.error === 'read_tools_unavailable'
+        ? 'This app has no compatible read tools yet. Your previous choices are unchanged.' : 'Access could not be saved. Please try again.');
+      setConnectors(value); setConnectorMessage('Saved for future dreams.');
+    } catch (failure) { setConnectorMessage(failure.message); }
+    finally { setConnectorBusy(false); }
   }
   return <section aria-label="Company dreaming">
     <div className="flex items-start justify-between gap-5">
@@ -63,5 +83,25 @@ export default function DreamingSettings({ organizationId }) {
         {saving ? 'Saving…' : state?.enabled ? 'On' : 'Off'}
       </button>
     </div>
+    <section aria-label="Dreaming connected apps" className="mt-5 pt-5 border-t border-[#ebe8e2]">
+      <label className="flex items-center justify-between gap-4 text-sm font-medium text-[#262626]">
+        <span>Use connected apps while dreaming</span>
+        <input type="checkbox" role="switch" aria-label="Use connected apps while dreaming" checked={Boolean(connectors?.enabled)}
+          disabled={!connectors?.available || connectorBusy} className="accent-[#117dff]" onChange={event => saveConnectors(event.target.checked,
+            connectors?.accounts.filter(account => account.enabled).map(account => account.id) || [])} />
+      </label>
+      <p className="text-xs text-[#737373] mt-2">Read-only. Choose which of your connections Dreaming may explore when useful. Discoveries may be shared with your company in Flashbacks. Turning access off prevents future reads; saved Flashbacks remain.</p>
+      {connectors?.enabled && <div className="mt-3 space-y-3">
+        {!connectors.accounts.length && <p className="text-sm text-[#737373]">No connected apps yet. Add them in Connectors.</p>}
+        {connectors.accounts.map(account => <label key={account.id} className="flex items-center justify-between gap-4 text-sm text-[#525252]">
+          <span>{account.label}<small className="block text-xs text-[#a3a3a3]">Read-only</small></span>
+          <input type="checkbox" checked={account.enabled} disabled={connectorBusy} className="accent-[#117dff]"
+            aria-label={`Allow Dreaming to read ${account.label}`} onChange={event => saveConnectors(true,
+              connectors.accounts.filter(item => item.id === account.id ? event.target.checked : item.enabled).map(item => item.id))} />
+        </label>)}
+      </div>}
+      {connectorBusy && <p role="status" className="text-xs text-[#737373] mt-2">Saving access and preparing read tools…</p>}
+      {connectorMessage && <p role="status" className="text-xs text-[#737373] mt-2">{connectorMessage}</p>}
+    </section>
   </section>;
 }
