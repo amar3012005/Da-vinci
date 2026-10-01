@@ -130,7 +130,10 @@ export const HARNESS_BOOT_STAGES = [
  * A compact, milestone-driven boot indicator. Unlike a timer-based progress
  * bar, each advance corresponds to a completed browser or runner boundary.
  */
-export function LoadingSurface({ stage = 0 }) {
+export function LoadingSurface({ stage = 0, dreaming = false }) {
+  if (dreaming) return <div className="h-full grid place-items-center bg-white" role="status" aria-label="Opening Dreaming">
+    <span className="text-sm text-[#737373]">🌙 Opening Dreaming…</span>
+  </div>;
   const safeStage = Math.max(0, Math.min(stage, HARNESS_BOOT_STAGES.length - 1));
   // `stage` is the active boundary, not a completed one. The 4/4 state only
   // exists after the overlay is removed and chat is interactive.
@@ -164,15 +167,18 @@ export function LoadingSurface({ stage = 0 }) {
 }
 
 /** Past-session navigation is independent of the first interactive composer. */
-export function nativeHarnessMounted(container) {
+export function nativeHarnessMounted(container, { dreaming = false } = {}) {
+  if (dreaming) return Boolean(container?.querySelector?.('[data-dreaming-ready="true"] [data-composer-seat]'));
   return Boolean(container?.querySelector?.('[data-composer-seat]'));
 }
 
 function waitForNativeHarnessMount(container, signal) {
-  if (nativeHarnessMounted(container)) return Promise.resolve();
+  const dreaming = window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`;
+  const mounted = () => nativeHarnessMounted(container, { dreaming });
+  if (mounted()) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const observer = new MutationObserver(() => {
-      if (!nativeHarnessMounted(container)) return;
+      if (!mounted()) return;
       cleanup();
       resolve();
     });
@@ -190,10 +196,10 @@ function waitForNativeHarnessMount(container, signal) {
       signal?.removeEventListener('abort', onAbort);
     };
     signal?.addEventListener('abort', onAbort, { once: true });
-    observer.observe(container, { childList: true, subtree: true });
+    observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-dreaming-ready'] });
     // A synchronous native insertion can occur between the first check and
     // observer registration.
-    if (nativeHarnessMounted(container)) {
+    if (mounted()) {
       cleanup();
       resolve();
     }
@@ -391,7 +397,7 @@ export default function HarnessSurface() {
   }
 
   return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface>
-    {state.phase === 'loading' && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} /></div>}
-    <div ref={mountRef} className="h-full min-h-0" />
+    {state.phase === 'loading' && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} dreaming={window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`} /></div>}
+    <div ref={mountRef} className="h-full min-h-0" style={{ visibility: state.phase === 'ready' ? 'visible' : 'hidden' }} />
   </div>;
 }
