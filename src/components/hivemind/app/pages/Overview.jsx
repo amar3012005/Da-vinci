@@ -49,7 +49,7 @@ import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/up
 // modal + save-to-HIVEMIND flow, same job-title derivation.
 import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './WebStudio';
 import HarnessChatSurface from './HarnessChatSurface';
-import HarnessSurface from './HarnessSurface';
+import HarnessSurface, { LoadingSurface } from './HarnessSurface';
 import DreamingPage from './DreamingPage';
 
 const LAST_HARNESS_SESSION_KEY = 'hm.lastHarnessSession';
@@ -88,7 +88,7 @@ function MobileChatRedirect() {
 function ResumeHarnessSession({ path }) {
   const navigate = useNavigate();
   useEffect(() => { navigate(path, { replace: true }); }, [path, navigate]);
-  return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
+  return <section className="h-full min-h-0 w-full overflow-hidden"><LoadingSurface /></section>;
 }
 
 // ─── Animation variants ──────────────────────────────────────────

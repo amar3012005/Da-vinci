@@ -68,6 +68,25 @@ function loadHarnessStylesheet(href) {
   });
 }
 
+/** Fetch ahead without changing the boot table's execution order. */
+function preloadHarnessAssets(rows, shellUrl) {
+  const preload = (href, module = false) => {
+    const marker = `${module ? 'module' : 'script'}:${href}`;
+    if ([...document.head.querySelectorAll('link[data-hive-boot-preload]')]
+      .some(link => link.dataset.hiveBootPreload === marker)) return;
+    const link = document.createElement('link');
+    link.rel = module ? 'modulepreload' : 'preload';
+    if (!module) link.as = 'script';
+    link.href = href;
+    link.dataset.hiveBootPreload = marker;
+    document.head.append(link);
+  };
+  for (const row of rows || []) {
+    if (['script-src', 'script-preload'].includes(row?.kind) && typeof row.src === 'string') preload(row.src);
+  }
+  preload(shellUrl, true);
+}
+
 /** Execute the typed Harness boot table exactly as its static worker does. */
 async function applyHarnessInjections(rows) {
   if (!Array.isArray(rows)) throw new Error('Harness returned an invalid boot graph.');
@@ -235,7 +254,7 @@ async function establishHarnessSession({ fresh = false } = {}) {
  * only placement and HIVE authentication; the mounted client owns sessions,
  * streams, replay, nodes, tool cards, approvals, subagents and trajectory.
  */
-export default function HarnessSurface() {
+export default function HarnessSurface({ sessionEstablished = false } = {}) {
   const mountRef = useRef(null);
   const [state, setState] = useState({ phase: 'loading', stage: 0, message: null });
 
@@ -270,7 +289,8 @@ export default function HarnessSurface() {
     };
 
     const start = async () => {
-      const admission = await establishHarnessSession({ fresh: isFreshHarnessRoute() });
+      const admission = sessionEstablished ? { mode: 'harness' }
+        : await establishHarnessSession({ fresh: isFreshHarnessRoute() });
       if (admission.mode === 'legacy') {
         // Never render or boot the native client for a legacy user.  This
         // replaces the former "not admitted" dead end with the established
@@ -279,7 +299,14 @@ export default function HarnessSurface() {
         return;
       }
       setLoadingStage(1);
-      const bootResponse = await fetch(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
+      let bootResponse = await fetch(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
+      // Dreaming just established this cookie. If it expires before boot,
+      // re-admit once; the runner remains the authentication authority.
+      if (sessionEstablished && [401, 403].includes(bootResponse.status)) {
+        const renewed = await establishHarnessSession();
+        if (renewed.mode !== 'harness') { window.location.replace(HARNESS_OVERVIEW_PATH); return; }
+        bootResponse = await fetch(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
+      }
       if (!bootResponse.ok) throw new Error('HIVEMIND could not verify your session.');
       const boot = await bootResponse.json();
       if (cancelled) return;
@@ -294,7 +321,15 @@ export default function HarnessSurface() {
       }
       const styles = Array.isArray(boot.styles) ? boot.styles : [];
       if (styles.length === 0) throw new Error('HIVEMIND could not load the conversation appearance.');
-      await Promise.all(styles.map(loadHarnessStylesheet));
+      const shellUrl = harnessShellUrl(boot.injections);
+      preloadHarnessAssets(boot.injections, shellUrl);
+      // Styles and ordered script execution are independent downloads. Wait
+      // for both before mounting, avoiding flashes of unstyled conversation.
+      await Promise.all([
+        Promise.all(styles.map(loadHarnessStylesheet)),
+        installedRevision !== bootRevision ? applyHarnessInjections(boot.injections) : Promise.resolve(),
+      ]);
+      if (installedRevision !== bootRevision) window.__HIVE_HARNESS_BOOT_REV__ = bootRevision;
       setLoadingStage(2);
       if (cancelled) return;
       // Reuse the exact authenticated speech-to-text transport used by
@@ -320,11 +355,6 @@ export default function HarnessSurface() {
       window.__HIVEMIND_DELETE_SESSION__ = async (sessionId) => {
         await apiClient.controlPlane.delete(`/v1/harness-chat/sessions/${encodeURIComponent(sessionId)}`);
       };
-      const shellUrl = harnessShellUrl(boot.injections);
-      if (installedRevision !== bootRevision) {
-        await applyHarnessInjections(boot.injections);
-        window.__HIVE_HARNESS_BOOT_REV__ = bootRevision;
-      }
       if (cancelled) return;
       // A fast OS → BRAIN transition can create the next host while the
       // previous native app is still disposing. Wait for that teardown before

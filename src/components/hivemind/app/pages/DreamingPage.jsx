@@ -26,6 +26,7 @@ export default function DreamingPage() {
       if (!response.ok) throw new Error('Dreaming could not be loaded. Please try again.');
       const value = await response.json();
       if (!controller.signal.aborted) setState(value);
+      if (value.sessionReady || value.hasRuns) return;
       const employees = await fetch('/api/hivemind/employees', { credentials: 'include', signal: controller.signal });
       if (employees.ok) {
         const data = await employees.json();
@@ -67,7 +68,7 @@ export default function DreamingPage() {
     } catch (failure) { setError(failure.message); }
     finally { setBusy(false); }
   }
-  if (state?.sessionReady || (state?.hasRuns && !starting)) return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface key={`dreaming-${org?.id || 'company'}`} /></section>;
+  if (state?.sessionReady || (state?.hasRuns && !starting)) return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface sessionEstablished key={`dreaming-${org?.id || 'company'}`} /></section>;
   if (!state) return <div className="h-full flex items-center justify-center text-sm text-neutral-500" role="status">{error || 'Opening Dreaming…'}</div>;
   return <div className="h-full overflow-y-auto flex items-center justify-center p-6 sm:p-10">
     <section className="w-full max-w-2xl rounded-3xl border border-blue-100 bg-gradient-to-br from-[#f5f8ff] via-white to-[#f8f5ff] p-7 sm:p-10" aria-label="Try Dreaming">
