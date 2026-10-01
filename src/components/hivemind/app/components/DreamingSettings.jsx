@@ -2,8 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { Moon } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
+const appNames = { gmail: 'Gmail', slack: 'Slack', googledocs: 'Google Docs', googledrive: 'Google Drive', github: 'GitHub', notion: 'Notion', outlook: 'Outlook' };
+function AccessSwitch({ checked, disabled, label, onChange }) {
+  return <button type="button" role="switch" aria-label={label} aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)}
+    className={`relative w-9 h-5 rounded-full shrink-0 transition-colors disabled:opacity-50 ${checked ? 'bg-[#117dff]' : 'bg-neutral-300'}`}>
+    <span className={`absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${checked ? 'translate-x-4' : ''}`} />
+  </button>;
+}
+
 // Reuse Harness admission only; Settings never mounts a chat or agent runtime.
-async function authenticate(signal) {
+export async function authenticateDreaming(signal) {
   const { data } = await apiClient.controlPlane.post('/v1/harness-chat/bootstrap', {}, { signal });
   if (data?.mode !== 'harness' || !data.ticket) throw new Error('Dreaming is unavailable for this workspace.');
   const response = await fetch('/api/hivemind/session/establish', {
@@ -25,7 +33,7 @@ export default function DreamingSettings({ organizationId }) {
     const controller = new AbortController();
     setState(null); setError(null); setConnectors(null); setConnectorMessage('');
     (async () => {
-      await authenticate(controller.signal);
+      await authenticateDreaming(controller.signal);
       const response = await fetch('/hivemind/dreamer/settings', { credentials: 'include', signal: controller.signal });
       if (!response.ok) throw new Error('Dreaming settings are unavailable right now.');
       const value = await response.json();
@@ -84,22 +92,23 @@ export default function DreamingSettings({ organizationId }) {
       </button>
     </div>
     <section aria-label="Dreaming connected apps" className="mt-5 pt-5 border-t border-[#ebe8e2]">
-      <label className="flex items-center justify-between gap-4 text-sm font-medium text-[#262626]">
+      <div className="flex items-center justify-between gap-4 text-sm font-medium text-[#262626]">
         <span>Use connected apps while dreaming</span>
-        <input type="checkbox" role="switch" aria-label="Use connected apps while dreaming" checked={Boolean(connectors?.enabled)}
-          disabled={!connectors?.available || connectorBusy} className="accent-[#117dff]" onChange={event => saveConnectors(event.target.checked,
+        <AccessSwitch label="Use connected apps while dreaming" checked={Boolean(connectors?.enabled)}
+          disabled={!connectors?.available || connectorBusy} onChange={enabled => saveConnectors(enabled,
             connectors?.accounts.filter(account => account.enabled).map(account => account.id) || [])} />
-      </label>
+      </div>
       <p className="text-xs text-[#737373] mt-2">Read-only. Choose which of your connections Dreaming may explore when useful. Discoveries may be shared with your company in Flashbacks. Turning access off prevents future reads; saved Flashbacks remain.</p>
       {connectors?.enabled && <div className="mt-3 space-y-3">
         {!connectors.accounts.length && <p className="text-sm text-[#737373]">No connected apps yet. Add them in Connectors.</p>}
-        {connectors.accounts.map(account => <label key={account.id} className="flex items-center justify-between gap-4 text-sm text-[#525252]">
-          <span>{account.label}<small className="block text-xs text-[#a3a3a3]">Read-only</small></span>
-          <input type="checkbox" checked={account.enabled} disabled={connectorBusy} className="accent-[#117dff]"
-            aria-label={`Allow Dreaming to read ${account.label}`} onChange={event => saveConnectors(true,
-              connectors.accounts.filter(item => item.id === account.id ? event.target.checked : item.enabled).map(item => item.id))} />
-        </label>)}
+        {connectors.accounts.map(account => <div key={account.id} className="flex items-center gap-3 text-sm text-[#525252]">
+          <img src={`https://logos.composio.dev/api/${encodeURIComponent(account.toolkit)}`} alt="" className="w-6 h-6 object-contain rounded" loading="lazy" />
+          <span className="flex-1">{appNames[account.toolkit.toLowerCase()] || account.toolkit}<small className="block text-xs text-[#a3a3a3]">Read-only · {account.id.slice(-6)}</small></span>
+          <AccessSwitch checked={account.enabled} disabled={connectorBusy} label={`Allow Dreaming to read ${account.label}`}
+            onChange={enabled => saveConnectors(true, connectors.accounts.filter(item => item.id === account.id ? enabled : item.enabled).map(item => item.id))} />
+        </div>)}
       </div>}
+      <a href="/hivemind/app/connectors" className="flex items-center justify-between text-sm text-[#117dff] mt-4">More apps <span aria-hidden="true">›</span></a>
       {connectorBusy && <p role="status" className="text-xs text-[#737373] mt-2">Saving access and preparing read tools…</p>}
       {connectorMessage && <p role="status" className="text-xs text-[#737373] mt-2">{connectorMessage}</p>}
     </section>

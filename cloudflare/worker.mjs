@@ -408,7 +408,7 @@ export default {
       return dayZeroOnboardingFlagResponse(request, env);
     }
     // Company Settings uses the native tenant principal without mounting chat.
-    if (['/hivemind/dreamer/settings', '/hivemind/dreamer/agenda', '/hivemind/dreamer/connectors'].includes(pathname)) {
+    if (['/hivemind/dreamer/settings', '/hivemind/dreamer/agenda', '/hivemind/dreamer/connectors', '/hivemind/dreamer/credits'].includes(pathname)) {
       if (!hasHarnessSession(request) || !hasHarnessAdmission(request)) {
         return new Response(JSON.stringify({ error: 'authentication_required' }), {
           status: 401, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
