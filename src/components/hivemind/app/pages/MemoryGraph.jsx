@@ -1131,7 +1131,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     if (!meta) return null;
     return {
       nodes: meta.nodeCount || graphData.nodes.length,
-      edges: meta.edgeCount || graphData.links?.length || 0,
+      // The API metadata may include entity/document references that this
+      // view deliberately omits. Report the filtered graph, not that broader
+      // server-side relationship total.
+      edges: graphData.links?.length || 0,
       projects: meta.projects?.length || 0,
     };
   }, [meta, graphData]);
