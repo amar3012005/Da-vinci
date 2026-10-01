@@ -154,7 +154,6 @@ export default function QueryStarters({ mount, ready }) {
     const editor = target.editor;
     if (!editor.isConnected) return;
     const draft = editor.textContent.trim();
-    if (draft && draft !== generatedDraft.current.trim()) return;
     stopTyping.current();
     setFinishedTyping(false);
     editor.focus();
@@ -172,7 +171,7 @@ export default function QueryStarters({ mount, ready }) {
       generatedDraft.current = query;
       editor.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: clipboard }));
     });
-    // Use the existing composer paste path. Never submit or overwrite a draft.
+    // A suggestion click explicitly replaces the draft through the native paste path; never submit.
   };
   const options = items.length ? items : [
     { id: 'document', topic: t('overview.starters.firstDocument', 'Help me understand a document'), query: t('overview.starters.firstDocumentQuery', 'I have a document I want to understand. Help me identify its key points and what I should do next.') },
