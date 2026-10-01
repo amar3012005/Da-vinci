@@ -183,10 +183,10 @@ export default function Sidebar({
     <aside
       data-tour-sidebar
       style={{ viewTransitionName: 'product-sidebar' }}
-      className={`fixed left-0 top-0 bottom-0 ${sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
+      className={`fixed left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] ${sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
     >
       {/* Logo */}
-      <div className="h-14 flex items-center justify-between px-4 border-b border-[#e3e0db]">
+      <div className="h-14 shrink-0 flex items-center justify-between px-4 border-b border-[#e3e0db]">
         <div className="flex items-center gap-2.5 min-w-0">
           {collapsed ? (
             <SingulanceMark size={24} />
@@ -220,7 +220,7 @@ export default function Sidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-4">
+      <nav className="flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4">
         {navSections.map((section, si) => (
           <div key={si}>
             {section.label && !collapsed && (
