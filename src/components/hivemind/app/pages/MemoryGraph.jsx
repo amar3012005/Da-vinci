@@ -2333,8 +2333,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         )}
       </div>
 
-      <div className="shrink-0 px-4 pb-4 pt-2 z-20">
-        <div className="mx-auto max-w-3xl">
+      <div className="absolute bottom-5 left-0 px-4 z-20 pointer-events-none" style={{ right: detailPanelWidth }}>
+        <div className="mx-auto max-w-3xl pointer-events-auto">
           <div aria-live="polite" className={`text-center text-xs mb-2 ${panelMutedText}`}>{queryMessage}</div>
           {queryResults.length > 0 && (
             <div className="flex items-center gap-2 overflow-x-auto mb-2 pb-1">
