@@ -35,7 +35,6 @@ export default function QueryStarters({ mount, ready }) {
   const [items, setItems] = useState([]);
   const [target, setTarget] = useState(null);
   const [ghost, setGhost] = useState('');
-  const [notice, setNotice] = useState('');
   const identity = `${org?.id || ''}:${user?.id || ''}:${i18n.language}`;
 
   useEffect(() => {
@@ -114,7 +113,6 @@ export default function QueryStarters({ mount, ready }) {
     clipboard.setData('text/plain', query);
     editor.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: clipboard }));
     // Use the existing composer paste path. Never submit or overwrite a draft.
-    if (!editor.textContent.trim()) setNotice(t('overview.starters.copyFallback', 'Select this question and paste it into the message box.'));
   };
   const options = items.length ? items : [
     { id: 'document', topic: t('overview.starters.firstDocument', 'Help me understand a document'), query: t('overview.starters.firstDocumentQuery', 'I have a document I want to understand. Help me identify its key points and what I should do next.') },
@@ -128,6 +126,5 @@ export default function QueryStarters({ mount, ready }) {
       <span className="hm-query-topic">{item.dream ? '🌙 ' : ''}{item.source ? (item.dream ? t('overview.starters.checkLabel', 'Check: {{topic}}', { topic: item.topic }) : t('overview.starters.catchUpLabel', 'Catch up: {{topic}}', { topic: item.topic })) : item.topic}</span>
       <span className="hm-query-source">{item.source || t('overview.starters.try', 'Try this')}{item.timestamp ? ` · ${new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(item.timestamp)}` : ''}</span>
     </button>)}</div>
-    {notice && <p role="status">{notice}</p>}
   </section>, target.seat)}</>;
 }
