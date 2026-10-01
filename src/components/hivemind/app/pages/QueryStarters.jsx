@@ -101,15 +101,30 @@ export default function QueryStarters({ mount, ready }) {
 
   useEffect(() => {
     const editor = target?.editor;
-    if (!editor || loadedEditor !== editor || !items[0] || editor.textContent.trim() || typedEditors.current.has(editor)) return;
+    if (!editor || loadedEditor !== editor || !items[0] || typedEditors.current.has(editor)) return;
+    const draftKey = `hivemind:generated-query:${identity}:${window.location.pathname}`;
+    let previous = '';
+    try { previous = sessionStorage.getItem(draftKey) || ''; } catch { /* optional storage */ }
+    const restored = editor.textContent.trim();
+    if (restored && restored !== previous.trim()) return;
+    generatedDraft.current = '';
+    if (restored) {
+      editor.focus();
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      selection.removeAllRanges(); selection.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+    }
     typedEditors.current.add(editor);
     const text = items[0].query;
     let index = 0;
     let timer;
-    const stop = event => { if (!event || event.isTrusted) { clearInterval(timer); setFinishedTyping(false); } };
+    const stop = event => { if (!event || event.isTrusted) { clearInterval(timer); setFinishedTyping(false); try { sessionStorage.removeItem(draftKey); } catch { /* optional storage */ } } };
     stopTyping.current = () => clearInterval(timer);
     const insert = value => {
       generatedDraft.current += value;
+      try { sessionStorage.setItem(draftKey, generatedDraft.current); } catch { /* optional storage */ }
       const clipboard = new DataTransfer();
       clipboard.setData('text/plain', value);
       editor.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: clipboard }));
