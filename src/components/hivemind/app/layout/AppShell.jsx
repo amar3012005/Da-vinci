@@ -190,7 +190,7 @@ function TalkToHiveFAB({ onOpen, hidden }) {
 }
 
 function sectionForPath(pathname) {
-  if (pathname.startsWith('/hivemind/app/employee/harness')) return 'hyperagents';
+  if (pathname.startsWith('/hivemind/app/employee/harness')) return 'hivemind';
   if (pathname.startsWith('/hivemind/app/employees')) return 'hyperagents';
   if (pathname.startsWith('/hivemind/app/tara')) return 'tara';
   return 'hivemind';
@@ -328,7 +328,7 @@ export default function AppShell() {
   const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
   // HyperAgents runs its own left rail (rooms + account) — the app sidebar is
   // hidden entirely there so the workspace reads as one dedicated surface.
-  const hyperFullscreen = location.pathname.startsWith('/hivemind/app/employees') || location.pathname.startsWith('/hivemind/app/employee/harness');
+  const hyperFullscreen = location.pathname.startsWith('/hivemind/app/employees');
   // Overview embeds the HIVE chat as the page centerpiece — the floating
   // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
   // every other page keeps the FAB.

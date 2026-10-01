@@ -102,6 +102,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
       label: null,
       items: [
         { to: '/hivemind/app/overview', icon: LayoutDashboard, label: tt('overview', 'Overview') },
+        { to: '/hivemind/app/employee/harness', icon: Bot, label: tt('hyperagents', 'HyperAgents') },
         { to: '/hivemind/app/overview/dreaming', icon: Moon, label: tt('dreaming', 'Dreaming') },
       ],
     },

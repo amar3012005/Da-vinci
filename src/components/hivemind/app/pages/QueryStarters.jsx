@@ -41,6 +41,7 @@ export default function QueryStarters({ mount, ready }) {
   const { user, org } = useAuth() || {};
   const { t, i18n } = useTranslation('dashboard');
   const [items, setItems] = useState([]);
+  const [selectionError, setSelectionError] = useState(false);
   const [draftSource, setDraftSource] = useState(null);
   const [finishedTyping, setFinishedTyping] = useState(false);
   const [target, setTarget] = useState(null);
@@ -61,9 +62,10 @@ export default function QueryStarters({ mount, ready }) {
       apiClient.listMemories({ limit: 24 }),
       apiClient.listMemories({ tags: 'flashback', limit: 6 }),
       apiClient.hivemindTriggers({ operation: 'suggestions', limit: 8 }, { timeoutMs: 4000 }),
+      fetch('/api/hivemind/employees', { credentials: 'same-origin' }).then(response => response.ok ? response.json() : { profiles: [] }),
     ]).then(results => {
       if (cancelled) return;
-      const memories = results.flatMap(result => result.status === 'fulfilled' ? rows(result.value) : []);
+      const memories = results.slice(0, 2).flatMap(result => result.status === 'fulfilled' ? rows(result.value) : []);
       const events = results[2]?.status === 'fulfilled' ? results[2].value?.suggestions || [] : [];
       const activity = events.map(event => ({ ...event, topic: clean(event.topic), timestamp: Date.parse(event.timestamp) || 0, app: event.source, source: ({ googledrive: 'Google Drive', gmail: 'Gmail', slack: 'Slack', github: 'GitHub', googledocs: 'Google Docs' })[event.source] || event.source, dream: false }));
       const all = [...activity, ...candidates(memories, t)];
@@ -77,6 +79,15 @@ export default function QueryStarters({ mount, ready }) {
       for (const item of all) {
         if (picked.length === 3) break;
         if (!picked.some(value => value.id === item.id)) picked.push(item);
+      }
+      const profiles = results[3]?.status === 'fulfilled' ? results[3].value?.profiles || [] : [];
+      const expert = profiles.find(profile => typeof profile.id === 'string' && typeof profile.name === 'string' && /research|investigat/i.test(profile.role_archetype || profile.role || ''));
+      const basis = picked.find(item => !item.dream) || picked[0];
+      if (expert && basis) {
+        const task = { ...basis, id: `agent:${expert.id}:${basis.id}`, employeeId: expert.id, employeeName: expert.name,
+          topic: t('overview.starters.agentTopic', 'Research {{topic}}', { topic: basis.topic }),
+          query: t('overview.starters.agentTask', 'Research “{{topic}}” using our company context and allowed connected apps. Prepare a source-backed brief with findings, uncertainties, and next steps.', { topic: basis.topic }) };
+        picked.splice(Math.min(2, picked.length), 1, task);
       }
       setItems(picked);
       setLoadedEditor(target.editor);
@@ -160,7 +171,14 @@ export default function QueryStarters({ mount, ready }) {
   }, [target?.editor, items, loadedEditor]);
 
   if (!target) return null;
-  const accept = item => {
+  const accept = async item => {
+    stopTyping.current();
+    const select = window.__HIVEMIND_SELECT_AGENT__;
+    if (typeof select !== 'function' || !await select(item.employeeId || null).catch(() => false)) {
+      setSelectionError(true);
+      return;
+    }
+    setSelectionError(false);
     const query = item.query;
     setDraftSource(item);
     const editor = target.editor;
@@ -196,8 +214,9 @@ export default function QueryStarters({ mount, ready }) {
     <div className="hm-query-heading">{items.length ? t('overview.starters.heading', 'A starting point from your context') : t('overview.starters.firstHeading', 'What would you like help with?')}</div>
     <div className="hm-query-options">{options.map(item => <button key={item.id} type="button" onClick={() => accept(item)} title={item.query}>
       <SourceLogo app={item.app} dream={item.dream} /><span className="hm-query-topic">{item.source ? (item.dream ? t('overview.starters.checkLabel', 'Check: {{topic}}', { topic: item.topic }) : t('overview.starters.catchUpLabel', 'Catch up: {{topic}}', { topic: item.topic })) : item.topic}</span>
-      <span className="hm-query-source">{item.source || t('overview.starters.try', 'Try this')}{item.timestamp ? ` · ${new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(item.timestamp)}` : ''}</span>
+      <span className="hm-query-source">{item.employeeName ? `${item.employeeName} · ` : ''}{item.source || t('overview.starters.try', 'Try this')}{item.timestamp ? ` · ${new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(item.timestamp)}` : ''}</span>
     </button>)}</div>
+    {selectionError && <p role="alert">{t('overview.starters.selectionFailed', 'Could not select the recipient. Please try again.')}</p>}
     {finishedTyping && <p className="hm-query-ready" role="status">{t('overview.starters.ready', 'Edit this question, or send it when you’re ready.')}</p>}
   </section>, target.seat);
 }
