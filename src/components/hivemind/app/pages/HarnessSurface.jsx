@@ -184,7 +184,7 @@ function waitForNativeHarnessMount(container, signal) {
     });
     const timeout = window.setTimeout(() => {
       cleanup();
-      reject(new Error('Harness did not finish rendering the chat interface.'));
+      reject(new Error('HIVEMIND could not finish opening this conversation.'));
     }, 30000);
     const onAbort = () => {
       cleanup();
@@ -218,15 +218,15 @@ async function establishHarnessSession({ fresh = false } = {}) {
   // must stay on the existing LangGraph conversation surface, including when
   // they arrive through a stale /overview/new or /overview/session/:id URL.
   if (admission?.mode === 'legacy') return { mode: 'legacy' };
-  if (admission?.mode !== 'harness') throw new Error('Harness admission returned an unsupported mode.');
+  if (admission?.mode !== 'harness') throw new Error('HIVEMIND could not open this session.');
   if (typeof admission.ticket !== 'string' || admission.ticket.length === 0) {
-    throw new Error('Harness admission did not return a session ticket.');
+    throw new Error('HIVEMIND could not authorize this session.');
   }
   const established = await fetch(HARNESS_SESSION_PATH, {
     method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ ticket: admission.ticket, request_id: crypto.randomUUID() }),
   });
-  if (!established.ok) throw new Error('Could not establish the secure Harness session.');
+  if (!established.ok) throw new Error('Could not open your secure HIVEMIND session.');
   return { mode: 'harness' };
 }
 
@@ -280,12 +280,12 @@ export default function HarnessSurface() {
       }
       setLoadingStage(1);
       const bootResponse = await fetch(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
-      if (!bootResponse.ok) throw new Error('Harness did not accept the authenticated browser session.');
+      if (!bootResponse.ok) throw new Error('HIVEMIND could not verify your session.');
       const boot = await bootResponse.json();
       if (cancelled) return;
       const bootRevision = harnessBootRevision(boot.injections);
       if (bootRevision === null) {
-        throw new Error('Harness returned a boot graph without a release revision.');
+        throw new Error('HIVEMIND could not load its current application.');
       }
       const installedRevision = window.__HIVE_HARNESS_BOOT_REV__;
       if (typeof installedRevision === 'string' && installedRevision !== bootRevision) {
@@ -293,7 +293,7 @@ export default function HarnessSurface() {
         return;
       }
       const styles = Array.isArray(boot.styles) ? boot.styles : [];
-      if (styles.length === 0) throw new Error('Harness returned no native styles.');
+      if (styles.length === 0) throw new Error('HIVEMIND could not load the conversation appearance.');
       await Promise.all(styles.map(loadHarnessStylesheet));
       setLoadingStage(2);
       if (cancelled) return;
@@ -341,7 +341,7 @@ export default function HarnessSurface() {
       await import(/* webpackIgnore: true */ shellUrl);
       if (window.__DSH_EMBED_APP__ === undefined) {
         if (typeof window.__DSH_EMBED_MOUNT__ !== 'function') {
-          throw new Error('Harness shell did not publish its remount capability.');
+          throw new Error('HIVEMIND could not reopen this conversation.');
         }
         await window.__DSH_EMBED_MOUNT__();
       } else {
@@ -357,7 +357,7 @@ export default function HarnessSurface() {
     };
 
     start().catch((error) => {
-      if (!cancelled) setState({ phase: 'error', stage: 0, message: error instanceof Error ? error.message : 'Could not open Harness chat.' });
+      if (!cancelled) setState({ phase: 'error', stage: 0, message: error instanceof Error ? error.message : 'Could not open HIVEMIND chat.' });
     });
 
     return () => {
