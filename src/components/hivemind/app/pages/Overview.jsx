@@ -1505,6 +1505,9 @@ export default function Overview() {
   // Mobile routing is authoritative and must run before either an explicit or
   // cached desktop Harness session is selected.
   if (shouldUseMobileChat()) return <MobileChatRedirect />;
+  if (pathname === '/hivemind/app/overview/dreaming') {
+    return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface key="dreaming-room" /></section>;
+  }
   if (/^\/hivemind\/app\/(?:overview|employee\/harness)\/(?:new|session\/[^/]+)$/u.test(pathname)) {
     rememberHarnessSessionPath(pathname);
     return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
