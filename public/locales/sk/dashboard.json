@@ -6,7 +6,7 @@
     "memories": "Spomienky",
     "graph3d": "Pamäťový graf · 3D",
     "graph2d": "Pamäťový graf · 2D",
-    "knowledge": "Znalostná báza",
+    "knowledge": "Nahrať všetko",
     "webIntel": "Webová inteligencia",
     "tara": "TARA × HIVE",
     "agentSwarm": "Agent Swarm",
@@ -87,7 +87,8 @@
     "tags": "Značky",
     "type": "Typ",
     "created": "Vytvorené",
-    "filterPlaceholder": "Filtrovať podľa značky, typu alebo textu…"
+    "filterPlaceholder": "Filtrovať podľa značky, typu alebo textu…",
+    "uploadDocuments": "Nahrať dokumenty"
   },
   "settings": {
     "title": "Nastavenia",
@@ -106,5 +107,8 @@
     "connected": "Pripojené",
     "disconnect": "Odpojiť",
     "needsReconnect": "Vyžaduje opätovné pripojenie"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Vybrať súbory"
   }
 }

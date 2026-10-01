@@ -6,7 +6,7 @@
     "memories": "Emlékek",
     "graph3d": "Memória gráf · 3D",
     "graph2d": "Memória gráf · 2D",
-    "knowledge": "Tudásbázis",
+    "knowledge": "Minden feltöltése",
     "webIntel": "Web Intel",
     "tara": "TARA × HIVE",
     "agentSwarm": "Agent Swarm",
@@ -87,7 +87,8 @@
     "tags": "Címkék",
     "type": "Típus",
     "created": "Létrehozva",
-    "filterPlaceholder": "Szűrés címke, típus vagy szöveg alapján…"
+    "filterPlaceholder": "Szűrés címke, típus vagy szöveg alapján…",
+    "uploadDocuments": "Dokumentumok feltöltése"
   },
   "settings": {
     "title": "Beállítások",
@@ -106,5 +107,8 @@
     "connected": "Kapcsolódva",
     "disconnect": "Szétkapcsolás",
     "needsReconnect": "Újrakapcsolás szükséges"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Fájlok kiválasztása"
   }
 }

@@ -977,7 +977,8 @@
     "uploadingHint": "Sobald jede Zeile „Hochgeladen“ anzeigt, kannst du die Seite verlassen – der Server übernimmt und deine neuen Erinnerungen erscheinen nach 2–5 Minuten.",
     "uploadingWarning_one": "Schließe diese Seite noch nicht – {{count}} Datei{{plural}} wird noch hochgeladen.",
     "uploadingWarning_other": "Schließe diese Seite noch nicht – {{count}} Datei{{plural}} wird noch hochgeladen.",
-    "waiting": "Warten…"
+    "waiting": "Warten…",
+    "chooseFiles": "Dateien auswählen"
   },
   "mcpconnectcallback": {
     "autoCopied": "automatisch in die Zwischenablage kopiert",
@@ -1141,7 +1142,8 @@
     "viewDoc": "Dokument ansehen",
     "viewSupportingEvidence": "Unterstützende Beweise ansehen",
     "wordCount": "Wortanzahl",
-    "words": "Wörter"
+    "words": "Wörter",
+    "uploadDocuments": "Dokumente hochladen"
   },
   "memoryGraph": {
     "allTime": "Gesamte Zeit",
@@ -1376,7 +1378,7 @@
       "workspaceAdmin": "Workspace-Admin",
       "yourBrain": "Dein Gehirn"
     },
-    "knowledge": "Wissensdatenbank",
+    "knowledge": "Alles hochladen",
     "mcpServer": "MCP Server",
     "memories": "Gedächtnisse",
     "overview": "Übersicht",

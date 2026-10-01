@@ -6,7 +6,7 @@
     "memories": "حافظه‌ها",
     "graph3d": "نمودار حافظه · ۳ بعدی",
     "graph2d": "نمودار حافظه · ۲ بعدی",
-    "knowledge": "پایگاه دانش",
+    "knowledge": "بارگذاری همه‌چیز",
     "webIntel": "اطلاعات وب",
     "tara": "TARA × HIVE",
     "agentSwarm": "گروه عامل‌ها",
@@ -87,7 +87,8 @@
     "tags": "برچسب‌ها",
     "type": "نوع",
     "created": "ایجاد شده",
-    "filterPlaceholder": "فیلتر بر اساس برچسب، نوع یا متن…"
+    "filterPlaceholder": "فیلتر بر اساس برچسب، نوع یا متن…",
+    "uploadDocuments": "بارگذاری اسناد"
   },
   "settings": {
     "title": "تنظیمات",
@@ -106,5 +107,8 @@
     "connected": "متصل شد",
     "disconnect": "قطع اتصال",
     "needsReconnect": "نیاز به اتصال مجدد"
+  },
+  "knowledgebase": {
+    "chooseFiles": "انتخاب فایل‌ها"
   }
 }

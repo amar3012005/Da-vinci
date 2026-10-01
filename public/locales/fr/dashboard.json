@@ -977,7 +977,8 @@
     "uploadingHint": "Une fois chaque ligne affichant Téléchargé, vous pouvez quitter en toute sécurité — le serveur prend le relais et vos nouvelles mémoires apparaissent en 2–5 minutes.",
     "uploadingWarning_one": "Ne fermez pas encore cette page — {{count}} fichier{{plural}} est toujours en cours de téléchargement.",
     "uploadingWarning_other": "Ne fermez pas encore cette page — {{count}} fichier{{plural}} est toujours en cours de téléchargement.",
-    "waiting": "En attente..."
+    "waiting": "En attente...",
+    "chooseFiles": "Choisir des fichiers"
   },
   "mcpconnectcallback": {
     "autoCopied": "copié automatiquement dans le presse‑papiers",
@@ -1141,7 +1142,8 @@
     "viewDoc": "View Doc",
     "viewSupportingEvidence": "View Supporting Evidence",
     "wordCount": "Word Count",
-    "words": "words"
+    "words": "words",
+    "uploadDocuments": "Importer des documents"
   },
   "memoryGraph": {
     "allTime": "All time",
@@ -1357,7 +1359,7 @@
       "workspaceAdmin": "Admin Espace de travail",
       "yourBrain": "Votre cerveau"
     },
-    "knowledge": "Base de connaissances",
+    "knowledge": "Tout importer",
     "mcpServer": "Serveur MCP",
     "memories": "Mémoires",
     "overview": "Vue d'ensemble",

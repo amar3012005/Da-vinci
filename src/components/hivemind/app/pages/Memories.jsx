@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Search,
+  Upload,
   Filter,
   Brain,
   Trash2,
@@ -2155,6 +2157,7 @@ function MemoriesTab({
 // ─── Documents Tab ─────────────────────────────────────────────────────────────
 
 function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelectedDocument }) {
+  const navigate = useNavigate();
   const { t } = useTranslation('dashboard');
   const PAGE_SIZE = 40;
   const [offset, setOffset] = useState(0);
@@ -2201,6 +2204,11 @@ function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelect
 
   return (
     <>
+      <div className="mb-4 flex justify-end">
+        <button type="button" onClick={() => navigate('/hivemind/app/knowledge?upload=documents')} className="inline-flex items-center gap-2 rounded-lg bg-[#117dff] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#0d5fcc]">
+          <Upload size={16} />{t('memories.uploadDocuments', 'Upload documents')}
+        </button>
+      </div>
       {/* ── Search Bar ── */}
       <div className="relative mb-6">
         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#d4d0ca]" />

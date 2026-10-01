@@ -6,7 +6,7 @@
     "memories": "स्मृतियाँ",
     "graph3d": "स्मृति ग्राफ · 3D",
     "graph2d": "स्मृति ग्राफ · 2D",
-    "knowledge": "ज्ञान आधार",
+    "knowledge": "सब कुछ अपलोड करें",
     "webIntel": "वेब इंटेल",
     "tara": "TARA × HIVE",
     "agentSwarm": "एजेंट स्वॉर्म",
@@ -87,7 +87,8 @@
     "tags": "टैग",
     "type": "प्रकार",
     "created": "निर्मित",
-    "filterPlaceholder": "टैग, प्रकार या टेक्स्ट से फ़िल्टर करें…"
+    "filterPlaceholder": "टैग, प्रकार या टेक्स्ट से फ़िल्टर करें…",
+    "uploadDocuments": "दस्तावेज़ अपलोड करें"
   },
   "settings": {
     "title": "सेटिंग्स",
@@ -106,5 +107,8 @@
     "connected": "कनेक्टेड",
     "disconnect": "डिस्कनेक्ट",
     "needsReconnect": "पुनः कनेक्शन आवश्यक"
+  },
+  "knowledgebase": {
+    "chooseFiles": "फ़ाइलें चुनें"
   }
 }

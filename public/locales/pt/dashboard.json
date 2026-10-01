@@ -6,7 +6,7 @@
     "memories": "Memórias",
     "graph3d": "Gráfico de Memória · 3D",
     "graph2d": "Gráfico de Memória · 2D",
-    "knowledge": "Base de Conhecimento",
+    "knowledge": "Carregar tudo",
     "webIntel": "Inteligência Web",
     "tara": "TARA × HIVE",
     "agentSwarm": "Enxame de Agentes",
@@ -87,7 +87,8 @@
     "tags": "Etiquetas",
     "type": "Tipo",
     "created": "Criado",
-    "filterPlaceholder": "Filtrar por etiqueta, tipo ou texto…"
+    "filterPlaceholder": "Filtrar por etiqueta, tipo ou texto…",
+    "uploadDocuments": "Carregar documentos"
   },
   "settings": {
     "title": "Configurações",
@@ -106,5 +107,8 @@
     "connected": "Ligado",
     "disconnect": "Desligar",
     "needsReconnect": "Precisa de reconectar"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Escolher arquivos"
   }
 }

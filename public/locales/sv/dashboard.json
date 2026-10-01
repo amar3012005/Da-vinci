@@ -6,7 +6,7 @@
     "memories": "Minnen",
     "graph3d": "Minnesgraf · 3D",
     "graph2d": "Minnesgraf · 2D",
-    "knowledge": "Kunskapsbas",
+    "knowledge": "Ladda upp allt",
     "webIntel": "Web Intel",
     "tara": "TARA × HIVE",
     "agentSwarm": "Agent Swarm",
@@ -87,7 +87,8 @@
     "tags": "Taggar",
     "type": "Typ",
     "created": "Skapad",
-    "filterPlaceholder": "Filtrera efter tagg, typ eller text…"
+    "filterPlaceholder": "Filtrera efter tagg, typ eller text…",
+    "uploadDocuments": "Ladda upp dokument"
   },
   "settings": {
     "title": "Inställningar",
@@ -106,5 +107,8 @@
     "connected": "Ansluten",
     "disconnect": "Koppla från",
     "needsReconnect": "Behöver återanslutas"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Välj filer"
   }
 }

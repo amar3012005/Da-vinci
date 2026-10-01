@@ -6,7 +6,7 @@
     "memories": "Minder",
     "graph3d": "Hukommelsesgraf · 3D",
     "graph2d": "Hukommelsesgraf · 2D",
-    "knowledge": "Vidensbase",
+    "knowledge": "Upload alt",
     "webIntel": "Web Intel",
     "tara": "TARA × HIVE",
     "agentSwarm": "Agent Swarm",
@@ -87,7 +87,8 @@
     "tags": "Tags",
     "type": "Type",
     "created": "Oprettet",
-    "filterPlaceholder": "Filtrer efter tag, type eller tekst…"
+    "filterPlaceholder": "Filtrer efter tag, type eller tekst…",
+    "uploadDocuments": "Upload dokumenter"
   },
   "settings": {
     "title": "Indstillinger",
@@ -106,5 +107,8 @@
     "connected": "Tilsluttet",
     "disconnect": "Afbryd",
     "needsReconnect": "Kræver genforbindelse"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Vælg filer"
   }
 }

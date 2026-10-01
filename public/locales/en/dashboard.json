@@ -977,7 +977,8 @@
     "uploadingHint": "Once every row shows Uploaded, you're safe to leave — the server takes over and your new memories surface in 2–5 minutes.",
     "uploadingWarning_one": "Don't close this page yet — {{count}} file{{plural}} still uploading.",
     "uploadingWarning_other": "Don't close this page yet — {{count}} file{{plural}} still uploading.",
-    "waiting": "Waiting..."
+    "waiting": "Waiting...",
+    "chooseFiles": "Choose files"
   },
   "mcpconnectcallback": {
     "autoCopied": "auto-copied to clipboard",
@@ -1141,7 +1142,8 @@
     "viewDoc": "View Doc",
     "viewSupportingEvidence": "View Supporting Evidence",
     "wordCount": "Word Count",
-    "words": "words"
+    "words": "words",
+    "uploadDocuments": "Upload documents"
   },
   "memoryGraph": {
     "allTime": "All time",
@@ -1258,7 +1260,7 @@
     "exportSuccess": "Export request received. You will receive an email when ready.",
     "fact": "fact",
     "facts": "facts",
-    "gdprNote": "GDPR compliant \u00a0·\u00a0 No US data transfer \u00a0·\u00a0 EU data residency guaranteed",
+    "gdprNote": "GDPR compliant  ·  No US data transfer  ·  EU data residency guaranteed",
     "hourAgo": "h ago",
     "identityFactsHint": "Profile facts build automatically as you use HIVEMIND, or add them manually below.",
     "justNow": "just now",
@@ -1376,7 +1378,7 @@
       "workspaceAdmin": "Workspace Admin",
       "yourBrain": "Your Brain"
     },
-    "knowledge": "Knowledge Base",
+    "knowledge": "Upload Everything",
     "mcpServer": "MCP Server",
     "memories": "Memories",
     "overview": "Overview",

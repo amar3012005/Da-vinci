@@ -6,7 +6,7 @@
     "memories": "Anılar",
     "graph3d": "Bellek Grafiği · 3D",
     "graph2d": "Bellek Grafiği · 2D",
-    "knowledge": "Bilgi Tabanı",
+    "knowledge": "Her şeyi yükle",
     "webIntel": "Web İstihbaratı",
     "tara": "TARA × HIVE",
     "agentSwarm": "Ajan Sürü",
@@ -87,7 +87,8 @@
     "tags": "Etiketler",
     "type": "Tür",
     "created": "Oluşturuldu",
-    "filterPlaceholder": "Etiket, tür veya metne göre filtrele…"
+    "filterPlaceholder": "Etiket, tür veya metne göre filtrele…",
+    "uploadDocuments": "Belge yükle"
   },
   "settings": {
     "title": "Ayarlar",
@@ -106,5 +107,8 @@
     "connected": "Bağlandı",
     "disconnect": "Bağlantıyı Kes",
     "needsReconnect": "Yeniden bağlanması gerekiyor"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Dosya seç"
   }
 }

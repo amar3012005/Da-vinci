@@ -197,6 +197,7 @@ function applyDirection(lng) {
   if (typeof document !== 'undefined') {
     document.documentElement.setAttribute('dir', dir);
     document.documentElement.setAttribute('lang', lng);
+    document.documentElement.dataset.hivemindReplyLanguage = lng || 'en';
   }
 }
 i18n.on('languageChanged', applyDirection);

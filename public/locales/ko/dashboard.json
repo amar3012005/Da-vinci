@@ -6,7 +6,7 @@
     "memories": "메모리",
     "graph3d": "메모리 그래프 · 3D",
     "graph2d": "메모리 그래프 · 2D",
-    "knowledge": "지식 베이스",
+    "knowledge": "모두 업로드",
     "webIntel": "웹 인텔",
     "tara": "TARA × HIVE",
     "agentSwarm": "에이전트 스웜",
@@ -87,7 +87,8 @@
     "tags": "태그",
     "type": "유형",
     "created": "생성일",
-    "filterPlaceholder": "태그, 유형, 텍스트로 필터링…"
+    "filterPlaceholder": "태그, 유형, 텍스트로 필터링…",
+    "uploadDocuments": "문서 업로드"
   },
   "settings": {
     "title": "설정",
@@ -106,5 +107,8 @@
     "connected": "연결됨",
     "disconnect": "연결 해제",
     "needsReconnect": "재연결 필요"
+  },
+  "knowledgebase": {
+    "chooseFiles": "파일 선택"
   }
 }

@@ -6,7 +6,7 @@
     "memories": "Pamięci",
     "graph3d": "Wykres pamięci · 3D",
     "graph2d": "Wykres pamięci · 2D",
-    "knowledge": "Baza wiedzy",
+    "knowledge": "Prześlij wszystko",
     "webIntel": "Inteligencja internetowa",
     "tara": "TARA × HIVE",
     "agentSwarm": "Rój agentów",
@@ -87,7 +87,8 @@
     "tags": "Tagi",
     "type": "Typ",
     "created": "Utworzono",
-    "filterPlaceholder": "Filtruj po tagu, typie lub tekście…"
+    "filterPlaceholder": "Filtruj po tagu, typie lub tekście…",
+    "uploadDocuments": "Prześlij dokumenty"
   },
   "settings": {
     "title": "Ustawienia",
@@ -106,5 +107,8 @@
     "connected": "Połączono",
     "disconnect": "Rozłącz",
     "needsReconnect": "Wymaga ponownego połączenia"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Wybierz pliki"
   }
 }

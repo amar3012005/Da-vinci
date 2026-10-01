@@ -6,7 +6,7 @@
     "memories": "الذكريات",
     "graph3d": "مخطط الذاكرة · 3D",
     "graph2d": "مخطط الذاكرة · 2D",
-    "knowledge": "قاعدة المعرفة",
+    "knowledge": "تحميل كل شيء",
     "webIntel": "معلومات الويب",
     "tara": "TARA × HIVE",
     "agentSwarm": "سرب الوكيل",
@@ -87,7 +87,8 @@
     "tags": "الوسوم",
     "type": "النوع",
     "created": "تم الإنشاء",
-    "filterPlaceholder": "تصفية حسب الوسم أو النوع أو النص…"
+    "filterPlaceholder": "تصفية حسب الوسم أو النوع أو النص…",
+    "uploadDocuments": "تحميل المستندات"
   },
   "settings": {
     "title": "الإعدادات",
@@ -106,5 +107,8 @@
     "connected": "متصل",
     "disconnect": "قطع الاتصال",
     "needsReconnect": "يحتاج إلى إعادة ربط"
+  },
+  "knowledgebase": {
+    "chooseFiles": "اختيار الملفات"
   }
 }

@@ -6,7 +6,7 @@
     "memories": "ความทรงจำ",
     "graph3d": "กราฟความทรงจำ · 3D",
     "graph2d": "กราฟความทรงจำ · 2D",
-    "knowledge": "ฐานความรู้",
+    "knowledge": "อัปโหลดทุกอย่าง",
     "webIntel": "ข้อมูลเว็บ",
     "tara": "TARA × HIVE",
     "agentSwarm": "ฝูงเอเจนต์",
@@ -87,7 +87,8 @@
     "tags": "แท็ก",
     "type": "ประเภท",
     "created": "สร้างเมื่อ",
-    "filterPlaceholder": "กรองตามแท็ก, ประเภท หรือข้อความ…"
+    "filterPlaceholder": "กรองตามแท็ก, ประเภท หรือข้อความ…",
+    "uploadDocuments": "อัปโหลดเอกสาร"
   },
   "settings": {
     "title": "การตั้งค่า",
@@ -106,5 +107,8 @@
     "connected": "เชื่อมต่อแล้ว",
     "disconnect": "ยกเลิกการเชื่อมต่อ",
     "needsReconnect": "ต้องเชื่อมต่อใหม่"
+  },
+  "knowledgebase": {
+    "chooseFiles": "เลือกไฟล์"
   }
 }

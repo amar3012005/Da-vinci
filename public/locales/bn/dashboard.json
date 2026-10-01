@@ -6,7 +6,7 @@
     "memories": "স্মৃতি",
     "graph3d": "মেমোরি গ্রাফ · ৩ডি",
     "graph2d": "মেমোরি গ্রাফ · ২ডি",
-    "knowledge": "জ্ঞানভান্ডার",
+    "knowledge": "সবকিছু আপলোড করুন",
     "webIntel": "ওয়েব ইন্টেল",
     "tara": "TARA × HIVE",
     "agentSwarm": "এজেন্ট স্বার্ম",
@@ -87,7 +87,8 @@
     "tags": "ট্যাগস",
     "type": "ধরন",
     "created": "সৃষ্ট",
-    "filterPlaceholder": "ট্যাগ, ধরন, অথবা টেক্সট দ্বারা ফিল্টার করুন…"
+    "filterPlaceholder": "ট্যাগ, ধরন, অথবা টেক্সট দ্বারা ফিল্টার করুন…",
+    "uploadDocuments": "নথি আপলোড করুন"
   },
   "settings": {
     "title": "সেটিংস",
@@ -106,5 +107,8 @@
     "connected": "সংযুক্ত",
     "disconnect": "সংযোগ বিচ্ছিন্ন করুন",
     "needsReconnect": "পুনঃসংযোগ প্রয়োজন"
+  },
+  "knowledgebase": {
+    "chooseFiles": "ফাইল নির্বাচন করুন"
   }
 }

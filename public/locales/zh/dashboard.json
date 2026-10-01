@@ -6,7 +6,7 @@
     "memories": "记忆",
     "graph3d": "记忆图 · 3D",
     "graph2d": "记忆图 · 2D",
-    "knowledge": "知识库",
+    "knowledge": "上传所有内容",
     "webIntel": "网络情报",
     "tara": "TARA × HIVE",
     "agentSwarm": "代理群",
@@ -87,7 +87,8 @@
     "tags": "标签",
     "type": "类型",
     "created": "创建时间",
-    "filterPlaceholder": "按标签、类型或文本过滤…"
+    "filterPlaceholder": "按标签、类型或文本过滤…",
+    "uploadDocuments": "上传文档"
   },
   "settings": {
     "title": "设置",
@@ -106,5 +107,8 @@
     "connected": "已连接",
     "disconnect": "断开连接",
     "needsReconnect": "需要重新连接"
+  },
+  "knowledgebase": {
+    "chooseFiles": "选择文件"
   }
 }

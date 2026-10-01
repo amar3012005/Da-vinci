@@ -6,7 +6,7 @@
     "memories": "Muistot",
     "graph3d": "Muistigrafi · 3D",
     "graph2d": "Muistigrafi · 2D",
-    "knowledge": "Tietopohja",
+    "knowledge": "Lataa kaikki",
     "webIntel": "Web Intel",
     "tara": "TARA × HIVE",
     "agentSwarm": "Agentti Parvi",
@@ -87,7 +87,8 @@
     "tags": "Tagit",
     "type": "Tyyppi",
     "created": "Luotu",
-    "filterPlaceholder": "Suodata tagin, tyypin tai tekstin mukaan…"
+    "filterPlaceholder": "Suodata tagin, tyypin tai tekstin mukaan…",
+    "uploadDocuments": "Lataa asiakirjoja"
   },
   "settings": {
     "title": "Asetukset",
@@ -106,5 +107,8 @@
     "connected": "Yhdistetty",
     "disconnect": "Katkaise yhteys",
     "needsReconnect": "Tarvitsee uudelleenyhdistämisen"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Valitse tiedostot"
   }
 }

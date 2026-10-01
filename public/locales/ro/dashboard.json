@@ -6,7 +6,7 @@
     "memories": "Memorii",
     "graph3d": "Grafic Memorie · 3D",
     "graph2d": "Grafic Memorie · 2D",
-    "knowledge": "Bază de Cunoștințe",
+    "knowledge": "Încarcă totul",
     "webIntel": "Inteligență Web",
     "tara": "TARA × HIVE",
     "agentSwarm": "Swarm de Agenți",
@@ -87,7 +87,8 @@
     "tags": "Etichete",
     "type": "Tip",
     "created": "Creat",
-    "filterPlaceholder": "Filtrează după etichetă, tip sau text…"
+    "filterPlaceholder": "Filtrează după etichetă, tip sau text…",
+    "uploadDocuments": "Încarcă documente"
   },
   "settings": {
     "title": "Setări",
@@ -106,5 +107,8 @@
     "connected": "Conectat",
     "disconnect": "Deconectează",
     "needsReconnect": "Necesită reconectare"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Alege fișiere"
   }
 }

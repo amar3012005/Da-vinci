@@ -977,7 +977,8 @@
     "uploadingHint": "Cuando cada fila muestre Subido, puedes irte tranquilo — el servidor toma el control y tus nuevos recuerdos aparecen en 2–5 minutos.",
     "uploadingWarning_one": "No cierres esta página aún — {{count}} archivo{{plural}} sigue subiendo.",
     "uploadingWarning_other": "No cierres esta página aún — {{count}} archivo{{plural}} sigue subiendo.",
-    "waiting": "Esperando..."
+    "waiting": "Esperando...",
+    "chooseFiles": "Elegir archivos"
   },
   "mcpconnectcallback": {
     "autoCopied": "copiado automáticamente al portapapeles",
@@ -1141,7 +1142,8 @@
     "viewDoc": "Ver documento",
     "viewSupportingEvidence": "Ver evidencia de apoyo",
     "wordCount": "Recuento de palabras",
-    "words": "palabras"
+    "words": "palabras",
+    "uploadDocuments": "Subir documentos"
   },
   "memoryGraph": {
     "allTime": "Todo el tiempo",
@@ -1357,7 +1359,7 @@
       "workspaceAdmin": "Administrador de Espacio",
       "yourBrain": "Tu Cerebro"
     },
-    "knowledge": "Base de Conocimientos",
+    "knowledge": "Subir todo",
     "mcpServer": "Servidor MCP",
     "memories": "Memorias",
     "overview": "Resumen",

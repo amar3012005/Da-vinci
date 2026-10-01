@@ -6,7 +6,7 @@
     "memories": "זיכרונות",
     "graph3d": "גרף זיכרון · 3D",
     "graph2d": "גרף זיכרון · 2D",
-    "knowledge": "בסיס ידע",
+    "knowledge": "העלאת הכול",
     "webIntel": "אינטליגנציה ברשת",
     "tara": "TARA × HIVE",
     "agentSwarm": "קבוצת סוכנים",
@@ -87,7 +87,8 @@
     "tags": "תגיות",
     "type": "סוג",
     "created": "נוצר",
-    "filterPlaceholder": "סנן לפי תג, סוג או טקסט…"
+    "filterPlaceholder": "סנן לפי תג, סוג או טקסט…",
+    "uploadDocuments": "העלאת מסמכים"
   },
   "settings": {
     "title": "הגדרות",
@@ -106,5 +107,8 @@
     "connected": "מחובר",
     "disconnect": "התנתק",
     "needsReconnect": "דורש חיבור מחדש"
+  },
+  "knowledgebase": {
+    "chooseFiles": "בחירת קבצים"
   }
 }

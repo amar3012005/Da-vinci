@@ -6,7 +6,7 @@
     "memories": "Memori",
     "graph3d": "Graf Memori · 3D",
     "graph2d": "Graf Memori · 2D",
-    "knowledge": "Basis Pengetahuan",
+    "knowledge": "Unggah semuanya",
     "webIntel": "Intel Web",
     "tara": "TARA × HIVE",
     "agentSwarm": "Swarm Agen",
@@ -87,7 +87,8 @@
     "tags": "Tag",
     "type": "Tipe",
     "created": "Dibuat",
-    "filterPlaceholder": "Filter berdasarkan tag, tipe, atau teks…"
+    "filterPlaceholder": "Filter berdasarkan tag, tipe, atau teks…",
+    "uploadDocuments": "Unggah dokumen"
   },
   "settings": {
     "title": "Pengaturan",
@@ -106,5 +107,8 @@
     "connected": "Terhubung",
     "disconnect": "Putuskan",
     "needsReconnect": "Perlu disambungkan kembali"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Pilih file"
   }
 }

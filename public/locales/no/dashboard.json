@@ -6,7 +6,7 @@
     "memories": "Minner",
     "graph3d": "Minnegraf · 3D",
     "graph2d": "Minnegraf · 2D",
-    "knowledge": "Kunnskapsbase",
+    "knowledge": "Last opp alt",
     "webIntel": "Web‑intelligens",
     "tara": "TARA × HIVE",
     "agentSwarm": "Agent‑sværm",
@@ -87,7 +87,8 @@
     "tags": "Etiketter",
     "type": "Type",
     "created": "Opprettet",
-    "filterPlaceholder": "Filtrer etter etikett, type eller tekst…"
+    "filterPlaceholder": "Filtrer etter etikett, type eller tekst…",
+    "uploadDocuments": "Last opp dokumenter"
   },
   "settings": {
     "title": "Innstillinger",
@@ -106,5 +107,8 @@
     "connected": "Tilkoblet",
     "disconnect": "Koble fra",
     "needsReconnect": "Må kobles til på nytt"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Velg filer"
   }
 }

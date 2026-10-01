@@ -6,7 +6,7 @@
     "memories": "Память",
     "graph3d": "Граф памяти · 3D",
     "graph2d": "Граф памяти · 2D",
-    "knowledge": "База знаний",
+    "knowledge": "Загрузить всё",
     "webIntel": "Веб‑аналитика",
     "tara": "TARA × HIVE",
     "agentSwarm": "Рой агентов",
@@ -87,7 +87,8 @@
     "tags": "Теги",
     "type": "Тип",
     "created": "Создано",
-    "filterPlaceholder": "Фильтр по тегу, типу или тексту…"
+    "filterPlaceholder": "Фильтр по тегу, типу или тексту…",
+    "uploadDocuments": "Загрузить документы"
   },
   "settings": {
     "title": "Настройки",
@@ -106,5 +107,8 @@
     "connected": "Подключено",
     "disconnect": "Отключить",
     "needsReconnect": "Требуется переподключение"
+  },
+  "knowledgebase": {
+    "chooseFiles": "Выбрать файлы"
   }
 }

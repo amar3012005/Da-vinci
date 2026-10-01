@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -1100,6 +1101,15 @@ export default function KnowledgeBase() {
   // Bulk-select state — Map<docId, doc> so we can pass full objects to delete handler
   const [bulkSelected, setBulkSelected] = useState(new Map());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [uploadParams, setUploadParams] = useSearchParams();
+  const [uploadChooserOpen, setUploadChooserOpen] = useState(false);
+  useEffect(() => {
+    if (uploadParams.get('upload') !== 'documents') return;
+    setUploadChooserOpen(true);
+    const next = new URLSearchParams(uploadParams);
+    next.delete('upload');
+    setUploadParams(next, { replace: true });
+  }, [uploadParams, setUploadParams]);
   const fileInputRef = useRef(null);
   const typedImportRef = useRef(null);
   // Per-document relationship summaries: { <docId>: { total, byType, cluster_size } }
@@ -2138,6 +2148,13 @@ export default function KnowledgeBase() {
         </div>
       </motion.div>
 
+      {uploadChooserOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby="document-upload-title" onClick={() => setUploadChooserOpen(false)}>
+        <section className="w-full max-w-md rounded-2xl border border-[#e3e0db] bg-white p-6 shadow-xl" onClick={event => event.stopPropagation()}>
+          <div className="flex items-center justify-between gap-4"><h2 id="document-upload-title" className="text-lg font-semibold">{t('memories.uploadDocuments', 'Upload documents')}</h2><button type="button" onClick={() => setUploadChooserOpen(false)} aria-label={t('common.close', 'Close')}><X size={18} /></button></div>
+          <p className="mt-3 text-sm text-[#777]">{t('knowledgebase.chooseFilesHint', 'Choose your files. You can review where they will be saved before uploading.')}</p>
+          <button autoFocus type="button" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#117dff] px-4 py-2.5 text-sm font-medium text-white" onClick={() => { fileInputRef.current?.click(); setUploadChooserOpen(false); }}><Upload size={16} />{t('knowledgebase.chooseFiles', 'Choose files')}</button>
+        </section>
+      </div>}
       <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mb-8">
         <input
           ref={fileInputRef}

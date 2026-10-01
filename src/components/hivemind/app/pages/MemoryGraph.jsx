@@ -360,7 +360,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete, theme =
       animate={{ x: 0, opacity: 1 }}
       exit={{ opacity: 0, x: 40 }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className={`absolute top-0 bottom-[160px] right-0 w-full ${radial ? "max-w-[min(420px,calc(100vw-16px))]" : "max-w-lg"} z-50 flex flex-col`}
+      className={`absolute top-0 bottom-[88px] right-0 w-full ${radial ? "max-w-[min(420px,calc(100vw-16px))]" : "max-w-lg"} z-50 flex flex-col`}
     >
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 lg:hidden" onClick={onClose} />
 
@@ -393,7 +393,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete, theme =
                   ? "border-[#3a2e28] bg-[#1b1512] text-[#ffb1a8]"
                   : "border-[#cfe2ff] bg-[#edf5ff] text-[#4d59dd]"
               }`}>
-                <Monitor size={11} /> {node.sourcePlatform}
+                <Monitor size={11} /> {String(node.sourcePlatform).replace(/deepseek[- ]harness|\bdsh\b/gi, 'HIVEMIND')}
               </span>
             )}
             {(node.daysSinceUpdate != null || createdLabel) && (
@@ -716,6 +716,16 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   }, [org?.id]);
   const graphRef = useRef();
   const graphShellRef = useRef(null);
+  const [graphViewport, setGraphViewport] = useState({ width: 800, height: 600 });
+  useEffect(() => {
+    const element = graphShellRef.current;
+    if (!element) return;
+    const measure = () => setGraphViewport({ width: element.clientWidth, height: element.clientHeight });
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    measure();
+    return () => observer.disconnect();
+  }, []);
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [rawEdges, setRawEdges] = useState([]);
   // Guards: prevent the mount fetch + the deferred warm fetch from both
@@ -1715,12 +1725,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             backgroundColor="rgba(0,0,0,0)"
             theme={graphTheme === "night" ? "atlas" : "day"}
             width={
-              typeof window !== "undefined"
-                ? window.innerWidth - detailPanelWidth
-                : 800
+              Math.max(1, graphViewport.width - detailPanelWidth)
             }
             height={
-              typeof window !== "undefined" ? window.innerHeight - 66 : 600
+              graphViewport.height
             }
           />
         )}
@@ -1753,12 +1761,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               }}
               backgroundColor="rgba(0,0,0,0)"
               width={
-                typeof window !== "undefined"
-                  ? window.innerWidth - detailPanelWidth
-                  : 800
+                Math.max(1, graphViewport.width - detailPanelWidth)
               }
               height={
-                typeof window !== "undefined" ? window.innerHeight - 66 : 600
+                graphViewport.height
               }
             />
           </div>
@@ -1790,7 +1796,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                 theme={graphTheme === "night" ? "atlas" : "day"}
                 radialTemporal
                 width={typeof window !== "undefined" ? window.innerWidth : 800}
-                height={typeof window !== "undefined" ? window.innerHeight - 66 : 600}
+                height={graphViewport.height}
               />
             </div>
             {selectedNode && !radialDetailVisible && (
@@ -1867,8 +1873,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
           <div
             className="absolute top-0 left-0 overflow-hidden"
             style={{
-              width: typeof window !== 'undefined' ? window.innerWidth - detailPanelWidth : 800,
-              height: typeof window !== 'undefined' ? window.innerHeight - 66 : 600,
+              width: Math.max(1, graphViewport.width - detailPanelWidth),
+              height: graphViewport.height,
             }}
           >
             <MemoryMoss

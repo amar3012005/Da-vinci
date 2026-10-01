@@ -6,7 +6,7 @@
     "memories": "メモリ",
     "graph3d": "メモリグラフ · 3D",
     "graph2d": "メモリグラフ · 2D",
-    "knowledge": "ナレッジベース",
+    "knowledge": "すべてアップロード",
     "webIntel": "Web インテリ",
     "tara": "TARA × HIVE",
     "agentSwarm": "エージェントスウォーム",
@@ -87,7 +87,8 @@
     "tags": "タグ",
     "type": "タイプ",
     "created": "作成日時",
-    "filterPlaceholder": "タグ、タイプ、テキストでフィルタ…"
+    "filterPlaceholder": "タグ、タイプ、テキストでフィルタ…",
+    "uploadDocuments": "ドキュメントをアップロード"
   },
   "settings": {
     "title": "設定",
@@ -106,5 +107,8 @@
     "connected": "接続済み",
     "disconnect": "切断",
     "needsReconnect": "再接続が必要"
+  },
+  "knowledgebase": {
+    "chooseFiles": "ファイルを選択"
   }
 }
