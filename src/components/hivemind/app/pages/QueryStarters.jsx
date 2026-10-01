@@ -213,7 +213,7 @@ export default function QueryStarters({ mount, ready }) {
     {draftSource?.app && <div className="hm-query-draft-source"><SourceLogo app={draftSource.app} /><span>{t('overview.starters.basedOn', 'Based on {{app}}', { app: draftSource.source })}</span></div>}
     <div className="hm-query-heading">{items.length ? t('overview.starters.heading', 'A starting point from your context') : t('overview.starters.firstHeading', 'What would you like help with?')}</div>
     <div className="hm-query-options">{options.map(item => <button key={item.id} type="button" onClick={() => accept(item)} title={item.query}>
-      <SourceLogo app={item.app} dream={item.dream} /><span className="hm-query-topic">{item.source ? (item.dream ? t('overview.starters.checkLabel', 'Check: {{topic}}', { topic: item.topic }) : t('overview.starters.catchUpLabel', 'Catch up: {{topic}}', { topic: item.topic })) : item.topic}</span>
+      <SourceLogo app={item.app} dream={item.dream} /><span className="hm-query-topic">{item.employeeId ? item.topic : item.source ? (item.dream ? t('overview.starters.checkLabel', 'Check: {{topic}}', { topic: item.topic }) : t('overview.starters.catchUpLabel', 'Catch up: {{topic}}', { topic: item.topic })) : item.topic}</span>
       <span className="hm-query-source">{item.employeeName ? `${item.employeeName} · ` : ''}{item.source || t('overview.starters.try', 'Try this')}{item.timestamp ? ` · ${new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(item.timestamp)}` : ''}</span>
     </button>)}</div>
     {selectionError && <p role="alert">{t('overview.starters.selectionFailed', 'Could not select the recipient. Please try again.')}</p>}

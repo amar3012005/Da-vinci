@@ -154,7 +154,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
   const pagePath = pageTitles[location.pathname]
     ? location.pathname
     : PAGE_PREFIXES.find(([prefix]) => location.pathname.startsWith(`${prefix}/`))?.[1] || location.pathname;
-  const title = pagePath === '/hivemind/app/employee/harness' ? 'Harness Rooms' : pageTitles[pagePath] || SECTION_TITLES[activeSection] || 'HIVEMIND';
+  const title = pagePath === '/hivemind/app/employee/harness' ? 'HyperAgents' : pageTitles[pagePath] || SECTION_TITLES[activeSection] || 'HIVEMIND';
   const description = pageDescriptions[pagePath] || '';
 
   const { t } = useTranslation('dashboard');
