@@ -6,7 +6,7 @@
 .hm-query-options button:hover { color:#117dff; background:transparent; }
 .hm-query-topic { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:13px; line-height:20px; font-weight:500; }
 .hm-query-source { display:block; font-size:11px; color:#737373; margin-top:7px; }
-.hm-query-ghost { position:absolute;  text-align:start; font-size:15px; color:#626b78; background:#fff; padding:2px 0; z-index:2; max-height:48px; overflow:hidden; line-height:23px; }
+.hm-query-ghost { position:absolute;  text-align:start; font-size:15px; color:#626b78; background:#fff; padding:4px 8px 0 16px; box-sizing:border-box; border:0; border-radius:0; z-index:2; max-height:48px; overflow:hidden; line-height:23px; }
 .hm-query-caret { color:#117dff; }
 .hm-query-starters button:focus-visible { outline:2px solid #117dff; outline-offset:3px; }
 @media(max-width:700px) { .hm-query-options { grid-template-columns:1fr; } .hm-query-ghost { display:none; } }
