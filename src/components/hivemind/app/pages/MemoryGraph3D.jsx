@@ -786,6 +786,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     selectedNode,
     highlightNodes,
     filteredNodes,
+    traversalNodeId,
+    traversalNodeIds,
     layerFilter,
     clusterFilter,
     scope,
@@ -862,6 +864,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const selectedNodeRef = useRef(selectedNode);
   const highlightNodesRef = useRef(highlightNodes);
   const filteredNodesRef = useRef(filteredNodes);
+  const traversalNodeIdRef = useRef(traversalNodeId);
+  const traversalNodeIdsRef = useRef(traversalNodeIds || new Set());
   const layerFilterRef = useRef(layerFilter);
   const clusterFilterRef = useRef(clusterFilter);
   const onNodeClickRef = useRef(onNodeClick);
@@ -922,6 +926,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     selectedNodeRef.current = selectedNode;
     highlightNodesRef.current = highlightNodes;
     filteredNodesRef.current = filteredNodes;
+    traversalNodeIdRef.current = traversalNodeId;
+    traversalNodeIdsRef.current = traversalNodeIds || new Set();
     layerFilterRef.current = layerFilter;
     clusterFilterRef.current = clusterFilter;
     onNodeClickRef.current = onNodeClick;
@@ -943,13 +949,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     onNodeHover,
     onViewStateChange,
     selectedNode,
+    traversalNodeId,
+    traversalNodeIds,
   ]);
 
   const isNodeVisible = useCallback((node) => {
       if (layerFilterRef.current !== "all" && !filteredNodesRef.current.has(node.id)) return false;
       if (clusterFilterRef.current && node.clusterId !== clusterFilterRef.current && node.clusterRole !== "bridge") return false;
       const inFrameNodeIds = viewStateRef.current.inFrameNodeIds;
-      if (inFrameNodeIds.size > 0 && Number.isFinite(node.x) && Number.isFinite(node.y) && Number.isFinite(node.z)) {
+      if (!traversalNodeIdRef.current && inFrameNodeIds.size > 0 && Number.isFinite(node.x) && Number.isFinite(node.y) && Number.isFinite(node.z)) {
         if (!inFrameNodeIds.has(node.id) && !highlightNodesRef.current.has(node.id) && selectedNodeRef.current?.id !== node.id) {
           return false;
         }
@@ -969,6 +977,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
       const highlightedLinks = highlightedLinksRef.current;
       if (highlightedLinks.has(link)) return true;
+      // Traversal mode keeps all filtered edges mounted so unrelated edges
+      // can be rendered quietly while the selected component stays legible.
+      if (traversalNodeIdRef.current) return true;
 
       const linkMode = viewStateRef.current.linkMode;
       const sourceImportant = selectedNodeRef.current?.id === sourceId || highlightNodesRef.current.has(sourceId);
@@ -1124,6 +1135,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       if (radialTemporalRef.current) {
         const radialColor = getRadialMemoryColor(node);
         if (highlightedNodes.has(node.id)) return selectedNodeRef.current?.id === node.id ? "#0a0a0a" : "#117dff";
+        if (traversalNodeIdRef.current && !traversalNodeIdsRef.current.has(node.id)) return "#74695f";
         if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) return `${radialColor}44`;
         return radialColor;
       }
@@ -1137,6 +1149,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         if (selectedNodeRef.current?.id === node.id) return t.nodeAccent;
         if (t.name === "atlas") return "#fff0e5";
         return t.name === "night" ? "#dcd6c9" : "#36332d";
+      }
+      // Once a memory is selected, keep the whole graph in place but quiet
+      // every node outside that memory's relationship component. This makes
+      // traversal legible without losing the user's spatial context.
+      if (traversalNodeIdRef.current && !traversalNodeIdsRef.current.has(node.id)) {
+        return t.name === "night" || t.name === "atlas" ? "#403b36" : "#b8b1a8";
       }
       if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) {
         const fallback = baseColor.startsWith("#") ? hexToRgb(baseColor) : { r: 136, g: 136, b: 136 };
@@ -1209,6 +1227,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const t = themeRef.current;
     const style = getRelationStyle(link);
     if (highlightedLinksRef.current.has(link)) return 0.82;
+    if (traversalNodeIdRef.current) {
+      const sourceId = typeof link.source === "object" ? link.source.id : link.source;
+      const targetId = typeof link.target === "object" ? link.target.id : link.target;
+      if (!traversalNodeIdsRef.current.has(sourceId) && !traversalNodeIdsRef.current.has(targetId)) {
+        return t.name === "day" ? 0.035 : 0.025;
+      }
+    }
     if (t.name === "atlas" || t.name === "night") return Math.max(0.1, style.opacity * 0.88);
     if (t.name === "day") return Math.max(0.28, style.opacity * 2.1);
     return Math.max(0.14, style.opacity * 1.45);
@@ -2222,7 +2247,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
   useEffect(() => {
     refreshHighlight();
-  }, [highlightNodes, selectedNode, refreshHighlight]);
+  }, [highlightNodes, selectedNode, traversalNodeId, traversalNodeIds, refreshHighlight]);
 
   useEffect(() => {
     if (selectedNode && !radialTemporal) focusNode(selectedNode, 700, 4.2);

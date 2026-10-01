@@ -126,6 +126,62 @@ const CLUSTER_COLORS = [
 
 const ORPHAN_COLOR = "#a3a3a3"; // for `_orphan` bucket (no edges)
 
+// The memory graph is a relationship graph, not an entity/document index.
+// Keep only the four relationships that describe how one memory changes or
+// explains another. `mentions` and `part of` are useful metadata elsewhere,
+// but make this view look connected when there is no memory-to-memory trail.
+const TRAVERSAL_RELATION_TYPES = new Set([
+  "update",
+  "updates",
+  "derive",
+  "derives",
+  "derivedfrom",
+  "extend",
+  "extends",
+  "contradict",
+  "contradicts",
+  "contradiction",
+  "contradictions",
+]);
+
+export function normalizeRelationType(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
+}
+
+export function isTraversalRelation(edge) {
+  return TRAVERSAL_RELATION_TYPES.has(normalizeRelationType(
+    edge?.type ?? edge?.relation ?? edge?.label ?? edge?.kind,
+  ));
+}
+
+export function connectedMemoryIds(nodeId, links = []) {
+  if (!nodeId) return new Set();
+  const adjacency = new Map();
+  for (const link of links) {
+    const source = typeof link.source === "object" ? link.source.id : link.source;
+    const target = typeof link.target === "object" ? link.target.id : link.target;
+    if (!source || !target) continue;
+    if (!adjacency.has(source)) adjacency.set(source, new Set());
+    if (!adjacency.has(target)) adjacency.set(target, new Set());
+    adjacency.get(source).add(target);
+    adjacency.get(target).add(source);
+  }
+  const visited = new Set([nodeId]);
+  const queue = [nodeId];
+  while (queue.length) {
+    const current = queue.shift();
+    for (const next of adjacency.get(current) || []) {
+      if (visited.has(next)) continue;
+      visited.add(next);
+      queue.push(next);
+    }
+  }
+  return visited;
+}
+
 /* ─── Helpers ────────────────────────────────────────────────────── */
 function truncate(str, len = 80) {
   if (!str) return "";
@@ -198,6 +254,7 @@ export function normalizeGraphPayload(nodesInput = [], edgesInput = []) {
   }));
   const nodeIds = new Set(nodes.map((node) => node.id));
   const links = edgesInput
+    .filter(isTraversalRelation)
     .filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target))
     .map((edge) => ({
       source: edge.source,
@@ -669,6 +726,9 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const [graphVisible, setGraphVisible] = useState(false);
   const [graphViewState, setGraphViewState] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
+  // Auto-focus may select the newest memory for the inspector. Traversal is
+  // explicit: only a user click should dim unrelated parts of the graph.
+  const [traversalNodeId, setTraversalNodeId] = useState(null);
   const [radialDetailVisible, setRadialDetailVisible] = useState(true);
   const autoSelectedLatestRef = useRef(null);
   const [searchInput, setSearchInput] = useState(""); // Immediate
@@ -786,7 +846,9 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       const { nodes, links } = normalizeGraphPayload(cached.nodes, cached.edges);
       const nodeIdSet = new Set(nodes.map((node) => node.id));
       setGraphData({ nodes, links });
-      setRawEdges(cached.edges.filter((edge) => nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target)));
+      setRawEdges(cached.edges
+        .filter(isTraversalRelation)
+        .filter((edge) => nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target)));
       setMeta(cached.meta || null);
       if (nodes.length) hasPaintedRef.current = true;
       return true;
@@ -823,7 +885,9 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       if (intelligentMode) {
         // edges have `source/target/type/confidence`; normalize to links
         nodes = (data.nodes || []).map(n => ({ ...n, val: n.size || 1 }));
-        links = (data.edges || []).map(e => ({ source: e.source, target: e.target, type: e.type, confidence: e.confidence, kind: e.kind }));
+        links = (data.edges || [])
+          .filter(isTraversalRelation)
+          .map(e => ({ source: e.source, target: e.target, type: e.type, confidence: e.confidence, kind: e.kind }));
         // Apply edge type filter
         if (edgeTypeFilter.size > 0) {
           links = links.filter(l => edgeTypeFilter.has(String(l.type || '').toLowerCase()));
@@ -834,7 +898,9 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       }
       setGraphData({ nodes, links });
       const nodeIdSet = new Set(nodes.map((node) => node.id));
-      setRawEdges((data.edges || []).filter((edge) => nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target)));
+      setRawEdges((data.edges || [])
+        .filter(isTraversalRelation)
+        .filter((edge) => nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target)));
       setMeta(data.meta || null);
       if (nodes.length) hasPaintedRef.current = true;
       // Persist for next mount — show instantly on refresh
@@ -1026,6 +1092,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // Node click
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
+    setTraversalNodeId(node?.id || null);
     if (isRadialAtlas) setRadialDetailVisible(true);
   }, [isRadialAtlas]);
 
@@ -1227,6 +1294,11 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     });
     return matches;
   }, [graphData.nodes, layerFilter, temporalFilteredNodes, canonicalOnly]);
+
+  const traversalNodeIds = useMemo(
+    () => traversalNodeId ? connectedMemoryIds(traversalNodeId, graphData.links) : new Set(),
+    [traversalNodeId, graphData.links],
+  );
 
   const radialGraphData = useMemo(() => {
     if (!isRadialAtlas) return graphData;
@@ -1546,7 +1618,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                   graphTheme === "night" ? "text-[#fff1e6]" : "text-[#0a0a0a]"
                 }`}
               >
-                {graphData.nodes.length === 0 ? "Loading memory graph" : "Refreshing graph"}
+                {graphData.nodes.length === 0 ? "Opening Memory Graph" : "Updating Memory Graph"}
               </div>
               <GraphTqdmBar
                 dark={graphTheme === "night"}
@@ -1576,6 +1648,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             selectedNode={selectedNode}
             highlightNodes={highlightNodes}
             filteredNodes={filteredNodes}
+            traversalNodeId={traversalNodeId}
+            traversalNodeIds={traversalNodeIds}
             layerFilter={layerFilter}
             clusterFilter={clusterFilter}
             scope={scope}
@@ -1588,6 +1662,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             }}
             onBackgroundClick={() => {
               setSelectedNode(null);
+              setTraversalNodeId(null);
               setHoveredNode(null);
             }}
             onViewStateChange={setGraphViewState}
@@ -1619,12 +1694,15 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               selectedNode={selectedNode}
               highlightNodes={highlightNodes}
               filteredNodes={filteredNodes}
+              traversalNodeId={traversalNodeId}
+              traversalNodeIds={traversalNodeIds}
               onNodeClick={handleNodeClick}
               onNodeHover={(node) => {
                 setHoveredNode(node);
               }}
               onBackgroundClick={() => {
                 setSelectedNode(null);
+                setTraversalNodeId(null);
                 setHoveredNode(null);
               }}
               backgroundColor="rgba(0,0,0,0)"
@@ -1650,6 +1728,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                 selectedNode={selectedNode}
                 highlightNodes={highlightNodes}
                 filteredNodes={filteredNodes}
+                traversalNodeId={traversalNodeId}
+                traversalNodeIds={traversalNodeIds}
                 layerFilter={layerFilter}
                 clusterFilter={clusterFilter}
                 scope={scope}
@@ -1658,7 +1738,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                 clusters={clusters}
                 onNodeClick={handleNodeClick}
                 onNodeHover={setHoveredNode}
-                onBackgroundClick={() => { setSelectedNode(null); setHoveredNode(null); }}
+                onBackgroundClick={() => { setSelectedNode(null); setTraversalNodeId(null); setHoveredNode(null); }}
                 onViewStateChange={setGraphViewState}
                 backgroundColor="rgba(0,0,0,0)"
                 theme={graphTheme === "night" ? "atlas" : "day"}

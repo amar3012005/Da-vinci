@@ -168,6 +168,8 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
     selectedNode,
     highlightNodes,
     filteredNodes,
+    traversalNodeId,
+    traversalNodeIds,
     onNodeClick,
     onNodeHover,
     onBackgroundClick,
@@ -183,6 +185,8 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
   const highlightSet = useMemo(() => new Set([...(highlightNodes || [])]), [highlightNodes]);
   const filteredSet = useMemo(() => new Set([...(filteredNodes || [])]), [filteredNodes]);
   const hasFilter = filteredSet.size > 0;
+  const traversalSet = useMemo(() => new Set([...(traversalNodeIds || [])]), [traversalNodeIds]);
+  const hasTraversal = Boolean(traversalNodeId && traversalSet.size > 0);
 
   useImperativeHandle(
     ref,
@@ -249,7 +253,8 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
 
       const isSelected = selectedNode?.id === node.id;
       const isHighlight = highlightSet.has(node.id);
-      const isDim = hasFilter && !filteredSet.has(node.id) && !isSelected && !isHighlight;
+      const isDim = ((hasFilter && !filteredSet.has(node.id))
+        || (hasTraversal && !traversalSet.has(node.id))) && !isSelected && !isHighlight;
       const glow = 0.3;
 
       // ── Concentric rings (3 layers) ──
@@ -349,7 +354,7 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
         ctx.fillText(truncated, node.x, node.y + r + 2);
       }
     },
-    [selectedNode, highlightSet, filteredSet, hasFilter]
+    [selectedNode, highlightSet, filteredSet, hasFilter, traversalSet, hasTraversal]
   );
 
   // ─── paintLink — MiroFish replica ─────────────────────────────────────────
@@ -369,7 +374,8 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
       const sourceImportant = selectedNode?.id === sourceId || highlightSet.has(sourceId);
       const targetImportant = selectedNode?.id === targetId || highlightSet.has(targetId);
       const isImportant = sourceImportant || targetImportant;
-      const isDim = hasFilter && !filteredSet.has(sourceId) && !filteredSet.has(targetId) && !isImportant;
+      const isDim = ((hasFilter && !filteredSet.has(sourceId) && !filteredSet.has(targetId))
+        || (hasTraversal && !traversalSet.has(sourceId) && !traversalSet.has(targetId))) && !isImportant;
 
       const confidence = link.confidence != null
         ? link.confidence
@@ -424,7 +430,7 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
         ctx.fillText(labelText, midX, midY);
       }
     },
-    [selectedNode, highlightSet, filteredSet, hasFilter]
+    [selectedNode, highlightSet, filteredSet, hasFilter, traversalSet, hasTraversal]
   );
 
   return (
