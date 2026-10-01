@@ -50,6 +50,7 @@ import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/up
 import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './WebStudio';
 import HarnessChatSurface from './HarnessChatSurface';
 import HarnessSurface from './HarnessSurface';
+import DreamingPage from './DreamingPage';
 
 const LAST_HARNESS_SESSION_KEY = 'hm.lastHarnessSession';
 const HARNESS_SESSION_ROUTE = /^\/hivemind\/app\/overview\/session\/[^/]+$/u;
@@ -1506,7 +1507,7 @@ export default function Overview() {
   // cached desktop Harness session is selected.
   if (shouldUseMobileChat()) return <MobileChatRedirect />;
   if (pathname === '/hivemind/app/overview/dreaming') {
-    return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface key="dreaming-room" /></section>;
+    return <DreamingPage />;
   }
   if (/^\/hivemind\/app\/(?:overview|employee\/harness)\/(?:new|session\/[^/]+)$/u.test(pathname)) {
     rememberHarnessSessionPath(pathname);
