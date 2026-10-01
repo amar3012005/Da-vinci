@@ -33,6 +33,7 @@ export default function QueryStarters({ mount, ready }) {
   const { user, org } = useAuth() || {};
   const { t, i18n } = useTranslation('dashboard');
   const [items, setItems] = useState([]);
+  const [finishedTyping, setFinishedTyping] = useState(false);
   const [target, setTarget] = useState(null);
   const typedEditors = useRef(new WeakSet());
   const generatedDraft = useRef('');
@@ -99,7 +100,7 @@ export default function QueryStarters({ mount, ready }) {
     const text = items[0].query;
     let index = 0;
     let timer;
-    const stop = event => { if (!event || event.isTrusted) clearInterval(timer); };
+    const stop = event => { if (!event || event.isTrusted) { clearInterval(timer); setFinishedTyping(false); } };
     stopTyping.current = () => clearInterval(timer);
     const insert = value => {
       generatedDraft.current += value;
@@ -111,13 +112,13 @@ export default function QueryStarters({ mount, ready }) {
     editor.addEventListener('pointerdown', stop);
     editor.addEventListener('paste', stop);
     editor.focus();
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) insert(text);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { insert(text); setFinishedTyping(true); }
     else timer = setInterval(() => {
       if (!editor.isConnected) { clearInterval(timer); return; }
       const next = Math.min(text.length, index + 3);
       insert(text.slice(index, next));
       index = next;
-      if (index === text.length) clearInterval(timer);
+      if (index === text.length) { clearInterval(timer); setFinishedTyping(true); }
     }, 40);
     return () => {
       clearInterval(timer);
@@ -134,6 +135,7 @@ export default function QueryStarters({ mount, ready }) {
     const draft = editor.textContent.trim();
     if (draft && draft !== generatedDraft.current.trim()) return;
     stopTyping.current();
+    setFinishedTyping(false);
     editor.focus();
     if (draft) {
       const selection = window.getSelection();
@@ -163,5 +165,6 @@ export default function QueryStarters({ mount, ready }) {
       <span className="hm-query-topic">{item.dream ? '🌙 ' : ''}{item.source ? (item.dream ? t('overview.starters.checkLabel', 'Check: {{topic}}', { topic: item.topic }) : t('overview.starters.catchUpLabel', 'Catch up: {{topic}}', { topic: item.topic })) : item.topic}</span>
       <span className="hm-query-source">{item.source || t('overview.starters.try', 'Try this')}{item.timestamp ? ` · ${new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(item.timestamp)}` : ''}</span>
     </button>)}</div>
+    {finishedTyping && <p className="hm-query-ready" role="status">{t('overview.starters.ready', 'Edit this question, or send it when you’re ready.')}</p>}
   </section>, target.seat);
 }
