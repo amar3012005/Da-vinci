@@ -35,6 +35,8 @@ export default function QueryStarters({ mount, ready }) {
   const [items, setItems] = useState([]);
   const [target, setTarget] = useState(null);
   const typedEditors = useRef(new WeakSet());
+  const generatedDraft = useRef('');
+  const stopTyping = useRef(() => {});
   const identity = `${org?.id || ''}:${user?.id || ''}:${i18n.language}`;
 
   useEffect(() => {
@@ -98,7 +100,9 @@ export default function QueryStarters({ mount, ready }) {
     let index = 0;
     let timer;
     const stop = event => { if (!event || event.isTrusted) clearInterval(timer); };
+    stopTyping.current = () => clearInterval(timer);
     const insert = value => {
+      generatedDraft.current += value;
       const clipboard = new DataTransfer();
       clipboard.setData('text/plain', value);
       editor.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: clipboard }));
@@ -123,14 +127,28 @@ export default function QueryStarters({ mount, ready }) {
     };
   }, [target?.editor, items]);
 
-  if (!target || target.editor.textContent.trim()) return null;
+  if (!target) return null;
   const accept = query => {
     const editor = target.editor;
-    if (!editor.isConnected || editor.textContent.trim()) return;
+    if (!editor.isConnected) return;
+    const draft = editor.textContent.trim();
+    if (draft && draft !== generatedDraft.current.trim()) return;
+    stopTyping.current();
     editor.focus();
-    const clipboard = new DataTransfer();
-    clipboard.setData('text/plain', query);
-    editor.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: clipboard }));
+    if (draft) {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+    }
+    requestAnimationFrame(() => {
+      const clipboard = new DataTransfer();
+      clipboard.setData('text/plain', query);
+      generatedDraft.current = query;
+      editor.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: clipboard }));
+    });
     // Use the existing composer paste path. Never submit or overwrite a draft.
   };
   const options = items.length ? items : [
