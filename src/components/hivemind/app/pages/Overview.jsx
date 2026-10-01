@@ -86,14 +86,9 @@ function MobileChatRedirect() {
 }
 
 function ResumeHarnessSession({ path }) {
-  useEffect(() => {
-    // The embedded Harness owns a separate React root. Re-enter it in a clean
-    // document after OS/VOICE instead of attempting to reuse a disposed root.
-    // Static assets remain browser/Cloudflare cached, while the neutral shell
-    // prevents the legacy Overview from flashing during the handoff.
-    window.location.replace(path);
-  }, [path]);
-  return <section className="h-full min-h-0 w-full overflow-hidden bg-[#f7f5f0]" aria-label="Loading BRAIN" />;
+  const navigate = useNavigate();
+  useEffect(() => { navigate(path, { replace: true }); }, [path, navigate]);
+  return <section className="h-full min-h-0 w-full overflow-hidden"><HarnessSurface /></section>;
 }
 
 // ─── Animation variants ──────────────────────────────────────────

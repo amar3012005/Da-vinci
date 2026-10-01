@@ -391,7 +391,7 @@ export default function AppShell() {
   return (
     <QuickRecorderProvider>
     <TeamProvider>
-      <div className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
+      <div data-hivemind-app-shell className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
         {!compactViewport && !graphFullscreen && !hyperFullscreen && (
           <Sidebar
             activeSection={activeSection}
@@ -407,7 +407,7 @@ export default function AppShell() {
           }}
         >
           <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />
-          <main className={graphFullscreen ? "h-[calc(100dvh-56px)] overflow-hidden" : onOverview ? "h-[calc(100dvh-56px)] min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          <main className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>

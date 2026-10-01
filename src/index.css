@@ -273,3 +273,10 @@ html.cinematic-mode::after { bottom: 0; }
 
 /* Governed external actions must remain actionable above first-run tours. */
 [aria-label="Choose email send policy"] { z-index: 10020 !important; }
+
+/* A stable desktop app scale, applied before paint; browser zoom stays user-owned. */
+@media (min-width: 768px) {
+  html:has([data-hivemind-app-shell]) { zoom: .9; width: calc(100% / .9); max-width: none; --hm-app-viewport-height: calc(100dvh / .9); }
+  html:has([data-hivemind-app-shell]) body { max-width: none; }
+  [data-hivemind-app-shell] { min-height: var(--hm-app-viewport-height); }
+}
