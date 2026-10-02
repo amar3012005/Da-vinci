@@ -354,6 +354,8 @@ function makeNodeTagSprite(text, themeName, variant = "normal") {
     map: texture,
     transparent: true,
     opacity: 0,            // updated each frame in render loop
+    sizeAttenuation: false,
+    fog: false,
     depthTest: false,
     depthWrite: false,
   });
@@ -361,6 +363,8 @@ function makeNodeTagSprite(text, themeName, variant = "normal") {
   const scale = variant.startsWith("board") ? 0.2 : 0.14;
   sprite.scale.set(w * scale, h * scale, 1);
   sprite.renderOrder = 998;
+  sprite.center.set(0.5, 0);
+  sprite.userData.labelPixels = { w, h };
   sprite.userData.nodeTag = text;
   sprite.userData.labelVariant = variant;
   return sprite;
@@ -379,7 +383,17 @@ function setNodeLabelSpriteVariant(sprite, variant, themeName) {
         ? 0.2
         : 0.14;
   sprite.scale.set(w * scale, h * scale, 1);
+  sprite.userData.labelPixels = { w, h };
   sprite.userData.labelVariant = variant;
+}
+
+// Keep titles readable while orbiting the radial shells; zoom still changes
+// the visible label budget, rather than shrinking text to a few pixels.
+function sizeNodeLabelForScreen(sprite, camera, viewportHeight) {
+  const pixels = sprite.userData.labelPixels;
+  if (!pixels || !camera || !viewportHeight) return;
+  const unit = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov || 50) / 2) / viewportHeight;
+  sprite.scale.set(pixels.w * unit * 0.85, pixels.h * unit * 0.85, 1);
 }
 
 function makeLinkLabelSprite(link, themeName) {
@@ -1036,11 +1050,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   );
 
   const getClusterHaloColor = useCallback((node) => {
-    const t = themeRef.current;
     const activeCluster = clusterFilterRef.current;
-    if (activeCluster && node.clusterId === activeCluster) return t.nodeAccent;
-    if (selectedNodeRef.current?.clusterId && node.clusterId === selectedNodeRef.current.clusterId) return t.nodeAccent;
-    if (highlightNodesRef.current.has(node.id)) return t.name === "atlas" ? "#ff786f" : (t.name === "night" ? "#dcd6c9" : "#5a554c");
+    if (activeCluster && node.clusterId === activeCluster) return "#277be2";
+    if (selectedNodeRef.current?.clusterId && node.clusterId === selectedNodeRef.current.clusterId) return "#277be2";
+    if (highlightNodesRef.current.has(node.id)) return "#277be2";
     return null;
   }, []);
 
@@ -1123,6 +1136,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       object3d.add(title);
       nodeTagSpritesRef.current.set(node.id, title);
     }
+    if (title) sizeNodeLabelForScreen(title, fgRef.current?.camera?.(), containerRef.current?.getBoundingClientRect?.().height);
     if (title && (focusId || highlightNodesRef.current.size > 0)) {
       setNodeLabelSpriteVariant(title, selected ? "selected" : "focus", themeRef.current.name);
       title.material.opacity = selected ? 1 : neighbor || highlighted ? 0.95 : 0;
@@ -1790,6 +1804,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             if (isSelected) variant = board ? "boardSelected" : "selected";
             else if (isNeighbor || isHighlighted) variant = board ? "boardFocus" : "focus";
             setNodeLabelSpriteVariant(sprite, variant, themeName);
+            sizeNodeLabelForScreen(sprite, cameraNow, viewport.height);
             sprite.material.opacity = opacity;
             sprite.visible = opacity > 0.01;
           });
