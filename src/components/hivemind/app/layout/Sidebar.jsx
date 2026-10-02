@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SingulanceMark from '../shared/SingulanceMark';
-import SingulanceBrand from '../shared/SingulanceBrand';
 import {
   LayoutDashboard,
   Moon,
@@ -18,6 +17,7 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Globe,
   Server,
   Network,
@@ -154,6 +154,15 @@ export default function Sidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const [team, setTeam] = useState([]);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness');
+  useEffect(() => setModeMenuOpen(false), [location.pathname]);
+  useEffect(() => {
+    if (!modeMenuOpen) return;
+    const dismiss = event => { if (event.key === 'Escape') setModeMenuOpen(false); };
+    window.addEventListener('keydown', dismiss);
+    return () => window.removeEventListener('keydown', dismiss);
+  }, [modeMenuOpen]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [openingAgent, setOpeningAgent] = useState(null);
   const [teamError, setTeamError] = useState('');
@@ -210,7 +219,10 @@ export default function Sidebar({
     };
   }, [onCollapsedChange]);
 
-  const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection, team });
+  const allNavSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection: activeSection === 'tara' ? 'tara' : 'hivemind', team });
+  const navSections = activeSection === 'tara' ? allNavSections : teamMode
+    ? [allNavSections[1], { label: null, items: [{ to: '/hivemind/app/employees', icon: Building2, label: t('sidebar.companyWorkspace', { defaultValue: 'Company workspace' }) }] }]
+    : allNavSections.filter((_, index) => index !== 1);
   const planLabel = org?.plan
     ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })
     : t('sidebar.planLabel.free', { defaultValue: 'Free Plan' });
@@ -232,26 +244,26 @@ export default function Sidebar({
     >
       {/* Logo */}
       <div className="h-14 shrink-0 flex items-center justify-between px-4 border-b border-[#e3e0db]">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {collapsed ? (
+        <div className="relative min-w-0 flex-1">
+          <button type="button" aria-label="Choose workspace mode" aria-expanded={modeMenuOpen}
+            aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)}
+            className="flex items-center gap-2.5 min-w-0 rounded-lg py-1.5 text-[#292929] hover:bg-[#f3f1ec] w-full">
             <SingulanceMark size={24} />
-          ) : (
-            <SingulanceBrand variant="light" markSize={27} />
-          )}
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              className="flex flex-col overflow-hidden"
-            >
-              {org && (
-                <span className="text-[#737373] text-[10px] font-mono truncate max-w-[140px]">
-                  {activeSection === 'hyperagents' ? 'HYPERAGENTS' : activeSection === 'tara' ? 'TARA' : 'HIVEMIND'} · {org.name || org.slug || org.id?.slice(0, 8)}
-                </span>
-              )}
-            </motion.div>
-          )}
+            {!collapsed && <span className="flex-1 min-w-0 text-left">
+              <span className="block text-[16px] font-semibold truncate">{teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span>
+              <span className="block text-[10px] text-[#737373] truncate">{org?.name || org?.slug || 'HIVEMIND'}</span>
+            </span>}
+            {!collapsed && <ChevronDown size={14} />}
+          </button>
+          {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 min-w-[200px] rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-1.5 shadow-lg z-50">
+            {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), icon: Brain, path: '/hivemind/app/overview', selected: !teamMode },
+              { name: 'HyperAgents', icon: Bot, path: '/hivemind/app/employee/harness', selected: teamMode }].map(mode =>
+              <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button"
+                onClick={() => { setModeMenuOpen(false); navigate(mode.path); }}
+                className={`flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f3f1ec] font-semibold' : ''}`}>
+                <mode.icon size={17} />{mode.name}
+              </button>)}
+          </div>}
         </div>
         <button
           type="button"
