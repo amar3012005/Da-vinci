@@ -1,3 +1,4 @@
+import { TEXT_PAGE_FORMATS, textPageEquivalents, officePageCount } from './UploadPageCount';
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -467,7 +468,7 @@ function UploadScopeModal({
                 {t('knowledgebase.uploadBatch', 'Upload batch')} · {files.length}
               </p>
               <p className="text-[11px] font-mono text-[#a3a3a3]">
-                {anyCounting ? '… pages' : `${totalPages} page${totalPages === 1 ? '' : 's'}`}
+                {anyCounting ? '… pages' : `${totalPages} page equivalent${totalPages === 1 ? '' : 's'}`}
               </p>
             </div>
             <div className="space-y-1 max-h-[30vh] overflow-y-auto pr-1">
@@ -475,7 +476,7 @@ function UploadScopeModal({
                 const pv = pageCounts[`${file.name}::${file.size}`];
                 const pageLabel = pv === 'counting' || pv === undefined
                   ? '…'
-                  : `${pv} pg`;
+                  : `${pv} ${TEXT_PAGE_FORMATS.has(file.name.split('.').pop().toLowerCase()) ? 'page eq.' : file.name.toLowerCase().endsWith('.pptx') ? 'slides' : file.name.toLowerCase().endsWith('.xlsx') ? 'sheets' : 'pages'}`;
                 return (
                   <div key={`${file.name}-${file.size}`} className="flex items-center justify-between gap-2 text-sm group">
                     <span className="truncate text-[#0a0a0a] flex-1 min-w-0">{file.name}</span>
@@ -498,7 +499,7 @@ function UploadScopeModal({
             {/* Page quota line — the ONLY gate on an upload. Never LLM tokens. */}
             {!pagesUnlimited && (
               <div className={`mt-2 pt-2 border-t border-[#ece8de] flex items-center justify-between text-[11px] font-mono ${overLimit ? 'text-[#dc2626]' : 'text-[#a3a3a3]'}`}>
-                <span>{t('knowledgebase.pagesQuota', 'Pages')}: {totalPages} of {Math.max(0, pagesRemaining)} left{pagesLimit >= 0 ? ` (${pagesUsed}/${pagesLimit} used)` : ''}</span>
+                <span>{t('knowledgebase.pagesQuota', 'Page equivalents')}: {totalPages} of {Math.max(0, pagesRemaining)} left{pagesLimit >= 0 ? ` (${pagesUsed}/${pagesLimit} used)` : ''}</span>
                 {overLimit && (
                   <button type="button" onClick={onUpgrade} className="font-semibold text-[#117dff] hover:text-[#0e6fe0]">
                     {t('knowledgebase.upgradeForPages', 'Upgrade for more →')}
@@ -1881,7 +1882,10 @@ export default function KnowledgeBase() {
       const sizeError = preflightRejectReason(file);
       if (sizeError) return { file, idx, error: sizeError };
 
-      const pageCount = isPdfFile(file) ? await countPdfPages(file) : 1;
+      const pageCount = isPdfFile(file) ? await countPdfPages(file)
+        : TEXT_PAGE_FORMATS.has(ext) ? textPageEquivalents(await file.text())
+          : ['pptx', 'xlsx'].includes(ext) ? (await officePageCount(file).catch(() => null)) || 1
+            : 1;
       const pageError = isPdfFile(file) ? pdfPageRejectReason(pageCount) : null;
       return { file, idx, pageCount, error: pageError };
     }));
@@ -2463,42 +2467,19 @@ export default function KnowledgeBase() {
                     </>
                   )}
                   {u.status === 'uploading' && u.bytesDone && (
-                    /* Real server phase, not an elapsed-seconds guess. The stage
-                       comes from knowledge_ingest_jobs via onStatus, so a 2-minute
-                       ingest reads as progress ("Extracting memories") instead of
-                       looking hung ("Processing · 131s"). Falls back to the old
-                       counter only when the server has not reported a phase yet. */
-                    <span className="text-[#117dff] font-semibold">
-                      {u.stageLabel
-                        ? u.stageLabel
-                        : `Processing${u.processingSec ? ` · ${u.processingSec}s` : '…'}`}
-                      {u.processed != null && u.total > 0 && (
-                        <span className="text-[#525252] font-normal"> · {u.processed}/{u.total}</span>
-                      )}
-                      {u.serverProgress != null && (
-                        <span className="text-[#525252] font-normal"> · {Math.round(u.serverProgress)}%</span>
-                      )}
-                      {u.processingSec != null && (
-                        <span className="text-[#a3a3a3] font-normal"> · {Math.floor(u.processingSec / 60)}:{String(u.processingSec % 60).padStart(2, '0')} elapsed</span>
-                      )}
-                      {u.segments != null && u.segments > 0 && (
-                        <span className="text-[#a3a3a3] font-normal"> · {u.segments} sections</span>
-                      )}
-                      {u.promoted != null && u.promoted > 0 && (
-                        <span className="text-[#16a34a] font-normal"> · {u.promoted} memories</span>
-                      )}
-                    </span>
-                  )}
-                  {/* The pipeline stack. Server-side ingest previously rendered as a
-                      full-width INDETERMINATE pulse plus one line of text, so a 30-134s
-                      ingest gave no sense of how far along it was. `serverProgress` was
-                      already being tracked separately from byte progress (the two must
-                      never share a field — see the ownership note above), it just was
-                      never drawn. Read/Index/Memories/Done fill from the server's own
-                      percentages. */}
-                  {u.status === 'uploading' && u.bytesDone && (
-                    <div className="w-32 shrink-0">
-                      <IngestStageStack progress={u.serverProgress ?? 0} stageLabel={u.stageLabel} />
+                    <div className="min-w-0 text-[#117dff]">
+                      <span className="font-semibold">Processing{u.serverProgress != null ? ` · ${Math.round(u.serverProgress)}%` : '…'}</span>
+                      {u.processingSec != null && <span className="ml-2 text-[#777]">{Math.floor(u.processingSec / 60)}:{String(u.processingSec % 60).padStart(2, '0')} elapsed</span>}
+                      <details className="mt-1 text-[#777]">
+                        <summary className="cursor-pointer">Work details</summary>
+                        <div className="mt-2 space-y-1">
+                          <p>{u.stageLabel || 'Processing'}</p>
+                          {u.segments > 0 && <p>{u.segments} source sections</p>}
+                          {u.promoted > 0 && <p>{u.promoted} memories saved</p>}
+                          {u.processed != null && u.total > 0 && <p>{u.processed} of {u.total} processed</p>}
+                          <IngestStageStack progress={u.serverProgress ?? 0} stageLabel={u.stageLabel} />
+                        </div>
+                      </details>
                     </div>
                   )}
                   {/* TWO DIFFERENT QUEUES, said differently. `status:'queued'` means this file has
@@ -2659,7 +2640,7 @@ export default function KnowledgeBase() {
                         <span className="text-[#777] text-xs">{phase1Stats[documentIdFrom(doc)].memories} memories</span>
                       )}
                       {meta.pages && (
-                        <span className="text-[#777] text-xs">{meta.pages} {Number(meta.pages) === 1 ? 'page' : 'pages'}</span>
+                        <span className="text-[#777] text-xs">{meta.pages} {TEXT_PAGE_FORMATS.has(String(meta.filename || srcMeta.filename || doc.title || '').split('.').pop().toLowerCase()) ? 'page equivalents' : 'pages'}</span>
                       )}
 
                     </div>

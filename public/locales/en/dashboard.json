@@ -918,7 +918,7 @@
     "youreIn": "You're in"
   },
   "knowledgebase": {
-    "acceptedFormats": "PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · PNG · JPG · TIFF · MP3 · WAV — max 100MB per file",
+    "acceptedFormats": "PDF · Word · Slides · Spreadsheets · Text · Markdown · HTML · Images · Audio — up to 10 MB per file; PDFs up to 100 pages",
     "allTypes": "All Types",
     "allUploadsComplete": "All uploads complete — safe to close this page.",
     "allUploadsHint": "The server is now extracting + indexing. New memories will appear in 2–5 minutes on the Memories page.",
@@ -978,7 +978,8 @@
     "uploadingWarning_one": "Don't close this page yet — {{count}} file{{plural}} still uploading.",
     "uploadingWarning_other": "Don't close this page yet — {{count}} file{{plural}} still uploading.",
     "waiting": "Waiting...",
-    "chooseFiles": "Choose files"
+    "chooseFiles": "Choose files",
+    "pagesQuota": "Page equivalents"
   },
   "mcpconnectcallback": {
     "autoCopied": "auto-copied to clipboard",
