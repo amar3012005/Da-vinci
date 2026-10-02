@@ -234,7 +234,7 @@ export default function Sidebar({
     { to: '/hivemind/app/settings', icon: Settings,   label: tt('settings', 'Settings') },
   ];
 
-  const sidebarWidth = collapsed ? 'w-[68px]' : 'w-[260px]';
+  const sidebarWidth = collapsed ? 'w-[68px]' : 'w-[300px]';
 
   return (
     <aside

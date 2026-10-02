@@ -402,7 +402,7 @@ export default function AppShell() {
         <div
           className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen ? 'sidebar-content-expanded' : ''}`}
           style={{
-            marginLeft: (compactViewport || graphFullscreen || hyperFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '260px',
+            marginLeft: (compactViewport || graphFullscreen || hyperFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '300px',
             '--hm-harness-center-offset': `${-(compactViewport ? 0 : hyperFullscreen ? 120 : sidebarCollapsed ? 34 : 130)}px`,
           }}
         >
