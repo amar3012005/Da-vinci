@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import ForceGraph3D from "3d-force-graph";
 import * as THREE from "three";
-import { getRadialMemoryColor, getTemporalTopDownPose } from "./MemoryGraphTemporal";
+import { getTemporalTopDownPose } from "./MemoryGraphTemporal";
 import {
   buildRadialAtlasShellTicks,
   formatRadialShellDate,
@@ -17,6 +17,8 @@ import {
   getUniqueRadialShellDateIndices,
   getVisibleRadialShellDateIndices,
 } from "./MemoryGraphRadialAtlas";
+
+import { memoryRelationLabel } from "./MemoryGraphLabels";
 
 const DEFAULT_BG = "rgba(0,0,0,0)";
 const TEMPORAL_DATE_LABEL_PADDING = 20;
@@ -270,26 +272,12 @@ function escapeHtml(value) {
 function getNodeTagTexture(text, themeName, variant = "normal") {
   const key = `${themeName}:${variant}:${text}`;
   if (nodeTagTextureCache.has(key)) return nodeTagTextureCache.get(key);
-  const t = (() => {
-    if (variant.startsWith("board")) {
-      if (variant === "boardSelected") return { bg: "#ffc44d", border: "rgba(255,236,172,0.78)", fg: "#160f07", shadow: "rgba(217,154,26,0.36)" };
-      if (variant === "boardFocus") return { bg: "rgba(230,163,24,0.98)", border: "rgba(255,226,139,0.62)", fg: "#160f07", shadow: "rgba(217,154,26,0.3)" };
-      return { bg: "rgba(219,151,19,0.98)", border: "rgba(255,220,120,0.52)", fg: "#160f07", shadow: "rgba(156,94,8,0.28)" };
-    }
-    if (themeName === "atlas") {
-      if (variant === "selected") return { bg: "rgba(255,84,80,0.96)", border: "rgba(255,211,202,0.38)", fg: "#120c0b", shadow: "rgba(255,84,80,0.26)" };
-      if (variant === "focus") return { bg: "rgba(4,4,4,0.94)", border: "rgba(255,115,105,0.34)", fg: "#fff2e8", shadow: "rgba(255,84,80,0.18)" };
-      return { bg: "rgba(3,3,3,0.9)", border: "rgba(255,238,222,0.14)", fg: "#eee4d8", shadow: "rgba(0,0,0,0.38)" };
-    }
-    if (themeName === "night") {
-      if (variant === "selected") return { bg: "rgba(255,84,80,0.96)", border: "rgba(255,211,202,0.38)", fg: "#120c0b", shadow: "rgba(255,84,80,0.26)" };
-      if (variant === "focus") return { bg: "rgba(4,4,4,0.94)", border: "rgba(255,115,105,0.34)", fg: "#fff2e8", shadow: "rgba(255,84,80,0.18)" };
-      return { bg: "rgba(3,3,3,0.9)", border: "rgba(255,238,222,0.14)", fg: "#eee4d8", shadow: "rgba(0,0,0,0.38)" };
-    }
-    if (variant === "selected") return { bg: "rgba(232,79,72,0.96)", border: "rgba(68,42,34,0.36)", fg: "#140c09", shadow: "rgba(156,59,48,0.24)" };
-    if (variant === "focus") return { bg: "rgba(7,6,5,0.92)", border: "rgba(232,79,72,0.32)", fg: "#fff2e4", shadow: "rgba(68,42,34,0.16)" };
-    return { bg: "rgba(8,7,6,0.86)", border: "rgba(232,79,72,0.18)", fg: "#fff2e4", shadow: "rgba(68,42,34,0.12)" };
-  })();
+  const selected = variant === "selected" || variant === "boardSelected";
+  const focused = variant === "focus" || variant === "boardFocus";
+  const dark = themeName !== "day";
+  const t = selected
+    ? { bg: "rgba(39,123,226,0.97)", border: "rgba(182,217,255,0.65)", fg: "#ffffff", shadow: "rgba(39,123,226,0.22)" }
+    : { bg: dark ? "rgba(17,25,34,0.96)" : "rgba(247,250,253,0.97)", border: focused ? "rgba(93,158,224,0.65)" : "rgba(142,171,201,0.3)", fg: dark ? "#e7f1fb" : "#23405e", shadow: "rgba(0,0,0,0.18)" };
   const dpr = typeof window !== "undefined" ? Math.max(1, Math.min(2.5, window.devicePixelRatio || 1)) : 1;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -395,7 +383,7 @@ function setNodeLabelSpriteVariant(sprite, variant, themeName) {
 }
 
 function makeLinkLabelSprite(link, themeName) {
-  const type = link?.type || "Relates";
+  const type = memoryRelationLabel(link?.type);
   const confidence = Number.isFinite(link?.confidence)
     ? `${Math.round(link.confidence * 100)}%`
     : null;
@@ -475,27 +463,6 @@ function getAdaptiveLabelLimit(mode, nodeCount) {
   return base;
 }
 
-function getAtlasNodeColor(node) {
-  const type = getNodeType(node);
-  const weight = getNodeWeight(node);
-  const factVariant = getFactVariant(node);
-
-  if (node?.kind === "document") return "#d99a1a";
-  if (node?.kind === "entity") return mixHex("#f2dfd3", "#f35a52", Math.min(0.68, 0.12 + weight * 0.5));
-  if (type === "decision") return mixHex("#8f2927", "#ff5b54", Math.min(1, 0.28 + weight * 0.68));
-  if (type === "event") return mixHex("#b4473e", "#f4d8c8", Math.min(1, 0.22 + weight * 0.48));
-  if (type === "fact") {
-    return factVariant === "extracted"
-      ? mixHex("#b73431", "#ff6a61", Math.min(1, 0.3 + weight * 0.55))
-      : mixHex("#d34f47", "#f1d5c7", Math.min(1, 0.12 + weight * 0.42));
-  }
-  if (type === "relationship") return "#ead9cf";
-  if (type === "goal") return mixHex("#9f312d", "#f0645d", Math.min(1, 0.22 + weight * 0.58));
-  if (type === "preference") return mixHex("#d1b4a4", "#f2ded0", Math.min(1, 0.18 + weight * 0.46));
-  if (type === "lesson") return mixHex("#d9c9bd", "#fff0e5", Math.min(1, 0.14 + weight * 0.42));
-  return mixHex("#c83f3a", "#f0d5c7", Math.min(1, 0.14 + weight * 0.54));
-}
-
 function getNodeRadius(node) {
   let radius = Math.min(5.8, Math.sqrt(node.val || 4) * 0.98);
   const weight = getNodeWeight(node);
@@ -512,7 +479,7 @@ function getNodeRadius(node) {
   if (node.nodeLayer === "tara-insight") radius *= 1.04;
   if (isBoardNode(node)) radius = Math.max(radius, 3.8 + importance * 2.4 + recall * 1.2);
 
-  return Math.min(10.6, Math.max(2.6, radius * (0.92 + weight * 0.54 + recall * 0.2)));
+  return Math.min(10.6, Math.max(3.6, radius * (1.08 + weight * 0.54 + recall * 0.2)));
 }
 
 function getNodeType(node) {
@@ -533,40 +500,6 @@ function getKindColor(node) {
 // Edge color by type (matches the image: purple=derived_from, red=contradicts, green=supports)
 // Edge palette parity with MemoryGraph.jsx EDGE_COLORS so the same edge
 // type reads the same color across 2D / 3D / detail views.
-function getEdgeColorByType(type, themeName = "day", temporalPalette = false) {
-  const t = String(type || '').toLowerCase();
-  if (temporalPalette) {
-    if (t === 'updates') return '#e59a18';
-    if (t === 'extends') return '#18a078';
-    if (t === 'derives' || t === 'derived_from') return '#8957d8';
-    if (t === 'contradicts') return '#df514b';
-    if (t === 'supports') return '#2878d4';
-    if (t === 'mentions') return '#8292a5';
-    if (t === 'needs_revision') return '#d97706';
-    if (t === 'peer_review') return '#0f9aaa';
-  }
-  if (themeName === "atlas" || themeName === "night" || themeName === "day") {
-    if (t === 'updates') return '#ff6560';
-    if (t === 'extends') return '#c4bdb4';
-    if (t === 'derives' || t === 'derived_from') return '#f1dfd1';
-    if (t === 'contradicts') return '#e3423f';
-    if (t === 'supports') return '#bfb8af';
-    if (t === 'mentions') return '#706d68';
-    if (t === 'needs_revision') return '#d08a2e';
-    if (t === 'peer_review') return '#8f8a82';
-    return null;
-  }
-  if (t === 'updates')      return '#f59e0b'; // amber — supersession
-  if (t === 'extends')      return '#22c55e'; // green — additive
-  if (t === 'derives' || t === 'derived_from') return '#8b5cf6'; // violet — synthesis link
-  if (t === 'contradicts')  return '#ef4444'; // red — conflict
-  if (t === 'supports')     return '#3b82f6'; // blue — evidence
-  if (t === 'mentions')     return '#94a3b8'; // slate — light reference
-  if (t === 'needs_revision') return '#f97316'; // orange
-  if (t === 'peer_review')  return '#64748b'; // slate
-  return null;
-}
-
 function getFactVariant(node) {
   if (!node) return "raw";
   const flags = [
@@ -651,16 +584,6 @@ function getThemeFog(theme) {
   return null;
 }
 
-function hexToRgb(hex) {
-  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!match) return { r: 143, g: 138, b: 130 };
-  return {
-    r: parseInt(match[1], 16),
-    g: parseInt(match[2], 16),
-    b: parseInt(match[3], 16),
-  };
-}
-
 // Perf: share node GEOMETRIES across all nodes. Geometry is the heavy GPU
 // buffer and is never mutated per-node (only material colors are, during
 // recolor — so materials stay per-node, geometries are pooled). Keyed by
@@ -692,7 +615,6 @@ function makeMaterial(color, opacity = 0.96) {
 
 function makeNodeShape(node, color, clusterTint, lite = false) {
   const radius = getNodeRadius(node);
-  const type = getNodeType(node);
   const group = new THREE.Group();
   const primaryMaterial = makeMaterial(color, 0.95);
   const haloMaterial = new THREE.MeshBasicMaterial({
@@ -709,50 +631,12 @@ function makeNodeShape(node, color, clusterTint, lite = false) {
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
-  let mesh;
-
   const rb = _rb(radius);
-  switch (type) {
-    case "document":
-      // Diamond/octahedron — matches reference image style
-      mesh = new THREE.Mesh(cachedGeo(`oct:${rb}`, () => new THREE.OctahedronGeometry(rb * 1.25, 0)), primaryMaterial);
-      break;
-    case "entity":
-      // Hexagonal disc — entity nodes
-      mesh = new THREE.Mesh(cachedGeo(`cyl-disc:${rb}`, () => new THREE.CylinderGeometry(rb * 1.1, rb * 1.1, rb * 0.4, 6)), primaryMaterial);
-      break;
-    case "decision":
-      mesh = new THREE.Mesh(cachedGeo(`sph16:${rb}`, () => new THREE.SphereGeometry(rb * 0.98, 16, 16)), primaryMaterial);
-      break;
-    case "preference":
-      mesh = new THREE.Mesh(cachedGeo(`box-pref:${rb}`, () => new THREE.BoxGeometry(rb * 1.7, rb * 1.28, rb * 1.05)), primaryMaterial);
-      break;
-    case "goal":
-      mesh = new THREE.Mesh(cachedGeo(`cyl-goal:${rb}`, () => new THREE.CylinderGeometry(rb * 0.98, rb * 0.98, rb * 1.45, 6)), primaryMaterial);
-      mesh.rotation.z = Math.PI / 2;
-      break;
-    case "lesson":
-      mesh = new THREE.Mesh(cachedGeo(`tetra:${rb}`, () => new THREE.TetrahedronGeometry(rb * 1.18, 0)), primaryMaterial);
-      break;
-    case "event":
-      mesh = new THREE.Mesh(cachedGeo(`box-evt:${rb}`, () => new THREE.BoxGeometry(rb * 1.55, rb * 1.1, rb * 1.1)), primaryMaterial);
-      break;
-    case "relationship": {
-      const torus = new THREE.Mesh(
-        cachedGeo(`torus:${rb}`, () => new THREE.TorusGeometry(rb * 0.88, Math.max(rb * 0.16, 0.24), 12, 28)),
-        primaryMaterial,
-      );
-      torus.rotation.x = Math.PI / 2;
-      mesh = torus;
-      break;
-    }
-    case "fact":
-    case "fact_raw":
-    case "fact_extracted":
-    default:
-      mesh = new THREE.Mesh(cachedGeo(`sph14:${rb}`, () => new THREE.SphereGeometry(rb, 14, 14)), primaryMaterial);
-      break;
-  }
+  // One base shape; type is described in the inspector rather than geometry.
+  const mesh = new THREE.Mesh(
+    cachedGeo(`sph14:${rb}`, () => new THREE.SphereGeometry(rb, 14, 14)),
+    primaryMaterial,
+  );
 
   const ct = clusterTint ? 1 : 0;
   const field = new THREE.Mesh(
@@ -1047,7 +931,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const t = themeRef.current;
     return `
       <div style="display:flex;align-items:center;gap:6px;padding:3px 7px;border:1px solid ${t.edgeLabelBorder};border-radius:999px;background:${t.edgeLabelBg};box-shadow:0 8px 18px rgba(0,0,0,0.18);font-family:'Space Grotesk',sans-serif;font-size:10px;line-height:1;color:${t.label};white-space:nowrap;backdrop-filter:blur(8px);">
-        <span style="font-weight:600;">${link.type || "Relates"}</span>
+        <span style="font-weight:600;">${escapeHtml(memoryRelationLabel(link.type))}</span>
         ${confidence ? `<span style="font-family:monospace;font-size:9px;color:${t.labelDim};">${confidence}</span>` : ""}
       </div>
     `;
@@ -1132,34 +1016,14 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const getNodeColor = useCallback((node) => {
       const t = themeRef.current;
       const highlightedNodes = highlightedNodesRef.current;
-      if (radialTemporalRef.current) {
-        const radialColor = getRadialMemoryColor(node);
-        if (highlightedNodes.has(node.id)) return selectedNodeRef.current?.id === node.id ? "#0a0a0a" : "#117dff";
-        if (traversalNodeIdRef.current && !traversalNodeIdsRef.current.has(node.id)) return "#74695f";
-        if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) return "#aaa49c";
-        return radialColor;
-      }
-      let baseColor = (t.name === "atlas" || t.name === "day" || t.name === "night")
-        ? getAtlasNodeColor(node)
-        : getNodeColorBase(node);
-      if (t.name === "night") {
-        baseColor = getAtlasNodeColor(node);
-      }
-      if (highlightedNodes.has(node.id)) {
-        if (selectedNodeRef.current?.id === node.id) return t.nodeAccent;
-        if (t.name === "atlas") return "#fff0e5";
-        return t.name === "night" ? "#dcd6c9" : "#36332d";
-      }
-      // Once a memory is selected, keep the whole graph in place but quiet
-      // every node outside that memory's relationship component. This makes
-      // traversal legible without losing the user's spatial context.
-      if (traversalNodeIdRef.current && !traversalNodeIdsRef.current.has(node.id)) {
-        return t.name === "night" || t.name === "atlas" ? "#403b36" : "#b8b1a8";
-      }
-      if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) {
-        return t.name === "night" || t.name === "atlas" ? "#403b36" : "#b8b1a8";
-      }
-      return baseColor;
+      const dark = t.name !== "day";
+      const selected = selectedNodeRef.current?.id === node.id;
+      const connected = selectedNodeRef.current?.id && neighborMapRef.current.get(selectedNodeRef.current.id)?.has(node.id);
+      if (selected) return dark ? "#66b1ff" : "#155fbe";
+      if (connected || highlightedNodes.has(node.id) || highlightNodesRef.current.has(node.id)) return dark ? "#b6d9ff" : "#3985d6";
+      if (traversalNodeIdRef.current || highlightNodesRef.current.size > 0) return dark ? "#46494e" : "#b0b5bd";
+      if (!["atlas", "night", "day"].includes(t.name)) return getNodeColorBase(node);
+      return dark ? "#8eabc9" : "#527ba4";
     },
     [],
   );
@@ -1178,12 +1042,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   // themes (Updates darkest, References lightest).
   const getLinkColor = useCallback((link) => {
     const t = themeRef.current;
-    if (highlightedLinksRef.current.has(link)) return t.nodeAccent;
-    // Type-specific colors take priority (Contradicts=red, derived_from=purple, etc.)
-    const typeColor = getEdgeColorByType(link?.type, t.name, radialTemporalRef.current);
-    if (typeColor) return typeColor;
-    const style = RELATION_WEIGHTS[link?.type] || RELATION_WEIGHTS.default;
-    return mixHex(t.linkBase, t.nodeAccent, 1 - style.weight);
+    const source = typeof link.source === "object" ? link.source.id : link.source;
+    const target = typeof link.target === "object" ? link.target.id : link.target;
+    const active = highlightedLinksRef.current.has(link) || selectedNodeRef.current?.id === source || selectedNodeRef.current?.id === target;
+    const dark = t.name !== "day";
+    if (!active) return dark ? "#424b55" : "#a7b2bc";
+    if (/contradict/i.test(link.type || '')) return dark ? "#e6b06d" : "#a65e16";
+    return dark ? "#8ec5ff" : "#277be2";
   }, []);
 
   const getLinkWidth = useCallback((link) => {
@@ -1563,7 +1428,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         // Append the memory-title label as a child of the node group so it
         // tracks the node automatically. Sprite opacity is camera-ranked.
         // Label LOD: at scale, only top-degree nodes get a persistent sprite.
-        const tag = (labelAllowRef.current && !labelAllowRef.current.has(node.id))
+        const focusId = selectedNodeRef.current?.id;
+        const onFocusedTrail = node.id === focusId || neighborMapRef.current.get(focusId)?.has(node.id) || highlightNodesRef.current.has(node.id);
+        const tag = (labelAllowRef.current && !labelAllowRef.current.has(node.id) && !onFocusedTrail)
           ? null
           : getNodeDisplayLabel(node);
         if (tag) {
@@ -1889,6 +1756,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             if (isSelected) opacity = 1;
             else if (isNeighbor) opacity = 0.95;
             else if (isHighlighted) opacity = 0.92;
+            else if (traversalNodeIdRef.current || highlightNodesRef.current.size > 0) opacity = 0;
             else if (labelMode === 'hidden') opacity = board && isLabeled && inFrameNodeIds.has(nid) ? 0.92 : 0;
             else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? (board ? 0.98 : themeName === 'atlas' ? 0.8 : 0.68) : 0;
             else opacity = isLabeled && inFrameNodeIds.has(nid) ? (board ? 0.98 : themeName === 'atlas' ? 0.94 : themeName === 'night' ? 0.92 : 0.9) : 0;
@@ -2106,7 +1974,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         // draw calls stack up fast; only small graphs keep the glow.
         const liteNode = getGraphSizeTier(graphDataRef.current?.nodes?.length || 0) !== "small";
         const object3d = makeNodeShape(node, getNodeColor(node), clusterTint, liteNode);
-        const tag = (labelAllowRef.current && !labelAllowRef.current.has(node.id))
+        const focusId = selectedNodeRef.current?.id;
+        const onFocusedTrail = node.id === focusId || neighborMapRef.current.get(focusId)?.has(node.id) || highlightNodesRef.current.has(node.id);
+        const tag = (labelAllowRef.current && !labelAllowRef.current.has(node.id) && !onFocusedTrail)
           ? null
           : getNodeDisplayLabel(node);
         if (tag) {

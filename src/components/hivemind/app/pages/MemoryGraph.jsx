@@ -1,3 +1,4 @@
+import { memoryRelationLabel } from "./MemoryGraphLabels";
 import React, {
   useState,
   useEffect,
@@ -478,7 +479,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete, theme =
                         const peerNode = nodeMap[peerId];
                         const peerTitle = peerNode?.title || peerNode?.label || truncate(peerId, 34);
                         const confidenceLabel = `${((e.confidence || 0) * 100).toFixed(0)}%`;
-                        const edgeLabel = String(e.type || "related").replace(/[_-]+/g, " ");
+                        const edgeLabel = memoryRelationLabel(e.type);
                         return (
                           <button
                             key={`${group.key}-${i}`}
@@ -739,6 +740,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const [graphVisible, setGraphVisible] = useState(false);
   const [graphViewState, setGraphViewState] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [showViewOptions, setShowViewOptions] = useState(false);
   // Auto-focus may select the newest memory for the inspector. Traversal is
   // explicit: only a user click should dim unrelated parts of the graph.
   const [traversalNodeId, setTraversalNodeId] = useState(null);
@@ -1428,27 +1430,6 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       <div
         className="shrink-0 px-3 sm:px-5 py-3 flex items-center gap-2.5 z-20 overflow-x-auto"
       >
-        {/* Node budget */}
-        <div className={`flex items-center gap-0.5 rounded-lg border p-0.5 shrink-0 ${toolbarControlClass}`}>
-          {[
-            { key: 300, label: '300' },
-            { key: 1000, label: '1K' },
-            { key: 5000, label: '5K' },
-            { key: 0, label: 'All' },
-          ].map((o) => (
-            <button
-              key={o.key}
-              type="button"
-              onClick={() => setNodeLimit(o.key)}
-              className={`rounded-md px-1.5 py-0.5 text-[10px] font-mono ${
-                nodeLimit === o.key ? toolbarActiveClass : toolbarMutedClass
-              }`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-
         <div className={`shrink-0 inline-flex items-center rounded-lg border p-0.5 ${toolbarControlClass}`}>
           {[
             { key: 'visible', label: 'All' },
@@ -1482,6 +1463,75 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
           </select>
         )}
 
+        {isRadialAtlas && (
+          <button
+            type="button"
+            onClick={() => {
+              const entering = !bitemporalMode;
+              setBitemporalMode(entering);
+              setTemporalPlaying(false);
+              if (entering) {
+                setTemporalProgress(1);
+                setValidTimeProgress(1);
+                setIsLiveMode(true);
+              }
+            }}
+            className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[10px] font-mono font-semibold ${bitemporalMode ? "border-[#3c91ff] bg-[#e8f2ff] text-[#155fbe]" : toolbarControlClass}`}
+            title="Switch to a top-down valid-time and recorded-time view"
+            aria-pressed={bitemporalMode}
+            aria-controls={bitemporalMode ? "memory-graph-bitemporal-controls" : undefined}
+          >
+            <Clock size={11} />
+            Time travel
+          </button>
+        )}
+
+        <button
+          onClick={() => graphRef.current?.fitView?.(400)}
+          className={`shrink-0 p-1.5 rounded-lg border ${toolbarControlClass}`}
+          title="Fit to view"
+        >
+          <Maximize2 size={12} />
+        </button>
+        <button
+          onClick={() => { setPageIndexRefreshKey(k => k + 1); setPageIndexModalOpen(true); }}
+          className={`shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-mono font-semibold ${toolbarActiveClass}`}
+          title="Memory Map"
+        >
+          <MapIcon size={10} />
+          Map
+        </button>
+
+        <button type="button" onClick={() => setShowViewOptions((value) => !value)}
+          aria-expanded={showViewOptions} aria-controls="memory-graph-view-options"
+          className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs ${toolbarControlClass}`}>
+          View options {showViewOptions ? '▴' : '▾'}
+        </button>
+      </div>
+
+      {showViewOptions && (
+        <div id="memory-graph-view-options" className="shrink-0 flex flex-wrap items-center gap-2 px-5 pb-3">
+        {/* Node budget */}
+        <div className={`flex items-center gap-0.5 rounded-lg border p-0.5 shrink-0 ${toolbarControlClass}`}>
+          {[
+            { key: 300, label: '300' },
+            { key: 1000, label: '1K' },
+            { key: 5000, label: '5K' },
+            { key: 0, label: 'All' },
+          ].map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => setNodeLimit(o.key)}
+              className={`rounded-md px-1.5 py-0.5 text-[10px] font-mono ${
+                nodeLimit === o.key ? toolbarActiveClass : toolbarMutedClass
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+
         {/* Action buttons */}
 
         {/* 3D / 2D toggle — segmented pill */}
@@ -1507,29 +1557,6 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             </button>
           ))}
         </div>
-
-        {isRadialAtlas && (
-          <button
-            type="button"
-            onClick={() => {
-              const entering = !bitemporalMode;
-              setBitemporalMode(entering);
-              setTemporalPlaying(false);
-              if (entering) {
-                setTemporalProgress(1);
-                setValidTimeProgress(1);
-                setIsLiveMode(true);
-              }
-            }}
-            className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[10px] font-mono font-semibold ${bitemporalMode ? "border-[#3c91ff] bg-[#e8f2ff] text-[#155fbe]" : toolbarControlClass}`}
-            title="Switch to a top-down valid-time and recorded-time view"
-            aria-pressed={bitemporalMode}
-            aria-controls={bitemporalMode ? "memory-graph-bitemporal-controls" : undefined}
-          >
-            <Clock size={11} />
-            Time travel
-          </button>
-        )}
 
         {/* Day / Night graph theme */}
         <div className={`shrink-0 inline-flex items-center rounded-lg border p-0.5 ${toolbarControlClass}`}>
@@ -1589,22 +1616,6 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         >
           <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
         </button>
-        <button
-          onClick={() => graphRef.current?.fitView?.(400)}
-          className={`shrink-0 p-1.5 rounded-lg border ${toolbarControlClass}`}
-          title="Fit to view"
-        >
-          <Maximize2 size={12} />
-        </button>
-        <button
-          onClick={() => { setPageIndexRefreshKey(k => k + 1); setPageIndexModalOpen(true); }}
-          className={`shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-mono font-semibold ${toolbarActiveClass}`}
-          title="Memory Map"
-        >
-          <MapIcon size={10} />
-          Map
-        </button>
-
         {/* Stats */}
         <div className="ml-auto shrink-0">
           <LangSwitcher compact theme={graphTheme} />
@@ -1623,7 +1634,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               {graphViewState.labelMode}
             </span>
           </div>
-        )}
+        )}        </div>
+      )}
+      <div className={`shrink-0 px-5 pb-2 text-xs ${panelMutedText}`}>
+        Explore how your company’s knowledge connects. Select a memory to follow its trail.
       </div>
 
       {/* Graph canvas */}
@@ -1814,9 +1828,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                 </div>
                 <div className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] ${graphTheme === "night" ? "text-[#e8dbcf]" : "text-[#525252]"}`}>
                   {[
-                    ["Fact", "#277be2"], ["Decision", "#f0a21b"], ["Preference", "#9265dc"],
-                    ["Lesson", "#12a38b"], ["Goal", "#e45b4d"], ["Event", "#647e9e"],
-                    ["Relationship", "#d64f91"], ["Document", "#d18a08"], ["Entity", "#596de0"],
+                    ["Memory", "#8eabc9"], ["Selected", "#66b1ff"], ["Connected", "#b6d9ff"],
                   ].map(([label, color]) => <span key={label} className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full" style={{ background: color }} />{label}</span>)}
                 </div>
                 <div className={`mt-2 flex items-center gap-2 text-[10px] ${panelMutedText}`}><span className="h-px w-5 bg-[#8fa8bd]" />Recorded relationship</div>
