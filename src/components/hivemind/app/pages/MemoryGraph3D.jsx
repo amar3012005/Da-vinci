@@ -1405,6 +1405,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   useEffect(() => {
     if (!containerRef.current || fgRef.current) return;
 
+    const ownedNodeObjects = nodeObjectsRef.current;
     const fg = ForceGraph3D({ controlType: "orbit" })(containerRef.current)
       .graphData(graphDataRef.current)
       .backgroundColor(getThemeBackground(themeRef.current, backgroundColorRef.current))
@@ -1983,7 +1984,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       fgRef.current = null;
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nodeTagSpritesRef.current?.clear?.();
-      nodeObjectsRef.current.clear();
+      ownedNodeObjects.clear();
     };
   // The graph instance must be created once; live React values are read from refs above.
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
