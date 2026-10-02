@@ -31,3 +31,9 @@
 .hm-query-draft-source { display:flex; align-items:center; gap:7px; font-size:11px; color:#68717c; margin-bottom:12px; }
 .hm-query-draft-source .hm-query-logo { width:14px; height:14px; }
 @media(max-width:700px) { .hm-query-options button { grid-template-columns:18px minmax(0,1fr); gap:9px; } .hm-query-source { grid-column:2; } }
+
+/* Keep every source/date beneath its own topic at all preview widths. */
+.hm-query-options button { grid-template-columns:20px minmax(0,1fr); column-gap:12px; row-gap:3px; min-width:0; align-items:start; }
+.hm-query-options .hm-query-logo { grid-column:1; grid-row:1 / span 2; margin-top:2px; }
+.hm-query-topic { grid-column:2; min-width:0; overflow-wrap:anywhere; }
+.hm-query-source { grid-column:2; min-width:0; white-space:normal; overflow-wrap:anywhere; line-height:18px; }

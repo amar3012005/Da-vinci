@@ -151,7 +151,7 @@ export default function QueryStarters({ mount, ready }) {
       editor.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: clipboard }));
     };
     editor.addEventListener('keydown', stop);
-    editor.addEventListener('pointerdown', stop);
+    target.seat.addEventListener('pointerdown', stop, true);
     editor.addEventListener('paste', stop);
     editor.focus();
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) { insert(text); setFinishedTyping(true); }
@@ -165,7 +165,7 @@ export default function QueryStarters({ mount, ready }) {
     return () => {
       clearInterval(timer);
       editor.removeEventListener('keydown', stop);
-      editor.removeEventListener('pointerdown', stop);
+      target.seat.removeEventListener('pointerdown', stop, true);
       editor.removeEventListener('paste', stop);
     };
   }, [target?.editor, items, loadedEditor]);
