@@ -1,11 +1,10 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Search,
   Upload,
-  Filter,
   Brain,
   Trash2,
   ChevronRight,
@@ -26,6 +25,7 @@ import {
   Lock,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import './Memories.css';
 import EntityProfileLink from '../shared/EntityProfileLink';
 import {
   documentIngestMode,
@@ -136,14 +136,6 @@ function truncate(text, maxLen = 180) {
   const lastSpace = cut.lastIndexOf(' ');
   const safe = lastSpace > maxLen * 0.6 ? cut.slice(0, lastSpace) : cut;
   return safe.trimEnd().replace(/[.,;:—-]+$/, '') + '…';
-}
-
-// A document summary is meant to be read as prose, so give it a longer preview
-// than a single-line fact. Still a preview — the detail view shows all of it.
-function previewFor(memory) {
-  const isSummary = memory?.memory_type === 'summary'
-    || (Array.isArray(memory?.tags) && memory.tags.includes('document-summary'));
-  return truncate(memory?.content, isSummary ? 420 : 180);
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -399,182 +391,48 @@ const cardVariants = {
   exit: { opacity: 0, y: -8, transition: { duration: 0.2 } },
 };
 
-function MemoryCard({ memory, index, onSelect, isSelected, orgKey }) {
-  const { t } = useTranslation('dashboard');
-  // Cognitive-layer memories (governance synthesis / canonical / bridge / principle /
-  // reflection) get a distinct warm-beige card so the cognitive loop's output is
-  // visually obvious among ingested memories.
-  const isCognitive = !!memory.cognitive_layer_role
-    || (memory.tags || []).some(t => typeof t === 'string'
-        && (t === 'cognition-loop' || t.startsWith('synthesis:') || t === 'internal-audit'));
-  // A "dream" = a synthesis output of the cognitive loop. Highlight its row with
-  // an indigo left-accent + glow so it visibly stands apart from ingested memories.
-  const isDream = (memory.cognitive_layer_role && DREAM_ROLES.has(memory.cognitive_layer_role))
-    || (memory.tags || []).some(t => typeof t === 'string' && t.startsWith('synthesis:'));
-  return (
-    <motion.button
-      layout
-      custom={index}
-      variants={cardVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      onClick={() => onSelect(memory)}
-      className={`w-full text-left rounded-xl border transition-all duration-200 p-4 group cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
-        isSelected
-          ? 'bg-[#117dff]/[0.06] border-[#117dff]/30 shadow-[0_0_20px_rgba(17,125,255,0.08)]'
-          : isDream
-            ? 'bg-[#f5f3ff] border-[#c7bfff] border-l-[3px] border-l-[#8b5cf6] hover:bg-[#efeaff] shadow-[0_0_14px_rgba(139,92,246,0.12)]'
-            : isCognitive
-              ? 'bg-[#f7f1e3] border-[#e6dabd] hover:border-[#d8c79c] hover:bg-[#f3ebd7]'
-              : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#f9f8f3]'
-      }`}
-    >
-      {/* Top row */}
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <h3 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk'] leading-tight line-clamp-1 flex-1">
-          {memory.title || memory.content?.slice(0, 60) || t('memories.untitledMemory', 'Untitled Memory')}
-        </h3>
-        <ChevronRight
-          size={14}
-          className={`mt-0.5 shrink-0 transition-transform ${
-            isSelected ? 'text-[#117dff] rotate-90' : 'text-[#d4d0ca] group-hover:text-[#525252] group-hover:translate-x-0.5'
-          }`}
-        />
-      </div>
-
-      {/* Type + Source + Provenance */}
-      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-        {memory.memory_type && <TypeBadge type={memory.memory_type} />}
-        {memory.cognitive_layer_role && <CognitiveBadge role={memory.cognitive_layer_role} />}
-        <ScopeBadge scope={memory.scope} project={memory.project} />
-        {memory.source && <SourceBadge source={memory.source} />}
-        <RelationshipIndicator memory={memory} />
-        <EntityChips memory={memory} />
-        {(() => {
-          // Source platform may live at top level OR inside source_metadata
-          // (Gmail/Drive/Calendar memories all write to source_metadata).
-          // Resolve and render a consistent badge regardless of provider.
-          const sp =
-            memory.source_platform ||
-            memory.source_metadata?.source_platform ||
-            memory.metadata?.source_platform ||
-            null;
-          if (!sp) return null;
-          const SOURCE_LABEL = {
-            gmail: 'Gmail',
-            google_drive: 'Drive',
-            google_calendar: 'Calendar',
-            google_docs: 'Docs',
-            google_sheets: 'Sheets',
-            google_slides: 'Slides',
-            google_contacts: 'Contacts',
-            google_chat: 'Google Chat',
-            google_tasks: 'Tasks',
-            google_forms: 'Forms',
-            slack: 'Slack',
-            notion: 'Notion',
-            github: 'GitHub',
-            knowledge_base: 'Company Info',
-            document: 'Company Info',
-            chat: 'Talk to HIVE',
-            'talk-to-hive': 'Talk to HIVE',
-          };
-          const SOURCE_COLOR = {
-            gmail: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
-            google_drive: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
-            google_calendar: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-            google_docs: { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' },
-            google_sheets: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-            google_slides: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
-            slack: { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
-            knowledge_base: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
-            document: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
-            chat: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' },
-          };
-          // KB/document memories read as "Company Info" ONLY when the memory's
-          // company intent matches the user's org name; otherwise neutral "Knowledge Base".
-          const isKbSource = sp === 'knowledge_base' || sp === 'document';
-          const label = isKbSource
-            ? (memoryMatchesOrg(memory, orgKey) ? 'Company Info' : 'Knowledge Base')
-            : (SOURCE_LABEL[sp] || sp);
-          const c = SOURCE_COLOR[sp] || { bg: 'bg-[#faf9f4]', text: 'text-[#525252]', border: 'border-[#e3e0db]' };
-          return (
-            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-[0.06em] border ${c.bg} ${c.text} ${c.border}`}>
-              <Monitor size={9} />
-              {label}
-            </span>
-          );
-        })()}
-        {memory.document_date && (
-          <span className="text-[10px] font-mono text-[#d4d0ca]">
-            {new Date(memory.document_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-          </span>
-        )}
-      </div>
-
-      {/* Content preview */}
-      <p className="text-[#525252] text-xs leading-relaxed mb-3 line-clamp-6 font-['Space_Grotesk']">
-        {previewFor(memory)}
-      </p>
-
-      {/* Footer: tags + date + importance.
-          entity:* tags already render as @-chips above, and synthesis/cognition
-          tags drive the badges — filter them out so the footer never duplicates. */}
-      {(() => {
-        const footerTags = (memory.tags || []).filter((t) =>
-          typeof t === 'string' &&
-          !t.startsWith('entity:') &&
-          !t.startsWith('synthesis:') &&
-          !['cognition-loop', 'internal-audit'].includes(t)
-        );
-        return (
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
-          {footerTags.slice(0, 3).map((tag) => (
-            <TagPill key={tag} label={tag} />
-          ))}
-          {footerTags.length > 3 && (
-            <span className="text-[10px] text-[#d4d0ca] font-mono">+{footerTags.length - 3}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          {(memory.owner_name || memory.owner?.name) && (
-            <span className="text-[10px] font-mono text-[#a3a3a3] flex items-center gap-1 max-w-[120px] truncate" title={`Owner: ${memory.owner_name || memory.owner?.name}`}>
-              <User size={9} /> {memory.owner_name || memory.owner?.name}
-            </span>
-          )}
-          <ImportanceBar score={memory.importance} />
-          <span className="text-[10px] font-mono text-[#d4d0ca] flex items-center gap-1">
-            <Clock size={9} />
-            {relativeTime(memory.created_at)}
-          </span>
-        </div>
-      </div>
-        );
-      })()}
-    </motion.button>
-  );
+// Natural card heights determine packing; no stored content is truncated here.
+function MosaicTile({ title, children }) {
+  const content = useRef(null);
+  const [rows, setRows] = useState(8);
+  const span = title.length > 100 ? 6 : title.length > 48 ? 4 : 3;
+  useEffect(() => {
+    const node = content.current;
+    if (!node) return undefined;
+    const measure = () => setRows(Math.max(1, Math.ceil((node.getBoundingClientRect().height + 10) / 18)));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [title]);
+  return <div className="memory-mosaic-tile" style={{ '--tile-span': span, gridRowEnd: `span ${rows}` }}><div ref={content}>{children}</div></div>;
 }
 
-// ─── Detail Panel ─────────────────────────────────────────────────────────────
+function MemorySource({ memory }) {
+  const platform = memory.source_platform || memory.source_metadata?.source_platform || memory.metadata?.source_platform || memory.source || 'hivemind';
+  const sources = {
+    gmail: ['Gmail', 'logos/google-gmail'], google_docs: ['Google Docs', 'logos/google-docs'],
+    google_drive: ['Google Drive', 'logos/google-drive'], google_calendar: ['Google Calendar', 'logos/google-calendar'],
+    google_sheets: ['Google Sheets', 'logos/google-sheets'], slack: ['Slack', 'logos/slack-icon'],
+    notion: ['Notion', 'logos/notion-icon'], github: ['GitHub', 'logos/github-icon'],
+  };
+  const [label, icon] = sources[platform] || [platform === 'document' || platform === 'knowledge_base' ? 'Document' : 'HIVEMIND', null];
+  return <span className="inline-flex items-center gap-1.5 min-w-0 text-[#525252]">{icon ? <img src={`https://api.iconify.design/${icon}.svg`} width="18" height="18" alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} /> : <Brain size={16} className="text-[#117dff]" />}<span className="truncate">{label}</span></span>;
+}
 
-// Render relations grouped by edge type. Shown inside MemoryDetailPanel
-// when /api/memories/:id/relationships returns.
-//
-// Edge types + their visual treatment:
-//   Updates      — green   (this memory updated something / something updated this)
-//   Extends      — sky     (this extended / was extended)
-//   Derives      — purple  (derived from / derivation source for)
-//   Contradicts  — red     (conflict)
-//   PartOf       — slate   (section/turn/message → parent doc/session/thread)
-const REL_TYPE_STYLE = {
-  Updates:     { bg: 'bg-emerald-50',  border: 'border-emerald-200',  text: 'text-emerald-700',  label: 'Updates' },
-  Extends:     { bg: 'bg-sky-50',      border: 'border-sky-200',      text: 'text-sky-700',      label: 'Extends' },
-  Derives:     { bg: 'bg-purple-50',   border: 'border-purple-200',   text: 'text-purple-700',   label: 'Derives' },
-  Contradicts: { bg: 'bg-red-50',      border: 'border-red-200',      text: 'text-red-700',      label: 'Contradicts' },
-  PartOf:      { bg: 'bg-slate-50',    border: 'border-slate-200',    text: 'text-slate-700',    label: 'Part Of' },
-};
+function MemoryCard({ memory, index, onSelect, isSelected }) {
+  const { t } = useTranslation('dashboard');
+  const title = memory.title || memory.content?.slice(0, 80) || t('memories.untitledMemory', 'Untitled Memory');
+  const owner = memory.owner_name || memory.owner?.name || memory.created_by_name;
+  return <MosaicTile title={title}><motion.button
+    custom={index} variants={cardVariants} initial="hidden" animate="visible" exit="exit"
+    onClick={() => onSelect(memory)} aria-haspopup="dialog" aria-expanded={isSelected}
+    className={`memory-block ${isSelected ? 'memory-block-selected' : ''}`}>
+    <div className="flex items-start gap-2 mb-2"><h3 className="text-[13px] font-semibold leading-snug flex-1 break-words">{title}</h3><ExternalLink size={13} className="shrink-0 mt-0.5 text-[#a3a3a3]" /></div>
+    <div className="flex flex-wrap gap-1.5 mb-3">{memory.memory_type && <TypeBadge type={memory.memory_type} />}<ScopeBadge scope={memory.scope} project={memory.project} /></div>
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-[10px] text-[#737373]"><MemorySource memory={memory} /><span className="inline-flex items-center gap-1"><Clock size={11} />{relativeTime(memory.created_at || memory.document_date)}</span>{owner && <span className="inline-flex items-center gap-1"><User size={11} />{owner}</span>}</div>
+  </motion.button></MosaicTile>;
+}
 
 function RelationsBlock({ loading, relations }) {
   const { t } = useTranslation('dashboard');
@@ -744,7 +602,14 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
       .finally(() => {
         if (!cancelled) setClaimsLoading(false);
       });
-    return () => { cancelled = true; };
+    useEffect(() => {
+    const previous = window.document.activeElement;
+    const handleKey = (event) => { if (event.key === 'Escape') onClose(); };
+    window.document.addEventListener('keydown', handleKey);
+    return () => { window.document.removeEventListener('keydown', handleKey); previous?.focus?.(); };
+  }, [onClose]);
+
+  return () => { cancelled = true; };
   }, [memory?.id, memory?.projection]);
 
   // Fetch memory-lineage relationships grouped by type (Updates, Extends,
@@ -822,11 +687,11 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 40 }}
+      initial={{ opacity: 0, x: '100%' }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 40 }}
+      exit={{ opacity: 0, x: '100%' }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="fixed inset-y-0 right-0 w-full max-w-lg z-50 flex flex-col"
+      role="dialog" aria-modal="true" aria-label="Memory details" className="fixed inset-y-0 right-0 w-full max-w-lg z-50 flex flex-col"
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 lg:hidden" onClick={onClose} />
@@ -840,6 +705,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
           </div>
           <button
             onClick={onClose}
+            aria-label="Close memory details" autoFocus
             className="p-1.5 rounded-lg hover:bg-[#f3f1ec] text-[#525252] hover:text-[#525252] transition-colors"
           >
             <X size={16} />
@@ -1296,7 +1162,7 @@ export default function Memories() {
           </div>
       </header>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-4">
+      <div className="relative z-10 max-w-[1440px] mx-auto px-5 sm:px-10 lg:px-12 py-4">
         {/* ── Header ── */}
         <div className="flex items-center justify-end mb-6">
           <div className="flex items-start gap-4">
@@ -1454,7 +1320,7 @@ export default function Memories() {
 
         {/* Top-entity chip cloud + group-by toggle */}
         {topEntities.length > 0 && (
-          <div className="mb-3 flex items-center gap-2 flex-wrap">
+          <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-2">
             <span className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('memories.filterByEntity', 'Filter by entity:')}</span>
             {topEntities.map(e => {
               const active = activeEntity === e.key;
@@ -1470,14 +1336,14 @@ export default function Memories() {
                   type="button"
                   onClick={() => setActiveEntity(active ? null : e.key)}
                   style={active ? { borderColor: tint, color: tint, background: tint + '14' } : undefined}
-                  className={`rounded-lg px-2 py-1 text-[11px] font-mono border ${active ? '' : 'border-[#e3e0db] text-[#525252]'} hover:border-[${tint}]`}
+                  className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-mono border ${active ? '' : 'border-[#e3e0db] text-[#525252]'} hover:border-[${tint}]`}
                 >
                   <span style={{ color: tint }}>●</span> {e.name}
                   <span className="text-[#a3a3a3] ml-1">·{e.count}</span>
                 </button>
               );
             })}
-            <span className="ml-auto flex items-center gap-1.5 text-[10px] font-mono text-[#737373]">
+            <span className="ml-auto shrink-0 flex items-center gap-1.5 text-[10px] font-mono text-[#737373]">
               <input
                 type="checkbox"
                 id="group-by-doc"
@@ -1827,182 +1693,14 @@ function MemoriesTab({
         </div>
       )}
 
-      {/* ── Filter Bar ── */}
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-1.5 text-xs font-mono transition-colors ${
-              showFilters ? 'text-[#117dff]' : 'text-[#a3a3a3] hover:text-[#525252]'
-            }`}
-          >
-            <Filter size={12} />
-            {t('memories.filters', 'Filters')}
-            {(activeType || activeTag) && (
-              <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[#117dff]" />
-            )}
-          </button>
-          {/* Show Dreams — opt-in overlay of the last dream-run on top of memories */}
-          <button
-            onClick={() => setShowDreams((v) => !v)}
-            className={`flex items-center gap-1.5 text-xs font-mono transition-colors ${
-              showDreams ? 'text-[#8b5cf6]' : 'text-[#a3a3a3] hover:text-[#525252]'
-            }`}
-            title={t('memories.showDreamsHint', 'Overlay the last dream run on top')}
-          >
-            <span>🌙</span>
-            {t('memories.showDreams', 'Show Dreams')}
-            <span className={`ml-1 inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${showDreams ? 'bg-[#8b5cf6]' : 'bg-[#d4d0ca]'}`}>
-              <span className={`h-2.5 w-2.5 rounded-full bg-white shadow-sm transition-transform ${showDreams ? 'translate-x-[12px]' : 'translate-x-0.5'}`} />
-            </span>
-          </button>
+      <div className="mb-5 space-y-3">
+        <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Memory types">
+          {[{ key: null, label: 'All', color: '#117dff' }, ...MEMORY_TYPES].map((type) => <button key={type.key || 'all'} onClick={() => { setActiveType(type.key); setOffset(0); setAllMemories([]); setHasMore(true); }} className="shrink-0 rounded-lg border px-3 py-2 text-xs font-medium" style={{ color: activeType === type.key ? type.color : '#525252', backgroundColor: activeType === type.key ? `${type.color}15` : 'white', borderColor: activeType === type.key ? `${type.color}40` : '#e3e0db' }}>{type.label}</button>)}
         </div>
-
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              {/* Type filters */}
-              <div className="mb-3">
-                <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                  {t('memories.filterType', 'Type')}
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {MEMORY_TYPES.map((t) => (
-                    <button
-                      key={t.key}
-                      onClick={() => {
-                        setActiveType(activeType === t.key ? null : t.key);
-                        setOffset(0);
-                        setAllMemories([]);
-                        setHasMore(true);
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                        activeType === t.key
-                          ? 'border-current'
-                          : 'border-[#e3e0db] text-[#525252] hover:text-[#525252] hover:border-[#d4d0ca]'
-                      }`}
-                      style={activeType === t.key ? { color: t.color, backgroundColor: `${t.color}15`, borderColor: `${t.color}40` } : {}}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Cognitive layer filter — canonical / bridge / compression / reflection */}
-              <div className="mb-3">
-                <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                  {t('memories.filterCognitiveLayer', 'Cognitive Layer')}
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { key: 'canonical',   label: 'Canonical',   color: '#8b5cf6' },
-                    { key: 'bridge',      label: 'Bridge',      color: '#f97316' },
-                    { key: 'compression', label: 'Compression', color: '#0ea5e9' },
-                    { key: 'reflection',  label: 'Reflection',  color: '#94a3b8' },
-                  ].map((r) => (
-                    <button
-                      key={r.key}
-                      onClick={() => {
-                        setActiveCognitiveRole(activeCognitiveRole === r.key ? null : r.key);
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                        activeCognitiveRole === r.key
-                          ? 'border-current'
-                          : 'border-[#e3e0db] text-[#525252] hover:text-[#525252] hover:border-[#d4d0ca]'
-                      }`}
-                      style={activeCognitiveRole === r.key ? { color: r.color, backgroundColor: `${r.color}15`, borderColor: `${r.color}40` } : {}}
-                    >
-                      COG·{r.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* is_latest toggle — show superseded (drift-compacted) memories */}
-              <div className="mb-3">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={showSuperseded}
-                    onChange={(e) => {
-                      setShowSuperseded(e.target.checked);
-                      setOffset(0);
-                      setAllMemories([]);
-                      setHasMore(true);
-                    }}
-                    className="w-3.5 h-3.5 accent-[#117dff]"
-                  />
-                  <span className="text-[11px] font-mono text-[#525252]">
-                    {t('memories.showSuperseded', 'Show superseded')}
-                    <span className="ml-1 text-[#a3a3a3]">
-                      {t('memories.showSupersededHint', '(older versions hidden by cognition drift-compaction + Updates edges)')}
-                    </span>
-                  </span>
-                </label>
-              </div>
-
-              {/* Hide newsletters / promotions / notifications — connector noise */}
-              <div className="mb-3">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={hideNoise}
-                    onChange={(e) => {
-                      setHideNoise(e.target.checked);
-                      setOffset(0);
-                      setAllMemories([]);
-                      setHasMore(true);
-                    }}
-                    className="w-3.5 h-3.5 accent-[#117dff]"
-                  />
-                  <span className="text-[11px] font-mono text-[#525252]">
-                    {t('memories.hideNoise', 'Hide newsletters & notifications')}
-                    <span className="ml-1 text-[#a3a3a3]">
-                      {t('memories.hideNoiseHint', '(promotions / updates / social / forums / no-reply)')}
-                    </span>
-                  </span>
-                </label>
-              </div>
-
-              {/* Tag filters */}
-                {availableTags.length > 0 && (
-                  <div>
-                    <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                      {t('memories.filterTags', 'Tags')}
-                    </label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {availableTags.slice(0, 20).map((tag) => (
-                        <button
-                          key={tag}
-                          onClick={() => {
-                            setActiveTag(activeTag === tag ? null : tag);
-                            setOffset(0);
-                            setAllMemories([]);
-                            setHasMore(true);
-                          }}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all border ${
-                            activeTag === tag
-                              ? 'border-[#117dff]/40 bg-[#117dff]/10 text-[#117dff]'
-                              : 'border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252] hover:border-[#d4d0ca]'
-                          }`}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="flex gap-2 overflow-x-auto pb-1 max-h-[120px]" aria-label="Entity tags">
+          {availableTags.filter((tag) => tag.startsWith('entity:')).map((tag) => <button key={tag} onClick={() => { setActiveTag(activeTag === tag ? null : tag); setOffset(0); setAllMemories([]); setHasMore(true); }} className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] ${activeTag === tag ? 'border-[#117dff]/40 bg-[#117dff]/10 text-[#117dff]' : 'border-[#e3e0db] text-[#737373]'}`}>{tag.slice(7)}</button>)}
         </div>
+      </div>
 
         {/* ── Error ── */}
         {error && (
@@ -2091,7 +1789,7 @@ function MemoriesTab({
                             </span>
                             <span className="text-[10px] font-mono text-[#a3a3a3]">·{grp.items.length} {t('memories.memoryOrMemories', 'memor{{suffix}}', { suffix: grp.items.length === 1 ? 'y' : 'ies' })}</span>
                           </div>
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                          <div className="memory-mosaic">
                             {grp.items.map((memory, i) => (
                               <MemoryCard
                                 key={memory.id || `${key}-${i}`}
@@ -2109,7 +1807,7 @@ function MemoriesTab({
                   })()}
                 </AnimatePresence>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="memory-mosaic">
                   <AnimatePresence mode="popLayout">
                     {resolvedList.map((memory, i) => (
                       <MemoryCard
@@ -2248,7 +1946,7 @@ function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelect
 
       {/* ── Document Grid ── */}
       {!loading && !error && documents.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="memory-mosaic">
           {documents.map((doc, idx) => (
             <DocumentCard
               key={doc.id}
@@ -2476,75 +2174,15 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
     processing: ['queued', 'processing', 'parsing', 'segmenting', 'embedding', 'promoting'].includes(documentStatus),
   });
 
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.02 }}
-      onClick={onSelect}
-      className={`group relative w-full text-left bg-transparent border rounded-xl p-4 transition-all hover:shadow-md ${
-        isSelected
-          ? 'border-[#117dff] shadow-lg shadow-[#117dff]/10'
-          : 'border-[#e3e0db] hover:border-[#d4d0ca]'
-      }`}
-    >
-      {/* Type Badge */}
-      <div className="flex items-start justify-between mb-3">
-        <div
-          className="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide"
-          style={{ backgroundColor: `${typeColor}15`, color: typeColor }}
-        >
-          {document.documentType || 'document'}
-        </div>
-        {document.sourcePlatform && (
-          <div className="flex items-center gap-1 text-[10px] text-[#a3a3a3] font-mono">
-            <Monitor size={10} />
-            {document.sourcePlatform}
-          </div>
-        )}
-      </div>
+  const title = document.title || document.filename || t('memories.untitledDocument', 'Untitled document');
+  const owner = document.uploadedBy?.name || document.uploaded_by_name || document.owner_name;
+  return <MosaicTile title={title}><motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.02 }} onClick={onSelect} aria-haspopup="dialog" aria-expanded={isSelected} className={`memory-block ${isSelected ? 'memory-block-selected' : ''}`}>
+    <div className="flex items-start gap-2.5 mb-3"><span className="rounded-lg p-2 shrink-0" style={{ backgroundColor: `${typeColor}15`, color: typeColor }}><FileText size={20} /><span className="block text-[9px] font-bold uppercase mt-1">{document.documentType || 'File'}</span></span><h3 className="text-[13px] font-semibold leading-snug break-words flex-1">{title}</h3><ExternalLink size={13} className="shrink-0 text-[#a3a3a3]" /></div>
+    {owner && <p className="text-[11px] text-[#737373] mb-2">Uploaded by {owner}</p>}
+    <div className="flex flex-wrap gap-3 text-[10px] text-[#737373]"><span className="inline-flex items-center gap-1"><Clock size={11} />{relativeTime(document.createdAt || document.created_at)}</span>{document.sourcePlatform && <span>{document.sourcePlatform.replace(/_/g, ' ')}</span>}</div>
+    {['Memory generation failed', 'Processing'].includes(documentState) && <p className="text-[10px] mt-2" style={{ color: documentState === 'Processing' ? '#117dff' : '#dc2626' }}>{documentState}</p>}
+  </motion.button></MosaicTile>;
 
-      {/* Title */}
-      <h3 className="text-[#0a0a0a] font-semibold text-sm mb-2 line-clamp-2 group-hover:text-[#117dff] transition-colors">
-        {document.title}
-      </h3>
-
-      {/* Metadata */}
-      <div className="flex items-center gap-3 text-[10px] text-[#a3a3a3] font-mono mb-3">
-        <span>{document.wordCount?.toLocaleString() || 0} {t('memories.words', 'words')}</span>
-        <span>·</span>
-        <span>{document.segmentCount || 0} {t('memories.segmentsLower', 'segments')}</span>
-        <span>·</span>
-        <span>{document.promotedCount || 0} {t('memories.promotedLower', 'promoted')}</span>
-      </div>
-      <p className={`mb-3 text-[10px] font-mono ${documentState === 'Memory generation failed' ? 'text-[#dc2626]' : documentState === 'Processing' ? 'text-[#117dff]' : 'text-[#16a34a]'}`}>
-        {documentState}
-      </p>
-
-      {/* Tags */}
-      {document.tags && document.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {document.tags.slice(0, 3).map((tag) => (
-            <span
-              key={tag}
-              className="px-2 py-0.5 bg-[#117dff]/5 text-[#117dff] rounded text-[10px] font-medium"
-            >
-              {tag}
-            </span>
-          ))}
-          {document.tags.length > 3 && (
-            <span className="text-[10px] text-[#a3a3a3]">+{document.tags.length - 3} more</span>
-          )}
-        </div>
-      )}
-
-      {/* Created date */}
-      <div className="flex items-center gap-1 mt-3 text-[10px] text-[#d4d0ca] font-mono">
-        <Clock size={10} />
-        {(document.createdAt && !isNaN(new Date(document.createdAt)) ? new Date(document.createdAt).toLocaleDateString() : '—')}
-      </div>
-    </motion.button>
-  );
 }
 
 // ─── Evidence Card ─────────────────────────────────────────────────────────────
