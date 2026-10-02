@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BotAvatar } from 'bot-avatars';
 import BrainModeIcon from './BrainModeIcon';
+import VoiceModeIcon from './VoiceModeIcon';
 import {
   LayoutDashboard,
   Moon,
@@ -158,6 +159,7 @@ export default function Sidebar({
   const [team, setTeam] = useState([]);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const modeMenuRef = useRef(null);
+  const voiceMode = location.pathname.startsWith('/hivemind/app/tara');
   const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness');
   useEffect(() => setModeMenuOpen(false), [location.pathname]);
   useEffect(() => {
@@ -171,6 +173,7 @@ export default function Sidebar({
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [openingAgent, setOpeningAgent] = useState(null);
   const [teamError, setTeamError] = useState('');
+  const [rooms, setRooms] = useState([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -180,17 +183,22 @@ export default function Sidebar({
       .then(value => setTeam((value.profiles || []).filter(agent => typeof agent.id === 'string' && typeof agent.name === 'string')))
       .catch(() => {});
     const selection = event => setSelectedAgent(event.detail?.id || null);
+    const activity = event => setRooms(event.detail?.rooms || []);
+    setRooms([]);
+    window.addEventListener('hivemind:agent-rooms', activity);
     window.addEventListener('hivemind:agent-selected', selection);
-    return () => { controller.abort(); window.removeEventListener('hivemind:agent-selected', selection); };
+    window.dispatchEvent(new Event('hivemind:request-agent-rooms'));
+    return () => { controller.abort(); window.removeEventListener('hivemind:agent-selected', selection); window.removeEventListener('hivemind:agent-rooms', activity); };
   }, [user?.id, org?.id]);
 
   const openAgent = async (event, agent) => {
     event.preventDefault();
     if (openingAgent) return;
     setOpeningAgent(agent.id); setTeamError('');
+    document.documentElement.dataset.agentRoomOpening = 'true';
     const previousStart = window.__HIVEMIND_START_AGENT__;
-    const needsNavigation = !location.pathname.startsWith('/hivemind/app/overview');
-    if (needsNavigation) navigate('/hivemind/app/overview');
+    const needsNavigation = !/^\/hivemind\/app\/(overview|employee\/harness)(\/|$)/.test(location.pathname);
+    if (needsNavigation) navigate('/hivemind/app/employee/harness');
     try {
       let start;
       for (let attempt = 0; attempt < 60; attempt += 1) {
@@ -199,9 +207,9 @@ export default function Sidebar({
         await new Promise(resolve => setTimeout(resolve, 200));
       }
       if (typeof start !== 'function' || !await start(agent.id)) throw new Error('selection unavailable');
-      setSelectedAgent(agent.id);
+      setSelectedAgent(agent.id === 'runtime' ? null : agent.id);
     } catch { setTeamError(tt('teamOpenError', 'Could not open this agent. Please try again.')); }
-    finally { setOpeningAgent(null); }
+    finally { setOpeningAgent(null); delete document.documentElement.dataset.agentRoomOpening; }
   };
   const [showWebAdmin, setShowWebAdmin] = useState(false);
   const { usage } = useUsage();
@@ -258,14 +266,15 @@ export default function Sidebar({
         {collapsed && <button type="button" aria-label="Expand sidebar" aria-expanded="false" onClick={() => onCollapsedChange?.(false)} className="mx-auto block p-1 text-[#737373]"><PanelLeft size={18} /></button>}
         <div ref={modeMenuRef} className="relative mt-1">
           <button type="button" aria-label="Choose workspace mode" aria-expanded={modeMenuOpen} aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)} className="flex items-center gap-2 rounded-xl px-1 py-1.5 text-[#383838] hover:bg-[#eeece6]">
-            {teamMode ? <BotAvatar type="mech" shading="fabric" size={32} interactive={false} /> : <BrainModeIcon size={32} />}
-            {!collapsed && <><span className="text-[15px] font-medium">{teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span><ChevronDown size={14} /></>}
+            {voiceMode ? <VoiceModeIcon size={32} /> : teamMode ? <BotAvatar type="mech" shading="fabric" size={32} interactive={false} /> : <BrainModeIcon size={32} />}
+            {!collapsed && <><span className="text-[15px] font-medium">{voiceMode ? t('sidebar.voice', { defaultValue: 'Voice' }) : teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span><ChevronDown size={14} /></>}
           </button>
           {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 w-[310px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#e3e0db] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.10)] z-50">
-            {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), path: '/hivemind/app/overview/new', selected: !teamMode, brain: true },
-              { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), path: '/hivemind/app/employee/harness/new', selected: teamMode }].map(mode =>
+            {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), path: '/hivemind/app/overview/new', selected: !teamMode && !voiceMode, brain: true },
+              { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), path: '/hivemind/app/employee/harness', selected: teamMode },
+              { name: t('sidebar.voice', { defaultValue: 'Voice' }), description: t('sidebar.voiceDescription', { defaultValue: 'Speak. Connect. Represent.' }), path: '/hivemind/app/tara', selected: voiceMode, voice: true }].map(mode =>
               <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button" onClick={() => { setModeMenuOpen(false); navigate(mode.path); window.dispatchEvent(new PopStateEvent('popstate')); }} className={`flex items-center gap-3 w-full rounded-xl px-3 py-3 text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f7f6f2]' : ''}`}>
-                <span className="shrink-0">{mode.brain ? <BrainModeIcon size={32} /> : <BotAvatar type="mech" shading="fabric" size={32} interactive={false} />}</span>
+                <span className="shrink-0">{mode.brain ? <BrainModeIcon size={32} /> : mode.voice ? <VoiceModeIcon size={32} /> : <BotAvatar type="mech" shading="fabric" size={32} interactive={false} />}</span>
                 <span className="flex flex-col gap-1"><span className="text-[17px] font-medium leading-tight">{mode.name}</span><span className="text-[14px] text-[#858585] font-normal leading-snug">{mode.description}</span></span>
               </button>)}
           </div>}
@@ -294,7 +303,8 @@ export default function Sidebar({
                   location.pathname === pathOnly ||
                   (location.pathname.startsWith(`${pathOnly}/`)
                     && !(pathOnly === '/hivemind/app/overview' && location.pathname === '/hivemind/app/overview/dreaming'));
-                const ItemLink = item.agent ? 'button' : NavLink;
+                const ItemLink = item.agent || item.runtime ? 'button' : NavLink;
+                const room = rooms.filter(room => room.id === (item.agent?.id || 'runtime')).sort((a,b) => b.updatedAt - a.updatedAt)[0];
                 const hasChildren = item.children && item.children.length > 0;
 
                 return (
@@ -314,11 +324,11 @@ export default function Sidebar({
                       </div>
                     ) : (
                       <ItemLink
-                        type={item.agent ? "button" : undefined}
-                        to={item.agent ? undefined : item.to}
+                        type={item.agent || item.runtime ? "button" : undefined}
+                        to={item.agent || item.runtime ? undefined : item.to}
                         data-tour-id={item.to}
-                        onClick={item.agent ? event => openAgent(event, item.agent) : item.runtime ? event => { event.preventDefault(); navigate('/hivemind/app/employee/harness/new'); window.dispatchEvent(new PopStateEvent('popstate')); } : undefined}
-                        aria-busy={item.agent && openingAgent === item.agent.id ? true : undefined}
+                        onClick={item.agent ? event => openAgent(event, item.agent) : item.runtime ? event => openAgent(event, { id: 'runtime' }) : undefined}
+                        aria-busy={openingAgent === (item.agent?.id || (item.runtime ? 'runtime' : undefined)) ? true : undefined}
                         className={`relative w-full text-left flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[15px] transition-all duration-150 group`}
                         title={collapsed ? item.label : undefined}
                       >
@@ -343,8 +353,10 @@ export default function Sidebar({
                             }`}
                           >
                             {item.label}
+                            {teamMode && (item.agent || item.runtime) && <small className="block font-normal text-[12px] text-[#737373] truncate max-w-[190px]">{room?.preview || t('sidebar.messageAgent', { defaultValue: 'Send a message' })}</small>}
                           </span>
                         )}
+                        {!collapsed && teamMode && (item.agent || item.runtime) && (room?.running || room?.unread) && <span className={`relative z-10 ml-auto h-1.5 w-1.5 rounded-full flex-shrink-0 ${room.running ? 'bg-blue-500 animate-pulse' : 'bg-green-500'}`} aria-label={room.running ? 'Working' : 'Unread update'} />
                       </ItemLink>
                     )}
                     {/* Always-visible children sub-nav */}
