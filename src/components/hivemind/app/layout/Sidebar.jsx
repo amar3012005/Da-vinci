@@ -353,7 +353,7 @@ export default function Sidebar({
                             }`}
                           >
                             {item.runtime ? <strong className="block text-[24px] font-semibold leading-tight tracking-tight">Runtime</strong> : item.label}
-                            {teamMode && (item.agent || item.runtime) && <small className="block font-normal text-[12px] text-[#737373] leading-snug mt-1 truncate">{item.runtime ? 'AI Chief of Staff' : item.agent?.role || item.agent?.job_title || 'Team member'}</small>}
+                            {teamMode && (item.agent || item.runtime) && <small className="block font-normal text-[12px] text-[#737373] leading-snug mt-1 truncate capitalize">{item.runtime ? 'AI Chief of Staff' : String(item.agent?.role || item.agent?.job_title || item.agent?.role_archetype || item.agent?.roleArchetype || 'Team member').replace(/_/g, ' ')}</small>}
                           </span>
                         )}
                         {!collapsed && teamMode && (item.agent || item.runtime) && (room?.running || room?.unread) && <span className={`relative z-10 ml-auto h-1.5 w-1.5 rounded-full flex-shrink-0 ${room.running ? 'bg-green-600 animate-pulse motion-reduce:animate-none' : 'bg-green-500'}`} aria-label={room.running ? 'Working' : 'Unread update'} />}
