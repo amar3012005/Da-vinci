@@ -596,6 +596,7 @@ function ClaimsBlock({ loading, available, claims, projection }) {
 
 function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }) {
   const { t } = useTranslation('dashboard');
+  const closeButton = useRef(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [evidenceCount, setEvidenceCount] = useState(null);
@@ -609,9 +610,10 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
 
   useEffect(() => {
     const previous = window.document.activeElement;
+    closeButton.current?.focus({ preventScroll: true });
     const handleKey = (event) => { if (event.key === 'Escape') onClose(); };
     window.document.addEventListener('keydown', handleKey);
-    return () => { window.document.removeEventListener('keydown', handleKey); previous?.focus?.(); };
+    return () => { window.document.removeEventListener('keydown', handleKey); previous?.focus?.({ preventScroll: true }); };
   }, [onClose]);
 
   // Claims are additive and feature-flagged. A flag-off deployment returns no
@@ -733,7 +735,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
           </div>
           <button
             onClick={onClose}
-            aria-label="Close memory details" autoFocus
+            aria-label="Close memory details" ref={closeButton}
             className="p-1.5 rounded-lg hover:bg-[#f3f1ec] text-[#525252] hover:text-[#525252] transition-colors"
           >
             <X size={16} />
