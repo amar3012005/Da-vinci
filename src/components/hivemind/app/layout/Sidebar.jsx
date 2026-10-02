@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -155,13 +155,16 @@ export default function Sidebar({
   const navigate = useNavigate();
   const [team, setTeam] = useState([]);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const modeMenuRef = useRef(null);
   const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness');
   useEffect(() => setModeMenuOpen(false), [location.pathname]);
   useEffect(() => {
     if (!modeMenuOpen) return;
     const dismiss = event => { if (event.key === 'Escape') setModeMenuOpen(false); };
+    const outside = event => { if (!modeMenuRef.current?.contains(event.target)) setModeMenuOpen(false); };
     window.addEventListener('keydown', dismiss);
-    return () => window.removeEventListener('keydown', dismiss);
+    window.addEventListener('pointerdown', outside);
+    return () => { window.removeEventListener('keydown', dismiss); window.removeEventListener('pointerdown', outside); };
   }, [modeMenuOpen]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [openingAgent, setOpeningAgent] = useState(null);
@@ -244,23 +247,24 @@ export default function Sidebar({
     >
       {/* Logo */}
       <div className="h-14 shrink-0 flex items-center justify-between px-4 border-b border-[#e3e0db]">
-        <div className="relative min-w-0 flex-1">
+        <div ref={modeMenuRef} className="relative min-w-0 flex-1">
           <button type="button" aria-label="Choose workspace mode" aria-expanded={modeMenuOpen}
             aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)}
-            className="flex items-center gap-2 min-w-0 rounded-lg py-1.5 text-[#292929] hover:bg-[#f3f1ec] w-full">
+            className="flex items-center gap-2 min-w-0 rounded-xl py-1.5 text-[#292929] hover:bg-[#eeece6] w-full">
             <img src="/images/singulance-orbit.png" alt="Singulance" className={collapsed ? "h-8 w-8 shrink-0 object-contain" : "h-10 w-12 shrink-0 object-contain"} />
             {!collapsed && <span className="min-w-0 text-left">
               <span className="block text-[20px] font-semibold truncate uppercase">{teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span>
             </span>}
             {!collapsed && <ChevronDown size={14} />}
           </button>
-          {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 min-w-[200px] rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-1.5 shadow-lg z-50">
-            {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), icon: Brain, path: '/hivemind/app/overview/new', selected: !teamMode },
-              { name: 'HyperAgents', icon: Bot, path: '/hivemind/app/employee/harness/new', selected: teamMode }].map(mode =>
+          {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 w-[310px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#e3e0db] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.10)] z-50">
+            {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), icon: Brain, path: '/hivemind/app/overview/new', selected: !teamMode },
+              { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), icon: Bot, path: '/hivemind/app/employee/harness/new', selected: teamMode }].map(mode =>
               <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button"
                 onClick={() => { setModeMenuOpen(false); navigate(mode.path); window.dispatchEvent(new PopStateEvent('popstate')); }}
-                className={`flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f3f1ec] font-semibold' : ''}`}>
-                <mode.icon size={17} /><span className="uppercase">{mode.name}</span>
+                className={`flex flex-col items-start gap-1 w-full rounded-xl px-3 py-3 text-sm text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f7f6f2]' : ''}`}>
+                <span className="uppercase text-[18px] font-medium leading-tight">{mode.name}</span>
+                <span className="text-[15px] text-[#858585] font-normal leading-snug">{mode.description}</span>
               </button>)}
           </div>}
         </div>
