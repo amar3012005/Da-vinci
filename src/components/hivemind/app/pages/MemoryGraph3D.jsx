@@ -768,6 +768,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const didInitialFitRef = useRef(false);
   // nodeId -> Sprite for persistent short tags (doc, gmail, @person ...)
   const nodeTagSpritesRef = useRef(new Map());
+  const nodeObjectsRef = useRef(new Map());
+  const updateNodeAppearanceRef = useRef(null);
   // Label LOD: at massive/large scale, the set of node ids allowed a persistent
   // text-sprite label (top-degree nodes). null = label all (small graphs). A text
   // sprite per node is a canvas texture — 3855 of them is the dominant per-frame
@@ -940,9 +942,14 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const refreshHighlight = useCallback(() => {
     const fg = fgRef.current;
     if (!fg) return;
+    // Recolor existing objects. Rebuilding them here resets title opacity
+    // after the camera loop has just made titles visible.
+    nodeObjectsRef.current.forEach((object, id) => {
+      const node = nodeMapRef.current.get(id);
+      if (node) updateNodeAppearanceRef.current?.(node, object);
+    });
     fg
       .nodeColor(fg.nodeColor())
-      .nodeThreeObject(fg.nodeThreeObject())
       .linkColor(fg.linkColor())
       .linkLabel(fg.linkLabel())
       .linkOpacity(fg.linkOpacity())
@@ -1105,6 +1112,22 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
   const updateNodeObjectAppearance = useCallback((node, object3d) => {
     if (!object3d?.userData?.primaryMaterial) return;
+    const focusId = selectedNodeRef.current?.id;
+    const selected = node.id === focusId;
+    const neighbor = neighborMapRef.current.get(focusId)?.has(node.id);
+    const highlighted = highlightNodesRef.current.has(node.id) || highlightedNodesRef.current.has(node.id);
+    let title = nodeTagSpritesRef.current.get(node.id);
+    if (!title && (selected || neighbor || highlighted)) {
+      title = makeNodeTagSprite(getNodeDisplayLabel(node), themeRef.current.name);
+      title.position.set(0, getNodeRadius(node) * 2.05 + 1.6, 0);
+      object3d.add(title);
+      nodeTagSpritesRef.current.set(node.id, title);
+    }
+    if (title && (focusId || highlightNodesRef.current.size > 0)) {
+      setNodeLabelSpriteVariant(title, selected ? "selected" : "focus", themeRef.current.name);
+      title.material.opacity = selected ? 1 : neighbor || highlighted ? 0.95 : 0;
+      title.visible = title.material.opacity > 0;
+    }
     const color = getNodeColorRef.current(node);
     const haloColor = getClusterHaloColor(node);
     const t = themeRef.current;
@@ -1165,6 +1188,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     getNodeColorRef.current = getNodeColor;
     getNodeLabelRef.current = getNodeLabel;
     refreshHighlightRef.current = refreshHighlight;
+    updateNodeAppearanceRef.current = updateNodeObjectAppearance;
   }, [
     backgroundColor,
     getNodeColor,
@@ -1178,6 +1202,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     onNodeHover,
     onViewStateChange,
     refreshHighlight,
+    updateNodeObjectAppearance,
   ]);
 
   const focusNode = useCallback((node, duration = 900, distanceMultiplier = 4.5) => {
@@ -1444,6 +1469,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           // Ensure stale entry from previous graph swap is dropped.
           nodeTagSpritesRef.current.delete(node.id);
         }
+        nodeObjectsRef.current.set(node.id, shape);
         return shape;
       })
       .nodeThreeObjectExtend(false)
@@ -1957,6 +1983,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       fgRef.current = null;
       // eslint-disable-next-line react-hooks/exhaustive-deps
       nodeTagSpritesRef.current?.clear?.();
+      nodeObjectsRef.current.clear();
     };
   // The graph instance must be created once; live React values are read from refs above.
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1989,6 +2016,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           nodeTagSpritesRef.current.delete(node.id);
         }
         updateNodeObjectAppearance(node, object3d);
+        nodeObjectsRef.current.set(node.id, object3d);
         return object3d;
       })
       .nodeVisibility((node) => isNodeVisible(node))
@@ -2061,6 +2089,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       // graphData swap rebuilds node Three objects; drop any stale sprite
       // references so the per-frame opacity loop doesn't touch orphans.
       nodeTagSpritesRef.current.clear();
+      nodeObjectsRef.current.clear();
       fg.graphData(graphData);
       if (radialTemporal) {
         fg.d3Force("charge", null);
