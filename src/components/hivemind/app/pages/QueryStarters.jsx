@@ -120,6 +120,27 @@ export default function QueryStarters({ mount, ready }) {
   }, [ready, mount]);
 
   useEffect(() => {
+    if (!ready || !mount) return;
+    const takeOver = event => {
+      if (!event.isTrusted) return;
+      const seat = event.target instanceof Element ? event.target.closest('[data-composer-seat]') : null;
+      if (!seat || !mount.contains(seat)) return;
+      const editor = seat.querySelector('[data-composer-input][contenteditable="true"]');
+      if (!editor) return;
+      // A click before suggestions load must also prevent later auto-typing.
+      typedEditors.current.add(editor);
+      stopTyping.current();
+      setFinishedTyping(false);
+    };
+    mount.addEventListener('pointerdown', takeOver, true);
+    mount.addEventListener('keydown', takeOver, true);
+    return () => {
+      mount.removeEventListener('pointerdown', takeOver, true);
+      mount.removeEventListener('keydown', takeOver, true);
+    };
+  }, [ready, mount]);
+
+  useEffect(() => {
     const editor = target?.editor;
     if (!editor || loadedEditor !== editor || !items[0] || typedEditors.current.has(editor)) return;
     const draftKey = `hivemind:generated-query:${identity}:${window.location.pathname}`;
