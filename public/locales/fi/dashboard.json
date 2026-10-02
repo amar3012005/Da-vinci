@@ -26,7 +26,8 @@
       "aiFeatures": "AI-ominaisuudet",
       "advanced": "Edistynyt",
       "workspaceAdmin": "Työtilan hallinta",
-      "account": "Tili"
+      "account": "Tili",
+      "yourTeam": "Tiimisi"
     },
     "planLabel": {
       "free": "Ilmainen suunnitelma",
@@ -34,7 +35,8 @@
       "pro": "Pro-paketti",
       "team": "Tiimipaketti",
       "enterprise": "Yrityspaketti"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "Etsi muistoja…",

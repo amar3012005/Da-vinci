@@ -26,7 +26,8 @@
       "aiFeatures": "ميزات الذكاء الاصطناعي",
       "advanced": "متقدم",
       "workspaceAdmin": "إدارة مساحة العمل",
-      "account": "الحساب"
+      "account": "الحساب",
+      "yourTeam": "فريقك"
     },
     "planLabel": {
       "free": "الخطة المجانية",
@@ -34,7 +35,8 @@
       "pro": "خطة احترافية",
       "team": "خطة الفريق",
       "enterprise": "خطة المؤسسة"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "ابحث في الذكريات…",

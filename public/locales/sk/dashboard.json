@@ -26,7 +26,8 @@
       "aiFeatures": "AI funkcie",
       "advanced": "Pokročilé",
       "workspaceAdmin": "Správa pracoviska",
-      "account": "Účet"
+      "account": "Účet",
+      "yourTeam": "Váš tím"
     },
     "planLabel": {
       "free": "Bezplatný plán",
@@ -34,7 +35,8 @@
       "pro": "Pro plán",
       "team": "Tímový plán",
       "enterprise": "Podnikový plán"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "Hľadať spomienky…",

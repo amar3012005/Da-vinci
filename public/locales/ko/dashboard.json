@@ -26,7 +26,8 @@
       "aiFeatures": "AI 기능",
       "advanced": "고급",
       "workspaceAdmin": "워크스페이스 관리",
-      "account": "계정"
+      "account": "계정",
+      "yourTeam": "내 팀"
     },
     "planLabel": {
       "free": "무료 플랜",
@@ -34,7 +35,8 @@
       "pro": "프로 플랜",
       "team": "팀 플랜",
       "enterprise": "엔터프라이즈 플랜"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "메모리 검색…",

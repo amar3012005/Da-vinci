@@ -26,7 +26,8 @@
       "aiFeatures": "Funzionalità AI",
       "advanced": "Avanzate",
       "workspaceAdmin": "Amministrazione Spazio di Lavoro",
-      "account": "Account"
+      "account": "Account",
+      "yourTeam": "Il tuo team"
     },
     "planLabel": {
       "free": "Piano Gratis",
@@ -34,7 +35,8 @@
       "pro": "Piano Pro",
       "team": "Piano Team",
       "enterprise": "Piano Enterprise"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "Cerca memorie…",

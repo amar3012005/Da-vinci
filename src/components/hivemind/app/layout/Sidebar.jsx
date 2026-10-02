@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SingulanceMark from '../shared/SingulanceMark';
 import SingulanceBrand from '../shared/SingulanceBrand';
@@ -42,9 +42,10 @@ import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
 import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
+import AgentAvatar from '../hyperagents/AgentAvatar';
 
 /** Build nav sections, conditionally including admin items. Filtered by activeSection. */
-function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection = 'hivemind' }) {
+function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection = 'hivemind', team = [] }) {
   const tt = (k, def) => t(`sidebar.${k}`, { defaultValue: def });
   const advancedItems = [
     // Agent Swarm + Engine hidden for now (kept routable, just off the sidebar).
@@ -102,8 +103,14 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
       label: null,
       items: [
         { to: '/hivemind/app/overview', icon: LayoutDashboard, label: tt('overview', 'Overview') },
-        { to: '/hivemind/app/employee/harness', icon: Bot, label: tt('hyperagents', 'HyperAgents') },
         { to: '/hivemind/app/overview/dreaming', icon: Moon, label: tt('dreaming', 'Dreaming') },
+      ],
+    },
+    {
+      label: tt('groups.yourTeam', 'Your Team'),
+      items: [
+        { to: '/hivemind/app/employee/harness', icon: Cpu, label: tt('runTime', 'Run Time'), runtime: true },
+        ...team.map(agent => ({ to: '/hivemind/app/overview', agent, label: agent.name })),
       ],
     },
     {
@@ -145,6 +152,41 @@ export default function Sidebar({
   const { t } = useTranslation('dashboard');
   const { logout, org, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [team, setTeam] = useState([]);
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [openingAgent, setOpeningAgent] = useState(null);
+  const [teamError, setTeamError] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setTeam([]);
+    if (user?.id) fetch('/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal })
+      .then(response => { if (!response.ok) throw new Error('team unavailable'); return response.json(); })
+      .then(value => setTeam((value.profiles || []).filter(agent => typeof agent.id === 'string' && typeof agent.name === 'string')))
+      .catch(() => {});
+    const selection = event => setSelectedAgent(event.detail?.id || null);
+    window.addEventListener('hivemind:agent-selected', selection);
+    return () => { controller.abort(); window.removeEventListener('hivemind:agent-selected', selection); };
+  }, [user?.id, org?.id]);
+
+  const openAgent = async (event, agent) => {
+    event.preventDefault();
+    if (openingAgent) return;
+    setOpeningAgent(agent.id); setTeamError('');
+    navigate('/hivemind/app/overview');
+    try {
+      let start;
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        start = window.__HIVEMIND_START_AGENT__;
+        if (typeof start === 'function') break;
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      if (typeof start !== 'function' || !await start(agent.id)) throw new Error('selection unavailable');
+      setSelectedAgent(agent.id);
+    } catch { setTeamError(tt('teamOpenError', 'Could not open this agent. Please try again.')); }
+    finally { setOpeningAgent(null); }
+  };
   const [showWebAdmin, setShowWebAdmin] = useState(false);
   const { usage } = useUsage();
 
@@ -166,7 +208,7 @@ export default function Sidebar({
     };
   }, [onCollapsedChange]);
 
-  const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection });
+  const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection, team });
   const planLabel = org?.plan
     ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })
     : t('sidebar.planLabel.free', { defaultValue: 'Free Plan' });
@@ -220,6 +262,7 @@ export default function Sidebar({
         </button>
       </div>
 
+      {teamError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{teamError}</p>}
       {/* Navigation */}
       <nav className="flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4">
         {navSections.map((section, si) => (
@@ -237,14 +280,14 @@ export default function Sidebar({
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const pathOnly = item.to.split('?')[0];
-                const isActive =
+                const isActive = item.agent ? selectedAgent === item.agent.id : item.runtime ? location.pathname.startsWith('/hivemind/app/employee/harness') && !selectedAgent :
                   location.pathname === pathOnly ||
                   (location.pathname.startsWith(`${pathOnly}/`)
                     && !(pathOnly === '/hivemind/app/overview' && location.pathname === '/hivemind/app/overview/dreaming'));
                 const hasChildren = item.children && item.children.length > 0;
 
                 return (
-                  <div key={item.to}>
+                  <div key={item.agent?.id || item.to}>
                     {hasChildren && !collapsed ? (
                       <div
                         className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[15px] group`}
@@ -262,6 +305,8 @@ export default function Sidebar({
                       <NavLink
                         to={item.to}
                         data-tour-id={item.to}
+                        onClick={item.agent ? event => openAgent(event, item.agent) : undefined}
+                        aria-busy={item.agent && openingAgent === item.agent.id ? true : undefined}
                         className={`relative flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[15px] transition-all duration-150 group`}
                         title={collapsed ? item.label : undefined}
                       >
@@ -272,13 +317,13 @@ export default function Sidebar({
                             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                           />
                         )}
-                        <item.icon
+                        {item.agent ? <AgentAvatar agent={item.agent} size={25} className="relative z-10" /> : <item.icon
                           size={18}
                           strokeWidth={1.75}
                           className={`relative z-10 transition-colors flex-shrink-0 ${
                             isActive ? 'text-[#0a0a0a]' : 'text-[#737373] group-hover:text-[#333333]'
                           }`}
-                        />
+                        />}
                         {!collapsed && (
                           <span
                             className={`relative z-10 transition-colors truncate ${

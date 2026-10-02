@@ -1376,7 +1376,8 @@
       "advanced": "Advanced",
       "aiFeatures": "AI Features",
       "workspaceAdmin": "Workspace Admin",
-      "yourBrain": "Your Brain"
+      "yourBrain": "Your Brain",
+      "yourTeam": "Your Team"
     },
     "knowledge": "Upload Everything",
     "mcpServer": "MCP Server",
@@ -1397,7 +1398,8 @@
     "tara": "TARA × HIVE",
     "webAdmin": "Web Admin",
     "webIntel": "Web Intel",
-    "workspaceAdmin": "Workspace Admin"
+    "workspaceAdmin": "Workspace Admin",
+    "runTime": "Run Time"
   },
   "swarmgovernance": {
     "actionLogHeading": "Action log",

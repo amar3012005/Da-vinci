@@ -26,7 +26,8 @@
       "aiFeatures": "AI‑funksjoner",
       "advanced": "Avansert",
       "workspaceAdmin": "Arbeidsområde‑admin",
-      "account": "Konto"
+      "account": "Konto",
+      "yourTeam": "Teamet ditt"
     },
     "planLabel": {
       "free": "Gratis plan",
@@ -34,7 +35,8 @@
       "pro": "Pro‑plan",
       "team": "Team‑plan",
       "enterprise": "Enterprise‑plan"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "Søk i minner…",

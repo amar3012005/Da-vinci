@@ -26,7 +26,8 @@
       "aiFeatures": "תכונות AI",
       "advanced": "מתקדם",
       "workspaceAdmin": "מנהל סביבת עבודה",
-      "account": "חשבון"
+      "account": "חשבון",
+      "yourTeam": "הצוות שלך"
     },
     "planLabel": {
       "free": "תוכנית חינם",
@@ -34,7 +35,8 @@
       "pro": "תוכנית פרו",
       "team": "תוכנית צוות",
       "enterprise": "תוכנית ארגונית"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "חפש זיכרונות…",

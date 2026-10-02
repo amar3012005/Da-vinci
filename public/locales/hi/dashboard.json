@@ -26,7 +26,8 @@
       "aiFeatures": "AI सुविधाएँ",
       "advanced": "उन्नत",
       "workspaceAdmin": "वर्कस्पेस एडमिन",
-      "account": "खाता"
+      "account": "खाता",
+      "yourTeam": "आपकी टीम"
     },
     "planLabel": {
       "free": "नि:शुल्क योजना",
@@ -34,7 +35,8 @@
       "pro": "प्रो योजना",
       "team": "टीम योजना",
       "enterprise": "एंटरप्राइज़ योजना"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "स्मृतियों की खोज…",

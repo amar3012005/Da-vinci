@@ -26,7 +26,8 @@
       "aiFeatures": "ویژگی‌های هوش مصنوعی",
       "advanced": "پیشرفته",
       "workspaceAdmin": "مدیر فضای کاری",
-      "account": "حساب"
+      "account": "حساب",
+      "yourTeam": "تیم شما"
     },
     "planLabel": {
       "free": "طرح رایگان",
@@ -34,7 +35,8 @@
       "pro": "طرح حرفه‌ای",
       "team": "طرح تیمی",
       "enterprise": "طرح سازمانی"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "جستجوی حافظه‌ها…",

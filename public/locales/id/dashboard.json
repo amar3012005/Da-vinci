@@ -26,7 +26,8 @@
       "aiFeatures": "Fitur AI",
       "advanced": "Lanjutan",
       "workspaceAdmin": "Admin Ruang Kerja",
-      "account": "Akun"
+      "account": "Akun",
+      "yourTeam": "Tim Anda"
     },
     "planLabel": {
       "free": "Paket Gratis",
@@ -34,7 +35,8 @@
       "pro": "Paket Pro",
       "team": "Paket Tim",
       "enterprise": "Paket Enterprise"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "Cari memori…",

@@ -26,7 +26,8 @@
       "aiFeatures": "AI 功能",
       "advanced": "高级",
       "workspaceAdmin": "工作区管理员",
-      "account": "账户"
+      "account": "账户",
+      "yourTeam": "你的团队"
     },
     "planLabel": {
       "free": "免费套餐",
@@ -34,7 +35,8 @@
       "pro": "专业套餐",
       "team": "团队套餐",
       "enterprise": "企业套餐"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "搜索记忆…",

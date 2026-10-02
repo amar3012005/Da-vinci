@@ -26,7 +26,8 @@
       "aiFeatures": "এআই ফিচারস",
       "advanced": "অ্যাডভান্সড",
       "workspaceAdmin": "ওয়ার্কস্পেস অ্যাডমিন",
-      "account": "অ্যাকাউন্ট"
+      "account": "অ্যাকাউন্ট",
+      "yourTeam": "আপনার দল"
     },
     "planLabel": {
       "free": "ফ্রি প্ল্যান",
@@ -34,7 +35,8 @@
       "pro": "প্রো প্ল্যান",
       "team": "টিম প্ল্যান",
       "enterprise": "এন্টারপ্রাইজ প্ল্যান"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "স্মৃতি অনুসন্ধান…",

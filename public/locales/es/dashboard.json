@@ -1357,7 +1357,8 @@
       "advanced": "Avanzado",
       "aiFeatures": "Funciones de IA",
       "workspaceAdmin": "Administrador de Espacio",
-      "yourBrain": "Tu Cerebro"
+      "yourBrain": "Tu Cerebro",
+      "yourTeam": "Tu equipo"
     },
     "knowledge": "Subir todo",
     "mcpServer": "Servidor MCP",
@@ -1378,7 +1379,8 @@
     "tara": "TARA × HIVE",
     "webAdmin": "Administrador Web",
     "webIntel": "Inteligencia Web",
-    "workspaceAdmin": "Administrador de Espacio"
+    "workspaceAdmin": "Administrador de Espacio",
+    "runTime": "Run Time"
   },
   "swarmgovernance": {
     "actionLogHeading": "Registro de acciones",

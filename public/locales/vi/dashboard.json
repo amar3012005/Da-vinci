@@ -26,7 +26,8 @@
       "aiFeatures": "Tính năng AI",
       "advanced": "Nâng cao",
       "workspaceAdmin": "Quản trị Workspace",
-      "account": "Tài khoản"
+      "account": "Tài khoản",
+      "yourTeam": "Đội của bạn"
     },
     "planLabel": {
       "free": "Gói miễn phí",
@@ -34,7 +35,8 @@
       "pro": "Gói Pro",
       "team": "Gói Team",
       "enterprise": "Gói Enterprise"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "Tìm kiếm ký ức…",

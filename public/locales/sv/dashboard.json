@@ -26,7 +26,8 @@
       "aiFeatures": "AI-funktioner",
       "advanced": "Avancerat",
       "workspaceAdmin": "Arbetsytans admin",
-      "account": "Konto"
+      "account": "Konto",
+      "yourTeam": "Ditt team"
     },
     "planLabel": {
       "free": "Gratis plan",
@@ -34,7 +35,8 @@
       "pro": "Pro-plan",
       "team": "Teamplan",
       "enterprise": "Företagsplan"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "Sök minnen…",

@@ -26,7 +26,8 @@
       "aiFeatures": "AI funkciók",
       "advanced": "Haladó",
       "workspaceAdmin": "Munkaterület admin",
-      "account": "Fiók"
+      "account": "Fiók",
+      "yourTeam": "Csapatod"
     },
     "planLabel": {
       "free": "Ingyenes csomag",
@@ -34,7 +35,8 @@
       "pro": "Pro csomag",
       "team": "Team csomag",
       "enterprise": "Enterprise csomag"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "Emlékek keresése…",

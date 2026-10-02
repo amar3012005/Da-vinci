@@ -26,7 +26,8 @@
       "aiFeatures": "Функції ШІ",
       "advanced": "Розширені",
       "workspaceAdmin": "Адмін робочого простору",
-      "account": "Обліковий запис"
+      "account": "Обліковий запис",
+      "yourTeam": "Ваша команда"
     },
     "planLabel": {
       "free": "Безкоштовний план",
@@ -34,7 +35,8 @@
       "pro": "Pro план",
       "team": "Командний план",
       "enterprise": "Enterprise план"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "Пошук пам’яті…",

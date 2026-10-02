@@ -26,7 +26,8 @@
       "aiFeatures": "ฟีเจอร์ AI",
       "advanced": "ขั้นสูง",
       "workspaceAdmin": "ผู้ดูแลพื้นที่ทำงาน",
-      "account": "บัญชี"
+      "account": "บัญชี",
+      "yourTeam": "ทีมของคุณ"
     },
     "planLabel": {
       "free": "แผนฟรี",
@@ -34,7 +35,8 @@
       "pro": "แผนโปร",
       "team": "แผนทีม",
       "enterprise": "แผนองค์กร"
-    }
+    },
+    "runTime": "Run Time"
   },
   "topbar": {
     "searchMemories": "ค้นหาความทรงจำ…",
