@@ -985,24 +985,11 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     return out;
   }, [clusters]);
 
-  const atmosphereStyle = useMemo(() => {
-    if (graphTheme === "night") {
-      return {
-        background:
-          `radial-gradient(circle at 22% 18%, rgba(255,91,82,0.10) 0%, rgba(21,18,15,0) 34%),` +
-          `radial-gradient(circle at 78% 30%, rgba(245,216,195,0.06) 0%, rgba(21,18,15,0) 30%),` +
-          `radial-gradient(circle at 58% 84%, rgba(255,82,76,0.08) 0%, rgba(21,18,15,0) 38%),` +
-          `linear-gradient(180deg, #15120f 0%, #0c0a08 100%)`,
-      };
-    }
-    return {
-      background:
-        `radial-gradient(circle at 20% 20%, rgba(232,79,72,0.08) 0%, rgba(239,231,218,0) 32%),` +
-        `radial-gradient(circle at 80% 24%, rgba(217,154,26,0.08) 0%, rgba(239,231,218,0) 28%),` +
-        `radial-gradient(circle at 56% 78%, rgba(80,55,38,0.08) 0%, rgba(239,231,218,0) 38%),` +
-        `linear-gradient(180deg, #f2eadf 0%, #e9dfd0 100%)`,
-    };
-  }, [graphTheme]);
+  // Match the renderer's clear color all the way to the viewport edge.
+  // At the desktop app scale a separate page gradient exposed a footer band.
+  const atmosphereStyle = useMemo(() => ({
+    backgroundColor: graphTheme === "night" ? "#15120f" : "#e8dece",
+  }), [graphTheme]);
 
   // Per-cluster centroid layout — arrange cluster anchors on a circle so
   // forceCluster pulls each node toward its group. Radius scales with the
