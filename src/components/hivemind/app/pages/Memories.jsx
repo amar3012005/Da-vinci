@@ -2147,9 +2147,12 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
   const { t } = useTranslation('dashboard');
   const metadata = document.metadata || {};
   const documentStatus = String(document.status ?? document.parseStatus ?? document.parse_status ?? '').toLowerCase();
-  const typeColor = document.documentType === 'pdf' ? '#ef4444' :
-                   document.documentType === 'docx' ? '#3b82f6' :
-                   document.documentType === 'xlsx' ? '#10b981' : '#6b7280';
+  const title = document.title || document.filename || t('memories.untitledDocument', 'Untitled document');
+  const extension = title.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase();
+  const fileType = extension || document.documentType || 'File';
+  const typeColor = fileType === 'pdf' ? '#ef4444' :
+                   fileType === 'docx' ? '#3b82f6' :
+                   fileType === 'xlsx' ? '#10b981' : '#6b7280';
   const documentState = documentIngestState({
     ingestMode: documentIngestMode(document),
     evidenceOnly: document.evidenceOnly ?? document.evidence_only ?? metadata.evidence_only ?? metadata.evidenceOnly,
@@ -2164,10 +2167,9 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
     processing: ['queued', 'processing', 'parsing', 'segmenting', 'embedding', 'promoting'].includes(documentStatus),
   });
 
-  const title = document.title || document.filename || t('memories.untitledDocument', 'Untitled document');
-  const owner = document.uploadedBy?.name || document.uploaded_by_name || document.owner_name;
+  const owner = document.uploadedBy?.name || document.uploaded_by_name || document.owner_name || document.metadata?.uploaded_by_name || document.createdBy?.name;
   return <MosaicTile title={title}><motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.02 }} onClick={onSelect} aria-haspopup="dialog" aria-expanded={isSelected} className={`memory-block ${isSelected ? 'memory-block-selected' : ''}`}>
-    <div className="flex items-start gap-2.5 mb-3"><span className="rounded-lg p-2 shrink-0" style={{ backgroundColor: `${typeColor}15`, color: typeColor }}><FileText size={20} /><span className="block text-[9px] font-bold uppercase mt-1">{document.documentType || 'File'}</span></span><h3 className="text-[13px] font-semibold leading-snug break-words flex-1">{title}</h3><ExternalLink size={13} className="shrink-0 text-[#a3a3a3]" /></div>
+    <div className="flex items-start gap-2.5 mb-3"><span className="rounded-lg p-2 shrink-0" style={{ backgroundColor: `${typeColor}15`, color: typeColor }}><FileText size={20} /><span className="block text-[9px] font-bold uppercase mt-1">{fileType}</span></span><h3 className="text-[13px] font-semibold leading-snug break-words flex-1">{title}</h3><ExternalLink size={13} className="shrink-0 text-[#a3a3a3]" /></div>
     {owner && <p className="text-[11px] text-[#737373] mb-2">Uploaded by {owner}</p>}
     <div className="flex flex-wrap gap-3 text-[10px] text-[#737373]"><span className="inline-flex items-center gap-1"><Clock size={11} />{relativeTime(document.createdAt || document.created_at)}</span>{document.sourcePlatform && <span>{document.sourcePlatform.replace(/_/g, ' ')}</span>}</div>
     {['Memory generation failed', 'Processing'].includes(documentState) && <p className="text-[10px] mt-2" style={{ color: documentState === 'Processing' ? '#117dff' : '#dc2626' }}>{documentState}</p>}
