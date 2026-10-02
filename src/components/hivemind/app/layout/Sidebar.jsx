@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  PanelLeft,
   Globe,
   Server,
   Network,
@@ -255,10 +256,10 @@ export default function Sidebar({
             {!collapsed && <ChevronDown size={14} />}
           </button>
           {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 min-w-[200px] rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-1.5 shadow-lg z-50">
-            {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), icon: Brain, path: '/hivemind/app/overview', selected: !teamMode },
-              { name: 'HyperAgents', icon: Bot, path: '/hivemind/app/employee/harness', selected: teamMode }].map(mode =>
+            {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), icon: Brain, path: '/hivemind/app/overview/new', selected: !teamMode },
+              { name: 'HyperAgents', icon: Bot, path: '/hivemind/app/employee/harness/new', selected: teamMode }].map(mode =>
               <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button"
-                onClick={() => { setModeMenuOpen(false); navigate(mode.path); }}
+                onClick={() => { setModeMenuOpen(false); navigate(mode.path); window.dispatchEvent(new PopStateEvent('popstate')); }}
                 className={`flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f3f1ec] font-semibold' : ''}`}>
                 <mode.icon size={17} />{mode.name}
               </button>)}
@@ -271,7 +272,7 @@ export default function Sidebar({
           onClick={() => onCollapsedChange?.(!collapsed)}
           className="p-1 rounded-md hover:bg-[#f3f1ec] text-[#737373] hover:text-[#333333] transition-colors flex-shrink-0"
         >
-          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          <PanelLeft size={18} strokeWidth={1.75} />
         </button>
       </div>
 
@@ -320,7 +321,7 @@ export default function Sidebar({
                         type={item.agent ? "button" : undefined}
                         to={item.agent ? undefined : item.to}
                         data-tour-id={item.to}
-                        onClick={item.agent ? event => openAgent(event, item.agent) : undefined}
+                        onClick={item.agent ? event => openAgent(event, item.agent) : item.runtime ? event => { event.preventDefault(); navigate('/hivemind/app/employee/harness/new'); window.dispatchEvent(new PopStateEvent('popstate')); } : undefined}
                         aria-busy={item.agent && openingAgent === item.agent.id ? true : undefined}
                         className={`relative w-full text-left flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[15px] transition-all duration-150 group`}
                         title={collapsed ? item.label : undefined}
