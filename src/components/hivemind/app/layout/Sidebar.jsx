@@ -356,7 +356,7 @@ export default function Sidebar({
                             {teamMode && (item.agent || item.runtime) && <small className="block font-normal text-[12px] text-[#737373] truncate max-w-[190px]">{room?.preview || t('sidebar.messageAgent', { defaultValue: 'Send a message' })}</small>}
                           </span>
                         )}
-                        {!collapsed && teamMode && (item.agent || item.runtime) && (room?.running || room?.unread) && <span className={`relative z-10 ml-auto h-1.5 w-1.5 rounded-full flex-shrink-0 ${room.running ? 'bg-blue-500 animate-pulse' : 'bg-green-500'}`} aria-label={room.running ? 'Working' : 'Unread update'} />
+                        {!collapsed && teamMode && (item.agent || item.runtime) && (room?.running || room?.unread) && <span className={`relative z-10 ml-auto h-1.5 w-1.5 rounded-full flex-shrink-0 ${room.running ? 'bg-blue-500 animate-pulse' : 'bg-green-500'}`} aria-label={room.running ? 'Working' : 'Unread update'} />}
                       </ItemLink>
                     )}
                     {/* Always-visible children sub-nav */}
