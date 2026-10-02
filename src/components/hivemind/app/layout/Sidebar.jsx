@@ -284,6 +284,7 @@ export default function Sidebar({
                   location.pathname === pathOnly ||
                   (location.pathname.startsWith(`${pathOnly}/`)
                     && !(pathOnly === '/hivemind/app/overview' && location.pathname === '/hivemind/app/overview/dreaming'));
+                const ItemLink = item.agent ? 'button' : NavLink;
                 const hasChildren = item.children && item.children.length > 0;
 
                 return (
@@ -302,12 +303,13 @@ export default function Sidebar({
                         </span>
                       </div>
                     ) : (
-                      <NavLink
-                        to={item.to}
+                      <ItemLink
+                        type={item.agent ? "button" : undefined}
+                        to={item.agent ? undefined : item.to}
                         data-tour-id={item.to}
                         onClick={item.agent ? event => openAgent(event, item.agent) : undefined}
                         aria-busy={item.agent && openingAgent === item.agent.id ? true : undefined}
-                        className={`relative flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[15px] transition-all duration-150 group`}
+                        className={`relative w-full text-left flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[15px] transition-all duration-150 group`}
                         title={collapsed ? item.label : undefined}
                       >
                         {isActive && (
@@ -333,7 +335,7 @@ export default function Sidebar({
                             {item.label}
                           </span>
                         )}
-                      </NavLink>
+                      </ItemLink>
                     )}
                     {/* Always-visible children sub-nav */}
                     {hasChildren && !collapsed && (
@@ -396,7 +398,7 @@ export default function Sidebar({
                   key={item.to}
                   to={item.to}
                   data-tour-id={item.to}
-                  className={`relative flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[15px] transition-all duration-150 group`}
+                  className={`relative w-full text-left flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[15px] transition-all duration-150 group`}
                   title={collapsed ? item.label : undefined}
                 >
                   {isActive && (
