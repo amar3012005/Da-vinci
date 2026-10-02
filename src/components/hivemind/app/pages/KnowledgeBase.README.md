@@ -60,9 +60,13 @@ check greyed out scopes the server would actually accept.
 ## Page-cost gate (pages only, never LLM tokens)
 
 The scope modal estimates **plan pages** per file *in the browser* before any byte
-leaves — `image → 1`, `pdf → real page count` (dependency-free: reads the PDF page
-tree), other documents → `1` (the real count settles server-side). It mirrors the
-backend `upload-service._estimatePages`.
+leaves — `image → 1`, `pdf → real page count` (dependency-free page-tree read),
+`pptx → slides`, `xlsx → sheets` (ZIP directory names only), and UTF-8 text formats
+(`txt`, `md`, `markdown`, `csv`, `tsv`, `html`, `htm`) → one page equivalent per
+3,000 Unicode characters including whitespace, excluding a BOM, rounded up.
+Unknown office pagination starts at one and settles server-side. Core
+`page-count.js` owns admission and settlement. Existing historical usage is not
+rebilled by this presentation change.
 
 - The batch shows total pages and pages remaining (`kbPages` quota only).
 - If the batch exceeds the remaining page quota, **Upload is disabled** and an
@@ -84,3 +88,11 @@ Supported: pdf, docx/doc, xlsx/xls, pptx/ppt, txt, md, csv/tsv, html; images
 that produced **no document or zero memories** (`NO_RECALLABLE_CONTENT`) rather
 than reporting a false success, and every accepted upload yields verbatim
 **evidence segments** + distilled **memories**.
+
+## Plain-language presentation
+
+The page is named Upload Everything. Existing documents remain listed. Document
+rows show title, scope, memory count, usage and date; evidence/connection metrics
+are expandable under Details. Missing fact counts do not imply running work.
+Upload rows show Processing with actual percentage and elapsed time, while real
+server stage details remain under Work details.
