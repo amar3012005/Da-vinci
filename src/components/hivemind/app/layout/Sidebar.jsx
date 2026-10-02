@@ -329,7 +329,7 @@ export default function Sidebar({
                         data-tour-id={item.to}
                         onClick={item.agent ? event => openAgent(event, item.agent) : item.runtime ? event => openAgent(event, { id: 'runtime' }) : undefined}
                         aria-busy={openingAgent === (item.agent?.id || (item.runtime ? 'runtime' : undefined)) ? true : undefined}
-                        className={`relative w-full text-left flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[15px] transition-all duration-150 group`}
+                        className={`relative w-full text-left flex items-center ${collapsed ? 'justify-center gap-2.5 px-2.5 py-2' : item.runtime ? 'gap-3 px-2.5 py-3 mb-2 min-h-[96px]' : 'gap-2.5 px-2.5 py-2'} rounded-lg text-[15px] transition-all duration-150 group`}
                         title={collapsed ? item.label : undefined}
                       >
                         {isActive && (
@@ -339,7 +339,7 @@ export default function Sidebar({
                             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                           />
                         )}
-                        {item.agent ? <AgentAvatar agent={item.agent} size={25} className="relative z-10" /> : <item.icon
+                        {item.runtime ? <img src="/assets/runtime-computer-c2305f5b.webp" alt="" aria-hidden="true" width={collapsed ? 24 : 80} height={collapsed ? 24 : 80} className="relative z-10 flex-shrink-0 object-contain" /> : item.agent ? <AgentAvatar agent={item.agent} size={25} className="relative z-10" /> : <item.icon
                           size={18}
                           strokeWidth={1.75}
                           className={`relative z-10 transition-colors flex-shrink-0 ${
