@@ -7,7 +7,7 @@
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v5';
+const CACHE = 'hive-shell-v6';
 const SHELL = ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
 
 function offlineResponse() {
@@ -67,6 +67,14 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((resp) => {
+        const executable = /\.(?:js|css)$/i.test(url.pathname);
+        const contentType = resp.headers.get('content-type') || '';
+        if (executable && /text\/html/i.test(contentType)) {
+          return new Response('Static asset unavailable. Reload to use the current version.', {
+            status: 404,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+          });
+        }
         if (resp && resp.status === 200 && resp.type === 'basic') {
           const copy = resp.clone();
           caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
