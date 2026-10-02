@@ -7,7 +7,7 @@
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v6';
+const CACHE = 'hive-shell-v7';
 const SHELL = ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
 
 function offlineResponse() {
@@ -65,7 +65,7 @@ self.addEventListener('fetch', (event) => {
   // Static assets are network-first so a release can never keep an old entry
   // bundle alive. The cache remains an offline fallback.
   event.respondWith(
-    fetch(request)
+    fetch(request, { cache: 'reload' })
       .then((resp) => {
         const executable = /\.(?:js|css)$/i.test(url.pathname);
         const contentType = resp.headers.get('content-type') || '';
