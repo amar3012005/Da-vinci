@@ -511,7 +511,7 @@ export default function HyperAgents() {
           </button>
           <button
             type="button"
-            onClick={() => setBetaFeature('runtime')}
+            onClick={() => navigate('/hivemind/app/overview?runtime=1')}
             className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-white border border-[#bcd0ef]"
           >
             <Power size={13} className="text-[#185bcc]" />
@@ -671,7 +671,7 @@ export default function HyperAgents() {
             }}
             onShowRoster={() => goMode('roster')}
             onOpenLeads={() => goMode('leads', null)}
-            onOpenRuntime={() => setBetaFeature('runtime')}
+            onOpenRuntime={() => navigate('/hivemind/app/overview?runtime=1')}
             showRuntimeInvite={showRuntimeIntro}
             runtimeInviteVersion="canary-20260901"
           />
