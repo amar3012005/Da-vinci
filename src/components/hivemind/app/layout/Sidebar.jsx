@@ -348,12 +348,12 @@ export default function Sidebar({
                         />}
                         {!collapsed && (
                           <span
-                            className={`relative z-10 transition-colors truncate ${
+                            className={`relative z-10 min-w-0 flex-1 transition-colors ${
                               isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#333333] group-hover:text-[#0a0a0a]'
                             }`}
                           >
-                            {item.label}
-                            {teamMode && (item.agent || item.runtime) && <small className="block font-normal text-[12px] text-[#737373] truncate max-w-[190px]">{room?.preview || t('sidebar.messageAgent', { defaultValue: 'Send a message' })}</small>}
+                            {item.runtime ? <strong className="block text-[24px] font-semibold leading-tight tracking-tight">Runtime</strong> : item.label}
+                            {teamMode && (item.agent || item.runtime) && <small className="block font-normal text-[12px] text-[#737373] leading-snug mt-1 truncate">{item.runtime ? 'AI Chief of Staff' : item.agent?.role || item.agent?.job_title || 'Team member'}</small>}
                           </span>
                         )}
                         {!collapsed && teamMode && (item.agent || item.runtime) && (room?.running || room?.unread) && <span className={`relative z-10 ml-auto h-1.5 w-1.5 rounded-full flex-shrink-0 ${room.running ? 'bg-green-600 animate-pulse motion-reduce:animate-none' : 'bg-green-500'}`} aria-label={room.running ? 'Working' : 'Unread update'} />}
@@ -439,7 +439,7 @@ export default function Sidebar({
                   />
                   {!collapsed && (
                     <span
-                      className={`relative z-10 transition-colors truncate ${
+                      className={`relative z-10 min-w-0 flex-1 transition-colors ${
                         isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#333333] group-hover:text-[#0a0a0a]'
                       }`}
                     >
