@@ -251,7 +251,6 @@ export default function Sidebar({
             <SingulanceMark size={24} />
             {!collapsed && <span className="flex-1 min-w-0 text-left">
               <span className="block text-[16px] font-semibold truncate">{teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span>
-              <span className="block text-[10px] text-[#737373] truncate">{org?.name || org?.slug || 'HIVEMIND'}</span>
             </span>}
             {!collapsed && <ChevronDown size={14} />}
           </button>
