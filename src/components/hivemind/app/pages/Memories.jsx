@@ -579,6 +579,13 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
   const [claimsAvailable, setClaimsAvailable] = useState(false);
   const [claimsLoading, setClaimsLoading] = useState(false);
 
+  useEffect(() => {
+    const previous = window.document.activeElement;
+    const handleKey = (event) => { if (event.key === 'Escape') onClose(); };
+    window.document.addEventListener('keydown', handleKey);
+    return () => { window.document.removeEventListener('keydown', handleKey); previous?.focus?.(); };
+  }, [onClose]);
+
   // Claims are additive and feature-flagged. A flag-off deployment returns no
   // endpoint (404/501), in which case the pre-Phase-0 UI remains unchanged.
   useEffect(() => {
@@ -602,13 +609,6 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
       .finally(() => {
         if (!cancelled) setClaimsLoading(false);
       });
-    useEffect(() => {
-    const previous = window.document.activeElement;
-    const handleKey = (event) => { if (event.key === 'Escape') onClose(); };
-    window.document.addEventListener('keydown', handleKey);
-    return () => { window.document.removeEventListener('keydown', handleKey); previous?.focus?.(); };
-  }, [onClose]);
-
   return () => { cancelled = true; };
   }, [memory?.id, memory?.projection]);
 
