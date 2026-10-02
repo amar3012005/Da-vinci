@@ -1284,9 +1284,7 @@ export default function Memories() {
       {/* Ambient glow */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-[#117dff]/[0.012] blur-[120px] pointer-events-none" />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-6">
+      <header className="relative z-10 px-4 sm:px-6 py-3" aria-label="Memories introduction">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
               <Brain size={22} className="text-[#117dff]" />
@@ -1296,6 +1294,11 @@ export default function Memories() {
               <p className="text-[#a3a3a3] text-xs">{t('memories.subtitle', 'Browse memories, documents, and evidence')}</p>
             </div>
           </div>
+      </header>
+
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-4">
+        {/* ── Header ── */}
+        <div className="flex items-center justify-end mb-6">
           <div className="flex items-start gap-4">
             <UsageTracker resource="memories" className="mt-1" />
             {hasFilters && (

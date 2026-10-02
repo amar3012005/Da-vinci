@@ -332,6 +332,7 @@ export default function AppShell() {
   // Overview embeds the HIVE chat as the page centerpiece — the floating
   // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
   // every other page keeps the FAB.
+  const onMemories = location.pathname === '/hivemind/app/memories';
   const onOverview = /\/hivemind\/app(?:\/(?:overview|employee\/harness)(?:\/.*)?)?\/?$/.test(location.pathname);
   const onMeetingNotes = /\/hivemind\/app\/meeting-notes\/?$/.test(location.pathname);
 
@@ -407,7 +408,7 @@ export default function AppShell() {
           }}
         >
           <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />
-          <main className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          <main className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "flex-1 overflow-y-auto" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>
