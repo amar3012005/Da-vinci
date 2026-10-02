@@ -395,7 +395,7 @@ const cardVariants = {
 function MosaicTile({ title, children }) {
   const content = useRef(null);
   const [rows, setRows] = useState(8);
-  const span = title.length > 100 ? 6 : title.length > 48 ? 4 : 3;
+  const span = title.length > 150 ? 6 : title.length > 80 ? 4 : 3;
   useEffect(() => {
     const node = content.current;
     if (!node) return undefined;
@@ -1162,9 +1162,9 @@ export default function Memories() {
           </div>
       </header>
 
-      <div className="relative z-10 max-w-[1440px] mx-auto px-5 sm:px-10 lg:px-12 py-4">
+      <div className="relative z-10 max-w-[1600px] mx-auto px-5 sm:px-10 lg:px-12 py-4">
         {/* ── Header ── */}
-        <div className="flex items-center justify-end mb-6">
+        <div className="flex items-center justify-end mb-3">
           <div className="flex items-start gap-4">
             <UsageTracker resource="memories" className="mt-1" />
             {hasFilters && (
@@ -1178,41 +1178,11 @@ export default function Memories() {
             )}
             {/* Tier scope switcher — same 4 tiers as the Graph page. ALL =
                 personal + org-wide + accessible projects (the visible set). */}
-            <div className="flex flex-col gap-1">
-              {[
-                { key: 'visible', label: 'ALL' },
-                { key: 'tier:organization', label: 'Org-level' },
-                { key: 'tier:project', label: 'Project-level' },
-                { key: 'tier:personal', label: 'Personal-level' },
-              ].map((option) => (
-                <React.Fragment key={option.key}>
-                  <button
-                    type="button"
-                    onClick={() => setTierScope(option.key)}
-                    className={`rounded-lg border px-2.5 py-1 text-[10px] font-mono text-left transition-colors ${
-                      tierScope === option.key
-                        ? 'border-[#117dff]/40 bg-[#117dff]/10 text-[#117dff]'
-                        : 'border-[#e3e0db] bg-white text-[#a3a3a3] hover:text-[#525252]'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                  {/* Project picker — appears under Project-level. Lists only
-                      the user's role-scoped projects. '' = all of them. */}
-                  {option.key === 'tier:project' && tierScope === 'tier:project' && (
-                    <select
-                      value={tierProject}
-                      onChange={(e) => setTierProject(e.target.value)}
-                      className="rounded-lg border border-[#e3e0db] bg-white px-2 py-1 text-[10px] font-mono text-[#525252] max-w-[160px]"
-                    >
-                      <option value="">All my projects</option>
-                      {(accessibleProjects || []).map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  )}
-                </React.Fragment>
-              ))}
+            <div className="flex flex-wrap justify-end gap-2">
+              <select aria-label="Memory scope" value={tierScope} onChange={(e) => setTierScope(e.target.value)} className="rounded-lg border border-[#117dff]/25 bg-[#117dff]/5 px-3 py-2 text-xs text-[#117dff]">
+                <option value="visible">All accessible context</option><option value="tier:organization">Organization</option><option value="tier:project">Projects</option><option value="tier:personal">Personal</option>
+              </select>
+              {tierScope === 'tier:project' && <select aria-label="Choose project" value={tierProject} onChange={(e) => setTierProject(e.target.value)} className="rounded-lg border border-[#e3e0db] bg-white px-3 py-2 text-xs text-[#525252]"><option value="">All my projects</option>{(accessibleProjects || []).map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>}
             </div>
           </div>
         </div>
