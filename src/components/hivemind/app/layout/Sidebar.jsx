@@ -339,7 +339,7 @@ export default function Sidebar({
                             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                           />
                         )}
-                        {item.runtime ? <img src="/assets/runtime-computer-c2305f5b.webp" alt="" aria-hidden="true" width={collapsed ? 24 : 80} height={collapsed ? 24 : 80} className="relative z-10 flex-shrink-0 object-contain" /> : item.agent ? <AgentAvatar agent={item.agent} size={25} className="relative z-10" /> : <item.icon
+                        {item.runtime ? <img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt="" aria-hidden="true" width={collapsed ? 24 : 80} height={collapsed ? 24 : 80} className="relative z-10 flex-shrink-0 object-contain" /> : item.agent ? <AgentAvatar agent={item.agent} size={25} className="relative z-10" /> : <item.icon
                           size={18}
                           strokeWidth={1.75}
                           className={`relative z-10 transition-colors flex-shrink-0 ${
