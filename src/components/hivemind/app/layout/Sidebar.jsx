@@ -258,14 +258,14 @@ export default function Sidebar({
         {collapsed && <button type="button" aria-label="Expand sidebar" aria-expanded="false" onClick={() => onCollapsedChange?.(false)} className="mx-auto block p-1 text-[#737373]"><PanelLeft size={18} /></button>}
         <div ref={modeMenuRef} className="relative mt-1">
           <button type="button" aria-label="Choose workspace mode" aria-expanded={modeMenuOpen} aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)} className="flex items-center gap-2 rounded-xl px-1 py-1.5 text-[#383838] hover:bg-[#eeece6]">
-            {teamMode ? <BotAvatar type="mech" size={32} interactive={false} /> : <BrainModeIcon size={32} />}
+            {teamMode ? <BotAvatar type="mech" shading="fabric" size={32} interactive={false} /> : <BrainModeIcon size={32} />}
             {!collapsed && <><span className="text-[15px] font-medium">{teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span><ChevronDown size={14} /></>}
           </button>
           {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 w-[310px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#e3e0db] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.10)] z-50">
             {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), path: '/hivemind/app/overview/new', selected: !teamMode, brain: true },
               { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), path: '/hivemind/app/employee/harness/new', selected: teamMode }].map(mode =>
               <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button" onClick={() => { setModeMenuOpen(false); navigate(mode.path); window.dispatchEvent(new PopStateEvent('popstate')); }} className={`flex items-center gap-3 w-full rounded-xl px-3 py-3 text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f7f6f2]' : ''}`}>
-                <span className="shrink-0">{mode.brain ? <BrainModeIcon size={32} /> : <BotAvatar type="mech" size={32} interactive={false} />}</span>
+                <span className="shrink-0">{mode.brain ? <BrainModeIcon size={32} /> : <BotAvatar type="mech" shading="fabric" size={32} interactive={false} />}</span>
                 <span className="flex flex-col gap-1"><span className="text-[17px] font-medium leading-tight">{mode.name}</span><span className="text-[14px] text-[#858585] font-normal leading-snug">{mode.description}</span></span>
               </button>)}
           </div>}
