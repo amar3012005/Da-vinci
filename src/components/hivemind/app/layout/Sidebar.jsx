@@ -253,17 +253,17 @@ export default function Sidebar({
             className="flex items-center gap-2 min-w-0 rounded-xl py-1.5 text-[#292929] hover:bg-[#eeece6] w-full">
             <img src="/images/singulance-orbit.png" alt="Singulance" className={collapsed ? "h-8 w-8 shrink-0 object-contain" : "h-10 w-12 shrink-0 object-contain"} />
             {!collapsed && <span className="min-w-0 text-left">
-              <span className="block text-[20px] font-semibold truncate uppercase">{teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span>
+              <span className="block text-[20px] font-semibold truncate">{teamMode ? 'Agents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span>
             </span>}
             {!collapsed && <ChevronDown size={14} />}
           </button>
           {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 w-[310px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#e3e0db] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.10)] z-50">
             {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), icon: Brain, path: '/hivemind/app/overview/new', selected: !teamMode },
-              { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), icon: Bot, path: '/hivemind/app/employee/harness/new', selected: teamMode }].map(mode =>
+              { name: 'Agents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), icon: Bot, path: '/hivemind/app/employee/harness/new', selected: teamMode }].map(mode =>
               <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button"
                 onClick={() => { setModeMenuOpen(false); navigate(mode.path); window.dispatchEvent(new PopStateEvent('popstate')); }}
                 className={`flex flex-col items-start gap-1 w-full rounded-xl px-3 py-3 text-sm text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f7f6f2]' : ''}`}>
-                <span className="uppercase text-[18px] font-medium leading-tight">{mode.name}</span>
+                <span className="text-[18px] font-medium leading-tight">{mode.name}</span>
                 <span className="text-[15px] text-[#858585] font-normal leading-snug">{mode.description}</span>
               </button>)}
           </div>}
