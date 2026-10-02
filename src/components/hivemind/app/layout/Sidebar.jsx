@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import SingulanceMark from '../shared/SingulanceMark';
 import {
   LayoutDashboard,
   Moon,
@@ -249,7 +248,7 @@ export default function Sidebar({
           <button type="button" aria-label="Choose workspace mode" aria-expanded={modeMenuOpen}
             aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)}
             className="flex items-center gap-2.5 min-w-0 rounded-lg py-1.5 text-[#292929] hover:bg-[#f3f1ec] w-full">
-            <SingulanceMark size={24} />
+            <img src="/images/singulance-orbit.png" alt="Singulance" className={collapsed ? "h-8 w-8 shrink-0 object-contain" : "h-10 w-12 shrink-0 object-contain"} />
             {!collapsed && <span className="flex-1 min-w-0 text-left">
               <span className="block text-[20px] font-semibold truncate">{teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span>
             </span>}
