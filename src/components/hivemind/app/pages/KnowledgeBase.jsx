@@ -2126,9 +2126,9 @@ export default function KnowledgeBase() {
     <div className="min-h-full">
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">{t('knowledgebase.title', 'Knowledge Base')}</h1>
+          <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">{t('knowledgebase.title', 'Upload Everything')}</h1>
           <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-            {t('knowledgebase.subtitle', 'Upload documents to create structured, searchable memories')}
+            {t('knowledgebase.subtitle', 'Bring your files into your company’s memory')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -2185,15 +2185,8 @@ export default function KnowledgeBase() {
           <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk'] mt-2">
             {t('knowledgebase.acceptedFormats', 'PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · PNG · JPG · TIFF · MP3 · WAV — max 10 MB per file; PDFs up to 100 pages')}
           </p>
-          {/* Two-tier ingestion: sections index synchronously (searchable in
-              seconds, no LLM in the request); facts + relations distill in a
-              background combined-LLM pass. The ✦-facts / enriching… badges on
-              each document reflect Tier-2 progress. */}
-          <p className="text-[#a3a3a3] text-[10px] font-mono mt-1.5">
-            {t('knowledgebase.tierHint', 'Searchable in seconds — facts & relations enrich in the background ✦')}
-          </p>
-          <p className="text-[#a3a3a3] text-[10px] font-mono mt-2">
-            {t('knowledgebase.chunkedHint', 'Files are chunked into semantic sections and stored as searchable memories')}
+          <p className="text-[#777] text-xs mt-2">
+            {t('knowledgebase.chunkedHint', 'Find what matters in your files through Memories and Brain.')}
           </p>
         </div>
 
@@ -2660,87 +2653,34 @@ export default function KnowledgeBase() {
                         || (doc.tags || []).find((t) => t.startsWith('filename:'))?.split(':').slice(1).join(':')
                         || 'Untitled'}
                     </p>
-                    <div className="flex items-center gap-3 mt-0.5">
-                      {/* Phase 1 evidence-backed stats for this exact document. */}
-                      {(() => {
-                        const p1 = phase1Stats[documentIdFrom(doc)];
-                        if (!p1) return null;
-                        return (
-                          <span
-                            className="text-[#16a34a] text-[10px] font-mono bg-[#16a34a]/8 border border-[#16a34a]/20 rounded px-1.5 py-0.5"
-                            title={`Evidence-backed: ${p1.segments} segments, ${formatBytes(p1.evidenceBytes)} of persisted evidence, and ${p1.memories} live memories for this document`}
-                          >
-                            {p1.segments} seg · {formatBytes(p1.evidenceBytes)} evidence · {p1.memories} mem
-                          </span>
-                        );
-                      })()}
-                      {!phase1Stats[documentIdFrom(doc)] && meta.total_chunks > 0 && (
-                        <span className="text-[#a3a3a3] text-[10px] font-mono">{meta.total_chunks} chunks</span>
+                    <div className="flex flex-wrap items-center gap-3 mt-0.5">
+                      {docProject(doc) && <span className="text-[#117dff] text-xs">{docProject(doc)}</span>}
+                      {phase1Stats[documentIdFrom(doc)]?.memories > 0 && (
+                        <span className="text-[#777] text-xs">{phase1Stats[documentIdFrom(doc)].memories} memories</span>
                       )}
-                      {docProject(doc) && (
-                        <span
-                          className="text-[#117dff] text-[10px] font-mono bg-[#117dff]/8 border border-[#117dff]/20 rounded px-1.5 py-0.5"
-                          title="Project scope"
-                        >
-                          {docProject(doc)}
-                        </span>
-                      )}
-                      {/* Relationship counts from canonical buildRoutedIngestPayloads pipeline */}
-                      {(() => {
-                        const rs = relSummaries[doc.id];
-                        if (!rs || !rs.total) return null;
-                        const types = Object.entries(rs.byType || {})
-                          .sort((a, b) => b[1] - a[1])
-                          .map(([t, c]) => `${c} ${t}`)
-                          .join(', ');
-                        return (
-                          <span
-                            className="text-[#117dff] text-[10px] font-mono bg-[#117dff]/8 border border-[#117dff]/20 rounded px-1.5 py-0.5"
-                            title={`Edges touching this document cluster (${rs.cluster_size} memories)`}
-                          >
-                            {rs.total} relations{types ? `: ${types}` : ''}
-                          </span>
-                        );
-                      })()}
-                      {/* Tier-2 enrichment status: sections index instantly (searchable);
-                          the combined LLM pass distills facts in the background. */}
-                      {(() => {
-                        const rs = relSummaries[doc.id];
-                        if (!rs) return null;
-                        if (rs.facts > 0) {
-                          return (
-                            <span
-                              className="text-[#d97706] text-[10px] font-mono bg-[#d97706]/8 border border-[#d97706]/20 rounded px-1.5 py-0.5"
-                              title="Background enrichment complete — atomic facts distilled from this document (searchable + cited in recall)"
-                            >
-                              ✦ {rs.facts} facts
-                            </span>
-                          );
-                        }
-                        return (
-                          <span
-                            className="text-[#a3a3a3] text-[10px] font-mono bg-[#f3f1ec] border border-[#e3e0db] rounded px-1.5 py-0.5 animate-pulse"
-                            title="Document is already searchable (sections indexed). Fact distillation runs in the background and lands within minutes."
-                          >
-                            enriching…
-                          </span>
-                        );
-                      })()}
                       {meta.pages && (
-                        <span className="text-[#a3a3a3] text-[10px] font-mono">{meta.pages} pages</span>
+                        <span className="text-[#777] text-xs">{meta.pages} {Number(meta.pages) === 1 ? 'page' : 'pages'}</span>
                       )}
-                      {meta.total_chars && (
-                        <span className="text-[#a3a3a3] text-[10px] font-mono">{formatBytes(meta.total_chars)}</span>
-                      )}
+
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {(doc.tags || []).filter((t) => !['knowledge-base', 'document', 'document-summary', 'schema-record', 'enterprise'].includes(t) && !t.startsWith('document_type:')).slice(0, 3).map((tag) => (
+                    {(doc.tags || []).filter((t) => !['knowledge-base', 'document', 'document-summary', 'schema-record', 'enterprise'].includes(t) && !t.startsWith('document_type:') && !/^(source|platform|ts|doc-hash|filename|scope|project|organization|user|document_id):/.test(t)).slice(0, 3).map((tag) => (
                       <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252] border border-[#e3e0db]">
                         {tag}
                       </span>
                     ))}
                   </div>
+                  <details className="relative shrink-0 text-xs text-[#777]">
+                    <summary className="cursor-pointer rounded-md px-2 py-1 hover:bg-[#f3f1ec]">Details</summary>
+                    <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-xl border border-[#e3e0db] bg-white p-3 shadow-lg space-y-1">
+                      {phase1Stats[documentIdFrom(doc)] && <p>{phase1Stats[documentIdFrom(doc)].segments} source sections · {formatBytes(phase1Stats[documentIdFrom(doc)].evidenceBytes)} saved evidence</p>}
+                      {relSummaries[doc.id]?.total > 0 && <p>{relSummaries[doc.id].total} connections</p>}
+                      {relSummaries[doc.id]?.facts > 0 && <p>{relSummaries[doc.id].facts} extracted facts</p>}
+                      {meta.total_chars > 0 && <p>{Number(meta.total_chars).toLocaleString()} characters</p>}
+                      <p>Full content and sources are available in Memories.</p>
+                    </div>
+                  </details>
                   <span className="text-[#a3a3a3] text-[10px] font-mono shrink-0 flex items-center gap-1">
                     <Clock size={10} />
                     {formatDate(doc.created_at)}
