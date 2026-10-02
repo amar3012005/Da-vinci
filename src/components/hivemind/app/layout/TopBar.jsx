@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Building2 } from 'lucide-react';
+import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
@@ -136,6 +137,7 @@ const PAGE_PREFIXES = [
 export default function TopBar({ activeSection = 'hivemind', onSectionChange }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { org } = useAuth();
   const healthy = useHealthStatus();
   const [organizationEmployees, setOrganizationEmployees] = useState([]);
 
@@ -168,16 +170,10 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
     <header className={`pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-white' : 'bg-transparent'}`}>
       {/* Branding and team selection live in the persistent HIVE sidebar. */}
       <div className="pointer-events-auto min-w-0 justify-self-start">
-        <div className="min-w-0">
-          <h1 className="text-[#0a0a0a] text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
-            {tTitle}
-          </h1>
-          {tDesc && (
-            <p className="hidden text-[#a3a3a3] text-[11px] mt-0.5 lg:block">
-              {tDesc}
-            </p>
-          )}
-        </div>
+        <h1 className="flex items-center gap-2 min-w-0 text-[#292929] text-[16px] font-semibold tracking-tight leading-none" title={org?.name || org?.slug || 'Workspace'}>
+          <Building2 size={18} strokeWidth={1.75} className="shrink-0 text-[#626262]" />
+          <span className="truncate">{org?.name || org?.slug || t('sidebar.workspace', { defaultValue: 'Workspace' })}</span>
+        </h1>
       </div>
 
       {/* Section Toggle */}
