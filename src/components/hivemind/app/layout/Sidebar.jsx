@@ -174,12 +174,14 @@ export default function Sidebar({
     event.preventDefault();
     if (openingAgent) return;
     setOpeningAgent(agent.id); setTeamError('');
-    navigate('/hivemind/app/overview');
+    const previousStart = window.__HIVEMIND_START_AGENT__;
+    const needsNavigation = !location.pathname.startsWith('/hivemind/app/overview');
+    if (needsNavigation) navigate('/hivemind/app/overview');
     try {
       let start;
       for (let attempt = 0; attempt < 60; attempt += 1) {
         start = window.__HIVEMIND_START_AGENT__;
-        if (typeof start === 'function') break;
+        if (typeof start === 'function' && (!needsNavigation || start !== previousStart)) break;
         await new Promise(resolve => setTimeout(resolve, 200));
       }
       if (typeof start !== 'function' || !await start(agent.id)) throw new Error('selection unavailable');
