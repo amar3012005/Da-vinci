@@ -434,6 +434,25 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
   </motion.button></MosaicTile>;
 }
 
+// ─── Detail Panel ─────────────────────────────────────────────────────────────
+
+// Render relations grouped by edge type. Shown inside MemoryDetailPanel
+// when /api/memories/:id/relationships returns.
+//
+// Edge types + their visual treatment:
+//   Updates      — green   (this memory updated something / something updated this)
+//   Extends      — sky     (this extended / was extended)
+//   Derives      — purple  (derived from / derivation source for)
+//   Contradicts  — red     (conflict)
+//   PartOf       — slate   (section/turn/message → parent doc/session/thread)
+const REL_TYPE_STYLE = {
+  Updates:     { bg: 'bg-emerald-50',  border: 'border-emerald-200',  text: 'text-emerald-700',  label: 'Updates' },
+  Extends:     { bg: 'bg-sky-50',      border: 'border-sky-200',      text: 'text-sky-700',      label: 'Extends' },
+  Derives:     { bg: 'bg-purple-50',   border: 'border-purple-200',   text: 'text-purple-700',   label: 'Derives' },
+  Contradicts: { bg: 'bg-red-50',      border: 'border-red-200',      text: 'text-red-700',      label: 'Contradicts' },
+  PartOf:      { bg: 'bg-slate-50',    border: 'border-slate-200',    text: 'text-slate-700',    label: 'Part Of' },
+};
+
 function RelationsBlock({ loading, relations }) {
   const { t } = useTranslation('dashboard');
   if (loading) {
@@ -724,6 +743,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
             {memory.memory_type && <TypeBadge type={memory.memory_type} />}
         {memory.cognitive_layer_role && <CognitiveBadge role={memory.cognitive_layer_role} />}
             {memory.source && <SourceBadge source={memory.source} />}
+            <EntityChips memory={memory} />
             <RelationshipIndicator memory={memory} />
             {(() => {
               const sp =
@@ -1665,7 +1685,7 @@ function MemoriesTab({
 
       <div className="mb-5 space-y-3">
         <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Memory types">
-          {[{ key: null, label: 'All', color: '#117dff' }, ...MEMORY_TYPES].map((type) => <button key={type.key || 'all'} onClick={() => { setActiveType(type.key); setOffset(0); setAllMemories([]); setHasMore(true); }} className="shrink-0 rounded-lg border px-3 py-2 text-xs font-medium" style={{ color: activeType === type.key ? type.color : '#525252', backgroundColor: activeType === type.key ? `${type.color}15` : 'white', borderColor: activeType === type.key ? `${type.color}40` : '#e3e0db' }}>{type.label}</button>)}
+          {[{ key: null, label: 'All', color: '#117dff' }, ...MEMORY_TYPES].map((type) => <button key={type.key || 'all'} onClick={() => { setActiveType(type.key); setShowDreams(false); setOffset(0); setAllMemories([]); setHasMore(true); }} className="shrink-0 rounded-lg border px-3 py-2 text-xs font-medium" style={{ color: activeType === type.key ? type.color : '#525252', backgroundColor: activeType === type.key ? `${type.color}15` : 'white', borderColor: activeType === type.key ? `${type.color}40` : '#e3e0db' }}>{type.label}</button>)}
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1 max-h-[120px]" aria-label="Entity tags">
           {availableTags.filter((tag) => tag.startsWith('entity:')).map((tag) => <button key={tag} onClick={() => { setActiveTag(activeTag === tag ? null : tag); setOffset(0); setAllMemories([]); setHasMore(true); }} className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] ${activeTag === tag ? 'border-[#117dff]/40 bg-[#117dff]/10 text-[#117dff]' : 'border-[#e3e0db] text-[#737373]'}`}>{tag.slice(7)}</button>)}
