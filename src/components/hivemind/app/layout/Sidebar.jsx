@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { BotAvatar } from 'bot-avatars';
+import BrainModeIcon from './BrainModeIcon';
 import {
   LayoutDashboard,
   Moon,
@@ -245,38 +247,29 @@ export default function Sidebar({
       style={{ viewTransitionName: 'product-sidebar' }}
       className={`fixed left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] ${sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
     >
-      {/* Logo */}
-      <div className="h-14 shrink-0 flex items-center justify-between px-4 border-b border-[#e3e0db]">
-        <div ref={modeMenuRef} className="relative min-w-0 flex-1">
-          <button type="button" aria-label="Choose workspace mode" aria-expanded={modeMenuOpen}
-            aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)}
-            className="flex items-center gap-2 min-w-0 rounded-xl py-1.5 text-[#292929] hover:bg-[#eeece6] w-full">
-            <img src="/images/singulance-orbit.png" alt="Singulance" className={collapsed ? "h-8 w-8 shrink-0 object-contain" : "h-10 w-12 shrink-0 object-contain"} />
-            {!collapsed && <span className="min-w-0 text-left">
-              <span className="block text-[20px] font-semibold truncate">{teamMode ? 'Agents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span>
-            </span>}
-            {!collapsed && <ChevronDown size={14} />}
+      <div className="shrink-0 px-4 pt-2 pb-3 border-b border-[#e3e0db]">
+        <div className="flex items-center justify-between h-12">
+          <div className="flex items-center gap-2 min-w-0">
+            <img src="/images/singulance-orbit.png" alt="Singulance" className="h-10 w-10 shrink-0 object-contain" />
+            {!collapsed && <span className="text-[19px] font-semibold tracking-wide text-[#292929]">HIVEMIND</span>}
+          </div>
+          {!collapsed && <button type="button" aria-label="Collapse sidebar" aria-expanded="true" onClick={() => onCollapsedChange?.(true)} className="p-1 rounded-md hover:bg-[#eeece6] text-[#737373]"><PanelLeft size={18} strokeWidth={1.75} /></button>}
+        </div>
+        {collapsed && <button type="button" aria-label="Expand sidebar" aria-expanded="false" onClick={() => onCollapsedChange?.(false)} className="mx-auto block p-1 text-[#737373]"><PanelLeft size={18} /></button>}
+        <div ref={modeMenuRef} className="relative mt-1">
+          <button type="button" aria-label="Choose workspace mode" aria-expanded={modeMenuOpen} aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)} className="flex items-center gap-2 rounded-xl px-1 py-1.5 text-[#383838] hover:bg-[#eeece6]">
+            {teamMode ? <BotAvatar type="mech" size={32} interactive={false} /> : <BrainModeIcon size={32} />}
+            {!collapsed && <><span className="text-[15px] font-medium">{teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span><ChevronDown size={14} /></>}
           </button>
           {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 w-[310px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#e3e0db] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.10)] z-50">
-            {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), icon: Brain, path: '/hivemind/app/overview/new', selected: !teamMode },
-              { name: 'Agents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), icon: Bot, path: '/hivemind/app/employee/harness/new', selected: teamMode }].map(mode =>
-              <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button"
-                onClick={() => { setModeMenuOpen(false); navigate(mode.path); window.dispatchEvent(new PopStateEvent('popstate')); }}
-                className={`flex flex-col items-start gap-1 w-full rounded-xl px-3 py-3 text-sm text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f7f6f2]' : ''}`}>
-                <span className="text-[18px] font-medium leading-tight">{mode.name}</span>
-                <span className="text-[15px] text-[#858585] font-normal leading-snug">{mode.description}</span>
+            {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), path: '/hivemind/app/overview/new', selected: !teamMode, brain: true },
+              { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), path: '/hivemind/app/employee/harness/new', selected: teamMode }].map(mode =>
+              <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button" onClick={() => { setModeMenuOpen(false); navigate(mode.path); window.dispatchEvent(new PopStateEvent('popstate')); }} className={`flex items-center gap-3 w-full rounded-xl px-3 py-3 text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f7f6f2]' : ''}`}>
+                <span className="shrink-0">{mode.brain ? <BrainModeIcon size={32} /> : <BotAvatar type="mech" size={32} interactive={false} />}</span>
+                <span className="flex flex-col gap-1"><span className="text-[17px] font-medium leading-tight">{mode.name}</span><span className="text-[14px] text-[#858585] font-normal leading-snug">{mode.description}</span></span>
               </button>)}
           </div>}
         </div>
-        <button
-          type="button"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-expanded={!collapsed}
-          onClick={() => onCollapsedChange?.(!collapsed)}
-          className="p-1 rounded-md hover:bg-[#f3f1ec] text-[#737373] hover:text-[#333333] transition-colors flex-shrink-0"
-        >
-          <PanelLeft size={18} strokeWidth={1.75} />
-        </button>
       </div>
 
       {teamError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{teamError}</p>}
