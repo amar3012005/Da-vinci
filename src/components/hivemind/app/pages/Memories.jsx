@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -386,7 +386,7 @@ const cardVariants = {
   visible: (i) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.04, duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { delay: Math.min(i, 5) * 0.025, duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] },
   }),
   exit: { opacity: 0, y: -8, transition: { duration: 0.2 } },
 };
@@ -395,17 +395,26 @@ const cardVariants = {
 function MosaicTile({ title, children }) {
   const content = useRef(null);
   const [rows, setRows] = useState(8);
-  const span = title.length > 150 ? 6 : title.length > 80 ? 4 : 3;
-  useEffect(() => {
+  const span = title.length > 130 ? 6 : title.length > 65 ? 4 : 3;
+  useLayoutEffect(() => {
     const node = content.current;
     if (!node) return undefined;
-    const measure = () => setRows(Math.max(1, Math.ceil((node.offsetHeight + 10) / 18)));
+    const measure = () => {
+      const next = Math.max(1, Math.ceil((node.offsetHeight + 10) / 18));
+      setRows((current) => current === next ? current : next);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => observer.disconnect();
   }, [title]);
   return <div className="memory-mosaic-tile" style={{ '--tile-span': span, gridRowEnd: `span ${rows}` }}><div ref={content}>{children}</div></div>;
+}
+
+function timelineTime(item) {
+  const value = item.created_at || item.createdAt || item.uploaded_at || item.uploadedAt;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : 0;
 }
 
 function MemorySource({ memory }) {
@@ -732,7 +741,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5 space-y-5">
           {/* Title */}
           <h2 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] leading-snug">
             {memory.title || t('memories.untitledMemory', 'Untitled Memory')}
@@ -1040,7 +1049,6 @@ export default function Memories() {
   const [showFilters, setShowFilters] = useState(false);
   // Phase 2 polish
   const [activeEntity, setActiveEntity] = useState(null);   // tag like "person:alice-wong"
-  const [groupByDoc, setGroupByDoc] = useState(false);
   const [topEntities, setTopEntities] = useState([]);
   const [contradictionsCount, setContradictionsCount] = useState(0);
   // The actual conflicting pairs, not just the count. The banner used to link to
@@ -1308,44 +1316,6 @@ export default function Memories() {
           </>
         )}
 
-        {/* Top-entity chip cloud + group-by toggle */}
-        {topEntities.length > 0 && (
-          <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('memories.filterByEntity', 'Filter by entity:')}</span>
-            {topEntities.map(e => {
-              const active = activeEntity === e.key;
-              const tint = e.type === 'person' ? '#117dff'
-                : e.type === 'organization' ? '#8b5cf6'
-                : e.type === 'project' ? '#10b981'
-                : e.type === 'product' ? '#f59e0b'
-                : e.type === 'location' ? '#06b6d4'
-                : '#64748b';
-              return (
-                <button
-                  key={e.key}
-                  type="button"
-                  onClick={() => setActiveEntity(active ? null : e.key)}
-                  style={active ? { borderColor: tint, color: tint, background: tint + '14' } : undefined}
-                  className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-mono border ${active ? '' : 'border-[#e3e0db] text-[#525252]'} hover:border-[${tint}]`}
-                >
-                  <span style={{ color: tint }}>●</span> {e.name}
-                  <span className="text-[#a3a3a3] ml-1">·{e.count}</span>
-                </button>
-              );
-            })}
-            <span className="ml-auto shrink-0 flex items-center gap-1.5 text-[10px] font-mono text-[#737373]">
-              <input
-                type="checkbox"
-                id="group-by-doc"
-                checked={groupByDoc}
-                onChange={(e) => setGroupByDoc(e.target.checked)}
-                className="accent-[#117dff]"
-              />
-              <label htmlFor="group-by-doc" className="cursor-pointer">{t('memories.groupByDocument', 'Group by document')}</label>
-            </span>
-          </div>
-        )}
-
         {/* ── Tab Content ── */}
         {activeTab === 'memories' && (
           <MemoriesTab
@@ -1357,7 +1327,6 @@ export default function Memories() {
             setActiveTag={setActiveTag}
             activeEntity={activeEntity}
             setActiveEntity={setActiveEntity}
-            groupByDoc={groupByDoc}
             showFilters={showFilters}
             setShowFilters={setShowFilters}
             offset={offset}
@@ -1381,6 +1350,9 @@ export default function Memories() {
             tierScope={tierScope}
             tierProject={tierProject}
             orgKey={orgKey}
+            selectedDocument={selectedDocument}
+            setSelectedDocument={setSelectedDocument}
+            entitySuggestions={topEntities}
             onKnowledgeChanged={refreshLayerCounts}
           />
         )}
@@ -1419,7 +1391,6 @@ function MemoriesTab({
   setActiveTag,
   activeEntity,
   setActiveEntity,
-  groupByDoc,
   showFilters,
   setShowFilters,
   showSuperseded,
@@ -1442,6 +1413,9 @@ function MemoriesTab({
   setActiveTab,
   activeCognitiveRole,
   setActiveCognitiveRole,
+  selectedDocument,
+  setSelectedDocument,
+  entitySuggestions,
   onKnowledgeChanged,
 }) {
   // ─── Data fetching ──────────────────────────────────────────────
@@ -1449,6 +1423,44 @@ function MemoriesTab({
   const { t } = useTranslation('dashboard');
   const { activeProjectId } = useTeamContext() || {};
   const isSearching = debouncedQuery.trim().length > 0;
+
+  const [timelineDocuments, setTimelineDocuments] = useState([]);
+  const [documentOffset, setDocumentOffset] = useState(0);
+  const [documentsHasMore, setDocumentsHasMore] = useState(false);
+  const [documentError, setDocumentError] = useState(null);
+  const [documentRetry, setDocumentRetry] = useState(0);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMoreLock = useRef(false);
+  const selectionRequest = useRef(0);
+  useEffect(() => {
+    const refreshDocuments = () => setDocumentRetry((value) => value + 1);
+    window.addEventListener(KNOWLEDGE_CHANGED_EVENT, refreshDocuments);
+    return () => window.removeEventListener(KNOWLEDGE_CHANGED_EVENT, refreshDocuments);
+  }, []);
+  const documentParams = useMemo(() => ({
+    limit: 40,
+    ...(tierScope !== 'visible' ? { scope: tierScope.replace('tier:', '') } : {}),
+    ...(tierScope === 'tier:project' && (tierProject || activeProjectId) ? { project_id: tierProject || activeProjectId } : {}),
+  }), [tierScope, tierProject, activeProjectId]);
+  useEffect(() => {
+    let cancelled = false;
+    setTimelineDocuments([]);
+    setDocumentOffset(0);
+    setDocumentsHasMore(false);
+    setDocumentError(null);
+    setLoadingDocuments(true);
+    const request = isSearching ? apiClient.searchDocuments(debouncedQuery, documentParams) : apiClient.listDocuments({ ...documentParams, offset: 0 });
+    request.then((data) => {
+      if (cancelled) return;
+      const items = data?.documents || data?.results || [];
+      setTimelineDocuments(Array.isArray(items) ? items : []);
+      const total = data?.pagination?.total ?? data?.total;
+      setDocumentsHasMore(!isSearching && (total != null ? items.length < total : items.length === 40));
+    }).catch(() => { if (!cancelled) setDocumentError('Documents could not load. Retry to include them in this timeline.'); })
+      .finally(() => { if (!cancelled) setLoadingDocuments(false); });
+    return () => { cancelled = true; };
+  }, [documentParams, isSearching, debouncedQuery, documentRetry]);
 
   // ─── Profile-based total count (fallback for self-host orgs where
   //     the list endpoint pagination.total may be absent) ───────────────
@@ -1584,6 +1596,25 @@ function MemoriesTab({
     resolvedList.forEach((m) => (m.tags || []).forEach((t) => tags.add(t)));
     return Array.from(tags).sort();
   }, [resolvedList]);
+  const entityTags = useMemo(() => [...new Set([
+    ...(entitySuggestions || []).map((entity) => entity.key.startsWith('entity:') ? entity.key : `entity:${entity.key}`),
+    ...availableTags.filter((tag) => tag.startsWith('entity:')),
+    ...(activeTag ? [activeTag] : []),
+  ])], [entitySuggestions, availableTags, activeTag]);
+  const timelineItems = useMemo(() => {
+    const documents = activeType || activeTag || activeEntity ? [] : timelineDocuments.filter((document) => {
+      if (tierScope === 'visible') return true;
+      const scope = document.scope_type || document.scope || document.metadata?.scope_type || document.metadata?.scope;
+      if (scope !== tierScope.replace('tier:', '')) return false;
+      const project = tierProject || activeProjectId;
+      const ids = document.projectIds || document.project_ids || document.metadata?.project_ids || [];
+      return tierScope !== 'tier:project' || !project || document.projectId === project || document.project_id === project || ids.includes(project);
+    });
+    return [
+      ...resolvedList.map((item) => ({ kind: 'memory', item })),
+      ...documents.map((item) => ({ kind: 'document', item })),
+    ].sort((a, b) => timelineTime(b.item) - timelineTime(a.item) || `${a.kind}:${a.item.id}`.localeCompare(`${b.kind}:${b.item.id}`));
+  }, [resolvedList, timelineDocuments, activeType, activeTag, activeEntity, tierScope, tierProject, activeProjectId]);
   const visibleMemoryCount = resolvedList.length;
   const displayedMemoryCount = Math.min(
     totalCount ?? profileMemoryCount ?? visibleMemoryCount,
@@ -1593,41 +1624,56 @@ function MemoriesTab({
   // ─── Handlers ───────────────────────────────────────────────────
 
   const handleLoadMore = async () => {
-    const nextOffset = offset + PAGE_SIZE;
+    if (loadMoreLock.current) return;
+    loadMoreLock.current = true;
+    setLoadingMore(true);
     try {
-      const data = await apiClient.listMemories({ ...listParams, offset: nextOffset, limit: PAGE_SIZE });
-      const arr = data?.memories || data?.results || data || [];
-      const items = Array.isArray(arr) ? arr : [];
-      if (items.length < PAGE_SIZE) setHasMore(false);
-      setAllMemories((prev) => {
-        const ids = new Set(prev.map((m) => m.id));
-        const merged = [...prev];
-        items.forEach((m) => {
-          if (!ids.has(m.id)) merged.push(m);
-        });
-        return merged;
-      });
-      setOffset(nextOffset);
+      if (hasMore) {
+        const nextOffset = offset + PAGE_SIZE;
+        const data = await apiClient.listMemories({ ...listParams, offset: nextOffset, limit: PAGE_SIZE });
+        const raw = data?.memories || data?.results || [];
+        const items = Array.isArray(raw) ? raw : [];
+        if (items.length < PAGE_SIZE || data?.pagination?.has_more === false) setHasMore(false);
+        setAllMemories([...new Map([...resolvedList, ...items].map((memory) => [memory.id, memory])).values()]);
+        setOffset(nextOffset);
+      }
+      if (documentsHasMore) {
+        const nextOffset = documentOffset + 40;
+        const data = await apiClient.listDocuments({ ...documentParams, offset: nextOffset });
+        const items = data?.documents || [];
+        setTimelineDocuments((previous) => [...new Map([...previous, ...items].map((document) => [document.id, document])).values()]);
+        setDocumentOffset(nextOffset);
+        const total = data?.pagination?.total ?? data?.total;
+        setDocumentsHasMore(total != null ? nextOffset + items.length < total : items.length === 40);
+      }
+      setDocumentError(null);
     } catch {
-      // silently fail
+      setDocumentError('More items could not load. Please try again.');
+    } finally {
+      loadMoreLock.current = false;
+      setLoadingMore(false);
     }
   };
 
   const handleSelectMemory = useCallback(
     async (memory) => {
       if (selectedMemory?.id === memory.id) {
+        selectionRequest.current += 1;
         setSelectedMemory(null);
         return;
       }
-      // Fetch full detail
+      // Open immediately; ignore a late response after another card is selected.
+      const request = ++selectionRequest.current;
+      setSelectedDocument(null);
+      setSelectedMemory(memory);
       try {
         const full = await apiClient.getMemory(memory.id);
-        setSelectedMemory(full?.memory || full);
+        if (request === selectionRequest.current) setSelectedMemory(full?.memory || full);
       } catch {
-        setSelectedMemory(memory);
+        if (request === selectionRequest.current) setSelectedMemory(memory);
       }
     },
-    [selectedMemory, setSelectedMemory],
+    [selectedMemory, setSelectedMemory, setSelectedDocument],
   );
 
   const handleDeleteMemory = useCallback(
@@ -1687,8 +1733,8 @@ function MemoriesTab({
         <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Memory types">
           {[{ key: null, label: 'All', color: '#117dff' }, ...MEMORY_TYPES].map((type) => <button key={type.key || 'all'} onClick={() => { setActiveType(type.key); setShowDreams(false); setOffset(0); setAllMemories([]); setHasMore(true); }} className="shrink-0 rounded-lg border px-3 py-2 text-xs font-medium" style={{ color: activeType === type.key ? type.color : '#525252', backgroundColor: activeType === type.key ? `${type.color}15` : 'white', borderColor: activeType === type.key ? `${type.color}40` : '#e3e0db' }}>{type.label}</button>)}
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 max-h-[120px]" aria-label="Entity tags">
-          {availableTags.filter((tag) => tag.startsWith('entity:')).map((tag) => <button key={tag} onClick={() => { setActiveTag(activeTag === tag ? null : tag); setOffset(0); setAllMemories([]); setHasMore(true); }} className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] ${activeTag === tag ? 'border-[#117dff]/40 bg-[#117dff]/10 text-[#117dff]' : 'border-[#e3e0db] text-[#737373]'}`}>{tag.slice(7)}</button>)}
+        <div className="memory-entity-strip" aria-label="Entity tags">
+          {entityTags.map((tag) => <button key={tag} onClick={() => { setActiveTag(activeTag === tag ? null : tag); setOffset(0); setAllMemories([]); setHasMore(true); }} className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] ${activeTag === tag ? 'border-[#117dff]/40 bg-[#117dff]/10 text-[#117dff]' : 'border-[#e3e0db] text-[#737373]'}`}>{tag.slice(7)}</button>)}
         </div>
       </div>
 
@@ -1731,12 +1777,12 @@ function MemoriesTab({
               )}
             </div>
           )}
-          {loading && resolvedList.length === 0 ? (
+          {(loading || loadingDocuments) && timelineItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24">
               <Loader2 size={28} className="text-[#117dff]/50 animate-spin mb-4" />
               <span className="text-[#d4d0ca] text-sm">{t('memories.loadingMemories', 'Loading memories...')}</span>
             </div>
-          ) : resolvedList.length === 0 ? (
+          ) : timelineItems.length === 0 ? (
             <EmptyState hasFilters={!!hasFilters} />
           ) : (
             <>
@@ -1747,80 +1793,23 @@ function MemoriesTab({
                 {isSearching
                   ? t('memories.searchResultCount', '{{count}} result{{suffix}}', { count: resolvedList.length, suffix: resolvedList.length !== 1 ? 's' : '' })
                   : t('memories.memoryCount', '{{count}} memories', { count: displayedMemoryCount })}
+                {!activeType && !activeTag && !activeEntity && timelineDocuments.length > 0 && <span> · {timelineDocuments.length} documents</span>}
                 {loading && <Loader2 size={10} className="inline-block ml-2 animate-spin" />}
               </p>
 
-              {/* Grid — flat or grouped-by-document */}
-              {groupByDoc ? (
-                <AnimatePresence mode="popLayout">
-                  {(() => {
-                    // Group by source_metadata.document_id (Phase 1 evidence-backed memories)
-                    const groups = new Map();
-                    for (const m of resolvedList) {
-                      const docId = m.source_metadata?.document_id
-                        || m.metadata?.source_metadata?.document_id
-                        || m.metadata?.document_id
-                        || null;
-                      const key = docId || 'ungrouped';
-                      if (!groups.has(key)) groups.set(key, { docId, items: [] });
-                      groups.get(key).items.push(m);
-                    }
-                    return Array.from(groups.entries()).map(([key, grp]) => {
-                      const first = grp.items[0];
-                      const docTitle = first?.source_metadata?.heading
-                        || first?.metadata?.source_metadata?.heading
-                        || (grp.docId ? `Document ${grp.docId.slice(0, 8)}` : 'Other memories');
-                      return (
-                        <div key={key} className="mb-4">
-                          <div className="flex items-center gap-2 mb-2 px-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#117dff]" />
-                            <span className="text-[11px] font-mono uppercase tracking-wider text-[#525252]">
-                              {docTitle}
-                            </span>
-                            <span className="text-[10px] font-mono text-[#a3a3a3]">·{grp.items.length} {t('memories.memoryOrMemories', 'memor{{suffix}}', { suffix: grp.items.length === 1 ? 'y' : 'ies' })}</span>
-                          </div>
-                          <div className="memory-mosaic">
-                            {grp.items.map((memory, i) => (
-                              <MemoryCard
-                                key={memory.id || `${key}-${i}`}
-                                memory={memory}
-                                index={i}
-                                onSelect={handleSelectMemory}
-                                isSelected={selectedMemory?.id === memory.id}
-                                orgKey={orgKey}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </AnimatePresence>
-              ) : (
-                <div className="memory-mosaic">
-                  <AnimatePresence mode="popLayout">
-                    {resolvedList.map((memory, i) => (
-                      <MemoryCard
-                        key={memory.id || i}
-                        memory={memory}
-                        index={i}
-                        onSelect={handleSelectMemory}
-                        isSelected={selectedMemory?.id === memory.id}
-                        orgKey={orgKey}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
+              <div className="memory-mosaic" aria-label="Memories and documents, newest first">
+                {timelineItems.map(({ kind, item }, index) => kind === 'document' ? <DocumentCard key={`document:${item.id}`} document={item} index={index} isSelected={selectedDocument?.id === item.id} onSelect={() => { selectionRequest.current += 1; setSelectedMemory(null); setSelectedDocument(item); }} /> : <MemoryCard key={`memory:${item.id}`} memory={item} index={index} onSelect={handleSelectMemory} isSelected={selectedMemory?.id === item.id} orgKey={orgKey} />)}
+              </div>
 
               {/* Load more */}
-              {!isSearching && hasMore && resolvedList.length >= PAGE_SIZE && (totalCount == null || resolvedList.length < totalCount) && (
+              {!isSearching && ((hasMore && resolvedList.length >= PAGE_SIZE && (totalCount == null || resolvedList.length < totalCount)) || documentsHasMore) && (
                 <div className="flex justify-center mt-8">
                   <button
                     onClick={handleLoadMore}
+                    disabled={loadingMore}
                     className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] text-sm font-semibold hover:text-[#525252] hover:border-[#d4d0ca] transition-all"
                   >
-                    {t('memories.loadMore', 'Load more')}
+                    {loadingMore ? 'Loading…' : t('memories.loadMore', 'Load more')}
                   </button>
                 </div>
               )}
@@ -1828,18 +1817,20 @@ function MemoriesTab({
           )}
         </div>
 
+      {documentError && <div role="alert" className="mt-3 flex items-center gap-2 text-xs text-amber-700"><span>{documentError}</span><button className="underline" onClick={() => setDocumentRetry((value) => value + 1)}>Retry documents</button></div>}
       {/* ── Detail Slide-over ── */}
       <AnimatePresence>
         {selectedMemory && (
           <MemoryDetailPanel
             memory={selectedMemory}
-            onClose={() => setSelectedMemory(null)}
+            onClose={() => { selectionRequest.current += 1; setSelectedMemory(null); }}
             onDelete={handleDeleteMemory}
             onViewEvidence={() => setActiveTab('evidence')}
             orgKey={orgKey}
           />
         )}
       </AnimatePresence>
+      <AnimatePresence>{selectedDocument && <DocumentDetailPanel document={selectedDocument} onClose={() => setSelectedDocument(null)} />}</AnimatePresence>
     </>
   // eslint-disable-next-line no-unused-vars
   );
@@ -2393,7 +2384,7 @@ function DocumentDetailPanel({ document, onClose }) {
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="absolute right-0 top-0 bottom-0 w-full max-w-3xl bg-[#faf9f4] shadow-2xl overflow-y-auto"
+        className="absolute right-0 top-0 bottom-0 w-full max-w-3xl bg-[#faf9f4] shadow-2xl overflow-y-auto overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 space-y-6">

@@ -408,7 +408,7 @@ export default function AppShell() {
           }}
         >
           <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />
-          <main className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "flex-1 overflow-y-auto" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          <main className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>
