@@ -1136,12 +1136,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       object3d.add(title);
       nodeTagSpritesRef.current.set(node.id, title);
     }
-    if (title) sizeNodeLabelForScreen(title, fgRef.current?.camera?.(), containerRef.current?.getBoundingClientRect?.().height);
     if (title && (focusId || highlightNodesRef.current.size > 0)) {
       setNodeLabelSpriteVariant(title, selected ? "selected" : "focus", themeRef.current.name);
       title.material.opacity = selected ? 1 : neighbor || highlighted ? 0.95 : 0;
       title.visible = title.material.opacity > 0;
     }
+    if (title) sizeNodeLabelForScreen(title, fgRef.current?.camera?.(), containerRef.current?.getBoundingClientRect?.().height);
     const color = getNodeColorRef.current(node);
     const haloColor = getClusterHaloColor(node);
     const t = themeRef.current;
