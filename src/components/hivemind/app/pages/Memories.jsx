@@ -399,7 +399,7 @@ function MosaicTile({ title, children }) {
   useEffect(() => {
     const node = content.current;
     if (!node) return undefined;
-    const measure = () => setRows(Math.max(1, Math.ceil((node.getBoundingClientRect().height + 10) / 18)));
+    const measure = () => setRows(Math.max(1, Math.ceil((node.offsetHeight + 10) / 18)));
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(node);
@@ -691,7 +691,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: '100%' }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-      role="dialog" aria-modal="true" aria-label="Memory details" className="fixed inset-y-0 right-0 w-full max-w-lg z-50 flex flex-col"
+      role="dialog" aria-label="Memory details" className="fixed inset-y-0 right-0 w-full max-w-lg z-50 flex flex-col"
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 lg:hidden" onClick={onClose} />
