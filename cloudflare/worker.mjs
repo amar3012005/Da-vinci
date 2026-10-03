@@ -1,3 +1,4 @@
+import { PUBLIC_PAGES, SITE, publicSeoResponse } from './public-seo.mjs';
 const STATIC_ASSET_PREFIX = '/static/';
 const AGENT_SETUP_PREFIX = '/agent-setup/';
 const DISCOVERY_PATHS = new Set(['/robots.txt', '/llms.txt', '/llms-full.txt', '/sitemap.xml']);
@@ -383,7 +384,31 @@ async function mobileLandingFlagResponse(request, env) {
 
 export default {
   async fetch(request, env) {
-    const pathname = new URL(request.url).pathname;
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+    if (url.protocol === 'http:' && env.ENVIRONMENT !== 'development') {
+      url.protocol = 'https:';
+      return Response.redirect(url.href, 308);
+    }
+    const publicHost = PUBLIC_MARKETING_HOSTS.has(hostname(request));
+    if (publicHost && hostname(request) !== 'singulancelabs.com') {
+      return Response.redirect(`${SITE}${pathname}${url.search}`, 308);
+    }
+    const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/+$/u, '').toLowerCase();
+    if (publicHost && PUBLIC_PAGES[cleanPath] && cleanPath !== pathname) {
+      return Response.redirect(`${SITE}${cleanPath}${url.search}`, 308);
+    }
+    if (publicHost && PUBLIC_PAGES[pathname] && ['GET', 'HEAD'].includes(request.method)) {
+      const documentRequest = new Request(new URL('/', request.url), request);
+      documentRequest.headers.delete('if-none-match');
+      documentRequest.headers.delete('if-modified-since');
+      const document = await env.ASSETS.fetch(documentRequest);
+      return publicSeoResponse(document, pathname);
+    }
+    const privatePath = /^\/(?:hivemind|enterprise|prometheus|invite|api|plugins|__hivemind)(?:\/|$)/u.test(pathname) || pathname === '/underprogress';
+    if (publicHost && !privatePath && !DISCOVERY_PATHS.has(pathname) && !pathname.split('/').pop().includes('.') && ['GET', 'HEAD'].includes(request.method)) {
+      return new Response('<!doctype html><html lang="en"><head><title>Page not found | SINGULANCE</title><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><main><h1>Page not found</h1><p><a href="/">SINGULANCE home</a> · <a href="/research">Research</a></p></main></body></html>', { status: 404, headers: { 'content-type': 'text/html; charset=utf-8', 'x-robots-tag': 'noindex', 'cache-control': 'no-store' } });
+    }
 
     if (pathname.startsWith('/hivemind/app/login')) {
       return Response.redirect(new URL('/hivemind/login', request.url), 302);
@@ -533,7 +558,7 @@ export default {
     if (!hasHarnessAdmission(request) && harnessDocumentPath(pathname) !== null && isHtml(response)) {
       const headers = new Headers(response.headers);
       headers.append('set-cookie', `${HARNESS_RETURN_COOKIE}=${encodeURIComponent(pathname)}; Path=/api/hivemind/embed/exchange; Max-Age=300; Secure; HttpOnly; SameSite=Strict`);
-      return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+      return noIndex(new Response(response.body, { status: response.status, statusText: response.statusText, headers }));
     }
 
     // SPA fallback must never turn a missing executable asset into index.html.
@@ -541,6 +566,6 @@ export default {
       return missingAssetResponse();
     }
 
-    return PUBLIC_MARKETING_HOSTS.has(hostname(request)) ? response : noIndex(response);
+    return publicHost && !privatePath ? response : noIndex(response);
   },
 };

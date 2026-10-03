@@ -29,12 +29,25 @@ const COVER_MOBILE = '/singulance-cover-900.webp';
 const COVER_MOBILE_AVIF = '/singulance-cover-900.avif';
 
 const useHeroMode = () => {
-  const [mode, setMode] = useState('static-desktop');
+  const initial = () => typeof window !== 'undefined' && !window.matchMedia('(min-width: 768px)').matches ? 'static-mobile' : 'static-desktop';
+  const [mode, setMode] = useState(initial);
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const wide = window.matchMedia('(min-width: 768px)').matches;
-    setMode(wide ? (reduced ? 'static-desktop' : 'immersive') : reduced ? 'static-mobile' : 'water-mobile');
+    const wide = window.matchMedia('(min-width: 768px)');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let cancelled = false;
+    const sync = () => setMode(wide.matches ? (reduced.matches ? 'static-desktop' : 'immersive') : reduced.matches ? 'static-mobile' : 'water-mobile');
+    // Give the poster and controls priority over loading the decorative canvas.
+    const idle = window.requestIdleCallback
+      ? window.requestIdleCallback(() => { if (!cancelled) sync(); }, { timeout: 2000 })
+      : window.setTimeout(sync, 1000);
+    wide.addEventListener('change', sync);
+    reduced.addEventListener('change', sync);
+    return () => {
+      cancelled = true;
+      if (window.cancelIdleCallback) window.cancelIdleCallback(idle); else window.clearTimeout(idle);
+      wide.removeEventListener('change', sync);
+      reduced.removeEventListener('change', sync);
+    };
   }, []);
   return mode;
 };
@@ -76,8 +89,8 @@ const HeroActionRail = ({ delay }) => (
   >
     <div className="flex flex-col items-center gap-3 border-y border-white/20 py-4 lg:grid lg:grid-cols-[minmax(180px,1fr)_minmax(440px,2.1fr)_minmax(180px,1fr)] lg:gap-6">
       <HeroCtas delay={0} banner />
-      <p className="order-first whitespace-nowrap text-center text-[clamp(0.58rem,1.05vw,1rem)] font-light leading-relaxed text-white/75 lg:order-2 lg:px-2">
-        The AI workforce that runs inside your organization&apos;s&nbsp;memory.
+      <p className="order-first whitespace-normal lg:whitespace-nowrap text-center text-sm lg:text-[clamp(0.85rem,1.05vw,1rem)] font-light leading-relaxed text-white/75 lg:order-2 lg:px-2">
+        The AI workforce that runs inside your organization&apos;s memory.
       </p>
     </div>
   </motion.div>
@@ -96,7 +109,7 @@ const DesktopHero = ({ immersive }) => (
         <Suspense fallback={
           <picture>
             <source srcSet={COVER_AVIF} type="image/avif" />
-            <img src={COVER} alt="" className="absolute inset-0 h-full w-full object-cover object-top" fetchpriority="high" />
+            <img src={COVER} width={1586} height={992} alt="" className="absolute inset-0 h-full w-full object-cover object-top" fetchpriority="high" />
           </picture>
         }>
           <HeroScene />
@@ -104,7 +117,7 @@ const DesktopHero = ({ immersive }) => (
       ) : (
         <picture>
           <source srcSet={COVER_AVIF} type="image/avif" />
-          <img src={COVER} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover object-top" decoding="async" fetchpriority="high" />
+          <img src={COVER} width={1586} height={992} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover object-top" decoding="async" fetchpriority="high" />
         </picture>
       )}
     </div>
@@ -172,7 +185,7 @@ const MobileHeroBand = ({ water }) => (
         <Suspense fallback={
           <picture>
             <source srcSet={COVER_MOBILE_AVIF} type="image/avif" />
-            <img src={COVER_MOBILE} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" fetchpriority="high" />
+            <img src={COVER_MOBILE} width={900} height={563} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" fetchpriority="high" />
           </picture>
         }>
           <CinematicPlate src={COVER_MOBILE} zoom={1} warp={1} bloom={0.5} tint={[0.04, 0.015, 0.0]} />
@@ -180,7 +193,7 @@ const MobileHeroBand = ({ water }) => (
       ) : (
         <picture>
           <source srcSet={COVER_MOBILE_AVIF} type="image/avif" />
-          <img src={COVER_MOBILE} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
+          <img src={COVER_MOBILE} width={900} height={563} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
         </picture>
       )}
     </motion.div>
@@ -208,8 +221,7 @@ const MobileHero = () => {
   const mode = useHeroMode();
   return (
     <>
-      <DesktopHero immersive={mode === 'immersive'} />
-      <MobileHeroBand water={mode === 'water-mobile'} />
+      {mode.includes('mobile') ? <MobileHeroBand water={mode === 'water-mobile'} /> : <DesktopHero immersive={mode === 'immersive'} />}
     </>
   );
 };

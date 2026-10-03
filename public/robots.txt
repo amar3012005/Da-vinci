@@ -1,33 +1,13 @@
-# SINGULANCE public marketing site — singulancelabs.com (also served on davinciai.eu)
-# Public pages may be indexed, cited, and used as retrieval input. Training and
-# fine-tuning are not permitted. Application, admin, and preview hostnames get
-# a deny-all robots policy from the Cloudflare Worker.
-
 User-agent: *
-Content-Signal: search=yes, ai-input=yes, ai-train=no, use=reference
 Allow: /
-Disallow: /hivemind/app/
-Disallow: /hivemind/login
+Disallow: /hivemind/
 Disallow: /enterprise/
 Disallow: /prometheus/
+Disallow: /invite/
 Disallow: /underprogress
-Disallow: /invite/
-
-# Explicit policies keep the private-route boundary intact for AI crawlers.
-User-agent: GPTBot
-User-agent: OAI-SearchBot
-User-agent: ChatGPT-User
-User-agent: ClaudeBot
-User-agent: Claude-Web
-User-agent: PerplexityBot
-User-agent: Google-Extended
-User-agent: Applebot-Extended
-User-agent: Bingbot
-User-agent: CCBot
-Content-Signal: search=yes, ai-input=yes, ai-train=no, use=reference
-Allow: /
-Disallow: /hivemind/app/
-Disallow: /hivemind/login
-Disallow: /invite/
+Disallow: /api/
+Disallow: /__hivemind/
+Disallow: /plugins/
+# Content preferences: search and AI input allowed; AI training not authorized.
 
 Sitemap: https://singulancelabs.com/sitemap.xml

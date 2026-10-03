@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { hivemindHref } from './hivemindLinks';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 /**
@@ -16,12 +17,12 @@ const BORDER = 'rgba(255,255,255,0.08)';
 const CARDS = [
   { cat: 'BENCHMARK', chart: true, title: 'HIVEMIND scores 87.2% on LongMemEval', desc: 'Published, reproducible recall benchmark — sub-50ms retrieval at scale, measured against the industry-standard long-context memory eval.', date: 'Jun 26, 2026', source: 'SINGULANCE Labs', href: '/benchmark' },
   { cat: 'RESEARCH', img: '/thesis-greekgod.webp', title: 'ICARUS — a memory filesystem', desc: 'The .amr byte layout fuses vector, entity, bi-temporal and graph into one mmap. Equal recall to a live vector DB, 7.5× smaller, zero servers.', date: 'Jun 24, 2026', source: 'SINGULANCE Labs', href: '/research/icarus' },
-  { cat: 'RESEARCH', img: '/singulance-cover.webp', title: 'Post-Quantum Cryptography', desc: 'Three quantum-resistant layers: hybrid PQC TLS, ML-DSA-65 signatures on every memory write, and an SLH-DSA tamper-evident audit chain. NIST-standard, harvest-now-decrypt-later closed.', date: 'Jul 02, 2026', source: 'SINGULANCE Labs', href: '/research/post-quantum-cryptography' },
-  { cat: 'PRODUCT', img: '/sp-hivemind.webp', title: 'HIVEMIND', desc: 'Sovereign memory engine — sub-50ms recall across everything your organization knows.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: '/products/hivemind' },
-  { cat: 'PRODUCT', img: '/sp-tara.webp', title: 'TARA gets to work.', desc: 'The enterprise voice agent that reasons in real time — calls, qualification, scheduling, support.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: '/products/tara' },
-  { cat: 'PRODUCT', img: '/sp-hyperagents.webp', title: 'HYPERAGENTS', desc: 'A swarm of digital employees that watch, decide, and act as one — grounded in memory.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: '/products/hyperagents' },
+  { cat: 'RESEARCH', img: '/singulance-cover-900.webp', title: 'Post-Quantum Cryptography', desc: 'Three quantum-resistant layers: hybrid PQC TLS, ML-DSA-65 signatures on every memory write, and an SLH-DSA tamper-evident audit chain. NIST-standard, harvest-now-decrypt-later closed.', date: 'Jul 02, 2026', source: 'SINGULANCE Labs', href: '/research/post-quantum-cryptography' },
+  { cat: 'PRODUCT', img: '/sp-hivemind.webp', title: 'HIVEMIND', desc: 'Sovereign memory engine — sub-50ms recall across everything your organization knows.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: hivemindHref('') },
+  { cat: 'PRODUCT', img: '/sp-tara.webp', title: 'TARA gets to work.', desc: 'The enterprise voice agent that reasons in real time — calls, qualification, scheduling, support.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: hivemindHref('/app/tara') },
+  { cat: 'PRODUCT', img: '/sp-hyperagents.webp', title: 'HYPERAGENTS', desc: 'A swarm of digital employees that watch, decide, and act as one — grounded in memory.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: hivemindHref('/app/employees') },
   { cat: 'COMPANY', img: '/thesis-greekgod.webp', title: 'Cognitive Swarm Intelligence', desc: 'The system remembers. The agents act. The architecture behind HIVEMIND, published.', date: 'Jun 20, 2026', source: 'SINGULANCE Labs', href: '/research/cognitive-swarm-intelligence' },
-  { cat: 'COMPANY', img: '/singulance-cover.webp', title: 'Beyond the horizon of intelligence', desc: 'The AI operating layer for regulated Europe. Run your institution as an AI company.', date: 'Jun 24, 2026', source: 'SINGULANCE', href: '/about' },
+  { cat: 'COMPANY', img: '/singulance-cover-900.webp', title: 'Beyond the horizon of intelligence', desc: 'The AI operating layer for regulated Europe. Run your institution as an AI company.', date: 'Jun 24, 2026', source: 'SINGULANCE', href: '/#cta-section-footer' },
 ];
 
 const LatestUpdates = () => {
@@ -117,7 +118,7 @@ const LatestUpdates = () => {
                   <span className="absolute left-4 top-4 font-mono text-[10px] uppercase tracking-[0.16em] text-white/40">LongMemEval · recall accuracy</span>
                 </div>
               ) : (
-                <img src={card.img} alt="" loading="lazy" decoding="async"
+                <img src={card.img} alt={card.title} loading="lazy" decoding="async"
                   className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]" />
               )}
             </div>

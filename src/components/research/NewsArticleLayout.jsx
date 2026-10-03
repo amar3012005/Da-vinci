@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Seo from '../Seo';
 
@@ -28,7 +27,6 @@ const NewsArticleLayout = ({
   heroAccessory,  // optional compact, interactive callout above the title
   children,
 }) => {
-  const navigate = useNavigate();
   return (
     <div style={{ background: PAPER, color: INK }} className="min-h-screen font-['Inter']">
       {seo && <Seo {...seo} />}
@@ -51,9 +49,9 @@ const NewsArticleLayout = ({
 
         {/* top bar */}
         <div className="relative z-10 flex items-center justify-between px-6 py-4 md:px-10">
-          <button onClick={() => navigate('/')} className="flex items-center gap-2 bg-transparent text-[13px] font-medium text-white/80 hover:text-white">
+          <a href="/" className="flex items-center gap-2 bg-transparent text-[13px] font-medium text-white/80 hover:text-white">
             SINGULANCE
-          </button>
+          </a>
           <span className="font-mono text-[11px] uppercase tracking-[0.28em] text-white/50">Research</span>
         </div>
 
@@ -67,9 +65,9 @@ const NewsArticleLayout = ({
 
         {/* bottom controls */}
         <div className="relative z-10 flex items-center justify-between px-6 pb-6 md:px-10">
-          <button onClick={() => navigate('/research')} className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-2 text-[12px] font-medium text-white backdrop-blur-md transition-colors hover:bg-black/50">
+          <a href="/research" className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-2 text-[12px] font-medium text-white backdrop-blur-md transition-colors hover:bg-black/50">
             <ArrowLeft size={14} /> Back to Research
-          </button>
+          </a>
           <div className="flex items-center gap-2">
             <span className="rounded-full border border-white/25 bg-black/30 px-4 py-2 text-[12px] font-medium text-white backdrop-blur-md">Share the post</span>
             <span className="h-8 w-8 rounded" style={{ background: EMBER }} />

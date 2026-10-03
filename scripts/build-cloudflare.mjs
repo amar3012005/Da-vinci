@@ -1,3 +1,4 @@
+import './generate-public-discovery.mjs';
 import { spawnSync } from 'node:child_process';
 
 const windows = process.platform === 'win32';

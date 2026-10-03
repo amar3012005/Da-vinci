@@ -1,5 +1,5 @@
 import React from 'react';
-import { Instagram, Linkedin, Twitter, Youtube, Github, MessageCircle, Apple, Play } from 'lucide-react';
+import { Instagram, Linkedin, Twitter, ArrowUpRight } from 'lucide-react';
 import { HIVEMIND_URL, hivemindHref } from './hivemindLinks';
 import { openCookiePreferences } from '../../privacy/consent';
 
@@ -10,59 +10,16 @@ import { openCookiePreferences } from '../../privacy/consent';
  */
 
 const COLS = [
-  {
-    title: 'Products',
-    links: [
-      ['HIVEMIND', HIVEMIND_URL],
-      ['TARA', '/products/tara'],
-      ['HYPERAGENTS', hivemindHref('/app/employees')],
-      ['Memory Graph', HIVEMIND_URL],
-      ['Pricing', '/pricing'],
-    ],
-  },
-  {
-    title: 'Solutions',
-    links: [
-      ['Sovereign Memory', '/products/hivemind'],
-      ['Voice Agents', '/products/tara'],
-      ['Agent Swarm', '/products/hyperagents'],
-      ['Document AI', '/solutions/document-ai'],
-      ['Custom Training', '/solutions/custom-model-training'],
-      ['Finance', '/industry/finance'],
-      ['Public Sector', '/industry/public-sector'],
-      ['Manufacturing', '/industry/manufacturing'],
-    ],
-  },
-  {
-    title: 'Why SINGULANCE',
-    links: [
-      ['About us', '/about'],
-      ['Careers', '/careers'],
-      ['Partners', '/partners'],
-      ['Our customers', '/customers'],
-      ['Research', '/research'],
-      ['Brand', '/brand'],
-    ],
-  },
-  {
-    title: 'Legal',
-    links: [
-      ['Terms of Service', '/terms'],
-      ['Privacy Policy', '/privacy'],
-      ['Cookie Policy', '/cookies'],
-      ['Data processing agreement', '/legal'],
-      ['Legal notice', '/legal'],
-    ],
-  },
+  { title: 'Products', links: [['HIVEMIND', HIVEMIND_URL], ['Voice', hivemindHref('/app/tara')], ['HyperAgents', hivemindHref('/app/employees')], ['Pricing', 'https://next.singulancelabs.com/#pricing']] },
+  { title: 'Research', links: [['All research', '/research'], ['ICARUS', '/research/icarus'], ['Cognitive Swarm Intelligence', '/research/cognitive-swarm-intelligence'], ['Post-Quantum Cryptography', '/research/post-quantum-cryptography'], ['Memory benchmarks', '/benchmark']] },
+  { title: 'Company', links: [['Contact', 'mailto:enterprise@singulancelabs.com'], ['Talk to founder', 'https://cal.com/amar-sai-gadde-eluoct/30min']] },
+  { title: 'Trust', links: [['Security', '/security'], ['Privacy Policy', '/privacy'], ['Cookie Policy', '/cookies']] },
 ];
 
 const SOCIALS = [
   [Linkedin, 'https://linkedin.com/company/singulance-ai', 'LinkedIn'],
   [Twitter, 'https://x.com/singulanceai', 'X'],
   [Instagram, 'https://instagram.com/singulancelabs', 'Instagram'],
-  [Youtube, 'https://youtube.com', 'YouTube'],
-  [MessageCircle, 'https://discord.com', 'Discord'],
-  [Github, 'https://github.com', 'GitHub'],
 ];
 
 const StoreBadge = ({ icon: Icon, top, big }) => (
@@ -81,6 +38,7 @@ const StoreBadge = ({ icon: Icon, top, big }) => (
 const SingulanceFooter = () => {
   return (
     <footer className="relative" style={{ background: '#05070f' }}>
+      <h2 className="sr-only">Explore SINGULANCE</h2>
       {/* link columns — fallback anchor for nav's "Solutions" scroll-to on phone
           widths, where SubProducts (the real #solutions section) isn't mounted.
           Named distinctly (not "solutions") to avoid a duplicate id on wider
@@ -125,8 +83,7 @@ const SingulanceFooter = () => {
         <div className="flex flex-col items-start gap-3 md:items-end">
           <span className="text-sm text-white/45">Get HIVEMIND</span>
           <div className="flex gap-3">
-            <StoreBadge icon={Apple} top="Download on the" big="App Store" />
-            <StoreBadge icon={Play} top="Get it on" big="Google Play" />
+            <StoreBadge icon={ArrowUpRight} top="Your AI workspace" big="Open HIVEMIND" />
           </div>
         </div>
       </div>

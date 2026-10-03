@@ -26,7 +26,7 @@ const tree = (
   </React.StrictMode>
 );
 
-if (rootEl.hasChildNodes()) {
+if (rootEl.hasChildNodes() && !rootEl.hasAttribute('data-seo-fallback')) {
   hydrateRoot(rootEl, tree);
 } else {
   createRoot(rootEl).render(tree);

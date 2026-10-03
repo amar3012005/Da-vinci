@@ -1,8 +1,9 @@
+import Seo from './components/Seo';
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import UpdateBanner from './components/hivemind/UpdateBanner';
-import MobileHomepage from './components/mobile/MobileHomepage';
+const MobileHomepage = React.lazy(() => import('./components/mobile/MobileHomepage'));
 import CookieConsent from './components/CookieConsent';
 import apiClient from './components/hivemind/app/shared/api-client';
 
@@ -53,18 +54,11 @@ const HivemindExternalRedirect = () => {
 
 const MarketingHomepage = () => (
   <>
-    <Helmet>
-      <title>SINGULANCE — AI Workforce That Runs Inside Memory</title>
-      <meta
-        name="description"
-        content="SINGULANCE — the AI operating layer for regulated Europe. Run your institution as an AI company: a sovereign, GDPR-compliant AI workforce that runs inside memory."
-      />
-      <link rel="canonical" href="https://singulancelabs.com/" />
-    </Helmet>
+    <Seo canonical="https://singulancelabs.com/" />
     <h1 className="sr-only">
       SINGULANCE — AI workforce that runs inside memory. The AI operating layer for regulated Europe.
     </h1>
-    <MobileHomepage />
+    <React.Suspense fallback={<div className="min-h-screen bg-[#05070f]" />}><MobileHomepage /></React.Suspense>
   </>
 );
 
