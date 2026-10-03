@@ -229,11 +229,10 @@ function ConfirmDialog({
 // Compact identity card: avatar, name, email, plan/org badges, quick actions,
 // inline stat ticker. Replaces the old dark-themed BrainMetricsHero — same
 // info, lighter footprint, cleaner hierarchy on the page.
-function AccountHeaderCard({ user, org, plan, planLabel, profileFacts, onSignOut }) {
+function AccountHeaderCard({ user, org, plan, planLabel, onSignOut }) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
-  const displayName = profileFacts?.find((fact) => fact.key === 'name')?.value
-    || user?.display_name || user?.email?.split('@')[0] || 'User';
+  const displayName = user?.display_name || user?.name || user?.email?.split('@')[0] || 'Your account';
 
   return (
     <Card>
@@ -267,156 +266,62 @@ function AccountHeaderCard({ user, org, plan, planLabel, profileFacts, onSignOut
 
 // ─── Section 2: Knowledge Identity Card ─────────────────────────────────────
 
-const IDENTITY_ICON_MAP = {
-  name: User,
-  company: Building2,
-  organization: Building2,
-  location: MapPin,
-  city: MapPin,
-  country: MapPin,
-  timezone: Clock,
-  role: Briefcase,
-  job: Briefcase,
-  title: Briefcase,
-  focus: Target,
-  goal: Target,
-  email: Mail,
-  preference: Settings2,
-};
-
-function getIconForKey(key) {
-  const lower = (key || '').toLowerCase();
-  for (const [keyword, icon] of Object.entries(IDENTITY_ICON_MAP)) {
-    if (lower.includes(keyword)) return icon;
-  }
-  return Sparkles;
+function isWorkspaceFact(fact) {
+  return /^(company|organization|workspace)(:|_|$)/i.test(fact.key || '');
 }
 
-function KnowledgeIdentityCard({ facts, onToggleEditor }) {
+function readableFactKey(key) {
+  return String(key || 'Context').replace(/^(company|organization|workspace)[:_]/i, '').replace(/[_:]/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function KnowledgeIdentityCard({ facts, onManage, workspace = false }) {
   const { t } = useTranslation('dashboard');
-
-  if (!facts || facts.length === 0) {
-    return (
-      <Card>
-        <div className="flex items-center gap-2 mb-4">
-          <Eye size={16} className="text-[#117dff]" />
-          <SectionHeading>{t('profile.brainKnows', 'What Your Brain Knows About You')}</SectionHeading>
-        </div>
-        <div className="px-4 py-8 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
-          <User size={24} className="text-[#d4d0ca] mx-auto mb-2" />
-          <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] mb-1">
-            {t('profile.noIdentityFacts', 'No identity facts yet.')}
-          </p>
-          <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
-            {t('profile.identityFactsHint', 'Profile facts build automatically as you use HIVEMIND, or add them manually below.')}
-          </p>
-        </div>
-        <button
-          onClick={onToggleEditor}
-          className="mt-4 flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
-        >
-          <Plus size={14} />
-          {t('profile.addProfileFacts', 'Add Profile Facts')}
-        </button>
-      </Card>
-    );
-  }
-
-  // Grouped, supermemory-style: durable Identity + live Current context + Goals,
-  // then Preferences. Each group only renders when it has facts.
-  const byCat = (c) => facts.filter((f) => (f.category || 'static') === c);
   const groups = [
-    { cat: 'static', label: t('profile.identity', 'Identity'), icon: User },
-    { cat: 'dynamic', label: t('profile.currentContext', 'Current context'), icon: Sparkles },
-    { cat: 'goal', label: t('profile.goals', 'Goals'), icon: Target },
+    { id: 'static', title: t('profile.learnedAboutYou', 'Background'), hint: 'Details Brain has learned from your work.', icon: User },
+    { id: 'preference', title: t('profile.workingStyle', 'Working style'), hint: 'Your communication and working preferences.', icon: Settings2 },
+    { id: 'goal', title: t('profile.priorities', 'Goals and priorities'), hint: 'The outcomes you are working toward.', icon: Target },
+    { id: 'dynamic', title: t('profile.currentFocus', 'Current focus'), hint: 'Context that may change as your work evolves.', icon: Sparkles },
   ];
-  const preferences = byCat('preference');
+  const knownCategories = groups.map((group) => group.id);
+  const other = facts.filter((fact) => !knownCategories.includes(fact.category || 'static'));
+  if (other.length) groups.push({ id: 'other', title: 'Other context', hint: 'Additional details saved in your profile.', icon: Tag });
 
   return (
-    <Card>
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2">
-          <Eye size={16} className="text-[#117dff]" />
-          <SectionHeading>{t('profile.brainKnows', 'What Your Brain Knows About You')}</SectionHeading>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-[#0a0a0a]">{workspace ? t('profile.learnedCompanyContext', 'What Brain has learned about your company') : t('profile.personalContext', 'Make Brain familiar with your work')}</h2>
+          <p className="mt-1 max-w-xl text-sm leading-6 text-[#737373]">{workspace ? 'Learned context is separate from your company profile. Review it when something changes.' : 'Review what Brain remembers, correct a detail, or add a preference. These details are separate from your account information.'}</p>
         </div>
-        <span className="text-[#a3a3a3] text-xs font-mono">{facts.length} {facts.length !== 1 ? t('profile.facts', 'facts') : t('profile.fact', 'fact')}</span>
+        <button type="button" onClick={() => onManage(null)} className="rounded-lg border border-[#e3e0db] bg-white px-4 py-2 text-sm font-medium text-[#117dff] hover:bg-[#f3f1ec]">{t('profile.manageRememberedDetails', 'Manage details')}</button>
       </div>
-
-      <div className="space-y-5">
-        {groups.map(({ cat, label, icon: GIcon }) => {
-          const items = byCat(cat);
-          if (items.length === 0) return null;
+      <div className="grid gap-4 sm:grid-cols-2">
+        {groups.map(({ id, title, hint, icon: Icon }) => {
+          const items = id === 'other' ? other : facts.filter((fact) => (fact.category || 'static') === id);
           return (
-            <div key={cat}>
-              <div className="flex items-center gap-2 mb-2.5">
-                <GIcon size={13} className="text-[#117dff]" />
-                <span className="text-[#0a0a0a] text-[13px] font-semibold font-['Space_Grotesk']">{label}</span>
-                <span className="text-[#a3a3a3] text-[11px] font-mono">{items.length}</span>
+            <section key={id} className="min-w-0 rounded-xl border border-[#e3e0db] bg-white p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-[#0a0a0a]"><Icon size={16} className="text-[#737373]" />{title}</h3>
+                <span className="text-xs text-[#737373]">{items.length}</span>
               </div>
-              {cat === 'static' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {items.map((fact) => {
-                    const Icon = getIconForKey(fact.key);
-                    return (
-                      <div
-                        key={fact.id}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-[#faf9f4] border border-[#e3e0db] hover:border-[#117dff]/30 transition-colors"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-[#117dff]/10 flex items-center justify-center flex-shrink-0">
-                          <Icon size={14} className="text-[#117dff]" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider truncate">{fact.key}</p>
-                          <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">{fact.value}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {items.map((fact) => (
-                    <div key={fact.id} className="flex items-start gap-3 p-3 rounded-xl bg-[#faf9f4] border border-[#e3e0db]">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk']">{fact.value}</p>
-                        {fact.confirmedCount > 1 && (
-                          <p className="text-[#a3a3a3] text-[10px] font-mono mt-0.5">confirmed {fact.confirmedCount}×</p>
-                        )}
-                      </div>
-                      {typeof fact.confidence === 'number' && <ConfidenceBar value={fact.confidence} />}
+              <p className="mt-2 text-xs leading-5 text-[#737373]">{hint}</p>
+              {items.length ? (
+                <div className="mt-4 space-y-3">
+                  {items.slice(0, 2).map((fact) => (
+                    <div key={fact.id || `${fact.category}:${fact.key}`} className="min-w-0">
+                      <p className="text-xs font-medium text-[#737373]">{readableFactKey(fact.key)}</p>
+                      <p className="mt-1 line-clamp-3 break-words text-sm leading-6 text-[#202020]">{fact.value}</p>
                     </div>
                   ))}
+                  {items.length > 2 && <p className="text-xs text-[#737373]">+{items.length - 2} more saved details</p>}
                 </div>
-              )}
-            </div>
+              ) : <p className="mt-4 text-sm text-[#a3a3a3]">{id === 'preference' ? 'No preferences saved yet.' : 'Nothing saved here yet.'}</p>}
+              <button type="button" onClick={() => onManage(id === 'other' ? null : id)} className="mt-4 text-sm font-medium text-[#117dff] hover:underline">{items.length ? 'Review and edit' : 'Get started'}</button>
+            </section>
           );
         })}
-
-        {preferences.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-2.5">
-              <Settings2 size={13} className="text-[#117dff]" />
-              <span className="text-[#0a0a0a] text-[13px] font-semibold font-['Space_Grotesk']">{t('profile.preferences', 'Preferences')}</span>
-              <span className="text-[#a3a3a3] text-[11px] font-mono">{preferences.length}</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {preferences.map((pref) => (
-                <PillBadge key={pref.id} variant="amber">{pref.value}</PillBadge>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
-
-      <button
-        onClick={onToggleEditor}
-        className="mt-5 flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
-      >
-        <Pencil size={13} />
-        {t('profile.editProfileFacts', 'Edit Profile Facts')}
-        <ChevronDown size={14} />
-      </button>
-    </Card>
+    </div>
   );
 }
 
@@ -626,15 +531,20 @@ function RecentBrainActivity() {
 
 // ─── Section 5: Profile Facts (Collapsible) ─────────────────────────────────
 
-function ProfileFactsSection({ facts, onRefresh }) {
+function ProfileFactsSection({ facts, onRefresh, initialCategory = 'all', canRebuild = false }) {
   const { t } = useTranslation('dashboard');
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState(initialCategory);
+  useEffect(() => { setCategoryFilter(initialCategory); setSearch(''); }, [initialCategory]);
+  const visibleFacts = facts.filter((fact) => (categoryFilter === 'all' || (fact.category || 'static') === categoryFilter) && `${fact.key} ${fact.value}`.toLowerCase().includes(search.toLowerCase()));
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAddRow, setShowAddRow] = useState(false);
-  const [newFact, setNewFact] = useState({ category: 'static', key: '', value: '' });
+  const [newFact, setNewFact] = useState({ category: initialCategory === 'all' ? 'static' : initialCategory, key: '', value: '' });
+  useEffect(() => { setNewFact((current) => ({ ...current, category: initialCategory === 'all' ? 'static' : initialCategory })); }, [initialCategory]);
   const [addError, setAddError] = useState(null);
   const [rebuilding, setRebuilding] = useState(false);
 
@@ -753,120 +663,29 @@ function ProfileFactsSection({ facts, onRefresh }) {
 
   return (
     <>
-      <div className="flex items-center justify-end mb-3">
-        <button
-          onClick={handleRebuild}
-          disabled={rebuilding}
-          title={t('profile.rebuildHint', 'Rebuild your profile from your latest memories')}
-          className="flex items-center gap-1.5 text-[#117dff] text-xs font-medium hover:text-[#0a5fd0] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <RefreshCw size={13} className={rebuilding ? 'animate-spin' : ''} />
-          {rebuilding ? t('profile.rebuilding', 'Rebuilding…') : t('profile.rebuild', 'Rebuild')}
-        </button>
+      <div className="mb-4 flex flex-wrap gap-3">
+        <label className="min-w-[180px] flex-1"><span className="sr-only">Search saved details</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search saved details" className="w-full rounded-lg border border-[#e3e0db] px-3 py-2 text-sm focus:border-[#117dff]" /></label>
+        <label><span className="sr-only">Type of detail</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="rounded-lg border border-[#e3e0db] bg-white px-3 py-2 text-sm"><option value="all">All details</option>{CATEGORIES.map((category) => <option key={category} value={category}>{({ static: 'Background', dynamic: 'Current focus', preference: 'Working style', goal: 'Goals' })[category]}</option>)}</select></label>
       </div>
+      {addError && <p role="alert" className="mb-3 text-sm text-red-600">{addError}</p>}
       <div>
-        {facts.length === 0 && !showAddRow ? (
-          <div className="px-4 py-8 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
-            <User size={24} className="text-[#d4d0ca] mx-auto mb-2" />
-            <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] mb-1">
-              {t('profile.noProfileFacts', 'No profile facts yet.')}
-            </p>
-            <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
-              {t('profile.profileFactsHint', 'Profile facts build automatically as you use HIVEMIND, or you can add them manually.')}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#f3f1ec]">
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">{t('profile.thCategory', 'Category')}</th>
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">{t('profile.thKey', 'Key')}</th>
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">{t('profile.thValue', 'Value')}</th>
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden lg:table-cell">{t('profile.thConfidence', 'Confidence')}</th>
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden md:table-cell">{t('profile.thConfirmed', 'Confirmed')}</th>
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden lg:table-cell">{t('profile.thLastSeen', 'Last Seen')}</th>
-                  <th className="text-right text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {facts.map((fact) => (
-                  <tr key={fact.id} className="border-b border-[#f3f1ec] last:border-b-0 group hover:bg-[#faf9f4] transition-colors">
-                    <td className="py-3 pr-3">
-                      <CategoryBadge category={fact.category} />
-                    </td>
-                    <td className="py-3 pr-3">
-                      <span className="text-[#0a0a0a] font-['Space_Grotesk'] font-semibold">{fact.key}</span>
-                    </td>
-                    <td className="py-3 pr-3 max-w-[200px]">
-                      {editingId === fact.id ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) => handleEditKeyDown(e, fact)}
-                            className="flex-1 bg-white border border-[#117dff]/40 rounded-lg py-1.5 px-3 text-[#0a0a0a] text-sm font-['Space_Grotesk'] outline-none"
-                            autoFocus
-                          />
-                          <button
-                            onClick={() => saveEdit(fact)}
-                            disabled={saving}
-                            className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors"
-                          >
-                            <Check size={14} />
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="p-1.5 rounded-lg text-[#a3a3a3] hover:bg-[#f3f1ec] transition-colors"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-[#525252] font-['Space_Grotesk'] truncate block">{fact.value}</span>
-                      )}
-                    </td>
-                    <td className="py-3 pr-3 hidden lg:table-cell">
-                      <ConfidenceBar value={fact.confidence} />
-                    </td>
-                    <td className="py-3 pr-3 hidden md:table-cell">
-                      <span className="text-[#525252] font-mono text-xs">
-                        {fact.confirmedCount ?? 0}x
-                      </span>
-                    </td>
-                    <td className="py-3 pr-3 hidden lg:table-cell">
-                      <span className="text-[#a3a3a3] font-mono text-xs">
-                        {formatDate(fact.lastConfirmedAt)}
-                      </span>
-                    </td>
-                    <td className="py-3 text-right">
-                      {editingId !== fact.id && (
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => startEdit(fact)}
-                            className="p-1.5 rounded-lg text-[#525252] hover:bg-[#f3f1ec] hover:text-[#117dff] transition-colors"
-                            title={t('profile.editValue', 'Edit value')}
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(fact)}
-                            className="p-1.5 rounded-lg text-[#525252] hover:bg-red-50 hover:text-[#dc2626] transition-colors"
-                            title={t('profile.deleteFact', 'Delete fact')}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
+        {!visibleFacts.length && <p className="rounded-lg bg-[#faf9f4] p-5 text-sm text-[#737373]">{facts.length ? 'No saved details match these filters.' : 'Add a detail to help Brain understand your work.'}</p>}
+        <div className="divide-y divide-[#e3e0db]">
+          {visibleFacts.map((fact) => (
+            <div key={fact.id} className="py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-[#0a0a0a]">{readableFactKey(fact.key)}</p>
+                  {editingId === fact.id ? <label><span className="sr-only">Edit {readableFactKey(fact.key)}</span><textarea value={editValue} onChange={(event) => setEditValue(event.target.value)} onKeyDown={(event) => handleEditKeyDown(event, fact)} rows={3} className="mt-2 w-full rounded-lg border border-[#e3e0db] p-3 text-sm" /></label> : <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[#525252]">{fact.value}</p>}
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  {editingId === fact.id ? <><button onClick={() => saveEdit(fact)} disabled={saving} aria-label="Save detail" className="rounded-lg p-2 text-[#117dff] disabled:opacity-50"><Check size={16} /></button><button onClick={cancelEdit} disabled={saving} aria-label="Cancel editing" className="rounded-lg p-2 text-[#737373]"><X size={16} /></button></> : <><button onClick={() => startEdit(fact)} aria-label={`Edit ${readableFactKey(fact.key)}`} className="rounded-lg p-2 text-[#737373] hover:bg-[#f3f1ec]"><Pencil size={15} /></button><button onClick={() => setDeleteTarget(fact)} aria-label={`Remove ${readableFactKey(fact.key)}`} className="rounded-lg p-2 text-[#737373] hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button></>}
+                </div>
+              </div>
+              <details className="mt-2 text-xs text-[#737373]"><summary className="cursor-pointer">Details</summary><div className="mt-2 space-y-1"><p>Stored as: {fact.key} · {fact.category || 'static'}</p><p>Last seen: {formatDate(fact.lastSeen || fact.last_seen)}</p>{typeof fact.confidence === 'number' && <p>Confidence: {Math.round(fact.confidence * 100)}%</p>}<p>Confirmed: {fact.confirmedCount || fact.confirmed_count || 0} times</p></div></details>
+            </div>
+          ))}
+        </div>
         {/* Add Fact Row */}
         <AnimatePresence>
           {showAddRow && (
@@ -887,7 +706,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
                     >
                       {CATEGORIES.map((cat) => (
                         <option key={cat} value={cat}>
-                          {CATEGORY_CONFIG[cat]?.label || cat}
+                          {({ static: 'Background', dynamic: 'Current focus', preference: 'Working style', goal: 'Goals' })[cat] || cat}
                         </option>
                       ))}
                     </select>
@@ -899,7 +718,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
                     value={newFact.key}
                     onChange={(e) => setNewFact((prev) => ({ ...prev, key: e.target.value }))}
                     onKeyDown={handleAddKeyDown}
-                    placeholder={t('profile.keyPlaceholder', 'Key (e.g. favorite_color)')}
+                    placeholder={t('profile.detailTopicPlaceholder', 'Topic, e.g. communication style')}
                     className="flex-1 min-w-[140px] bg-white border border-[#e3e0db] rounded-lg py-2 px-3 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#a3a3a3] outline-none focus:border-[#117dff]/40 transition-colors"
                   />
                   {/* Value */}
@@ -908,7 +727,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
                     value={newFact.value}
                     onChange={(e) => setNewFact((prev) => ({ ...prev, value: e.target.value }))}
                     onKeyDown={handleAddKeyDown}
-                    placeholder={t('profile.valuePlaceholder', 'Value (e.g. blue)')}
+                    placeholder={t('profile.detailValuePlaceholder', 'What would you like Brain to remember?')}
                     className="flex-1 min-w-[140px] bg-white border border-[#e3e0db] rounded-lg py-2 px-3 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#a3a3a3] outline-none focus:border-[#117dff]/40 transition-colors"
                   />
                 </div>
@@ -956,6 +775,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
         )}
       </div>
 
+      {canRebuild && <details className="mt-6 border-t border-[#e3e0db] pt-4 text-sm"><summary className="cursor-pointer text-[#737373]">Advanced</summary><p className="mt-3 text-xs text-[#737373]">Refresh learned details from your latest memories.</p><button onClick={handleRebuild} disabled={rebuilding} className="mt-3 inline-flex items-center gap-2 text-[#117dff] disabled:opacity-50"><RefreshCw size={14} />{rebuilding ? 'Refreshing…' : 'Refresh learned profile'}</button></details>}
       {/* Delete Confirmation */}
       {deleteTarget && (
         <ConfirmDialog
@@ -1351,6 +1171,12 @@ export default function Profile() {
   const { user, org, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('account');
   const [factsExpanded, setFactsExpanded] = useState(false);
+  const [detailScope, setDetailScope] = useState('personal');
+  const [detailCategory, setDetailCategory] = useState('all');
+  const manageDetails = (scope, category) => {
+    setDetailScope(scope); setDetailCategory(category || 'all'); setFactsExpanded(true); setActiveTab('about');
+    requestAnimationFrame(() => document.getElementById('profile-saved-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
 
   // Fetch persistent profile facts from /api/profiles (plural)
   const profilesQuery = useApiQuery(async () => {
@@ -1371,6 +1197,9 @@ export default function Profile() {
     : null;
 
   const facts = profilesData?.facts || [];
+  const personalFacts = facts.filter((fact) => !isWorkspaceFact(fact));
+  const workspaceFacts = facts.filter(isWorkspaceFact);
+  const editorFacts = detailScope === 'all' ? facts : detailScope === 'workspace' ? workspaceFacts : personalFacts;
   const loading = profilesLoading && statsLoading;
 
   if (loading) {
@@ -1391,14 +1220,15 @@ export default function Profile() {
         </p>
       </motion.div>
 
-      <div role="tablist" aria-label={t('profile.sectionsLabel', 'Profile sections')} className="mb-6 flex gap-1 border-b border-[#e3e0db]">
+      <div role="tablist" aria-label={t('profile.sectionsLabel', 'Profile sections')} className="mb-6 flex gap-1 overflow-x-auto border-b border-[#e3e0db]">
         {[
           ['account', t('profile.accountTab', 'Account')],
-          ['about', t('profile.aboutTab', 'About you')],
+          ['about', t('profile.personalizationTab', 'Personalization')],
+          ['workspace', t('profile.workspaceTab', 'Workspace')],
           ['privacy', t('profile.privacyTab', 'Privacy')],
         ].map(([id, label]) => (
           <button key={id} id={`profile-tab-${id}`} type="button" role="tab" tabIndex={activeTab === id ? 0 : -1} aria-selected={activeTab === id} aria-controls={`profile-panel-${id}`} onClick={() => setActiveTab(id)} onKeyDown={(event) => {
-            const ids = ['account', 'about', 'privacy'];
+            const ids = ['account', 'about', 'workspace', 'privacy'];
             const current = ids.indexOf(id);
             const next = event.key === 'ArrowRight' ? ids[(current + 1) % ids.length]
               : event.key === 'ArrowLeft' ? ids[(current + ids.length - 1) % ids.length]
@@ -1408,7 +1238,7 @@ export default function Profile() {
               setActiveTab(next);
               document.getElementById(`profile-tab-${next}`)?.focus();
             }
-          }} className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === id ? 'border-[#117dff] text-[#117dff]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}>{label}</button>
+          }} className={`shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === id ? 'border-[#117dff] text-[#117dff]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}>{label}</button>
         ))}
       </div>
       <motion.div
@@ -1423,21 +1253,16 @@ export default function Profile() {
           org={org}
           plan={billing?.plan?.id || statsData?.plan || org?.plan}
           planLabel={billing?.plan?.name}
-          profileFacts={facts}
           onSignOut={logout}
         />
 
-        <details className="group rounded-xl border border-[#e3e0db] bg-white">
-          <summary className="cursor-pointer p-5 text-sm font-medium text-[#0a0a0a]">{t('profile.workspaceDetails', 'Workspace details and access')}</summary>
-          <div className="space-y-5 px-4 pb-4"><WorkspaceAccessCard billing={billing} /><OrganizationContextCard org={org} user={user} /></div>
-        </details>
         </section>
         <section id="profile-panel-about" role="tabpanel" aria-labelledby="profile-tab-about" hidden={activeTab !== 'about'} className="space-y-5">
 
         {/* Section 2: Knowledge Identity Card */}
         <KnowledgeIdentityCard
-          facts={facts}
-          onToggleEditor={() => setFactsExpanded(true)}
+          facts={personalFacts}
+          onManage={(category) => manageDetails('personal', category)}
         />
 
         {/* Section 3: Knowledge Breakdown */}
@@ -1447,8 +1272,10 @@ export default function Profile() {
         </details>
 
         {/* Section 5: Profile Facts (collapsible) */}
-        <Card>
+        <div id="profile-saved-details" className="scroll-mt-6"><Card>
           <button
+            aria-expanded={factsExpanded}
+            aria-controls="profile-detail-editor"
             onClick={() => setFactsExpanded((p) => !p)}
             className="flex items-center justify-between w-full group"
           >
@@ -1474,17 +1301,25 @@ export default function Profile() {
                 transition={{ duration: 0.3, ease: 'easeOut' }}
                 className="overflow-hidden"
               >
-                <div className="mt-5 pt-5 border-t border-[#f3f1ec]">
+                <div id="profile-detail-editor" className="mt-5 pt-5 border-t border-[#f3f1ec]">
+                  <label className="mb-4 block text-sm text-[#737373]">Show context for<select value={detailScope} onChange={(event) => setDetailScope(event.target.value)} className="ml-3 rounded-lg border border-[#e3e0db] bg-white px-3 py-2"><option value="personal">You</option><option value="workspace">Your company</option><option value="all">All saved details</option></select></label>
                   <ProfileFactsSection
-                    facts={facts}
+                    facts={editorFacts}
+                    initialCategory={detailCategory}
+                    canRebuild={['owner', 'admin'].includes(user?.role)}
                     onRefresh={refetchProfiles}
                   />
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-        </Card>
+        </Card></div>
 
+        </section>
+        <section id="profile-panel-workspace" role="tabpanel" aria-labelledby="profile-tab-workspace" hidden={activeTab !== 'workspace'} className="space-y-5">
+          <OrganizationContextCard org={org} user={user} />
+          <KnowledgeIdentityCard facts={workspaceFacts} workspace onManage={(category) => manageDetails('workspace', category)} />
+          <details className="rounded-xl border border-[#e3e0db] bg-white"><summary className="cursor-pointer p-5 text-sm font-medium text-[#0a0a0a]">Workspace access and infrastructure</summary><div className="px-4 pb-4"><WorkspaceAccessCard billing={billing} /></div></details>
         </section>
         <section id="profile-panel-privacy" role="tabpanel" aria-labelledby="profile-tab-privacy" hidden={activeTab !== 'privacy'}>
           <DataPrivacySection />
