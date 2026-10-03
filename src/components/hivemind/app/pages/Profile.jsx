@@ -25,12 +25,10 @@ import {
   Settings2,
   Sparkles,
   Activity,
-  MessageSquare,
   ArrowRight,
   Globe,
   Mail,
   Briefcase,
-  Network,
   Cloud,
   Server,
   Save,
@@ -42,7 +40,6 @@ import { useApiQuery } from '../shared/hooks';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import WorkspaceAccessCard from '../shared/WorkspaceAccessCard';
-import CreditBalance from '../shared/CreditBalance';
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
 
@@ -55,42 +52,6 @@ const fadeUp = {
   hidden: { opacity: 0, y: 12 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 };
-
-// ─── Animated Counter ─────────────────────────────────────────────────────────
-
-function AnimatedCounter({ value, duration = 1000 }) {
-  const [display, setDisplay] = useState(0);
-  const ref = useRef(null);
-  const startTime = useRef(null);
-  const target = value || 0;
-
-  useEffect(() => {
-    if (target === 0) {
-      setDisplay(0);
-      return;
-    }
-
-    const animate = (timestamp) => {
-      if (!startTime.current) startTime.current = timestamp;
-      const elapsed = timestamp - startTime.current;
-      const progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(eased * target));
-      if (progress < 1) {
-        ref.current = requestAnimationFrame(animate);
-      }
-    };
-
-    startTime.current = null;
-    ref.current = requestAnimationFrame(animate);
-    return () => {
-      if (ref.current) cancelAnimationFrame(ref.current);
-    };
-  }, [target, duration]);
-
-  return <>{display.toLocaleString()}</>;
-}
 
 // ─── Small Reusable Components ────────────────────────────────────────────────
 
@@ -147,6 +108,7 @@ function UserAvatar({ displayName, email }) {
 function PlanBadge({ plan }) {
   const map = {
     free: { label: 'Free', variant: 'gray', dot: '#a3a3a3' },
+    plus: { label: 'BRAIN+', variant: 'blue', dot: '#117dff' },
     pro: { label: 'Pro', variant: 'blue', dot: '#117dff' },
     team: { label: 'Team', variant: 'purple', dot: '#a855f7' },
     scale: { label: 'Scale', variant: 'purple', dot: '#a855f7' },
@@ -267,131 +229,41 @@ function ConfirmDialog({
 // Compact identity card: avatar, name, email, plan/org badges, quick actions,
 // inline stat ticker. Replaces the old dark-themed BrainMetricsHero — same
 // info, lighter footprint, cleaner hierarchy on the page.
-function AccountHeaderCard({ user, org, plan, stats, profileFacts, onSignOut }) {
+function AccountHeaderCard({ user, org, plan, profileFacts, onSignOut }) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
-  const nameFromFacts = profileFacts?.find((f) => f.key === 'name')?.value;
-  const displayName = nameFromFacts || user?.display_name || user?.email?.split('@')[0] || 'User';
-  const email = user?.email || '—';
-
-  const {
-    memory_count: rawMemCount,
-    observation_count = 0,
-    relationship_count = 0,
-  } = stats || {};
-  const memoryCount = rawMemCount || (observation_count > 0 ? observation_count : 0);
-  const factCount = profileFacts?.length || 0;
-  const sourceCount = (stats?.top_source_platforms || []).length;
-
-  const stats4 = [
-    { label: t('profile.statMemories', 'Memories'),    value: memoryCount,        icon: Brain,   to: '/hivemind/app/memories' },
-    { label: t('profile.statConnections', 'Connections'), value: relationship_count, icon: Link,    to: '/hivemind/app/graph' },
-    { label: t('profile.statFacts', 'Facts'),       value: factCount,          icon: User,    to: null },
-    { label: t('profile.statSources', 'Sources'),     value: sourceCount,        icon: Globe,   to: '/hivemind/app/connectors' },
-  ];
-
-  const quickActions = [
-    { label: t('profile.actionTalkToHive', 'Talk to HIVE'), icon: MessageSquare, to: '/hivemind/app/overview', primary: true },
-    { label: t('profile.actionMemoryGraph', 'Memory Graph'), icon: Network,       to: '/hivemind/app/graph' },
-    { label: t('profile.actionConnectors', 'Connectors'),   icon: ExternalLink,  to: '/hivemind/app/connectors' },
-    { label: t('profile.actionSettings', 'Settings'),     icon: Settings2,     to: '/hivemind/app/settings' },
-  ];
+  const displayName = profileFacts?.find((fact) => fact.key === 'name')?.value
+    || user?.display_name || user?.email?.split('@')[0] || 'User';
 
   return (
-    <motion.div variants={fadeUp} className="rounded-2xl border border-[#e3e0db] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-      {/* Top: identity row */}
-      <div className="p-6 flex flex-col md:flex-row md:items-center gap-5">
-        <UserAvatar displayName={displayName} email={email} />
-        <div className="flex-1 min-w-0">
-          <h2 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] truncate">{displayName}</h2>
-          <p className="text-[#737373] text-sm font-mono truncate">{email}</p>
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            {org && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#f3f1ec] text-[#525252] border border-[#e3e0db]">
-                <Building2 size={11} />
-                {org.name || org.slug || t('profile.org', 'Org')}
-              </span>
-            )}
-            <PlanBadge plan={plan} />
-            {org?.memory_storage_label && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#ecfdf5] text-[#047857] border border-[#a7f3d0]">
-                <Brain size={11} />
-                {org.plan === 'free' ? 'Personal' : 'Enterprise'} · {org.memory_storage_label}
-              </span>
-            )}
-            {user?.role && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20">
-                <Shield size={11} />
-                {user.role}
-              </span>
-            )}
-          </div>
+    <Card>
+      <div className="flex flex-wrap items-center gap-4">
+        <UserAvatar displayName={displayName} email={user?.email} />
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-semibold text-[#0a0a0a] break-words">{displayName}</h2>
+          <p className="mt-1 text-sm text-[#737373] break-all">{user?.email || '—'}</p>
         </div>
-        {/* Sign Out */}
-        <button
-          onClick={onSignOut}
-          className="self-start md:self-center inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#dc2626]/5 transition-colors"
-        >
+        <button onClick={onSignOut} className="rounded-lg border border-[#e3e0db] px-4 py-2 text-sm text-[#525252] hover:bg-[#f3f1ec]">
           {t('profile.signOut', 'Sign Out')}
         </button>
       </div>
-
-      {/* Quick actions */}
-      <div className="px-6 pb-5 grid grid-cols-2 md:grid-cols-4 gap-2">
-        {quickActions.map(({ label, icon: Icon, to, primary }) => (
-          <button
-            key={label}
-            onClick={() => navigate(to)}
-            className={`inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-[12.5px] font-semibold font-['Space_Grotesk'] transition-colors ${
-              primary
-                ? 'bg-[#0a0a0a] text-white hover:bg-[#262626]'
-                : 'bg-[#faf9f4] text-[#0a0a0a] border border-[#e3e0db] hover:bg-[#f3f1ec]'
-            }`}
-          >
-            <Icon size={13} />
-            {label}
-          </button>
-        ))}
+      <div className="mt-6 divide-y divide-[#e3e0db] border-t border-[#e3e0db]">
+        <div className="flex items-center justify-between gap-4 py-4 text-sm">
+          <span className="text-[#737373]">{t('profile.workspaceLabel', 'Workspace')}</span>
+          <span className="text-right text-[#0a0a0a]">{org?.name || org?.slug || 'Personal'}{user?.role ? ` · ${user.role}` : ''}</span>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
+          <span className="text-[#737373]">{t('profile.planLabel', 'Plan')}</span>
+          <div className="flex items-center gap-3"><PlanBadge plan={plan} /><button onClick={() => navigate('/hivemind/app/billing')} className="text-[#117dff] hover:underline">{t('profile.manageBilling', 'Manage billing')}</button></div>
+        </div>
+        <div className="flex items-center justify-between gap-4 pt-4 text-sm">
+          <span className="text-[#737373]">{t('profile.preferencesLabel', 'Preferences')}</span>
+          <button onClick={() => navigate('/hivemind/app/settings')} className="text-[#117dff] hover:underline">{t('profile.openSettings', 'Open settings')}</button>
+        </div>
       </div>
-
-      {/* Stat ticker — click to jump */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 border-t border-[#f3f1ec]">
-        {stats4.map(({ label, value, icon: Icon, to }, i) => {
-          const inner = (
-            <>
-              <div className="flex items-center gap-2 mb-1">
-                <Icon size={12} className="text-[#117dff]" />
-                <span className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.1em]">{label}</span>
-              </div>
-              <p className="text-[#0a0a0a] text-2xl font-bold font-mono leading-none">
-                <AnimatedCounter value={value} />
-              </p>
-            </>
-          );
-          const borderCls = i < stats4.length - 1 ? 'sm:border-r border-[#f3f1ec]' : '';
-          return to ? (
-            <button
-              key={label}
-              onClick={() => navigate(to)}
-              className={`px-5 py-4 text-left hover:bg-[#faf9f4] transition-colors ${borderCls}`}
-            >
-              {inner}
-            </button>
-          ) : (
-            <div key={label} className={`px-5 py-4 ${borderCls}`}>
-              {inner}
-            </div>
-          );
-        })}
-      </div>
-    </motion.div>
+    </Card>
   );
 }
-
-// BrainMetricsHero removed — superseded by AccountHeaderCard above which
-// folds identity, plan/org badges, quick actions, and the stat ticker into
-// one compact light-themed card.
-
 
 // ─── Section 2: Knowledge Identity Card ─────────────────────────────────────
 
@@ -1408,7 +1280,7 @@ function OrganizationContextCard({ org, user }) {
           </div>
           <div>
             <SectionHeading>Workspace identity</SectionHeading>
-            <p className="mt-1 text-sm leading-relaxed text-[#525252]">Profile owns who you are and what this workspace represents. Settings controls how it operates; Team controls who can access it.</p>
+            <p className="mt-1 text-sm leading-relaxed text-[#525252]">Your company profile and workspace information.</p>
           </div>
         </div>
         <span className="w-fit rounded-full border border-[#117dff]/20 bg-[#117dff]/10 px-2.5 py-1 text-[10px] font-mono font-semibold uppercase tracking-[0.08em] text-[#117dff]">{userType}</span>
@@ -1435,7 +1307,7 @@ function OrganizationContextCard({ org, user }) {
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-[#0a0a0a]">Company overview</p>
-            <p className="mt-0.5 text-xs text-[#737373]">The canonical context available to your organization and AI workspace.</p>
+            <p className="mt-0.5 text-xs text-[#737373]">Help Brain understand your company.</p>
           </div>
           {!canEdit && <span className="text-xs text-[#737373]">Only an owner or admin can edit</span>}
         </div>
@@ -1477,9 +1349,8 @@ function OrganizationContextCard({ org, user }) {
 export default function Profile() {
   const { t } = useTranslation('dashboard');
   const { user, org, logout } = useAuth();
-  // Profile Facts auto-expand by default — they're the most-useful
-  // editable surface on this page, no reason to hide them on first load.
-  const [factsExpanded, setFactsExpanded] = useState(true);
+  const [activeTab, setActiveTab] = useState('account');
+  const [factsExpanded, setFactsExpanded] = useState(false);
 
   // Fetch persistent profile facts from /api/profiles (plural)
   const profilesQuery = useApiQuery(async () => {
@@ -1511,35 +1382,56 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-full">
+    <div className="min-h-full mx-auto max-w-3xl pb-8">
       {/* Page header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">{t('profile.title', 'Your Profile')}</h1>
         <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-          {t('profile.subtitle', 'Account info, knowledge identity, and privacy controls')}
+          {t('profile.settingsSubtitle', 'Your account, what Brain remembers, and your privacy.')}
         </p>
       </motion.div>
 
+      <div role="tablist" aria-label={t('profile.sectionsLabel', 'Profile sections')} className="mb-6 flex gap-1 border-b border-[#e3e0db]">
+        {[
+          ['account', t('profile.accountTab', 'Account')],
+          ['about', t('profile.aboutTab', 'About you')],
+          ['privacy', t('profile.privacyTab', 'Privacy')],
+        ].map(([id, label]) => (
+          <button key={id} id={`profile-tab-${id}`} type="button" role="tab" tabIndex={activeTab === id ? 0 : -1} aria-selected={activeTab === id} aria-controls={`profile-panel-${id}`} onClick={() => setActiveTab(id)} onKeyDown={(event) => {
+            const ids = ['account', 'about', 'privacy'];
+            const current = ids.indexOf(id);
+            const next = event.key === 'ArrowRight' ? ids[(current + 1) % ids.length]
+              : event.key === 'ArrowLeft' ? ids[(current + ids.length - 1) % ids.length]
+              : event.key === 'Home' ? ids[0] : event.key === 'End' ? ids[ids.length - 1] : null;
+            if (next) {
+              event.preventDefault();
+              setActiveTab(next);
+              document.getElementById(`profile-tab-${next}`)?.focus();
+            }
+          }} className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === id ? 'border-[#117dff] text-[#117dff]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}>{label}</button>
+        ))}
+      </div>
       <motion.div
         variants={stagger}
         initial="hidden"
         animate="visible"
         className="space-y-6"
       >
-        {/* Section 1: Account header — identity + quick actions + stat ticker */}
+        <section id="profile-panel-account" role="tabpanel" aria-labelledby="profile-tab-account" hidden={activeTab !== 'account'} className="space-y-5">
         <AccountHeaderCard
           user={user}
           org={org}
-          plan={statsData?.plan}
-          stats={statsData}
+          plan={billing?.plan?.id || statsData?.plan || org?.plan}
           profileFacts={facts}
           onSignOut={logout}
         />
 
-        <WorkspaceAccessCard billing={billing} />
-        <CreditBalance credits={billing?.usage_summary?.credits} />
-
-        <OrganizationContextCard org={org} user={user} />
+        <details className="group rounded-xl border border-[#e3e0db] bg-white">
+          <summary className="cursor-pointer p-5 text-sm font-medium text-[#0a0a0a]">{t('profile.workspaceDetails', 'Workspace details and access')}</summary>
+          <div className="space-y-5 px-4 pb-4"><WorkspaceAccessCard billing={billing} /><OrganizationContextCard org={org} user={user} /></div>
+        </details>
+        </section>
+        <section id="profile-panel-about" role="tabpanel" aria-labelledby="profile-tab-about" hidden={activeTab !== 'about'} className="space-y-5">
 
         {/* Section 2: Knowledge Identity Card */}
         <KnowledgeIdentityCard
@@ -1548,10 +1440,10 @@ export default function Profile() {
         />
 
         {/* Section 3: Knowledge Breakdown */}
-        <KnowledgeBreakdown stats={statsData} />
-
-        {/* Section 4: Recent Brain Activity */}
-        <RecentBrainActivity />
+        <details className="rounded-xl border border-[#e3e0db] bg-white">
+          <summary className="cursor-pointer p-5 text-sm font-medium text-[#0a0a0a]">{t('profile.viewActivity', 'View knowledge and activity')}</summary>
+          <div className="space-y-5 px-4 pb-4"><KnowledgeBreakdown stats={statsData} /><RecentBrainActivity /></div>
+        </details>
 
         {/* Section 5: Profile Facts (collapsible) */}
         <Card>
@@ -1561,7 +1453,7 @@ export default function Profile() {
           >
             <div className="flex items-center gap-2">
               <User size={16} className="text-[#117dff]" />
-              <SectionHeading>{t('profile.profileFactsEditor', 'Profile Facts Editor')}</SectionHeading>
+              <SectionHeading>{t('profile.editAboutYou', 'Edit what Brain remembers')}</SectionHeading>
               <span className="text-[#a3a3a3] text-xs font-mono ml-2">{facts.length} {facts.length !== 1 ? t('profile.facts', 'facts') : t('profile.fact', 'fact')}</span>
             </div>
             <motion.div
@@ -1592,8 +1484,10 @@ export default function Profile() {
           </AnimatePresence>
         </Card>
 
-        {/* Section 6: Data & Privacy */}
-        <DataPrivacySection />
+        </section>
+        <section id="profile-panel-privacy" role="tabpanel" aria-labelledby="profile-tab-privacy" hidden={activeTab !== 'privacy'}>
+          <DataPrivacySection />
+        </section>
       </motion.div>
     </div>
   );

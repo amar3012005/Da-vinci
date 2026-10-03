@@ -15,12 +15,11 @@ import {
   Headphones,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import RunwayUpgradePanel from '../components/RunwayUpgradePanel';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
-import CreditBalance from '../shared/CreditBalance';
 import { isEnterpriseBillingWorkspace, orderedPersonalPlans } from '../shared/billing-presentation';
 
 // ─── Plan Definitions ────────────────────────────────────────────────────────
@@ -270,22 +269,12 @@ function CommercialJourney({ billing }) {
     ? new Date(entitlement.effective_until).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
   return (
-    <section className="border border-[#bcd5ff] bg-[#f5f9ff] p-5">
-      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">Enterprise commercial journey</p>
-      <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Invitation onboarding, then paid Runway</h2>
-      <p className="mt-1 max-w-3xl text-sm leading-6 text-[#525252]">Your invitation opened the temporary onboarding phase. It is not a recurring subscription. Runway is the paid operating configuration that continues the workspace after onboarding.</p>
-      <div className="mt-5 grid gap-px border border-[#d8e5fb] bg-[#d8e5fb] md:grid-cols-2">
-        <div className="bg-white p-4">
-          <div className="flex items-center justify-between gap-3"><span className="font-mono text-[10px] font-bold uppercase text-[#117dff]">01 · Onboarding</span><span className={`px-2 py-1 font-mono text-[9px] font-bold uppercase ${onboarding ? 'bg-[#dcfce7] text-[#15803d]' : 'bg-[#f3f1ec] text-[#737373]'}`}>{onboarding ? 'Active' : 'Complete'}</span></div>
-          <p className="mt-3 text-sm font-semibold text-[#0a0a0a]">Invitation access</p>
-          <p className="mt-1 text-xs leading-5 text-[#737373]">Temporary company setup and evaluation access{endsAt ? ` through ${endsAt}` : ''}.</p>
-        </div>
-        <div className="bg-white p-4">
-          <div className="flex items-center justify-between gap-3"><span className="font-mono text-[10px] font-bold uppercase text-[#117dff]">02 · Runway</span><span className={`px-2 py-1 font-mono text-[9px] font-bold uppercase ${onboarding ? 'bg-[#fff7ed] text-[#c2410c]' : 'bg-[#dcfce7] text-[#15803d]'}`}>{onboarding ? 'Configure next' : 'Current'}</span></div>
-          <p className="mt-3 text-sm font-semibold text-[#0a0a0a]">Paid operating plan</p>
-          <p className="mt-1 text-xs leading-5 text-[#737373]">Choose infrastructure, seats, storage, and monthly capacity, then confirm payment.</p>
-        </div>
-      </div>
+    <section className="rounded-xl border border-[#bcd5ff] bg-[#f5f9ff] p-5">
+      <h2 className="text-sm font-semibold text-[#0a0a0a]">{onboarding ? 'Your invitation access' : 'Your workspace access'}</h2>
+      <p className="mt-2 text-sm leading-6 text-[#525252]">{onboarding
+        ? `Your invitation includes temporary access${endsAt ? ` through ${endsAt}` : ''}. To continue, configure a paid workspace plan below.`
+        : 'Your workspace has moved beyond invitation onboarding. Manage its paid operating plan below.'}</p>
+      <p className="mt-2 text-xs text-[#737373]">Invitation access is not a recurring subscription. A paid plan starts only after an owner confirms checkout.</p>
     </section>
   );
 }
@@ -488,11 +477,10 @@ export default function Billing() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-6 pb-8">
       <header>
-        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#117dff]">Workspace commercial settings</p>
         <h1 className="mt-1 text-2xl font-bold text-[#0a0a0a]">Billing and plans</h1>
-        <p className="mt-1 text-sm text-[#525252]">Manage onboarding, Runway, subscriptions, payment methods, invoices, and plan changes. Consumption and allowances live on the Usage page.</p>
+        <p className="mt-1 text-sm text-[#525252]">Your plan, payments, and invoices in one place.</p>
       </header>
       {billingError && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
@@ -524,17 +512,13 @@ export default function Billing() {
           {checkoutNotice}
         </div>
       )}
-      {billing?.usage_summary?.credits && (
-        <CreditBalance credits={billing.usage_summary.credits} />
-      )}
-      <CommercialJourney billing={billing} />
       {/* Current Plan Overview */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
       >
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
               <CreditCard size={18} className="text-[#117dff]" />
@@ -554,50 +538,62 @@ export default function Billing() {
                 <span className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">
                   {currentPlanDef?.name}
                 </span>
-                <span className="text-[10px] font-mono bg-[#f3f1ec] text-[#525252] px-2 py-0.5 rounded uppercase">
-                  {currentPlan}
-                </span>
               </div>
-              {subscription?.status && (
-                <div className="mt-1 flex items-center gap-2 justify-end text-[10px] font-['Space_Grotesk']">
-                  <span className={`px-1.5 py-0.5 rounded font-mono uppercase ${
-                    subscription.status === 'active' || subscription.status === 'trialing'
-                      ? 'bg-[#dcfce7] text-[#15803d]'
-                      : subscription.status === 'past_due' || subscription.status === 'unpaid'
-                      ? 'bg-[#fef2f2] text-[#b91c1c]'
-                      : 'bg-[#f3f1ec] text-[#525252]'
-                  }`}>
-                    {subscription.status}
-                  </span>
-                  {subscription.current_period_end && (
-                    <span className="text-[#a3a3a3]">
-                      {t('billing.renews', 'renews {{date}}', { date: new Date(subscription.current_period_end).toLocaleDateString() })}
-                    </span>
-                  )}
-                </div>
-              )}
+              <p className="mt-1 text-sm text-[#737373]">{currentPlanDef?.price}{currentPlanDef?.period}</p>
             </div>
             {canManageBilling && !isEnterpriseWorkspace && subscription?.stripe_customer_id && (
               <button
                 onClick={handleManageSubscription}
-                className="px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] text-[#525252] text-[11px] font-medium font-['Space_Grotesk']"
+                className="px-4 py-2 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] text-[#525252] text-sm font-medium font-['Space_Grotesk']"
                 title={t('billing.manageSubscriptionTitle', 'Open Stripe Customer Portal')}
               >
-                {t('billing.manage', 'Manage')}
+                {t('billing.manageSubscription', 'Manage subscription')}
               </button>
             )}
           </div>
         </div>
 
         <div className="grid gap-px border border-[#e3e0db] bg-[#e3e0db] sm:grid-cols-3">
-          <div className="bg-[#faf9f4] p-3"><p className="font-mono text-[9px] uppercase text-[#a3a3a3]">Billing status</p><p className="mt-1 text-sm font-semibold capitalize text-[#202020]">{subscription.status || (billing?.entitlement ? 'Entitlement active' : 'No subscription')}</p></div>
-          <div className="bg-[#faf9f4] p-3"><p className="font-mono text-[9px] uppercase text-[#a3a3a3]">Renewal</p><p className="mt-1 text-sm font-semibold text-[#202020]">{subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : 'Not scheduled'}</p></div>
-          <div className="bg-[#faf9f4] p-3"><p className="font-mono text-[9px] uppercase text-[#a3a3a3]">Payment management</p><p className="mt-1 text-sm font-semibold text-[#202020]">{canManageBilling ? 'Owner / admin access' : 'Contact workspace owner'}</p></div>
+          <div className="bg-[#faf9f4] p-3"><p className="text-xs text-[#737373]">Status</p><p className="mt-1 text-sm font-semibold capitalize text-[#202020]">{({ active: 'Active', trialing: 'Trial', past_due: 'Payment overdue', unpaid: 'Payment needed', canceled: 'Canceled', incomplete: 'Payment pending', incomplete_expired: 'Payment expired', paused: 'Paused' }[subscription.status] || subscription.status || (billing?.entitlement ? 'Access active' : 'No subscription'))}</p></div>
+          <div className="bg-[#faf9f4] p-3"><p className="text-xs text-[#737373]">Next renewal</p><p className="mt-1 text-sm font-semibold text-[#202020]">{subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : 'Not scheduled'}</p></div>
+          <div className="bg-[#faf9f4] p-3"><p className="text-xs text-[#737373]">Managed by</p><p className="mt-1 text-sm font-semibold text-[#202020]">{canManageBilling ? 'You can manage billing' : 'Workspace owner'}</p></div>
         </div>
       </motion.div>
 
-      {/* Enterprise invitation holders configure the paid continuation here. */}
-      {isEnterpriseWorkspace && <RunwayUpgradePanel />}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <span className="text-[#737373]">See your allowances and remaining credits.</span>
+        <Link to="/hivemind/app/usage" className="font-medium text-[#117dff] hover:underline">View usage <span aria-hidden="true">→</span></Link>
+      </div>
+      {!isEnterpriseWorkspace && (
+        <details className="rounded-xl border border-[#e3e0db] bg-white">
+          <summary className="cursor-pointer p-5 text-sm font-semibold text-[#0a0a0a]">Change plan</summary>
+          <section className="space-y-4 px-5 pb-5">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Choose the capacity that fits your work</h2>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {planOptions.map((plan) => (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                currentPlan={currentPlan}
+                onSelect={(id) => canManageBilling ? setUpgradeModal(id) : setBillingError('Only an organization owner or admin can change the subscription.')}
+              />
+            ))}
+          </div>
+          </section>
+        </details>
+      )}
+
+      <CommercialJourney billing={billing} />
+      {isEnterpriseWorkspace && (
+        <details className="rounded-xl border border-[#e3e0db] bg-white">
+          <summary className="cursor-pointer p-5 text-sm font-semibold text-[#0a0a0a]">Configure your workspace plan</summary>
+          <div className="px-4 pb-4"><RunwayUpgradePanel /></div>
+        </details>
+      )}
 
       {/* Invoices */}
       {canManageBilling && (
@@ -662,34 +658,11 @@ export default function Billing() {
         </motion.div>
       )}
 
-      {!isEnterpriseWorkspace && (
-        <section className="space-y-4">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a3a3a3]">Personal plans</p>
-              <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Choose the capacity that fits your work</h2>
-            </div>
-            <p className="max-w-md text-xs leading-5 text-[#737373]">Plans are ordered from individual memory to autonomous execution. Your current plan remains clearly marked.</p>
-          </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {planOptions.map((plan) => (
-              <PlanCard
-                key={plan.id}
-                plan={plan}
-                currentPlan={currentPlan}
-                onSelect={(id) => canManageBilling ? setUpgradeModal(id) : setBillingError('Only an organization owner or admin can change the subscription.')}
-              />
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* FAQ Section */}
-      <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <h3 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-4">
-          {t('billing.faqTitle', 'Frequently Asked Questions')}
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <details className="bg-white border border-[#e3e0db] rounded-xl p-5">
+        <summary className="cursor-pointer text-sm font-semibold text-[#0a0a0a]">{t('billing.billingHelp', 'Billing help')}</summary>
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
               q: 'Is invitation onboarding a subscription?',
@@ -718,7 +691,7 @@ export default function Billing() {
             </div>
           ))}
         </div>
-      </div>
+      </details>
 
       {canManageBilling && !isEnterpriseWorkspace && upgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
