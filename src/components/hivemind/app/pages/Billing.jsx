@@ -264,7 +264,7 @@ function CommercialJourney({ billing }) {
   const entitlement = billing?.entitlement;
   const invited = entitlement?.source === 'enterprise_invitation';
   if (!invited) return null;
-  const onboarding = entitlement?.phase === 'onboarding';
+  const onboarding = entitlement?.phase === 'onboarding' || billing?.plan?.id === 'enterprise_onboarding';
   const endsAt = entitlement?.effective_until
     ? new Date(entitlement.effective_until).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
@@ -539,7 +539,7 @@ export default function Billing() {
                   {currentPlanDef?.name}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-[#737373]">{currentPlanDef?.price}{currentPlanDef?.period}</p>
+              <p className="mt-1 text-sm text-[#737373]">{currentPlan === 'enterprise_onboarding' ? 'Temporary invitation access' : `${currentPlanDef?.price || ''}${currentPlanDef?.period || ''}`}</p>
             </div>
             {canManageBilling && !isEnterpriseWorkspace && subscription?.stripe_customer_id && (
               <button
