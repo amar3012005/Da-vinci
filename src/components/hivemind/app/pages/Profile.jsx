@@ -105,7 +105,7 @@ function UserAvatar({ displayName, email }) {
   );
 }
 
-function PlanBadge({ plan }) {
+function PlanBadge({ plan, label }) {
   const map = {
     free: { label: 'Free', variant: 'gray', dot: '#a3a3a3' },
     plus: { label: 'BRAIN+', variant: 'blue', dot: '#117dff' },
@@ -114,7 +114,7 @@ function PlanBadge({ plan }) {
     scale: { label: 'Scale', variant: 'purple', dot: '#a855f7' },
     enterprise: { label: 'Enterprise', variant: 'green', dot: '#059669' },
   };
-  const cfg = map[plan?.toLowerCase()] || map.free;
+  const cfg = map[plan?.toLowerCase()] || { label: plan ? String(plan).replaceAll('_', ' ') : 'Not available', variant: 'gray', dot: '#a3a3a3' };
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono border ${
@@ -122,7 +122,7 @@ function PlanBadge({ plan }) {
       }`}
     >
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.dot }} />
-      {cfg.label}
+      {label || cfg.label}
     </span>
   );
 }
@@ -154,7 +154,7 @@ function CategoryBadge({ category }) {
       }`}
     >
       <Icon size={11} />
-      {cfg.label}
+      {label || cfg.label}
     </span>
   );
 }
@@ -229,7 +229,7 @@ function ConfirmDialog({
 // Compact identity card: avatar, name, email, plan/org badges, quick actions,
 // inline stat ticker. Replaces the old dark-themed BrainMetricsHero — same
 // info, lighter footprint, cleaner hierarchy on the page.
-function AccountHeaderCard({ user, org, plan, profileFacts, onSignOut }) {
+function AccountHeaderCard({ user, org, plan, planLabel, profileFacts, onSignOut }) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const displayName = profileFacts?.find((fact) => fact.key === 'name')?.value
@@ -254,7 +254,7 @@ function AccountHeaderCard({ user, org, plan, profileFacts, onSignOut }) {
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
           <span className="text-[#737373]">{t('profile.planLabel', 'Plan')}</span>
-          <div className="flex items-center gap-3"><PlanBadge plan={plan} /><button onClick={() => navigate('/hivemind/app/billing')} className="text-[#117dff] hover:underline">{t('profile.manageBilling', 'Manage billing')}</button></div>
+          <div className="flex items-center gap-3"><PlanBadge plan={plan} label={planLabel} /><button onClick={() => navigate('/hivemind/app/billing')} className="text-[#117dff] hover:underline">{t('profile.manageBilling', 'Manage billing')}</button></div>
         </div>
         <div className="flex items-center justify-between gap-4 pt-4 text-sm">
           <span className="text-[#737373]">{t('profile.preferencesLabel', 'Preferences')}</span>
@@ -1422,6 +1422,7 @@ export default function Profile() {
           user={user}
           org={org}
           plan={billing?.plan?.id || statsData?.plan || org?.plan}
+          planLabel={billing?.plan?.name}
           profileFacts={facts}
           onSignOut={logout}
         />
