@@ -154,7 +154,7 @@ function CategoryBadge({ category }) {
       }`}
     >
       <Icon size={11} />
-      {label || cfg.label}
+      {cfg.label}
     </span>
   );
 }
