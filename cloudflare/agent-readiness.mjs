@@ -1,11 +1,13 @@
+import RENDERED from './generated/public-renderings.json';
 import { PUBLIC_PAGES, SITE } from '../src/seo/public-pages.mjs';
 
 export const CORE = 'https://core.singulancelabs.com';
 export const SKILL_PATH = '/.well-known/agent-skills/public-research/SKILL.md';
 export const SKILL = `---\nname: singulance-public-research\ndescription: Find and cite public SINGULANCE research with canonical sources and limitations.\n---\n\n# Explore public SINGULANCE research\n\nRead ${SITE}/llms.txt to choose a public page. Request its URL with Accept: text/markdown, or append /index.md. These Markdown resources are concise overviews; follow the canonical HTML link for the complete article, evidence and methodology. Distinguish published findings from product claims. Cite the canonical page.\n\nOpen the product workspace at https://next.singulancelabs.com/. For authorized MCP setup, use https://next.singulancelabs.com/hivemind/app/mcp. Public content requires no account. Private company memory and agent rooms require explicit user authorization through the existing HIVEMIND OAuth or API-key flow; see ${SITE}/auth.md. This skill grants no access and performs no writes.\n`;
 export const DISCOVERY_LINKS = `<${SITE}/sitemap.xml>; rel="sitemap", <${SITE}/llms.txt>; rel="describedby"; type="text/plain", <${SITE}/.well-known/api-catalog>; rel="api-catalog", <${SITE}/.well-known/ai-catalog.json>; rel="ai-catalog", <${SITE}/.well-known/mcp/server-card.json>; rel="mcp-server-card", <${SITE}/.well-known/agent-skills/index.json>; rel="agent-skills"`;
-export const isAgentDiscovery = (path) => path.startsWith('/.well-known/') || path === '/auth.md' || path === '/openapi-public.json' || path === '/index.md' || path.endsWith('/index.md');
+export const isAgentDiscovery = (path) => path.startsWith('/.well-known/') || path === '/auth.md' || path === '/openapi-public.json' || path === '/index.md' || path.endsWith('/index.md') || path === '/index.txt' || path.endsWith('/index.txt') || path.endsWith('.md') || path.endsWith('.txt');
 export const markdownFor = (path) => {
+  if (RENDERED[path]?.markdown) return RENDERED[path].markdown;
   const page = PUBLIC_PAGES[path];
   return `# ${page.heading}\n\n${page.description}\n\n## Overview\n\n${page.summary}\n\nThis is a concise overview, not the complete article or policy. Read [the full page](${SITE}${path}) for the complete content, evidence and limitations.\n\n## Open your workspace\n\n[Open HIVEMIND](https://next.singulancelabs.com/) to use Brain, HyperAgents and Tara. This is an authenticated workspace; request user authorization before accessing company information.\n\n## Related public pages\n\n${Object.entries(PUBLIC_PAGES).filter(([key]) => key !== path).map(([key,p])=>`- [${p.heading}](${SITE}${key}): ${p.description}`).join('\n')}\n`;
 };
@@ -43,11 +45,11 @@ export async function agentDiscoveryResponse(request,path) {
     capabilities:{tools:{},resources:{},prompts:{}},documentationUrl:`${SITE}/auth.md`
   });
   if (path === '/.well-known/api-catalog') return response(request,{linkset:[{anchor:SITE,'service-desc':[{href:`${SITE}/openapi-public.json`,type:'application/vnd.oai.openapi+json'}],'service-doc':[{href:`${SITE}/llms.txt`,type:'text/plain'}]},{anchor:`${CORE}/api/mcp`,'service-doc':[{href:`${SITE}/auth.md`,type:'text/markdown'}]}]},'application/linkset+json');
-  if (path === '/openapi-public.json') return response(request,{openapi:'3.1.0',info:{title:'SINGULANCE public page overviews',version:'1.0.0',description:'Read-only public overviews. Canonical HTML pages contain the complete articles and policies.'},servers:[{url:SITE}],paths:Object.fromEntries(Object.entries(PUBLIC_PAGES).map(([key,page])=>[key==='/'?'/index.md':`${key}/index.md`,{get:{summary:page.heading,responses:{200:{description:'Public Markdown overview',content:{'text/markdown':{schema:{type:'string'}}}}}}}]))});
+  if (path === '/openapi-public.json') return response(request,{openapi:'3.1.0',info:{title:'SINGULANCE public page content',version:'1.0.0',description:'Read-only public page text, generated from the same React sources as the HTML renderings.'},servers:[{url:SITE}],paths:Object.fromEntries(Object.entries(PUBLIC_PAGES).map(([key,page])=>[key==='/'?'/index.md':`${key}/index.md`,{get:{summary:page.heading,responses:{200:{description:'Public Markdown page text',content:{'text/markdown':{schema:{type:'string'}}}}}}}]))});
   if (path === '/.well-known/ai-catalog.json') return response(request,{specVersion:'1.0',host:{displayName:'SINGULANCE',identifier:'did:web:singulancelabs.com'},entries:[{identifier:'urn:air:singulancelabs.com:server:hivemind',displayName:'Authenticated HIVEMIND MCP',type:'application/mcp-server-card+json',url:`${SITE}/.well-known/mcp/server-card.json`,representativeQueries:['How do I connect my authorized HIVEMIND workspace?','Where is the HIVEMIND MCP authentication documentation?']},{identifier:'urn:air:singulancelabs.com:skill:public-research',displayName:'Explore public research',type:'text/markdown',url:`${SITE}${SKILL_PATH}`,representativeQueries:['Find the ICARUS research and evaluation limitations','Find published memory benchmark methodology']} ]});
-  if (path === '/index.md' || path.endsWith('/index.md')) {
-    const canonical=path === '/index.md' ? '/' : path.slice(0,-9);
-    if (PUBLIC_PAGES[canonical]) return markdownResponse(request,canonical);
+  if (path.endsWith('.md') || path.endsWith('.txt')) {
+    const canonical=(path === '/index.md' || path === '/index.txt') ? '/' : path.endsWith('/index.md') || path.endsWith('/index.txt') ? path.slice(0,path.endsWith('.txt') ? -10 : -9) : path.slice(0,path.endsWith('.txt') ? -4 : -3);
+    if (PUBLIC_PAGES[canonical]) return path.endsWith('.txt') ? response(request,markdownFor(canonical),'text/plain',{'content-location':SITE+canonical}) : markdownResponse(request,canonical);
   }
   return null;
 }

@@ -5,6 +5,7 @@ import './index.css';
 import './i18n';
 import { TProvider } from './components/i18n/T';
 import App from './App';
+import { PublicInitialContent } from './components/PublicPageLoading';
 import { initConsentAwarePostHog } from './analytics/posthog-loader';
 import { installChunkLoadRecovery } from './chunk-load-recovery';
 
@@ -18,11 +19,13 @@ initConsentAwarePostHog();
 const rootEl = document.getElementById('root');
 const tree = (
   <React.StrictMode>
+    <PublicInitialContent.Provider value={rootEl.hasAttribute('data-public-render') ? rootEl.innerHTML : ''}>
     <HelmetProvider>
       <TProvider enabled>
         <App />
       </TProvider>
     </HelmetProvider>
+    </PublicInitialContent.Provider>
   </React.StrictMode>
 );
 

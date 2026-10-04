@@ -1,3 +1,4 @@
+import RENDERED from './generated/public-renderings.json';
 import { DISCOVERY_LINKS } from './agent-readiness.mjs';
 import { SITE, OG_IMAGE, PUBLIC_PAGES, canonicalFor, schemaFor } from '../src/seo/public-pages.mjs';
 const escape = (value) => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -24,7 +25,7 @@ export function publicSeoResponse(response, path) {
   return new HTMLRewriter()
     .on('title, meta[name="description"], meta[name="robots"], link[rel="canonical"], meta[property^="og:"], meta[name^="twitter:"], script[type="application/ld+json"], noscript', { element(el) { el.remove(); } })
     .on('head', { element(el) { el.append(head, { html: true }); } })
-    .on('#root', { element(el) { el.setAttribute('data-seo-fallback', 'true'); el.setInnerContent(fallback, { html: true }); } })
+    .on('#root', { element(el) { el.setAttribute('data-seo-fallback', 'true'); el.setAttribute('data-public-render', 'true'); el.setInnerContent(RENDERED[path]?.html || fallback, { html: true }); } })
     .transform(source);
 }
 export { PUBLIC_PAGES, SITE };

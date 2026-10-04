@@ -1,11 +1,13 @@
 import Seo from './components/Seo';
+import PublicProduct from './components/PublicProduct';
+import PublicPageLoading from './components/PublicPageLoading';
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import UpdateBanner from './components/hivemind/UpdateBanner';
-const MobileHomepage = React.lazy(() => import('./components/mobile/MobileHomepage'));
 import CookieConsent from './components/CookieConsent';
 import apiClient from './components/hivemind/app/shared/api-client';
+const MobileHomepage = React.lazy(() => import('./components/mobile/MobileHomepage'));
 
 // Hivemind
 const HivemindRedirect = React.lazy(() => import('./components/hivemind/HivemindRedirect'));
@@ -58,7 +60,7 @@ const MarketingHomepage = () => (
     <h1 className="sr-only">
       SINGULANCE — AI workforce that runs inside memory. The AI operating layer for regulated Europe.
     </h1>
-    <React.Suspense fallback={<div className="min-h-screen bg-[#05070f]" />}><MobileHomepage /></React.Suspense>
+    <React.Suspense fallback={<PublicPageLoading />}><MobileHomepage /></React.Suspense>
   </>
 );
 
@@ -107,7 +109,7 @@ function App() {
         <Routes>
           <Route
             path="*"
-            element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><PlatformAdmin /></React.Suspense>}
+            element={<React.Suspense fallback={<PublicPageLoading />}><PlatformAdmin /></React.Suspense>}
           />
         </Routes>
       </Router>
@@ -119,7 +121,7 @@ function App() {
       <UpdateBanner />
       <CookieConsent />
       <Routes>
-        <Route path="/" element={PRODUCT_HOST ? <ReturningUserMarketingHomepage /> : (isHivemindHost ? <React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><HivemindRedirect /></React.Suspense> : <ReturningUserMarketingHomepage />)} />
+        <Route path="/" element={PRODUCT_HOST ? <ReturningUserMarketingHomepage /> : (isHivemindHost ? <React.Suspense fallback={<PublicPageLoading />}><HivemindRedirect /></React.Suspense> : <ReturningUserMarketingHomepage />)} />
 
         {/* HIVEMIND — only served on the HIVEMIND subdomain; every /hivemind* hit
             on the marketing domain hard-redirects to HIVEMIND_SITE_HOST. */}
@@ -127,36 +129,39 @@ function App() {
           {/* /hivemind index — PRODUCT_HOST (singulancelabs) shows the HIVEMIND product cover;
               the dedicated hivemind subdomain opens the app; marketing host redirects away. */}
           <Route index element={PRODUCT_HOST
-            ? <React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><HivemindRedirect /></React.Suspense>
+            ? <React.Suspense fallback={<PublicPageLoading />}><HivemindRedirect /></React.Suspense>
             : (isHivemindHost
-              ? <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}><HiveMindApp /></React.Suspense>
+              ? <React.Suspense fallback={<PublicPageLoading />}><HiveMindApp /></React.Suspense>
               : <HivemindExternalRedirect />)
           } />
           {/* Public auth has its own small entry point. Do not load the dashboard
               shell merely to show a sign-in form. */}
           <Route
             path="login"
-            element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><HivemindLogin /></React.Suspense>}
+            element={<React.Suspense fallback={<PublicPageLoading />}><HivemindLogin /></React.Suspense>}
           />
           {/* /hivemind/app, /hivemind/login, … — served locally on PRODUCT_HOST + hivemind subdomain. */}
           <Route
             path="*"
             element={(PRODUCT_HOST || isHivemindHost)
-              ? <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}><HiveMindApp /></React.Suspense>
+              ? <React.Suspense fallback={<PublicPageLoading />}><HiveMindApp /></React.Suspense>
               : <HivemindExternalRedirect />
             }
           />
         </Route>
 
+        <Route path="/tara" element={<PublicProduct path="/tara" />} />
+        <Route path="/hyperagents" element={<PublicProduct path="/hyperagents" />} />
+
         {/* Research pages */}
-        <Route path="/research" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><ResearchIndex /></React.Suspense>} />
-        <Route path="/research/icarus" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><IcarusResearch /></React.Suspense>} />
-        <Route path="/research/cognitive-swarm-intelligence" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><CsiResearch /></React.Suspense>} />
-        <Route path="/research/post-quantum-cryptography" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><PostQuantumResearch /></React.Suspense>} />
-        <Route path="/privacy" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><PrivacySecurity mode="privacy" /></React.Suspense>} />
-        <Route path="/security" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><PrivacySecurity mode="security" /></React.Suspense>} />
-        <Route path="/cookies" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><CookiePolicy /></React.Suspense>} />
-        <Route path="/benchmark" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><BenchmarkResearch /></React.Suspense>} />
+        <Route path="/research" element={<React.Suspense fallback={<PublicPageLoading />}><ResearchIndex /></React.Suspense>} />
+        <Route path="/research/icarus" element={<React.Suspense fallback={<PublicPageLoading />}><IcarusResearch /></React.Suspense>} />
+        <Route path="/research/cognitive-swarm-intelligence" element={<React.Suspense fallback={<PublicPageLoading />}><CsiResearch /></React.Suspense>} />
+        <Route path="/research/post-quantum-cryptography" element={<React.Suspense fallback={<PublicPageLoading />}><PostQuantumResearch /></React.Suspense>} />
+        <Route path="/privacy" element={<React.Suspense fallback={<PublicPageLoading />}><PrivacySecurity mode="privacy" /></React.Suspense>} />
+        <Route path="/security" element={<React.Suspense fallback={<PublicPageLoading />}><PrivacySecurity mode="security" /></React.Suspense>} />
+        <Route path="/cookies" element={<React.Suspense fallback={<PublicPageLoading />}><CookiePolicy /></React.Suspense>} />
+        <Route path="/benchmark" element={<React.Suspense fallback={<PublicPageLoading />}><BenchmarkResearch /></React.Suspense>} />
 
         {/* Catch all */}
         <Route path="*" element={<MarketingHomepage />} />

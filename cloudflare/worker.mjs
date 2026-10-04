@@ -395,6 +395,22 @@ export default {
     if (publicHost && hostname(request) !== 'singulancelabs.com') {
       return Response.redirect(`${SITE}${pathname}${url.search}`, 308);
     }
+    // Public landing and product descriptions on the app host contain no account data.
+    const appPublicHost = hostname(request) === 'next.singulancelabs.com';
+    if (appPublicHost && (DISCOVERY_PATHS.has(pathname) || (isAgentDiscovery(pathname) && !pathname.includes('/app/')))) {
+      const landingDoc = pathname === '/index.md' || pathname === '/index.txt' ? `/hivemind${pathname}` : pathname;
+      return Response.redirect(`${SITE}${landingDoc}`, 302);
+    }
+    const publicEntry = appPublicHost && ['/', '/hivemind', '/tara', '/hyperagents'].includes(pathname);
+    if (publicEntry && ['GET', 'HEAD'].includes(request.method)) {
+      const pagePath = pathname === '/' ? '/hivemind' : pathname;
+      if (prefersMarkdown(request.headers.get('accept'))) return markdownResponse(request, pagePath);
+      const document = await env.ASSETS.fetch(new Request(new URL('/', request.url), request));
+      const rendered = publicSeoResponse(document, pagePath);
+      const headers = new Headers(rendered.headers);
+      headers.set('x-robots-tag', 'noindex, follow');
+      return new Response(rendered.body, {status:rendered.status, headers});
+    }
     if (isAgentDiscovery(pathname)) {
       if (!publicHost) return privateDiscoveryResponse(pathname);
       const discovery = await agentDiscoveryResponse(request, pathname);

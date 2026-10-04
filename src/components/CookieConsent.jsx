@@ -58,7 +58,7 @@ export default function CookieConsent() {
           <section
             className="consent-banner-enter fixed inset-x-0 bottom-0 z-[1000] overflow-hidden border-t border-white/20 bg-[#080b10]/72 px-5 py-3 text-white shadow-[0_-14px_48px_rgba(0,0,0,0.22)] backdrop-blur-3xl md:px-8"
             style={{ backgroundImage: 'radial-gradient(ellipse 55% 150% at 54% -55%,rgba(255,172,76,.34),rgba(132,48,19,.14) 42%,transparent 72%),linear-gradient(180deg,rgba(18,17,17,.76),rgba(4,7,10,.92))', WebkitBackdropFilter: 'blur(24px) saturate(135%)' }}
-            role="dialog" aria-modal="true" aria-labelledby="cookie-title"
+            aria-labelledby="cookie-title"
           >
             <div className="mx-auto flex max-w-[1380px] flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-3xl">

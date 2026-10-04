@@ -1,0 +1,12 @@
+import React from 'react';
+import Seo from './Seo';
+import { PRODUCTS } from '../seo/products.mjs';
+export default function PublicProduct({path}) {
+ const p=PRODUCTS[path];
+ return <div style={{background:'#05070f',color:'#f2f4f8',minHeight:'100vh',fontFamily:'Inter,system-ui,sans-serif'}}>
+ <Seo canonical={`https://singulancelabs.com${path}`}/><header style={{maxWidth:1120,margin:'auto',padding:'24px',display:'flex',gap:24,flexWrap:'wrap',alignItems:'center'}}><a href="/" style={{color:'inherit',fontWeight:700,display:'flex',alignItems:'center',gap:10}}><img src="/singulance-mark-192.png" alt="SINGULANCE" width="36" height="36"/>SINGULANCE</a><nav aria-label="Products" style={{display:'flex',gap:20,flexWrap:'wrap'}}>{[['/hivemind','HIVEMIND'],['/tara','TARA'],['/hyperagents','HYPERAGENTS']].map(([href,label])=><a key={href} href={href} style={{color:'#bcd2ff'}}>{label}</a>)}</nav></header>
+ <main style={{maxWidth:1120,margin:'auto',padding:'48px 24px 80px'}}><p style={{color:'#a9caff',letterSpacing:3,fontSize:13}}>{p.name} · {p.eyebrow}</p><h1 style={{fontSize:'clamp(36px,6vw,72px)',lineHeight:1.08,maxWidth:920,margin:'24px 0'}}>{p.title}</h1><p style={{fontSize:20,lineHeight:1.7,maxWidth:760,color:'#c3cad7'}}>{p.description}</p><a href="https://next.singulancelabs.com/" style={{display:'inline-block',margin:'24px 0 40px',padding:'14px 22px',background:'#dce8ff',color:'#14213a',borderRadius:10,fontWeight:600}}>Open your workspace →</a>
+ <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))',gap:20}}>{p.sections.map(([title,text])=><section key={title} style={{padding:24,border:'1px solid #31394b',borderRadius:16}}><h2 style={{fontSize:23,margin:'0 0 16px'}}>{title}</h2><p style={{lineHeight:1.8,color:'#c3cad7'}}>{text}</p></section>)}</div>
+ <section style={{marginTop:56}}><h2 style={{fontSize:30}}>Get started</h2><ol style={{lineHeight:2,color:'#c3cad7'}}>{p.steps.map(s=><li key={s}>{s}</li>)}</ol><p>The public product pages describe the experience. Your company conversations, agent traces and artifacts require authorized access at <a href="https://next.singulancelabs.com/" style={{color:'#a9caff'}}>next.singulancelabs.com</a>.</p></section></main>
+ <footer style={{maxWidth:1120,margin:'auto',padding:24,display:'flex',gap:24,flexWrap:'wrap'}}>{[['/research','Research'],['/privacy','Privacy'],['/security','Security'],['/cookies','Cookies']].map(([href,label])=><a key={href} href={href} style={{color:'#a9caff'}}>{label}</a>)}</footer></div>;
+}

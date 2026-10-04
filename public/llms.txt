@@ -2,10 +2,13 @@
 
 > Public research and product information.
 
-Markdown links below provide concise overviews. Canonical HTML links in each overview contain the complete article or policy. Private workspaces are not included.
+Markdown links below contain server-rendered public page text from the same React source as the visual pages. Private workspaces are not included.
 
 ## Public reading list
 - [SINGULANCE — AI workforce that runs inside memory](https://singulancelabs.com/index.md): Discover HIVEMIND organizational memory, HyperAgents digital teammates and TARA voice agents. Explore SINGULANCE research and AI workforce tools.
+- [HIVEMIND — your company brain](https://singulancelabs.com/hivemind/index.md): Explore HIVEMIND company memory, connected apps, evidence-backed answers and persistent AI teammates.
+- [TARA — voice with company context](https://singulancelabs.com/tara/index.md): Explore TARA, the voice experience in the HIVEMIND workspace.
+- [HyperAgents — your AI teammates](https://singulancelabs.com/hyperagents/index.md): Explore persistent AI teammate rooms, task results, artifacts and Runtime coordination in HIVEMIND.
 - [SINGULANCE Research](https://singulancelabs.com/research/index.md): Explore SINGULANCE research on agent memory, cognitive swarm intelligence and post-quantum cryptography, with published methods and benchmarks.
 - [ICARUS — an agent memory filesystem](https://singulancelabs.com/research/icarus/index.md): Explore ICARUS, SINGULANCE’s agent memory filesystem combining vector, entity, temporal and graph retrieval in one file. Read the research and methods.
 - [Cognitive Swarm Intelligence](https://singulancelabs.com/research/cognitive-swarm-intelligence/index.md): Read SINGULANCE research on cognitive swarm intelligence: shared organizational memory, coordinated agents and the architecture behind HIVEMIND.

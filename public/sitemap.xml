@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://singulancelabs.com/</loc></url>
+  <url><loc>https://singulancelabs.com/hivemind</loc></url>
+  <url><loc>https://singulancelabs.com/tara</loc></url>
+  <url><loc>https://singulancelabs.com/hyperagents</loc></url>
   <url><loc>https://singulancelabs.com/research</loc></url>
   <url><loc>https://singulancelabs.com/research/icarus</loc></url>
   <url><loc>https://singulancelabs.com/research/cognitive-swarm-intelligence</loc></url>

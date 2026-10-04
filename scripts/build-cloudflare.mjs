@@ -1,4 +1,5 @@
-import './generate-public-discovery.mjs';
+await import('./generate-public-renderings.mjs');
+await import('./generate-public-discovery.mjs');
 import { spawnSync } from 'node:child_process';
 
 const windows = process.platform === 'win32';

@@ -1,6 +1,7 @@
 User-agent: *
 Content-Signal: search=yes, ai-input=yes, ai-train=no
 Allow: /
+Allow: /hivemind$
 Disallow: /hivemind/
 Disallow: /enterprise/
 Disallow: /prometheus/
