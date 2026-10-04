@@ -2384,6 +2384,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Existing owner-authenticated subscriptions; no new connector or credential. */
+  async connectedEventSubscriptions(args) {
+    const { data } = await this.controlPlane.post('/v1/hivemind/triggers', args);
+    return data;
+  }
+
   /** Disconnect a Composio toolkit connection for the current org. */
   async disconnectComposioToolkit(toolkitSlug) {
     const { data } = await this.controlPlane.post(`/v1/connectors/composio/${encodeURIComponent(toolkitSlug)}/disconnect`, {});

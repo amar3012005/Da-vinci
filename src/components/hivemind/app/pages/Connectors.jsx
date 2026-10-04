@@ -48,6 +48,7 @@ import WhatsAppQRModal from './WhatsAppQRModal';
 import { PageWalkthrough, CONNECTORS_STEPS } from '../shared/Walkthrough';
 import UsageTracker from '../components/UsageTracker';
 import ComposioToolkitBrowser from './ComposioToolkitBrowser';
+import RuntimeEventSubscriptions from './RuntimeEventSubscriptions';
 
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
@@ -4359,6 +4360,7 @@ export default function Connectors() {
       {/* Browse Composio's full toolkit catalog — every self-serve connector
           on this page now lives here, one visual language, no duplicates. */}
       <ComposioToolkitBrowser />
+      <RuntimeEventSubscriptions key={`${org?.id || ''}:${user?.id || ''}`} />
 
       {/* MCP Endpoints */}
       <div>
