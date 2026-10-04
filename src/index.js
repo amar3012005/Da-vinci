@@ -5,7 +5,7 @@ import './index.css';
 import './i18n';
 import { TProvider } from './components/i18n/T';
 import App from './App';
-import { initConsentAwarePostHog } from './analytics/posthog';
+import { initConsentAwarePostHog } from './analytics/posthog-loader';
 import { installChunkLoadRecovery } from './chunk-load-recovery';
 
 // A tab opened before a deployment can still reference the previous hashed

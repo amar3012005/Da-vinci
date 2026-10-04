@@ -9,20 +9,12 @@
  */
 import posthog from 'posthog-js';
 import { CONSENT_EVENT, hasConsent } from '../privacy/consent';
+import { clearLegacyPostHogPersistence } from './posthog-persistence';
 
 const KEY = process.env.REACT_APP_POSTHOG_KEY || '';
 const HOST = process.env.REACT_APP_POSTHOG_HOST || 'https://eu.i.posthog.com';
 
 let started = false;
-
-function clearLegacyPostHogPersistence() {
-  try {
-    Object.keys(window.localStorage).filter((key) => key.startsWith('ph_')).forEach((key) => window.localStorage.removeItem(key));
-    document.cookie.split(';').map((part) => part.trim().split('=')[0]).filter((name) => name.startsWith('ph_')).forEach((name) => {
-      document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`;
-    });
-  } catch { /* storage controls can be unavailable in hardened browsers */ }
-}
 
 export function initPostHog() {
   if (started || !KEY || typeof window === 'undefined' || !hasConsent('analytics')) return;
@@ -39,7 +31,13 @@ export function initPostHog() {
     disable_session_recording: true,
     person_profiles: 'identified_only',  // don't create a profile for every anon hit
     persistence: 'localStorage+cookie',
-    loaded: (client) => client.opt_in_capturing(),
+    loaded: (client) => {
+      if (hasConsent('analytics')) client.opt_in_capturing();
+      else {
+        client.opt_out_capturing({ clear_persistence: true });
+        client.reset(true);
+      }
+    },
   });
 }
 
