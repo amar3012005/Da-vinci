@@ -1,6 +1,5 @@
 import React from 'react';
 import { Cookie, ShieldCheck, X } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { CONSENT_EVENT, OPEN_CONSENT_EVENT, readConsent, writeConsent } from '../privacy/consent';
 
 const categories = [
@@ -55,12 +54,9 @@ export default function CookieConsent() {
 
   return (
     <>
-      <AnimatePresence>
         {bannerOpen && (
-          <motion.section
-            initial={{ y: '100%', opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: '100%', opacity: 0 }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-x-0 bottom-0 z-[1000] overflow-hidden border-t border-white/20 bg-[#080b10]/72 px-5 py-3 text-white shadow-[0_-14px_48px_rgba(0,0,0,0.22)] backdrop-blur-3xl md:px-8"
+          <section
+            className="consent-banner-enter fixed inset-x-0 bottom-0 z-[1000] overflow-hidden border-t border-white/20 bg-[#080b10]/72 px-5 py-3 text-white shadow-[0_-14px_48px_rgba(0,0,0,0.22)] backdrop-blur-3xl md:px-8"
             style={{ backgroundImage: 'radial-gradient(ellipse 55% 150% at 54% -55%,rgba(255,172,76,.34),rgba(132,48,19,.14) 42%,transparent 72%),linear-gradient(180deg,rgba(18,17,17,.76),rgba(4,7,10,.92))', WebkitBackdropFilter: 'blur(24px) saturate(135%)' }}
             role="dialog" aria-modal="true" aria-labelledby="cookie-title"
           >
@@ -73,12 +69,11 @@ export default function CookieConsent() {
               <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto lg:min-w-[530px]">
                 <button type="button" onClick={() => setPreferencesOpen(true)} className="h-10 rounded-[6px] border border-white/20 bg-white/[0.06] px-5 text-[12px] font-semibold text-white transition-colors hover:bg-white/10">Manage preferences</button>
                 <button type="button" onClick={reject} className="h-10 rounded-[6px] border border-white/25 bg-black/25 px-5 text-[12px] font-semibold text-white transition-colors hover:bg-black/40">Reject optional</button>
-                <button type="button" onClick={accept} className="h-10 rounded-[6px] border border-[#117dff] bg-[#117dff] px-5 text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0]">Accept all</button>
+                <button type="button" onClick={accept} className="h-10 rounded-[6px] border border-[#0066e0] bg-[#0066e0] px-5 text-[12px] font-semibold text-white transition-colors hover:bg-[#0057c2]">Accept all</button>
               </div>
             </div>
-          </motion.section>
+          </section>
         )}
-      </AnimatePresence>
 
       {preferencesOpen && (
         <div className="fixed inset-0 z-[1010] grid place-items-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-labelledby="preferences-title">
@@ -93,7 +88,7 @@ export default function CookieConsent() {
                 return <div key={category.id} className="flex gap-5 py-5"><div className="min-w-0 flex-1"><h3 className="text-[14px] font-semibold text-[#0a0a0a]">{category.title}</h3><p className="mt-1 text-[12px] leading-5 text-[#525252]">{category.description}</p></div><button type="button" role="switch" aria-checked={checked} disabled={category.id === 'necessary'} onClick={() => setChoices((current) => ({ ...current, [category.id]: !current[category.id] }))} className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? 'bg-[#117dff]' : 'bg-[#d9d6cf]'} disabled:cursor-not-allowed`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${checked ? 'translate-x-5' : 'translate-x-1'}`} /></button></div>;
               })}
             </div>
-            <footer className="grid gap-2 border-t border-[#e3e0db] bg-white p-5 sm:grid-cols-3 md:px-7"><button type="button" onClick={reject} className="h-11 border border-[#0a0a0a] text-[12px] font-semibold">Reject optional</button><button type="button" onClick={() => save(choices)} className="h-11 border border-[#117dff] text-[12px] font-semibold text-[#117dff]">Save choices</button><button type="button" onClick={accept} className="h-11 bg-[#117dff] text-[12px] font-semibold text-white">Accept all</button></footer>
+            <footer className="grid gap-2 border-t border-[#e3e0db] bg-white p-5 sm:grid-cols-3 md:px-7"><button type="button" onClick={reject} className="h-11 border border-[#0a0a0a] text-[12px] font-semibold">Reject optional</button><button type="button" onClick={() => save(choices)} className="h-11 border border-[#117dff] text-[12px] font-semibold text-[#117dff]">Save choices</button><button type="button" onClick={accept} className="h-11 bg-[#0066e0] text-[12px] font-semibold text-white">Accept all</button></footer>
           </section>
         </div>
       )}
