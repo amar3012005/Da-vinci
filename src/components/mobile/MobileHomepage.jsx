@@ -5,19 +5,11 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ThemeProvider } from './ThemeContext';
 import MobileNavigation from './MobileNavigation';
 import MobileHero from './MobileHero';
-import HorizonScene from './HorizonScene';
-import SceneBridge from './SceneBridge';
 // PAUSED: Act II "THE FALL". The Horizon film now carries the opening on its
 // own and runs straight into the updates via SceneBridge. Re-add below
 // <HorizonScene /> to bring the pain narrative back.
 // import FallScene from './FallScene';
-import CinematicMode from './CinematicMode';
-import LatestUpdates from './LatestUpdates';
-import SubProducts from './SubProducts';
-import FieldPicker from './FieldPicker';
-import AudienceSection from './AudienceSection';
 import ThesisSection from './ThesisSection';
-import MobileAboutSection from './MobileAboutSection';
 import SingulanceFooter from './SingulanceFooter';
 // HIDDEN (re-add on singulancelabs.com): Talk-to-Tara voice widget + orb
 // import TaraVoiceWidget from './TaraVoiceWidget';
@@ -26,6 +18,17 @@ import { useTheme, t } from './ThemeContext';
 import { hasConsent } from '../../privacy/consent';
 
 gsap.registerPlugin(ScrollTrigger);
+
+// Desktop-only scenes include WebGL dependencies. Keep them outside the mobile
+// startup path; resizing to desktop still loads the same components on demand.
+const HorizonScene = React.lazy(() => import('./HorizonScene'));
+const SceneBridge = React.lazy(() => import('./SceneBridge'));
+const CinematicMode = React.lazy(() => import('./CinematicMode'));
+const LatestUpdates = React.lazy(() => import('./LatestUpdates'));
+const SubProducts = React.lazy(() => import('./SubProducts'));
+const FieldPicker = React.lazy(() => import('./FieldPicker'));
+const AudienceSection = React.lazy(() => import('./AudienceSection'));
+const MobileAboutSection = React.lazy(() => import('./MobileAboutSection'));
 
 const PageContent = () => {
     const { isDark } = useTheme();
@@ -90,22 +93,22 @@ const PageContent = () => {
     return (
         <div className={`min-h-screen ${c.bg} ${c.text} overflow-x-hidden transition-colors duration-300`}>
             <MobileNavigation />
-            <CinematicMode />
+            {!isMobile && <React.Suspense fallback={null}><CinematicMode /></React.Suspense>}
             <MobileHero />
-            {!isMobile && <>
+            {!isMobile && <React.Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
                 <HorizonScene />
                 {/* <FallScene field={field} /> */}
                 <SceneBridge />
                 <LatestUpdates />
                 <SubProducts />
                 <AudienceSection field={field} onChange={() => setPickerOpen(true)} />
-            </>}
+            </React.Suspense>}
             <ThesisSection />
-            {!isMobile && <MobileAboutSection />}
+            {!isMobile && <React.Suspense fallback={<div className="min-h-screen" aria-busy="true" />}><MobileAboutSection /></React.Suspense>}
             <SingulanceFooter />
             {/* HIDDEN (re-add on singulancelabs.com): Talk-to-Tara voice widget + orb
             {isIndicDomain ? <TaraVoiceWidgetIndic /> : <TaraVoiceWidget />} */}
-            {!isMobile && <FieldPicker open={pickerOpen} onPick={pickField} onClose={() => setPickerOpen(false)} />}
+            {!isMobile && <React.Suspense fallback={null}><FieldPicker open={pickerOpen} onPick={pickField} onClose={() => setPickerOpen(false)} /></React.Suspense>}
         </div>
     );
 };
