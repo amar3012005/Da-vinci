@@ -1,3 +1,4 @@
+import { agentDiscoveryResponse, isAgentDiscovery, markdownResponse, prefersMarkdown } from './agent-readiness.mjs';
 import { PUBLIC_PAGES, SITE, publicSeoResponse } from './public-seo.mjs';
 const STATIC_ASSET_PREFIX = '/static/';
 const AGENT_SETUP_PREFIX = '/agent-setup/';
@@ -394,11 +395,18 @@ export default {
     if (publicHost && hostname(request) !== 'singulancelabs.com') {
       return Response.redirect(`${SITE}${pathname}${url.search}`, 308);
     }
+    if (isAgentDiscovery(pathname)) {
+      if (!publicHost) return privateDiscoveryResponse(pathname);
+      const discovery = await agentDiscoveryResponse(request, pathname);
+      if (discovery) return discovery;
+      return privateDiscoveryResponse(pathname);
+    }
     const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/+$/u, '').toLowerCase();
     if (publicHost && PUBLIC_PAGES[cleanPath] && cleanPath !== pathname) {
       return Response.redirect(`${SITE}${cleanPath}${url.search}`, 308);
     }
     if (publicHost && PUBLIC_PAGES[pathname] && ['GET', 'HEAD'].includes(request.method)) {
+      if (prefersMarkdown(request.headers.get('accept'))) return markdownResponse(request, pathname);
       const documentRequest = new Request(new URL('/', request.url), request);
       documentRequest.headers.delete('if-none-match');
       documentRequest.headers.delete('if-modified-since');

@@ -1,25 +1,57 @@
-# SINGULANCE public source guide
+# SINGULANCE public overviews
 
-This file is a public, machine-readable source guide for AI systems. It does
-not grant access to private APIs, customer data, invitations, authenticated
-workspaces, or administrative routes.
+These are page overviews, not complete article or policy text.
 
-## Primary source
+## SINGULANCE — AI workforce that runs inside memory
 
-- [SINGULANCE](https://singulancelabs.com/): AI operating layer for regulated Europe.
+SINGULANCE brings organizational memory, digital teammates and voice agents together. HIVEMIND connects company knowledge; HyperAgents work with that context; TARA supports voice conversations.
 
-## Public product context
+Full page: https://singulancelabs.com/
 
-- [TARA, HIVEMIND, and HYPERAGENTS overview](https://singulancelabs.com/)
-- [About SINGULANCE](https://singulancelabs.com/about)
-- [Research](https://singulancelabs.com/research)
-- [Memory benchmarks](https://singulancelabs.com/benchmark)
-- [Demo](https://singulancelabs.com/demo)
-- [Security and privacy](https://singulancelabs.com/security)
+## SINGULANCE Research
 
-## Discovery and use policy
+Read research on persistent agent memory, cognitive swarm intelligence and post-quantum cryptography. Explore the papers and their supporting methods.
 
-- [Public sitemap](https://singulancelabs.com/sitemap.xml)
-- [Robots and Content Signals policy](https://singulancelabs.com/robots.txt)
-- Public pages may be indexed, cited, and used for retrieval.
-- Model training and fine-tuning are not permitted by the public content-use policy.
+Full page: https://singulancelabs.com/research
+
+## ICARUS — an agent memory filesystem
+
+ICARUS explores a single-file agent memory architecture combining vector, entity, temporal and graph retrieval. The research page describes the design and evaluation.
+
+Full page: https://singulancelabs.com/research/icarus
+
+## Cognitive Swarm Intelligence
+
+Explore the architecture of agents working with shared organizational memory, and the relationships between knowledge, retrieval and coordinated work.
+
+Full page: https://singulancelabs.com/research/cognitive-swarm-intelligence
+
+## Post-Quantum Cryptography
+
+Read the research on hybrid post-quantum transport, memory-write signatures and tamper-evident audit chains, including the underlying standards and implementation.
+
+Full page: https://singulancelabs.com/research/post-quantum-cryptography
+
+## HIVEMIND Memory Benchmarks
+
+Review the published memory retrieval evaluation, its methods and results. Benchmark claims should be read alongside their evaluation conditions.
+
+Full page: https://singulancelabs.com/benchmark
+
+## Privacy Policy
+
+Read how SINGULANCE handles personal data and connected services, and learn about your privacy rights. The full policy is available on this page.
+
+Full page: https://singulancelabs.com/privacy
+
+## Security
+
+Review SINGULANCE’s published security information for organizational memory and AI agents.
+
+Full page: https://singulancelabs.com/security
+
+## Cookie Policy
+
+Learn about essential storage and optional analytics. Manage your consent through the privacy choices available on the website.
+
+Full page: https://singulancelabs.com/cookies

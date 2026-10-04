@@ -1,72 +1,27 @@
 # SINGULANCE
 
-> The AI operating layer for regulated Europe: an AI workforce that runs inside organizational memory.
+> Public research and product information.
 
-SINGULANCE builds AI products for organizations that need persistent memory,
-multi-agent coordination, voice interaction, and European data-residency
-options. Public information on this hostname may be indexed, cited, and used
-as retrieval input. It is not licensed for model training or fine-tuning.
+Markdown links below provide concise overviews. Canonical HTML links in each overview contain the complete article or policy. Private workspaces are not included.
 
-Primary domain: https://singulancelabs.com
-Alternate public domain: https://davinciai.eu
-Also known as: SINGULANCE AI, Singulance.
+## Public reading list
+- [SINGULANCE — AI workforce that runs inside memory](https://singulancelabs.com/index.md): Discover HIVEMIND organizational memory, HyperAgents digital teammates and TARA voice agents. Explore SINGULANCE research and AI workforce tools.
+- [SINGULANCE Research](https://singulancelabs.com/research/index.md): Explore SINGULANCE research on agent memory, cognitive swarm intelligence and post-quantum cryptography, with published methods and benchmarks.
+- [ICARUS — an agent memory filesystem](https://singulancelabs.com/research/icarus/index.md): Explore ICARUS, SINGULANCE’s agent memory filesystem combining vector, entity, temporal and graph retrieval in one file. Read the research and methods.
+- [Cognitive Swarm Intelligence](https://singulancelabs.com/research/cognitive-swarm-intelligence/index.md): Read SINGULANCE research on cognitive swarm intelligence: shared organizational memory, coordinated agents and the architecture behind HIVEMIND.
+- [Post-Quantum Cryptography](https://singulancelabs.com/research/post-quantum-cryptography/index.md): Explore SINGULANCE’s research on hybrid post-quantum transport, signed memory writes and tamper-evident audit chains for organizational AI systems.
+- [HIVEMIND Memory Benchmarks](https://singulancelabs.com/benchmark/index.md): Review HIVEMIND memory retrieval benchmarks, evaluation methods and published results. Explore the evidence behind SINGULANCE’s memory research.
+- [Privacy Policy](https://singulancelabs.com/privacy/index.md): Read SINGULANCE’s privacy policy, including information about personal data, connected services, data protection and your privacy rights.
+- [Security](https://singulancelabs.com/security/index.md): Learn about SINGULANCE security practices and data protection for organizational memory and AI agents. Review the published security information.
+- [Cookie Policy](https://singulancelabs.com/cookies/index.md): Read SINGULANCE’s cookie policy and learn about essential storage, optional analytics and how to manage your privacy and cookie preferences.
 
-## Products
+## Workspace
+- [Open HIVEMIND](https://next.singulancelabs.com/): Brain, HyperAgents and Tara; requires user authorization.
+- [MCP setup](https://next.singulancelabs.com/hivemind/app/mcp): authenticated account connection settings.
 
-- [TARA](https://singulancelabs.com/): Enterprise voice-agent product for calls, lead qualification, appointment booking, and support.
-- [HIVEMIND](https://singulancelabs.com/): Persistent organizational memory with semantic retrieval, graph-based knowledge, and MCP-compatible integration.
-- HYPERAGENTS: A coordinated digital workforce grounded in HIVEMIND memory. The product workspace is authenticated and intentionally not crawlable.
+## Authentication and capabilities
+- [Authentication](https://singulancelabs.com/auth.md)
+- [API catalog](https://singulancelabs.com/.well-known/api-catalog)
+- [Agent skills](https://singulancelabs.com/.well-known/agent-skills/index.json)
 
-## Capabilities
-
-- Semantic retrieval over organizational knowledge.
-- Graph-based memory and cross-agent context sharing.
-- MCP-compatible integration for AI assistants.
-- Voice-agent workflows and multilingual customer interactions.
-- Coordinated multi-agent operations for approved business workflows.
-- European deployment and data-residency options for regulated organizations.
-
-## Key public pages
-
-- [Homepage](https://singulancelabs.com/): Product overview and the SINGULANCE stack.
-- [About](https://singulancelabs.com/about): Company information.
-- [Research](https://singulancelabs.com/research): Public research material.
-- [Demo](https://singulancelabs.com/demo): Product demonstration.
-- [Benchmark](https://singulancelabs.com/benchmark): Memory benchmark results.
-- [Security](https://singulancelabs.com/security): Security and privacy information.
-- [Sitemap](https://singulancelabs.com/sitemap.xml): Public page inventory.
-- [Crawl policy](https://singulancelabs.com/robots.txt): Public crawling and content-use policy.
-
-## FAQ
-
-### What is SINGULANCE?
-
-SINGULANCE is an AI operating layer for regulated Europe, with TARA voice
-workflows, HIVEMIND persistent memory, and HYPERAGENTS multi-agent operations.
-
-### What is HIVEMIND?
-
-HIVEMIND is SINGULANCE's persistent organizational memory product. It provides
-semantic retrieval, graph-based knowledge, cross-agent context sharing, and
-MCP-compatible integration.
-
-### What is TARA?
-
-TARA is SINGULANCE's enterprise voice-agent product for calls, lead
-qualification, appointment scheduling, and support.
-
-### What are HYPERAGENTS?
-
-HYPERAGENTS are coordinated digital employees grounded in HIVEMIND memory.
-
-## Crawling and content use
-
-- Public marketing, research, benchmark, and security pages may be indexed and cited.
-- Authenticated workspaces, invitations, APIs, admin surfaces, and preview hosts are not public sources.
-- `robots.txt` declares `search=yes`, `ai-input=yes`, and `ai-train=no` for the public marketing site.
-- The public source inventory is available at https://singulancelabs.com/sitemap.xml.
-
-## Contact
-
-- Email: enterprise@singulancelabs.com
-- Website: https://singulancelabs.com
+Search and AI retrieval input are allowed; model training is not authorized.
