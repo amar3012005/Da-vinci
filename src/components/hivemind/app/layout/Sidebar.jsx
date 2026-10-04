@@ -391,6 +391,9 @@ export default function Sidebar({
             </div>
           </div>
         ))}
+        {teamMode && location.pathname.startsWith('/hivemind/app/employee/harness') && (
+          <div data-hivemind-artifacts-seat data-collapsed={collapsed || undefined} />
+        )}
       </nav>
 
       {/* Fixed bottom: Account nav + upgrade banner + user/logout */}
