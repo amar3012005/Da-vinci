@@ -26,7 +26,7 @@ const ease = [0.16, 1, 0.3, 1];
 const COVER = '/singulance-cover-1600.webp';
 const COVER_AVIF = '/singulance-cover-1600.avif';
 const COVER_MOBILE = '/singulance-cover-900.webp';
-const COVER_MOBILE_AVIF = '/singulance-cover-900.avif';
+const MOBILE_SRCSET = '/singulance-cover-mobile-450.webp 450w, /singulance-cover-mobile-750.webp 750w, /singulance-cover-900.webp 900w';
 
 const useHeroMode = () => {
   const initial = () => typeof window !== 'undefined' && !window.matchMedia('(min-width: 768px)').matches ? 'static-mobile' : 'static-desktop';
@@ -184,16 +184,14 @@ const MobileHeroBand = ({ water, onToggleMotion }) => (
       {water ? (
         <Suspense fallback={
           <picture>
-            <source srcSet={COVER_MOBILE_AVIF} type="image/avif" />
-            <img src={COVER_MOBILE} width={900} height={563} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" fetchpriority="high" />
+            <img src={COVER_MOBILE} srcSet={MOBILE_SRCSET} sizes="100vw" width={900} height={563} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" fetchpriority="high" />
           </picture>
         }>
           <CinematicPlate src={COVER_MOBILE} zoom={1} warp={1} bloom={0.5} tint={[0.04, 0.015, 0.0]} />
         </Suspense>
       ) : (
         <picture>
-          <source srcSet={COVER_MOBILE_AVIF} type="image/avif" />
-          <img src={COVER_MOBILE} width={900} height={563} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
+          <img src={COVER_MOBILE} srcSet={MOBILE_SRCSET} sizes="100vw" width={900} height={563} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
         </picture>
       )}
       <button type="button" aria-pressed={water} onClick={onToggleMotion}

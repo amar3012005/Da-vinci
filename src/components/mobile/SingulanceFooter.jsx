@@ -48,7 +48,7 @@ const SingulanceFooter = () => {
         <div className="grid grid-cols-2 gap-y-12 md:grid-cols-4 md:gap-y-0">
           {COLS.map((col, i) => (
             <div key={col.title} className={i > 0 ? 'md:border-l md:border-white/8 md:pl-8' : 'md:pr-8'}>
-              <h3 className="text-sm font-medium text-white/45">{col.title}</h3>
+              <h3 className="text-sm font-medium text-white/65">{col.title}</h3>
               <ul className="mt-6 space-y-4">
                 {col.links.map(([label, href]) => (
                   <li key={label}>
@@ -81,7 +81,7 @@ const SingulanceFooter = () => {
 
         {/* get app */}
         <div className="flex flex-col items-start gap-3 md:items-end">
-          <span className="text-sm text-white/45">Get HIVEMIND</span>
+          <span className="text-sm text-white/65">Get HIVEMIND</span>
           <div className="flex gap-3">
             <StoreBadge icon={ArrowUpRight} top="Your AI workspace" big="Open HIVEMIND" />
           </div>
