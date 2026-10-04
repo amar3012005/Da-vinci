@@ -29,6 +29,8 @@ const ThesisSection = () => {
       <div className="relative md:hidden">
         <img
           src={THESIS_PLATE}
+          width={1080}
+          height={1080}
           alt="SINGULANCE — beyond the horizon of intelligence"
           loading="lazy"
           decoding="async"
@@ -45,6 +47,8 @@ const ThesisSection = () => {
         <div className="absolute inset-0 left-1/2">
           <img
             src={THESIS_PLATE}
+          width={1080}
+          height={1080}
             alt=""
             loading="lazy"
             decoding="async"

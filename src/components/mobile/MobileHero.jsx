@@ -35,7 +35,7 @@ const useHeroMode = () => {
     const wide = window.matchMedia('(min-width: 768px)');
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     let cancelled = false;
-    const sync = () => setMode(wide.matches ? (reduced.matches ? 'static-desktop' : 'immersive') : reduced.matches ? 'static-mobile' : 'water-mobile');
+    const sync = () => setMode(wide.matches ? (reduced.matches ? 'static-desktop' : 'immersive') : 'static-mobile');
     // Give the poster and controls priority over loading the decorative canvas.
     const idle = window.requestIdleCallback
       ? window.requestIdleCallback(() => { if (!cancelled) sync(); }, { timeout: 2000 })
@@ -166,7 +166,7 @@ const DesktopHero = ({ immersive }) => (
 );
 
 /* ---------- mobile width-fit band ---------- */
-const MobileHeroBand = ({ water }) => (
+const MobileHeroBand = ({ water, onToggleMotion }) => (
   <section id="hero-m" className="relative flex min-h-[100svh] flex-col justify-center gap-8 pb-10 pt-24 md:hidden" style={{ background: '#05070f' }}>
     <motion.p
       initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2, ease }}
@@ -175,9 +175,9 @@ const MobileHeroBand = ({ water }) => (
       The AI Operating Layer for Regulated Europe
     </motion.p>
 
-    {/* full poster fit to screen edges (no side padding, no rounding), water shader */}
+    {/* Reserve the poster geometry before loading optional motion. */}
     <motion.div
-      initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.3, ease }}
+      initial={false}
       className="relative aspect-[1586/992] w-full overflow-hidden bg-[#05070f]"
       style={{ backgroundImage: `url(${COVER_LQIP})`, backgroundSize: 'cover' }}
     >
@@ -196,6 +196,10 @@ const MobileHeroBand = ({ water }) => (
           <img src={COVER_MOBILE} width={900} height={563} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
         </picture>
       )}
+      <button type="button" aria-pressed={water} onClick={onToggleMotion}
+        className="absolute bottom-3 right-3 z-10 rounded-full border border-white/40 bg-black/80 px-3 py-2 text-xs text-white">
+        {water ? 'Pause motion' : 'Play motion'}
+      </button>
     </motion.div>
 
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.45, ease }} className="w-full">
@@ -219,9 +223,10 @@ const MobileHeroBand = ({ water }) => (
 
 const MobileHero = () => {
   const mode = useHeroMode();
+  const [mobileMotion, setMobileMotion] = useState(false);
   return (
     <>
-      {mode.includes('mobile') ? <MobileHeroBand water={mode === 'water-mobile'} /> : <DesktopHero immersive={mode === 'immersive'} />}
+      {mode.includes('mobile') ? <MobileHeroBand water={mobileMotion} onToggleMotion={() => setMobileMotion((value) => !value)} /> : <DesktopHero immersive={mode === 'immersive'} />}
     </>
   );
 };

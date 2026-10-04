@@ -37,3 +37,11 @@ Avoid buying ranking links, automated comment links, link exchanges at scale and
 - This release reduces an update thumbnail from 340KB to 96KB, compresses the OG image, avoids loading hidden desktop/mobile heroes together and prioritizes the static poster before decorative canvas work. Quantify the live result separately; it does not establish a site-wide performance score.
 
 References: https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics ; https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap ; https://web.dev/articles/vitals
+
+## First live lab measurement and follow-up
+
+PageSpeed mobile on 2026-10-04 reported SEO 100, Accessibility 96, Best Practices 100 and Performance 44. FCP 1.7s, LCP 5.2s, TBT 33,610ms, CLS 0.078. Main-thread work was 41.7s, of which 40.8s was classified Other. This is a single synthetic run, not field Core Web Vitals.
+
+The follow-up keeps the mobile artwork static until the visitor chooses Play motion. It preserves the canvas as an optional experience, keeps desktop motion, reserves the thesis image dimensions and preloads the exact mobile AVIF only on the public homepage. A fresh PageSpeed run is required to judge the improvement.
+
+Google accepted the sitemap submission, but its initial processing report said Could not fetch. Browser and Googlebot-header HTTP checks retrieved the public homepage, robots and sitemap with 200. Search Console live inspection returned a generic Something went wrong message. This does not establish a site-side block; record the eventual processing result separately.
