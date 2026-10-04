@@ -29,6 +29,8 @@ const ThesisSection = () => {
       <div className="relative md:hidden">
         <img
           src={THESIS_PLATE}
+          srcSet="/thesis-greekgod-450.webp 450w, /thesis-greekgod-750.webp 750w, /thesis-greekgod.webp 1080w"
+          sizes="100vw"
           width={1080}
           height={1080}
           alt="SINGULANCE — beyond the horizon of intelligence"

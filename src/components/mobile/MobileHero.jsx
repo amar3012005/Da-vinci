@@ -27,6 +27,7 @@ const COVER = '/singulance-cover-1600.webp';
 const COVER_AVIF = '/singulance-cover-1600.avif';
 const COVER_MOBILE = '/singulance-cover-900.webp';
 const MOBILE_SRCSET = '/singulance-cover-mobile-450.webp 450w, /singulance-cover-mobile-750.webp 750w, /singulance-cover-900.webp 900w';
+const MOBILE_AVIF_SRCSET = '/singulance-cover-mobile-450.avif 450w, /singulance-cover-mobile-750.avif 750w, /singulance-cover-mobile-900.avif 900w';
 
 const useHeroMode = () => {
   const initial = () => typeof window !== 'undefined' && !window.matchMedia('(min-width: 768px)').matches ? 'static-mobile' : 'static-desktop';
@@ -184,6 +185,7 @@ const MobileHeroBand = ({ water, onToggleMotion }) => (
       {water ? (
         <Suspense fallback={
           <picture>
+            <source type="image/avif" srcSet={MOBILE_AVIF_SRCSET} sizes="100vw" />
             <img src={COVER_MOBILE} srcSet={MOBILE_SRCSET} sizes="100vw" width={900} height={563} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" fetchpriority="high" />
           </picture>
         }>
@@ -191,6 +193,7 @@ const MobileHeroBand = ({ water, onToggleMotion }) => (
         </Suspense>
       ) : (
         <picture>
+          <source type="image/avif" srcSet={MOBILE_AVIF_SRCSET} sizes="100vw" />
           <img src={COVER_MOBILE} srcSet={MOBILE_SRCSET} sizes="100vw" width={900} height={563} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
         </picture>
       )}
