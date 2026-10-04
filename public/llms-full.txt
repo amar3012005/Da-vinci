@@ -324,7 +324,7 @@ HIVEMIND operating system
 # Your company,
 working as one.
 
-BRAIN remembers. HYPERAGENTS execute. VOICE represents you.
+[BRAIN](https://singulancelabs.com/hivemind) remembers. [HYPERAGENTS](https://singulancelabs.com/hyperagents) execute. [VOICE](https://singulancelabs.com/tara) represents you.
 
 [Start your Hivemind](https://next.singulancelabs.com/hivemind/login)[Preparing…Universal](https://github.com/amar3012005/HIVEMIND/releases/latest)
 

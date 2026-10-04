@@ -99,9 +99,9 @@ const Hero = ({ desktop = false, profileName = null }) => (
 
       <Rise delay={0.2}>
         <p className="mx-auto mt-6 max-w-[22rem] text-[18px] leading-[1.55] text-[#5F5D57]">
-          <strong className="font-semibold text-[#0A0A0A]">BRAIN</strong> remembers.{' '}
-          <strong className="font-semibold text-[#0A0A0A]">HYPERAGENTS</strong> execute.{' '}
-          <strong className="font-semibold text-[#0A0A0A]">VOICE</strong> represents you.
+          <a href="https://singulancelabs.com/hivemind" aria-label="HIVEMIND Brain" className="font-semibold text-[#0A0A0A] underline decoration-[#117DFF]/30 underline-offset-4">BRAIN</a> remembers.{' '}
+          <a href="https://singulancelabs.com/hyperagents" aria-label="HYPERAGENTS" className="font-semibold text-[#0A0A0A] underline decoration-[#117DFF]/30 underline-offset-4">HYPERAGENTS</a> execute.{' '}
+          <a href="https://singulancelabs.com/tara" aria-label="TARA Voice" className="font-semibold text-[#0A0A0A] underline decoration-[#117DFF]/30 underline-offset-4">VOICE</a> represents you.
         </p>
       </Rise>
 
