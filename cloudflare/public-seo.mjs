@@ -1,4 +1,4 @@
-import RENDERED from './generated/public-renderings.json';
+import RENDERED from './generated/public-renderings.json' with { type: 'json' };
 import { DISCOVERY_LINKS } from './agent-readiness.mjs';
 import { SITE, OG_IMAGE, PUBLIC_PAGES, canonicalFor, schemaFor } from '../src/seo/public-pages.mjs';
 const escape = (value) => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

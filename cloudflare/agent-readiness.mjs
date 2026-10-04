@@ -1,4 +1,4 @@
-import RENDERED from './generated/public-renderings.json';
+import RENDERED from './generated/public-renderings.json' with { type: 'json' };
 import { PUBLIC_PAGES, SITE } from '../src/seo/public-pages.mjs';
 
 export const CORE = 'https://core.singulancelabs.com';
