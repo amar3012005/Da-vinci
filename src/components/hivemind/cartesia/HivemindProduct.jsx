@@ -179,7 +179,7 @@ const Hero = ({ profileName = null }) => {
 
           <Reveal delay={0.5}>
             <div className="mx-auto mt-[clamp(1rem,3vh,1.75rem)] max-w-[700px]">
-              <motion.a href={profileName ? '/hivemind/app/overview' : '/hivemind/login'} whileHover={{ y: -2, boxShadow: '0 16px 36px rgba(17,125,255,0.24)' }} whileTap={{ scale: 0.99 }}
+              <motion.a href={profileName ? 'https://next.singulancelabs.com/hivemind/app/overview' : 'https://next.singulancelabs.com/hivemind/login'} whileHover={{ y: -2, boxShadow: '0 16px 36px rgba(17,125,255,0.24)' }} whileTap={{ scale: 0.99 }}
                 className="group flex min-h-[68px] w-full items-center justify-between rounded-[10px] bg-[#117dff] px-5 text-white no-underline transition-colors hover:bg-[#006fe8] sm:px-7">
                 <span className="flex items-center gap-4">
                   <span className="flex h-9 w-9 items-center justify-center rounded-[6px] bg-white"><GoogleMark /></span>

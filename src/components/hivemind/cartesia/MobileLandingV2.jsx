@@ -106,7 +106,7 @@ const Hero = ({ desktop = false, profileName = null }) => (
       </Rise>
 
       <Rise delay={0.26} className={`mt-8 space-y-3 ${desktop ? 'md:mx-auto md:flex md:max-w-xl md:items-center md:justify-center md:gap-3 md:space-y-0' : ''}`}>
-        <a href={profileName ? '/hivemind/app/overview' : '/hivemind/login'} className="group flex min-h-14 w-full items-center justify-between rounded-xl bg-[#117DFF] px-5 text-white no-underline shadow-[0_16px_34px_rgba(17,125,255,.24)] transition-transform active:scale-[.99]">
+        <a href={profileName ? 'https://next.singulancelabs.com/hivemind/app/overview' : 'https://next.singulancelabs.com/hivemind/login'} className="group flex min-h-14 w-full items-center justify-between rounded-xl bg-[#117DFF] px-5 text-white no-underline shadow-[0_16px_34px_rgba(17,125,255,.24)] transition-transform active:scale-[.99]">
           <span className="font-['Space_Grotesk'] text-[16px] font-semibold">{profileName ? `Welcome back — ${profileName}` : 'Start your Hivemind'}</span>
           <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
         </a>

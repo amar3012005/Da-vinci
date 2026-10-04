@@ -90,6 +90,7 @@ const ReturningUserMarketingHomepage = () => {
 };
 
 function App() {
+  const isPublicProductHost = typeof window !== 'undefined' && ['singulancelabs.com', 'www.singulancelabs.com', 'next.singulancelabs.com'].includes(window.location.hostname);
   const isPlatformAdminHost =
     typeof window !== 'undefined' && window.location.hostname === PLATFORM_ADMIN_HOST;
   const isHivemindHost =
@@ -128,7 +129,7 @@ function App() {
         <Route path="/hivemind">
           {/* /hivemind index — PRODUCT_HOST (singulancelabs) shows the HIVEMIND product cover;
               the dedicated hivemind subdomain opens the app; marketing host redirects away. */}
-          <Route index element={PRODUCT_HOST
+          <Route index element={(PRODUCT_HOST || isPublicProductHost)
             ? <React.Suspense fallback={<PublicPageLoading />}><HivemindRedirect /></React.Suspense>
             : (isHivemindHost
               ? <React.Suspense fallback={<PublicPageLoading />}><HiveMindApp /></React.Suspense>
