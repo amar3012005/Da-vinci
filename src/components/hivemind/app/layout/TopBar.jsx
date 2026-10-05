@@ -74,7 +74,7 @@ function normalizeEmployees(payload) {
   return employees.filter((employee) => employee && (employee.id || employee.slug || employee.name));
 }
 
-export function HumationSystemSwitcher({ activeSection, onSectionChange, employees = [] }) {
+export function HumationSystemSwitcher({ activeSection, onSectionChange, employees = [], agentRoom = false }) {
   const team = useMemo(
     () => SECTIONS.map((_, index) => employees[index] || FALLBACK_HUMATION_TEAM[index]),
     [employees],
@@ -82,7 +82,7 @@ export function HumationSystemSwitcher({ activeSection, onSectionChange, employe
 
   // Agent rooms use compact text navigation; Brain and Voice retain their
   // existing product switcher presentation.
-  if (activeSection === 'hyperagents') {
+  if (agentRoom || activeSection === 'hyperagents') {
     return (
       <nav className="flex items-center gap-1" aria-label="Switch product">
         {SECTIONS.map((section) => (
@@ -200,7 +200,8 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
       {/* Section Toggle */}
       <div className="pointer-events-auto relative justify-self-center">
         <HumationSystemSwitcher
-          activeSection={activeSection}
+          activeSection={pagePath === '/hivemind/app/employee/harness' ? 'hyperagents' : activeSection}
+          agentRoom={pagePath === '/hivemind/app/employee/harness'}
           onSectionChange={onSectionChange}
           employees={organizationEmployees}
         />
