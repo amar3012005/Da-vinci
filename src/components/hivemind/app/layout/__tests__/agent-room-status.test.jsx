@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import AgentRoomStatus from '../AgentRoomStatus';
+import AgentRoomStatus, { aggregateAgentRooms } from '../AgentRoomStatus';
 
 const output = (room, collapsed = false) => renderToStaticMarkup(<AgentRoomStatus room={room} collapsed={collapsed} />);
 
@@ -27,3 +27,15 @@ test('collapsed sidebar retains accessible status without a long label', () => {
   expect(value).toContain('Action required');
   expect(value).toContain('aria-label="Working"');
 });
+
+ test('a newer idle room cannot hide another room activity or approval', () => {
+  const rooms = [
+    { id: 'ravi', updatedAt: 1, preview: 'Working', running: true, actionRequired: true, scheduled: true, unread: true },
+    { id: 'ravi', updatedAt: 2, preview: 'Latest', running: false },
+    { id: 'elena', updatedAt: 3, preview: 'Another agent', running: true },
+  ];
+  expect(aggregateAgentRooms(rooms, 'ravi')).toMatchObject({ preview: 'Latest', running: true, actionRequired: true, scheduled: true, unread: true });
+  expect(aggregateAgentRooms(rooms, 'elena')).toMatchObject({ preview: 'Another agent', actionRequired: false, scheduled: false, unread: false });
+  expect(aggregateAgentRooms(rooms, 'missing')).toBeUndefined();
+  expect(rooms[0].preview).toBe('Working');
+ });

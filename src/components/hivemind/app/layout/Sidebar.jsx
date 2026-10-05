@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BotAvatar } from 'bot-avatars';
 import BrainModeIcon from './BrainModeIcon';
-import AgentRoomStatus from './AgentRoomStatus';
+import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
 import VoiceModeIcon from './VoiceModeIcon';
 import {
   LayoutDashboard,
@@ -336,7 +336,7 @@ export default function Sidebar({
                   (location.pathname.startsWith(`${pathOnly}/`)
                     && !(pathOnly === '/hivemind/app/overview' && location.pathname === '/hivemind/app/overview/dreaming'));
                 const ItemLink = item.agent || item.runtime ? 'button' : NavLink;
-                const room = rooms.filter(room => room.id === (item.agent?.id || 'runtime')).sort((a,b) => b.updatedAt - a.updatedAt)[0];
+                const room = aggregateAgentRooms(rooms, item.agent?.id || 'runtime');
                 const hasChildren = item.children && item.children.length > 0;
 
                 return (

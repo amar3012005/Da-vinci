@@ -1,6 +1,20 @@
 import React from 'react';
 import { CalendarClock, LoaderCircle, CircleAlert } from 'lucide-react';
 
+/** Keep the newest preview while retaining activity in any authorized room. */
+export function aggregateAgentRooms(rooms, agentId) {
+  const matching = rooms.filter(room => room.id === agentId);
+  if (matching.length === 0) return undefined;
+  const latest = matching.reduce((current, room) => room.updatedAt > current.updatedAt ? room : current);
+  return {
+    ...latest,
+    running: matching.some(room => room.running === true),
+    unread: matching.some(room => room.unread === true),
+    actionRequired: matching.some(room => room.actionRequired === true),
+    scheduled: matching.some(room => room.scheduled === true),
+  };
+}
+
 /** Display only states published by the authenticated native room bridge. */
 export default function AgentRoomStatus({ room, collapsed = false }) {
   if (!room) return null;
