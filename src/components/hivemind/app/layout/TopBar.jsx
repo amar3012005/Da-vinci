@@ -197,15 +197,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
         </h1>
       </div>
 
-      {/* Section Toggle */}
-      <div className="pointer-events-auto relative justify-self-center">
-        {pagePath !== '/hivemind/app/employee/harness' && activeSection !== 'hyperagents' && <HumationSystemSwitcher
-          activeSection={pagePath === '/hivemind/app/employee/harness' ? 'hyperagents' : activeSection}
-          agentRoom={pagePath === '/hivemind/app/employee/harness'}
-          onSectionChange={onSectionChange}
-          employees={organizationEmployees}
-        />}
-      </div>
+      <div aria-hidden="true" />
 
       {/* Right: Actions */}
       <div className="pointer-events-auto flex items-center gap-2 justify-self-end">
