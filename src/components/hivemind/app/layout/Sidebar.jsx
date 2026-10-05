@@ -174,21 +174,51 @@ export default function Sidebar({
   const [openingAgent, setOpeningAgent] = useState(null);
   const [teamError, setTeamError] = useState('');
   const [rooms, setRooms] = useState([]);
+  const teamScope = useRef(null);
+  const [teamLoadError, setTeamLoadError] = useState(false);
+  const [teamRetry, setTeamRetry] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
-    setTeam([]);
-    if (user?.id) fetch('/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal })
-      .then(response => { if (!response.ok) throw new Error('team unavailable'); return response.json(); })
-      .then(value => setTeam((value.profiles || []).filter(agent => typeof agent.id === 'string' && typeof agent.name === 'string')))
-      .catch(() => {});
+    const scope = user?.id && org?.id ? `${user.id}:${org.id}` : null;
+    if (teamScope.current !== scope) {
+      teamScope.current = scope;
+      setTeam([]);
+      setTeamLoadError(false);
+    }
+    let retryTimer;
+    let attempts = 0;
+    const load = async () => {
+      if (!scope || controller.signal.aborted) return;
+      try {
+        const response = await fetch('/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal });
+        if (!response.ok) throw new Error('team unavailable');
+        const value = await response.json();
+        if (!Array.isArray(value.profiles)) throw new Error('invalid team response');
+        if (controller.signal.aborted || teamScope.current !== scope) return;
+        setTeam(value.profiles.filter(agent => typeof agent.id === 'string' && typeof agent.name === 'string'));
+        setTeamLoadError(false);
+      } catch {
+        if (controller.signal.aborted || teamScope.current !== scope) return;
+        setTeamLoadError(true);
+        if (++attempts < 3) retryTimer = setTimeout(load, attempts * 1500);
+      }
+    };
+    const refresh = () => { clearTimeout(retryTimer); attempts = 0; load(); };
+    load();
+    window.addEventListener('focus', refresh);
+    window.addEventListener('online', refresh);
+    return () => { controller.abort(); clearTimeout(retryTimer); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); };
+  }, [user?.id, org?.id, teamMode, teamRetry]);
+
+  useEffect(() => {
     const selection = event => setSelectedAgent(event.detail?.id || null);
     const activity = event => setRooms(event.detail?.rooms || []);
     setRooms([]);
     window.addEventListener('hivemind:agent-rooms', activity);
     window.addEventListener('hivemind:agent-selected', selection);
     window.dispatchEvent(new Event('hivemind:request-agent-rooms'));
-    return () => { controller.abort(); window.removeEventListener('hivemind:agent-selected', selection); window.removeEventListener('hivemind:agent-rooms', activity); };
+    return () => { window.removeEventListener('hivemind:agent-selected', selection); window.removeEventListener('hivemind:agent-rooms', activity); };
   }, [user?.id, org?.id]);
 
   const openAgent = async (event, agent) => {
@@ -281,6 +311,7 @@ export default function Sidebar({
         </div>
       </div>
 
+      {teamMode && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">Could not refresh our team. <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>Retry</button></p>}
       {teamError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{teamError}</p>}
       {/* Navigation */}
       <nav className="flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4">
