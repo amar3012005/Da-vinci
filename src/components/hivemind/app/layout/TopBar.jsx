@@ -215,8 +215,9 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
           <span className="hidden md:inline">{t('topbar.inviteTeam', 'Invite your Team')}</span>
         </button>
 
+        {mobileTeamToggle && <button type="button" aria-label="Open chat history" onClick={() => window.dispatchEvent(new Event('hivemind:mobile-history'))} className="min-h-[44px] px-2 rounded-full text-[12px] text-[#525252]">Recents</button>}
         {/* Language switcher */}
-        <div className="hidden md:block"><LangSwitcher /></div>
+        <div className={mobileTeamToggle ? "block" : "hidden md:block"}><LangSwitcher /></div>
 
 
         {/* Health */}

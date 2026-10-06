@@ -1,5 +1,6 @@
+import NativeMobileAppsSheet from './NativeMobileAppsSheet';
 import { bindNativeChatViewport } from './mobile-chat-viewport';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
@@ -278,6 +279,8 @@ export default function AppShell() {
   }, [isSelfHost, shGate]);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileAppsOpen, setMobileAppsOpen] = useState(() => new URLSearchParams(window.location.search).get('native_apps') === '1');
+  const closeMobileApps = useCallback(() => setMobileAppsOpen(false), []);
   const [mobileTeamOpen, setMobileTeamOpen] = useState(false);
   const employeeRoom = location.pathname.startsWith('/hivemind/app/employee/harness');
   const nativeChatRoom = employeeRoom || /^\/hivemind\/app(?:\/overview(?:\/(?:new|session\/[^/]+))?)?\/?$/u.test(location.pathname);
@@ -297,6 +300,12 @@ export default function AppShell() {
     if (!nativeChatRoom || !employeeCompact) return undefined;
     return bindNativeChatViewport(window, document.documentElement.style);
   }, [nativeChatRoom, employeeCompact]);
+  useEffect(() => {
+    if (!nativeChatRoom) return undefined;
+    const openApps = () => setMobileAppsOpen(true);
+    window.addEventListener('hivemind:mobile-connectors', openApps);
+    return () => window.removeEventListener('hivemind:mobile-connectors', openApps);
+  }, [nativeChatRoom]);
   const [activeSection, setActiveSection] = useState(() => sectionForPath(location.pathname));
   const [productUpgrade, setProductUpgrade] = useState(null);
   useEffect(() => {
@@ -427,6 +436,7 @@ export default function AppShell() {
         >
           <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />
           {nativeChatRoom && overlayNavigation && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
+          {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} />}
           <main className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>

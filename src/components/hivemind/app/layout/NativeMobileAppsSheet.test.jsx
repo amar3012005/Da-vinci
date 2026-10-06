@@ -1,0 +1,30 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { act } from 'react';
+import NativeMobileAppsSheet from './NativeMobileAppsSheet';
+import apiClient from '../shared/api-client';
+jest.mock('../shared/api-client', () => ({ __esModule: true, default: { listComposioToolkits: jest.fn(), createComposioConnectLink: jest.fn(), startConnectorOAuth: jest.fn() } }));
+global.IS_REACT_ACT_ENVIRONMENT = true;
+let container, root;
+beforeEach(() => { jest.useFakeTimers(); container = document.createElement('div'); document.body.append(container); root = createRoot(container); apiClient.listComposioToolkits.mockResolvedValue({ toolkits: [{ slug: 'gmail', name: 'Gmail', connected: true }, { slug: 'slack', name: 'Slack', connected: false }] }); });
+afterEach(() => { act(() => root.unmount()); container.remove(); jest.useRealTimers(); jest.clearAllMocks(); });
+test('loads authorized connected status and chooses an app without sending', async () => {
+  const close = jest.fn(); const selected = jest.fn(); window.addEventListener('hivemind:connector-selected', selected);
+  await act(async () => { root.render(<NativeMobileAppsSheet onClose={close} />); });
+  await act(async () => { jest.advanceTimersByTime(200); });
+  expect(apiClient.listComposioToolkits).toHaveBeenCalledWith({ search: '', cursor: null, limit: 40 });
+  const connected = [...container.querySelectorAll('button')].find(button => button.textContent === 'Connected');
+  act(() => connected.click());
+  expect(selected).toHaveBeenCalledTimes(1); expect(selected.mock.calls[0][0].detail.name).toBe('Gmail');
+  expect(close).toHaveBeenCalledTimes(1); expect(apiClient.createComposioConnectLink).not.toHaveBeenCalled();
+  window.removeEventListener('hivemind:connector-selected', selected);
+});
+test('Escape/backdrop closes and focus is contained in the sheet', async () => {
+  const close = jest.fn(); await act(async () => { root.render(<NativeMobileAppsSheet onClose={close} />); });
+  const first = container.querySelector('[aria-label="Close apps"]');
+  expect(document.activeElement).toBe(first);
+  act(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  expect(close).toHaveBeenCalledTimes(1);
+  act(() => container.querySelector('[aria-label="Close apps and connectors"]').click());
+  expect(close).toHaveBeenCalledTimes(2);
+});

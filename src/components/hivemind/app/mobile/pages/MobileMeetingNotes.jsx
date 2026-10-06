@@ -333,7 +333,11 @@ export default function MobileMeetingNotes() {
   const primaryLabel = qrec.active ? 'Open current meeting' : 'Start meeting';
 
   return (
-    <MobileShell title="AI Meeting Notes">
+    <MobileShell title="AI Meeting Notes" rightAction={(() => {
+      const target = new URLSearchParams(window.location.search).get('native_chat_return');
+      return /^\/hivemind\/app\/(?:overview|employee\/harness)(?:\/(?:new|session\/[^/]+))?\/?$/u.test(target || '')
+        ? <a href={target} className="min-h-[44px] inline-flex items-center text-[13px] text-[#117dff]">Back to chat</a> : null;
+    })()}>
       <div className="px-4 pt-2 pb-10">
         <div className="flex items-center gap-1.5 text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1">
           <MeetingNotesIcon size={12} /> HIVEMIND
