@@ -1,9 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import LegacyMobileChatHeader from '../mobile/LegacyMobileChatHeader';
+import { useAuth } from '../auth/AuthProvider';
+import BrainModeIcon from './BrainModeIcon';
+import './MobileBrainHeaderActions.css';
 
 export default function MobileBrainHeaderActions() {
   const { i18n } = useTranslation('dashboard');
+  const { org } = useAuth() || {};
+  const organization = String(org?.name || org?.slug || '').trim();
   const [languageOpen, setLanguageOpen] = useState(false);
   const host = useRef(null);
   useEffect(() => {
@@ -18,6 +23,11 @@ export default function MobileBrainHeaderActions() {
     return () => document.removeEventListener('keydown', dismiss);
   }, [languageOpen]);
   return <div ref={host}>
+    <div className="hm-mobile-brain-header-identity" aria-label={organization ? `BRAIN · ${organization}` : 'BRAIN'}>
+      <span className="hm-mobile-brain-header-icon" aria-hidden="true"><BrainModeIcon size={23} /></span>
+      <span className="hm-mobile-brain-header-title">BRAIN</span>
+      {organization && <span className="hm-mobile-brain-header-org" title={organization}>{organization}</span>}
+    </div>
     <LegacyMobileChatHeader language={i18n.language} languageOpen={languageOpen}
       onLanguageToggle={() => setLanguageOpen(v => !v)} onLanguageClose={() => setLanguageOpen(false)}
       onLanguageSelect={code => { i18n.changeLanguage(code); setLanguageOpen(false); }}

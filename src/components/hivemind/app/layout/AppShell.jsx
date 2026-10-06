@@ -444,7 +444,7 @@ export default function AppShell() {
     <QuickRecorderProvider>
       <TeamProvider>
         <div data-hivemind-app-shell data-native-chat-shell data-mobile-brain-user-name={mobileBrainUserName(user, brainChat && brainPhone)} data-mobile-brain-greeting={mobileBrainGreeting(user, brainChat && brainPhone, t)} className="font-[Inter,ui-sans-serif,system-ui,sans-serif]" style={{ '--hm-harness-center-offset': '0px' }}>
-          <MobileShell noScroll bareHeader nativeChatViewport activeNavPath="/hivemind/m/chat">
+          <MobileShell noScroll bareHeader showBareLogo={false} nativeChatViewport activeNavPath="/hivemind/m/chat">
             <MobileBrainHeaderActions />
             <main className="flex-1 min-h-0 overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 56px)' }}><Outlet /></main>
             {mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy />}

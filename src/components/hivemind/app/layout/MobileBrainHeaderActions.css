@@ -1,0 +1,18 @@
+/* Phone Brain chrome only. Reserve the original language/Recents cluster. */
+.hm-mobile-brain-header-identity {
+  position:absolute;
+  top:calc(env(safe-area-inset-top, 0px) + 9px);
+  left:56px;
+  right:180px;
+  height:36px;
+  z-index:40;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  min-width:0;
+  color:#3d3d3a;
+  pointer-events:none;
+}
+.hm-mobile-brain-header-icon { display:flex; flex:none; }
+.hm-mobile-brain-header-title { flex:none; font-size:11px; font-weight:700; letter-spacing:.02em; }
+.hm-mobile-brain-header-org { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; line-height:14px; color:#737373; }

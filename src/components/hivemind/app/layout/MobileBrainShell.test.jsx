@@ -18,7 +18,7 @@ jest.mock('react-router-dom', () => ({ useLocation: () => ({ pathname: mockPath 
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ org: { name: 'SINGULANCE' } }) }));
 jest.mock('../shared/useUsage', () => ({ useUsage: () => ({ usage: {} }) }));
 jest.mock('../shared/CreditBalance', () => () => null);
-jest.mock('../shared/SingulanceMark', () => () => null);
+jest.mock('../shared/SingulanceMark', () => () => <span data-legacy-fish-logo />);
 jest.mock('../shared/SingulanceBrand', () => () => <span>SINGULANCE</span>);
 jest.mock('../mobile/SingulanceSplash', () => () => null);
 jest.mock('../shared/hooks', () => ({ useHealthStatus: () => true }));
@@ -102,8 +102,12 @@ test('legacy Apps traps focus and closes with Escape', () => {
 
 test('native Brain uses original bare chat header and identical sidebar destinations', async () => {
   mockPath = '/hivemind/app/overview/new';
-  await act(async () => root.render(<MobileShell noScroll bareHeader nativeChatViewport activeNavPath="/hivemind/m/chat"><MobileBrainHeaderActions /><div>Native chat</div></MobileShell>));
+  await act(async () => root.render(<MobileShell noScroll bareHeader showBareLogo={false} nativeChatViewport activeNavPath="/hivemind/m/chat"><MobileBrainHeaderActions /><div>Native chat</div></MobileShell>));
   expect(host.querySelector('[data-mobile-native-chat]')).not.toBeNull();
+  expect(host.querySelector('[data-legacy-fish-logo]')).toBeNull();
+  expect(host.querySelector('.hm-mobile-brain-header-title').textContent).toBe('BRAIN');
+  expect(host.querySelector('.hm-mobile-brain-header-org').textContent).toBe('SINGULANCE');
+  expect(host.querySelector('.hm-mobile-brain-header-icon svg').getAttribute('aria-label')).toBe('Brain');
   expect(host.querySelector('[data-mobile-brain-header]')).toBeNull();
   act(() => host.querySelector('[aria-label="Menu"]').click());
   const nav = host.querySelector('nav');
@@ -118,6 +122,7 @@ test('other legacy pages retain default MobileShell header and viewport', () => 
   mockPath = '/hivemind/m/connectors';
   render(<MobileShell><div>Legacy connectors</div></MobileShell>);
   expect(host.querySelector('[data-mobile-native-chat]')).toBeNull();
+  expect(host.querySelector('.hm-mobile-brain-header-identity')).toBeNull();
   expect(host.querySelector('[aria-label="Menu"]')).not.toBeNull();
   expect(host.querySelector('[data-mobile-brain-header]')).toBeNull();
 });
