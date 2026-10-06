@@ -1,3 +1,4 @@
+import MobileBrainAddSheet from './MobileBrainAddSheet';
 import NativeMobileAppsSheet from './NativeMobileAppsSheet';
 import { bindNativeChatViewport } from './mobile-chat-viewport';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -280,10 +281,27 @@ export default function AppShell() {
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileAppsOpen, setMobileAppsOpen] = useState(() => new URLSearchParams(window.location.search).get('native_apps') === '1');
+  const [mobileBrainAddOpen, setMobileBrainAddOpen] = useState(false);
+  const closeMobileBrainAdd = useCallback(() => setMobileBrainAddOpen(false), []);
   const closeMobileApps = useCallback(() => setMobileAppsOpen(false), []);
   const [mobileTeamOpen, setMobileTeamOpen] = useState(false);
   const employeeRoom = location.pathname.startsWith('/hivemind/app/employee/harness');
   const nativeChatRoom = employeeRoom || /^\/hivemind\/app(?:\/overview(?:\/(?:new|session\/[^/]+))?)?\/?$/u.test(location.pathname);
+  const brainChat = /^\/hivemind\/app\/overview(?:\/(?:new|session\/[^/]+))?\/?$/.test(location.pathname);
+  const [brainPhone, setBrainPhone] = useState(() => window.matchMedia('(max-width: 600px)').matches);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 600px)');
+    const update = () => { setBrainPhone(query.matches); setMobileBrainAddOpen(false); };
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  useEffect(() => { setMobileBrainAddOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    if (!brainChat || !brainPhone) return undefined;
+    const openAdd = () => setMobileBrainAddOpen(true);
+    window.addEventListener('hivemind:mobile-brain-add', openAdd);
+    return () => window.removeEventListener('hivemind:mobile-brain-add', openAdd);
+  }, [brainChat, brainPhone]);
   const [employeeCompact, setEmployeeCompact] = useState(() => window.matchMedia('(max-width: 900px)').matches);
   useEffect(() => {
     const query = window.matchMedia('(max-width: 900px)');
@@ -436,7 +454,8 @@ export default function AppShell() {
         >
           <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />
           {nativeChatRoom && overlayNavigation && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
-          {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} />}
+          {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainChat && brainPhone} />}
+          {brainChat && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
           <main className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>

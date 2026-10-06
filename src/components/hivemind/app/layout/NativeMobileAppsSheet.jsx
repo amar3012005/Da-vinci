@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Cable, Search, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { LegacyMobileAppsSheet } from '../mobile/LegacyChatSheets';
 
 /** Mobile presentation of the existing authorized connector catalog and OAuth flow. */
-export default function NativeMobileAppsSheet({ onClose }) {
+export default function NativeMobileAppsSheet({ onClose, legacy = false }) {
   const panel = useRef(null);
   const [query, setQuery] = useState('');
   const [toolkits, setToolkits] = useState([]);
@@ -16,20 +17,22 @@ export default function NativeMobileAppsSheet({ onClose }) {
     const current = ++generation.current;
     setLoading(true); setError('');
     try {
-      const data = await apiClient.listComposioToolkits({ search, cursor: after, limit: 40 });
+      const data = await apiClient.listComposioToolkits(legacy ? { catalog: true, limit: 100 } : { search, cursor: after, limit: 40 });
       if (current !== generation.current) return;
       setToolkits(previous => after ? [...previous, ...(data.toolkits || [])] : data.toolkits || []);
       setCursor(data.next_cursor || null);
     } catch (err) { if (current === generation.current) setError(err?.message || 'Apps could not be loaded.'); }
     finally { if (current === generation.current) setLoading(false); }
-  }, []);
+  }, [legacy]);
+  const remoteQuery = legacy ? '' : query;
   useEffect(() => {
-    const timer = setTimeout(() => load(query, null), 200);
+    const timer = setTimeout(() => load(remoteQuery, null), 200);
     return () => { clearTimeout(timer); generation.current += 1; };
-  }, [query, load]);
+  }, [remoteQuery, load]);
   useEffect(() => {
+    if (legacy) return undefined;
     const previous = document.querySelector('[data-native-mobile-add]') || document.activeElement;
-    const elements = () => [...panel.current.querySelectorAll('button:not(:disabled), input, a[href]')];
+    const elements = () => [...(panel.current?.querySelectorAll('button:not(:disabled), input, a[href]') || [])];
     elements()[0]?.focus();
     const key = event => {
       if (event.key === 'Escape') { event.preventDefault(); onClose(); }
@@ -41,8 +44,9 @@ export default function NativeMobileAppsSheet({ onClose }) {
     };
     document.addEventListener('keydown', key);
     return () => { document.removeEventListener('keydown', key); previous?.focus?.(); };
-  }, [onClose]);
+  }, [onClose, legacy]);
   const choose = async toolkit => {
+    if (connecting !== null) return;
     if (toolkit.connected) {
       window.dispatchEvent(new CustomEvent('hivemind:connector-selected', { detail: { name: toolkit.name } }));
       onClose(); return;
@@ -69,6 +73,10 @@ export default function NativeMobileAppsSheet({ onClose }) {
     } catch (err) { setError(err?.response?.data?.error || err?.message || 'Could not connect this app.'); }
     finally { setConnecting(null); }
   };
+  if (legacy) return <div ref={panel} data-legacy-brain-apps>
+    <LegacyMobileAppsSheet connectorSheetOpen onClose={onClose} connectorSearch={query} setConnectorSearch={setQuery} visibleToolkits={[...toolkits].filter(toolkit => `${toolkit.name || ''} ${toolkit.slug || ''}`.toLowerCase().includes(query.trim().toLowerCase())).sort((left, right) => Number(Boolean(right.connected)) - Number(Boolean(left.connected)) || String(left.name || left.slug).localeCompare(String(right.name || right.slug)))} chooseToolkit={choose} />
+    {(error || loading) && <p role={error ? 'alert' : 'status'} className="fixed bottom-1 left-4 z-[80] text-[11px] text-[#777]">{error || 'Loading apps…'}</p>}
+  </div>;
   return <div className="fixed inset-0 z-[90] flex items-end" data-native-mobile-apps>
     <button type="button" className="absolute inset-0 bg-black/35" aria-label="Close apps and connectors" onClick={onClose} />
     <section ref={panel} role="dialog" aria-modal="true" aria-label="Apps and connectors" className="relative w-full rounded-t-[24px] bg-white text-[#202020] px-5 pt-3 max-h-[calc(100dvh-64px)] overflow-y-auto overscroll-contain" style={{ paddingBottom: 'max(18px, env(safe-area-inset-bottom))' }}>
