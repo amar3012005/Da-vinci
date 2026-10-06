@@ -1,0 +1,16 @@
+/* Only compact native chat frames own this viewport. Legacy /m pages and
+   desktop layouts keep their existing shell dimensions. */
+[data-native-compact-chat] {
+  position:fixed;
+  inset:0;
+  bottom:auto;
+  height:var(--hm-app-viewport-height, 100dvh);
+  min-height:0;
+  overflow:hidden;
+}
+[data-native-compact-chat] [data-native-chat-main] {
+  height:calc(var(--hm-app-viewport-height, 100dvh) - 56px - env(safe-area-inset-top, 0px));
+  min-height:0;
+  overflow:hidden;
+}
+[data-native-compact-chat] [data-os-harness-rooms] { height:100%; }

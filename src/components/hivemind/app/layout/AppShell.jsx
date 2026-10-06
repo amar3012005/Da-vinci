@@ -5,6 +5,7 @@ import MobileBrainAddSheet from './MobileBrainAddSheet';
 import MobileBrainHeaderActions from './MobileBrainHeaderActions';
 import NativeMobileAppsSheet from './NativeMobileAppsSheet';
 import { bindNativeChatViewport } from './mobile-chat-viewport';
+import './mobile-chat-viewport.css';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -446,7 +447,7 @@ export default function AppShell() {
         <div data-hivemind-app-shell data-native-chat-shell data-mobile-brain-user-name={mobileBrainUserName(user, brainChat && brainPhone)} data-mobile-brain-greeting={mobileBrainGreeting(user, brainChat && brainPhone, t)} className="font-[Inter,ui-sans-serif,system-ui,sans-serif]" style={{ '--hm-harness-center-offset': '0px' }}>
           <MobileShell noScroll bareHeader showBareLogo={false} nativeChatViewport activeNavPath="/hivemind/m/chat">
             <MobileBrainHeaderActions />
-            <main className="flex-1 min-h-0 overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 56px)' }}><Outlet /></main>
+            <main className="flex-1 min-h-0 overflow-hidden" style={{ paddingTop: '56px' }}><Outlet /></main>
             {mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy />}
             <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />
             <GlobalUploadStrip />
@@ -464,7 +465,7 @@ export default function AppShell() {
   return (
     <QuickRecorderProvider>
     <TeamProvider>
-      <div data-hivemind-app-shell data-native-chat-shell={nativeChatRoom || undefined} className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
+      <div data-hivemind-app-shell data-native-chat-shell={nativeChatRoom || undefined} data-native-compact-chat={(nativeChatRoom && employeeCompact) || undefined} className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
         {!overlayNavigation && !graphFullscreen && !hyperFullscreen && !crmFullscreen && (
           <Sidebar
             activeSection={activeSection}
@@ -476,6 +477,7 @@ export default function AppShell() {
           className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen || crmFullscreen ? 'sidebar-content-expanded' : ''}`}
           style={{
             marginLeft: (overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '300px',
+            ...(nativeChatRoom && employeeCompact ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : {}),
             '--hm-harness-center-offset': `${-(overlayNavigation ? 0 : hyperFullscreen ? 120 : sidebarCollapsed ? 34 : 130)}px`,
           }}
         >
@@ -483,7 +485,7 @@ export default function AppShell() {
           {nativeChatRoom && overlayNavigation && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainChat && brainPhone} />}
           {brainChat && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
-          <main className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          <main data-native-chat-main={nativeChatRoom || undefined} className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>

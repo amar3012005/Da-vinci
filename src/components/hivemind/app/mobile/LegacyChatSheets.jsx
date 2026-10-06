@@ -22,12 +22,13 @@ function useSheetKeyboard(open, selector, onClose) {
 }
 
 // Shared legacy presentation: native Brain supplies native actions, never a legacy chat loop.
-export function LegacyMobileAddSheet({ plusSheetOpen, onClose, onPickFiles, deepResearchMode, setDeepResearchMode, onFocus, qrec, onConnectors }) { useSheetKeyboard(plusSheetOpen, '[data-legacy-mobile-add]', onClose); return (
+export function LegacyMobileAddSheet({ plusSheetOpen, onClose, onPickFiles, deepResearchMode, setDeepResearchMode, onFocus, qrec, onConnectors, nativeViewport = false }) { useSheetKeyboard(plusSheetOpen, '[data-legacy-mobile-add]', onClose); return (
 <AnimatePresence>
         {plusSheetOpen && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[70] flex items-end bg-black/35"
+            style={nativeViewport ? { bottom: 'auto', height: 'var(--hm-app-viewport-height, 100dvh)' } : undefined}
             onClick={() => onClose()}
           >
             <motion.div
@@ -35,7 +36,7 @@ export function LegacyMobileAddSheet({ plusSheetOpen, onClose, onPickFiles, deep
               transition={{ type: 'spring', stiffness: 360, damping: 34 }}
               data-legacy-mobile-add role="dialog" aria-modal="true" aria-label="Add to this chat"
               className="w-full bg-white rounded-t-[24px] border-t border-[#e8e5de] px-4 pt-2.5"
-              style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 18px)' }}
+              style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 18px)', ...(nativeViewport ? { maxHeight: 'calc(var(--hm-app-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - 12px)', overflowY: 'auto', overscrollBehavior: 'contain' } : {}) }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-8 h-1 rounded-full bg-[#d5d1c8] mx-auto mb-3" />
@@ -119,12 +120,13 @@ export function LegacyMobileAddSheet({ plusSheetOpen, onClose, onPickFiles, deep
         )}
       </AnimatePresence>
 ); }
-export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSearch, setConnectorSearch, visibleToolkits, chooseToolkit, loading = false, error = '' }) { useSheetKeyboard(connectorSheetOpen, '[data-legacy-mobile-apps]', onClose); return (
+export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSearch, setConnectorSearch, visibleToolkits, chooseToolkit, loading = false, error = '', nativeViewport = false }) { useSheetKeyboard(connectorSheetOpen, '[data-legacy-mobile-apps]', onClose); return (
 <AnimatePresence>
         {connectorSheetOpen && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[75] flex items-end bg-black/35"
+            style={nativeViewport ? { bottom: 'auto', height: 'var(--hm-app-viewport-height, 100dvh)' } : undefined}
             onClick={() => onClose()}
           >
             <motion.div
@@ -132,7 +134,7 @@ export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSe
               transition={{ type: 'spring', stiffness: 360, damping: 34 }}
               data-legacy-mobile-apps role="dialog" aria-modal="true" aria-label="Apps and connectors"
               className="w-full rounded-t-[24px] border-t border-[#e3e0db] bg-white px-4 pt-2.5"
-              style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 18px)' }}
+              style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 18px)', ...(nativeViewport ? { maxHeight: 'calc(var(--hm-app-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - 12px)', overflowY: 'auto', overscrollBehavior: 'contain' } : {}) }}
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mx-auto mb-3 h-1 w-8 rounded-full bg-[#d5d1c8]" />
@@ -151,10 +153,11 @@ export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSe
                   onChange={(event) => setConnectorSearch(event.target.value)}
                   placeholder="Search Gmail, Slack, Calendar…"
                   className="min-w-0 flex-1 bg-transparent text-[13px] text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3]"
+                  style={nativeViewport ? { fontSize: '16px' } : undefined}
                   autoFocus
                 />
               </label>
-              <div className="max-h-[52vh] overflow-y-auto pb-1">
+              <div className="max-h-[52vh] overflow-y-auto pb-1" style={nativeViewport ? { maxHeight: 'max(80px, calc(var(--hm-app-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 170px))', overscrollBehavior: 'contain' } : undefined}>
                 {loading && <div role="status" className="py-10 text-center text-[12px] text-[#737373]">Loading apps…</div>}
                 {error && <div role="alert" className="py-3 text-[12px] text-red-700">{error}</div>}
                 {!loading && visibleToolkits.length > 0 ? visibleToolkits.map((toolkit) => (

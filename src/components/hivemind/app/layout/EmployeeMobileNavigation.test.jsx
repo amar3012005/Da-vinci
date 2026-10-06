@@ -1,3 +1,4 @@
+/* eslint-disable testing-library/no-node-access -- Focus restore coverage inspects document.activeElement and an external opener. */
 import React from 'react';
 import { render, fireEvent, screen, cleanup } from '@testing-library/react';
 import EmployeeMobileNavigation from './EmployeeMobileNavigation';
@@ -7,6 +8,8 @@ test('keeps the existing team actions in an accessible dismissible drawer', () =
   const close = jest.fn();
   render(<EmployeeMobileNavigation activeSection="hivemind" onClose={close} />);
   expect(screen.getByRole('dialog', { name: 'Your team' }).getAttribute('aria-modal')).toBe('true');
+  // jsdom's CSS parser drops var() heights; the source contract checks that binding.
+  expect(screen.getByRole('button', { name: 'Close team navigation' }).style.fontSize).toBe('24px');
   fireEvent.click(screen.getByRole('button', { name: 'Ravi' }));
   expect(close).toHaveBeenCalledTimes(1);
   fireEvent.keyDown(document, { key: 'Escape' });

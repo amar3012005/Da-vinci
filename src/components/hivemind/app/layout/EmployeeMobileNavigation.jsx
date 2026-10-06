@@ -19,13 +19,13 @@ export default function EmployeeMobileNavigation({ activeSection, onClose }) {
     document.addEventListener('keydown', key);
     return () => { document.removeEventListener('keydown', key); previous?.focus?.(); };
   }, [onClose]);
-  return <div ref={root} role="dialog" aria-modal="true" aria-label="Your team" className="fixed inset-0 z-[70]" data-mobile-employee-navigation>
+  return <div ref={root} role="dialog" aria-modal="true" aria-label="Your team" className="fixed inset-0 z-[70]" data-mobile-employee-navigation style={{ bottom: 'auto', height: 'var(--hm-app-viewport-height, 100dvh)' }}>
     <button type="button" aria-label="Close your team" onClick={onClose} className="absolute inset-0 bg-black/30" />
     <div className="absolute inset-y-0 left-0 w-[min(300px,85vw)] overflow-hidden bg-[#faf9f4]" onClick={event => {
       if (event.target.closest('a[href], button[data-agent-room-link]')) onClose();
     }}>
       <Sidebar activeSection={activeSection} collapsed={false} mobileDrawer />
-      <button type="button" aria-label="Close team navigation" onClick={onClose} className="absolute top-2 right-2 z-50 min-w-[44px] min-h-[44px] rounded-full bg-[#faf9f4] text-[#525252]" style={{ fontSize: 24 }}>×</button>
+      <button type="button" aria-label="Close team navigation" onClick={onClose} style={{ top: 'calc(env(safe-area-inset-top, 0px) + 8px)', fontSize: 24 }} className="absolute right-2 z-50 min-w-[44px] min-h-[44px] rounded-full bg-[#faf9f4] text-[#525252]">×</button>
     </div>
   </div>;
 }

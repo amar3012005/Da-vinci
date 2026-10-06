@@ -305,7 +305,7 @@ export default function Sidebar({
     <aside
       data-tour-sidebar
       data-crm-enabled={process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? 'true' : undefined}
-      style={{ viewTransitionName: 'product-sidebar' }}
+      style={{ viewTransitionName: 'product-sidebar', ...(mobileDrawer ? { paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : {}) }}
       className={`${mobileDrawer ? 'absolute' : 'fixed'} left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] ${mobileDrawer ? 'w-[min(300px,85vw)]' : sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
     >
       <div className="shrink-0 px-4 pt-2 pb-3 border-b border-[#e3e0db]">
