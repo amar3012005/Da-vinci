@@ -1312,6 +1312,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async nativeEmployeeLifecycle(payload) {
+    const { data } = await this.controlPlane.post('/v1/employees/native-lifecycle', payload);
+    return data;
+  }
+
   async createEmployee(payload) {
     const { data } = await this.controlPlane.post('/v1/employees', payload);
     return data;

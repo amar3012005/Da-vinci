@@ -1,3 +1,4 @@
+import NativeEmployeeCreateDialog from './NativeEmployeeCreateDialog';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import AgentAvatar from '../hyperagents/AgentAvatar';
@@ -31,7 +32,6 @@ import {
   Store,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
-import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import {
   buildPersonaContractLike,
@@ -297,6 +297,7 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onChat, 
   // (policy_rules.marketplace_profession). Shown in place of the technical slug so
   // a hired agent reads as its real role. Seeded/hand-made employees have none.
   const profession = employee.policyRules?.marketplace_profession || null;
+  const isNative = Boolean(employee.policyRules?.native_lifecycle);
   const isRunning = employee.status === 'running';
   const isPaused = employee.status === 'paused';
   const isDraft = employee.status === 'draft';
@@ -403,7 +404,7 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onChat, 
       {/* action row */}
       {!selectable && (
         <div className="flex items-center gap-1 mt-auto pt-3">
-          {(isDraft || isError) && (
+          {!isNative && (isDraft || isError) && (
             <button onClick={(e) => { e.stopPropagation(); onDeploy && onDeploy(employee); }}
               className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-medium text-white bg-[#117dff] hover:bg-[#0066e0]">
               <Rocket size={11} /> {isError ? t('digitalemployees.retryDeploy', 'Retry') : t('digitalemployees.deploy', 'Deploy')}
@@ -414,13 +415,13 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onChat, 
               <RefreshCw size={11} className="animate-spin" /> {t('digitalemployees.deploying', 'Deploying')}
             </span>
           )}
-          {isRunning && (
+          {!isNative && isRunning && (
             <button onClick={(e) => { e.stopPropagation(); onPause(employee); }}
               className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-medium text-amber-700 hover:bg-amber-500/10">
               <Pause size={11} /> {t('digitalemployees.pause', 'Pause')}
             </button>
           )}
-          {isPaused && (
+          {!isNative && isPaused && (
             <button onClick={(e) => { e.stopPropagation(); onResume(employee); }}
               className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-medium text-[#16a34a] hover:bg-emerald-500/10">
               <Play size={11} /> {t('digitalemployees.resume', 'Resume')}
@@ -1022,201 +1023,6 @@ function TaskHistoryCard({ task, onResume }) {
 // full persona system-prompt via LLM, so users no longer hand-write prompts.
 // Model + max_tokens are NOT exposed — they default to the platform's tuned
 // values and can be adjusted from the employee detail view later.
-function CreateWizard({ open, onClose, onCreate, teams }) {
-  const { t } = useTranslation('dashboard');
-  const ROLE_ARCHETYPES = [
-    { id: 'generalist',   label: 'Generalist' },
-    { id: 'coordinator',  label: 'Coordinator' },
-    { id: 'investigator', label: 'Investigator' },
-    { id: 'skeptic',      label: 'Skeptic' },
-    { id: 'synthesizer',  label: 'Synthesizer' },
-    { id: 'advocate',     label: 'Advocate' },
-    { id: 'fact_checker', label: 'Fact-checker' },
-    { id: 'challenger',   label: 'Challenger' },
-  ];
-
-  const [form, setForm] = useState({
-    name: '',
-    brief: '',
-    role_archetype: 'generalist',
-    team_id: '',
-  });
-  const [persona, setPersona] = useState('');
-  const [optimizing, setOptimizing] = useState(false);
-  const [error, setError] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setForm({ name: '', brief: '', role_archetype: 'generalist', team_id: '' });
-      setPersona('');
-      setError(null);
-      setSubmitting(false);
-      setOptimizing(false);
-    }
-  }, [open]);
-
-  if (!open) return null;
-
-  async function optimize() {
-    setError(null);
-    setOptimizing(true);
-    try {
-      const teamName = teams.find(t => t.id === form.team_id)?.name || '';
-      const { persona: p } = await apiClient.optimizeEmployeePersona({
-        brief: form.brief.trim(),
-        name: form.name.trim(),
-        role: form.role_archetype,
-        team: teamName,
-      });
-      setPersona(p);
-    } catch (e) {
-      setError(e.response?.data?.error || e.message);
-    } finally {
-      setOptimizing(false);
-    }
-  }
-
-  async function submit() {
-    setError(null);
-    setSubmitting(true);
-    try {
-      // Auto-optimize persona on submit if user didn't preview it.
-      let finalPersona = persona;
-      if (!finalPersona) {
-        const teamName = teams.find(t => t.id === form.team_id)?.name || '';
-        const { persona: p } = await apiClient.optimizeEmployeePersona({
-          brief: form.brief.trim(),
-          name: form.name.trim(),
-          role: form.role_archetype,
-          team: teamName,
-        });
-        finalPersona = p;
-      }
-      const payload = {
-        name: form.name.trim(),
-        persona: finalPersona,
-        scope: form.team_id ? 'team' : 'personal',
-        team_id: form.team_id || null,
-        role_archetype: form.role_archetype,
-        policy_rules: {
-          rate_limit_per_min: 30,
-          persona_contract: buildPersonaContractLike({
-            name: form.name.trim(),
-            role_archetype: form.role_archetype,
-            scope: form.team_id ? 'team' : 'personal',
-          }),
-        },
-      };
-      await onCreate(payload);
-      onClose();
-    } catch (e) {
-      setError(e.response?.data?.error || e.message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  // Team is OPTIONAL — no team → personal-scope employee. Requiring it blocked
-  // creation for users/orgs without a team. Only name + brief + role matter.
-  const canSubmit = form.name.trim() && form.brief.trim() && form.role_archetype;
-
-  return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="bg-white rounded-[12px] w-[560px] max-h-[90vh] overflow-y-auto shadow-2xl"
-           onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="p-5 border-b border-[#eae7e1] flex items-start justify-between">
-          <div>
-            <h2 className="text-[16px] font-semibold text-[#0a0a0a]">{t('digitalemployees.createTitle', 'Create Digital Employee')}</h2>
-            <p className="text-[11px] text-[#a3a3a3] mt-0.5">{t('digitalemployees.createSubtitle', 'Describe them in one line — we build the persona.')}</p>
-          </div>
-          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#525252]"><X size={16} /></button>
-        </div>
-
-        {/* Body */}
-        <div className="p-5 space-y-4">
-          <label className="block">
-            <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldName', 'Name')}</span>
-            <input autoFocus value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-              placeholder={t('digitalemployees.namePlaceholder', 'e.g. Maya Ortiz')}
-              className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px] focus:outline-none focus:border-[#117dff]" />
-          </label>
-
-          <label className="block">
-            <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldBrief', 'Brief / what should they do?')}</span>
-            <textarea value={form.brief} onChange={e => setForm({ ...form, brief: e.target.value })}
-              rows={3}
-              placeholder={t('digitalemployees.briefLongPlaceholder', 'e.g. Calm operations lead who turns chaos into clear plans and keeps the team honest about owners and blockers.')}
-              className="w-full px-3 py-2 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px] resize-y focus:outline-none focus:border-[#117dff]" />
-            <span className="text-[10px] text-[#a3a3a3]">{t('digitalemployees.briefHint', 'One sentence is enough — we expand this into a full persona.')}</span>
-          </label>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldRole', 'Role')}</span>
-              <select value={form.role_archetype} onChange={e => setForm({ ...form, role_archetype: e.target.value })}
-                className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]">
-                {ROLE_ARCHETYPES.map(r => (
-                  <option key={r.id} value={r.id}>{r.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldTeamOptional', 'Team (optional)')}</span>
-              <select value={form.team_id} onChange={e => setForm({ ...form, team_id: e.target.value })}
-                className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]">
-                <option value="">{t('digitalemployees.teamPersonal', 'Personal (no team)')}</option>
-                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </label>
-          </div>
-
-          {/* Persona preview block: LLM expansion of the brief. Optional. */}
-          <div className="rounded-[8px] border border-[#eae7e1] bg-[#faf9f4] p-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] uppercase tracking-[0.08em] text-[#737373] font-semibold">
-                {t('digitalemployees.generatedPersona', 'Generated persona')}
-              </span>
-              <button onClick={optimize}
-                disabled={!form.brief.trim() || optimizing}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-[6px] bg-white border border-[#e3e0db] hover:border-[#117dff] hover:text-[#117dff] disabled:opacity-40">
-                {optimizing ? <RefreshCw size={11} className="animate-spin" /> : <Sparkles size={11} />}
-                {persona ? t('digitalemployees.regenerate', 'Regenerate') : t('digitalemployees.preview', 'Preview')}
-              </button>
-            </div>
-            {persona ? (
-              <p className="mt-2 text-[12px] leading-relaxed text-[#0a0a0a] whitespace-pre-wrap">{persona}</p>
-            ) : (
-              <p className="mt-2 text-[11px] text-[#a3a3a3] italic">{t('digitalemployees.personaHint', 'Optional. Auto-generated on create if you skip preview.')}</p>
-            )}
-          </div>
-
-
-          {error && (
-            <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded text-[11px] text-[#dc2626]">
-              <AlertCircle size={12} /> {error}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-5 border-t border-[#eae7e1] flex items-center justify-end gap-2">
-          <button onClick={onClose}
-            className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded">
-            {t('digitalemployees.cancel', 'Cancel')}
-          </button>
-          <button onClick={submit} disabled={submitting || !canSubmit}
-            className="flex items-center gap-1.5 px-4 py-2 text-[12px] bg-[#117dff] text-white rounded hover:bg-[#0066e0] disabled:opacity-50">
-            {submitting ? <RefreshCw size={12} className="animate-spin" /> : <Sparkles size={12} />}
-            {t('digitalemployees.create', 'Create')}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Human-style qualification profiles, derived from role_archetype ──────
 // HIVEMIND employees carry persona + role + model + hyper eval state, not a CV.
 // Map the role to a recognisable "job profile" (title, lane, skills, evidence
@@ -1432,7 +1238,7 @@ function AgentDetailOverlay({ employee, onClose, onChat, onRemint, isAdmin }) {
           >
             <MessageCircle size={15} /> {t('digitalemployees.talkTo', 'Talk to {{name}}', { name: firstName })}
           </button>
-          {isAdmin && onRemint && (
+          {isAdmin && onRemint && !employee.policyRules?.native_lifecycle && (
             <button
               onClick={() => onRemint(employee)}
               title={t('digitalemployees.remintKey', 'Re-mint HIVEMIND key')}
@@ -1880,7 +1686,7 @@ function AgentMarketplaceModal({ open, onClose, onHireProfession, hiringProf, is
 
 export default function DigitalEmployees() {
   const { t } = useTranslation('dashboard');
-  const { teams } = useTeamContext();
+  const nativeCreationRetries = useRef(new Map());
   const { org, user } = useAuth();
   const isOrgAdmin = ['admin', 'owner'].includes(user?.role);
   const [employees, setEmployees] = useState([]);
@@ -1939,20 +1745,36 @@ export default function DigitalEmployees() {
     if (surface === 'workspace') loadRecentTasks();
   }, [surface, loadRecentTasks]);
 
-  async function handleCreate(payload) {
-    await apiClient.createEmployee(payload);
-    await fetch();
+  async function createNativeFromPreset(identity, name, persona) {
+    const saved = nativeCreationRetries.current.get(identity) || { operation: 'create', creation_key: crypto.randomUUID(), name, persona, lifecycle: 'durable' };
+    nativeCreationRetries.current.set(identity, saved);
+    const result = await apiClient.nativeEmployeeLifecycle(saved);
+    nativeCreationRetries.current.delete(identity);
+    return result;
   }
   async function handlePause(emp)   { await apiClient.pauseEmployee(emp.id); await fetch(); }
   async function handleResume(emp)  { await apiClient.resumeEmployee(emp.id); await fetch(); }
   async function handleArchive(emp) {
-    if (!window.confirm(t('digitalemployees.archiveConfirm', 'Delete "{{name}}"? The agent is archived and its container stopped. This cannot be undone.', { name: emp.name }))) return;
+    if (!window.confirm(`Archive ${emp.name}? Runtime must review its work and retain its learning first. History will be preserved.`)) return;
     try {
-      await apiClient.archiveEmployee(emp.id);
-      flash(t('digitalemployees.archived', '{{name}} deleted.', { name: emp.name }));
+      const lifecycle = emp.policyRules?.native_lifecycle;
+      if (lifecycle) {
+        let revision = lifecycle.revision;
+        if (lifecycle.phase === 'active') {
+          const closing = await apiClient.nativeEmployeeLifecycle({operation:'begin_closeout',employee_id:emp.id,expected_revision:revision});
+          revision = closing.employee.policyRules.native_lifecycle.revision;
+        }
+        const inspection = await apiClient.nativeEmployeeLifecycle({operation:'inspect_closeout',employee_id:emp.id});
+        if (!inspection.closeout?.ready) throw new Error('Runtime still needs to review this employee’s work and save its handoff before archival.');
+        const archived = await apiClient.nativeEmployeeLifecycle({operation:'archive',employee_id:emp.id,expected_revision:revision});
+        if (archived.native_activation?.status !== 'ready') throw new Error('The employee is archived. Schedule cleanup is pending; Runtime can retry safely.');
+      } else {
+        await apiClient.archiveEmployee(emp.id);
+      }
+      flash(t('digitalemployees.archived', '{{name}} archived. History preserved.', { name: emp.name }));
     } catch (e) {
       // Was silently swallowed before — surface it so a failed delete is visible.
-      setError(e.response?.data?.error || e.message || 'Delete failed.');
+      setError(e.response?.data?.error || e.message || 'Archival failed.');
     } finally {
       await fetch();
     }
@@ -1968,25 +1790,7 @@ export default function DigitalEmployees() {
     setInstallingMarketplaceId(preset.id);
     setError(null);
     try {
-      await apiClient.createEmployee({
-        name: preset.name,
-        persona: preset.persona,
-        model: preset.model,
-        llm_provider: preset.llm_provider,
-        scope: 'organization',
-        team_id: null,
-        slack_team_id: null,
-        slack_channels_allowed: [],
-        tools: preset.tools,
-        role_archetype: preset.role_archetype,
-        peer_review_targets: preset.peer_review_targets,
-        policy_rules: {
-          rate_limit_per_min: 30,
-          marketplace_template_id: preset.id,
-          marketplace_category: preset.category || 'Core',
-          persona_contract: buildPersonaContractLike(preset),
-        },
-      });
+      await createNativeFromPreset(`preset:${preset.id}`, preset.name, preset.persona);
       await fetch();
       flash(t('digitalemployees.agentInstalled', '{{name}} installed into your organization.', { name: preset.name }));
     } catch (e) {
@@ -2013,12 +1817,7 @@ export default function DigitalEmployees() {
         });
         if (p) persona = p;
       } catch { /* fall back to the brief as the persona */ }
-      await apiClient.createEmployee({
-        name: empName, persona, scope: 'organization', team_id: null,
-        slack_team_id: null, slack_channels_allowed: [], tools: [],
-        role_archetype: prof.role_archetype,
-        policy_rules: { rate_limit_per_min: 30, marketplace_category: field, marketplace_profession: prof.title },
-      });
+      await createNativeFromPreset(`profession:${field}:${prof.title}:${empName}`, empName, persona);
       await fetch();
       flash(t('digitalemployees.professionHired', '{{name}} hired into your organization.', { name: empName }));
     } catch (e) {
@@ -2252,12 +2051,7 @@ export default function DigitalEmployees() {
         </>
       )}
 
-      <CreateWizard
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreate={handleCreate}
-        teams={teams || []}
-      />
+      <NativeEmployeeCreateDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={async () => { await fetch(); }} />
 
       <AgentMarketplaceModal
         open={marketplaceOpen}
