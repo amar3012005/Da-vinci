@@ -59,6 +59,16 @@ export default function YourCRM() {
     catch { if (requestGeneration.current === generation) setError('More records could not be loaded.'); }
     finally { if (requestGeneration.current === generation) setLoadingMore(false); }
   };
+  const updateRecord = async (record, data, operationId) => {
+    try {
+      const result = await apiClient.controlPlane.patch(`${ROOT}/${app.id}/records/${record.id}`, { expectedVersion: record.version, data, operationId });
+      setRecords(old => old.map(item => item.id === record.id ? result.data.record : item));
+    } catch (cause) {
+      if (cause.response?.status === 403) throw new Error('Your role does not allow editing this record.');
+      if (cause.response?.status === 409) throw new Error('This record has changed. Reload the workspace before editing again.');
+      throw new Error('The change could not be confirmed. Retry the same change to avoid duplication.');
+    }
+  };
   if (!CRM_ENABLED) return <div className="crm-empty"><h1>Your CRM</h1><p>This workspace is not enabled in this environment yet.</p></div>;
-  return <main className="crm-page">{error && <div role="alert" className="crm-error">{error} <button type="button" onClick={() => window.location.reload()}>Try again</button></div>}{loading ? <div role="status" className="crm-empty">Opening your CRM…</div> : !appId ? <div className="crm-empty"><h1>Your CRM</h1><p>Your published workspace will appear here. Describe what you need in your Runtime or HyperAgent conversation.</p><Link to="/hivemind/app/employee/harness">Open Runtime ↗</Link></div> : app && <>{apps.length > 1 && <label className="crm-app-picker">Workspace <select value={appId} onChange={event => setAppId(event.target.value)}>{apps.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}<CRMWorkspace app={app} records={records} workflows={workflows} viewId={viewId} onViewChange={setViewId} onLoadMore={cursor ? loadMore : undefined} loadingMore={loadingMore} />{loadingMore && !records.length && <p role="status">Loading activity…</p>}</>}</main>;
+  return <main className="crm-page"><div className="crm-toolbar"><Link to="/hivemind/app/employee/harness">Open Runtime ↗</Link><Link to="/hivemind/app/crm?fullscreen=true">Open full screen ↗</Link><Link to="/hivemind/app/crm">Workspace navigation</Link></div>{error && <div role="alert" className="crm-error">{error} <button type="button" onClick={() => window.location.reload()}>Try again</button></div>}{loading ? <div role="status" className="crm-empty">Opening your CRM…</div> : !appId ? <div className="crm-empty"><h1>Your CRM</h1><p>Your published workspace will appear here. Describe what you need in your Runtime or HyperAgent conversation.</p><Link to="/hivemind/app/employee/harness">Open Runtime ↗</Link></div> : app && <>{apps.length > 1 && <label className="crm-app-picker">Workspace <select value={appId} onChange={event => setAppId(event.target.value)}>{apps.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}<CRMWorkspace app={app} records={records} workflows={workflows} viewId={viewId} onViewChange={setViewId} onLoadMore={cursor ? loadMore : undefined} loadingMore={loadingMore} onUpdateRecord={updateRecord} />{loadingMore && !records.length && <p role="status">Loading activity…</p>}</>}</main>;
 }

@@ -26,6 +26,11 @@ function Demo() {
     fetch(`/demo-api?actor=${actor}&path=${encodeURIComponent(path)}`, { signal: controller.signal }).then(response => response.json()).then(data => { if (data.error) throw new Error(data.error.message); if (viewId === 'workflows') setWorkflows(data.workflows); else setRecords(data.records); }).catch(() => { if (!controller.signal.aborted) setError('Demo activity unavailable'); });
     return () => controller.abort();
   }, [actor, app, viewId]);
-  return <main className="crm-page"><div style={{ padding: '12px 0', marginBottom: 30, borderBottom: '1px solid #ddd', display: 'flex', justifyContent: 'space-between' }}><span>Isolated CRM demo · artificial data · PostgreSQL</span><label>Organization <select aria-label="Demo organization" value={actor} onChange={event => setActor(event.target.value)}><option value="a">Demo A</option><option value="b">Demo B</option></select></label></div>{error && <p role="alert">{error}</p>}{app ? <CRMWorkspace app={app} records={records} workflows={workflows} viewId={viewId} onViewChange={setViewId} /> : <p role="status">Opening your CRM…</p>}</main>;
+  const updateRecord = async (record, data, operationId) => {
+    const response = await fetch(`/demo-api?actor=${actor}&path=${encodeURIComponent(`/api/app-runtime/apps/${app.id}/records/${record.id}`)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ expectedVersion: record.version, data, operationId }) });
+    const value = await response.json(); if (!response.ok) throw new Error(value.error?.message || 'Save failed');
+    setRecords(old => old.map(item => item.id === record.id ? value.record : item));
+  };
+  return <main className="crm-page"><div style={{ padding: '12px 0', marginBottom: 30, borderBottom: '1px solid #ddd', display: 'flex', justifyContent: 'space-between' }}><span>Isolated CRM demo · artificial data · PostgreSQL</span><label>Organization <select aria-label="Demo organization" value={actor} onChange={event => setActor(event.target.value)}><option value="a">Demo A</option><option value="b">Demo B</option></select></label></div>{error && <p role="alert">{error}</p>}{app ? <CRMWorkspace app={app} records={records} workflows={workflows} viewId={viewId} onViewChange={setViewId} onUpdateRecord={updateRecord} /> : <p role="status">Opening your CRM…</p>}</main>;
 }
 createRoot(document.getElementById('root')).render(<Demo />);
