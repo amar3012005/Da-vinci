@@ -25,6 +25,7 @@ export default function EmployeeMobileNavigation({ activeSection, onClose }) {
       if (event.target.closest('a[href], button[data-agent-room-link]')) onClose();
     }}>
       <Sidebar activeSection={activeSection} collapsed={false} mobileDrawer />
+      <button type="button" aria-label="Close team navigation" onClick={onClose} className="absolute top-2 right-2 z-50 min-w-[44px] min-h-[44px] rounded-full bg-[#faf9f4] text-[#525252]" style={{ fontSize: 24 }}>×</button>
     </div>
   </div>;
 }
