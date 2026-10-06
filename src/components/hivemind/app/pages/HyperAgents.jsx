@@ -515,7 +515,7 @@ export default function HyperAgents({ harnessRooms = false }) {
     <div className={`font-['Space_Grotesk'] flex h-[calc(var(--hm-app-viewport-height,100dvh)-3.5rem)] min-h-0 ${harnessRooms ? '' : '-m-6'} max-w-none bg-white border-t border-[#e3e0db] overflow-hidden`} data-os-harness-rooms={harnessRooms || undefined}>
       {!harnessRooms && <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />}
       {/* Left rail: rooms */}
-      <aside className={showOperatingSystemSidebar ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'} data-product-sidebar="os" style={{ viewTransitionName: 'product-sidebar' }}>
+      <aside className={showOperatingSystemSidebar ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'} data-product-sidebar="os" data-crm-enabled={process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? 'true' : undefined} style={{ viewTransitionName: 'product-sidebar' }}>
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
