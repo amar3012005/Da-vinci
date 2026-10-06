@@ -13,7 +13,10 @@
     "iOS simulator installed and launched existing sign-in",
     "mobile safe-area fixes integrated: source d60f8bd7",
     "combined36React checks and4safe-area source contracts passed",
-    "combinednativebundle rebuilt and iOS/Android synced"
+    "combinednativebundle rebuilt and iOS/Android synced",
+    "mobile UI deployed as Worker 9c066038-9e32-4158-9b8a-5c0f80dfddb5; runner unchanged",
+    "signed-in browser: reduced-height Apps sheet fits, search font 16px, full-height Brain and Runtime frame fit, team drawer opens",
+    "post-release CRM preserves Published version 1 and Qualified synthetic canary record"
   ],
   "required": [
     "packaged-origin Control Plane sign-in and OAuth callbacks",
@@ -51,5 +54,11 @@
       "evidence": "Java runtime and Android SDK unavailable; SDK license permission requested",
       "scope": "platform source generated; APK/device verification pending"
     }
-  ]
+  ],
+  "webRelease": {
+    "source": "d60f8bd729a8b474709dd795bc6dd6cdf5fa5692",
+    "worker": "9c066038-9e32-4158-9b8a-5c0f80dfddb5",
+    "rollback": "76005805-fc7c-4a8e-a750-602c591c59dd",
+    "nativeAppDeployed": false
+  }
 }
