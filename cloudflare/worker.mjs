@@ -441,6 +441,12 @@ export default {
     if (canonicalHarnessPath !== null && canonicalHarnessPath !== pathname) {
       return Response.redirect(new URL(canonicalHarnessPath, request.url), 302);
     }
+    // Recover the legacy relative-router suffix before loading any cached shell.
+    if (/^\/hivemind\/app\/crm(?:\/overview)+\/?$/u.test(pathname)) {
+      const canonicalCRM = new URL(request.url);
+      canonicalCRM.pathname = '/hivemind/app/crm';
+      return Response.redirect(canonicalCRM, 302);
+    }
     if (/^\/hivemind\/app\/overview(?:\/overview)+\/?$/u.test(pathname)) {
       return Response.redirect(new URL(HARNESS_OVERVIEW_PATH, request.url), 302);
     }

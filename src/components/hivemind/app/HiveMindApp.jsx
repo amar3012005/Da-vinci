@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
 import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './auth/LoginPage';
@@ -109,6 +109,14 @@ function PageSuspense({ children }) {
       </React.Suspense>
     </PageErrorBoundary>
   );
+}
+
+function CanonicalCRMRoute() {
+  const location = useLocation();
+  if (location.pathname !== '/hivemind/app/crm') {
+    return <Navigate to={{ pathname: '/hivemind/app/crm', search: location.search, hash: location.hash }} replace />;
+  }
+  return <PageSuspense><YourCRM /></PageSuspense>;
 }
 
 /**
@@ -234,7 +242,7 @@ export default function HiveMindApp() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="overview" replace />} />
+          <Route index element={<Navigate to="/hivemind/app/overview" replace />} />
           {/* Native Harness owns explicit overview session URLs.  The wildcard
               keeps `/overview/new` and `/overview/session/:id` inside this
               route instead of falling through to the relative catch-all,
@@ -262,7 +270,7 @@ export default function HiveMindApp() {
           <Route path="deep-research" element={<PageSuspense><DeepResearch /></PageSuspense>} />
           <Route path="engine" element={<PageSuspense><Engine /></PageSuspense>} />
           <Route path="knowledge" element={<PageSuspense><KnowledgeBase /></PageSuspense>} />
-          <Route path="crm" element={<PageSuspense><YourCRM /></PageSuspense>} />
+          <Route path="crm/*" element={<CanonicalCRMRoute />} />
           <Route path="swarm" element={<PageSuspense><AgentSwarm /></PageSuspense>} />
           <Route path="governance" element={<PageSuspense><SwarmGovernance /></PageSuspense>} />
           <Route path="tara" element={<PageSuspense><TaraConfig /></PageSuspense>} />
@@ -285,7 +293,7 @@ export default function HiveMindApp() {
           <Route path="connect/composio/callback" element={<PageSuspense><ComposioConnectCallback /></PageSuspense>} />
           {/* Unknown /hivemind/app/* child (stray OAuth redirect_uri like
               /app/callback, typos) → overview instead of a blank Outlet. */}
-          <Route path="*" element={<Navigate to="overview" replace />} />
+          <Route path="*" element={<Navigate to="/hivemind/app/overview" replace />} />
         </Route>
 
         {/* Fallback */}
