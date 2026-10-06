@@ -5,7 +5,6 @@ import { UserPlus, Building2, Menu } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import LangSwitcher from './LangSwitcher';
-import BrainModeIcon from './BrainModeIcon';
 import WorkspaceNotifications from './WorkspaceNotifications';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import apiClient from '../shared/api-client';
@@ -162,13 +161,6 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
   const { org } = useAuth();
   const healthy = useHealthStatus();
   const [organizationEmployees, setOrganizationEmployees] = useState([]);
-  const [phone, setPhone] = useState(() => window.matchMedia('(max-width: 600px)').matches);
-  useEffect(() => {
-    const query = window.matchMedia('(max-width: 600px)');
-    const update = () => setPhone(query.matches);
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -194,19 +186,6 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
   const tTitle = t(`topbar.titles.${routeSlug}`, { defaultValue: title });
   const tDesc = description ? t(`topbar.descriptions.${routeSlug}`, { defaultValue: description }) : '';
   const harnessCanvas = pagePath === '/hivemind/app/overview' || pagePath === '/hivemind/app/employee/harness';
-
-  const mobileBrain = phone && /^\/hivemind\/app\/overview(?:\/(?:new|session\/[^/]+))?\/?$/.test(location.pathname);
-  if (mobileBrain) return (
-    <header data-mobile-brain-header className="sticky top-0 z-30 flex h-14 items-center gap-2 bg-[#faf9f4] px-2 text-[#292929]">
-      <button type="button" aria-label="Open your team" aria-haspopup="dialog" onClick={mobileTeamToggle} className="flex h-11 w-11 shrink-0 items-center justify-center"><Menu size={23} /></button>
-      <BrainModeIcon size={32} />
-      <div className="min-w-0 flex-1">
-        <h1 className="text-[16px] font-semibold leading-5">Brain</h1>
-        <div className="flex items-center gap-1 text-[11px] leading-4 text-[#777]" title={org?.name || org?.slug || 'Workspace'}><Building2 size={11} className="shrink-0" /><span className="truncate">{org?.name || org?.slug || t('sidebar.workspace', { defaultValue: 'Workspace' })}</span></div>
-      </div>
-      <LangSwitcher compact />
-    </header>
-  );
 
   return (
     <header className={`pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-[#faf9f4] md:bg-white' : 'bg-transparent'}`}>

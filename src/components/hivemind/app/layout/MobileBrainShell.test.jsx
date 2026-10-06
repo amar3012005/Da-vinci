@@ -1,3 +1,4 @@
+/* eslint-disable testing-library/no-unnecessary-act -- These tests use React DOM createRoot, not Testing Library render. */
 import NativeMobileAppsSheet from './NativeMobileAppsSheet';
 import apiClient from '../shared/api-client';
 import { mobileBrainUserName, mobileBrainGreeting } from './mobile-brain-identity';
@@ -7,6 +8,7 @@ import { act } from 'react-dom/test-utils';
 import TopBar from './TopBar';
 import MobileShell from '../mobile/MobileShell';
 import MobileBrainAddSheet from './MobileBrainAddSheet';
+import MobileBrainHeaderActions from './MobileBrainHeaderActions';
 import { LegacyMobileAppsSheet } from '../mobile/LegacyChatSheets';
 
 const mockNavigate = jest.fn();
@@ -22,7 +24,8 @@ jest.mock('../mobile/SingulanceSplash', () => () => null);
 jest.mock('../shared/hooks', () => ({ useHealthStatus: () => true }));
 jest.mock('../shared/api-client', () => ({ listEmployees: () => Promise.resolve([]), listComposioToolkits: jest.fn(), startConnectorOAuth: jest.fn(), createComposioConnectLink: jest.fn() }));
 jest.mock('../shared/QuickRecorderProvider', () => ({ useQuickRecorder: () => ({ supported: true, active: false, openConfig: jest.fn() }) }));
-jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key, fallback) => typeof fallback === 'string' ? fallback : fallback?.defaultValue || key }) }));
+const mockI18n = { language: 'en', changeLanguage: jest.fn() };
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ i18n: mockI18n, t: (key, fallback) => typeof fallback === 'string' ? fallback : fallback?.defaultValue || key }) }));
 jest.mock('./LangSwitcher', () => () => <button aria-label="Language">EN</button>);
 jest.mock('./WorkspaceNotifications', () => () => <button>Notifications</button>);
 jest.mock('../hyperagents/AgentAvatar', () => () => null);
@@ -37,15 +40,11 @@ beforeEach(() => {
 afterEach(() => { act(() => root.unmount()); host.remove(); jest.useRealTimers(); jest.clearAllMocks(); });
 const render = node => act(() => root.render(node));
 
-test('phone Brain header uses its identity and organization, with plain menu and language', async () => {
+test('shared TopBar remains unchanged for Brain; mobile shell owns the mobile header', async () => {
   mockPath = '/hivemind/app/overview/session/session-one';
-  await act(async () => root.render(<TopBar mobileTeamToggle={() => {}} />));
-  expect(host.querySelector('[data-mobile-brain-header]')).not.toBeNull();
-  expect(host.querySelector('h1').textContent).toBe('Brain');
-  expect(host.textContent).toContain('SINGULANCE');
-  expect(host.querySelector('[aria-label="Open your team"]').className).not.toContain('rounded');
-  expect(host.querySelector('[aria-label="Language"]')).not.toBeNull();
-  expect(host.textContent).not.toContain('Recents');
+  await act(async () => root.render(<TopBar />));
+  expect(host.querySelector('[data-mobile-brain-header]')).toBeNull();
+  expect(host.querySelector('h1').textContent).toBe('SINGULANCE');
 });
 test.each(['/hivemind/app/employee/harness/session/session-one', '/hivemind/app/connectors'])('other routes retain existing header: %s', async route => {
   mockPath = route;
@@ -101,20 +100,18 @@ test('legacy Apps traps focus and closes with Escape', () => {
 });
 
 
-test('native Brain reuses actual legacy MobileShell navigation and Recents closes its drawer', async () => {
+test('native Brain uses original bare chat header and identical sidebar destinations', async () => {
   mockPath = '/hivemind/app/overview/new';
-  const history = jest.fn(); window.addEventListener('hivemind:mobile-history', history);
-  await act(async () => root.render(<MobileShell noScroll nativeChatViewport activeNavPath="/hivemind/m/chat" renderHeader={({ openDrawer }) => <TopBar mobileTeamToggle={openDrawer} />} extraDrawerActions={({ closeDrawer }) => <button onClick={() => { closeDrawer(); window.dispatchEvent(new Event('hivemind:mobile-history')); }}>Recents</button>}><div>Native chat</div></MobileShell>));
+  await act(async () => root.render(<MobileShell noScroll bareHeader nativeChatViewport activeNavPath="/hivemind/m/chat"><MobileBrainHeaderActions /><div>Native chat</div></MobileShell>));
   expect(host.querySelector('[data-mobile-native-chat]')).not.toBeNull();
-  act(() => host.querySelector('[aria-label="Open your team"]').click());
+  expect(host.querySelector('[data-mobile-brain-header]')).toBeNull();
+  act(() => host.querySelector('[aria-label="Menu"]').click());
   const nav = host.querySelector('nav');
   expect([...nav.querySelectorAll('button')].map(button => button.textContent.trim())).toEqual(['Chat', 'Memories', 'Memory Graph', 'Meeting Notes', 'Connectors', 'Projects', 'Usage', 'Billing', 'Profile', 'Settings']);
+  expect(nav.textContent).not.toContain('Recents');
+  expect(host.querySelector('[aria-label="Recent conversations"]')).not.toBeNull();
   act(() => [...nav.querySelectorAll('button')].find(button => button.textContent.trim() === 'Connectors').click());
   expect(mockNavigate).toHaveBeenCalledWith('/hivemind/m/connectors');
-  act(() => [...host.querySelectorAll('button')].find(button => button.textContent === 'Recents').click());
-  expect(host.querySelector('nav')).toBeNull();
-  expect(history).toHaveBeenCalledTimes(1);
-  window.removeEventListener('hivemind:mobile-history', history);
 });
 
 test('other legacy pages retain default MobileShell header and viewport', () => {
@@ -190,4 +187,21 @@ test.each(['<html>Login page</html>', {}, { toolkits: 'bad' }, { toolkits: [null
   await act(async () => { jest.advanceTimersByTime(200); });
   expect(host.querySelector('[role="alert"]').textContent).toContain('invalid catalog');
   expect(host.textContent).not.toContain('No apps match');
+});
+
+
+test('original floating language and Recents controls route only to native history', () => {
+  const history = jest.fn(); window.addEventListener('hivemind:mobile-history', history);
+  render(<MobileBrainHeaderActions />);
+  act(() => host.querySelector('[aria-label="Reply language"]').click());
+  act(() => [...host.querySelectorAll('button')].find(b => b.textContent.startsWith('Deutsch')).click());
+  expect(mockI18n.changeLanguage).toHaveBeenCalledWith('de');
+  expect(host.textContent).not.toContain('Deutsch');
+  act(() => host.querySelector('[aria-label="Reply language"]').click());
+  act(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  expect(document.activeElement).toBe(host.querySelector('[aria-label="Reply language"]'));
+  act(() => host.querySelector('[aria-label="Recent conversations"]').click());
+  expect(history).toHaveBeenCalledTimes(1);
+  expect(mockNavigate).not.toHaveBeenCalled();
+  window.removeEventListener('hivemind:mobile-history', history);
 });

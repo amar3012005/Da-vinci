@@ -61,6 +61,7 @@ import {
   startConversationRecord,
 } from '../../shared/chat-session-records';
 import MobileShell from '../MobileShell';
+import LegacyMobileChatHeader from '../LegacyMobileChatHeader';
 import SingulanceMark from '../../shared/SingulanceMark';
 // Same Web Studio research-report toolkit Overview.jsx reuses — one
 // implementation of the report tab, save-bridge, and job-title logic.
@@ -127,19 +128,7 @@ const MAX_CHARS = 2000;
 // slide-in chat promotion until the product is ready to expose it again.
 const SHOW_MEETING_NOTES_PROMO = false;
 
-const LANG_OPTIONS = [
-  { c: 'en', n: 'English' }, { c: 'de', n: 'Deutsch' },
-  { c: 'es', n: 'Español' }, { c: 'fr', n: 'Français' },
-  { c: 'it', n: 'Italiano' }, { c: 'pt', n: 'Português' },
-  { c: 'nl', n: 'Nederlands' }, { c: 'pl', n: 'Polski' },
-  { c: 'sv', n: 'Svenska' }, { c: 'ru', n: 'Русский' },
-  { c: 'uk', n: 'Українська' }, { c: 'tr', n: 'Türkçe' },
-  { c: 'ar', n: 'العربية' }, { c: 'he', n: 'עברית' },
-  { c: 'hi', n: 'हिन्दी' }, { c: 'ja', n: '日本語' },
-  { c: 'ko', n: '한국어' }, { c: 'zh', n: '中文' },
-  { c: 'vi', n: 'Tiếng Việt' }, { c: 'th', n: 'ไทย' },
-  { c: 'id', n: 'Indonesia' },
-];
+
 
 const MODELS = [
   { id: 'gpt-oss-120b', label: 'GPT-OSS 120B', tag: 'Default' },
@@ -1039,48 +1028,12 @@ export default function TalkToHiveMobile() {
   );
   return (
     <MobileShell noScroll bareHeader showBareLogo={messages.length > 0} extraDrawerActions={chatDrawerActions}>
-      {/* Floating top-right cluster — language + user-facing conversation
-          records. Recents never inspect LangGraph checkpoints. */}
-      <div className="absolute right-2.5 z-40 flex items-center gap-1.5"
-        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 9px)' }}>
-        <div className="relative">
-          {langMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setLangMenuOpen(false)} />}
-          <button
-            onClick={() => { setLangMenuOpen((v) => !v); setRecentsOpen(false); setScopeMenuOpen(false); }}
-            className="relative z-40 inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-[#faf9f4]/85 backdrop-blur-sm text-[11.5px] font-semibold text-[#3d3d3a] active:bg-[#ece9e2]"
-            aria-label="Reply language"
-          >
-            <Globe size={13} className="text-[#117dff]" />
-            <span>{((i18n.language || 'en').slice(0, 2)).toUpperCase()}</span>
-            <ChevronDown size={11} className="text-[#a3a3a3]" />
-          </button>
-          {langMenuOpen && (
-            <div className="absolute top-full mt-1.5 right-0 z-40 w-[180px] max-h-[300px] overflow-y-auto bg-white border border-[#e8e5de] rounded-xl shadow-lg py-1" onClick={() => setLangMenuOpen(false)}>
-              {LANG_OPTIONS.map((l) => {
-                const active = ((i18n.language || 'en').slice(0, 2)) === l.c;
-                return (
-                  <button key={l.c} onClick={() => { i18n.changeLanguage(l.c); setLangMenuOpen(false); }}
-                    className={`w-full text-left px-3 py-2 flex items-center justify-between text-[13px] ${active ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} active:bg-[#f3f1ec]`}>
-                    <span>{l.n}</span>
-                    <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{l.c}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        <div className="relative">
-          {recentsOpen && <div className="fixed inset-0 z-30" onClick={() => setRecentsOpen(false)} />}
-          <button
-            onClick={() => { setRecentsOpen((v) => !v); setLangMenuOpen(false); setScopeMenuOpen(false); }}
-            className="relative z-40 inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-[#faf9f4]/85 backdrop-blur-sm text-[11.5px] font-semibold text-[#3d3d3a] active:bg-[#ece9e2]"
-            aria-label="Recent conversations"
-            aria-expanded={recentsOpen}
-          >
-            <Clock size={13} className="text-[#117dff]" />
-            <span>Recents</span>
-            <ChevronDown size={11} className="text-[#a3a3a3]" />
-          </button>
+      <LegacyMobileChatHeader language={i18n.language} languageOpen={langMenuOpen}
+        onLanguageToggle={() => { setLangMenuOpen(v => !v); setRecentsOpen(false); setScopeMenuOpen(false); }}
+        onLanguageClose={() => setLangMenuOpen(false)}
+        onLanguageSelect={code => { i18n.changeLanguage(code); setLangMenuOpen(false); }}
+        recentsOpen={recentsOpen} onRecentsClose={() => setRecentsOpen(false)}
+        onRecents={() => { setRecentsOpen(v => !v); setLangMenuOpen(false); setScopeMenuOpen(false); }}>
           {recentsOpen && (
             <div className="absolute top-full mt-1.5 right-0 z-40 w-[min(320px,calc(100vw-20px))] overflow-hidden rounded-[12px] border border-[#e3e0db] bg-white shadow-lg">
               <div className="flex items-center justify-between border-b border-[#eae7e1] px-3 py-2">
@@ -1110,8 +1063,7 @@ export default function TalkToHiveMobile() {
               </button>
             </div>
           )}
-        </div>
-      </div>
+      </LegacyMobileChatHeader>
       <AnimatePresence>
         {allConversationsOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-[#faf9f4]" role="dialog" aria-modal="true" aria-label="Conversation history">
