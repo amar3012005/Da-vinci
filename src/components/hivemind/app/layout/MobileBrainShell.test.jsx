@@ -10,6 +10,7 @@ import MobileShell from '../mobile/MobileShell';
 import MobileBrainAddSheet from './MobileBrainAddSheet';
 import MobileBrainHeaderActions from './MobileBrainHeaderActions';
 import { LegacyMobileAppsSheet } from '../mobile/LegacyChatSheets';
+import LegacyMobileChatHeader from '../mobile/LegacyMobileChatHeader';
 
 const mockNavigate = jest.fn();
 let mockPath = '/hivemind/app/overview/new';
@@ -108,6 +109,9 @@ test('native Brain uses original bare chat header and identical sidebar destinat
   expect(host.querySelector('.hm-mobile-brain-header-title').textContent).toBe('BRAIN');
   expect(host.querySelector('.hm-mobile-brain-header-org').textContent).toBe('SINGULANCE');
   expect(host.querySelector('.hm-mobile-brain-header-icon svg').getAttribute('aria-label')).toBe('Brain');
+  expect(host.querySelector('.hm-mobile-brain-header-icon svg').getAttribute('width')).toBe('28');
+  expect(host.querySelector('.hm-mobile-brain-header-org .lucide-building2')).not.toBeNull();
+  expect(host.querySelector('.hm-legacy-chat-header-compact')).not.toBeNull();
   expect(host.querySelector('[data-mobile-brain-header]')).toBeNull();
   act(() => host.querySelector('[aria-label="Menu"]').click());
   const nav = host.querySelector('nav');
@@ -209,4 +213,17 @@ test('original floating language and Recents controls route only to native histo
   expect(history).toHaveBeenCalledTimes(1);
   expect(mockNavigate).not.toHaveBeenCalled();
   window.removeEventListener('hivemind:mobile-history', history);
+});
+
+
+test('compact Brain controls omit redundant chevrons while default legacy controls are unchanged', () => {
+  render(<LegacyMobileChatHeader />);
+  expect(host.querySelector('.hm-legacy-chat-header-compact')).toBeNull();
+  expect(host.querySelectorAll('.lucide-chevron-down')).toHaveLength(2);
+  expect(host.querySelector('[aria-label="Reply language"]').className).toContain('px-2.5');
+  render(<LegacyMobileChatHeader compact />);
+  expect(host.querySelector('.hm-legacy-chat-header-compact')).not.toBeNull();
+  expect(host.querySelectorAll('.lucide-chevron-down')).toHaveLength(0);
+  expect(host.querySelector('[aria-label="Reply language"]').className).toContain('px-1');
+  expect(host.querySelector('[aria-label="Recent conversations"]').textContent).toBe('Recents');
 });

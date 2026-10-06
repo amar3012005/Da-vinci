@@ -62,3 +62,9 @@ test('native session establishment reaches the runner before an admission cookie
     /hasHarnessAdmission\(request\) && isHarnessRunnerRoute\(pathname\)/u,
   );
 });
+
+
+test('fresh production frontend builds preserve the enabled CRM', () => {
+  const productionConfig = readFileSync(new URL('../.env.production', import.meta.url), 'utf8');
+  assert.match(productionConfig, /^REACT_APP_HIVE_APP_RUNTIME_ENABLED=true$/m);
+});

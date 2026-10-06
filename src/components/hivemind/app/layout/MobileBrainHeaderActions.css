@@ -3,7 +3,7 @@
   position:absolute;
   top:calc(env(safe-area-inset-top, 0px) + 9px);
   left:56px;
-  right:180px;
+  right:118px;
   height:36px;
   z-index:40;
   display:flex;
@@ -14,5 +14,7 @@
   pointer-events:none;
 }
 .hm-mobile-brain-header-icon { display:flex; flex:none; }
-.hm-mobile-brain-header-title { flex:none; font-size:11px; font-weight:700; letter-spacing:.02em; }
-.hm-mobile-brain-header-org { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; line-height:14px; color:#737373; }
+.hm-mobile-brain-header-title { flex:none; font-size:15px; font-weight:700; letter-spacing:.02em; }
+.hm-mobile-brain-header-org { display:flex; align-items:center; gap:3px; min-width:0; font-size:10px; line-height:14px; color:#737373; }
+.hm-mobile-brain-header-org svg { flex:none; }
+.hm-mobile-brain-header-org span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
