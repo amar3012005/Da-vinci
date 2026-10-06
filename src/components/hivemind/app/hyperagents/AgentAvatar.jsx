@@ -12,6 +12,7 @@ import React, { useMemo } from 'react';
 import { Avatar } from '@humation/react';
 import { humation1 } from '@humation/assets-humation-1';
 import { LANE_META } from './rooms/shared';
+import { employeeAppearance } from '../shared/employee-appearance';
 
 const HUMATION_FACE_ASSETS = {
   ...humation1,
@@ -75,9 +76,10 @@ export default function AgentAvatar({
 }) {
   const lane = resolveLane(agent);
   const meta = LANE_META[lane] || LANE_META.Communicator;
-  const seed = resolveSeed(agent);
+  const appearance = employeeAppearance(agent);
+  const seed = appearance?.seed || resolveSeed(agent);
   const name = resolveName(agent);
-  const img = resolveImg(agent);
+  const img = appearance ? null : resolveImg(agent);
   const radius = shape === 'square' ? Math.round(size * 0.28) : size;
   const faceCrop = crop === 'face';
   const direction = facing === 'left' ? -1 : 1;
@@ -118,8 +120,9 @@ export default function AgentAvatar({
           assets={faceCrop ? HUMATION_FACE_ASSETS : humation1}
           seed={seed}
           size={size}
-          colors={colors}
-          background="transparent"
+          selections={appearance?.selections}
+          colors={appearance?.colors || colors}
+          background={appearance?.background || "transparent"}
           crop={faceCrop ? 'face' : 'avatar'}
           title={name}
           style={{ transform: `scaleX(${direction})` }}

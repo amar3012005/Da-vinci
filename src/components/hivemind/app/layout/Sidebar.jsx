@@ -1,3 +1,4 @@
+import CreateEmployeeDialog from './CreateEmployeeDialog';
 import CompanyWorkspaceOverlay from '../shared/CompanyWorkspaceOverlay';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
@@ -15,6 +16,7 @@ import {
   User,
   Users,
   UserPlus,
+  Plus,
   FlaskConical,
   Settings,
   LogOut,
@@ -116,6 +118,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
       items: [
         { to: '/hivemind/app/employee/harness', icon: Cpu, label: tt('runTime', 'Run Time'), runtime: true },
         ...team.map(agent => ({ to: '/hivemind/app/overview', agent, label: agent.name })),
+        { to: '/hivemind/app/employee/create', icon: Plus, label: tt('createEmployee', 'Create employee'), createEmployee: true },
       ],
     },
     {
@@ -226,7 +229,7 @@ export default function Sidebar({
 
   const openAgent = async (event, agent) => {
     event.preventDefault();
-    if (openingAgent) return;
+    if (openingAgent) return false;
     setOpeningAgent(agent.id); setTeamError('');
     document.documentElement.dataset.agentRoomOpening = 'true';
     const previousStart = window.__HIVEMIND_START_AGENT__;
@@ -239,10 +242,20 @@ export default function Sidebar({
         if (typeof start === 'function' && (!needsNavigation || start !== previousStart)) break;
         await new Promise(resolve => setTimeout(resolve, 200));
       }
-      if (typeof start !== 'function' || !await start(agent.id)) throw new Error('selection unavailable');
+      if (typeof start !== 'function' || (needsNavigation && start === previousStart) || !await start(agent.id)) throw new Error('selection unavailable');
       setSelectedAgent(agent.id === 'runtime' ? null : agent.id);
-    } catch { setTeamError(tt('teamOpenError', 'Could not open this agent. Please try again.')); }
+      return true;
+    } catch { setTeamError(tt('teamOpenError', 'Could not open this agent. Please try again.')); return false; }
     finally { setOpeningAgent(null); delete document.documentElement.dataset.agentRoomOpening; }
+  };
+  const [createEmployeeOpen, setCreateEmployeeOpen] = useState(false);
+  const closeCreateEmployee = useCallback(() => setCreateEmployeeOpen(false), []);
+  useEffect(() => setCreateEmployeeOpen(false), [org?.id, user?.id]);
+  const employeeCreated = async employee => {
+    if (!user?.id || !org?.id || teamScope.current !== `${user.id}:${org.id}`) return false;
+    setTeam(current => current.some(item => item.id === employee.id) ? current : [...current, employee]);
+    setTeamRetry(value => value + 1);
+    return openAgent({ preventDefault() {} }, employee);
   };
   const [companyOpen, setCompanyOpen] = useState(false);
   const closeCompany = useCallback(() => setCompanyOpen(false), []);
@@ -336,11 +349,11 @@ export default function Sidebar({
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const pathOnly = item.to.split('?')[0];
-                const isActive = item.agent ? selectedAgent === item.agent.id : item.runtime ? location.pathname.startsWith('/hivemind/app/employee/harness') && !selectedAgent :
+                const isActive = item.createEmployee ? createEmployeeOpen : item.agent ? selectedAgent === item.agent.id : item.runtime ? location.pathname.startsWith('/hivemind/app/employee/harness') && !selectedAgent :
                   location.pathname === pathOnly ||
                   (location.pathname.startsWith(`${pathOnly}/`)
                     && !(pathOnly === '/hivemind/app/overview' && location.pathname === '/hivemind/app/overview/dreaming'));
-                const ItemLink = item.agent || item.runtime || item.companyWorkspace ? 'button' : NavLink;
+                const ItemLink = item.agent || item.runtime || item.companyWorkspace || item.createEmployee ? 'button' : NavLink;
                 const room = aggregateAgentRooms(rooms, item.agent?.id || 'runtime');
                 const hasChildren = item.children && item.children.length > 0;
 
@@ -362,10 +375,10 @@ export default function Sidebar({
                     ) : (
                       <ItemLink
                         data-agent-room-link={item.agent || item.runtime ? true : undefined}
-                        type={item.agent || item.runtime || item.companyWorkspace ? "button" : undefined}
-                        to={item.agent || item.runtime || item.companyWorkspace ? undefined : item.to}
+                        type={item.agent || item.runtime || item.companyWorkspace || item.createEmployee ? "button" : undefined}
+                        to={item.agent || item.runtime || item.companyWorkspace || item.createEmployee ? undefined : item.to}
                         data-tour-id={item.to}
-                        onClick={item.agent ? event => openAgent(event, item.agent) : item.runtime ? event => openAgent(event, { id: 'runtime' }) : item.companyWorkspace ? () => setCompanyOpen(true) : undefined}
+                        onClick={item.createEmployee ? () => setCreateEmployeeOpen(true) : item.agent ? event => openAgent(event, item.agent) : item.runtime ? event => openAgent(event, { id: 'runtime' }) : item.companyWorkspace ? () => setCompanyOpen(true) : undefined}
                         aria-busy={openingAgent === (item.agent?.id || (item.runtime ? 'runtime' : undefined)) ? true : undefined}
                         className={`relative w-full text-left flex items-center ${collapsed ? 'justify-center gap-2.5 px-2.5 py-2' : item.runtime ? 'gap-3 px-2.5 py-3 mb-2 min-h-[96px]' : 'gap-2.5 px-2.5 py-2'} rounded-lg text-[15px] transition-all duration-150 group`}
                         title={collapsed ? item.label : undefined}
@@ -524,6 +537,7 @@ export default function Sidebar({
         </div>
       </div>
       {companyOpen ? <CompanyWorkspaceOverlay onClose={closeCompany} /> : null}
+      {createEmployeeOpen && <CreateEmployeeDialog onClose={closeCreateEmployee} onCreated={employeeCreated} />}
     </aside>
   );
 }
