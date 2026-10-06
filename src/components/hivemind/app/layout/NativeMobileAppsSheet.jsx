@@ -9,7 +9,7 @@ export default function NativeMobileAppsSheet({ onClose, legacy = false }) {
   const [query, setQuery] = useState('');
   const [toolkits, setToolkits] = useState([]);
   const [cursor, setCursor] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(legacy);
   const [error, setError] = useState('');
   const [connecting, setConnecting] = useState(null);
   const generation = useRef(0);
@@ -19,6 +19,9 @@ export default function NativeMobileAppsSheet({ onClose, legacy = false }) {
     try {
       const data = await apiClient.listComposioToolkits(legacy ? { catalog: true, limit: 100 } : { search, cursor: after, limit: 40 });
       if (current !== generation.current) return;
+      if (!Array.isArray(data?.toolkits) || data.toolkits.some(toolkit => !toolkit || typeof toolkit !== 'object' || typeof toolkit.slug !== 'string')) {
+        throw new Error('Apps returned an invalid catalog. Please try again.');
+      }
       setToolkits(previous => after ? [...previous, ...(data.toolkits || [])] : data.toolkits || []);
       setCursor(data.next_cursor || null);
     } catch (err) { if (current === generation.current) setError(err?.message || 'Apps could not be loaded.'); }
@@ -74,8 +77,7 @@ export default function NativeMobileAppsSheet({ onClose, legacy = false }) {
     finally { setConnecting(null); }
   };
   if (legacy) return <div ref={panel} data-legacy-brain-apps>
-    <LegacyMobileAppsSheet connectorSheetOpen onClose={onClose} connectorSearch={query} setConnectorSearch={setQuery} visibleToolkits={[...toolkits].filter(toolkit => `${toolkit.name || ''} ${toolkit.slug || ''}`.toLowerCase().includes(query.trim().toLowerCase())).sort((left, right) => Number(Boolean(right.connected)) - Number(Boolean(left.connected)) || String(left.name || left.slug).localeCompare(String(right.name || right.slug)))} chooseToolkit={choose} />
-    {(error || loading) && <p role={error ? 'alert' : 'status'} className="fixed bottom-1 left-4 z-[80] text-[11px] text-[#777]">{error || 'Loading apps…'}</p>}
+    <LegacyMobileAppsSheet connectorSheetOpen onClose={onClose} connectorSearch={query} setConnectorSearch={setQuery} loading={loading} error={error} visibleToolkits={[...toolkits].filter(toolkit => `${toolkit.name || ''} ${toolkit.slug || ''}`.toLowerCase().includes(query.trim().toLowerCase())).sort((left, right) => Number(Boolean(right.connected)) - Number(Boolean(left.connected)) || String(left.name || left.slug).localeCompare(String(right.name || right.slug)))} chooseToolkit={choose} />
   </div>;
   return <div className="fixed inset-0 z-[90] flex items-end" data-native-mobile-apps>
     <button type="button" className="absolute inset-0 bg-black/35" aria-label="Close apps and connectors" onClick={onClose} />

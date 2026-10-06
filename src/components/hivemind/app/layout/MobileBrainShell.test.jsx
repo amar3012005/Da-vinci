@@ -1,4 +1,6 @@
-import { mobileBrainUserName } from './mobile-brain-identity';
+import NativeMobileAppsSheet from './NativeMobileAppsSheet';
+import apiClient from '../shared/api-client';
+import { mobileBrainUserName, mobileBrainGreeting } from './mobile-brain-identity';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
@@ -18,7 +20,7 @@ jest.mock('../shared/SingulanceMark', () => () => null);
 jest.mock('../shared/SingulanceBrand', () => () => <span>SINGULANCE</span>);
 jest.mock('../mobile/SingulanceSplash', () => () => null);
 jest.mock('../shared/hooks', () => ({ useHealthStatus: () => true }));
-jest.mock('../shared/api-client', () => ({ listEmployees: () => Promise.resolve([]) }));
+jest.mock('../shared/api-client', () => ({ listEmployees: () => Promise.resolve([]), listComposioToolkits: jest.fn(), startConnectorOAuth: jest.fn(), createComposioConnectLink: jest.fn() }));
 jest.mock('../shared/QuickRecorderProvider', () => ({ useQuickRecorder: () => ({ supported: true, active: false, openConfig: jest.fn() }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key, fallback) => typeof fallback === 'string' ? fallback : fallback?.defaultValue || key }) }));
 jest.mock('./LangSwitcher', () => () => <button aria-label="Language">EN</button>);
@@ -32,7 +34,7 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
   global.IS_REACT_ACT_ENVIRONMENT = true;
 });
-afterEach(() => { act(() => root.unmount()); host.remove(); });
+afterEach(() => { act(() => root.unmount()); host.remove(); jest.useRealTimers(); jest.clearAllMocks(); });
 const render = node => act(() => root.render(node));
 
 test('phone Brain header uses its identity and organization, with plain menu and language', async () => {
@@ -137,4 +139,55 @@ test('greeting identity is omitted outside mobile Brain and when absent', () => 
   expect(mobileBrainUserName(null, true)).toBeUndefined();
   render(<div data-mobile-brain-user-name={mobileBrainUserName(user, true)} />);
   expect(host.querySelector('[data-mobile-brain-user-name]').dataset.mobileBrainUserName).toBe('Amar Sai');
+});
+
+
+test.each([[8, 'overview.morning'], [14, 'overview.afternoon'], [21, 'overview.evening']])('greeting reuses existing translated time key at hour %s', (hour, key) => {
+  const translate = jest.fn(() => 'Localized greeting');
+  expect(mobileBrainGreeting({ display_name: 'Amar Sai' }, true, translate, hour)).toBe('Localized greeting, Amar');
+  expect(translate.mock.calls[0][0]).toBe(key);
+  expect(mobileBrainGreeting({ email: 'private@example.com' }, true, translate, hour)).toBe('Localized greeting');
+  expect(mobileBrainGreeting({ name: 'Amar' }, false, translate, hour)).toBeUndefined();
+});
+
+test('native Apps reports loading from initial paint and connected selection does not start OAuth', async () => {
+  jest.useFakeTimers();
+  let resolveCatalog;
+  apiClient.listComposioToolkits.mockReturnValue(new Promise(resolve => { resolveCatalog = resolve; }));
+  const selected = jest.fn(); const close = jest.fn();
+  window.addEventListener('hivemind:connector-selected', selected);
+  render(<NativeMobileAppsSheet legacy onClose={close} />);
+  expect(host.querySelector('[role="status"]').textContent).toBe('Loading apps…');
+  expect(host.textContent).not.toContain('No apps match');
+  await act(async () => { jest.advanceTimersByTime(200); });
+  expect(apiClient.listComposioToolkits).toHaveBeenCalledWith({ catalog: true, limit: 100 });
+  expect(host.textContent).not.toContain('No apps match');
+  await act(async () => resolveCatalog({ toolkits: [{ slug: 'gmail', name: 'Gmail', connected: true }] }));
+  expect(host.querySelector('[role="status"]')).toBeNull();
+  expect(host.textContent).toContain('Connected');
+  act(() => [...host.querySelectorAll('button')].find(button => button.textContent.includes('Gmail')).click());
+  expect(selected.mock.calls[0][0].detail).toEqual({ name: 'Gmail' });
+  expect(close).toHaveBeenCalledTimes(1);
+  expect(apiClient.startConnectorOAuth).not.toHaveBeenCalled();
+  expect(apiClient.createComposioConnectLink).not.toHaveBeenCalled();
+  window.removeEventListener('hivemind:connector-selected', selected);
+});
+
+test('native Apps surfaces request rejection without a false empty catalog', async () => {
+  jest.useFakeTimers();
+  apiClient.listComposioToolkits.mockRejectedValue(new Error('Catalog request failed'));
+  render(<NativeMobileAppsSheet legacy onClose={() => {}} />);
+  await act(async () => { jest.advanceTimersByTime(200); });
+  expect(host.querySelector('[role="alert"]').textContent).toBe('Catalog request failed');
+  expect(host.textContent).not.toContain('No apps match');
+  expect(host.querySelector('[role="status"]')).toBeNull();
+});
+
+test.each(['<html>Login page</html>', {}, { toolkits: 'bad' }, { toolkits: [null] }])('native Apps rejects malformed successful responses: %j', async data => {
+  jest.useFakeTimers();
+  apiClient.listComposioToolkits.mockResolvedValue(data);
+  render(<NativeMobileAppsSheet legacy onClose={() => {}} />);
+  await act(async () => { jest.advanceTimersByTime(200); });
+  expect(host.querySelector('[role="alert"]').textContent).toContain('invalid catalog');
+  expect(host.textContent).not.toContain('No apps match');
 });

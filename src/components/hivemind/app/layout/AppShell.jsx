@@ -1,4 +1,5 @@
-import { mobileBrainUserName } from './mobile-brain-identity';
+import { useTranslation } from 'react-i18next';
+import { mobileBrainUserName, mobileBrainGreeting } from './mobile-brain-identity';
 import MobileShell from '../mobile/MobileShell';
 import MobileBrainAddSheet from './MobileBrainAddSheet';
 import NativeMobileAppsSheet from './NativeMobileAppsSheet';
@@ -209,6 +210,7 @@ function sectionForPath(pathname) {
  */
 export default function AppShell() {
   const { needsOnboarding, org, logout, user } = useAuth();
+  const { t } = useTranslation('dashboard');
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -439,7 +441,7 @@ export default function AppShell() {
   if (brainChat && brainPhone) return (
     <QuickRecorderProvider>
       <TeamProvider>
-        <div data-hivemind-app-shell data-native-chat-shell data-mobile-brain-user-name={mobileBrainUserName(user, brainChat && brainPhone)} className="font-[Inter,ui-sans-serif,system-ui,sans-serif]" style={{ '--hm-harness-center-offset': '0px' }}>
+        <div data-hivemind-app-shell data-native-chat-shell data-mobile-brain-user-name={mobileBrainUserName(user, brainChat && brainPhone)} data-mobile-brain-greeting={mobileBrainGreeting(user, brainChat && brainPhone, t)} className="font-[Inter,ui-sans-serif,system-ui,sans-serif]" style={{ '--hm-harness-center-offset': '0px' }}>
           <MobileShell noScroll nativeChatViewport activeNavPath="/hivemind/m/chat"
             renderHeader={({ openDrawer }) => <TopBar activeSection="hivemind" mobileTeamToggle={openDrawer} />}
             extraDrawerActions={({ closeDrawer }) => <button type="button" onClick={() => { closeDrawer(); window.dispatchEvent(new Event('hivemind:mobile-history')); }} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] text-[#3d3d3a] active:bg-[#f1eee7]">Recents</button>}

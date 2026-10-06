@@ -119,7 +119,7 @@ export function LegacyMobileAddSheet({ plusSheetOpen, onClose, onPickFiles, deep
         )}
       </AnimatePresence>
 ); }
-export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSearch, setConnectorSearch, visibleToolkits, chooseToolkit }) { useSheetKeyboard(connectorSheetOpen, '[data-legacy-mobile-apps]', onClose); return (
+export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSearch, setConnectorSearch, visibleToolkits, chooseToolkit, loading = false, error = '' }) { useSheetKeyboard(connectorSheetOpen, '[data-legacy-mobile-apps]', onClose); return (
 <AnimatePresence>
         {connectorSheetOpen && (
           <motion.div
@@ -155,7 +155,9 @@ export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSe
                 />
               </label>
               <div className="max-h-[52vh] overflow-y-auto pb-1">
-                {visibleToolkits.length > 0 ? visibleToolkits.map((toolkit) => (
+                {loading && <div role="status" className="py-10 text-center text-[12px] text-[#737373]">Loading apps…</div>}
+                {error && <div role="alert" className="py-3 text-[12px] text-red-700">{error}</div>}
+                {!loading && visibleToolkits.length > 0 ? visibleToolkits.map((toolkit) => (
                   <button
                     key={toolkit.slug}
                     type="button"
@@ -171,7 +173,7 @@ export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSe
                     </span>
                     <span className={`rounded-full border px-2 py-0.5 text-[9px] font-medium ${toolkit.connected ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>{toolkit.connected ? 'Connected' : 'Connect'}</span>
                   </button>
-                )) : <div className="py-10 text-center text-[12px] text-[#a3a3a3]">No apps match this search.</div>}
+                )) : (!loading && !error && <div className="py-10 text-center text-[12px] text-[#a3a3a3]">No apps match this search.</div>)}
               </div>
             </motion.div>
           </motion.div>
