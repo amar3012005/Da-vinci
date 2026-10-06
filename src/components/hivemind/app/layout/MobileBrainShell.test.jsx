@@ -9,7 +9,7 @@ import TopBar from './TopBar';
 import MobileShell from '../mobile/MobileShell';
 import MobileBrainAddSheet from './MobileBrainAddSheet';
 import MobileBrainHeaderActions from './MobileBrainHeaderActions';
-import { LegacyMobileAppsSheet } from '../mobile/LegacyChatSheets';
+import { LegacyMobileAppsSheet, LegacyMobileAddSheet } from '../mobile/LegacyChatSheets';
 import LegacyMobileChatHeader from '../mobile/LegacyMobileChatHeader';
 
 const mockNavigate = jest.fn();
@@ -226,4 +226,25 @@ test('compact Brain controls omit redundant chevrons while default legacy contro
   expect(host.querySelectorAll('.lucide-chevron-down')).toHaveLength(0);
   expect(host.querySelector('[aria-label="Reply language"]').className).toContain('px-1');
   expect(host.querySelector('[aria-label="Recent conversations"]').textContent).toBe('Recents');
+});
+
+
+test('native Brain sheets use visible keyboard height while legacy sheet defaults stay unchanged', () => {
+  const props = { plusSheetOpen: true, onClose: () => {}, onPickFiles: () => {}, setDeepResearchMode: () => {}, onConnectors: () => {}, qrec: { supported: false } };
+  render(<LegacyMobileAddSheet {...props} />);
+  expect(host.querySelector('[data-legacy-mobile-add]').getAttribute('style')).not.toContain('--hm-app-viewport-height');
+  render(<LegacyMobileAddSheet {...props} nativeViewport />);
+  expect(host.querySelector('[data-legacy-mobile-add]').getAttribute('style')).toContain('--hm-app-viewport-height');
+  render(<LegacyMobileAppsSheet connectorSheetOpen onClose={() => {}} connectorSearch="" setConnectorSearch={() => {}} visibleToolkits={[]} chooseToolkit={() => {}} />);
+  expect(host.querySelector('input').style.fontSize).toBe('');
+  render(<LegacyMobileAppsSheet nativeViewport connectorSheetOpen onClose={() => {}} connectorSearch="" setConnectorSearch={() => {}} visibleToolkits={[]} chooseToolkit={() => {}} />);
+  expect(host.querySelector('input').style.fontSize).toBe('16px');
+  expect(host.querySelector('[data-legacy-mobile-apps]').getAttribute('style')).toContain('--hm-app-viewport-height');
+});
+
+
+test('employee Apps shows loading immediately before its catalog request starts', () => {
+  render(<NativeMobileAppsSheet onClose={() => {}} />);
+  expect(host.querySelector('[role="status"]').textContent).toBe('Loading apps…');
+  expect(host.textContent).not.toContain('No apps found');
 });

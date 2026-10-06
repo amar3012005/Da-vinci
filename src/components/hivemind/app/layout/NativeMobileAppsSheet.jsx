@@ -9,7 +9,7 @@ export default function NativeMobileAppsSheet({ onClose, legacy = false }) {
   const [query, setQuery] = useState('');
   const [toolkits, setToolkits] = useState([]);
   const [cursor, setCursor] = useState(null);
-  const [loading, setLoading] = useState(legacy);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [connecting, setConnecting] = useState(null);
   const generation = useRef(0);
@@ -77,11 +77,11 @@ export default function NativeMobileAppsSheet({ onClose, legacy = false }) {
     finally { setConnecting(null); }
   };
   if (legacy) return <div ref={panel} data-legacy-brain-apps>
-    <LegacyMobileAppsSheet connectorSheetOpen onClose={onClose} connectorSearch={query} setConnectorSearch={setQuery} loading={loading} error={error} visibleToolkits={[...toolkits].filter(toolkit => `${toolkit.name || ''} ${toolkit.slug || ''}`.toLowerCase().includes(query.trim().toLowerCase())).sort((left, right) => Number(Boolean(right.connected)) - Number(Boolean(left.connected)) || String(left.name || left.slug).localeCompare(String(right.name || right.slug)))} chooseToolkit={choose} />
+    <LegacyMobileAppsSheet nativeViewport connectorSheetOpen onClose={onClose} connectorSearch={query} setConnectorSearch={setQuery} loading={loading} error={error} visibleToolkits={[...toolkits].filter(toolkit => `${toolkit.name || ''} ${toolkit.slug || ''}`.toLowerCase().includes(query.trim().toLowerCase())).sort((left, right) => Number(Boolean(right.connected)) - Number(Boolean(left.connected)) || String(left.name || left.slug).localeCompare(String(right.name || right.slug)))} chooseToolkit={choose} />
   </div>;
-  return <div className="fixed inset-0 z-[90] flex items-end" data-native-mobile-apps>
+  return <div className="fixed inset-0 z-[90] flex items-end" data-native-mobile-apps style={{ bottom: 'auto', height: 'var(--hm-app-viewport-height, 100dvh)' }}>
     <button type="button" className="absolute inset-0 bg-black/35" aria-label="Close apps and connectors" onClick={onClose} />
-    <section ref={panel} role="dialog" aria-modal="true" aria-label="Apps and connectors" className="relative w-full rounded-t-[24px] bg-white text-[#202020] px-5 pt-3 max-h-[calc(100dvh-64px)] overflow-y-auto overscroll-contain" style={{ paddingBottom: 'max(18px, env(safe-area-inset-bottom))' }}>
+    <section ref={panel} role="dialog" aria-modal="true" aria-label="Apps and connectors" className="relative w-full rounded-t-[24px] bg-white text-[#202020] px-5 pt-3 max-h-[calc(100dvh-64px)] overflow-y-auto overscroll-contain" style={{ paddingBottom: 'max(18px, env(safe-area-inset-bottom))', maxHeight: 'calc(var(--hm-app-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - 12px)' }}>
       <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[#d5d1c8]" />
       <header className="flex items-start justify-between gap-3"><div><h2 className="text-[18px] font-semibold">Apps &amp; connectors</h2><p className="mt-1 text-[13px] text-[#777]">Choose a connected app, or connect a new one.</p></div><button type="button" aria-label="Close apps" onClick={onClose} className="min-w-[44px] min-h-[44px] grid place-items-center"><X size={20} /></button></header>
       <label className="my-4 flex items-center gap-2 rounded-xl border border-[#e3e0db] bg-[#faf9f4] px-3 min-h-[48px] focus-within:border-[#117dff]"><Search size={18} /><input type="search" aria-label="Search apps" placeholder="Search Gmail, Slack, Calendar…" value={query} onChange={event => setQuery(event.target.value)} className="w-full min-w-0 bg-transparent text-[16px] outline-none" /></label>

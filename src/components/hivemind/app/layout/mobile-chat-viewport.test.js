@@ -19,3 +19,14 @@ test('resizes native canvas for the keyboard and restores its prior owner', () =
   viewport.dispatchEvent(new Event('resize'));
   expect(style.getPropertyValue('--hm-app-viewport-height')).toBe('100dvh');
 });
+
+
+test('native keyboard viewport falls back to browser resize without VisualViewport', () => {
+  const browser = new EventTarget(); browser.innerHeight = 700;
+  const style = document.documentElement.style; style.removeProperty('--hm-app-viewport-height');
+  const dispose = bindNativeChatViewport(browser, style);
+  expect(style.getPropertyValue('--hm-app-viewport-height')).toBe('700px');
+  browser.innerHeight = 350; browser.dispatchEvent(new Event('resize'));
+  expect(style.getPropertyValue('--hm-app-viewport-height')).toBe('350px');
+  dispose(); expect(style.getPropertyValue('--hm-app-viewport-height')).toBe('');
+});
