@@ -199,7 +199,7 @@ function TalkToHiveFAB({ onOpen, hidden }) {
 
 function sectionForPath(pathname) {
   if (pathname.startsWith('/hivemind/app/employee/harness')) return 'hivemind';
-  if (pathname.startsWith('/hivemind/app/employees')) return 'hyperagents';
+  if (pathname.startsWith('/hivemind/app/employees') || pathname === '/hivemind/app/crm') return 'hyperagents';
   if (pathname.startsWith('/hivemind/app/tara')) return 'tara';
   return 'hivemind';
 }
@@ -466,7 +466,6 @@ export default function AppShell() {
     <TeamProvider>
       <div data-hivemind-app-shell data-native-chat-shell={nativeChatRoom || undefined} className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
         {!overlayNavigation && !graphFullscreen && !hyperFullscreen && !crmFullscreen && (
-
           <Sidebar
             activeSection={activeSection}
             collapsed={sidebarCollapsed}
@@ -484,7 +483,6 @@ export default function AppShell() {
           {nativeChatRoom && overlayNavigation && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainChat && brainPhone} />}
           {brainChat && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
-
           <main className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
