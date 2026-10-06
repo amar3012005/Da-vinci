@@ -10,7 +10,10 @@
     "React production native bundle compiled",
     "Capacitor iOS/Android platforms synced",
     "unsigned iOS simulator build succeeded",
-    "iOS simulator installed and launched existing sign-in"
+    "iOS simulator installed and launched existing sign-in",
+    "mobile safe-area fixes integrated: source d60f8bd7",
+    "combined36React checks and4safe-area source contracts passed",
+    "combinednativebundle rebuilt and iOS/Android synced"
   ],
   "required": [
     "packaged-origin Control Plane sign-in and OAuth callbacks",
