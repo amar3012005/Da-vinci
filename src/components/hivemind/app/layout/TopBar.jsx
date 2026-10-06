@@ -188,7 +188,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
   const harnessCanvas = pagePath === '/hivemind/app/overview' || pagePath === '/hivemind/app/employee/harness';
 
   return (
-    <header className={`pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-white' : 'bg-transparent'}`}>
+    <header className={`pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-[#faf9f4] md:bg-white' : 'bg-transparent'}`}>
       {/* Branding and team selection live in the persistent HIVE sidebar. */}
       <div className="pointer-events-auto min-w-0 justify-self-start flex items-center gap-2">
         <>{mobileTeamToggle && <button type="button" aria-label="Open your team" aria-haspopup="dialog" onClick={mobileTeamToggle} className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full text-[#292929] hover:bg-[#f3f2ee]"><Menu size={22} /></button>}</><h1 className="flex items-center gap-2 min-w-0 text-[#292929] text-[16px] font-semibold tracking-tight leading-none" title={org?.name || org?.slug || 'Workspace'}>

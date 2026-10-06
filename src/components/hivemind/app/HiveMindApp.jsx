@@ -14,7 +14,6 @@ import TaraConfig from './pages/TaraConfig';
 // Pages (lazy loaded for code splitting)
 const Overview = React.lazy(() => import('./pages/Overview'));
 const DocsPage = React.lazy(() => import('../DocsPage'));
-const TalkToHiveMobile = React.lazy(() => import('./mobile/pages/TalkToHiveMobile'));
 const MobileMemories = React.lazy(() => import('./mobile/pages/MobileMemories'));
 const MobileMeetingNotes = React.lazy(() => import('./mobile/pages/MobileMeetingNotes'));
 const MobileConnectors = React.lazy(() => import('./mobile/pages/MobileConnectors'));
@@ -137,12 +136,12 @@ export default function HiveMindApp() {
         <Route path="docs" element={<PageSuspense><DocsPage /></PageSuspense>} />
         <Route path="cli-verified" element={<CliVerified />} />
         <Route path="platform-admin" element={<PageSuspense><PlatformAdmin /></PageSuspense>} />
-        {/* Mobile dedicated chat — no AppShell chrome, full screen */}
+        {/* Legacy mobile entry opens native Brain; stored legacy history is retained. */}
         <Route
           path="m/chat"
           element={
             <ProtectedRoute>
-              <QuickRecorderProvider><PageSuspense><TalkToHiveMobile /></PageSuspense></QuickRecorderProvider>
+              <Navigate to="/hivemind/app/overview" replace />
             </ProtectedRoute>
           }
         />

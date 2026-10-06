@@ -5,7 +5,7 @@ import { Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight,
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 import { clearInvitationContext, loadInvitationContext, saveInvitationContext } from './invitation-session';
-import { defaultAuthReturnUrl, defaultAuthenticatedPath, isMobileAuthClient } from './mobile-routing';
+import { defaultAuthReturnUrl, defaultAuthenticatedPath, isNativeChatDeepLink, isMobileAuthClient } from './mobile-routing';
 
 /* ─── Provider icons ───────────────────────────────────────────────────── */
 function GoogleIcon({ size = 18 }) {
@@ -298,7 +298,7 @@ export default function LoginPage() {
     if (from.pathname.startsWith('/hivemind/login')) return null;
     // Protected desktop routes can be the sign-in origin even on a phone.
     // Preserve invite/CLI and non-app deep links, but land mobile app sessions in chat.
-    if (isMobileAuthClient() && from.pathname.startsWith('/hivemind/app/')) return null;
+    if (isMobileAuthClient() && from.pathname.startsWith('/hivemind/app/') && !isNativeChatDeepLink(from.pathname)) return null;
     const search = from.search || '';
     const sep = search ? (search.includes('auth=callback') ? '' : '&') : '?';
     const authParam = search.includes('auth=callback') ? '' : `${sep}auth=callback`;
@@ -514,7 +514,7 @@ export default function LoginPage() {
       }
       const from = location.state && location.state.from;
       const hasDeepLink = from && from.pathname && !from.pathname.startsWith('/hivemind/login');
-      const isDesktopAppLanding = hasDeepLink && from.pathname.startsWith('/hivemind/app/');
+      const isDesktopAppLanding = hasDeepLink && !isNativeChatDeepLink(from.pathname) && from.pathname.startsWith('/hivemind/app/');
       const dest = hasDeepLink && !(isMobileAuthClient() && isDesktopAppLanding)
         ? `${from.pathname}${from.search || ''}`
         : defaultAuthenticatedPath();

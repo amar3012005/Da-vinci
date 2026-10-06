@@ -291,3 +291,8 @@ html.cinematic-mode::after { bottom: 0; }
   html:has([data-hivemind-app-shell]) body { max-width: none; }
   [data-hivemind-app-shell] { min-height: var(--hm-app-viewport-height); }
 }
+
+/* Native phone chats use device pixels; desktop's global .9 zoom wastes touch space. */
+@media (max-width: 900px) {
+  html:has([data-native-chat-shell]) { zoom: 1; --hm-app-viewport-height: 100dvh; }
+}
