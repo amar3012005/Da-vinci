@@ -15,7 +15,11 @@ const server = createServer(async (req, res) => {
       const actor = url.searchParams.get('actor');
       const path = url.searchParams.get('path');
       if (!['a', 'b'].includes(actor) || !/^\/api\/app-runtime\/apps(?:[/?]|$)/.test(path || '')) { res.writeHead(400); res.end(); return; }
-      const response = await fetch(new URL(path, apiOrigin), { headers: { 'x-crm-demo-actor': actor } });
+      let body;
+      if (req.method === 'PATCH' && /^\/api\/app-runtime\/apps\/[a-f0-9-]+\/records\/[a-f0-9-]+$/i.test(path)) {
+        const chunks = []; let size = 0; for await (const chunk of req) { size += chunk.length; if (size > 65536) throw new Error('Demo payload too large'); chunks.push(chunk); } body = Buffer.concat(chunks).toString('utf8');
+      } else if (req.method !== 'GET') { res.writeHead(405); res.end(); return; }
+      const response = await fetch(new URL(path, apiOrigin), { method: req.method, headers: { 'x-crm-demo-actor': actor, 'content-type': 'application/json' }, ...(body === undefined ? {} : { body }) });
       res.writeHead(response.status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(await response.text()); return;
     }
     if (['/demo.js', '/demo.css'].includes(url.pathname)) { res.writeHead(200, { 'content-type': url.pathname.endsWith('.css') ? 'text/css' : 'application/javascript' }); res.end(await readFile(join(output, url.pathname.slice(1)))); return; }
