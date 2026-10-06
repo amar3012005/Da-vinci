@@ -153,6 +153,7 @@ export default function Sidebar({
   activeSection = 'hivemind',
   collapsed = false,
   onCollapsedChange,
+  mobileDrawer = false,
 }) {
   const { t } = useTranslation('dashboard');
   const { logout, org, user } = useAuth();
@@ -288,7 +289,7 @@ export default function Sidebar({
     <aside
       data-tour-sidebar
       style={{ viewTransitionName: 'product-sidebar' }}
-      className={`fixed left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] ${sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
+      className={`${mobileDrawer ? 'absolute' : 'fixed'} left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] ${mobileDrawer ? 'w-[min(300px,85vw)]' : sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
     >
       <div className="shrink-0 px-4 pt-2 pb-3 border-b border-[#e3e0db]">
         <div className="flex items-center justify-between h-12">
@@ -360,6 +361,7 @@ export default function Sidebar({
                       </div>
                     ) : (
                       <ItemLink
+                        data-agent-room-link={item.agent || item.runtime ? true : undefined}
                         type={item.agent || item.runtime || item.companyWorkspace ? "button" : undefined}
                         to={item.agent || item.runtime || item.companyWorkspace ? undefined : item.to}
                         data-tour-id={item.to}

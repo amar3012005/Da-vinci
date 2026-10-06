@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
-import { UserPlus, Building2 } from 'lucide-react';
+import { UserPlus, Building2, Menu } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import LangSwitcher from './LangSwitcher';
@@ -155,7 +155,7 @@ const PAGE_PREFIXES = [
   ['/hivemind/app/team/projects', '/hivemind/app/team/projects'],
 ];
 
-export default function TopBar({ activeSection = 'hivemind', onSectionChange }) {
+export default function TopBar({ activeSection = 'hivemind', onSectionChange, mobileTeamToggle = null }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { org } = useAuth();
@@ -190,8 +190,8 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
   return (
     <header className={`pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-white' : 'bg-transparent'}`}>
       {/* Branding and team selection live in the persistent HIVE sidebar. */}
-      <div className="pointer-events-auto min-w-0 justify-self-start">
-        <h1 className="flex items-center gap-2 min-w-0 text-[#292929] text-[16px] font-semibold tracking-tight leading-none" title={org?.name || org?.slug || 'Workspace'}>
+      <div className="pointer-events-auto min-w-0 justify-self-start flex items-center gap-2">
+        <>{mobileTeamToggle && <button type="button" aria-label="Open your team" aria-haspopup="dialog" onClick={mobileTeamToggle} className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full text-[#292929] hover:bg-[#f3f2ee]"><Menu size={22} /></button>}</><h1 className="flex items-center gap-2 min-w-0 text-[#292929] text-[16px] font-semibold tracking-tight leading-none" title={org?.name || org?.slug || 'Workspace'}>
           <Building2 size={18} strokeWidth={1.75} className="shrink-0 text-[#626262]" />
           <span className="truncate">{org?.name || org?.slug || t('sidebar.workspace', { defaultValue: 'Workspace' })}</span>
         </h1>
