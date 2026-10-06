@@ -1,3 +1,4 @@
+import { openCompanyRuntime } from '../shared/openCompanyRuntime';
 /**
  * HyperAgents page — Slack/WhatsApp-style Cognitive Swarm Intelligence
  * workspace on HIVEMIND.
@@ -445,11 +446,12 @@ export default function HyperAgents({ harnessRooms = false }) {
       const u = new URL(window.location.href);
       if (u.searchParams.has('onboard')) { u.searchParams.delete('onboard'); window.history.replaceState({}, '', u); }
     } catch { /* noop */ }
-    goMode('hero', null); // Enter your workspace → the mycompany dashboard
+    if (result) openCompanyRuntime(navigate).catch((error) => setError(error.message));
+    else goMode('hero', null);
     domainRoomsEnsuredRef.current = false;
     fetchRooms();
     emitUsageChanged();
-  }, [fetchRooms, goMode]);
+  }, [fetchRooms, goMode, navigate]);
   const showOnboarding = !loading && !onboardDismissed && ((liveRooms.length === 0 && !onboardDone) || forceOnboard);
   if (showOnboarding && !harnessRooms) {
     return (

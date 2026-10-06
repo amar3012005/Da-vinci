@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+import { openCompanyRuntime } from '../shared/openCompanyRuntime';
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -173,8 +175,10 @@ const RUNTIME_FOCUSES = [
   { id: 'fundraising', label: 'Fundraising', detail: 'Prepare evidence, narrative, and investor work.' },
 ];
 
-export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime, showRuntimeInvite = true, runtimeInviteVersion = 'v1' }) {
+export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime, showRuntimeInvite = true, runtimeInviteVersion = 'v1', showTasks = true, allowOnboarding = true }) {
   const { t } = useTranslation('dashboard');
+  const navigate = useNavigate();
+  const [entryError, setEntryError] = useState('');
   const [state, setState] = useState(null); // {company, employees, hq_room_id}
   const [loading, setLoading] = useState(true);
   const [openingTask, setOpeningTask] = useState(null);
@@ -260,17 +264,18 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
     );
   }
   if (!state?.onboarded || !state?.company) {
+    if (!allowOnboarding) return <p className="p-6 text-sm">Company information is not available yet.</p>;
     // No company state (fresh org, or the HQ room carrying it was deleted) →
     // "Your Company" IS the onboarding page. Render the full genesis flow
     // inline instead of a dead placeholder.
     return (
       <div className="flex-1 min-h-0 overflow-y-auto bg-[#faf9f4] px-6 py-4">
         <div className="max-w-[1280px] mx-auto">
+          {entryError ? <p role="alert">{entryError}</p> : null}
           <HyperOnboarding
-            // The first destination is the completed CompanyDashboard itself:
-            // it is the record the owner reviews and the moment Day-0 is sent.
-            // The HQ remains available from the HQ card once this view loads.
-            onComplete={() => load()}
+            // Company details are already saved by onboarding. Open the native
+            // Runtime room without sending awakening or changing its draft.
+            onComplete={() => openCompanyRuntime(navigate).catch((error) => setEntryError(error.message))}
             onSkip={() => load()}
           />
         </div>
@@ -442,7 +447,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
         </div>
       ) : null}
 
-      <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden px-6 py-4 grid grid-cols-1 lg:grid-cols-[minmax(250px,0.92fr)_minmax(340px,1.08fr)_minmax(280px,0.98fr)] gap-6">
+      <div className={`flex-1 min-h-0 overflow-y-auto lg:overflow-hidden px-6 py-4 grid grid-cols-1 ${showTasks ? 'lg:grid-cols-[minmax(250px,0.92fr)_minmax(340px,1.08fr)_minmax(280px,0.98fr)]' : 'lg:grid-cols-2'} gap-6`}>
         {/* Company context stays complete; the website remains anchored bottom-left. */}
         <section className="min-h-0 flex flex-col">
           <div className="min-h-0 overflow-y-auto pr-2 pb-4">
@@ -507,7 +512,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
         </section>
 
         {/* One substantive task per expertise room; cards route directly into that room. */}
-        <section className="min-h-0 flex flex-col">
+        {showTasks && <section className="min-h-0 flex flex-col">
           <div className="shrink-0"><SectionTitle>{t('hyperDash.tasks', 'Tasks')}</SectionTitle></div>
           <div className="min-h-0 overflow-y-auto pr-2 space-y-2.5">
             {(c.tasks || []).map((task) => {
@@ -548,7 +553,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
               <p className="text-[11.5px] text-[#a3a3a3]">{t('hyperDash.noTasks', 'No planned tasks — re-run onboarding or create a room manually.')}</p>
             ) : null}
           </div>
-        </section>
+        </section>}
 
         {/* Durable company memory, completed room outputs, evidence, and HQ. */}
         <section className="min-h-0 flex flex-col pr-2">
@@ -611,7 +616,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
             </div>
             ) : null}
 
-          <div className="mt-5 shrink-0">
+          {onOpenRoom && <div className="mt-5 shrink-0">
             <SectionTitle>{t('hyperDash.hq', 'HQ')}</SectionTitle>
             <button
               onClick={() => state.hq_room_id && onOpenRoom?.({ id: c.room_id || state.hq_room_id, name: c.room_name })}
@@ -622,11 +627,11 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
               </span>
               <ArrowUpRight size={13} className="text-[#a3a3a3] group-hover:text-[#0a0a0a]" />
             </button>
-          </div>
+          </div>}
 
           <div className="mt-4 shrink-0 flex flex-col items-start gap-1 text-[10.5px] font-mono pb-2">
             <span className="inline-flex items-center gap-2 text-[#a3a3a3]"><Building2 size={11} /> {t('hyperDash.onboardedAt', 'Onboarded')} {c.onboarded_at ? new Date(c.onboarded_at).toLocaleDateString() : ''}</span>
-            <button onClick={() => setConfirmRerun(true)} className="text-[#117dff] hover:underline">{t('hyperDash.rerun', 'Re-run onboarding')}</button>
+            {allowOnboarding && <button onClick={() => setConfirmRerun(true)} className="text-[#117dff] hover:underline">{t('hyperDash.rerun', 'Re-run onboarding')}</button>}
           </div>
         </section>
       </div>

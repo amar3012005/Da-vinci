@@ -1,0 +1,32 @@
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import CompanyWorkspaceOverlay from '../CompanyWorkspaceOverlay';
+jest.mock('../../hyperagents/CompanyDashboard', () => props => <div data-testid="company-content">{JSON.stringify(props)}<button>Company detail</button></div>);
+
+test('reader excludes tasks, closes on Escape, traps focus and restores trigger', () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const rects = jest.spyOn(HTMLElement.prototype, 'getClientRects').mockReturnValue([{}]);
+  const trigger = document.createElement('button');
+  const host = document.createElement('div');
+  document.body.append(trigger, host);
+  trigger.focus();
+  const onClose = jest.fn();
+  const root = createRoot(host);
+  act(() => root.render(<CompanyWorkspaceOverlay onClose={onClose} />));
+  const first = document.querySelector('[aria-label="Close"]');
+  const last = [...document.querySelectorAll('button')].find(button => button.textContent === 'Company detail');
+  const content = document.querySelector('[data-testid="company-content"]').textContent;
+  expect(content).toContain('"showTasks":false');
+  expect(content).toContain('"allowOnboarding":false');
+  expect(document.activeElement).toBe(first);
+  last.focus();
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+  expect(document.activeElement).toBe(first);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
+  expect(document.activeElement).toBe(last);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  expect(onClose).toHaveBeenCalledTimes(1);
+  act(() => root.unmount());
+  expect(document.activeElement).toBe(trigger);
+  trigger.remove(); host.remove(); rects.mockRestore();
+});

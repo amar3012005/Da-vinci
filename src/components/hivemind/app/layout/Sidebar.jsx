@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import CompanyWorkspaceOverlay from '../shared/CompanyWorkspaceOverlay';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BotAvatar } from 'bot-avatars';
@@ -242,6 +243,9 @@ export default function Sidebar({
     } catch { setTeamError(tt('teamOpenError', 'Could not open this agent. Please try again.')); }
     finally { setOpeningAgent(null); delete document.documentElement.dataset.agentRoomOpening; }
   };
+  const [companyOpen, setCompanyOpen] = useState(false);
+  const closeCompany = useCallback(() => setCompanyOpen(false), []);
+  useEffect(() => { setCompanyOpen(false); }, [org?.id, user?.id]);
   const [showWebAdmin, setShowWebAdmin] = useState(false);
   const { usage } = useUsage();
 
@@ -265,7 +269,7 @@ export default function Sidebar({
 
   const allNavSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection: activeSection === 'tara' ? 'tara' : 'hivemind', team });
   const navSections = activeSection === 'tara' ? allNavSections : teamMode
-    ? [allNavSections[1], { label: null, items: [{ to: '/hivemind/app/employees', icon: Building2, label: t('sidebar.companyWorkspace', { defaultValue: 'Company workspace' }) }] }]
+    ? [allNavSections[1], { label: null, items: [{ to: '/hivemind/app/employees', companyWorkspace: true, icon: Building2, label: t('sidebar.companyWorkspace', { defaultValue: 'Company workspace' }) }] }]
     : allNavSections.filter((_, index) => index !== 1);
   const planLabel = org?.plan
     ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })
@@ -335,7 +339,7 @@ export default function Sidebar({
                   location.pathname === pathOnly ||
                   (location.pathname.startsWith(`${pathOnly}/`)
                     && !(pathOnly === '/hivemind/app/overview' && location.pathname === '/hivemind/app/overview/dreaming'));
-                const ItemLink = item.agent || item.runtime ? 'button' : NavLink;
+                const ItemLink = item.agent || item.runtime || item.companyWorkspace ? 'button' : NavLink;
                 const room = aggregateAgentRooms(rooms, item.agent?.id || 'runtime');
                 const hasChildren = item.children && item.children.length > 0;
 
@@ -356,10 +360,10 @@ export default function Sidebar({
                       </div>
                     ) : (
                       <ItemLink
-                        type={item.agent || item.runtime ? "button" : undefined}
-                        to={item.agent || item.runtime ? undefined : item.to}
+                        type={item.agent || item.runtime || item.companyWorkspace ? "button" : undefined}
+                        to={item.agent || item.runtime || item.companyWorkspace ? undefined : item.to}
                         data-tour-id={item.to}
-                        onClick={item.agent ? event => openAgent(event, item.agent) : item.runtime ? event => openAgent(event, { id: 'runtime' }) : undefined}
+                        onClick={item.agent ? event => openAgent(event, item.agent) : item.runtime ? event => openAgent(event, { id: 'runtime' }) : item.companyWorkspace ? () => setCompanyOpen(true) : undefined}
                         aria-busy={openingAgent === (item.agent?.id || (item.runtime ? 'runtime' : undefined)) ? true : undefined}
                         className={`relative w-full text-left flex items-center ${collapsed ? 'justify-center gap-2.5 px-2.5 py-2' : item.runtime ? 'gap-3 px-2.5 py-3 mb-2 min-h-[96px]' : 'gap-2.5 px-2.5 py-2'} rounded-lg text-[15px] transition-all duration-150 group`}
                         title={collapsed ? item.label : undefined}
@@ -517,6 +521,7 @@ export default function Sidebar({
           </button>
         </div>
       </div>
+      {companyOpen ? <CompanyWorkspaceOverlay onClose={closeCompany} /> : null}
     </aside>
   );
 }
