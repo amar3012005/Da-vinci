@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { openCompanyRuntime } from '../shared/openCompanyRuntime';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
 import './YourCRM.css';
@@ -8,6 +9,20 @@ export { CRMWorkspace } from './CRMWorkspace';
 
 export const CRM_ENABLED = process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true';
 const ROOT = '/v1/proxy/app-runtime/apps';
+
+export function CRMRuntimeLink({ onError }) {
+  const navigate = useNavigate();
+  const opening = useRef(false);
+  const openRuntime = async event => {
+    event.preventDefault();
+    if (opening.current) return;
+    opening.current = true;
+    try { await openCompanyRuntime(navigate); }
+    catch (cause) { onError?.(cause.message || 'Runtime could not be opened. Please try again.'); }
+    finally { opening.current = false; }
+  };
+  return <Link to="/hivemind/app/employee/harness" onClick={openRuntime}>Open Runtime ↗</Link>;
+}
 
 export default function YourCRM() {
   const { user, org } = useAuth();
@@ -79,5 +94,5 @@ export default function YourCRM() {
     }
   };
   if (!CRM_ENABLED) return <div className="crm-empty"><h1>Your CRM</h1><p>This workspace is not enabled in this environment yet.</p></div>;
-  return <main className="crm-page"><div className="crm-toolbar"><Link to="/hivemind/app/employee/harness">Open Runtime ↗</Link><Link to="/hivemind/app/crm?fullscreen=true">Open full screen ↗</Link><Link to="/hivemind/app/crm">Workspace navigation</Link></div>{error && <div role="alert" className="crm-error">{error} <button type="button" onClick={() => window.location.reload()}>Try again</button></div>}{loading || workspaceTenant !== tenantKey ? <div role="status" className="crm-empty">Opening your CRM…</div> : !appId ? <div className="crm-empty"><h1>Your CRM</h1><p>Your published workspace will appear here. Describe what you need in your Runtime or HyperAgent conversation.</p><Link to="/hivemind/app/employee/harness">Open Runtime ↗</Link></div> : app && <>{apps.length > 1 && <label className="crm-app-picker">Workspace <select value={appId} onChange={event => setAppId(event.target.value)}>{apps.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}<CRMWorkspace key={`${tenantKey}:${app.id}`} app={app} records={records} workflows={workflows} viewId={viewId} onViewChange={setViewId} onLoadMore={cursor ? loadMore : undefined} loadingMore={loadingMore} onUpdateRecord={updateRecord} />{loadingMore && !records.length && <p role="status">Loading activity…</p>}</>}</main>;
+  return <main className="crm-page"><div className="crm-toolbar"><CRMRuntimeLink onError={setError} /><Link to="/hivemind/app/crm?fullscreen=true">Open full screen ↗</Link><Link to="/hivemind/app/crm">Workspace navigation</Link></div>{error && <div role="alert" className="crm-error">{error} <button type="button" onClick={() => window.location.reload()}>Try again</button></div>}{loading || workspaceTenant !== tenantKey ? <div role="status" className="crm-empty">Opening your CRM…</div> : !appId ? <div className="crm-empty"><h1>Your CRM</h1><p>Your published workspace will appear here. Describe what you need in your Runtime or HyperAgent conversation.</p><CRMRuntimeLink onError={setError} /></div> : app && <>{apps.length > 1 && <label className="crm-app-picker">Workspace <select value={appId} onChange={event => setAppId(event.target.value)}>{apps.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}<CRMWorkspace key={`${tenantKey}:${app.id}`} app={app} records={records} workflows={workflows} viewId={viewId} onViewChange={setViewId} onLoadMore={cursor ? loadMore : undefined} loadingMore={loadingMore} onUpdateRecord={updateRecord} />{loadingMore && !records.length && <p role="status">Loading activity…</p>}</>}</main>;
 }
