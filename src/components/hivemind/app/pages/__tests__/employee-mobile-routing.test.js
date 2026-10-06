@@ -13,10 +13,11 @@ test.each([
 test.each(['/hivemind/app/overview', '/hivemind/app/overview/new', '/hivemind/m/chat', '/hivemind/app/employee/harness-other'])('retains existing routing outside employee rooms: %s', route => {
   expect(isEmployeeHarnessRoute(route)).toBe(false);
 });
-test('employee route exclusion runs before device/viewport/query redirects', () => {
+test('native Brain and employee routes never divert to legacy mobile chat', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '..', 'Overview.jsx'), 'utf8');
-  const check = source.indexOf('if (isEmployeeHarnessRoute(pathname)) return false;');
-  expect(check).toBeGreaterThan(-1);
-  expect(check).toBeLessThan(source.indexOf("const narrowViewport = window.matchMedia"));
-  expect(source).toContain('if (shouldUseMobileChat(pathname)) return <MobileChatRedirect />;');
+  expect(source).not.toContain('shouldUseMobileChat');
+  expect(source).not.toContain('MobileChatRedirect');
+  const router = fs.readFileSync(path.resolve(__dirname, '../../HiveMindApp.jsx'), 'utf8');
+  expect(router).toContain('<Navigate to="/hivemind/app/overview" replace />');
+  expect(router).not.toContain('<TalkToHiveMobile');
 });

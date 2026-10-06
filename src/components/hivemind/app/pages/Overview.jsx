@@ -51,7 +51,6 @@ import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './W
 import HarnessChatSurface from './HarnessChatSurface';
 import HarnessSurface, { LoadingSurface } from './HarnessSurface';
 import DreamingPage from './DreamingPage';
-import { isEmployeeHarnessRoute } from './employee-harness-route';
 
 const LAST_HARNESS_SESSION_KEY = 'hm.lastHarnessSession';
 const HARNESS_SESSION_ROUTE = /^\/hivemind\/app\/overview\/session\/[^/]+$/u;
@@ -68,24 +67,6 @@ function cachedHarnessSessionPath() {
 function rememberHarnessSessionPath(pathname) {
   if (!HARNESS_SESSION_ROUTE.test(pathname)) return;
   try { window.sessionStorage.setItem(LAST_HARNESS_SESSION_KEY, pathname); } catch { /* storage may be unavailable */ }
-}
-
-function shouldUseMobileChat(pathname) {
-  // Runtime and HyperAgent rooms retain their native identity/session on mobile.
-  if (isEmployeeHarnessRoute(pathname)) return false;
-  if (typeof window === 'undefined') return false;
-  if (window.location.hostname === 'next.preview.singulancelabs.com') return false;
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('desktop') === '1') return false;
-  const narrowViewport = window.matchMedia('(max-width: 768px)').matches;
-  const uaDataMobile = !!(navigator.userAgentData && navigator.userAgentData.mobile);
-  const uaSniff = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(navigator.userAgent || '');
-  return narrowViewport || uaDataMobile || uaSniff || Boolean(params.get('from'));
-}
-
-function MobileChatRedirect() {
-  useEffect(() => { window.location.replace('/hivemind/m/chat'); }, []);
-  return <section className="min-h-dvh w-full bg-[#f7f5f0]" aria-label="Loading mobile chat" />;
 }
 
 function ResumeHarnessSession({ path }) {
@@ -1501,8 +1482,6 @@ export default function Overview() {
   // use the server-side feature flag at admission. Only an explicit admitted
   // route mounts the native client; the overview root retains legacy fallback.
   const { pathname } = useLocation();
-  // Brain retains its dedicated mobile chat; employee rooms stay in native Harness.
-  if (shouldUseMobileChat(pathname)) return <MobileChatRedirect />;
   if (pathname === '/hivemind/app/overview/dreaming') {
     return <DreamingPage />;
   }

@@ -20,8 +20,8 @@ test('mobile callback helpers honor mobile viewport and explicit desktop mode', 
     window.matchMedia = () => ({ matches: true });
     window.history.replaceState({}, '', '/hivemind/login');
     expect(routing.defaultAuthReturnUrl('https://example.test'))
-      .toBe('https://example.test/hivemind/m/chat?auth=callback');
-    expect(routing.defaultAuthenticatedPath()).toBe('/hivemind/m/chat');
+      .toBe('https://example.test/hivemind/app/overview?auth=callback');
+    expect(routing.defaultAuthenticatedPath()).toBe('/hivemind/app/overview');
     expect(routing.newWorkspaceLanding()).toBe('/hivemind/m/chat');
 
     window.history.replaceState({}, '', '/hivemind/login?desktop=1');
@@ -33,4 +33,11 @@ test('mobile callback helpers honor mobile viewport and explicit desktop mode', 
     window.matchMedia = previousMatchMedia;
     window.history.replaceState({}, '', `/hivemind/login${previousSearch}`);
   }
+});
+
+test.each(['/hivemind/app/overview/session/brain-room', '/hivemind/app/employee/harness/session/runtime-room', '/hivemind/app/overview/new'])('preserves native phone chat deep link %s', pathname => {
+  expect(require('../mobile-routing').isNativeChatDeepLink(pathname)).toBe(true);
+});
+test.each(['/hivemind/app/workspace', '/hivemind/app/invite', '/hivemind/cli-verified', '//external.test'])('does not expand phone deep link exceptions %s', pathname => {
+  expect(require('../mobile-routing').isNativeChatDeepLink(pathname)).toBe(false);
 });

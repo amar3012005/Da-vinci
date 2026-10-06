@@ -1,3 +1,4 @@
+import { bindNativeChatViewport } from './mobile-chat-viewport';
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -279,6 +280,7 @@ export default function AppShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileTeamOpen, setMobileTeamOpen] = useState(false);
   const employeeRoom = location.pathname.startsWith('/hivemind/app/employee/harness');
+  const nativeChatRoom = employeeRoom || /^\/hivemind\/app(?:\/overview(?:\/(?:new|session\/[^/]+))?)?\/?$/u.test(location.pathname);
   const [employeeCompact, setEmployeeCompact] = useState(() => window.matchMedia('(max-width: 900px)').matches);
   useEffect(() => {
     const query = window.matchMedia('(max-width: 900px)');
@@ -290,7 +292,11 @@ export default function AppShell() {
   const [compactViewport, setCompactViewport] = useState(() => (
     typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
   ));
-  const overlayNavigation = compactViewport || (employeeRoom && employeeCompact);
+  const overlayNavigation = compactViewport || (nativeChatRoom && employeeCompact);
+  useEffect(() => {
+    if (!nativeChatRoom || !employeeCompact) return undefined;
+    return bindNativeChatViewport(window, document.documentElement.style);
+  }, [nativeChatRoom, employeeCompact]);
   const [activeSection, setActiveSection] = useState(() => sectionForPath(location.pathname));
   const [productUpgrade, setProductUpgrade] = useState(null);
   useEffect(() => {
@@ -404,7 +410,7 @@ export default function AppShell() {
   return (
     <QuickRecorderProvider>
     <TeamProvider>
-      <div data-hivemind-app-shell className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
+      <div data-hivemind-app-shell data-native-chat-shell={nativeChatRoom || undefined} className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
         {!overlayNavigation && !graphFullscreen && !hyperFullscreen && (
           <Sidebar
             activeSection={activeSection}
@@ -419,8 +425,8 @@ export default function AppShell() {
             '--hm-harness-center-offset': `${-(overlayNavigation ? 0 : hyperFullscreen ? 120 : sidebarCollapsed ? 34 : 130)}px`,
           }}
         >
-          <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={employeeRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />
-          {employeeRoom && overlayNavigation && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
+          <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />
+          {nativeChatRoom && overlayNavigation && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
           <main className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>

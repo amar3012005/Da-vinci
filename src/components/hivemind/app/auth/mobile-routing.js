@@ -14,14 +14,19 @@ export function isMobileAuthClient() {
 }
 
 export function defaultAuthReturnUrl(origin = window.location.origin) {
-  const path = isMobileAuthClient() ? '/hivemind/m/chat' : '/hivemind/app/overview';
+  const path = '/hivemind/app/overview';
   return `${origin}${path}?auth=callback`;
 }
 
 export function defaultAuthenticatedPath() {
-  return isMobileAuthClient() ? '/hivemind/m/chat' : '/hivemind/app/overview';
+  return '/hivemind/app/overview';
 }
 
 export function newWorkspaceLanding(isMobile = isMobileAuthClient()) {
   return isMobile ? '/hivemind/m/chat' : NEW_WORKSPACE_LANDING;
+}
+
+/** Retain only known native chat rooms through phone sign-in. */
+export function isNativeChatDeepLink(pathname) {
+  return /^\/hivemind\/app\/(?:overview|employee\/harness)(?:\/(?:new|session\/[^/]+))?\/?$/u.test(pathname || '');
 }
