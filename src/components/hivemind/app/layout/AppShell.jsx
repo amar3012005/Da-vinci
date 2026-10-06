@@ -1,3 +1,4 @@
+import MobileShell from '../mobile/MobileShell';
 import MobileBrainAddSheet from './MobileBrainAddSheet';
 import NativeMobileAppsSheet from './NativeMobileAppsSheet';
 import { bindNativeChatViewport } from './mobile-chat-viewport';
@@ -433,6 +434,29 @@ export default function AppShell() {
   if (gate === 'activation') {
     return <ActivationGate onDone={finishGate} />;
   }
+
+  if (brainChat && brainPhone) return (
+    <QuickRecorderProvider>
+      <TeamProvider>
+        <div data-hivemind-app-shell data-native-chat-shell className="font-[Inter,ui-sans-serif,system-ui,sans-serif]" style={{ '--hm-harness-center-offset': '0px' }}>
+          <MobileShell noScroll nativeChatViewport activeNavPath="/hivemind/m/chat"
+            renderHeader={({ openDrawer }) => <TopBar activeSection="hivemind" mobileTeamToggle={openDrawer} />}
+            extraDrawerActions={({ closeDrawer }) => <button type="button" onClick={() => { closeDrawer(); window.dispatchEvent(new Event('hivemind:mobile-history')); }} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] text-[#3d3d3a] active:bg-[#f1eee7]">Recents</button>}
+          >
+            <main className="flex-1 min-h-0 overflow-hidden"><Outlet /></main>
+            {mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy />}
+            <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />
+            <GlobalUploadStrip />
+            <PlanLimitGate />
+            <ServiceErrorToast />
+            <CallContractModal />
+            <ProductAccessModal open={Boolean(productUpgrade)} product={productUpgrade?.product} currentPlan={org?.plan} onClose={() => setProductUpgrade(null)} onUpgrade={plan => { setProductUpgrade(null); navigate(`/hivemind/m/billing?upgrade=${plan}`); }} />
+            <EntityProfileModalHost />
+          </MobileShell>
+        </div>
+      </TeamProvider>
+    </QuickRecorderProvider>
+  );
 
   return (
     <QuickRecorderProvider>

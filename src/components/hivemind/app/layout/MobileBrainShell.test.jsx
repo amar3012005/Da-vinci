@@ -2,13 +2,20 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import TopBar from './TopBar';
+import MobileShell from '../mobile/MobileShell';
 import MobileBrainAddSheet from './MobileBrainAddSheet';
 import { LegacyMobileAppsSheet } from '../mobile/LegacyChatSheets';
 
+const mockNavigate = jest.fn();
 let mockPath = '/hivemind/app/overview/new';
-jest.mock('react-router-dom', () => ({ useLocation: () => ({ pathname: mockPath }), useNavigate: () => jest.fn() }), { virtual: true });
+jest.mock('react-router-dom', () => ({ useLocation: () => ({ pathname: mockPath }), useNavigate: () => mockNavigate }), { virtual: true });
 
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ org: { name: 'SINGULANCE' } }) }));
+jest.mock('../shared/useUsage', () => ({ useUsage: () => ({ usage: {} }) }));
+jest.mock('../shared/CreditBalance', () => () => null);
+jest.mock('../shared/SingulanceMark', () => () => null);
+jest.mock('../shared/SingulanceBrand', () => () => <span>SINGULANCE</span>);
+jest.mock('../mobile/SingulanceSplash', () => () => null);
 jest.mock('../shared/hooks', () => ({ useHealthStatus: () => true }));
 jest.mock('../shared/api-client', () => ({ listEmployees: () => Promise.resolve([]) }));
 jest.mock('../shared/QuickRecorderProvider', () => ({ useQuickRecorder: () => ({ supported: true, active: false, openConfig: jest.fn() }) }));
@@ -18,6 +25,8 @@ jest.mock('./WorkspaceNotifications', () => () => <button>Notifications</button>
 jest.mock('../hyperagents/AgentAvatar', () => () => null);
 let host, root;
 beforeEach(() => {
+  window.localStorage.setItem('hm_m_splashed', '1');
+  mockNavigate.mockClear();
   window.matchMedia = jest.fn(() => ({ matches: true, addEventListener: jest.fn(), removeEventListener: jest.fn(), addListener: jest.fn(), removeListener: jest.fn() }));
   host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
   global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -86,4 +95,29 @@ test('legacy Apps traps focus and closes with Escape', () => {
   expect(document.activeElement).toBe(buttons[0]);
   act(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
   expect(close).toHaveBeenCalled();
+});
+
+
+test('native Brain reuses actual legacy MobileShell navigation and Recents closes its drawer', async () => {
+  mockPath = '/hivemind/app/overview/new';
+  const history = jest.fn(); window.addEventListener('hivemind:mobile-history', history);
+  await act(async () => root.render(<MobileShell noScroll nativeChatViewport activeNavPath="/hivemind/m/chat" renderHeader={({ openDrawer }) => <TopBar mobileTeamToggle={openDrawer} />} extraDrawerActions={({ closeDrawer }) => <button onClick={() => { closeDrawer(); window.dispatchEvent(new Event('hivemind:mobile-history')); }}>Recents</button>}><div>Native chat</div></MobileShell>));
+  expect(host.querySelector('[data-mobile-native-chat]')).not.toBeNull();
+  act(() => host.querySelector('[aria-label="Open your team"]').click());
+  const nav = host.querySelector('nav');
+  expect([...nav.querySelectorAll('button')].map(button => button.textContent.trim())).toEqual(['Chat', 'Memories', 'Memory Graph', 'Meeting Notes', 'Connectors', 'Projects', 'Usage', 'Billing', 'Profile', 'Settings']);
+  act(() => [...nav.querySelectorAll('button')].find(button => button.textContent.trim() === 'Connectors').click());
+  expect(mockNavigate).toHaveBeenCalledWith('/hivemind/m/connectors');
+  act(() => [...host.querySelectorAll('button')].find(button => button.textContent === 'Recents').click());
+  expect(host.querySelector('nav')).toBeNull();
+  expect(history).toHaveBeenCalledTimes(1);
+  window.removeEventListener('hivemind:mobile-history', history);
+});
+
+test('other legacy pages retain default MobileShell header and viewport', () => {
+  mockPath = '/hivemind/m/connectors';
+  render(<MobileShell><div>Legacy connectors</div></MobileShell>);
+  expect(host.querySelector('[data-mobile-native-chat]')).toBeNull();
+  expect(host.querySelector('[aria-label="Menu"]')).not.toBeNull();
+  expect(host.querySelector('[data-mobile-brain-header]')).toBeNull();
 });

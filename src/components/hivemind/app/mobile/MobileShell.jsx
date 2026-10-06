@@ -48,7 +48,7 @@ const NAV = [
   { to: '/hivemind/m/settings', label: 'Settings', icon: Settings2 },
 ];
 
-export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false, showBareLogo = true }) {
+export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false, showBareLogo = true, renderHeader = null, nativeChatViewport = false, activeNavPath = null }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, org, logout, needsOnboarding } = useAuth() || {};
@@ -148,8 +148,9 @@ export default function MobileShell({ children, rightAction = null, title = null
 
   return (
     <div
+      data-mobile-native-chat={nativeChatViewport || undefined}
       className="fixed inset-0 bg-[#faf9f4] text-[#0a0a0a] flex flex-col overflow-hidden"
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)', ...(nativeChatViewport ? { bottom: 'auto', height: 'var(--hm-app-viewport-height, 100dvh)' } : {}) }}
     >
       {showSplash && <SingulanceSplash onDone={finishSplash} />}
       {showAwakening && !showSplash && (
@@ -188,7 +189,7 @@ export default function MobileShell({ children, rightAction = null, title = null
       )}
       {/* ── Top chrome: full bar by default, or a floating standalone hamburger
              (bareHeader) — the page owns its own top-right controls then. ── */}
-      {bareHeader ? (
+      {renderHeader ? renderHeader({ openDrawer: () => setDrawer(true), closeDrawer: () => setDrawer(false) }) : bareHeader ? (
         <>
           <button
             onClick={() => setDrawer(true)}
@@ -269,7 +270,7 @@ export default function MobileShell({ children, rightAction = null, title = null
 
             <nav className="flex-1 overflow-y-auto px-2.5">
               {NAV.map(({ to, label, icon: Icon }) => {
-                const active = location.pathname.startsWith(to);
+                const active = (activeNavPath || location.pathname).startsWith(to);
                 return (
                   <button
                     key={to}
@@ -287,7 +288,7 @@ export default function MobileShell({ children, rightAction = null, title = null
             </nav>
 
             <div className="p-3 border-t border-[#ece9e2]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
-              {extraDrawerActions}
+              {typeof extraDrawerActions === 'function' ? extraDrawerActions({ closeDrawer: () => setDrawer(false) }) : extraDrawerActions}
               <button
                 onClick={() => navigate('/hivemind/app/overview?desktop=1')}
                 className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] text-[#3d3d3a] active:bg-[#f1eee7]"
