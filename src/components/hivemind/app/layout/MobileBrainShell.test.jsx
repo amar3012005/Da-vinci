@@ -1,3 +1,4 @@
+import { mobileBrainUserName } from './mobile-brain-identity';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
@@ -120,4 +121,20 @@ test('other legacy pages retain default MobileShell header and viewport', () => 
   expect(host.querySelector('[data-mobile-native-chat]')).toBeNull();
   expect(host.querySelector('[aria-label="Menu"]')).not.toBeNull();
   expect(host.querySelector('[data-mobile-brain-header]')).toBeNull();
+});
+
+
+test('mobile greeting identity uses the actual name and never derives it from email', () => {
+  expect(mobileBrainUserName({ display_name: '  Amar Sai  ', name: 'Other', email: 'private@example.com' }, true)).toBe('Amar Sai');
+  expect(mobileBrainUserName({ display_name: '  ', name: ' Mateo ' }, true)).toBe('Mateo');
+  expect(mobileBrainUserName({ email: 'private@example.com' }, true)).toBeUndefined();
+});
+
+test('greeting identity is omitted outside mobile Brain and when absent', () => {
+  const user = { display_name: 'Amar Sai' };
+  render(<div data-mobile-brain-user-name={mobileBrainUserName(user, false)} />);
+  expect(host.querySelector('[data-mobile-brain-user-name]')).toBeNull();
+  expect(mobileBrainUserName(null, true)).toBeUndefined();
+  render(<div data-mobile-brain-user-name={mobileBrainUserName(user, true)} />);
+  expect(host.querySelector('[data-mobile-brain-user-name]').dataset.mobileBrainUserName).toBe('Amar Sai');
 });
