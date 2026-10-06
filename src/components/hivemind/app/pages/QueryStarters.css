@@ -37,3 +37,15 @@
 .hm-query-options .hm-query-logo { grid-column:1; grid-row:1 / span 2; margin-top:2px; }
 .hm-query-topic { grid-column:2; min-width:0; overflow-wrap:anywhere; }
 .hm-query-source { grid-column:2; min-width:0; white-space:normal; overflow-wrap:anywhere; line-height:18px; }
+
+/* Mobile Brain suggestions live in the greeting dock, never in its composer. */
+@media (max-width:600px) {
+  .hm-query-starters-mobile { max-width:340px; margin:12px auto 0; padding:0 14px; text-align:center; box-sizing:border-box; }
+  .hm-query-starters-mobile .hm-query-heading { font-size:11px; margin-bottom:8px; }
+  .hm-query-starters-mobile .hm-query-options { gap:6px; }
+  .hm-query-starters-mobile .hm-query-options button { padding:8px 10px; border:1px solid #ece9e2; border-radius:16px; background:transparent; column-gap:8px; row-gap:1px; }
+  .hm-query-starters-mobile .hm-query-topic { font-size:12px; line-height:17px; }
+  .hm-query-starters-mobile .hm-query-source { font-size:10px; line-height:14px; }
+  .hm-query-starters-mobile .hm-query-logo { width:15px; height:15px; }
+  .hm-query-starters-mobile .hm-query-options button:disabled { opacity:.55; }
+}

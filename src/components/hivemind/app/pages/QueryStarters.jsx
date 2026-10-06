@@ -42,6 +42,8 @@ export default function QueryStarters({ mount, ready }) {
   const { t, i18n } = useTranslation('dashboard');
   const [items, setItems] = useState([]);
   const [selectionError, setSelectionError] = useState(false);
+  const [sending, setSending] = useState(false);
+  const pendingSend = useRef(false);
   const [draftSource, setDraftSource] = useState(null);
   const [finishedTyping, setFinishedTyping] = useState(false);
   const [target, setTarget] = useState(null);
@@ -105,18 +107,21 @@ export default function QueryStarters({ mount, ready }) {
         const hero = mount.querySelector('[data-phase="hero"]');
         const editor = hero?.querySelector('[data-composer-input][contenteditable="true"]');
         const seat = hero?.querySelector('[data-composer-seat]');
+        const mobile = window.matchMedia('(max-width: 600px)').matches;
+        const dock = mobile ? hero?.querySelector('[data-mobile-brain-suggestions]') : seat;
         const overview = /^\/hivemind\/app\/overview(?:\/(?:new|session\/[^/]+))?$/.test(window.location.pathname);
         const scale = Number.parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
         const field = editor?.getBoundingClientRect();
         const bounds = seat?.getBoundingClientRect();
-        setTarget(overview && editor && seat ? { editor, seat, top: (field.top - bounds.top) / scale, left: (field.left - bounds.left) / scale, width: editor.clientWidth } : null);
+        setTarget(overview && editor && seat && dock ? { editor, seat, dock, mobile, top: (field.top - bounds.top) / scale, left: (field.left - bounds.left) / scale, width: editor.clientWidth } : null);
       });
     };
     refresh();
     const observer = new MutationObserver(refresh);
-    observer.observe(mount, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-phase', 'contenteditable'], characterData: true });
+    observer.observe(mount, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-phase', 'contenteditable', 'data-mobile-brain-suggestions'], characterData: true });
     mount.addEventListener('input', refresh);
-    return () => { observer.disconnect(); mount.removeEventListener('input', refresh); cancelAnimationFrame(frame); };
+    window.addEventListener('resize', refresh);
+    return () => { observer.disconnect(); mount.removeEventListener('input', refresh); window.removeEventListener('resize', refresh); cancelAnimationFrame(frame); };
   }, [ready, mount]);
 
   useEffect(() => {
@@ -142,7 +147,7 @@ export default function QueryStarters({ mount, ready }) {
 
   useEffect(() => {
     const editor = target?.editor;
-    if (!editor || loadedEditor !== editor || !items[0] || typedEditors.current.has(editor)) return;
+    if (target?.mobile || !editor || loadedEditor !== editor || !items[0] || typedEditors.current.has(editor)) return;
     const draftKey = `hivemind:generated-query:${identity}:${window.location.pathname}`;
     let previous = '';
     try { previous = sessionStorage.getItem(draftKey) || ''; } catch { /* optional storage */ }
@@ -189,11 +194,27 @@ export default function QueryStarters({ mount, ready }) {
       target.seat.removeEventListener('pointerdown', stop, true);
       editor.removeEventListener('paste', stop);
     };
-  }, [target?.editor, items, loadedEditor]);
+  }, [target?.editor, target?.seat, target?.mobile, items, loadedEditor, identity]);
 
   if (!target) return null;
   const accept = async item => {
     stopTyping.current();
+    if (target.mobile) {
+      if (pendingSend.current) return;
+      const send = window.__HIVEMIND_SEND_PROMPT__;
+      const select = window.__HIVEMIND_SELECT_AGENT__;
+      if (typeof send !== 'function' || typeof select !== 'function') { setSelectionError(true); return; }
+      pendingSend.current = true;
+      setSending(true);
+      setSelectionError(false);
+      try {
+        // Use the native user-message path; never replace an existing draft.
+        if (!await select(item.employeeId || null)) { setSelectionError(true); return; }
+        if (!await send(item.query)) setSelectionError(true);
+      } catch { setSelectionError(true); }
+      finally { pendingSend.current = false; setSending(false); }
+      return;
+    }
     const select = window.__HIVEMIND_SELECT_AGENT__;
     if (typeof select !== 'function' || !await select(item.employeeId || null).catch(() => false)) {
       setSelectionError(true);
@@ -229,15 +250,15 @@ export default function QueryStarters({ mount, ready }) {
     { id: 'remember', topic: t('overview.starters.firstMemory', 'Find something I remember'), query: t('overview.starters.firstMemoryQuery', 'Help me find something in my memories. Ask me what I remember about it.') },
     { id: 'project', topic: t('overview.starters.firstProject', 'Catch up on a project'), query: t('overview.starters.firstProjectQuery', 'Help me catch up on a project. Ask me which project, then bring together its relevant context.') },
   ];
-  return createPortal(<section className="hm-query-starters" aria-label={t('overview.starters.label', 'Suggested questions')}>
+  return createPortal(<section className={`hm-query-starters${target.mobile ? ' hm-query-starters-mobile' : ''}`} aria-label={t('overview.starters.label', 'Suggested questions')}>
 
     {draftSource?.app && <div className="hm-query-draft-source"><SourceLogo app={draftSource.app} /><span>{t('overview.starters.basedOn', 'Based on {{app}}', { app: draftSource.source })}</span></div>}
     <div className="hm-query-heading">{items.length ? t('overview.starters.heading', 'A starting point from your context') : t('overview.starters.firstHeading', 'What would you like help with?')}</div>
-    <div className="hm-query-options">{options.map(item => <button key={item.id} type="button" onClick={() => accept(item)} title={item.query}>
+    <div className="hm-query-options">{options.map(item => <button key={item.id} type="button" disabled={sending} onClick={() => accept(item)} title={item.query}>
       <SourceLogo app={item.app} dream={item.dream} /><span className="hm-query-topic">{item.employeeId ? item.topic : item.source ? (item.dream ? t('overview.starters.checkLabel', 'Check: {{topic}}', { topic: item.topic }) : t('overview.starters.catchUpLabel', 'Catch up: {{topic}}', { topic: item.topic })) : item.topic}</span>
       <span className="hm-query-source">{item.employeeName ? `${item.employeeName} · ` : ''}{item.source || t('overview.starters.try', 'Try this')}{item.timestamp ? ` · ${new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(item.timestamp)}` : ''}</span>
     </button>)}</div>
-    {selectionError && <p role="alert">{t('overview.starters.selectionFailed', 'Could not select the recipient. Please try again.')}</p>}
+    {selectionError && <p role="alert">{target.mobile ? t('overview.starters.sendFailed', 'Could not start this question. Please try again.') : t('overview.starters.selectionFailed', 'Could not select the recipient. Please try again.')}</p>}
     {finishedTyping && <p className="hm-query-ready" role="status">{t('overview.starters.ready', 'Edit this question, or send it when you’re ready.')}</p>}
-  </section>, target.seat);
+  </section>, target.dock);
 }
