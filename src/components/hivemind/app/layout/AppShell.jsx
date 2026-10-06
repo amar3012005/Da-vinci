@@ -326,6 +326,7 @@ export default function AppShell() {
     return () => window.removeEventListener('hm:product-access-required', onRestrictedAction);
   }, [org?.plan]);
   const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
+  const crmFullscreen = location.pathname === '/hivemind/app/crm' && new URLSearchParams(location.search).get('fullscreen') === 'true';
   // HyperAgents runs its own left rail (rooms + account) — the app sidebar is
   // hidden entirely there so the workspace reads as one dedicated surface.
   const hyperFullscreen = location.pathname.startsWith('/hivemind/app/employees');
@@ -393,7 +394,7 @@ export default function AppShell() {
     <QuickRecorderProvider>
     <TeamProvider>
       <div data-hivemind-app-shell className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
-        {!compactViewport && !graphFullscreen && !hyperFullscreen && (
+        {!compactViewport && !graphFullscreen && !hyperFullscreen && !crmFullscreen && (
           <Sidebar
             activeSection={activeSection}
             collapsed={sidebarCollapsed}
@@ -403,18 +404,18 @@ export default function AppShell() {
         <div
           className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen ? 'sidebar-content-expanded' : ''}`}
           style={{
-            marginLeft: (compactViewport || graphFullscreen || hyperFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '300px',
+            marginLeft: (compactViewport || graphFullscreen || hyperFullscreen || crmFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '300px',
             '--hm-harness-center-offset': `${-(compactViewport ? 0 : hyperFullscreen ? 120 : sidebarCollapsed ? 34 : 130)}px`,
           }}
         >
-          <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />
+          {!crmFullscreen && <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />}
           <main className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>
 
         {/* Chat FAB — glass-morph pill, slides in from right, blinking pulse */}
-        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || onOverview || onMeetingNotes || activeSection === 'hyperagents' || activeSection === 'tara'} />
+        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || crmFullscreen || onOverview || onMeetingNotes || activeSection === 'hyperagents' || activeSection === 'tara'} />
 
         {/* Global upload strip — survives KB unmount so users can browse
             other pages while files are still uploading */}
