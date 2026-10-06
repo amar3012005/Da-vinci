@@ -56,6 +56,7 @@ const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
 const AdminSso = React.lazy(() => import('./pages/AdminSso'));
 const DigitalEmployees = React.lazy(() => import('./pages/DigitalEmployees'));
 const HyperAgents = React.lazy(() => import('./pages/HyperAgents'));
+const YourCRM = React.lazy(() => import('./pages/YourCRM'));
 const OperatingRooms = React.lazy(() => import('./pages/OperatingRooms'));
 const HermesAgents = React.lazy(() => import('./pages/HermesAgents'));
 const WorkspaceAdmin = React.lazy(() => import('./pages/WorkspaceAdmin'));
@@ -262,6 +263,7 @@ export default function HiveMindApp() {
           <Route path="deep-research" element={<PageSuspense><DeepResearch /></PageSuspense>} />
           <Route path="engine" element={<PageSuspense><Engine /></PageSuspense>} />
           <Route path="knowledge" element={<PageSuspense><KnowledgeBase /></PageSuspense>} />
+          <Route path="crm" element={<PageSuspense><YourCRM /></PageSuspense>} />
           <Route path="swarm" element={<PageSuspense><AgentSwarm /></PageSuspense>} />
           <Route path="governance" element={<PageSuspense><SwarmGovernance /></PageSuspense>} />
           <Route path="tara" element={<PageSuspense><TaraConfig /></PageSuspense>} />

@@ -161,7 +161,7 @@ export default function Sidebar({
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const modeMenuRef = useRef(null);
   const voiceMode = location.pathname.startsWith('/hivemind/app/tara');
-  const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness');
+  const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness') || location.pathname === '/hivemind/app/crm';
   useEffect(() => setModeMenuOpen(false), [location.pathname]);
   useEffect(() => {
     if (!modeMenuOpen) return;
@@ -265,7 +265,10 @@ export default function Sidebar({
 
   const allNavSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection: activeSection === 'tara' ? 'tara' : 'hivemind', team });
   const navSections = activeSection === 'tara' ? allNavSections : teamMode
-    ? [allNavSections[1], { label: null, items: [{ to: '/hivemind/app/employees', icon: Building2, label: t('sidebar.companyWorkspace', { defaultValue: 'Company workspace' }) }] }]
+    ? [allNavSections[1], { label: null, items: [
+      { to: '/hivemind/app/employees', icon: Building2, label: t('sidebar.companyWorkspace', { defaultValue: 'Company workspace' }) },
+      ...(process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? [{ to: '/hivemind/app/crm', icon: FolderKanban, label: 'Your CRM' }] : []),
+    ] }]
     : allNavSections.filter((_, index) => index !== 1);
   const planLabel = org?.plan
     ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })
@@ -283,6 +286,7 @@ export default function Sidebar({
   return (
     <aside
       data-tour-sidebar
+      data-crm-enabled={process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? 'true' : undefined}
       style={{ viewTransitionName: 'product-sidebar' }}
       className={`fixed left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] ${sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
     >
