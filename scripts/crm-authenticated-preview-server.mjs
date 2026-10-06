@@ -4,13 +4,23 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 
 const buildRoot=resolve(process.env.CRM_AUTH_BUILD_PATH||'/tmp/hivemind-crm-auth-fe-build');
-const cp=new URL(process.env.CRM_AUTH_CP_ORIGIN||'http://127.0.0.1:62642');
+const cp=new URL(process.env.CRM_AUTH_CP_ORIGIN||'http://127.0.0.1:63002');
 if(cp.protocol!=='http:'||!['127.0.0.1','localhost'].includes(cp.hostname))throw new Error('Only a local isolated Control Plane preview is accepted');
 const port=Number(process.env.CRM_AUTH_FE_PORT||62911);
 const types={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.woff2':'font/woff2'};
 const server=createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,'http://127.0.0.1');
+    // Explicit local fixture admission reuses real CP-signed Redis sessions. It
+    // exists only in this loopback preview script, never in the deployed app.
+    const fixture=url.pathname.match(/^\/__demo\/sign-in\/([12])$/);
+    if(fixture&&process.env.CRM_AUTH_FIXTURE_PATH){
+      if(!process.env.CRM_AUTH_FIXTURE_PATH.startsWith('/tmp/hivemind-crm-authenticated-preview-'))throw new Error('Only an isolated artificial auth fixture is accepted');
+      const actors=JSON.parse(await readFile(process.env.CRM_AUTH_FIXTURE_PATH,'utf8'));
+      const cookie=actors[fixture[1]]?.cookie;
+      if(typeof cookie!=='string'||!/^hm_cp_session=[^;\r\n]+$/.test(cookie))throw new Error('Missing native CP session fixture');
+      res.writeHead(303,{'set-cookie':`${cookie}; HttpOnly; SameSite=Lax; Path=/`,'location':'/hivemind/app/crm','cache-control':'no-store'});res.end();return;
+    }
     if(/^\/(?:v1|auth|demo-login|__demo)(?:\/|$)/.test(url.pathname)){
       const headers=new Headers();
       for(const [key,value]of Object.entries(req.headers))if(value&&!['host','connection','content-length','accept-encoding'].includes(key))headers.set(key,Array.isArray(value)?value.join(','):value);
