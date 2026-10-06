@@ -1,0 +1,52 @@
+{
+  "stage": "development-integration",
+  "storeReady": false,
+  "appId": "com.singulancelabs.hivemind",
+  "appName": "HIVE-MIND",
+  "identityStatus": "provisional-before-store-registration",
+  "baseline": "c7a344a0554085b1f5444240606c20120c5b94ed",
+  "verified": [
+    "native entry and lifecycle unit checks: 5 passed",
+    "React production native bundle compiled",
+    "Capacitor iOS/Android platforms synced",
+    "unsigned iOS simulator build succeeded",
+    "iOS simulator installed and launched existing sign-in"
+  ],
+  "required": [
+    "packaged-origin Control Plane sign-in and OAuth callbacks",
+    "packaged-origin Harness admission, signed module graph and streams",
+    "native credential storage review (current web Core key uses localStorage)",
+    "keyboard, safe-area and sheet verification in actual WebViews",
+    "Brain, Runtime and employee end-to-end session verification",
+    "photo/file upload and attachment/PDF download verification",
+    "voice permissions, audio interruptions and background behavior",
+    "Android SDK/Java build and device verification",
+    "iPhone physical-device verification",
+    "store signing, privacy disclosures, deletion and account review",
+    "native login screen and privacy preferences fit compact phone viewport",
+    "production app icons/splash and bundle-size refinement"
+  ],
+  "constraints": [
+    "retain legacy mobile shell and pages; DSH owns reasoning and session semantics",
+    "bundle local web assets; no production server.url website wrapper",
+    "no duplicate agent execution on app resume",
+    "no embedded operator secrets or widened tenant authority"
+  ],
+  "observedBlockers": [
+    {
+      "boundary": "native authentication",
+      "evidence": "iOS sign-in displays Control plane unavailable; bootstrap200 omits Access-Control-Allow-Origin for capacitor://localhost and https://localhost",
+      "scope": "Core/Control authenticated native origin/session contract required; no production changes made"
+    },
+    {
+      "boundary": "native DSH boot",
+      "evidence": "HarnessSurface uses relative /api/hivemind session/boot/module graph and authenticated same-origin connection",
+      "scope": "native-compatible transport must reuse signed admission and Cordis connection checks"
+    },
+    {
+      "boundary": "Android tooling",
+      "evidence": "Java runtime and Android SDK unavailable; SDK license permission requested",
+      "scope": "platform source generated; APK/device verification pending"
+    }
+  ]
+}

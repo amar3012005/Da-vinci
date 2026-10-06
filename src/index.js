@@ -1,3 +1,4 @@
+import { isNativeApp, prepareNativeEntry, installNativeLifecycle } from './native/runtime';
 import React from 'react';
 import { hydrateRoot, createRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
@@ -8,6 +9,9 @@ import App from './App';
 import { PublicInitialContent } from './components/PublicPageLoading';
 import { initConsentAwarePostHog } from './analytics/posthog-loader';
 import { installChunkLoadRecovery } from './chunk-load-recovery';
+
+prepareNativeEntry();
+installNativeLifecycle().catch(() => { /* Foreground browser recovery remains available. */ });
 
 // A tab opened before a deployment can still reference the previous hashed
 // chunks. Recover once against the newly revalidated SPA shell.
@@ -37,7 +41,7 @@ if (rootEl.hasChildNodes() && !rootEl.hasAttribute('data-seo-fallback')) {
 
 // Register the PWA service worker (enables Android install prompt + offline
 // launch shell). Best-effort; never blocks the app. Served from origin root.
-if ('serviceWorker' in navigator) {
+if (!isNativeApp() && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => { /* non-fatal */ });
   });

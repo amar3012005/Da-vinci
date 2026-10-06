@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">HIVE-MIND</string>
+    <string name="title_activity_main">HIVE-MIND</string>
+    <string name="package_name">com.singulancelabs.hivemind</string>
+    <string name="custom_url_scheme">com.singulancelabs.hivemind</string>
+</resources>

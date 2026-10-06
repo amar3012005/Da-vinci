@@ -5,6 +5,14 @@
   "homepage": "/",
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
+    "@capacitor/android": "8.5.2",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/ios": "8.5.2",
+    "@capacitor/keyboard": "8.0.6",
+    "@capacitor/network": "8.0.1",
+    "@capacitor/status-bar": "8.0.4",
     "@cloudflare/realtimekit": "^2.0.2",
     "@cloudflare/realtimekit-react": "^2.0.2",
     "@cloudflare/realtimekit-react-ui": "^2.0.2",
@@ -65,7 +73,12 @@
     "test:ai-discovery": "node --test scripts/ai-discovery-contract.test.mjs",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "native:build": "node scripts/build-native.mjs",
+    "native:sync": "npm run native:build && cap sync",
+    "native:ios": "cap open ios",
+    "native:android": "cap open android",
+    "native:readiness": "node scripts/native-readiness.mjs"
   },
   "eslintConfig": {
     "extends": [
@@ -87,6 +100,7 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.14.5",
+    "@capacitor/cli": "8.5.2",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",

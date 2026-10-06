@@ -1,3 +1,4 @@
+import { isNativeApp } from './native/runtime';
 import Seo from './components/Seo';
 import PublicProduct from './components/PublicProduct';
 import PublicPageLoading from './components/PublicPageLoading';
@@ -97,7 +98,7 @@ function App() {
     typeof window !== 'undefined' && (
       window.location.hostname === HIVEMIND_SITE_HOST ||
       HIVEMIND_PREVIEW_HOSTS.has(window.location.hostname) ||
-      window.location.protocol === 'file:'
+      window.location.protocol === 'file:' || isNativeApp()
     );
 
   if (isPlatformAdminHost) {
