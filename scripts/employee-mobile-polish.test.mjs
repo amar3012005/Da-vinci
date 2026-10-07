@@ -12,7 +12,10 @@ test('employee phone uses Brain native Add/Apps seam while legacy outer routing 
 test('phone roster reuses authenticated team, room opening and employee creation', () => {
  const sidebar=source('Sidebar.jsx');
  assert.match(sidebar, /mobileRoster = false/);
- assert.match(sidebar, /team.slice\(0, 3\).map/);
+ assert.match(sidebar, /slice\(rosterPage \* 5, rosterPage \* 5 \+ 5\)/);
+ assert.match(sidebar, /mobile-roster-runtime/);
+ assert.match(sidebar, /mobile-roster-grid/);
+ assert.match(sidebar, /Account &amp; settings/);
  assert.match(sidebar, /openAgent\(event, agent\)/);
  assert.match(sidebar, /setCreateEmployeeOpen\(true\)/);
  assert.match(sidebar, /Search your team/);

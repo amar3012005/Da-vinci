@@ -165,6 +165,7 @@ export default function Sidebar({
   const navigate = useNavigate();
   const [team, setTeam] = useState([]);
   const [rosterSearch, setRosterSearch] = useState('');
+  const [rosterPage, setRosterPage] = useState(0);
   const [rosterSearchOpen, setRosterSearchOpen] = useState(false);
   const [rosterProfileOpen, setRosterProfileOpen] = useState(false);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
@@ -314,17 +315,30 @@ export default function Sidebar({
       className={`${mobileDrawer ? 'absolute' : 'fixed'} left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] ${mobileDrawer ? 'w-[min(300px,85vw)]' : sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
     >
       {mobileRoster && <div className="mobile-roster-intro">
-        <header className="flex items-center justify-between gap-3">
-          <button type="button" aria-label="Your profile" onClick={() => setRosterProfileOpen(true)} className="grid h-11 w-11 place-items-center rounded-full bg-[#117dff]/10 text-[#117dff] font-semibold">{(user?.display_name || user?.name || 'U').charAt(0)}</button>
-          <div className="flex gap-2"><button type="button" aria-label="Search your team" onClick={() => setRosterSearchOpen(value => !value)} className="grid h-11 w-11 place-items-center rounded-full border border-[#e3e0db]"><Search size={20}/></button><button type="button" aria-label="Create employee" onClick={() => setCreateEmployeeOpen(true)} className="grid h-11 w-11 place-items-center rounded-full border border-[#e3e0db]"><Plus size={22}/></button></div>
+        <header className="mobile-roster-top">
+          <button type="button" aria-label="Your profile" onClick={() => setRosterProfileOpen(true)} className="mobile-roster-profile-button">{(user?.display_name || user?.name || 'U').charAt(0)}</button>
+          <select aria-label="Choose workspace mode" value="HyperAgents" onChange={event => { navigate(event.target.value === 'Brain' ? '/hivemind/app/overview/new' : event.target.value === 'Voice' ? '/hivemind/app/tara' : '/hivemind/app/employee/harness'); window.dispatchEvent(new PopStateEvent('popstate')); }}><option>HyperAgents</option><option>Brain</option><option>Voice</option></select>
+          <button type="button" aria-label="Search your team" onClick={() => setRosterSearchOpen(value => !value)}><Search size={20}/></button>
+          <button type="button" aria-label="Create employee" onClick={() => setCreateEmployeeOpen(true)}><Plus size={22}/></button>
         </header>
-        {rosterSearchOpen && <input autoFocus aria-label="Search your team" value={rosterSearch} onChange={event => setRosterSearch(event.target.value)} placeholder="Search your team" className="mt-3 w-full rounded-2xl border border-[#e3e0db] bg-white p-3 text-[16px]" />}
-        <div className="mt-5 flex gap-5 overflow-x-auto pb-2" aria-label="Your employees">
-          <button type="button" data-agent-room-link onClick={event => openAgent(event, { id: 'runtime' })} className="shrink-0 text-center text-xs"><img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt="" className="mx-auto h-14 w-14 object-contain"/><span>Runtime</span></button>
-          {team.slice(0, 3).map(agent => <button type="button" data-agent-room-link key={agent.id} onClick={event => openAgent(event, agent)} className="shrink-0 text-center text-xs"><AgentAvatar agent={agent} size={56}/><span className="mt-2 block max-w-[72px] truncate">{agent.name}</span></button>)}
+        {rosterSearchOpen && <input autoFocus aria-label="Search your team" value={rosterSearch} onChange={event => { setRosterSearch(event.target.value); setRosterPage(0); }} placeholder="Search your team" className="mobile-roster-search" />}
+        <div className="mobile-roster-team">
+          <h2>Your team</h2>
+          <div className="mobile-roster-grid" aria-label="Your employees">
+            <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt=""/><strong>Runtime</strong><small>Chief of Staff</small></button>
+            {team.filter(agent => agent.name.toLowerCase().includes(rosterSearch.toLowerCase())).slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span></button>)}
+          </div>
+          {team.filter(agent => agent.name.toLowerCase().includes(rosterSearch.toLowerCase())).length > 5 && <div className="mobile-roster-pages"><button type="button" disabled={rosterPage === 0} onClick={() => setRosterPage(value => value - 1)}>Previous</button><span>{rosterPage + 1} / {Math.ceil(team.filter(agent => agent.name.toLowerCase().includes(rosterSearch.toLowerCase())).length / 5)}</span><button type="button" disabled={(rosterPage + 1) * 5 >= team.filter(agent => agent.name.toLowerCase().includes(rosterSearch.toLowerCase())).length} onClick={() => setRosterPage(value => value + 1)}>Next</button></div>}
         </div>
+        <div className="mobile-roster-shortcuts">
+          <button type="button" onClick={() => setCompanyOpen(true)}><Building2 size={24}/><span>Company</span></button>
+          {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm"><FolderKanban size={24}/><span>Your CRM</span></NavLink>}
+          <div data-hivemind-artifacts-seat />
+        </div>
+        <button type="button" className="mobile-roster-create" onClick={() => setCreateEmployeeOpen(true)}><Plus size={20}/>Create employee</button>
+        <button type="button" className="mobile-roster-account" onClick={() => setRosterProfileOpen(true)}><User size={20}/><span>Account &amp; settings</span><ChevronRight size={18}/></button>
       </div>}
-      <div className="shrink-0 px-4 pt-2 pb-3 border-b border-[#e3e0db]">
+      <div className="mobile-roster-legacy shrink-0 px-4 pt-2 pb-3 border-b border-[#e3e0db]">
         <div className="flex items-center justify-between h-12">
           <div className="flex items-center gap-2 min-w-0">
             <img src="/images/singulance-orbit.png" alt="Singulance" className="h-10 w-10 shrink-0 object-contain" />
@@ -353,7 +367,7 @@ export default function Sidebar({
       {teamMode && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">Could not refresh our team. <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>Retry</button></p>}
       {teamError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{teamError}</p>}
       {/* Navigation */}
-      <nav className="flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4">
+      <nav className="mobile-roster-legacy flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4">
         {navSections.map((section, si) => (
           <div key={si}>
             {section.label && !collapsed && (
@@ -462,13 +476,13 @@ export default function Sidebar({
             </div>
           </div>
         ))}
-        {teamMode && location.pathname.startsWith('/hivemind/app/employee/harness') && (
+        {teamMode && !mobileRoster && location.pathname.startsWith('/hivemind/app/employee/harness') && (
           <div data-hivemind-artifacts-seat data-collapsed={collapsed || undefined} />
         )}
       </nav>
 
       {/* Fixed bottom: Account nav + upgrade banner + user/logout */}
-      <div className="flex-shrink-0 border-t border-[#e3e0db]">
+      <div className="mobile-roster-legacy flex-shrink-0 border-t border-[#e3e0db]">
         {collapsed && (
           <div className="pt-2">
             <CreditBalance credits={usage?.credits} compact collapsed />
@@ -556,7 +570,7 @@ export default function Sidebar({
           </button>
         </div>
       </div>
-      {mobileRoster && rosterProfileOpen && <div className="mobile-roster-profile fixed inset-0 z-[95] flex items-end bg-black/25 p-2" onClick={() => setRosterProfileOpen(false)}><section data-mobile-roster-profile role="dialog" aria-modal="true" aria-label="Your profile" onClick={event => event.stopPropagation()} className="w-full rounded-[32px] bg-white p-6" style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))' }}><button type="button" autoFocus aria-label="Close profile" onClick={() => setRosterProfileOpen(false)} className="mb-6 h-11 w-11 rounded-full bg-[#f3f1ec]">×</button><div className="overflow-hidden rounded-3xl bg-[#f3f1ec]">{[{to:'/hivemind/app/profile',label:user?.display_name || user?.name || 'Profile'}, {to:'/hivemind/app/usage',label:'Usage'}, {to:'/hivemind/app/connectors',label:'Apps & connectors'}].map(item => <NavLink key={item.to} to={item.to} className="block border-b border-[#e3e0db] p-5 text-[17px]">{item.label}</NavLink>)}</div></section></div>}
+      {mobileRoster && rosterProfileOpen && <div className="mobile-roster-profile fixed inset-0 z-[95] flex items-end bg-black/25 p-2" onClick={() => setRosterProfileOpen(false)}><section data-mobile-roster-profile role="dialog" aria-modal="true" aria-label="Your profile" onClick={event => event.stopPropagation()} className="w-full rounded-[32px] bg-white p-6" style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))' }}><button type="button" autoFocus aria-label="Close profile" onClick={() => setRosterProfileOpen(false)} className="mb-6 h-11 w-11 rounded-full bg-[#f3f1ec]">×</button><div className="overflow-hidden rounded-3xl bg-[#f3f1ec]">{[{to:'/hivemind/app/profile',label:user?.display_name || user?.name || 'Profile'}, {to:'/hivemind/app/usage',label:'Usage'}, {to:'/hivemind/app/billing',label:'Billing'}, {to:'/hivemind/app/settings',label:'Settings'}, {to:'/hivemind/app/connectors',label:'Apps & connectors'}].map(item => <NavLink key={item.to} to={item.to} className="block border-b border-[#e3e0db] p-5 text-[17px]">{item.label}</NavLink>)}<button type="button" onClick={logout} className="block w-full p-5 text-left text-[17px]">Sign out</button></div></section></div>}
       {companyOpen ? <CompanyWorkspaceOverlay onClose={closeCompany} /> : null}
       {createEmployeeOpen && <CreateEmployeeDialog onClose={closeCreateEmployee} onCreated={employeeCreated} />}
     </aside>
