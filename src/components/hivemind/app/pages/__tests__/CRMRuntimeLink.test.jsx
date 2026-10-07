@@ -30,7 +30,7 @@ test('Open Runtime invokes shared native entry rather than plain navigation', as
   mockOpenRuntime.mockResolvedValue(undefined);
   await act(async () => root.render(<CRMRuntimeLink />));
   const link = container.querySelector('a');
-  expect(link.textContent).toBe('Open Runtime ↗');
+  expect(link.textContent).toBe('Ask Runtime ↗');
   expect(link.getAttribute('href')).toBe('/hivemind/app/employee/harness');
   await act(async () => {
     const event = new MouseEvent('click', { bubbles: true, cancelable: true });
@@ -46,5 +46,5 @@ test('entry failures reach the existing CRM error surface', async () => {
   mockOpenRuntime.mockRejectedValue(new Error('Runtime is still loading.'));
   await act(async () => root.render(<CRMRuntimeLink onError={onError} />));
   await act(async () => container.querySelector('a').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
-  expect(onError).toHaveBeenCalledWith('Runtime is still loading.');
+  expect(onError).toHaveBeenCalledWith('Runtime could not be opened. Please try again.');
 });
