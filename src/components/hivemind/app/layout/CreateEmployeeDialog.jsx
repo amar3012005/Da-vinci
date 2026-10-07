@@ -66,10 +66,10 @@ export default function CreateEmployeeDialog({ onClose, onCreated }) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/30 p-2 backdrop-blur-[2px] sm:items-center sm:p-5"
+    <div data-create-employee-overlay className="fixed inset-0 z-[100] flex items-end justify-center bg-black/30 p-2 backdrop-blur-[2px] sm:items-center sm:p-5"
       onMouseDown={event => { if (event.target === event.currentTarget && !busy) onClose(); }}>
       <form ref={container} onSubmit={submit} onKeyDown={keys} role="dialog" aria-modal="true" aria-labelledby="create-employee-title"
-        className="flex max-h-[94dvh] w-full max-w-[480px] flex-col overflow-hidden rounded-[30px] bg-[#fbfbfa] p-6 shadow-2xl sm:max-h-[90dvh] sm:rounded-[26px] sm:p-8">
+        data-create-employee-card className="flex max-h-[94dvh] w-full max-w-[480px] flex-col overflow-hidden rounded-[30px] bg-[#fbfbfa] p-6 shadow-2xl sm:max-h-[90dvh] sm:rounded-[26px] sm:p-8">
         <header className="flex items-center gap-4">
           <button type="button" aria-label="Close" disabled={busy} onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-[#f0f0ee] text-[#292929] disabled:opacity-40"><X size={22} /></button>
           <h2 id="create-employee-title" className="text-[20px] font-semibold tracking-[-0.03em]">Create employee</h2>
