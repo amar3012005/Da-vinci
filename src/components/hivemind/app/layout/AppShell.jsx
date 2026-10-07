@@ -303,11 +303,11 @@ export default function AppShell() {
   }, []);
   useEffect(() => { setMobileBrainAddOpen(false); }, [location.pathname]);
   useEffect(() => {
-    if (!brainChat || !brainPhone) return undefined;
+    if (!nativeChatRoom || !brainPhone) return undefined;
     const openAdd = () => setMobileBrainAddOpen(true);
     window.addEventListener('hivemind:mobile-brain-add', openAdd);
     return () => window.removeEventListener('hivemind:mobile-brain-add', openAdd);
-  }, [brainChat, brainPhone]);
+  }, [nativeChatRoom, brainPhone]);
   const [employeeCompact, setEmployeeCompact] = useState(() => window.matchMedia('(max-width: 900px)').matches);
   useEffect(() => {
     const query = window.matchMedia('(max-width: 900px)');
@@ -483,8 +483,8 @@ export default function AppShell() {
         >
           {!crmFullscreen && <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
           {nativeChatRoom && overlayNavigation && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
-          {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainChat && brainPhone} />}
-          {brainChat && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
+          {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
+          {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
           <main data-native-chat-main={nativeChatRoom || undefined} className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>

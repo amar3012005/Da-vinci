@@ -157,12 +157,16 @@ export default function Sidebar({
   collapsed = false,
   onCollapsedChange,
   mobileDrawer = false,
+  mobileRoster = false,
 }) {
   const { t } = useTranslation('dashboard');
   const { logout, org, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [team, setTeam] = useState([]);
+  const [rosterSearch, setRosterSearch] = useState('');
+  const [rosterSearchOpen, setRosterSearchOpen] = useState(false);
+  const [rosterProfileOpen, setRosterProfileOpen] = useState(false);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const modeMenuRef = useRef(null);
   const voiceMode = location.pathname.startsWith('/hivemind/app/tara');
@@ -303,11 +307,23 @@ export default function Sidebar({
 
   return (
     <aside
+      data-mobile-roster={mobileRoster || undefined}
       data-tour-sidebar
       data-crm-enabled={process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? 'true' : undefined}
       style={{ viewTransitionName: 'product-sidebar', ...(mobileDrawer ? { paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : {}) }}
       className={`${mobileDrawer ? 'absolute' : 'fixed'} left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] ${mobileDrawer ? 'w-[min(300px,85vw)]' : sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
     >
+      {mobileRoster && <div className="mobile-roster-intro">
+        <header className="flex items-center justify-between gap-3">
+          <button type="button" aria-label="Your profile" onClick={() => setRosterProfileOpen(true)} className="grid h-11 w-11 place-items-center rounded-full bg-[#117dff]/10 text-[#117dff] font-semibold">{(user?.display_name || user?.name || 'U').charAt(0)}</button>
+          <div className="flex gap-2"><button type="button" aria-label="Search your team" onClick={() => setRosterSearchOpen(value => !value)} className="grid h-11 w-11 place-items-center rounded-full border border-[#e3e0db]"><Search size={20}/></button><button type="button" aria-label="Create employee" onClick={() => setCreateEmployeeOpen(true)} className="grid h-11 w-11 place-items-center rounded-full border border-[#e3e0db]"><Plus size={22}/></button></div>
+        </header>
+        {rosterSearchOpen && <input autoFocus aria-label="Search your team" value={rosterSearch} onChange={event => setRosterSearch(event.target.value)} placeholder="Search your team" className="mt-3 w-full rounded-2xl border border-[#e3e0db] bg-white p-3 text-[16px]" />}
+        <div className="mt-5 flex gap-5 overflow-x-auto pb-2" aria-label="Your employees">
+          <button type="button" data-agent-room-link onClick={event => openAgent(event, { id: 'runtime' })} className="shrink-0 text-center text-xs"><img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt="" className="mx-auto h-14 w-14 object-contain"/><span>Runtime</span></button>
+          {team.slice(0, 3).map(agent => <button type="button" data-agent-room-link key={agent.id} onClick={event => openAgent(event, agent)} className="shrink-0 text-center text-xs"><AgentAvatar agent={agent} size={56}/><span className="mt-2 block max-w-[72px] truncate">{agent.name}</span></button>)}
+        </div>
+      </div>}
       <div className="shrink-0 px-4 pt-2 pb-3 border-b border-[#e3e0db]">
         <div className="flex items-center justify-between h-12">
           <div className="flex items-center gap-2 min-w-0">
@@ -351,7 +367,7 @@ export default function Sidebar({
               <div className="h-px bg-[#e3e0db] mx-2 mb-2" />
             )}
             <div className="space-y-0.5">
-              {section.items.map((item) => {
+              {section.items.filter(item => !mobileRoster || !rosterSearch || (!item.agent && !item.runtime) || String(item.label).toLowerCase().includes(rosterSearch.toLowerCase())).map((item) => {
                 const pathOnly = item.to.split('?')[0];
                 const isActive = item.createEmployee ? createEmployeeOpen : item.agent ? selectedAgent === item.agent.id : item.runtime ? location.pathname.startsWith('/hivemind/app/employee/harness') && !selectedAgent :
                   location.pathname === pathOnly ||
@@ -540,6 +556,7 @@ export default function Sidebar({
           </button>
         </div>
       </div>
+      {mobileRoster && rosterProfileOpen && <div className="mobile-roster-profile fixed inset-0 z-[95] flex items-end bg-black/25 p-2" onClick={() => setRosterProfileOpen(false)}><section data-mobile-roster-profile role="dialog" aria-modal="true" aria-label="Your profile" onClick={event => event.stopPropagation()} className="w-full rounded-[32px] bg-white p-6" style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))' }}><button type="button" autoFocus aria-label="Close profile" onClick={() => setRosterProfileOpen(false)} className="mb-6 h-11 w-11 rounded-full bg-[#f3f1ec]">×</button><div className="overflow-hidden rounded-3xl bg-[#f3f1ec]">{[{to:'/hivemind/app/profile',label:user?.display_name || user?.name || 'Profile'}, {to:'/hivemind/app/usage',label:'Usage'}, {to:'/hivemind/app/connectors',label:'Apps & connectors'}].map(item => <NavLink key={item.to} to={item.to} className="block border-b border-[#e3e0db] p-5 text-[17px]">{item.label}</NavLink>)}</div></section></div>}
       {companyOpen ? <CompanyWorkspaceOverlay onClose={closeCompany} /> : null}
       {createEmployeeOpen && <CreateEmployeeDialog onClose={closeCreateEmployee} onCreated={employeeCreated} />}
     </aside>
