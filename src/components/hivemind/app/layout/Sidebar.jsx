@@ -7,6 +7,8 @@ import { BotAvatar } from 'bot-avatars';
 import BrainModeIcon from './BrainModeIcon';
 import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
 import VoiceModeIcon from './VoiceModeIcon';
+import LangSwitcher from './LangSwitcher';
+import WorkspaceNotifications from './WorkspaceNotifications';
 import {
   LayoutDashboard,
   Moon,
@@ -304,6 +306,24 @@ export default function Sidebar({
     { to: '/hivemind/app/settings', icon: Settings,   label: tt('settings', 'Settings') },
   ];
 
+  const workspaceModeSwitcher = (
+        <div ref={modeMenuRef} className="relative mt-1">
+          <button type="button" aria-label="Choose workspace mode" aria-expanded={modeMenuOpen} aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)} className="flex items-center gap-2 rounded-xl px-1 py-1.5 text-[#383838] hover:bg-[#eeece6]">
+            {voiceMode ? <VoiceModeIcon size={32} /> : teamMode ? <BotAvatar type="mech" shading="fabric" size={32} interactive={false} /> : <BrainModeIcon size={32} />}
+            {!collapsed && <><span className="text-[15px] font-medium">{voiceMode ? t('sidebar.voice', { defaultValue: 'Voice' }) : teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span><ChevronDown size={14} /></>}
+          </button>
+          {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 w-[310px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#e3e0db] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.10)] z-50">
+            {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), path: '/hivemind/app/overview/new', selected: !teamMode && !voiceMode, brain: true },
+              { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), path: '/hivemind/app/employee/harness', selected: teamMode },
+              { name: t('sidebar.voice', { defaultValue: 'Voice' }), description: t('sidebar.voiceDescription', { defaultValue: 'Speak. Connect. Represent.' }), path: '/hivemind/app/tara', selected: voiceMode, voice: true }].map(mode =>
+              <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button" onClick={() => { setModeMenuOpen(false); navigate(mode.path); window.dispatchEvent(new PopStateEvent('popstate')); }} className={`flex items-center gap-3 w-full rounded-xl px-3 py-3 text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f7f6f2]' : ''}`}>
+                <span className="shrink-0">{mode.brain ? <BrainModeIcon size={32} /> : mode.voice ? <VoiceModeIcon size={32} /> : <BotAvatar type="mech" shading="fabric" size={32} interactive={false} />}</span>
+                <span className="flex flex-col gap-1"><span className="text-[17px] font-medium leading-tight">{mode.name}</span><span className="text-[14px] text-[#858585] font-normal leading-snug">{mode.description}</span></span>
+              </button>)}
+          </div>}
+        </div>
+  );
+
   const sidebarWidth = collapsed ? 'w-[68px]' : 'w-[300px]';
 
   return (
@@ -317,10 +337,12 @@ export default function Sidebar({
       {mobileRoster && <div className="mobile-roster-intro">
         <header className="mobile-roster-top">
           <button type="button" aria-label="Your profile" onClick={() => setRosterProfileOpen(true)} className="mobile-roster-profile-button">{(user?.display_name || user?.name || 'U').charAt(0)}</button>
-          <select aria-label="Choose workspace mode" value="HyperAgents" onChange={event => { navigate(event.target.value === 'Brain' ? '/hivemind/app/overview/new' : event.target.value === 'Voice' ? '/hivemind/app/tara' : '/hivemind/app/employee/harness'); window.dispatchEvent(new PopStateEvent('popstate')); }}><option>HyperAgents</option><option>Brain</option><option>Voice</option></select>
+          {workspaceModeSwitcher}
           <button type="button" aria-label="Search your team" onClick={() => setRosterSearchOpen(value => !value)}><Search size={20}/></button>
           <button type="button" aria-label="Create employee" onClick={() => setCreateEmployeeOpen(true)}><Plus size={22}/></button>
         </header>
+        <div className="mobile-roster-org"><Building2 size={18}/><strong>{org?.name || org?.slug || 'Workspace'}</strong></div>
+        <div className="mobile-roster-utilities"><LangSwitcher compact/><WorkspaceNotifications/><button type="button" aria-label="Open chat history" onClick={() => window.dispatchEvent(new Event('hivemind:mobile-history'))}>Recents</button></div>
         {rosterSearchOpen && <input autoFocus aria-label="Search your team" value={rosterSearch} onChange={event => { setRosterSearch(event.target.value); setRosterPage(0); }} placeholder="Search your team" className="mobile-roster-search" />}
         <div className="mobile-roster-team">
           <h2>Your team</h2>
@@ -347,21 +369,7 @@ export default function Sidebar({
           {!collapsed && !mobileDrawer && <button type="button" aria-label="Collapse sidebar" aria-expanded="true" onClick={() => onCollapsedChange?.(true)} className="p-1 rounded-md hover:bg-[#eeece6] text-[#737373]"><PanelLeft size={18} strokeWidth={1.75} /></button>}
         </div>
         {collapsed && <button type="button" aria-label="Expand sidebar" aria-expanded="false" onClick={() => onCollapsedChange?.(false)} className="mx-auto block p-1 text-[#737373]"><PanelLeft size={18} /></button>}
-        <div ref={modeMenuRef} className="relative mt-1">
-          <button type="button" aria-label="Choose workspace mode" aria-expanded={modeMenuOpen} aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)} className="flex items-center gap-2 rounded-xl px-1 py-1.5 text-[#383838] hover:bg-[#eeece6]">
-            {voiceMode ? <VoiceModeIcon size={32} /> : teamMode ? <BotAvatar type="mech" shading="fabric" size={32} interactive={false} /> : <BrainModeIcon size={32} />}
-            {!collapsed && <><span className="text-[15px] font-medium">{voiceMode ? t('sidebar.voice', { defaultValue: 'Voice' }) : teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span><ChevronDown size={14} /></>}
-          </button>
-          {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 w-[310px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#e3e0db] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.10)] z-50">
-            {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), path: '/hivemind/app/overview/new', selected: !teamMode && !voiceMode, brain: true },
-              { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), path: '/hivemind/app/employee/harness', selected: teamMode },
-              { name: t('sidebar.voice', { defaultValue: 'Voice' }), description: t('sidebar.voiceDescription', { defaultValue: 'Speak. Connect. Represent.' }), path: '/hivemind/app/tara', selected: voiceMode, voice: true }].map(mode =>
-              <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button" onClick={() => { setModeMenuOpen(false); navigate(mode.path); window.dispatchEvent(new PopStateEvent('popstate')); }} className={`flex items-center gap-3 w-full rounded-xl px-3 py-3 text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f7f6f2]' : ''}`}>
-                <span className="shrink-0">{mode.brain ? <BrainModeIcon size={32} /> : mode.voice ? <VoiceModeIcon size={32} /> : <BotAvatar type="mech" shading="fabric" size={32} interactive={false} />}</span>
-                <span className="flex flex-col gap-1"><span className="text-[17px] font-medium leading-tight">{mode.name}</span><span className="text-[14px] text-[#858585] font-normal leading-snug">{mode.description}</span></span>
-              </button>)}
-          </div>}
-        </div>
+        {!mobileRoster && workspaceModeSwitcher}
       </div>
 
       {teamMode && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">Could not refresh our team. <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>Retry</button></p>}

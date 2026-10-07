@@ -465,7 +465,7 @@ export default function AppShell() {
   return (
     <QuickRecorderProvider>
     <TeamProvider>
-      <div data-hivemind-app-shell data-native-chat-shell={nativeChatRoom || undefined} data-native-compact-chat={(nativeChatRoom && employeeCompact) || undefined} className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
+      <div data-hivemind-app-shell data-mobile-agent-overlay={(employeeRoom && brainPhone) || undefined} data-native-chat-shell={nativeChatRoom || undefined} data-native-compact-chat={(nativeChatRoom && employeeCompact) || undefined} className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
         {!overlayNavigation && !graphFullscreen && !hyperFullscreen && !crmFullscreen && (
           <Sidebar
             activeSection={activeSection}
@@ -481,7 +481,7 @@ export default function AppShell() {
             '--hm-harness-center-offset': `${-(overlayNavigation ? 0 : hyperFullscreen ? 120 : sidebarCollapsed ? 34 : 130)}px`,
           }}
         >
-          {!crmFullscreen && <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
+          {!crmFullscreen && <TopBar floatingMobile={employeeRoom && brainPhone} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
           {nativeChatRoom && overlayNavigation && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}

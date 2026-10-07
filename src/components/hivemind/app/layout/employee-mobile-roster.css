@@ -51,3 +51,19 @@
     .mobile-roster-shortcuts { padding-top:12px; }
   }
 }
+@media (max-width:600px) {
+ .mobile-roster-top > div { flex:1; min-width:0; margin-top:0; }
+ .mobile-roster-top > div > button { width:auto; border:0; border-radius:12px; gap:4px; }
+ .mobile-roster-top > div > button > span { font-size:13px; }
+ .mobile-roster-top > div > button > svg, .mobile-roster-top > div > button > div { max-width:24px; }
+ .mobile-roster-top [role="menu"] { z-index:60; }
+ .mobile-roster-top [role="menu"] button { width:100%; height:auto; border:0; border-radius:12px; display:flex; }
+ .mobile-roster-org { display:flex; align-items:center; gap:8px; min-height:40px; }
+ .mobile-roster-org > strong { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
+ .mobile-roster-org > svg { flex-shrink:0; color:#626262; }
+ [data-mobile-agent-overlay] [data-native-chat-main] { height:calc(var(--hm-app-viewport-height,100dvh) - env(safe-area-inset-top,0px)); }
+}
+@media (max-width:600px) {
+ .mobile-roster-utilities { display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-top:-10px; }
+ .mobile-roster-utilities > button { min-height:40px; font-size:13px; padding:0 8px; }
+}

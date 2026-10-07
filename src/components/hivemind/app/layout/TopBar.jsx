@@ -155,7 +155,7 @@ const PAGE_PREFIXES = [
   ['/hivemind/app/team/projects', '/hivemind/app/team/projects'],
 ];
 
-export default function TopBar({ activeSection = 'hivemind', onSectionChange, mobileTeamToggle = null }) {
+export default function TopBar({ activeSection = 'hivemind', onSectionChange, mobileTeamToggle = null, floatingMobile = false }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { org } = useAuth();
@@ -186,6 +186,10 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
   const tTitle = t(`topbar.titles.${routeSlug}`, { defaultValue: title });
   const tDesc = description ? t(`topbar.descriptions.${routeSlug}`, { defaultValue: description }) : '';
   const harnessCanvas = pagePath === '/hivemind/app/overview' || pagePath === '/hivemind/app/employee/harness';
+
+  if (floatingMobile) return <div data-mobile-agent-overlay-controls className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between px-2" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+    <button type="button" aria-label="Open your team" aria-haspopup="dialog" onClick={mobileTeamToggle} className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full bg-[#faf9f4]/90 text-[#292929]"><Menu size={22}/></button>
+  </div>;
 
   return (
     <header className={`pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-[#faf9f4] md:bg-white' : 'bg-transparent'}`}>
