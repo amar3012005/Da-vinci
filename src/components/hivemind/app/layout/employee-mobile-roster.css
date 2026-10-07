@@ -67,3 +67,7 @@
  .mobile-roster-utilities { display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-top:-10px; }
  .mobile-roster-utilities > button { min-height:40px; font-size:13px; padding:0 8px; }
 }
+@media (max-width:600px) {
+ .mobile-roster-top > div > button { display:flex; white-space:nowrap; }
+ .mobile-roster-top > div > button > span { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+}
