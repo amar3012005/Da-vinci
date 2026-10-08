@@ -1,4 +1,7 @@
 import axios from 'axios';
+import { isNativeApp } from './native-app';
+import { createNativeApiAdapter } from './native-api-adapter';
+import { nativePlugin } from './native-auth';
 import { API_DEFAULTS } from './theme';
 import { isPlanLimitError, extractPlanLimit, emitPlanLimit } from './planLimit';
 import { shouldNotifyServiceError, extractServiceError, emitServiceError } from './serviceError';
@@ -93,7 +96,11 @@ class HiveMindApiClient {
     this._attachProductAccessInterceptor(this.controlPlane);
     this._attachProductAccessInterceptor(this.core);
 
-    this.loadStoredApiKey();
+    if (isNativeApp()) {
+      this.controlPlane.defaults.adapter = createNativeApiAdapter(nativePlugin);
+      this.core.defaults.adapter = createNativeApiAdapter(nativePlugin, { coreProxy: true });
+      this.clearApiKey();
+    } else this.loadStoredApiKey();
   }
 
   getPlatformAdminEnvironment() {
@@ -158,7 +165,7 @@ class HiveMindApiClient {
   }
 
   loadStoredApiKey() {
-    if (typeof window === 'undefined') return null;
+    if (isNativeApp() || typeof window === 'undefined') return null;
     try {
       const stored = window.localStorage.getItem(this._apiKeyStorageKey);
       if (stored) {
@@ -172,6 +179,7 @@ class HiveMindApiClient {
   }
 
   setApiKey(key, { persist = true } = {}) {
+    if (isNativeApp()) return; // Native Core calls use the authenticated CP proxy.
     if (!key) {
       this.clearApiKey();
       return;
@@ -192,6 +200,7 @@ class HiveMindApiClient {
 
   clearApiKey() {
     this._apiKey = null;
+    this._nativeAuthenticated = false;
     delete this.core.defaults.headers['X-API-Key'];
     delete this.core.defaults.headers['Authorization'];
 
@@ -205,10 +214,11 @@ class HiveMindApiClient {
   }
 
   hasApiKey() {
-    return Boolean(this._apiKey);
+    return isNativeApp() ? this._nativeAuthenticated === true : Boolean(this._apiKey);
   }
 
   setCoreBaseUrl(url) {
+    if (isNativeApp()) return; // Never follow a bootstrap-supplied external Core host.
     // The Platform Admin environment is a hard routing latch. Bootstrap data
     // from either environment must never redirect later Core calls across it.
     if (this._platformAdminEnvironment) {
@@ -364,7 +374,8 @@ class HiveMindApiClient {
     }
     // Session bootstrap must override any stale locally persisted key so org/plan changes
     // take effect immediately for the signed-in user.
-    if (data.session_api_key) {
+    if (isNativeApp()) this._nativeAuthenticated = Boolean(data.user && data.authenticated !== false);
+    if (data.session_api_key && !isNativeApp()) {
       this.setApiKey(data.session_api_key);
     }
     return data;

@@ -5,6 +5,9 @@
   "homepage": "/",
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/core": "^8.5.3",
     "@cloudflare/realtimekit": "^2.0.2",
     "@cloudflare/realtimekit-react": "^2.0.2",
     "@cloudflare/realtimekit-react-ui": "^2.0.2",

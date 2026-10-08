@@ -1,3 +1,4 @@
+import { isNativeApp } from './native-app';
 /**
  * HIVEMIND Design Tokens
  * Supermemory-inspired warm light console aesthetic
@@ -75,8 +76,8 @@ const IS_PREVIEW_HOST = typeof window !== 'undefined'
 
 export const API_DEFAULTS = {
   controlPlaneBase:
-    (IS_PREVIEW_HOST ? 'https://preview-api.singulancelabs.com' : process.env.REACT_APP_CONTROL_PLANE_URL) ||
+    (isNativeApp() ? 'https://api.singulancelabs.com' : IS_PREVIEW_HOST ? 'https://preview-api.singulancelabs.com' : process.env.REACT_APP_CONTROL_PLANE_URL) ||
     'https://api.hivemind.davinciai.eu:8040',
   coreApiBase:
-    (IS_PREVIEW_HOST ? 'https://preview.singulancelabs.com' : process.env.REACT_APP_CORE_API_URL) || 'https://core.hivemind.davinciai.eu:8050',
+    (isNativeApp() ? 'https://api.singulancelabs.com' : IS_PREVIEW_HOST ? 'https://preview.singulancelabs.com' : process.env.REACT_APP_CORE_API_URL) || 'https://core.hivemind.davinciai.eu:8050',
 };

@@ -4,6 +4,8 @@ import apiClient from '../shared/api-client';
 import posthog, { isPostHogEnabled } from '../../../../analytics/posthog';
 import { setStorageUser, clearUserScopedStorage } from '../shared/user-storage';
 import { defaultAuthReturnUrl } from './mobile-routing';
+import { isNativeApp } from '../shared/native-app';
+import { bindNativeAuthCallbacks, nativeAuth } from '../shared/native-auth';
 
 const AuthContext = createContext(undefined);
 
@@ -28,6 +30,7 @@ export function AuthProvider({ children }) {
 
   const runBootstrap = useCallback(async () => {
     setAuthState('loading');
+    if (isNativeApp()) { setUser(null); setOrg(null); setOnboarding(null); }
 
     try {
       // Hard timeout so a hung bootstrap never traps the user on the
@@ -105,6 +108,15 @@ export function AuthProvider({ children }) {
     runBootstrap();
   }, [runBootstrap]);
 
+  useEffect(() => {
+    if (!isNativeApp()) return undefined;
+    let cancelled = false; let dispose;
+    bindNativeAuthCallbacks(runBootstrap, () => { setAuthState(current => current === 'signed_in' ? current : 'signed_out'); })
+      .then(cleanup => { if (cancelled) cleanup(); else dispose = cleanup; })
+      .catch(() => { if (!cancelled) setAuthState('signed_out'); });
+    return () => { cancelled = true; dispose?.(); };
+  }, [runBootstrap]);
+
   // Re-bootstrap when returning from ZITADEL callback
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -134,6 +146,10 @@ export function AuthProvider({ children }) {
   }, [authState]);
 
   const login = useCallback((options = {}) => {
+    if (isNativeApp()) {
+      nativeAuth().start().catch(() => setAuthState('signed_out'));
+      return;
+    }
     // Honor caller-provided returnTo (e.g. invitee bouncing through /hivemind/join/...)
     // and fall back to the default overview landing.
     const defaultReturn = defaultAuthReturnUrl(window.location.origin);
@@ -155,10 +171,12 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      await apiClient.logout();
+      if (isNativeApp()) await nativeAuth().logout();
+      else await apiClient.logout();
     } catch {
       // Clear local state regardless
     }
+    apiClient.clearApiKey();
     setUser(null);
     setOrg(null);
     setOnboarding(null);
@@ -169,7 +187,7 @@ export function AuthProvider({ children }) {
     // on this device starts clean (the cross-account cache bug).
     try { setStorageUser(null); clearUserScopedStorage(); } catch { /* noop */ }
     try { if (posthog && isPostHogEnabled()) posthog.reset(); } catch { /* noop */ }
-    window.location.href = '/hivemind';
+    window.location.href = isNativeApp() ? '/hivemind/login' : '/hivemind';
   }, []);
 
   const createOrg = useCallback(async (name) => {
