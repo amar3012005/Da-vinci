@@ -512,7 +512,7 @@ export default function HyperAgents({ harnessRooms = false }) {
 
   // ── WhatsApp layout (post-first-room) ──────────────────────────────
   return (
-    <div className={`font-['Space_Grotesk'] flex h-[calc(var(--hm-app-viewport-height,100dvh)-3.5rem)] min-h-0 ${harnessRooms ? '' : '-m-6'} max-w-none bg-white border-t border-[#e3e0db] overflow-hidden`} data-os-harness-rooms={harnessRooms || undefined}>
+    <div className={`font-['Space_Grotesk'] flex h-[calc(var(--hm-app-viewport-height,100dvh)-3.5rem)] min-w-0 min-h-0 ${harnessRooms ? '' : '-m-6'} max-w-none bg-white border-t border-[#e3e0db] overflow-hidden`} data-os-harness-rooms={harnessRooms || undefined}>
       {!harnessRooms && <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />}
       {/* Left rail: rooms */}
       <aside className={showOperatingSystemSidebar ? 'hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex' : 'hidden'} data-product-sidebar="os" data-crm-enabled={process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? 'true' : undefined} style={{ viewTransitionName: 'product-sidebar' }}>
@@ -716,7 +716,7 @@ export default function HyperAgents({ harnessRooms = false }) {
       {/* Middle: hero dashboard, thread or roster */}
       <main className="flex-1 min-w-0 min-h-0 flex flex-col">
         {harnessRooms ? (
-          <section className="flex-1 min-h-0 overflow-hidden" aria-label="Harness Rooms">
+          <section className="flex-1 min-w-0 min-h-0 overflow-hidden" aria-label="Harness Rooms">
             <HarnessSurface />
           </section>
         ) : viewMode === 'hero' ? (

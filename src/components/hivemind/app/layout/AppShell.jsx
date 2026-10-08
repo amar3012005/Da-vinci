@@ -321,9 +321,9 @@ export default function AppShell() {
   ));
   const overlayNavigation = compactViewport || (nativeChatRoom && employeeCompact);
   useEffect(() => {
-    if (!nativeChatRoom || !employeeCompact) return undefined;
+    if (!(nativeChatRoom && employeeCompact) && !(chatOpen && compactViewport)) return undefined;
     return bindNativeChatViewport(window, document.documentElement.style);
-  }, [nativeChatRoom, employeeCompact]);
+  }, [nativeChatRoom, employeeCompact, chatOpen, compactViewport]);
   useEffect(() => {
     if (!nativeChatRoom) return undefined;
     const openApps = () => setMobileAppsOpen(true);
@@ -447,7 +447,7 @@ export default function AppShell() {
         <div data-hivemind-app-shell data-native-chat-shell data-mobile-brain-user-name={mobileBrainUserName(user, brainChat && brainPhone)} data-mobile-brain-greeting={mobileBrainGreeting(user, brainChat && brainPhone, t)} className="font-[Inter,ui-sans-serif,system-ui,sans-serif]" style={{ '--hm-harness-center-offset': '0px' }}>
           <MobileShell noScroll bareHeader showBareLogo={false} nativeChatViewport activeNavPath="/hivemind/m/chat">
             <MobileBrainHeaderActions />
-            <main className="flex-1 min-h-0 overflow-hidden" style={{ paddingTop: '56px' }}><Outlet /></main>
+            <main className="flex-1 min-h-0 min-w-0 overflow-hidden" style={{ paddingTop: '56px' }}><Outlet /></main>
             {mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy />}
             <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />
             <GlobalUploadStrip />
@@ -474,7 +474,8 @@ export default function AppShell() {
           />
         )}
         <div
-          className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen || crmFullscreen ? 'sidebar-content-expanded' : ''}`}
+          data-native-chat-frame={nativeChatRoom || undefined}
+          className={`min-w-0 transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen || crmFullscreen ? 'sidebar-content-expanded' : ''}`}
           style={{
             marginLeft: (overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '300px',
             ...(nativeChatRoom && employeeCompact ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : {}),

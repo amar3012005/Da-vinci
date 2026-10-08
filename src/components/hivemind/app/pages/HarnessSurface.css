@@ -55,3 +55,12 @@ html[data-dsh-mode='hivemind-chat'] [data-os-harness-rooms]
   [data-hivemind-harness-surface] [class*='_composerStack'] {
   transform: translateX(var(--hm-harness-center-offset, 0px));
 }
+
+/* Phone chat uses the full canvas already. Desktop centering compensates for
+   side rails and must not move the mobile composer outside its viewport. */
+@media (max-width:600px) {
+  html[data-dsh-mode='hivemind-chat'] [data-hivemind-harness-surface] [class*='_composerStack'] {
+    transform:none;
+  }
+  [data-hivemind-harness-surface] { min-width:0; width:100%; }
+}

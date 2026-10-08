@@ -693,6 +693,7 @@ export function ChatPanel({ isOpen, onClose }) {
             initial="hidden"
             animate="visible"
             exit="exit"
+            data-hivemind-chat-panel
             className="fixed top-0 right-0 h-screen w-[440px] max-w-full z-50 flex flex-col bg-[#faf9f4] font-['Space_Grotesk']"
             style={{
               boxShadow: '-4px 0 40px rgba(0,0,0,0.14), -1px 0 0 rgba(17,125,255,0.06)',
@@ -831,7 +832,7 @@ export function ChatPanel({ isOpen, onClose }) {
             </div>
 
             {/* ── Messages ── (same structure as TalkToHiveMobile's thread) */}
-            <div className="flex-1 overflow-y-auto px-4 py-5 bg-[#faf9f4]">
+            <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-4 py-5 bg-[#faf9f4]">
               <div className="flex flex-col gap-4">
                 {messages.length === 0 && !loading ? (
                   <EmptyState setInput={setInput} textareaRef={textareaRef} userName={user?.name || user?.email} />
@@ -914,7 +915,7 @@ export function ChatPanel({ isOpen, onClose }) {
             </AnimatePresence>
 
             {/* ── Composer — mirrors TalkToHiveMobile's floating card exactly ── */}
-            <div className="flex-shrink-0 px-3 pt-2 pb-3 bg-[#faf9f4]">
+            <div data-hivemind-popup-composer className="flex-shrink-0 px-3 pt-2 pb-3 bg-[#faf9f4]">
               <div className="bg-white border border-[#e8e5de] rounded-[28px] shadow-[0_2px_14px_rgba(0,0,0,0.06)] px-4 pt-3 pb-2.5 focus-within:border-[#117dff]/40 transition-colors">
                 <input
                   ref={fileInputRef}
