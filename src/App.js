@@ -18,6 +18,8 @@ const HivemindLogin = React.lazy(() => import('./components/hivemind/app/auth/Hi
 // Research pages (three.js hero scenes → lazy)
 const ResearchIndex = React.lazy(() => import('./components/ResearchIndex'));
 const BenchmarkResearch = React.lazy(() => import('./components/BenchmarkResearch'));
+const RuntimeProduct = React.lazy(() => import('./components/RuntimeProduct'));
+const RuntimeResearch = React.lazy(() => import('./components/RuntimeResearch'));
 const IcarusResearch = React.lazy(() => import('./components/IcarusResearch'));
 const CsiResearch = React.lazy(() => import('./components/CsiResearch'));
 const PostQuantumResearch = React.lazy(() => import('./components/research/PostQuantumResearch'));
@@ -122,7 +124,7 @@ function App() {
       <UpdateBanner />
       <CookieConsent />
       <Routes>
-        <Route path="/" element={PRODUCT_HOST ? <ReturningUserMarketingHomepage /> : (isHivemindHost ? <React.Suspense fallback={<PublicPageLoading />}><HivemindRedirect /></React.Suspense> : <ReturningUserMarketingHomepage />)} />
+        <Route path="/" element={window.location.hostname === "runtime.singulancelabs.com" ? <React.Suspense fallback={<PublicPageLoading />}><RuntimeProduct /></React.Suspense> : PRODUCT_HOST ? <ReturningUserMarketingHomepage /> : (isHivemindHost ? <React.Suspense fallback={<PublicPageLoading />}><HivemindRedirect /></React.Suspense> : <ReturningUserMarketingHomepage />)} />
 
         {/* HIVEMIND — only served on the HIVEMIND subdomain; every /hivemind* hit
             on the marketing domain hard-redirects to HIVEMIND_SITE_HOST. */}
@@ -156,6 +158,8 @@ function App() {
 
         {/* Research pages */}
         <Route path="/research" element={<React.Suspense fallback={<PublicPageLoading />}><ResearchIndex /></React.Suspense>} />
+        <Route path="/runtime" element={<React.Suspense fallback={<PublicPageLoading />}><RuntimeProduct /></React.Suspense>} />
+        <Route path="/research/runtime" element={<React.Suspense fallback={<PublicPageLoading />}><RuntimeResearch /></React.Suspense>} />
         <Route path="/research/icarus" element={<React.Suspense fallback={<PublicPageLoading />}><IcarusResearch /></React.Suspense>} />
         <Route path="/research/cognitive-swarm-intelligence" element={<React.Suspense fallback={<PublicPageLoading />}><CsiResearch /></React.Suspense>} />
         <Route path="/research/post-quantum-cryptography" element={<React.Suspense fallback={<PublicPageLoading />}><PostQuantumResearch /></React.Suspense>} />

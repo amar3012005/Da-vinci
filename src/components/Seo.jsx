@@ -2,9 +2,9 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { PUBLIC_PAGES, OG_IMAGE, schemaFor } from '../seo/public-pages.mjs';
 
-const Seo = ({ title, description, canonical }) => {
+const Seo = ({ title, description, canonical, pagePath }) => {
   const path = canonical ? new URL(canonical, 'https://singulancelabs.com').pathname : null;
-  const page = PUBLIC_PAGES[path];
+  const page = PUBLIC_PAGES[pagePath || path];
   const resolvedTitle = page?.title || title;
   const resolvedDescription = page?.description || description;
   return (
@@ -26,7 +26,7 @@ const Seo = ({ title, description, canonical }) => {
       {page && <meta name="twitter:title" content={resolvedTitle} />}
       {page && <meta name="twitter:description" content={resolvedDescription} />}
       {page && <meta name="twitter:image" content={OG_IMAGE} />}
-      {page && <script type="application/ld+json">{JSON.stringify(schemaFor(path))}</script>}
+      {page && <script type="application/ld+json">{JSON.stringify(schemaFor(pagePath || path))}</script>}
     </Helmet>
   );
 };

@@ -391,6 +391,25 @@ export default {
       url.protocol = 'https:';
       return Response.redirect(url.href, 308);
     }
+    // Dedicated public product host never enters authenticated app or gateway routing.
+    if (hostname(request) === 'runtime.singulancelabs.com') {
+      if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', {status:405, headers:{allow:'GET, HEAD'}});
+      if (pathname === '/runtime') return Response.redirect(new URL('/', request.url), 308);
+      if (pathname === '/') {
+        if (prefersMarkdown(request.headers.get('accept'))) return markdownResponse(request, '/runtime');
+        const documentRequest = new Request(new URL('/', request.url), request);
+        documentRequest.headers.delete('if-none-match');
+        documentRequest.headers.delete('if-modified-since');
+        return publicSeoResponse(await env.ASSETS.fetch(documentRequest), '/runtime');
+      }
+      if (pathname === '/robots.txt') return new Response('User-agent: *\nAllow: /\n', {headers:{'content-type':'text/plain'}});
+      if (/^\/(?:static|assets)\//u.test(pathname) || ['/favicon.ico','/logo.svg','/singulance-mark-192.png','/manifest.json'].includes(pathname)) {
+        const asset = await env.ASSETS.fetch(request);
+        if ((asset.headers.get('content-type') || '').includes('text/html')) return new Response('Not found', {status:404});
+        return asset;
+      }
+      return new Response('Not found', {status:404, headers:{'x-robots-tag':'noindex','cache-control':'no-store'}});
+    }
     const publicHost = PUBLIC_MARKETING_HOSTS.has(hostname(request));
     if (publicHost && hostname(request) !== 'singulancelabs.com') {
       return Response.redirect(`${SITE}${pathname}${url.search}`, 308);

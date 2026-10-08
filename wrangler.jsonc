@@ -26,6 +26,7 @@
     "RUNNER_ORIGIN": "https://harness-chat-origin.singulancelabs.com"
   },
   "routes": [
+    { "pattern": "runtime.singulancelabs.com", "custom_domain": true },
     {
       "pattern": "singulancelabs.com",
       "custom_domain": true

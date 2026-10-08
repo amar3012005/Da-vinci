@@ -1,5 +1,172 @@
 # SINGULANCE public page text
 
+INTRODUCING RUNTIME · YOUR AI CHIEF OF STAFF
+
+# Before you ask.
+Already connected.
+
+Your company doesn’t move one prompt at a time.
+Its intelligence shouldn’t either.
+
+[Discover a different rhythm ↓](#intelligence)
+
+A signal appears.A priority connects.Work moves forward.
+
+SIGNALS → CONTEXT → COORDINATION → REVIEW
+
+FROM AGENDA TO MOMENTUM
+
+## Less starting over.
+More moving forward.
+
+You set the direction. Runtime connects what matters: your goals, your company’s context, and the work happening across your team.
+
+It can notice relevant changes before your next request, surface a useful next step, and coordinate work within the authority you give it. When a decision belongs to you, it asks.
+
+INTELLIGENCE, IN MOTION
+
+## Not just an answer.
+A continuous thread.
+
+Follow the path from a signal to a reviewed result.
+
+01Notice
+
+THE RUNTIME CYCLE
+
+### A signal worth your attention.
+
+A recurring customer question. An unfinished handoff. A result from your team. Runtime follows relevant signals from the connections you authorize.
+
+AN ILLUSTRATIVE BUSINESS MOMENT
+
+## One recurring question.
+A clearer next move.
+
+09:10 · NoticeA customer question keeps appearing in an authorized source.
+
+09:12 · ConnectIt relates to your confirmed goal: improve customer onboarding.
+
+Next · Coordinate & reviewA specialist investigates the gap. Runtime reviews the findings and brings you a proposed improvement.
+
+Illustrative sequence, not a performance measurement. Sources, timing and available actions depend on your configuration and permissions.
+
+YOUR COMPANY. YOUR DIRECTION.
+
+## Proactive.
+With you in charge.
+
+01
+
+### Selected signals.
+
+Connections you authorize. Context relevant to your goals.
+
+02
+
+### Visible uncertainty.
+
+Evidence stays distinct from hypotheses. Missing answers become questions.
+
+03
+
+### Human decisions.
+
+Approvals and consequential choices remain yours. Initiative doesn’t grant new authority.
+
+MEET YOUR COMPANY’S NEXT CHAPTER
+
+## You shape the ambition.
+Runtime connects the work.
+
+[Meet Runtime ↗](https://next.singulancelabs.com/hivemind)[Read the thinking behind Runtime →](https://singulancelabs.com/research/runtime)
+
+[SINGULANCE](https://singulancelabs.com)Intelligence with continuity.[Privacy](https://singulancelabs.com/privacy)
+
+## Products and workspace
+
+- [HIVEMIND](https://singulancelabs.com/hivemind)
+- [TARA](https://singulancelabs.com/tara)
+- [HyperAgents](https://singulancelabs.com/hyperagents)
+- [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
+
+
+Canonical page: https://singulancelabs.com/runtime
+
+---
+
+[SINGULANCE](https://singulancelabs.com/)Research
+
+PRODUCT RESEARCH · DESIGN NOTE
+
+# Runtime: intelligence with continuity
+
+8 October 2026 · By SINGULANCE Labs
+
+[Back to Research](https://singulancelabs.com/research)
+
+Share the post
+
+## Highlights
+
+- Proactivity begins with relevant, authorized signals.
+- A business agenda supplies direction; a signal alone does not.
+- Review and retained context connect one work cycle to the next.
+
+RU
+
+Runtime
+
+AI CHIEF OF STAFF
+
+Connect company signals, confirmed priorities and reviewed work.
+
+## From responding to carrying work forward
+
+A useful assistant can answer a request. A company also needs continuity between requests: noticing a relevant change, remembering why it matters, coordinating the next action, and checking what actually happened. Runtime is our product approach to that problem. This article describes its design principles, not a comparative benchmark or a guarantee of business outcomes.
+
+## Proactive is not the same as unbounded
+
+Proactive work starts from selected signals and confirmed goals. A connected source may reveal a recurring question or a teammate may return a deliverable. Runtime needs to relate that event to the current agenda before treating it as useful work. Access to a source does not authorize every action involving it. Missing goals, uncertain evidence and consequential choices should become questions for the administrator.
+
+## A continuous work cycle
+
+The cycle is notice, connect, coordinate, review and carry forward. First, identify a relevant signal from an authorized source. Next, consult company context and the administrator’s priorities. Assign scoped work to a specialist when a useful next step is established. Review the saved result rather than accepting a completion announcement as proof. Finally, retain accepted findings, unresolved questions and useful lessons for the next follow-up.
+
+## What anticipation should mean
+
+Anticipation is a design aim: recognizing an emerging need early enough to offer a useful next step. It is not clairvoyance. Repeated customer questions might suggest an onboarding gap, but that remains a hypothesis until examined. The appropriate response may be an internal investigation or a question, rather than an external action. A system should show the evidence supporting its proposal and remain open to correction.
+
+## The administrator stays in the loop
+
+Runtime coordinates specialists and brings meaningful results or required decisions back to the administrator. Reviews, approvals and messages serve different purposes: a completed internal analysis may need a short update, while an external commitment requires the appropriate authorization. Initiative should reduce the effort of managing work without removing the person responsible for the company’s direction.
+
+## How to evaluate the idea
+
+A credible evaluation should measure relevant signal selection, correct use of retained context, assignment clarity, deliverable quality, permission compliance and recovery after interruptions. It should also measure unnecessary notifications and duplicated work. These are proposed evaluation dimensions, not results reported here. Product reliability and usefulness must be demonstrated under realistic conditions, including stale information, conflicting evidence and missing answers.
+
+## A different rhythm for company work
+
+The ambition is practical: fewer lost handoffs, fewer repeated explanations, and clearer connections between an agenda and the work that follows. Runtime brings these steps into one ongoing relationship with the company, while preserving uncertainty and human control.
+
+[Explore Runtime →](https://runtime.singulancelabs.com/)
+
+Beyond the horizon of intelligence.
+
+[More SINGULANCE research](https://singulancelabs.com/research)
+
+## Products and workspace
+
+- [HIVEMIND](https://singulancelabs.com/hivemind)
+- [TARA](https://singulancelabs.com/tara)
+- [HyperAgents](https://singulancelabs.com/hyperagents)
+- [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
+
+
+Canonical page: https://singulancelabs.com/research/runtime
+
+---
+
 [![SINGULANCE](https://singulancelabs.com/singulance-mark-192.png)
 SINGULANCE](https://singulancelabs.com/)
 
@@ -941,18 +1108,30 @@ The work behind the sovereign workforce — memory you can prove, and a swarm th
 
 Featured research01
 
-MEMORY.AMRINFRASTRUCTURE
+RUNTIMEPROACTIVE INTELLIGENCEPRODUCT DESIGN
 
-## ICARUS
+## Intelligence with continuity
 
-A memory filesystem for AI agents — where the byte layout, not the query engine, is the innovation. Equal recall to a live vector DB, 7.5× smaller, zero servers.
+How company signals become scoped work, reviewed results and useful next steps. The thinking behind Runtime, your AI Chief of Staff.
 
-[Learn more](https://singulancelabs.com/research/icarus)
+[Learn more](https://singulancelabs.com/research/runtime)
 
-[ICARUS](https://singulancelabs.com/research/icarus)
+[Intelligence](https://singulancelabs.com/research/runtime)
 
 Research02
 
+MEMORY.AMRINFRASTRUCTURE
+
+## ICARUS
+
+A memory filesystem for AI agents — where the byte layout, not the query engine, is the innovation. Equal recall to a live vector DB, 7.5× smaller, zero servers.
+
+[Learn more](https://singulancelabs.com/research/icarus)
+
+[ICARUS](https://singulancelabs.com/research/icarus)
+
+Research03
+
 BENCHMARKLONGMEMEVALEVALUATION
 
 ## 87.2% on LongMemEval
@@ -963,7 +1142,7 @@ Published, reproducible recall benchmark against the industry-standard long-cont
 
 [87.2%](https://singulancelabs.com/benchmark)
 
-Research03
+Research04
 
 ARCHITECTURESWARMMEMORY
 
@@ -975,7 +1154,7 @@ Environment-centric intelligence — memory, behavior, and policy externalized i
 
 [Cognitive](https://singulancelabs.com/research/cognitive-swarm-intelligence)
 
-Research04
+Research05
 
 SECURITYPOST-QUANTUMFIPS 203/204/205
 
@@ -986,6 +1165,16 @@ Three quantum-resistant layers — hybrid PQC TLS on the edge, ML-DSA-65 signatu
 [Learn more](https://singulancelabs.com/research/post-quantum-cryptography)
 
 [Post-Quantum](https://singulancelabs.com/research/post-quantum-cryptography)
+
+RUNTIMEPROACTIVE INTELLIGENCEPRODUCT DESIGN
+
+## Intelligence with continuity
+
+How company signals become scoped work, reviewed results and useful next steps. The thinking behind Runtime, your AI Chief of Staff.
+
+[Learn more](https://singulancelabs.com/research/runtime)
+
+[Intelligence](https://singulancelabs.com/research/runtime)
 
 MEMORY.AMRINFRASTRUCTURE
 
@@ -1026,6 +1215,16 @@ Three quantum-resistant layers — hybrid PQC TLS on the edge, ML-DSA-65 signatu
 [Learn more](https://singulancelabs.com/research/post-quantum-cryptography)
 
 [Post-Quantum](https://singulancelabs.com/research/post-quantum-cryptography)
+
+RUNTIMEPROACTIVE INTELLIGENCEPRODUCT DESIGN
+
+## Intelligence with continuity
+
+How company signals become scoped work, reviewed results and useful next steps. The thinking behind Runtime, your AI Chief of Staff.
+
+[Learn more](https://singulancelabs.com/research/runtime)
+
+[Intelligence](https://singulancelabs.com/research/runtime)
 
 MEMORY.AMRINFRASTRUCTURE
 
@@ -1069,7 +1268,9 @@ Three quantum-resistant layers — hybrid PQC TLS on the edge, ML-DSA-65 signatu
 
 ## All research.
 
-[MEMORY.AMRINFRASTRUCTURE
+[RUNTIMEPROACTIVE INTELLIGENCEPRODUCT DESIGN
+
+### Intelligence with continuity](https://singulancelabs.com/research/runtime)[MEMORY.AMRINFRASTRUCTURE
 
 ### ICARUS](https://singulancelabs.com/research/icarus)[BENCHMARKLONGMEMEVALEVALUATION
 

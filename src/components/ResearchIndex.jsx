@@ -14,6 +14,7 @@ const INK = '#0a0a0a';
 const BORDER = '#E4E3DE';
 
 const ITEMS = [
+  { tags: ['RUNTIME', 'PROACTIVE INTELLIGENCE', 'PRODUCT DESIGN'], title: 'Intelligence with continuity', desc: 'How company signals become scoped work, reviewed results and useful next steps. The thinking behind Runtime, your AI Chief of Staff.', href: '/research/runtime', art: 'radial-gradient(ellipse at center, #704333, #10111a)', img: '/assets/runtime-computer-c2305f5b.webp' },
   {
     tags: ['MEMORY', '.AMR', 'INFRASTRUCTURE'],
     title: 'ICARUS',
