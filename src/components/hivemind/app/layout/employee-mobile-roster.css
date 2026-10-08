@@ -71,3 +71,13 @@
  .mobile-roster-top > div > button { display:flex; white-space:nowrap; }
  .mobile-roster-top > div > button > span { min-width:0; overflow:hidden; text-overflow:ellipsis; }
 }
+
+/* Phone team drawer: a single mode/language/notification row and an upper roster. */
+@media (max-width:600px) {
+  [data-mobile-roster] .mobile-roster-intro { gap:14px; }
+  .mobile-roster-top .mobile-roster-header-utilities { display:flex; flex:none; align-items:center; gap:4px; }
+  .mobile-roster-header-utilities > div { flex:none; }
+  .mobile-roster-header-utilities > div > button { display:inline-flex; width:auto; min-width:40px; border:0; padding:0 6px; }
+  .mobile-roster-team { flex:none; justify-content:flex-start; gap:14px; }
+  .mobile-roster-shortcuts { margin-top:auto; }
+}

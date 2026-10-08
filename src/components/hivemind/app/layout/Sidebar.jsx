@@ -34,7 +34,6 @@ import {
   Building2,
   Gauge,
   FolderKanban,
-  Search,
   FileSearch,
   Waypoints,
   Sliders,
@@ -163,9 +162,7 @@ export default function Sidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const [team, setTeam] = useState([]);
-  const [rosterSearch, setRosterSearch] = useState('');
   const [rosterPage, setRosterPage] = useState(0);
-  const [rosterSearchOpen, setRosterSearchOpen] = useState(false);
   const [rosterProfileOpen, setRosterProfileOpen] = useState(false);
   const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness') || location.pathname === '/hivemind/app/crm';
   const [selectedAgent, setSelectedAgent] = useState(null);
@@ -305,21 +302,17 @@ export default function Sidebar({
     >
       {mobileRoster && <div className="mobile-roster-intro">
         <header className="mobile-roster-top">
-          <button type="button" aria-label="Your profile" onClick={() => setRosterProfileOpen(true)} className="mobile-roster-profile-button">{(user?.display_name || user?.name || 'U').charAt(0)}</button>
           {workspaceModeSwitcher}
-          <button type="button" aria-label="Search your team" onClick={() => setRosterSearchOpen(value => !value)}><Search size={20}/></button>
-          <button type="button" aria-label="Create employee" onClick={() => setCreateEmployeeOpen(true)}><Plus size={22}/></button>
+          <div className="mobile-roster-header-utilities"><LangSwitcher compact/><WorkspaceNotifications/></div>
         </header>
         <div className="mobile-roster-org"><Building2 size={18}/><strong>{org?.name || org?.slug || 'Workspace'}</strong></div>
-        <div className="mobile-roster-utilities"><LangSwitcher compact/><WorkspaceNotifications/><button type="button" aria-label="Open chat history" onClick={() => window.dispatchEvent(new Event('hivemind:mobile-history'))}>Recents</button></div>
-        {rosterSearchOpen && <input autoFocus aria-label="Search your team" value={rosterSearch} onChange={event => { setRosterSearch(event.target.value); setRosterPage(0); }} placeholder="Search your team" className="mobile-roster-search" />}
         <div className="mobile-roster-team">
           <h2>Your team</h2>
           <div className="mobile-roster-grid" aria-label="Your employees">
             <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt=""/><strong>Runtime</strong><small>Chief of Staff</small></button>
-            {team.filter(agent => agent.name.toLowerCase().includes(rosterSearch.toLowerCase())).slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span></button>)}
+            {team.slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span></button>)}
           </div>
-          {team.filter(agent => agent.name.toLowerCase().includes(rosterSearch.toLowerCase())).length > 5 && <div className="mobile-roster-pages"><button type="button" disabled={rosterPage === 0} onClick={() => setRosterPage(value => value - 1)}>Previous</button><span>{rosterPage + 1} / {Math.ceil(team.filter(agent => agent.name.toLowerCase().includes(rosterSearch.toLowerCase())).length / 5)}</span><button type="button" disabled={(rosterPage + 1) * 5 >= team.filter(agent => agent.name.toLowerCase().includes(rosterSearch.toLowerCase())).length} onClick={() => setRosterPage(value => value + 1)}>Next</button></div>}
+          {team.length > 5 && <div className="mobile-roster-pages"><button type="button" disabled={rosterPage === 0} onClick={() => setRosterPage(value => value - 1)}>Previous</button><span>{rosterPage + 1} / {Math.ceil(team.length / 5)}</span><button type="button" disabled={(rosterPage + 1) * 5 >= team.length} onClick={() => setRosterPage(value => value + 1)}>Next</button></div>}
         </div>
         <div className="mobile-roster-shortcuts">
           <button type="button" onClick={() => setCompanyOpen(true)}><Building2 size={24}/><span>Company</span></button>
@@ -358,7 +351,7 @@ export default function Sidebar({
               <div className="h-px bg-[#e3e0db] mx-2 mb-2" />
             )}
             <div className="space-y-0.5">
-              {section.items.filter(item => !mobileRoster || !rosterSearch || (!item.agent && !item.runtime) || String(item.label).toLowerCase().includes(rosterSearch.toLowerCase())).map((item) => {
+              {section.items.map((item) => {
                 const pathOnly = item.to.split('?')[0];
                 const isActive = item.createEmployee ? createEmployeeOpen : item.agent ? selectedAgent === item.agent.id : item.runtime ? location.pathname.startsWith('/hivemind/app/employee/harness') && !selectedAgent :
                   location.pathname === pathOnly ||
