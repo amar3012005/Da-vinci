@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, Check, Clock3, RefreshCw } from 'lucide-react';
 import MobileShell from '../MobileShell';
+import MobileSafetyPanel from '../MobileSafetyPanel';
 import apiClient from '../../shared/api-client';
 
 const DEFAULT_SETTINGS = {
@@ -124,6 +125,7 @@ export default function MobileSettings() {
             {saving ? 'Saving…' : notice?.type === 'success' ? 'Saved' : 'Save reminder preference'}
           </button>
         </section>
+        <MobileSafetyPanel />
       </div>
     </MobileShell>
   );
