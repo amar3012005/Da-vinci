@@ -7,6 +7,7 @@ import {
   Upload,
   Brain,
   Trash2,
+  Pencil,
   ChevronRight,
   X,
   Clock,
@@ -26,6 +27,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import './Memories.css';
+import { useAuth } from '../auth/AuthProvider';
 import EntityProfileLink from '../shared/EntityProfileLink';
 import {
   documentIngestMode,
@@ -431,16 +433,49 @@ function MemorySource({ memory }) {
 
 function MemoryCard({ memory, index, onSelect, isSelected }) {
   const { t } = useTranslation('dashboard');
+  const { user, org } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(memory.content || '');
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [removed, setRemoved] = useState(false);
+  const [savedContent, setSavedContent] = useState(null);
+  const ownerId = memory.user_id || memory.owner_id || memory.owner?.id;
+  const personal = memory.scope === 'personal' || (!memory.scope && memory.visibility === 'private');
+  const admin = ['owner', 'admin'].includes(user?.role);
+  const allowed = personal ? Boolean(user?.id && ownerId === user.id) : admin;
+  const mutate = async (remove) => {
+    if (!allowed || busy) return;
+    if (remove && !window.confirm(t('memories.confirmDelete', 'Delete this memory?'))) return;
+    setBusy(true); setActionError('');
+    try {
+      if (remove) { await apiClient.deleteMemory(memory.id); setRemoved(true); }
+      else {
+        await apiClient.controlPlane.put(`/v1/proxy/memories/${encodeURIComponent(memory.id)}`, { content: draft });
+        setSavedContent(draft); setEditing(false);
+      }
+    } catch (error) {
+      setActionError(error.response?.data?.error || t('memories.actionFailed', 'Unable to save this change. Please try again.'));
+    } finally { setBusy(false); }
+  };
+  if (removed) return null;
   const title = memory.title || memory.content?.slice(0, 80) || t('memories.untitledMemory', 'Untitled Memory');
   const owner = memory.owner_name || memory.owner?.name || memory.created_by_name;
-  return <MosaicTile title={title}><motion.button
+  return <MosaicTile title={title}><motion.div role="button" tabIndex={0} onKeyDown={(event) => { if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); onSelect(memory); } }}
     custom={index} variants={cardVariants} initial="hidden" animate="visible" exit="exit"
     onClick={() => onSelect(memory)} aria-haspopup="dialog" aria-expanded={isSelected}
     className={`memory-block ${isSelected ? 'memory-block-selected' : ''}`}>
     <div className="flex items-start gap-2 mb-2"><h3 className="text-[13px] font-semibold leading-snug flex-1 break-words">{title}</h3><ExternalLink size={13} className="shrink-0 mt-0.5 text-[#a3a3a3]" /></div>
     <div className="flex flex-wrap gap-1.5 mb-3">{memory.memory_type && <TypeBadge type={memory.memory_type} />}<ScopeBadge scope={memory.scope} project={memory.project} /></div>
-    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-[10px] text-[#737373]"><MemorySource memory={memory} /><span className="inline-flex items-center gap-1"><Clock size={11} />{relativeTime(memory.created_at || memory.document_date)}</span>{owner && <span className="inline-flex items-center gap-1"><User size={11} />{owner}</span>}</div>
-  </motion.button></MosaicTile>;
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-[10px] text-[#737373]"><MemorySource memory={memory} /><span className="inline-flex items-center gap-1"><Clock size={11} />{relativeTime(memory.created_at || memory.document_date)}</span><span className="inline-flex items-center gap-1"><button type="button" aria-label="Edit memory" disabled={!allowed || busy} onClick={(event) => { event.stopPropagation(); setEditing(true); }} className="p-1 disabled:opacity-30"><Pencil size={13} /></button><button type="button" aria-label="Delete memory" disabled={!allowed || busy} onClick={(event) => { event.stopPropagation(); mutate(true); }} className="p-1 text-red-600 disabled:opacity-30"><Trash2 size={13} /></button></span>{owner && <span className="inline-flex items-center gap-1"><User size={11} />{owner}</span>}</div>
+      {actionError && <p role="alert" className="text-xs text-red-600 mb-2">{actionError}</p>}
+      {editing && <div onClick={(event) => event.stopPropagation()} className="mb-3">
+        <textarea aria-label="Memory content" value={draft} onChange={(event) => setDraft(event.target.value)} className="w-full rounded border p-2 text-sm" rows={5} />
+        <button type="button" disabled={busy || !draft.trim()} onClick={() => mutate(false)} className="p-2 text-blue-600">Save</button>
+        <button type="button" disabled={busy} onClick={() => setEditing(false)} className="p-2">Cancel</button>
+      </div>}
+  </motion.div></MosaicTile>;
+
 }
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
