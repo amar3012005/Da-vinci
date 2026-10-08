@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Wrench, Zap, ShieldCheck, Search, Loader2, Plug, Check, Mail, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { refreshComposioReturn } from './composio-return-refresh.mjs';
 
 const AUTH_LABELS = {
   OAUTH2: 'OAuth2',
@@ -256,17 +257,26 @@ export default function ComposioToolkitBrowser() {
   const [error, setError] = useState('');
   const [connectingSlug, setConnectingSlug] = useState(null);
   const [disconnectingSlug, setDisconnectingSlug] = useState(null);
-  const [connectedSlugs, setConnectedSlugs] = useState(() => (
-    returnParams?.status === 'success' ? { [returnParams.toolkit]: 'connected' } : {}
-  ));
+  const [connectedSlugs, setConnectedSlugs] = useState({});
   const debounceRef = useRef(null);
 
   // Toast the outcome once, then strip our query params so a refresh or
   // re-share of this URL doesn't replay a stale "connected" state.
   useEffect(() => {
     if (!returnParams) return;
+    let cancelled = false;
     if (returnParams.status === 'success') {
       setError('');
+      // The callback URL is only a refresh hint. The authenticated server
+      // verifies provider accounts and reconciles any waiting Runtime work.
+      (async () => {
+        try {
+          const verified = await refreshComposioReturn(apiClient, returnParams.toolkit);
+          if (!cancelled && verified) setConnectedSlugs((prev) => ({ ...prev, [returnParams.toolkit]: 'connected' }));
+        } catch (_err) {
+          if (!cancelled) setError('Connection status could not be refreshed. Please reload to check it.');
+        }
+      })();
     } else if (returnParams.status === 'failed') {
       setError(`Connecting ${returnParams.toolkit} failed or was cancelled.`);
     }
@@ -275,6 +285,7 @@ export default function ComposioToolkitBrowser() {
     url.searchParams.delete('status');
     url.searchParams.delete('connected_account_id');
     window.history.replaceState({}, '', url.toString());
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -317,6 +328,9 @@ export default function ComposioToolkitBrowser() {
         const key = window.prompt(`${toolkit.name} API key`);
         if (!key) return;
         await apiClient.createComposioApiKeyConnection(toolkit.slug, key.trim());
+        // A successful key connection stays successful if the refresh fails;
+        // the normal Connectors refresh can reconcile it on the next visit.
+        await apiClient.listOAuthConnectors().catch(() => null);
         setConnectedSlugs((prev) => ({ ...prev, [toolkit.slug]: 'connected' }));
         return;
       }
