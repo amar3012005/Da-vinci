@@ -5,7 +5,7 @@ import {
   AlignLeft, MessageCircle, Brain, Mic2, Plug, Folder, Gauge, Network,
   CreditCard, UserCircle2,
   Settings2,
-  X, LogOut, ChevronRight,
+  X, LogOut, ChevronRight, Building2,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import SingulanceSplash from './SingulanceSplash';
@@ -15,6 +15,7 @@ import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
 import apiClient from '../shared/api-client';
 import AgentAvatar from '../hyperagents/AgentAvatar';
+import WorkspaceModeSwitcher from '../layout/WorkspaceModeSwitcher';
 
 const SPLASH_FLAG = 'hm_m_splashed';
 const ONBOARDING_TEAM = [
@@ -261,10 +262,11 @@ export default function MobileShell({ children, rightAction = null, title = null
             </div>
 
             <div className="px-5 pb-3">
+              <WorkspaceModeSwitcher onChoose={() => setDrawer(false)} />
               <div className="text-[20px] leading-snug" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
                 {firstName}
               </div>
-              {org?.name && <div className="text-[11.5px] text-[#737373] truncate mt-0.5">{org.name}</div>}
+              {org?.name && <div className="flex items-center gap-2 text-[12px] text-[#737373] mt-2"><Building2 size={16} aria-hidden="true" /><span className="truncate">{org.name}</span></div>}
               <CreditBalance credits={usage?.credits} inline className="mt-1" />
             </div>
 
