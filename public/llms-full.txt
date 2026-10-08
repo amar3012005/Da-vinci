@@ -1,5 +1,39 @@
 # SINGULANCE public page text
 
+[SINGULANCE](https://singulancelabs.com)
+
+# Delete your account
+
+You can request deletion of your SINGULANCE account and associated personal service records from the app or from the web. You do not need to reinstall the mobile app.
+
+- Sign in to the account you want to delete.
+- Open your profile and select Delete account.
+- Read the deletion notice, type DELETE, and confirm the request.
+
+[Open your profile ↗](https://next.singulancelabs.com/hivemind/m/profile)
+
+## What happens to your data?
+
+The deletion process reconciles your personal account and service records. Shared company records, external copies, self-hosted data and records we must retain may remain. Some source cleanup can be pending; the result of your request should be read before you leave the app. Disconnecting an app alone does not delete your SINGULANCE account.
+
+## Cannot sign in?
+
+Contact [privacy@singulancelabs.com](mailto:privacy@singulancelabs.com) from the email associated with your account to request assistance. We may need to verify your identity before deleting records. Do not email your password.
+
+[Privacy and retention information →](https://singulancelabs.com/privacy)
+
+## Products and workspace
+
+- [HIVEMIND](https://singulancelabs.com/hivemind)
+- [TARA](https://singulancelabs.com/tara)
+- [HyperAgents](https://singulancelabs.com/hyperagents)
+- [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
+
+
+Canonical page: https://singulancelabs.com/account-deletion
+
+---
+
 INTRODUCING RUNTIME · YOUR AI CHIEF OF STAFF
 
 # Before you ask.

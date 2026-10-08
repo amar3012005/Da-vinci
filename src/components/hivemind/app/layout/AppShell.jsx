@@ -1,3 +1,4 @@
+import { NativeAiConsentGate } from '../mobile/MobileSafetyPanel';
 import { useTranslation } from 'react-i18next';
 import { mobileBrainUserName, mobileBrainGreeting } from './mobile-brain-identity';
 import MobileShell from '../mobile/MobileShell';
@@ -210,7 +211,7 @@ function sectionForPath(pathname) {
  *   1. needs_org_setup -> show org creation
  *   2. otherwise -> full dashboard (API key generated on-demand when needed)
  */
-export default function AppShell() {
+function AppShellContent() {
   const { needsOnboarding, org, logout, user } = useAuth();
   const { t } = useTranslation('dashboard');
   const location = useLocation();
@@ -528,3 +529,5 @@ export default function AppShell() {
     </QuickRecorderProvider>
   );
 }
+
+export default function AppShell() { return <NativeAiConsentGate><AppShellContent /></NativeAiConsentGate>; }

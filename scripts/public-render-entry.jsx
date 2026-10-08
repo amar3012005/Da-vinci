@@ -1,4 +1,5 @@
 import React from 'react';
+import AccountDeletion from '../src/components/AccountDeletion';
 import RuntimeProduct from '../src/components/RuntimeProduct';
 import RuntimeResearch from '../src/components/RuntimeResearch';
 import PublicProduct from '../src/components/PublicProduct';
@@ -15,7 +16,7 @@ import PrivacySecurity from '../src/components/PrivacySecurity';
 import CookiePolicy from '../src/components/CookiePolicy';
 import MobileHomepage from '../src/components/mobile/MobileHomepage';
 import HivemindRedirect from '../src/components/hivemind/HivemindRedirect';
-const pages = {'/runtime':<RuntimeProduct/>, '/research/runtime':<RuntimeResearch/>, '/tara':<PublicProduct path="/tara"/>, '/hyperagents':<PublicProduct path="/hyperagents"/>, '/':<MobileHomepage/>, '/hivemind':<HivemindRedirect/>, '/research':<ResearchIndex/>, '/research/icarus':<IcarusResearch/>, '/research/cognitive-swarm-intelligence':<CsiResearch/>, '/research/post-quantum-cryptography':<PostQuantumResearch/>, '/benchmark':<BenchmarkResearch/>, '/privacy':<PrivacySecurity mode="privacy"/>, '/security':<PrivacySecurity mode="security"/>, '/cookies':<CookiePolicy/>};
+const pages = {'/account-deletion':<AccountDeletion/>, '/runtime':<RuntimeProduct/>, '/research/runtime':<RuntimeResearch/>, '/tara':<PublicProduct path="/tara"/>, '/hyperagents':<PublicProduct path="/hyperagents"/>, '/':<MobileHomepage/>, '/hivemind':<HivemindRedirect/>, '/research':<ResearchIndex/>, '/research/icarus':<IcarusResearch/>, '/research/cognitive-swarm-intelligence':<CsiResearch/>, '/research/post-quantum-cryptography':<PostQuantumResearch/>, '/benchmark':<BenchmarkResearch/>, '/privacy':<PrivacySecurity mode="privacy"/>, '/security':<PrivacySecurity mode="security"/>, '/cookies':<CookiePolicy/>};
 export async function renderPages(){
  const out={};
  for(const [path,page] of Object.entries(pages)) {

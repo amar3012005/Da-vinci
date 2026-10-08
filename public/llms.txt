@@ -9,6 +9,7 @@ Markdown links below contain server-rendered public page text from the same Reac
 - [HIVEMIND — your company brain](https://singulancelabs.com/hivemind/index.md): Explore HIVEMIND company memory, connected apps, evidence-backed answers and persistent AI teammates.
 - [TARA — voice with company context](https://singulancelabs.com/tara/index.md): Explore TARA, the voice experience in the HIVEMIND workspace.
 - [HyperAgents — your AI teammates](https://singulancelabs.com/hyperagents/index.md): Explore persistent AI teammate rooms, task results, artifacts and Runtime coordination in HIVEMIND.
+- [Delete your account](https://singulancelabs.com/account-deletion/index.md): Request deletion of your SINGULANCE account from your profile or contact the privacy team if you cannot sign in.
 - [Runtime](https://singulancelabs.com/runtime/index.md): Meet Runtime, your AI Chief of Staff. Connect authorized company signals, confirmed goals and reviewed team work in one continuous thread.
 - [Runtime: intelligence with continuity](https://singulancelabs.com/research/runtime/index.md): The design principles behind Runtime: relevant signals, confirmed goals, specialist coordination, review and human control.
 - [SINGULANCE Research](https://singulancelabs.com/research/index.md): Explore SINGULANCE research on agent memory, cognitive swarm intelligence and post-quantum cryptography, with published methods and benchmarks.
