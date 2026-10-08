@@ -164,6 +164,7 @@ export default function Sidebar({
   const [team, setTeam] = useState([]);
   const [rosterPage, setRosterPage] = useState(0);
   const [rosterProfileOpen, setRosterProfileOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness') || location.pathname === '/hivemind/app/crm';
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [openingAgent, setOpeningAgent] = useState(null);
@@ -191,7 +192,7 @@ export default function Sidebar({
         const value = await response.json();
         if (!Array.isArray(value.profiles)) throw new Error('invalid team response');
         if (controller.signal.aborted || teamScope.current !== scope) return;
-        setTeam(value.profiles.filter(agent => typeof agent.id === 'string' && typeof agent.name === 'string'));
+        setTeam(value.profiles.filter(agent => typeof agent.id === 'string' && agent.id !== 'runtime' && typeof agent.name === 'string'));
         setTeamLoadError(false);
       } catch {
         if (controller.signal.aborted || teamScope.current !== scope) return;
@@ -302,24 +303,30 @@ export default function Sidebar({
     >
       {mobileRoster && <div className="mobile-roster-intro">
         <header className="mobile-roster-top">
-          {workspaceModeSwitcher}
+          <NavLink to="/hivemind/app/overview/new" className="mobile-unified-brand" aria-label="Open Brain chat"><img src="/images/singulance-orbit.png" alt=""/>HIVEMIND</NavLink>
           <div className="mobile-roster-header-utilities"><LangSwitcher compact/><WorkspaceNotifications/></div>
         </header>
         <div className="mobile-roster-org"><Building2 size={18}/><strong>{org?.name || org?.slug || 'Workspace'}</strong></div>
         <div className="mobile-roster-team">
-          <h2>Your team</h2>
+          <div className="mobile-unified-heading"><h2>Your team</h2><div className="mobile-roster-shortcuts">
+            <button type="button" onClick={() => setCompanyOpen(true)}><Building2 size={18}/><span>Company</span></button>
+            {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm"><FolderKanban size={18}/><span>CRM</span></NavLink>}
+            <div data-hivemind-artifacts-seat />
+          </div></div>
           <div className="mobile-roster-grid" aria-label="Your employees">
             <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt=""/><strong>Runtime</strong><small>Chief of Staff</small></button>
             {team.slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span></button>)}
           </div>
           {team.length > 5 && <div className="mobile-roster-pages"><button type="button" disabled={rosterPage === 0} onClick={() => setRosterPage(value => value - 1)}>Previous</button><span>{rosterPage + 1} / {Math.ceil(team.length / 5)}</span><button type="button" disabled={(rosterPage + 1) * 5 >= team.length} onClick={() => setRosterPage(value => value + 1)}>Next</button></div>}
         </div>
-        <div className="mobile-roster-shortcuts">
-          <button type="button" onClick={() => setCompanyOpen(true)}><Building2 size={24}/><span>Company</span></button>
-          {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm"><FolderKanban size={24}/><span>Your CRM</span></NavLink>}
-          <div data-hivemind-artifacts-seat />
-        </div>
         <button type="button" className="mobile-roster-create" onClick={() => setCreateEmployeeOpen(true)}><Plus size={20}/>Create employee</button>
+        <section className="mobile-unified-brain" aria-label="Your Brain">
+          <div className="mobile-unified-heading"><h2>Your Brain</h2><button type="button" className="mobile-unified-advanced" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(value => !value)}><Sliders size={17}/>Advanced</button></div>
+          <div className="mobile-unified-brain-grid">
+            {[{to:'/hivemind/m/memories',label:'Memories',icon:Brain},{to:'/hivemind/app/knowledge',label:'Uploads',icon:BookOpen},{to:'/hivemind/m/connectors',label:'Connectors',icon:Cable},{to:'/hivemind/m/meeting-notes',label:'AI meeting notes',icon:Mic}].map(({to,label,icon:Icon}) => <NavLink key={to} to={to}><Icon size={19}/><span>{label}</span><ChevronRight size={14}/></NavLink>)}
+          </div>
+          {advancedOpen && <div className="mobile-unified-advanced-links" aria-label="Advanced features">{[{to:'/hivemind/app/mcp',label:'MCPs'},{to:'/hivemind/app/keys',label:'API keys'},{to:'/hivemind/m/graph',label:'Memory graph'},{to:'/hivemind/m/projects',label:'Projects'},{to:'/hivemind/app/evaluation',label:'Evaluation'}].map(item => <NavLink key={item.to} to={item.to}>{item.label}<ChevronRight size={14}/></NavLink>)}</div>}
+        </section>
         <button type="button" className="mobile-roster-account" onClick={() => setRosterProfileOpen(true)}><User size={20}/><span>Account &amp; settings</span><ChevronRight size={18}/></button>
       </div>}
       <div className="mobile-roster-legacy shrink-0 px-4 pt-2 pb-3 border-b border-[#e3e0db]">
@@ -334,7 +341,7 @@ export default function Sidebar({
         {!mobileRoster && workspaceModeSwitcher}
       </div>
 
-      {teamMode && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">Could not refresh our team. <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>Retry</button></p>}
+      {(teamMode || mobileRoster) && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">Could not refresh our team. <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>Retry</button></p>}
       {teamError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{teamError}</p>}
       {/* Navigation */}
       <nav className="mobile-roster-legacy flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4">

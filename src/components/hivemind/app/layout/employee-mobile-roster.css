@@ -81,3 +81,35 @@
   .mobile-roster-team { flex:none; justify-content:flex-start; gap:14px; }
   .mobile-roster-shortcuts { margin-top:auto; }
 }
+
+/* One compact mobile workspace for Brain and the team; desktop stays separate. */
+@media (max-width:600px) {
+  [data-mobile-roster] .mobile-roster-intro { gap:12px; overflow-y:auto; overscroll-behavior:contain; }
+  .mobile-unified-brand { display:flex; align-items:center; gap:6px; flex:1; min-width:0; font-size:14px; font-weight:650; }
+  .mobile-unified-brand img { width:27px; height:27px; object-fit:contain; }
+  .mobile-roster-org { min-height:28px; }
+  .mobile-unified-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .mobile-unified-heading h2 { font-size:21px; font-weight:650; letter-spacing:-.4px; margin:0; white-space:nowrap; }
+  .mobile-unified-heading .mobile-roster-shortcuts { margin:0; border:0; padding:0; display:flex; gap:8px; }
+  .mobile-unified-heading .mobile-roster-shortcuts > button, .mobile-unified-heading .mobile-roster-shortcuts > a, .mobile-unified-heading .mobile-roster-shortcuts [data-hivemind-artifacts-seat] button { min-height:40px; width:auto; gap:3px; font-size:9px; }
+  .mobile-unified-heading .mobile-roster-shortcuts svg { width:18px; height:18px; }
+  .mobile-roster-grid { gap:12px 8px; }
+  .mobile-roster-grid [data-agent-room-link] { min-height:94px; font-size:12px; }
+  .mobile-roster-grid .mobile-roster-runtime img { width:76px; height:76px; }
+  .mobile-roster-create { min-height:42px; flex-shrink:0; font-size:14px; }
+  .mobile-unified-brain { display:flex; flex-direction:column; gap:10px; }
+  .mobile-unified-advanced { display:flex; align-items:center; gap:5px; border:1px solid #e3e0db; border-radius:12px; padding:7px 9px; font-size:12px; min-height:36px; }
+  .mobile-unified-brain-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .mobile-unified-brain-grid a { display:flex; align-items:center; gap:7px; border:1px solid #e3e0db; border-radius:14px; padding:10px; min-height:48px; font-size:12px; }
+  .mobile-unified-brain-grid a > span { flex:1; }
+  .mobile-unified-brain-grid a > svg { flex-shrink:0; }
+  .mobile-unified-advanced-links { display:grid; gap:2px; padding:6px; background:#f3f1ec; border-radius:14px; }
+  .mobile-unified-advanced-links a { display:flex; justify-content:space-between; padding:10px; font-size:13px; }
+  .mobile-roster-account { margin-top:auto; flex-shrink:0; min-height:44px; }
+}
+@media (max-width:360px) {
+  [data-mobile-roster] .mobile-roster-intro { padding-left:14px; padding-right:14px; }
+  .mobile-unified-heading h2 { font-size:19px; }
+  .mobile-unified-heading .mobile-roster-shortcuts { gap:6px; }
+  .mobile-unified-brain-grid a { padding:8px; gap:5px; font-size:11px; }
+}

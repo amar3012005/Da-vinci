@@ -16,6 +16,7 @@ import CreditBalance from '../shared/CreditBalance';
 import apiClient from '../shared/api-client';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import WorkspaceModeSwitcher from '../layout/WorkspaceModeSwitcher';
+import EmployeeMobileNavigation from '../layout/EmployeeMobileNavigation';
 
 const SPLASH_FLAG = 'hm_m_splashed';
 const ONBOARDING_TEAM = [
@@ -245,7 +246,8 @@ export default function MobileShell({ children, rightAction = null, title = null
       )}
 
       {/* ── Drawer ── */}
-      {drawer && (
+      {drawer && !location.pathname.includes('/tara') && <EmployeeMobileNavigation activeSection="hivemind" onClose={() => setDrawer(false)} />}
+      {drawer && location.pathname.includes('/tara') && (
         <div className="absolute inset-0 z-50">
           <div className="absolute inset-0 bg-black/30" onClick={() => setDrawer(false)} />
           <aside
