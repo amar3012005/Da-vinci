@@ -403,7 +403,7 @@ export default {
         return publicSeoResponse(await env.ASSETS.fetch(documentRequest), '/runtime');
       }
       if (pathname === '/robots.txt') return new Response('User-agent: *\nAllow: /\n', {headers:{'content-type':'text/plain'}});
-      if (/^\/(?:static|assets)\//u.test(pathname) || ['/favicon.ico','/logo.svg','/singulance-mark-192.png','/manifest.json'].includes(pathname)) {
+      if (/^\/(?:static|assets)\//u.test(pathname) || ['/favicon.ico','/logo.svg','/singulance-mark.svg','/singulance-mark-192.png','/manifest.json'].includes(pathname)) {
         const asset = await env.ASSETS.fetch(request);
         if ((asset.headers.get('content-type') || '').includes('text/html')) return new Response('Not found', {status:404});
         return asset;
