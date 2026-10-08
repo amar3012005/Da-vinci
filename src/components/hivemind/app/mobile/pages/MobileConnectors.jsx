@@ -1,4 +1,5 @@
-// Mobile Connectors — Composio only. Nango's popup SDK, the Browser
+import McpClientSetup from '../../shared/McpClientSetup';
+// Mobile Connectors — Composio catalog and remote MCP client setup. Nango's popup SDK, the Browser
 // Intelligence promo, and the ChatGPT/Claude featured tiles are gone (not
 // used any more); this page is purely Composio's toolkit catalog, styled
 // as the same compact row cards the old curated list used (small logo,
@@ -226,6 +227,11 @@ export default function MobileConnectors() {
         <h1 className="text-[21px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Connectors</h1>
         <p className="mt-1 text-[12px] leading-relaxed text-[#737373]">Connect your apps to let HIVEMIND preserve context and also perform automations.</p>
       </div>
+
+      <details className="mx-3 my-3 rounded-xl border border-[#e3e0db] bg-white">
+        <summary className="px-4 py-3 text-sm font-medium cursor-pointer">Connect ChatGPT, Claude or another AI client</summary>
+        <McpClientSetup selectable />
+      </details>
 
       <div className="px-3 pt-2 pb-2">
         <label className="flex items-center gap-2 h-11 px-3 rounded-[18px] bg-white border border-[#ece9e2] focus-within:border-[#9fc7ff]">

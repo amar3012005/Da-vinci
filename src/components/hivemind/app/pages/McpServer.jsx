@@ -1,3 +1,4 @@
+import McpClientSetup, { HIVEMIND_MCP_URL } from '../shared/McpClientSetup';
 import { API_DEFAULTS } from '../shared/theme';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -1040,12 +1041,12 @@ function UniversalSchemaCard() {
   const SNIPPETS = {
     http: {
       label: 'HTTP (canonical)',
-      sub: 'Claude Code, Claude Desktop 0.7+, Cursor, VS Code, Antigravity',
+      sub: 'Clients accepting mcpServers HTTP configuration. VS Code and Codex use different schemas; see Connect your client.',
       body: `{
   "mcpServers": {
     "hivemind": {
       "type": "http",
-      "url": "${API_DEFAULTS.coreApiBase}/api/mcp",
+      "url": "${HIVEMIND_MCP_URL}",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       }
@@ -1063,7 +1064,7 @@ function UniversalSchemaCard() {
       "args": [
         "-y",
         "mcp-remote",
-        "${API_DEFAULTS.coreApiBase}/api/mcp",
+        "${HIVEMIND_MCP_URL}",
         "--header",
         "Authorization: Bearer YOUR_API_KEY"
       ]
@@ -1308,7 +1309,7 @@ export default function McpServer() {
             { id: 'web', label: t('mcpserver.tabWeb', 'Web Intelligence'), count: WEB_TOOLS.length },
             { id: 'coding', label: t('mcpserver.tabCoding', 'Coding Intelligence'), count: CODING_TOOLS.length + CODE_TEMPORAL_TOOLS.length },
             { id: 'temporal', label: t('mcpserver.tabTemporal', 'Time Travel'), count: TEMPORAL_TOOLS.length },
-            { id: 'chatgpt', label: t('mcpserver.tabChatgpt', 'ChatGPT'), count: 5 },
+            { id: 'chatgpt', label: t('mcpSetup.clientsTab', 'Connect your client') },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1319,92 +1320,14 @@ export default function McpServer() {
                   : 'text-[#a3a3a3] hover:text-[#525252]'
               }`}
             >
-              {tab.label} <span className="ml-1 text-[10px] opacity-60">{tab.count}</span>
+              {tab.label} {tab.count != null && <span className="ml-1 text-[10px] opacity-60">{tab.count}</span>}
             </button>
           ))}
         </div>
 
         {/* Tool cards */}
         {activeTab === 'chatgpt' ? (
-          <motion.div variants={stagger} initial="initial" animate="animate" key="chatgpt" className="space-y-3">
-            <div className="rounded-2xl border border-[#117dff]/20 bg-gradient-to-br from-[#117dff]/[0.04] to-white p-5">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center text-lg">🤖</div>
-                <div>
-                  <h3 className="text-[#0a0a0a] text-base font-bold font-['Space_Grotesk']">{t('mcpserver.chatgptTitle', 'ChatGPT One-Click Connector')}</h3>
-                  <p className="text-[#525252] text-xs font-['Space_Grotesk'] mt-1">
-                    {t('mcpserver.chatgptDesc', 'Custom GPT & ChatGPT plugin connector. OAuth 2.0 + 5 narrow tools mapped from your MCP surface.')}
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">OpenAPI spec</div>
-                  <code className="text-[11px] text-[#0a0a0a] break-all">{`${API_DEFAULTS.coreApiBase}/v1/chatgpt/openapi.yaml`}</code>
-                </div>
-                <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Authorization URL</div>
-                  <code className="text-[11px] text-[#0a0a0a] break-all">{`${API_DEFAULTS.coreApiBase}/oauth/authorize`}</code>
-                </div>
-                <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Token URL</div>
-                  <code className="text-[11px] text-[#0a0a0a] break-all">{`${API_DEFAULTS.coreApiBase}/oauth/token`}</code>
-                </div>
-                <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Scopes</div>
-                  <code className="text-[11px] text-[#0a0a0a]">memory:read · memory:write · web:search</code>
-                </div>
-              </div>
-              <div className="mt-4 rounded-xl border border-[#e3e0db] bg-[#fafaf6] p-3">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-2">{t('mcpserver.chatgptSetupTitle', 'Setup in OpenAI dev dashboard')}</div>
-                <ol className="text-[12px] text-[#525252] font-['Space_Grotesk'] space-y-1 list-decimal pl-4">
-                  <li>{t('mcpserver.chatgptStep1', 'Create a new GPT → Configure → Actions → Import from URL')}</li>
-                  <li>{t('mcpserver.chatgptStep2', 'Paste the OpenAPI spec URL above')}</li>
-                  <li>{t('mcpserver.chatgptStep3', 'Set Authentication → OAuth → paste Authorization + Token URLs + scopes')}</li>
-                  <li>{t('mcpserver.chatgptStep4', 'OpenAI gives you a redirect URI → register it in HIVEMIND admin (POST /oauth/clients)')}</li>
-                  <li>{t('mcpserver.chatgptStep5', 'Publish & click "Connect to HIVEMIND" in any chat')}</li>
-                </ol>
-              </div>
-              <a
-                href={`${API_DEFAULTS.coreApiBase}/v1/chatgpt/openapi.yaml`}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="inline-flex items-center gap-1.5 mt-4 px-3 py-2 rounded-lg bg-[#117dff] text-white text-[12px] font-semibold hover:bg-[#0066e0] transition-colors"
-              >
-                {t('mcpserver.viewOpenApiSpec', 'View OpenAPI spec ↗')}
-              </a>
-            </div>
-
-            <div className="rounded-xl border border-[#e3e0db] bg-white p-4">
-              <div className="text-[12px] font-semibold text-[#0a0a0a] mb-2">{t('mcpserver.exposedOps', 'Exposed Operations (5)')}</div>
-              <table className="w-full text-[11.5px]">
-                <thead>
-                  <tr className="text-[#a3a3a3] uppercase tracking-wider text-[10px]">
-                    <th className="text-left py-1.5 pr-3">{t('mcpserver.colOperationId', 'operationId')}</th>
-                    <th className="text-left py-1.5 pr-3">{t('mcpserver.colMethod', 'Method')}</th>
-                    <th className="text-left py-1.5 pr-3">{t('mcpserver.colPath', 'Path')}</th>
-                    <th className="text-left py-1.5">{t('mcpserver.colMapsTo', 'Maps to')}</th>
-                  </tr>
-                </thead>
-                <tbody className="font-mono">
-                  {[
-                    ['searchMemory',       'POST', '/v1/chatgpt/memory/search', 'hivemind_recall'],
-                    ['saveMemory',         'POST', '/v1/chatgpt/memory/save',   'hivemind_save_memory'],
-                    ['listMemories',       'GET',  '/v1/chatgpt/memory/list',   'hivemind_list_memories'],
-                    ['queryMemoryWithAI',  'POST', '/v1/chatgpt/memory/query',  'hivemind_query_with_ai'],
-                    ['webSearch',          'POST', '/v1/chatgpt/web/search',    'hivemind_web_search'],
-                  ].map(([opId, m, p, maps]) => (
-                    <tr key={opId} className="border-t border-[#f3f1ec]">
-                      <td className="py-1.5 pr-3 text-[#117dff]">{opId}</td>
-                      <td className="py-1.5 pr-3 text-[#525252]">{m}</td>
-                      <td className="py-1.5 pr-3 text-[#0a0a0a] break-all">{p}</td>
-                      <td className="py-1.5 text-[#525252]">{maps}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
+          <McpClientSetup selectable />
         ) : (
           <motion.div variants={stagger} initial="initial" animate="animate" key={activeTab} className="space-y-2">
             {(TAB_DATA[activeTab] || MEMORY_TOOLS).map(tool => (
