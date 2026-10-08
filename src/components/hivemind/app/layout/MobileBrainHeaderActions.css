@@ -20,7 +20,5 @@
 .hm-mobile-brain-header-org span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* The native Brain footer currently owns only the ChatGPT connection entry.
-   Use its semantic boundary so phone visibility can release with the shell. */
-@media (max-width: 600px) {
-  [data-brain-chat] [data-conversation-page-footer] { display: none; }
-}
+   Temporarily hide it on all screen sizes; retain the native connection flow. */
+[data-brain-chat] [data-conversation-page-footer] { display: none; }
