@@ -117,3 +117,10 @@
   .mobile-unified-plan { padding-top:0; margin-top:-6px; flex-shrink:0; }
   .mobile-unified-plan > div:last-child { font-size:10px; }
 }
+
+/* Shared native semantic stats seat: hide diagnostics in every phone chat. */
+@media (max-width:600px) {
+  [data-native-chat-shell] [data-composer-stats],
+  [data-agent-room] [data-composer-stats],
+  [data-brain-chat] [data-composer-stats] { display:none !important; }
+}
