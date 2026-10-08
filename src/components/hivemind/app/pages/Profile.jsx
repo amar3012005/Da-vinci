@@ -829,8 +829,19 @@ function DataPrivacySection() {
     setExportLoading(true);
     setExportMsg(null);
     try {
-      await apiClient.controlPlane.post('/v1/account/export');
-      setExportMsg({ type: 'success', text: t('profile.exportSuccess', 'Export request received. You will receive an email when ready.') });
+      const response = await apiClient.controlPlane.post('/v1/account/export', {}, { timeout: 60000 });
+      const records = response.data;
+      if (records?.format !== 'hivemind-account-records-v1') throw new Error('The export was not completed. Please retry.');
+      const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'hivemind-account-records.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setExportMsg({ type: 'success', text: 'Your records download is ready. The file lists included categories and exclusions; original file bytes are not included.' });
     } catch (err) {
       if (err.response?.status === 404 || err.response?.status === 405) {
         setExportMsg({ type: 'info', text: t('profile.exportComingSoon', 'Data export is coming soon.') });
