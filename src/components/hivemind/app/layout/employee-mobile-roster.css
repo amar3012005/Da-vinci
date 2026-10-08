@@ -132,3 +132,17 @@
   .mobile-unified-brain-title { display:flex; align-items:center; gap:6px; }
   .mobile-unified-brain-title svg { flex-shrink:0; }
 }
+
+/* Existing native Artifacts seat, shared by phone and desktop sidebars. */
+[data-hivemind-artifacts-seat] > button { font-size:0 !important; }
+[data-hivemind-artifacts-seat] > button::before {
+  content:""; display:block; flex:none; width:20px; height:20px;
+  background-color:currentColor;
+  -webkit-mask:url('/images/icons/artifacts-palette-brush.svg') center/contain no-repeat;
+  mask:url('/images/icons/artifacts-palette-brush.svg') center/contain no-repeat;
+}
+[data-hivemind-artifacts-seat] > button > span { font-size:15px; }
+@media (max-width:600px) {
+  .mobile-roster-shortcuts [data-hivemind-artifacts-seat] > button::before { width:18px; height:18px; }
+  .mobile-roster-shortcuts [data-hivemind-artifacts-seat] > button > span { font-size:9px; }
+}
