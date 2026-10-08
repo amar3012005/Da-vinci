@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   AlignLeft, MessageCircle, Brain, Mic2, Plug, Folder, Gauge, Network,
@@ -54,6 +54,7 @@ const NAV = [
 
 export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false, showBareLogo = true, renderHeader = null, nativeChatViewport = false, activeNavPath = null }) {
   const shell = useRef(null);
+  const reduceMotion = useReducedMotion();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, org, logout, needsOnboarding } = useAuth() || {};
@@ -245,10 +246,10 @@ export default function MobileShell({ children, rightAction = null, title = null
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 10 }}
+              initial={reduceMotion ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.26, ease: [0.25, 0.46, 0.45, 0.94] }}
+              exit={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.26, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
               {children}
             </motion.div>
