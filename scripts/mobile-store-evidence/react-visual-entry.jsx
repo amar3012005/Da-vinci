@@ -1,5 +1,5 @@
 // Render actual mobile pages with an isolated fixture tenant and mocked network.
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import MobileSettings from '../../src/components/hivemind/app/mobile/pages/MobileSettings';
@@ -10,6 +10,14 @@ localStorage.setItem('hm_m_splashed', '1');
 const query = new URL(location.href).searchParams;
 window.Capacitor = { isNativePlatform: () => query.get('native') === '1' };
 window.fetch = async () => ({ ok: true, json: async () => ({ profiles: [], items: [] }) });
-const GateFixture = () => <NativeAiConsentGate><div data-sensitive-chat>Private native chat</div></NativeAiConsentGate>;
+function SensitiveChat() {
+  useEffect(() => { window.__privateMounts = [...(window.__privateMounts || []), window.__fixtureUser || 'fixture-user']; }, []);
+  return <div data-sensitive-chat>Private native chat</div>;
+}
+function GateFixture() {
+  const [user, setUser] = useState('fixture-user');
+  window.__switchUser = () => { window.__fixtureUser = 'other-user'; window.__resetConsent(); setUser('other-user'); };
+  return <NativeAiConsentGate><SensitiveChat key={user} /></NativeAiConsentGate>;
+}
 const Page = query.get('view') === 'gate' ? GateFixture : query.get('view') === 'profile' ? MobileProfile : query.get('view') === 'billing' ? MobileBilling : MobileSettings;
 createRoot(document.getElementById('root')).render(<BrowserRouter><Page /></BrowserRouter>);
