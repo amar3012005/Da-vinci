@@ -138,8 +138,8 @@
 [data-hivemind-artifacts-seat] > button::before {
   content:""; display:block; flex:none; width:20px; height:20px;
   background-color:currentColor;
-  -webkit-mask:url('/images/icons/artifacts-palette-brush.svg') center/contain no-repeat;
-  mask:url('/images/icons/artifacts-palette-brush.svg') center/contain no-repeat;
+  -webkit-mask:url('./artifacts-palette-brush.svg') center/contain no-repeat;
+  mask:url('./artifacts-palette-brush.svg') center/contain no-repeat;
 }
 [data-hivemind-artifacts-seat] > button > span { font-size:15px; }
 @media (max-width:600px) {
