@@ -304,7 +304,7 @@ export default function Sidebar({
     >
       {mobileRoster && <div className="mobile-roster-intro">
         <header className="mobile-roster-top">
-          <NavLink to="/hivemind/app/overview/new" className="mobile-unified-brand" aria-label="Open Brain chat"><BrainModeIcon size={30}/>HIVEMIND</NavLink>
+          <NavLink to="/hivemind/app/overview/new" className="mobile-unified-brand" aria-label="Open Brain chat"><img src="/images/singulance-orbit.png" alt=""/>HIVEMIND</NavLink>
           <div className="mobile-roster-header-utilities"><LangSwitcher compact/><WorkspaceNotifications/></div>
         </header>
         <div className="mobile-unified-user-name">{user?.display_name || user?.name || user?.email?.split('@')[0] || 'Your account'}</div>
@@ -324,11 +324,11 @@ export default function Sidebar({
         </div>
         <button type="button" className="mobile-roster-create" onClick={() => setCreateEmployeeOpen(true)}><Plus size={20}/>Create employee</button>
         <section className="mobile-unified-brain" aria-label="Your Brain">
-          <div className="mobile-unified-heading"><h2>Your Brain</h2><button type="button" className="mobile-unified-advanced" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(value => !value)}><Sliders size={17}/>Advanced</button></div>
+          <div className="mobile-unified-heading"><h2 className="mobile-unified-brain-title"><BrainModeIcon size={25}/>Your Brain</h2><button type="button" className="mobile-unified-advanced" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(value => !value)}><Sliders size={17}/>Advanced</button></div>
           <div className="mobile-unified-brain-grid">
-            {[{to:'/hivemind/m/memories',label:'Memories',icon:Brain},{to:'/hivemind/app/knowledge',label:'Uploads',icon:BookOpen},{to:'/hivemind/m/connectors',label:'Connectors',icon:Cable},{to:'/hivemind/m/meeting-notes',label:'AI meeting notes',icon:Mic}].map(({to,label,icon:Icon}) => <NavLink key={to} to={to}><Icon size={19}/><span>{label}</span><ChevronRight size={14}/></NavLink>)}
+            {[{to:'/hivemind/m/memories',label:'Memories',icon:Brain},{to:'/hivemind/app/knowledge',label:'Uploads',icon:BookOpen},{to:'/hivemind/m/connectors',label:'Connectors',icon:Cable},{to:'/hivemind/m/meeting-notes',label:'AI meeting notes',icon:Mic},{to:'/hivemind/m/graph',label:'Memory graph',icon:Network}].map(({to,label,icon:Icon}) => <NavLink key={to} to={to}><Icon size={19}/><span>{label}</span><ChevronRight size={14}/></NavLink>)}
           </div>
-          {advancedOpen && <div className="mobile-unified-advanced-links" aria-label="Advanced features">{[{to:'/hivemind/app/mcp',label:'MCPs'},{to:'/hivemind/app/keys',label:'API keys'},{to:'/hivemind/m/graph',label:'Memory graph'},{to:'/hivemind/m/projects',label:'Projects'},{to:'/hivemind/app/evaluation',label:'Evaluation'}].map(item => <NavLink key={item.to} to={item.to}>{item.label}<ChevronRight size={14}/></NavLink>)}</div>}
+          {advancedOpen && <div className="mobile-unified-advanced-links" aria-label="Advanced features">{[{to:'/hivemind/app/mcp',label:'MCPs'},{to:'/hivemind/app/keys',label:'API keys'},{to:'/hivemind/m/projects',label:'Projects'},{to:'/hivemind/app/evaluation',label:'Evaluation'}].map(item => <NavLink key={item.to} to={item.to}>{item.label}<ChevronRight size={14}/></NavLink>)}</div>}
         </section>
         <button type="button" className="mobile-roster-account" onClick={() => setRosterProfileOpen(true)}><User size={20}/><span>Account &amp; settings</span><ChevronRight size={18}/></button>
       </div>}

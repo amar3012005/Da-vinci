@@ -128,3 +128,7 @@
   .mobile-unified-user-name { font-family:Georgia,'Times New Roman',serif; font-size:27px; line-height:1.15; overflow-wrap:anywhere; }
   .mobile-unified-brand > span { flex-shrink:0; }
 }
+@media (max-width:600px) {
+  .mobile-unified-brain-title { display:flex; align-items:center; gap:6px; }
+  .mobile-unified-brain-title svg { flex-shrink:0; }
+}
