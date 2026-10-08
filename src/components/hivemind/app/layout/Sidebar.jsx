@@ -307,6 +307,7 @@ export default function Sidebar({
           <div className="mobile-roster-header-utilities"><LangSwitcher compact/><WorkspaceNotifications/></div>
         </header>
         <div className="mobile-roster-org"><Building2 size={18}/><strong>{org?.name || org?.slug || 'Workspace'}</strong></div>
+        <CreditBalance credits={usage?.credits} inline className="mobile-unified-plan" />
         <div className="mobile-roster-team">
           <div className="mobile-unified-heading"><h2>Your team</h2><div className="mobile-roster-shortcuts">
             <button type="button" onClick={() => setCompanyOpen(true)}><Building2 size={18}/><span>Company</span></button>

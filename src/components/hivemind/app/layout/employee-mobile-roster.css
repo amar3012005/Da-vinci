@@ -113,3 +113,7 @@
   .mobile-unified-heading .mobile-roster-shortcuts { gap:6px; }
   .mobile-unified-brain-grid a { padding:8px; gap:5px; font-size:11px; }
 }
+@media (max-width:600px) {
+  .mobile-unified-plan { padding-top:0; margin-top:-6px; flex-shrink:0; }
+  .mobile-unified-plan > div:last-child { font-size:10px; }
+}
