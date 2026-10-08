@@ -19,3 +19,13 @@ test('Profile export downloads actual records rather than promising an unsent em
   assert.ok(messages.at(-1).text.includes('original file bytes are not included'));
   assert.ok(!source.slice(start,end).includes('receive an email'));
 });
+
+test('Privacy copy describes export exclusions and does not promise universal residency or deletion', () => {
+  const source = readFileSync(new URL('../src/components/hivemind/app/pages/Profile.jsx', import.meta.url), 'utf8');
+  assert.ok(source.includes('Download available personal account records as JSON.'));
+  assert.ok(source.includes('original file bytes are not included'));
+  assert.ok(source.includes('Shared company records and unresolved cleanup may be retained.'));
+  for (const claim of ['Download all your memories', 'GDPR compliant', 'No US data transfer', 'EU data residency guaranteed', 'Your data is stored in Frankfurt', 'Permanently delete all your data', 'ALL your memory data', 'Yes, delete everything']) {
+    assert.ok(!source.includes(claim), claim);
+  }
+});

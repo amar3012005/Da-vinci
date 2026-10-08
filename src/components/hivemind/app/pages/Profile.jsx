@@ -896,10 +896,10 @@ function DataPrivacySection() {
           <MapPin size={16} className="text-emerald-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-emerald-800 text-sm font-['Space_Grotesk'] font-semibold">
-              {t('profile.dataLocation', 'Your data is stored in Frankfurt, Germany')}
+              {t('profile.privacyInformationTitle', 'How your records are handled')}
             </p>
             <p className="text-emerald-700 text-xs font-['Space_Grotesk'] mt-0.5">
-              {t('profile.gdprNote', 'GDPR compliant  ·  No US data transfer  ·  EU data residency guaranteed')}
+              {t('profile.privacyInformationDesc', 'See our Privacy Policy for data processing, service providers and storage information.')}
             </p>
           </div>
         </div>
@@ -911,7 +911,7 @@ function DataPrivacySection() {
             <div>
               <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">{t('profile.exportMyData', 'Export My Data')}</p>
               <p className="text-[#525252] text-xs font-['Space_Grotesk'] mt-0.5">
-                {t('profile.exportDesc', 'Download all your memories, observations and settings as JSON.')}
+                {t('profile.exportRecordsDesc', 'Download available personal account records as JSON. The file identifies included categories and exclusions; original file bytes are not included.')}
               </p>
               {exportMsg && (
                 <p
@@ -947,8 +947,8 @@ function DataPrivacySection() {
               <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">{t('profile.deleteMyAccount', 'Delete My Account')}</p>
               <p className="text-[#525252] text-xs font-['Space_Grotesk'] mt-0.5">
                 {isSelfHost
-                  ? t('profile.deleteSelfHostDesc', 'Removes only your Singulance identity, API keys, sessions, and the connection. Your memories, vectors, and relationship graph stay on your own server and are not touched.')
-                  : t('profile.deleteManagedDesc', 'Permanently delete all your data. This action cannot be undone.')}
+                  ? t('profile.deleteSelfHostedRecordsDesc', 'Request deletion of your Singulance account and associated service records. Data on your own server is managed separately.')
+                  : t('profile.deleteManagedRecordsDesc', 'Request deletion of your account and associated personal records. Shared company records and unresolved cleanup may be retained. This action cannot be undone.')}
               </p>
               {deleteMsg && (
                 <p className="text-[#dc2626] text-xs font-mono mt-1.5">{deleteMsg}</p>
@@ -990,14 +990,14 @@ function DataPrivacySection() {
             deleteLoading
               ? ''
               : managedReconfirm
-              ? t('profile.deleteFinalConfirmMsg', 'Are you absolutely sure? This is your final confirmation — data cannot be recovered.')
+              ? t('profile.deleteRecordsFinalConfirmMsg', 'Confirm account deletion. Deleted records cannot be recovered; this does not guarantee removal of every record or external copy.')
               : isSelfHost
-              ? t('profile.deleteSelfHostMsg', 'Your memory data stays on your server. Your memories, vectors, and relationship graph live in the .amr (and Postgres) on your own machine and are NOT touched. This removes only your Singulance identity, API keys, sessions, and the connection. Type DELETE to confirm.')
-              : t('profile.deleteManagedMsg', 'This permanently deletes your account, session access, connectors, API keys, and ALL your memory data on Singulance. This cannot be undone. Type DELETE to continue.')
+              ? t('profile.deleteSelfHostedRecordsMsg', 'Request deletion of your Singulance account and associated service records. Data on your own server is managed separately; shared records and unresolved cleanup may remain. Type DELETE to confirm.')
+              : t('profile.deleteManagedRecordsMsg', 'Request deletion of your account and associated personal records. Shared company records, external copies and unresolved cleanup may remain. Deleted records cannot be recovered. Type DELETE to continue.')
           }
           confirmLabel={
             managedReconfirm
-              ? t('profile.deleteFinalConfirmBtn', 'Yes, delete everything')
+              ? t('profile.deleteRecordsFinalConfirmBtn', 'Yes, delete my account')
               : t('profile.deleteAccountBtn', 'Delete Account')
           }
           confirmVariant="red"
