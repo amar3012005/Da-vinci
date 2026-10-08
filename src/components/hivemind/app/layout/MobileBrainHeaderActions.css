@@ -18,3 +18,9 @@
 .hm-mobile-brain-header-org { display:flex; align-items:center; gap:3px; min-width:0; font-size:10px; line-height:14px; color:#737373; }
 .hm-mobile-brain-header-org svg { flex:none; }
 .hm-mobile-brain-header-org span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* The native Brain footer currently owns only the ChatGPT connection entry.
+   Use its semantic boundary so phone visibility can release with the shell. */
+@media (max-width: 600px) {
+  [data-brain-chat] [data-conversation-page-footer] { display: none; }
+}
