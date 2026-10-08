@@ -1,0 +1,16 @@
+/* This boundary is only mounted by phone routes; desktop controls keep their size. */
+[data-mobile-shell] { box-sizing: border-box; min-width: 0; }
+[data-mobile-shell] main { overflow-x: hidden; overflow-wrap: anywhere; }
+[data-mobile-shell] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[data-mobile-shell] textarea,
+[data-mobile-shell] select { font-size: 16px; min-height: 44px; max-width: 100%; }
+[data-mobile-shell] input:focus-visible,
+[data-mobile-shell] textarea:focus-visible,
+[data-mobile-shell] select:focus-visible,
+[data-mobile-shell] button:focus-visible,
+[data-mobile-shell] a:focus-visible { outline: 2px solid #117dff; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  [data-mobile-shell] *, [data-mobile-shell] *::before, [data-mobile-shell] *::after {
+    animation-duration: .01ms !important; transition-duration: .01ms !important;
+  }
+}

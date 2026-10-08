@@ -30,3 +30,16 @@ test('native keyboard viewport falls back to browser resize without VisualViewpo
   expect(style.getPropertyValue('--hm-app-viewport-height')).toBe('350px');
   dispose(); expect(style.getPropertyValue('--hm-app-viewport-height')).toBe('');
 });
+
+
+test('a mobile shell owns its viewport without changing embedded chat height', () => {
+  const browser = new EventTarget(); browser.innerHeight = 500;
+  const style = document.createElement('div').style;
+  style.setProperty('--hm-app-viewport-height', '420px');
+  const dispose = bindNativeChatViewport(browser, style, '--hm-mobile-shell-height');
+  expect(style.getPropertyValue('--hm-mobile-shell-height')).toBe('500px');
+  expect(style.getPropertyValue('--hm-app-viewport-height')).toBe('420px');
+  dispose();
+  expect(style.getPropertyValue('--hm-mobile-shell-height')).toBe('');
+  expect(style.getPropertyValue('--hm-app-viewport-height')).toBe('420px');
+});

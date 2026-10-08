@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -17,6 +17,8 @@ import apiClient from '../shared/api-client';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import WorkspaceModeSwitcher from '../layout/WorkspaceModeSwitcher';
 import EmployeeMobileNavigation from '../layout/EmployeeMobileNavigation';
+import { bindNativeChatViewport } from '../layout/mobile-chat-viewport';
+import './mobile-shell.css';
 
 const SPLASH_FLAG = 'hm_m_splashed';
 const ONBOARDING_TEAM = [
@@ -51,6 +53,7 @@ const NAV = [
 ];
 
 export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false, showBareLogo = true, renderHeader = null, nativeChatViewport = false, activeNavPath = null }) {
+  const shell = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, org, logout, needsOnboarding } = useAuth() || {};
@@ -84,6 +87,12 @@ export default function MobileShell({ children, rightAction = null, title = null
       }
     } catch { /* noop */ }
   };
+
+  // A local viewport owner avoids racing with the embedded native chat canvas.
+  useEffect(() => {
+    if (!shell.current) return undefined;
+    return bindNativeChatViewport(window, shell.current.style, '--hm-mobile-shell-height');
+  }, []);
 
   // Close the drawer on any route change.
   useEffect(() => { setDrawer(false); }, [location.pathname]);
@@ -150,14 +159,16 @@ export default function MobileShell({ children, rightAction = null, title = null
 
   return (
     <div
+      ref={shell}
+      data-mobile-shell
       data-mobile-native-chat={nativeChatViewport || undefined}
       className="fixed inset-0 bg-[#faf9f4] text-[#0a0a0a] flex flex-col overflow-hidden"
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)', ...(nativeChatViewport ? { bottom: 'auto', height: 'var(--hm-app-viewport-height, 100dvh)' } : {}) }}
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)', bottom: 'auto', height: 'var(--hm-mobile-shell-height, 100dvh)' }}
     >
       {showSplash && <SingulanceSplash onDone={finishSplash} />}
       {showAwakening && !showSplash && (
         <div className="absolute inset-0 z-[90] flex items-end bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Awaken your AI company">
-          <section className="w-full rounded-[18px] border border-[#e3e0db] bg-white p-5 shadow-xl">
+          <section className="w-full max-h-full overflow-y-auto overscroll-contain rounded-[18px] border border-[#e3e0db] bg-white p-5 shadow-xl">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#117dff]">HIVEMIND · FIRST MOVE</p>
             <div className="mt-4 flex items-center gap-3" aria-label="Your Humation team">
               <div className="flex -space-x-2.5">
@@ -228,9 +239,9 @@ export default function MobileShell({ children, rightAction = null, title = null
 
       {/* ── Page body (page-enter transition, one place for all /m/* pages) ── */}
       {noScroll ? (
-        <div className="flex-1 min-h-0 flex flex-col">{children}</div>
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col">{children}</div>
       ) : (
-        <main className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <main className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', WebkitOverflowScrolling: 'touch' }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

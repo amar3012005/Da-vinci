@@ -5,6 +5,8 @@
 // (CommercialJourney invitation banner, RunwayUpgradePanel) are desktop-only
 // for now — narrow audience, rare path.
 import React, { useEffect, useState } from 'react';
+import { isNativeApp } from '../../shared/native-app';
+import NativePlanSummary from '../../shared/NativePlanSummary';
 import { motion } from 'framer-motion';
 import { ArrowRight, Brain, Cable, Check, Clock, CreditCard, HardDrive, Headphones, Shield, Sparkles, Users, Zap } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
@@ -132,7 +134,7 @@ export default function MobileBilling() {
   const currentPlanDef = billing?.plan ? planFromBackend(billing.plan) : planOptions.find((p) => p.id === currentPlan);
 
   useEffect(() => {
-    if (checkoutState !== 'success') return undefined;
+    if (isNativeApp() || checkoutState !== 'success') return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -147,6 +149,7 @@ export default function MobileBilling() {
   }, [checkoutState, refetchBilling, setSearchParams]);
 
   const handleUpgrade = async (planId) => {
+    if (isNativeApp()) return;
     if (!canManageBilling) { setBillingError('Only an organization owner or admin can change the subscription.'); return; }
     if (isEnterpriseWorkspace) return;
     setUpgrading(true);
@@ -160,10 +163,13 @@ export default function MobileBilling() {
   };
 
   const handleManageSubscription = async () => {
+    if (isNativeApp()) return;
     if (!canManageBilling) { setBillingError('Only an organization owner or admin can manage payment details.'); return; }
     try { const res = await apiClient.createBillingPortal(); if (res?.portal_url) window.location.href = res.portal_url; }
     catch (e) { setBillingError(`Could not open billing portal: ${e?.response?.data?.error || e.message}`); }
   };
+
+  if (isNativeApp()) return <MobileShell title="Account access"><NativePlanSummary billing={billing} org={org} /></MobileShell>;
 
   return (
     <MobileShell title="Billing">

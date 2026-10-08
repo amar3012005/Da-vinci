@@ -40,12 +40,14 @@ function UserAvatar({ displayName, email }) {
 
 function Sheet({ onClose, children }) {
   return (
-    <motion.div className="fixed inset-0 z-50 bg-[#0a0a0a]/25 flex items-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+    <motion.div className="absolute inset-0 z-50 bg-[#0a0a0a]/25 flex items-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.section
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 360, damping: 34 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-h-[86vh] overflow-y-auto bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
+        role="dialog" aria-modal="true" aria-label="Profile action"
+        style={{ maxHeight: 'calc(var(--hm-mobile-shell-height, 100dvh) - env(safe-area-inset-top, 0px) - 12px)', paddingBottom: 'max(20px, env(safe-area-inset-bottom, 0px))' }}
+        className="w-full overflow-y-auto overscroll-contain bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
       >
         {children}
       </motion.section>
@@ -391,8 +393,8 @@ function DataPrivacyCard() {
       <div className="flex items-start gap-2.5 p-3 rounded-[12px] bg-emerald-50 border border-emerald-100 mb-3">
         <MapPin size={14} className="text-emerald-600 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-[11.5px] font-semibold text-emerald-800">Your data is stored in Frankfurt, Germany</p>
-          <p className="text-[10.5px] text-emerald-700 mt-0.5">GDPR compliant · No US data transfer · EU data residency</p>
+          <p className="text-[11.5px] font-semibold text-emerald-800">Your data and service providers</p>
+          <p className="text-[10.5px] text-emerald-700 mt-0.5">Read our privacy policy for storage, processing and transfer details.</p>
         </div>
       </div>
 
@@ -402,7 +404,7 @@ function DataPrivacyCard() {
           <p className="text-[10.5px] text-[#525252] mt-0.5">Download memories, observations, settings as JSON.</p>
           {exportMsg && <p className={`text-[10px] mt-1 ${exportMsg.type === 'error' ? 'text-red-600' : exportMsg.type === 'success' ? 'text-emerald-600' : 'text-[#a3a3a3]'}`}>{exportMsg.text}</p>}
         </div>
-        <button onClick={handleExport} disabled={exportLoading} className="flex items-center gap-1.5 h-9 px-3 rounded-full border border-[#e3e0db] bg-white text-[#525252] text-[11.5px] font-semibold flex-shrink-0 disabled:opacity-40">
+        <button onClick={handleExport} disabled={exportLoading} className="flex items-center gap-1.5 h-11 px-3 rounded-full border border-[#e3e0db] bg-white text-[#525252] text-[11.5px] font-semibold flex-shrink-0 disabled:opacity-40">
           {exportLoading ? <RefreshCw size={13} className="animate-spin" /> : <Download size={13} />} Export
         </button>
       </div>
@@ -410,15 +412,15 @@ function DataPrivacyCard() {
       <div className="flex items-center justify-between p-3 rounded-[12px] border border-red-100 bg-red-50">
         <div className="min-w-0 pr-3">
           <p className="text-[12.5px] font-semibold text-[#0a0a0a]">Delete my account</p>
-          <p className="text-[10.5px] text-[#525252] mt-0.5">{isSelfHost ? 'Removes only your Singulance identity — memories stay on your own server.' : 'Permanently delete all your data. Cannot be undone.'}</p>
+          <p className="text-[10.5px] text-[#525252] mt-0.5">{isSelfHost ? 'Request deletion of your Singulance account and service records. Data on your own server is managed separately.' : 'Request deletion of your account and personal records. Shared company records and unresolved cleanup may be retained.'}</p>
         </div>
         <button onClick={() => { setDeleteConfirm(''); setDeleteMsg(null); setManagedReconfirm(false); setShowDelete(true); }}
-          className="flex items-center gap-1.5 h-9 px-3 rounded-full border border-red-200 bg-white text-red-600 text-[11.5px] font-semibold flex-shrink-0">
+          className="flex items-center gap-1.5 h-11 px-3 rounded-full border border-red-200 bg-white text-red-600 text-[11.5px] font-semibold flex-shrink-0">
           <Trash2 size={13} /> Delete
         </button>
       </div>
 
-      <a href="https://singulancelabs.com/privacy" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1 text-[10.5px] text-[#a3a3a3]">
+      <a href="https://singulancelabs.com/privacy" target="_blank" rel="noopener noreferrer" className="mt-3 min-h-[44px] inline-flex items-center gap-1 text-[12px] text-[#a3a3a3]">
         Privacy Policy <ExternalLink size={10} />
       </a>
 
@@ -431,8 +433,8 @@ function DataPrivacyCard() {
               <div className="text-[16px] font-bold">Delete account</div>
               <p className="mt-1 text-[12.5px] text-[#525252] leading-relaxed">
                 {managedReconfirm ? 'Are you absolutely sure? This is your final confirmation — data cannot be recovered.'
-                  : isSelfHost ? 'Your memory data stays on your server. This removes only your Singulance identity, API keys, sessions, and the connection. Type DELETE to confirm.'
-                  : 'This permanently deletes your account, connectors, API keys, and ALL your memory data on Singulance. This cannot be undone. Type DELETE to continue.'}
+                  : isSelfHost ? 'Request deletion of your Singulance account and service records. Data on your own server is managed separately; shared records and unresolved cleanup may remain. Type DELETE to confirm.'
+                  : 'Request deletion of your account and associated personal records. Shared company records, external copies and unresolved cleanup may remain. Deleted records cannot be recovered. Type DELETE to continue.'}
               </p>
             </div>
           </div>
@@ -446,7 +448,7 @@ function DataPrivacyCard() {
               disabled={deleteConfirm.trim().toUpperCase() !== 'DELETE' || deleteLoading}
               className="flex-1 h-11 rounded-full bg-[#dc2626] text-white text-[13px] font-semibold disabled:opacity-40"
             >
-              {deleteLoading ? 'Processing…' : managedReconfirm ? 'Yes, delete everything' : 'Delete account'}
+              {deleteLoading ? 'Processing…' : managedReconfirm ? 'Yes, delete my account' : 'Delete account'}
             </button>
           </div>
         </Sheet>

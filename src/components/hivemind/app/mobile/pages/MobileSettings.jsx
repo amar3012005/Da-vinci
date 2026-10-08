@@ -19,9 +19,10 @@ function Toggle({ checked, disabled, onChange }) {
       aria-label="Enable email reflections"
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative h-5 w-9 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}
+      className={`relative h-11 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 bg-transparent`}
     >
-      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+      <span aria-hidden="true" className={`absolute left-1 top-3 h-5 w-9 rounded-full ${checked ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`} />
+      <span aria-hidden="true" className={`absolute left-1 top-[14px] h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
     </button>
   );
 }
@@ -99,7 +100,7 @@ export default function MobileSettings() {
                 value={settings.quiet_start_hour}
                 disabled={disabled}
                 onChange={(event) => setSettings((current) => ({ ...current, quiet_start_hour: Number(event.target.value) }))}
-                className="h-9 w-full rounded-[9px] border border-[#e3e0db] bg-white px-2 text-[11px] text-[#0a0a0a] disabled:opacity-50"
+                className="h-11 w-full rounded-[9px] border border-[#e3e0db] bg-white px-2 text-[11px] text-[#0a0a0a] disabled:opacity-50"
               >
                 {Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{String(hour).padStart(2, '0')}:00</option>)}
               </select>
@@ -110,7 +111,7 @@ export default function MobileSettings() {
                 value={settings.quiet_end_hour}
                 disabled={disabled}
                 onChange={(event) => setSettings((current) => ({ ...current, quiet_end_hour: Number(event.target.value) }))}
-                className="h-9 w-full rounded-[9px] border border-[#e3e0db] bg-white px-2 text-[11px] text-[#0a0a0a] disabled:opacity-50"
+                className="h-11 w-full rounded-[9px] border border-[#e3e0db] bg-white px-2 text-[11px] text-[#0a0a0a] disabled:opacity-50"
               >
                 {Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{String(hour).padStart(2, '0')}:00</option>)}
               </select>
@@ -118,7 +119,7 @@ export default function MobileSettings() {
           </div>
           <p className="mt-3 text-[10px] leading-relaxed text-[#737373]">Email is limited to one check-in per rolling day. You can turn it off at any time, and every email has a one-click unsubscribe.</p>
           {notice && <p className={`mt-3 text-[10.5px] ${notice.type === 'error' ? 'text-red-600' : 'text-emerald-700'}`}>{notice.text}</p>}
-          <button type="button" onClick={save} disabled={disabled} className="mt-4 flex h-10 w-full items-center justify-center gap-1.5 rounded-[6px] bg-[#117dff] text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:opacity-40">
+          <button type="button" onClick={save} disabled={disabled} className="mt-4 flex h-11 w-full items-center justify-center gap-1.5 rounded-[6px] bg-[#117dff] text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:opacity-40">
             {saving ? <RefreshCw size={13} className="animate-spin" /> : notice?.type === 'success' ? <Check size={13} /> : <Bell size={13} />}
             {saving ? 'Saving…' : notice?.type === 'success' ? 'Saved' : 'Save reminder preference'}
           </button>

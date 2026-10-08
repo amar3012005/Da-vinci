@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { isNativeApp } from '../shared/native-app';
+import NativePlanSummary from '../shared/NativePlanSummary';
 import { motion } from 'framer-motion';
 import {
   CreditCard,
@@ -397,6 +399,7 @@ export default function Billing() {
   const planOptions = orderedPersonalPlans(availablePlans);
 
   useEffect(() => {
+    if (isNativeApp()) return;
     const requested = String(searchParams.get('upgrade') || '').toLowerCase();
     if (!['plus', 'pro', 'scale'].includes(requested)) return;
     if (!billing) return;
@@ -412,7 +415,7 @@ export default function Billing() {
     : planOptions.find((p) => p.id === currentPlan);
 
   useEffect(() => {
-    if (checkoutState !== 'success') return undefined;
+    if (isNativeApp() || checkoutState !== 'success') return undefined;
     let cancelled = false;
     const reconcile = async () => {
       try {
@@ -433,6 +436,7 @@ export default function Billing() {
   }, [checkoutState, refetchBilling, refetchInvoices, setSearchParams]);
 
   const handleUpgrade = async (planId) => {
+    if (isNativeApp()) return;
     if (!canManageBilling) { setBillingError('Only an organization owner or admin can change the subscription.'); return; }
     if (isEnterpriseWorkspace) return;
     setUpgrading(true);
@@ -466,6 +470,7 @@ export default function Billing() {
   };
 
   const handleManageSubscription = async () => {
+    if (isNativeApp()) return;
     if (!canManageBilling) { setBillingError('Only an organization owner or admin can manage payment details.'); return; }
     try {
       const res = await apiClient.createBillingPortal();
@@ -475,6 +480,8 @@ export default function Billing() {
       setBillingError(`Could not open billing portal: ${msg}`);
     }
   };
+
+  if (isNativeApp()) return <NativePlanSummary billing={billing} org={org} />;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-8">
