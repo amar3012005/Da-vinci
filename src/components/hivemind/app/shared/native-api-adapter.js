@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { nativeRequestBody, base64ToBytes } from './native-body';
 import { NATIVE_CONTROL_PLANE } from './native-auth-controller';
 
 /** Keep bearer credentials inside the trusted OS plugin, including on failed requests. */
@@ -15,15 +16,20 @@ export function createNativeApiAdapter(plugin, { coreProxy = false } = {}) {
     for (const [key, value] of params) url.searchParams.append(key, value);
     if (config.signal?.aborted) throw new axios.CanceledError('canceled');
     const headers = { Accept: 'application/json' };
-    let body = config.data;
-    if (body != null && typeof body !== 'string') {
-      if (typeof FormData !== 'undefined' && body instanceof FormData) throw new Error('native_binary_upload_requires_file_transport');
-      body = JSON.stringify(body);
-    }
-    if (body != null) headers['Content-Type'] = 'application/json';
-    const result = await plugin.request({ url: url.href, method: String(config.method || 'GET').toUpperCase(), headers, ...(body != null ? { body } : {}), authorize: true });
+    const requestedType = config.headers?.get?.('Content-Type') || config.headers?.['Content-Type'] || config.headers?.['content-type'];
+    const payload = await nativeRequestBody(config.data, requestedType);
+    if (payload.contentType) headers['Content-Type'] = payload.contentType;
+    const { contentType, ...bodyOptions } = payload;
+    const binary = ['blob', 'arraybuffer'].includes(config.responseType);
+    const result = await plugin.request({ url: url.href, method: String(config.method || 'GET').toUpperCase(), headers, ...bodyOptions, responseType: binary ? 'base64' : 'text', authorize: true });
     if (config.signal?.aborted) throw new axios.CanceledError('canceled');
-    let data; try { data = JSON.parse(result.data); } catch { data = result.data; }
+    let data;
+    if (binary) {
+      const bytes = base64ToBytes(result.data);
+      data = config.responseType === 'blob' ? new Blob([bytes], { type: result.headers?.['Content-Type'] || result.headers?.['content-type'] || 'application/octet-stream' }) : bytes.buffer;
+    } else {
+      try { data = JSON.parse(result.data); } catch { data = result.data; }
+    }
     const response = { data, status: result.status, statusText: '', headers: result.headers || {}, config, request: null };
     if (!(config.validateStatus || (status => status >= 200 && status < 300))(result.status)) throw new axios.AxiosError('Native request failed', result.status >= 500 ? 'ERR_BAD_RESPONSE' : 'ERR_BAD_REQUEST', config, null, response);
     return response;

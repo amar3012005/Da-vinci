@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { createNativeApiAdapter } from './native-api-adapter';
 jest.mock('axios', () => ({ __esModule: true, default: { CanceledError: class extends Error {}, AxiosError: class extends Error { constructor(message,code,config,request,response) { super(message);this.response=response; } } } }));
 

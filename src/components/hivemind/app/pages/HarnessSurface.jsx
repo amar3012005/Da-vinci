@@ -2,6 +2,22 @@ import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../shared/api-client';
 import './HarnessSurface.css';
 import QueryStarters from './QueryStarters';
+import { isNativeApp } from '../shared/native-app';
+import { nativePlugin } from '../shared/native-auth';
+import { createNativeHarnessFetch, createNativeHarnessStream } from '../shared/native-harness-transport';
+import { createNativeHarnessLoader } from '../shared/native-harness-loader';
+
+let nativeRuntime;
+function harnessRuntime() {
+  if (!isNativeApp()) return null;
+  if (!nativeRuntime) {
+    const fetchRunner = createNativeHarnessFetch(nativePlugin);
+    const loader = createNativeHarnessLoader(fetchRunner);
+    nativeRuntime = { fetch: fetchRunner, loader, hooks: { remoteHost: true, fetch: fetchRunner, openStream: createNativeHarnessStream(nativePlugin), loadBundle: loader.loadBundle } };
+  }
+  return nativeRuntime;
+}
+function fetchHarness(input, init) { return harnessRuntime()?.fetch(input, init) || fetch(input, init); }
 
 const HARNESS_BOOT_PATH = '/api/hivemind/boot';
 const HARNESS_SESSION_PATH = '/api/hivemind/session/establish';
@@ -89,7 +105,7 @@ function preloadHarnessAssets(rows, shellUrl) {
 }
 
 /** Execute the typed Harness boot table exactly as its static worker does. */
-async function applyHarnessInjections(rows) {
+async function applyHarnessInjections(rows, nativeLoader) {
   if (!Array.isArray(rows)) throw new Error('Harness returned an invalid boot graph.');
   // One document installs one signed boot graph. Same-revision SPA remounts
   // reuse the live module system; a new revision gets a full document reload.
@@ -109,9 +125,11 @@ async function applyHarnessInjections(rows) {
           break;
         }
         case 'script-src':
-          await executeExternalScript(row.src);
+          if (nativeLoader) await nativeLoader.loadBundle(row.src);
+          else await executeExternalScript(row.src);
           break;
         case 'script-preload': {
+          if (nativeLoader) break;
           const preload = document.createElement('link');
           preload.rel = 'preload';
           preload.as = 'script';
@@ -242,7 +260,7 @@ async function establishHarnessSession({ fresh = false } = {}) {
   if (typeof admission.ticket !== 'string' || admission.ticket.length === 0) {
     throw new Error('HIVEMIND could not authorize this session.');
   }
-  const established = await fetch(HARNESS_SESSION_PATH, {
+  const established = await fetchHarness(HARNESS_SESSION_PATH, {
     method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ ticket: admission.ticket, request_id: crypto.randomUUID() }),
   });
@@ -274,7 +292,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
     const recoverExpiredSession = async () => {
       if (cancelled || recovering || document.visibilityState === 'hidden') return;
       try {
-        const response = await fetch(HARNESS_BOOT_PATH, {
+        const response = await fetchHarness(HARNESS_BOOT_PATH, {
           method: 'HEAD', credentials: 'include', cache: 'no-store',
         });
         if (response.status !== 401 && response.status !== 403) return;
@@ -290,6 +308,11 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
     };
 
     const start = async () => {
+      const runtime = harnessRuntime();
+      if (runtime) {
+        window.__DSH_TRANSPORT__ = runtime.hooks;
+        window.__DSH_FILE_UPLOAD__ = { fetch: runtime.fetch };
+      }
       const admission = sessionEstablished ? { mode: 'harness' }
         : await establishHarnessSession({ fresh: isFreshHarnessRoute() });
       if (admission.mode === 'legacy') {
@@ -300,13 +323,13 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
         return;
       }
       setLoadingStage(1);
-      let bootResponse = await fetch(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
+      let bootResponse = await fetchHarness(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
       // Dreaming just established this cookie. If it expires before boot,
       // re-admit once; the runner remains the authentication authority.
       if (sessionEstablished && [401, 403].includes(bootResponse.status)) {
         const renewed = await establishHarnessSession();
         if (renewed.mode !== 'harness') { window.location.replace(HARNESS_OVERVIEW_PATH); return; }
-        bootResponse = await fetch(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
+        bootResponse = await fetchHarness(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
       }
       if (!bootResponse.ok) throw new Error('HIVEMIND could not verify your session.');
       const boot = await bootResponse.json();
@@ -323,12 +346,12 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       const styles = Array.isArray(boot.styles) ? boot.styles : [];
       if (styles.length === 0) throw new Error('HIVEMIND could not load the conversation appearance.');
       const shellUrl = harnessShellUrl(boot.injections);
-      preloadHarnessAssets(boot.injections, shellUrl);
+      if (!runtime) preloadHarnessAssets(boot.injections, shellUrl);
       // Styles and ordered script execution are independent downloads. Wait
       // for both before mounting, avoiding flashes of unstyled conversation.
       await Promise.all([
-        Promise.all(styles.map(loadHarnessStylesheet)),
-        installedRevision !== bootRevision ? applyHarnessInjections(boot.injections) : Promise.resolve(),
+        Promise.all(styles.map(runtime ? runtime.loader.loadStyle : loadHarnessStylesheet)),
+        installedRevision !== bootRevision ? applyHarnessInjections(boot.injections, runtime?.loader) : Promise.resolve(),
       ]);
       if (installedRevision !== bootRevision) window.__HIVE_HARNESS_BOOT_REV__ = bootRevision;
       setLoadingStage(2);
@@ -369,7 +392,8 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       // The module URL changes only when the authenticated Harness release
       // graph changes. Re-entering Overview reuses the parsed module and calls
       // its explicit mount entry instead of downloading ~500 KiB again.
-      await import(/* webpackIgnore: true */ shellUrl);
+      if (runtime) await runtime.loader.importModule(shellUrl);
+      else await import(/* webpackIgnore: true */ shellUrl);
       if (window.__DSH_EMBED_APP__ === undefined) {
         if (typeof window.__DSH_EMBED_MOUNT__ !== 'function') {
           throw new Error('HIVEMIND could not reopen this conversation.');
@@ -415,7 +439,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
         window.__HIVE_HARNESS_DISPOSE_PROMISE__ = disposePromise;
       }
     };
-  }, []);
+  }, [sessionEstablished]);
 
   if (state.phase === 'error') {
     return <div className="h-full min-h-[420px] grid place-items-center bg-[#faf9f4] px-6">
