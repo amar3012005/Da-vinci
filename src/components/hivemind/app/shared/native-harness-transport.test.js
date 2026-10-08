@@ -1,6 +1,6 @@
 /** @jest-environment node */
 import { webcrypto } from 'crypto';
-import { createNativeHarnessFetch, createNativeHarnessStream, trustedHarnessUrl } from './native-harness-transport';
+import { createNativeHarnessFetch, createNativeHarnessStream, createNativeSaveFile, trustedHarnessUrl } from './native-harness-transport';
 import { nativeRequestBody } from './native-body';
 global.crypto = webcrypto;
 global.DOMException = require('vm').runInThisContext('DOMException');
@@ -40,4 +40,14 @@ test('native stream rejects malformed frames and preserves source Remote errors'
 });
 test('abort cancels a waiting native stream and releases its listener', async()=>{
  const plugin=streamPlugin([]);const controller=new AbortController();const iterator=createNativeHarnessStream(plugin)('events',{},controller.signal);const next=iterator.next();await new Promise(setImmediate);controller.abort(new Error('deliberate_stop'));await expect(next).rejects.toThrow('deliberate_stop');expect(plugin.closeStream).toHaveBeenCalledTimes(1);
+});
+
+test('native download forwards authorized Blob bytes only to explicit OS save and preserves cancellation', async () => {
+ const plugin={saveFile:jest.fn(async()=>({saved:true}))};const save=createNativeSaveFile(plugin);
+ expect(await save(new Blob([new Uint8Array([0,1,255])],{type:'application/pdf'}),'../report.pdf')).toBe(true);
+ expect(plugin.saveFile).toHaveBeenCalledWith({name:'report.pdf',mimeType:'application/pdf',dataBase64:'AAH/'});
+ plugin.saveFile.mockResolvedValue({saved:false});expect(await save(new Blob(['ok']),'report.txt')).toBe(false);
+ await expect(save(new Blob([new Uint8Array(20*1024*1024+1)]),'big.bin')).rejects.toThrow('20 MB');
+ expect(plugin.saveFile).toHaveBeenCalledTimes(2);
+ await expect(save('not a blob','x')).rejects.toThrow('must be a file');
 });

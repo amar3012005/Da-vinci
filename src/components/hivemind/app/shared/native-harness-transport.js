@@ -1,4 +1,4 @@
-import { base64ToBytes, nativeRequestBody } from './native-body';
+import { base64ToBytes, bytesToBase64, nativeRequestBody } from './native-body';
 const RUNNER = 'https://next.singulancelabs.com';
 const LOCAL_ORIGINS = new Set(['capacitor://localhost', 'https://localhost', 'http://localhost']);
 
@@ -65,5 +65,17 @@ export function createNativeHarnessStream(plugin) {
       await plugin.closeStream({ id }).catch(() => {});
       await listener.remove();
     }
+  };
+}
+
+/** Called only by an explicit download action after its existing authorized RPC returns a Blob. */
+export function createNativeSaveFile(plugin) {
+  return async (blob, filename) => {
+    if (!(blob instanceof Blob)) throw new TypeError('Download content must be a file.');
+    if (blob.size > 20 * 1024 * 1024) throw new Error('This file exceeds the mobile download limit of 20 MB.');
+    const name = String(filename || 'download').split(/[\\/]/).pop().split('').filter(char => char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127).join('').slice(0, 240);
+    if (!name || name === '.' || name === '..') throw new Error('A valid download filename is required.');
+    const result = await plugin.saveFile({ name, mimeType: blob.type || 'application/octet-stream', dataBase64: bytesToBase64(new Uint8Array(await blob.arrayBuffer())) });
+    return result?.saved === true;
   };
 }

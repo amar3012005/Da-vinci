@@ -4,7 +4,7 @@ import './HarnessSurface.css';
 import QueryStarters from './QueryStarters';
 import { isNativeApp } from '../shared/native-app';
 import { nativePlugin } from '../shared/native-auth';
-import { createNativeHarnessFetch, createNativeHarnessStream } from '../shared/native-harness-transport';
+import { createNativeHarnessFetch, createNativeHarnessStream, createNativeSaveFile } from '../shared/native-harness-transport';
 import { createNativeHarnessLoader } from '../shared/native-harness-loader';
 
 let nativeRuntime;
@@ -13,7 +13,7 @@ function harnessRuntime() {
   if (!nativeRuntime) {
     const fetchRunner = createNativeHarnessFetch(nativePlugin);
     const loader = createNativeHarnessLoader(fetchRunner);
-    nativeRuntime = { fetch: fetchRunner, loader, hooks: { remoteHost: true, fetch: fetchRunner, openStream: createNativeHarnessStream(nativePlugin), loadBundle: loader.loadBundle } };
+    nativeRuntime = { fetch: fetchRunner, loader, hooks: { remoteHost: true, fetch: fetchRunner, openStream: createNativeHarnessStream(nativePlugin), loadBundle: loader.loadBundle, saveFile: createNativeSaveFile(nativePlugin) } };
   }
   return nativeRuntime;
 }
