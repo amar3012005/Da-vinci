@@ -45,3 +45,18 @@
     padding-bottom:max(12px, env(safe-area-inset-bottom, 0px));
   }
 }
+@media (max-width:600px) {
+  /* Separate identity from utility chips rather than squeezing the title into
+     a narrow column beside five controls. */
+  [data-hivemind-popup-header] {
+    flex-direction:column;
+    align-items:stretch;
+    gap:8px;
+    padding:12px;
+  }
+  [data-hivemind-popup-header] > div:last-child {
+    justify-content:space-between;
+    gap:4px;
+  }
+  [data-hivemind-popup-header] h2 { white-space:nowrap; }
+}

@@ -710,7 +710,7 @@ export function ChatPanel({ isOpen, onClose }) {
             />
 
             {/* ── Header ── */}
-            <div className="flex-shrink-0 flex items-center justify-between px-5 py-3.5 bg-white border-b border-[#e3e0db] shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+            <div data-hivemind-popup-header className="flex-shrink-0 flex items-center justify-between px-5 py-3.5 bg-white border-b border-[#e3e0db] shadow-[0_1px_0_rgba(0,0,0,0.04)]">
               <div className="flex items-center gap-3 min-w-0">
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"

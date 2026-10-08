@@ -21,3 +21,13 @@ No global horizontal overflow masking, route changes, draft changes or native se
 The fixtures validate the outer CSS geometry only, not native conversation content or authenticated production UI. Native long links, tables, composer voice/stop states and real phone keyboard interactions need the accompanying Harness changes and live verification.
 
 Existing broader suites could not run with the available reused dependencies: MobileBrainShell imports ESM `@humation/react` through Jest's ignored node_modules, and EmployeeMobileNavigation lacks `@testing-library/dom`. No shared dependency tree was changed. No deployment performed.
+
+## Real outer component visual check
+
+A separate React fixture bundles the unchanged real MobileShell, EmployeeMobileNavigation, Sidebar, ChatPanel and shared message bubbles with compiled application Tailwind. Only authenticated tenant hooks, network and browser dictation are mocked; no production authentication bypass or native-session mock claim.
+
+Four phone widths (320/360/390/430) render populated message history without document horizontal overflow. At400px viewport height the popup composer remains visible. The history scroll is independently exercised. Actual390px navigation drawer renders the existing company/team/Brain controls. Browser runtime errors: zero.
+
+This caught and corrected the real popup header's compressed multi-line identity: mobile now places identity above the utility chips rather than squeezing both onto one row. Desktop stays unchanged.
+
+Screens: `/tmp/mobile-outer-evidence/react-popup-390.png`, `react-popup-keyboard-390.png`, `react-navigation-390.png`. The fixture excludes live authentication, native Harness conversation rendering and production web-font network loading. These are visual component fixtures, not browser-verified production pages.
