@@ -159,7 +159,7 @@ function isHarnessViteAsset(pathname) {
 }
 
 function isHarnessDocumentOrAsset(request, pathname) {
-  if (!hasHarnessSession(request) || !hasHarnessAdmission(request)) return false;
+  if (!hasHarnessSession(request)) return false;
   // Overview documents always belong to Da-vinci, including admitted reloads.
   // The host mounts Harness into its chat seat; standalone runner HTML would
   // replace the HIVE sidebar, header, and embedding configuration.
@@ -464,20 +464,23 @@ export default {
     }
     // Company Settings uses the native tenant principal without mounting chat.
     if (['/hivemind/dreamer/settings', '/hivemind/dreamer/agenda', '/hivemind/dreamer/connectors', '/hivemind/dreamer/credits'].includes(pathname)) {
-      if (!hasHarnessSession(request) || !hasHarnessAdmission(request)) {
+      if (!hasHarnessSession(request)) {
         return new Response(JSON.stringify({ error: 'authentication_required' }), {
           status: 401, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
         });
       }
       return noIndex(await harnessResponse(request, env));
     }
-    // Establishment is the one runner route that necessarily precedes the
-    // admission cookie.  The runner validates the signed, short-lived ticket
-    // carried in this request; every later runner route remains cookie-gated.
+    // Establishment validates a signed ticket at the runner. Boot must also
+    // reach native authorization without cookies so liveness sees an expired
+    // session as 401, never a successful SPA document. Cookie presence below
+    // selects the carrier only; the runner validates the actual principal.
+    // The short-lived edge marker must not strand a longer-lived native session.
     if (pathname === '/api/hivemind/embed/exchange'
       || pathname === '/api/hivemind/session/establish'
+      || pathname === '/api/hivemind/boot'
       || isHarnessDocumentOrAsset(request, pathname)
-      || (hasHarnessAdmission(request) && isHarnessRunnerRoute(pathname))) {
+      || ((hasHarnessAdmission(request) || hasHarnessSession(request)) && isHarnessRunnerRoute(pathname))) {
       return noIndex(await harnessResponse(request, env));
     }
 

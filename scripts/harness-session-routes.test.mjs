@@ -177,3 +177,55 @@ test('Day 0 admission is private, Flagship-owned, and fails closed', async () =>
   });
   assert.equal(evaluatedKey, 'singulance_day0_onboarding_v1');
 });
+
+// The one-hour edge marker may expire while the native signed session remains valid.
+test('native session survives an expired edge marker across RPC, Dreamer and compiled assets', async () => {
+  const routes = ['/api/session/create', '/plugins/client.js', '/assets/vendor-BNsW4eBh.css', '/assets/index-CMAtbjV6.css', '/hivemind/dreamer/credits?sessionId=ROMEO', '/hivemind/dreamer/connectors'];
+  for (const route of routes) {
+    let forwarded;
+    const response = await worker.fetch(new Request(`${origin}${route}`, {
+      method: route === '/api/session/create' ? 'POST' : 'GET',
+      headers: { cookie: 'dsh-auth-main=signed-native-session', origin },
+    }), environment(async request => {
+      forwarded = new URL(request.url).pathname;
+      assert.equal(request.headers.get('cookie'), 'dsh-auth-main=signed-native-session');
+      return new Response('native', { status: 200 });
+    }));
+    assert.equal(response.status, 200, route);
+    assert.equal(forwarded, new URL(`${origin}${route}`).pathname, route);
+  }
+});
+
+test('boot liveness without cookies reaches native authorization rather than SPA HTML', async () => {
+  for (const method of ['GET', 'HEAD']) {
+    let forwarded;
+    const response = await worker.fetch(new Request(`${origin}/api/hivemind/boot`, { method }), environment(async request => {
+      forwarded = new URL(request.url).pathname;
+      return Response.json({ diagnostic: 'authentication_required' }, { status: 401 });
+    }));
+    assert.equal(forwarded, '/api/hivemind/boot');
+    assert.equal(response.status, 401);
+    assert.match(response.headers.get('content-type'), /application\/json/);
+  }
+});
+
+test('cookie presence routes transport but cannot override native authentication rejection', async () => {
+  for (const route of ['/api/session/create', '/hivemind/dreamer/credits']) {
+    const response = await worker.fetch(new Request(`${origin}${route}`, {
+      headers: { cookie: 'dsh-auth-main=invalid' },
+    }), environment(async () => Response.json({ diagnostic: 'authentication_required' }, { status: 401 })));
+    assert.equal(response.status, 401);
+    assert.match(response.headers.get('content-type'), /application\/json/);
+  }
+});
+
+test('native cookies preserve outer meeting handlers, public art and product documents', async () => {
+  for (const route of ['/api/meetings/other', '/assets/onboarding/hero.webp', '/assets/runtime-computer-c2305f5b.webp', '/hivemind/app/employee/harness/session/session-opaque']) {
+    let forwarded = false;
+    await worker.fetch(new Request(`${origin}${route}`, { headers: { cookie: 'dsh-auth-main=value' } }), environment(async () => {
+      forwarded = true;
+      return new Response('native');
+    }));
+    assert.equal(forwarded, false, route);
+  }
+});

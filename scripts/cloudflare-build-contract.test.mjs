@@ -59,7 +59,7 @@ test('native session establishment reaches the runner before an admission cookie
   );
   assert.match(
     worker,
-    /hasHarnessAdmission\(request\) && isHarnessRunnerRoute\(pathname\)/u,
+    /\(hasHarnessAdmission\(request\) \|\| hasHarnessSession\(request\)\) && isHarnessRunnerRoute\(pathname\)/u,
   );
 });
 
