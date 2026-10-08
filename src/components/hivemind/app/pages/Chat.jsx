@@ -195,7 +195,7 @@ function UploadScopeModal({
         <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg rounded-[24px] border border-[#e3e0db] bg-white p-4 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
-              <h3 className="text-[#0a0a0a] text-[16px] font-semibold font-['Space_Grotesk']">Save uploaded memories to</h3>
+              <h3 className="text-[#0a0a0a] text-[16px] font-semibold font-['Space_Grotesk',Inter,ui-sans-serif,system-ui,sans-serif]">Save uploaded memories to</h3>
               <p className="text-[#525252] text-[12px] mt-1">Choose where these files should live before upload starts.</p>
             </div>
             <button type="button" onClick={onClose} className="rounded-lg p-1 text-[#a3a3a3] hover:text-[#525252]">
@@ -218,7 +218,7 @@ function UploadScopeModal({
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center"><Lock size={14} className="text-[#117dff]" /></div>
                 <div>
-                  <p className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">My Space</p>
+                  <p className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk',Inter,ui-sans-serif,system-ui,sans-serif]">My Space</p>
                   <p className="text-[11px] text-[#525252]">Private memories only visible in your personal workspace.</p>
                 </div>
               </div>
@@ -227,7 +227,7 @@ function UploadScopeModal({
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center"><FolderKanban size={14} className="text-[#117dff]" /></div>
                 <div>
-                  <p className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Project</p>
+                  <p className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk',Inter,ui-sans-serif,system-ui,sans-serif]">Project</p>
                   <p className="text-[11px] text-[#525252]">Shared with the members invited to that project.</p>
                 </div>
               </div>
@@ -244,7 +244,7 @@ function UploadScopeModal({
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center"><Users size={14} className="text-[#117dff]" /></div>
                 <div>
-                  <p className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{org?.name ? `Entire organization: ${org.name}` : 'Entire organization'}</p>
+                  <p className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk',Inter,ui-sans-serif,system-ui,sans-serif]">{org?.name ? `Entire organization: ${org.name}` : 'Entire organization'}</p>
                   <p className="text-[11px] text-[#525252]">{isOrgAdmin ? 'Visible to every member of the org.' : 'Org-wide uploads are reserved for organization admins.'}</p>
                 </div>
               </div>
@@ -694,7 +694,7 @@ export function ChatPanel({ isOpen, onClose }) {
             animate="visible"
             exit="exit"
             data-hivemind-chat-panel
-            className="fixed top-0 right-0 h-screen w-[440px] max-w-full z-50 flex flex-col bg-[#faf9f4] font-['Space_Grotesk']"
+            className="fixed top-0 right-0 h-screen w-[440px] max-w-full z-50 flex flex-col bg-[#faf9f4] font-['Space_Grotesk',Inter,ui-sans-serif,system-ui,sans-serif]"
             style={{
               boxShadow: '-4px 0 40px rgba(0,0,0,0.14), -1px 0 0 rgba(17,125,255,0.06)',
               borderLeft: '1px solid rgba(227,224,219,0.8)',
@@ -932,7 +932,7 @@ export function ChatPanel({ isOpen, onClose }) {
                   onKeyDown={handleKeyDown}
                   placeholder="Chat with HIVE…"
                   rows={1}
-                  className="w-full resize-none border-none outline-none bg-transparent text-[14px] py-0.5 placeholder:text-[#c4c1bb] max-h-[120px] leading-snug font-['Space_Grotesk']"
+                  className="w-full resize-none border-none outline-none bg-transparent text-[14px] py-0.5 placeholder:text-[#c4c1bb] max-h-[120px] leading-snug font-['Space_Grotesk',Inter,ui-sans-serif,system-ui,sans-serif]"
                 />
                 {/* Action row: + · scope chip · spacer · mic · black voice/send */}
                 <div className="flex items-center gap-2 mt-2">
