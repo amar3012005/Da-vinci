@@ -5,6 +5,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
 import WorkspaceModeSwitcher from './WorkspaceModeSwitcher';
+import BrainModeIcon from './BrainModeIcon';
 import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
 import {
@@ -303,9 +304,10 @@ export default function Sidebar({
     >
       {mobileRoster && <div className="mobile-roster-intro">
         <header className="mobile-roster-top">
-          <NavLink to="/hivemind/app/overview/new" className="mobile-unified-brand" aria-label="Open Brain chat"><img src="/images/singulance-orbit.png" alt=""/>HIVEMIND</NavLink>
+          <NavLink to="/hivemind/app/overview/new" className="mobile-unified-brand" aria-label="Open Brain chat"><BrainModeIcon size={30}/>HIVEMIND</NavLink>
           <div className="mobile-roster-header-utilities"><LangSwitcher compact/><WorkspaceNotifications/></div>
         </header>
+        <div className="mobile-unified-user-name">{user?.display_name || user?.name || user?.email?.split('@')[0] || 'Your account'}</div>
         <div className="mobile-roster-org"><Building2 size={18}/><strong>{org?.name || org?.slug || 'Workspace'}</strong></div>
         <CreditBalance credits={usage?.credits} inline className="mobile-unified-plan" />
         <div className="mobile-roster-team">

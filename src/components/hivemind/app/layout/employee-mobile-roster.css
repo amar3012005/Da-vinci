@@ -124,3 +124,7 @@
   [data-agent-room] [data-composer-stats],
   [data-brain-chat] [data-composer-stats] { display:none !important; }
 }
+@media (max-width:600px) {
+  .mobile-unified-user-name { font-family:Georgia,'Times New Roman',serif; font-size:27px; line-height:1.15; overflow-wrap:anywhere; }
+  .mobile-unified-brand > span { flex-shrink:0; }
+}
