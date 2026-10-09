@@ -80,5 +80,14 @@ const fs = require('fs'); const assert = require('assert/strict');
   const transform=await page.locator('[data-mobile-shell] main > div').evaluate(e=>getComputedStyle(e).transform);
   assert.ok(transform==='none'||transform==='matrix(1, 0, 0, 1, 0, 0)');
  }
+ for (const viewport of [{width:320,height:568},{width:844,height:390},{width:390,height:280}]) {
+  await page.setViewportSize(viewport);await page.goto('http://fixture/?view=header');
+  const language=page.getByRole('button',{name:'Reply language'});await language.waitFor();
+  for(const name of ['Reply language','Recent conversations']){const rect=await page.getByRole('button',{name}).boundingBox();assert.ok(rect.width>=44&&rect.height>=44);}
+  await language.click();await page.getByRole('button',{name:'English en'}).waitFor();
+  const menu=page.getByRole('button',{name:'English en'}).locator('..');const rect=await menu.boundingBox();assert.ok(rect.y+rect.height<=viewport.height);
+  assert.ok((await page.getByRole('button',{name:'English en'}).boundingBox()).height>=44);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+ }
  await browser.close();assert.deepEqual(errors,[]);console.log('Passed: mobile viewport/keyboard/touch controls at 320/390/768px; native billing/web purchases; consent initial denial, grant, withdraw, account switch, GET/POST failures; settings/profile/logout; report success receipt and failure without false receipt. No browser page errors.');
 })().catch(e=>{console.error(e);process.exit(1)});
