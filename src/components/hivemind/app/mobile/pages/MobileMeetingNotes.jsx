@@ -460,7 +460,7 @@ export default function MobileMeetingNotes() {
               exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 360, damping: 34 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-h-[86vh] overflow-y-auto bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
+              data-mobile-sheet className="w-full max-h-[86vh] overflow-y-auto bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
             >
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2">
@@ -472,7 +472,7 @@ export default function MobileMeetingNotes() {
                     <p className="text-[12px] text-[#737373] mt-0.5 leading-tight truncate max-w-[240px]">{deleteTarget.title || 'Meeting'}</p>
                   </div>
                 </div>
-                <button type="button" onClick={() => { setDeleteTarget(null); setDeletePreview(null); }} disabled={deleting} className="w-9 h-9 rounded-full grid place-items-center bg-[#f3f1ec] flex-shrink-0 disabled:opacity-50" aria-label="Close">
+                <button type="button" onClick={() => { setDeleteTarget(null); setDeletePreview(null); }} disabled={deleting} className="w-11 h-11 rounded-full grid place-items-center bg-[#f3f1ec] flex-shrink-0 disabled:opacity-50" aria-label="Close">
                   <X size={16} />
                 </button>
               </div>
@@ -567,14 +567,14 @@ export default function MobileMeetingNotes() {
               exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 360, damping: 34 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-h-[86vh] overflow-y-auto bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
+              data-mobile-sheet className="w-full max-h-[86vh] overflow-y-auto bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[18px] font-bold leading-tight">{selected.title || selected.name || 'Untitled meeting'}</div>
                   <div className="mt-1 text-[11px] text-[#a3a3a3]">{fmtAt(selected.created_at || selected.started_at)}</div>
                 </div>
-                <button onClick={() => setSelected(null)} className="w-9 h-9 rounded-full grid place-items-center bg-[#f3f1ec]"><X size={16} /></button>
+                <button aria-label="Close meeting details" onClick={() => setSelected(null)} className="w-11 h-11 rounded-full grid place-items-center bg-[#f3f1ec]"><X size={16} /></button>
               </div>
 
               <MeetingDetailBody meeting={selected} />

@@ -14,6 +14,7 @@ const fs = require('fs'); const assert = require('assert/strict');
   await page.setViewportSize({width,height:844}); await page.goto('http://fixture/');
   await page.getByRole('heading',{name:'Stay in the loop.'}).waitFor(); await page.waitForTimeout(500);
   const geometry=await page.evaluate(()=>({width:document.documentElement.scrollWidth,shell:document.querySelector('[data-mobile-shell]').getBoundingClientRect().height,selectSize:parseFloat(getComputedStyle(document.querySelector('select')).fontSize),switchHeight:document.querySelector('[role=switch]').getBoundingClientRect().height}));
+  const toggle=await page.getByRole('switch').evaluate(e=>{const t=e.children[0].getBoundingClientRect(),b=e.children[1].getBoundingClientRect();return {track:t.width,thumb:b.width,inTrack:b.x>=t.x&&b.right<=t.right};});assert.equal(toggle.track,36);assert.equal(toggle.thumb,16);assert.ok(toggle.inTrack);
   assert.equal(geometry.width,width); assert.equal(geometry.shell,844);assert.equal(geometry.selectSize,16);assert.ok(geometry.switchHeight>=44);
   await page.screenshot({path:(process.env.EVIDENCE_OUTPUT||'/evidence')+'/settings-'+width+'.png'});
   await page.setViewportSize({width,height:400}); await page.waitForTimeout(100);
@@ -84,10 +85,25 @@ const fs = require('fs'); const assert = require('assert/strict');
   await page.setViewportSize(viewport);await page.goto('http://fixture/?view=header');
   const language=page.getByRole('button',{name:'Reply language'});await language.waitFor();
   for(const name of ['Reply language','Recent conversations']){const rect=await page.getByRole('button',{name}).boundingBox();assert.ok(rect.width>=44&&rect.height>=44);}
+  await page.screenshot({path:(process.env.EVIDENCE_OUTPUT||'/evidence')+'/header-'+viewport.width+'x'+viewport.height+'.png'});
   await language.click();await page.getByRole('button',{name:'English en'}).waitFor();
   const menu=page.getByRole('button',{name:'English en'}).locator('..');const rect=await menu.boundingBox();assert.ok(rect.y+rect.height<=viewport.height);
   assert.ok((await page.getByRole('button',{name:'English en'}).boundingBox()).height>=44);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+ }
+ for (const viewport of [{width:320,height:568},{width:844,height:390},{width:390,height:280}]) {
+  await page.setViewportSize(viewport);await page.goto('http://fixture/?view=projects');
+  await page.getByRole('button',{name:/Open project Long project 0/}).click();await page.getByRole('dialog',{name:'Project details'}).waitFor();
+  await page.screenshot({path:(process.env.EVIDENCE_OUTPUT||'/evidence')+'/dense-project-'+viewport.width+'x'+viewport.height+'.png'});
+  let rect=await page.getByRole('dialog').boundingBox();assert.ok(rect.y>=0&&rect.y+rect.height<=viewport.height);
+  await page.getByRole('button',{name:'Close project details'}).click();
+  await page.getByRole('button',{name:'New project',exact:true}).click();await page.getByRole('dialog',{name:'New project'}).waitFor();
+  rect=await page.getByRole('dialog').boundingBox();assert.ok(rect.y>=0&&rect.y+rect.height<=viewport.height);
+  assert.equal(await page.locator('button button').count(),0);
+  await page.goto('http://fixture/?view=connectors');await page.getByRole('button',{name:/Details for Long application 0/}).waitFor();await page.waitForTimeout(400);
+  await page.screenshot({path:(process.env.EVIDENCE_OUTPUT||'/evidence')+'/dense-connectors-'+viewport.width+'x'+viewport.height+'.png'});
+  assert.equal(await page.locator('button button').count(),0);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  }
  await browser.close();assert.deepEqual(errors,[]);console.log('Passed: mobile viewport/keyboard/touch controls at 320/390/768px; native billing/web purchases; consent initial denial, grant, withdraw, account switch, GET/POST failures; settings/profile/logout; report success receipt and failure without false receipt. No browser page errors.');
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -263,7 +263,7 @@ export default function MobileMemories() {
         <div className="mt-4 flex items-center gap-2 h-11 px-4 rounded-full border border-[#dcd8d0] focus-within:border-[#b6b1a7]">
           <Search size={17} className="text-[#a3a3a3]" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search memories" className="flex-1 bg-transparent outline-none text-[14.5px] placeholder:text-[#a8a49c]" />
-          {query && <button onClick={() => setQuery('')} className="text-[#a3a3a3]"><X size={16} /></button>}
+          {query && <button aria-label="Clear search" onClick={() => setQuery('')} className="text-[#a3a3a3] w-11 h-11 grid place-items-center"><X size={16} /></button>}
         </div>
 
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">

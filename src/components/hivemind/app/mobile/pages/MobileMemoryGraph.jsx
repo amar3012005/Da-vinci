@@ -98,7 +98,7 @@ function NodeSheet({ node, edges, nodes, onClose, onNavigate, onDelete, deleting
           initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
           transition={{ type: 'spring', stiffness: 360, damping: 34 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-h-[78vh] overflow-y-auto bg-white rounded-t-[28px] p-5"
+          data-mobile-sheet className="w-full max-h-[78vh] overflow-y-auto bg-white rounded-t-[28px] p-5"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}
         >
           <div className="w-10 h-1 rounded-full bg-[#d4d0ca] mx-auto mb-4" />
@@ -107,7 +107,7 @@ function NodeSheet({ node, edges, nodes, onClose, onNavigate, onDelete, deleting
             <h2 className="text-[17px] font-semibold font-['Space_Grotesk'] leading-snug flex-1">
               {node.title || node.label || 'Untitled Memory'}
             </h2>
-            <button onClick={onClose} className="w-9 h-9 rounded-full grid place-items-center active:bg-[#f1eee7] flex-shrink-0" aria-label="Close">
+            <button onClick={onClose} className="w-11 h-11 rounded-full grid place-items-center active:bg-[#f1eee7] flex-shrink-0" aria-label="Close">
               <X size={18} />
             </button>
           </div>

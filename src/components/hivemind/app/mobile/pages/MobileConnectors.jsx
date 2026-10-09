@@ -61,7 +61,7 @@ function ToolkitDetailSheet({ toolkit, onClose }) {
         exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 360, damping: 34 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-h-[80vh] overflow-y-auto bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
+        data-mobile-sheet className="w-full max-h-[80vh] overflow-y-auto bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
       >
         <div className="mx-auto mb-3 h-1.5 w-14 rounded-full bg-[#dfdad1]" />
         <div className="flex items-center gap-3">
@@ -72,7 +72,7 @@ function ToolkitDetailSheet({ toolkit, onClose }) {
             <div className="text-[16px] font-bold leading-tight">{toolkit.name}</div>
             <div className="text-[11px] text-[#a3a3a3]">{toolkit.toolsCount} tools{toolkit.triggersCount > 0 ? ` · ${toolkit.triggersCount} triggers` : ''}</div>
           </div>
-          <button onClick={onClose} className="w-9 h-9 rounded-full grid place-items-center bg-[#f3f1ec] flex-shrink-0" aria-label="Close"><X size={16} /></button>
+          <button onClick={onClose} className="w-11 h-11 rounded-full grid place-items-center bg-[#f3f1ec] flex-shrink-0" aria-label="Close"><X size={16} /></button>
         </div>
         <div className="mt-4">
           {error && <p className="text-[12.5px] text-red-600">{error}</p>}
@@ -276,17 +276,15 @@ export default function MobileConnectors() {
             const connecting = connectingSlug === toolkit.slug;
             const disconnecting = disconnectingSlug === toolkit.slug;
             return (
-              <motion.button
+              <motion.div
                 key={toolkit.slug}
-                type="button"
-                onClick={() => setDetailToolkit(toolkit)}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(index * 0.012, 0.16) }}
                 className="w-full rounded-[18px] border border-[#e3e0db] bg-white p-2.5 text-left shadow-[0_10px_22px_rgba(26,24,20,0.035)]"
               >
                 <div className="flex items-center gap-2.5">
-                  <LogoMark toolkit={toolkit} connected={connected} />
+                  <button type="button" aria-label={`Details for ${toolkit.name}`} onClick={() => setDetailToolkit(toolkit)} className="min-w-0 flex-1 flex items-center gap-2.5 text-left"><LogoMark toolkit={toolkit} connected={connected} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[13px] font-bold leading-tight line-clamp-1">{toolkit.name}</span>
@@ -296,11 +294,12 @@ export default function MobileConnectors() {
                       </span>
                     </div>
                   </div>
+                  </button>
                   {connected ? (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDisconnect(toolkit); }}
                       disabled={disconnecting}
-                      className="ml-1 inline-flex h-7 items-center gap-1 rounded-lg border border-[#e3e0db] bg-white px-2.5 text-[10.5px] font-bold text-[#6f6b63] active:scale-[0.97] disabled:opacity-50 flex-shrink-0"
+                      className="ml-1 inline-flex min-h-[44px] items-center gap-1 rounded-lg border border-[#e3e0db] bg-white px-2.5 text-[10.5px] font-bold text-[#6f6b63] active:scale-[0.97] disabled:opacity-50 flex-shrink-0"
                     >
                       {disconnecting ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} className="text-emerald-500" />} Connected
                     </button>
@@ -310,7 +309,7 @@ export default function MobileConnectors() {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleConnect(toolkit); }}
                       disabled={connecting}
-                      className="ml-1 inline-flex h-7 items-center gap-1 rounded-lg bg-[#1a1a17] px-2.5 text-[10.5px] font-bold text-white active:scale-[0.97] disabled:opacity-50 flex-shrink-0"
+                      className="ml-1 inline-flex min-h-[44px] items-center gap-1 rounded-lg bg-[#1a1a17] px-2.5 text-[10.5px] font-bold text-white active:scale-[0.97] disabled:opacity-50 flex-shrink-0"
                     >
                       {connecting ? <Loader2 size={12} className="animate-spin" /> : <Plug size={12} />} Connect
                     </button>
@@ -318,7 +317,7 @@ export default function MobileConnectors() {
                     <span className="ml-1 text-[10px] text-[#a3a3a3] flex-shrink-0">Request access</span>
                   )}
                 </div>
-              </motion.button>
+              </motion.div>
             );
           })}
         </div>

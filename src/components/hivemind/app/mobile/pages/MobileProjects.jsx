@@ -105,9 +105,9 @@ export default function MobileProjects() {
           {error && <div className="py-3 text-[13px] text-red-700">{error}</div>}
           {!loading && !error && filtered.length === 0 && <div className="py-16 text-center text-[13px] text-[#737373]">No projects yet.</div>}
           {filtered.map((p, i) => (
-            <button key={p.id} onClick={() => setSelected(p)}
+            <div key={p.id}
               className={`w-full text-left py-3.5 flex items-start gap-3 active:opacity-60 ${i ? 'border-t border-[#eceae3]' : ''}`}>
-              <Folder size={18} className="text-[#117dff] flex-shrink-0 mt-0.5" />
+              <button type="button" onClick={() => setSelected(p)} className="min-w-0 flex-1 flex items-start gap-3 text-left" aria-label={`Open project ${p.name}`}><Folder size={18} className="text-[#117dff] flex-shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1">
                 <div className="text-[16px] leading-tight truncate">{p.name}</div>
                 {p.description && <div className="text-[12px] text-[#8b857d] mt-0.5 line-clamp-2">{p.description}</div>}
@@ -116,10 +116,11 @@ export default function MobileProjects() {
                   <span className={POLICY_COLOR[p.policy] || 'text-amber-600'}>{POLICY_LABEL[p.policy] || 'Private'}</span>
                 </div>
               </div>
-              <button onClick={(e) => archive(p.id, e)} className="text-[#a3a3a3] p-1 flex-shrink-0" aria-label="Archive project">
+              </button>
+              <button onClick={(e) => archive(p.id, e)} className="text-[#a3a3a3] w-11 h-11 grid place-items-center flex-shrink-0" aria-label="Archive project">
                 <Trash2 size={15} />
               </button>
-            </button>
+            </div>
           ))}
         </div>
       </div>
@@ -134,7 +135,7 @@ export default function MobileProjects() {
 
       {selected && (
         <div className="fixed inset-0 z-50 bg-black/30 flex items-end" onClick={() => setSelected(null)}>
-          <div className="w-full max-h-[75vh] overflow-y-auto bg-white rounded-t-[28px] p-5" onClick={(e) => e.stopPropagation()}
+          <div data-mobile-sheet role="dialog" aria-modal="true" aria-label="Project details" className="w-full max-h-[75vh] overflow-y-auto bg-white rounded-t-[28px] p-5" onClick={(e) => e.stopPropagation()}
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
             <div className="w-10 h-1 rounded-full bg-[#d4d0ca] mx-auto mb-4" />
             <div className="flex items-start gap-3">
@@ -146,7 +147,7 @@ export default function MobileProjects() {
                   <span className={POLICY_COLOR[selected.policy] || 'text-amber-600'}>{POLICY_LABEL[selected.policy] || 'Private'}</span>
                 </div>
               </div>
-              <button onClick={() => setSelected(null)} className="w-9 h-9 rounded-full grid place-items-center bg-[#f3f1ec] flex-shrink-0"><X size={16} /></button>
+              <button aria-label="Close project details" onClick={() => setSelected(null)} className="w-11 h-11 rounded-full grid place-items-center bg-[#f3f1ec] flex-shrink-0"><X size={16} /></button>
             </div>
             {selected.description
               ? <p className="mt-3 text-[14px] leading-relaxed text-[#3d3d3a]">{selected.description}</p>
@@ -163,7 +164,7 @@ export default function MobileProjects() {
 
       {creating && (
         <div className="fixed inset-0 z-50 bg-black/30 flex items-end" onClick={() => !saving && setCreating(false)}>
-          <div className="w-full bg-white rounded-t-[28px] p-5" onClick={(e) => e.stopPropagation()} style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
+          <div data-mobile-sheet role="dialog" aria-modal="true" aria-label="New project" className="w-full bg-white rounded-t-[28px] p-5" onClick={(e) => e.stopPropagation()} style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
             <div className="w-10 h-1 rounded-full bg-[#d4d0ca] mx-auto mb-4" />
             <div className="text-[19px] leading-tight mb-4" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>New project</div>
             <input

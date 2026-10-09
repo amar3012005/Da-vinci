@@ -217,8 +217,8 @@ export default function MobileUsage() {
               {month ? `${month} · ` : ''}<span className="font-medium text-[#117dff]">{planName}</span> plan
             </p>
           </div>
-          <button onClick={() => { refetch(); refetchDaily(); refetchBilling(); }}
-            className="ml-auto w-9 h-9 rounded-full border border-[#e3e0db] flex items-center justify-center flex-shrink-0">
+          <button aria-label="Refresh usage" onClick={() => { refetch(); refetchDaily(); refetchBilling(); }}
+            className="ml-auto w-11 h-11 rounded-full border border-[#e3e0db] flex items-center justify-center flex-shrink-0">
             <RefreshCw size={13} className={loading ? 'animate-spin text-[#525252]' : 'text-[#525252]'} />
           </button>
         </div>

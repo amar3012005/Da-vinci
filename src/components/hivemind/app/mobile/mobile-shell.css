@@ -14,3 +14,12 @@
     animation-duration: .01ms !important; transition-duration: .01ms !important;
   }
 }
+
+[data-mobile-shell] [data-mobile-sheet] {
+  max-height:calc(var(--hm-mobile-shell-height, 100dvh) - env(safe-area-inset-top, 0px) - 12px);
+  overflow-y:auto; overscroll-behavior:contain; overflow-wrap:anywhere;
+  padding-bottom:max(20px, env(safe-area-inset-bottom, 0px));
+}
+/* Keep the intended sans headings readable before external brand fonts arrive. */
+[data-mobile-shell] { font-family:Inter,ui-sans-serif,system-ui,sans-serif; }
+[data-mobile-shell] [class*="Space_Grotesk"] { font-family:'Space Grotesk',Inter,ui-sans-serif,system-ui,sans-serif; }

@@ -6,6 +6,8 @@ import MobileSettings from '../../src/components/hivemind/app/mobile/pages/Mobil
 import MobileProfile from '../../src/components/hivemind/app/mobile/pages/MobileProfile';
 import { NativeAiConsentGate } from '../../src/components/hivemind/app/mobile/MobileSafetyPanel';
 import MobileBilling from '../../src/components/hivemind/app/mobile/pages/MobileBilling';
+import MobileProjects from '../../src/components/hivemind/app/mobile/pages/MobileProjects';
+import MobileConnectors from '../../src/components/hivemind/app/mobile/pages/MobileConnectors';
 import MobileShell from '../../src/components/hivemind/app/mobile/MobileShell';
 import LegacyMobileChatHeader from '../../src/components/hivemind/app/mobile/LegacyMobileChatHeader';
 localStorage.setItem('hm_m_splashed', '1');
@@ -25,5 +27,5 @@ function HeaderFixture() {
  const [open,setOpen]=useState(false);
  return <MobileShell bareHeader showBareLogo={false}><LegacyMobileChatHeader compact languageOpen={open} onLanguageToggle={()=>setOpen(!open)} onLanguageClose={()=>setOpen(false)} onLanguageSelect={()=>setOpen(false)} onRecents={()=>{}} /><p>Conversation content</p></MobileShell>;
 }
-const Page = query.get('view') === 'header' ? HeaderFixture : query.get('view') === 'gate' ? GateFixture : query.get('view') === 'profile' ? MobileProfile : query.get('view') === 'billing' ? MobileBilling : MobileSettings;
+const Page = query.get('view') === 'projects' ? MobileProjects : query.get('view') === 'connectors' ? MobileConnectors : query.get('view') === 'header' ? HeaderFixture : query.get('view') === 'gate' ? GateFixture : query.get('view') === 'profile' ? MobileProfile : query.get('view') === 'billing' ? MobileBilling : MobileSettings;
 createRoot(document.getElementById('root')).render(<BrowserRouter><Page /></BrowserRouter>);
