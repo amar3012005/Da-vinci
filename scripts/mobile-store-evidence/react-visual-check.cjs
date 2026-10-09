@@ -108,6 +108,7 @@ const fs = require('fs'); const assert = require('assert/strict');
  for(const viewport of [{width:320,height:568},{width:844,height:390},{width:390,height:280},{width:768,height:1024}]) {
   await page.setViewportSize(viewport);await page.goto('http://fixture/?view=artifact');await page.getByRole('button',{name:'Open artifact'}).click();
   const dialog=page.getByRole('dialog');await dialog.waitFor();await page.evaluate(()=>document.documentElement.setAttribute('data-native-reduce-transparency','true'));assert.equal(await dialog.evaluate(e=>getComputedStyle(e).backdropFilter),'none');const rect=await dialog.boundingBox();assert.ok(rect.y>=0&&rect.y+rect.height<=viewport.height);
+  if(viewport.width<=700) {const heading=dialog.getByRole('heading');assert.ok((await heading.boundingBox()).height<=48);assert.equal(await heading.evaluate(e=>getComputedStyle(e).fontSize),'19px');}
   const close=page.getByRole('button',{name:'Close',exact:true});const box=await close.boundingBox();if(viewport.width<=700)assert.ok(box.width>=44&&box.height>=44);
   for(const control of [page.getByRole('button',{name:'Share',exact:true}),page.getByRole('link',{name:'Download',exact:true})]) {const action=await control.boundingBox();assert.ok(action.y>=0&&action.y+action.height<=viewport.height);}
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
