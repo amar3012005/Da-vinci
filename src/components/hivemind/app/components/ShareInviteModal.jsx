@@ -172,8 +172,8 @@ export default function ShareInviteModal({
       const response = await apiClient.resendInvite(orgId, inv.id);
       setDeliveryNotice(inviteDeliveryMessage(response.email_dispatch || response.invite?.email_dispatch, response.invite?.expires_at));
       await fetchInvites();
-    } catch (err) {
-      setDeliveryNotice(`Email delivery was not confirmed: ${err.response?.data?.error || err.message}. You can copy the invitation link or retry.`);
+    } catch {
+      setDeliveryNotice('Email delivery was not confirmed. You can copy the invitation link or retry.');
     } finally {
       setBusyById(b => ({ ...b, [inv.id]: null }));
     }
