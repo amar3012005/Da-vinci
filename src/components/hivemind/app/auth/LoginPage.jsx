@@ -1,4 +1,5 @@
 import { mobileAuthReturn } from '../shared/mobile-auth-return';
+import { isNativeApp } from '../shared/native-app';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1355,7 +1356,7 @@ export default function LoginPage() {
               );
             })() : (
               <>
-                {loadArtwork && (
+                {loadArtwork && !isNativeApp() && (
                   <img
                     src="/images/hivemind-login-art.webp"
                     alt="HIVEMIND memory system"
