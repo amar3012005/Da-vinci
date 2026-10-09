@@ -1,0 +1,3 @@
+import {mobilePageDestination} from './mobile-route';
+test('phone app destinations preserve search and hash',()=>{for(const page of ['profile','usage','billing','settings','connectors','knowledge'])expect(mobilePageDestination({pathname:'/hivemind/app/'+page,search:'?upgrade=pro',hash:'#details'},true)).toBe('/hivemind/m/'+(page==='knowledge'?'uploads':page)+'?upgrade=pro#details');});
+test('desktop override and native employee routes remain untouched',()=>{expect(mobilePageDestination({pathname:'/hivemind/app/billing',search:'?desktop=1'},true)).toBeNull();expect(mobilePageDestination({pathname:'/hivemind/app/employee/harness'},true)).toBeNull();expect(mobilePageDestination({pathname:'/hivemind/app/profile'},false)).toBeNull();});

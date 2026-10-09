@@ -137,7 +137,7 @@ function MeetingDetailBody({ meeting: m }) {
           <MeetingIntelligencePanel
             intelligence={m.intelligence}
             status={m.intelligence_status}
-            onOpenMemory={(id) => id && window.open(`/hivemind/app/memories?focus=${id}`, '_self')}
+            onOpenMemory={(id) => id && window.open(`/hivemind/m/memories?focus=${id}`, '_self')}
           />
         </div>
       )}

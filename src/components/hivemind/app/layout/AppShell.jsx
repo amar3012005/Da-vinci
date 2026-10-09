@@ -1,6 +1,7 @@
 import { NativeAiConsentGate } from '../mobile/MobileSafetyPanel';
 import { useTranslation } from 'react-i18next';
 import { mobileBrainUserName, mobileBrainGreeting } from './mobile-brain-identity';
+import { mobilePageDestination } from '../shared/mobile-route';
 import MobileShell from '../mobile/MobileShell';
 import MobileBrainAddSheet from './MobileBrainAddSheet';
 import MobileBrainHeaderActions from './MobileBrainHeaderActions';
@@ -217,6 +218,10 @@ function AppShellContent() {
   const { t } = useTranslation('dashboard');
   const location = useLocation();
   const navigate = useNavigate();
+  useEffect(() => {
+    const destination = mobilePageDestination(location, window.matchMedia('(max-width: 600px)').matches);
+    if (destination) navigate(destination, { replace:true });
+  }, [location, navigate]);
 
   useEffect(() => {
     if (org?.billing_action_required && location.pathname !== '/hivemind/app/billing') {
@@ -521,7 +526,7 @@ function AppShellContent() {
           onClose={() => setProductUpgrade(null)}
           onUpgrade={(plan) => {
             setProductUpgrade(null);
-            navigate(`/hivemind/app/billing?upgrade=${plan}`);
+            navigate(mobilePageDestination({pathname:'/hivemind/app/billing',search:`?upgrade=${plan}${new URLSearchParams(location.search).get('desktop') === '1' ? '&desktop=1' : ''}`,hash:location.hash}, brainPhone) || `/hivemind/app/billing?upgrade=${plan}${new URLSearchParams(location.search).get('desktop') === '1' ? '&desktop=1' : ''}${location.hash}`);
           }}
         />
         <EntityProfileModalHost />
