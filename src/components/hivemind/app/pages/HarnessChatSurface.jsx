@@ -1,3 +1,4 @@
+import { fetchHarness } from '../shared/harness-fetch';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -31,7 +32,7 @@ function canonicalHarnessDestination(url) {
 
 async function navigateHarnessTicket(ticket, destination, navigate) {
   const requestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
-  const response = await fetch(HARNESS_EXCHANGE_PATH, {
+  const response = await fetchHarness(HARNESS_EXCHANGE_PATH, {
     method: 'POST',
     credentials: 'include',
     headers: { 'content-type': 'application/json' },
