@@ -147,7 +147,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback((options = {}) => {
     if (isNativeApp()) {
-      nativeAuth().start().catch(() => setAuthState('signed_out'));
+      nativeAuth().start().then(completed => { if (completed) runBootstrap(); }).catch(() => setAuthState('signed_out'));
       return;
     }
     // Honor caller-provided returnTo (e.g. invitee bouncing through /hivemind/join/...)
@@ -167,7 +167,7 @@ export function AuthProvider({ children }) {
       // Zitadel Enterprise SSO
       window.location.href = apiClient.getLoginUrl(returnTo, undefined, options.workspaceInviteToken);
     }
-  }, []);
+  }, [runBootstrap]);
 
   const logout = useCallback(async () => {
     try {

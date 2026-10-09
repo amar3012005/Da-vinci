@@ -1,3 +1,4 @@
+import { mobileAuthReturn } from '../shared/mobile-auth-return';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -286,7 +287,7 @@ export default function LoginPage() {
 
     // CLI flow takes priority over ordinary in-app navigation.
     const urlParams = new URLSearchParams(location.search);
-    const cliReturnTo = urlParams.get('cli_return_to');
+    const cliReturnTo = mobileAuthReturn(location.search) || urlParams.get('cli_return_to');
     if (cliReturnTo) {
       // Already a fully-qualified URL (control-plane host with the cli/start
       // params encoded inside). Pass through verbatim.
@@ -307,7 +308,7 @@ export default function LoginPage() {
 
   // CLI flow: show a banner so the user knows why we asked them to sign in.
   const isCliFlow = useMemo(
-    () => new URLSearchParams(location.search).has('cli_return_to'),
+    () => new URLSearchParams(location.search).has('cli_return_to') && !mobileAuthReturn(location.search),
     [location.search]
   );
   const oauthReturnTo = useMemo(
@@ -323,7 +324,7 @@ export default function LoginPage() {
   useEffect(() => {
     try {
       const urlParams = new URLSearchParams(location.search);
-      const cliReturnTo = urlParams.get('cli_return_to');
+      const cliReturnTo = mobileAuthReturn(location.search) || urlParams.get('cli_return_to');
       if (cliReturnTo) {
         sessionStorage.setItem('hivemind_cli_return_to', cliReturnTo);
       }
@@ -507,7 +508,7 @@ export default function LoginPage() {
       // CLI flow: jump to the cross-origin control-plane URL so it can
       // mint the API key and 302 to the verified page.
       const urlParams = new URLSearchParams(location.search);
-      const cliReturnTo = urlParams.get('cli_return_to');
+      const cliReturnTo = mobileAuthReturn(location.search) || urlParams.get('cli_return_to');
       if (cliReturnTo) {
         window.location.href = cliReturnTo;
         return;

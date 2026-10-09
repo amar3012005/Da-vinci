@@ -100,7 +100,8 @@ function App() {
     typeof window !== 'undefined' && (
       window.location.hostname === HIVEMIND_SITE_HOST ||
       HIVEMIND_PREVIEW_HOSTS.has(window.location.hostname) ||
-      window.location.protocol === 'file:'
+      window.location.protocol === 'file:' ||
+      window.Capacitor?.isNativePlatform?.() === true
     );
 
   if (isPlatformAdminHost) {

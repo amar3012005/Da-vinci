@@ -8,7 +8,7 @@ function base64url(bytes) {
 }
 
 /** Inject native storage/transport so authentication can be tested without real credentials. */
-export function createNativeAuthController({ plugin, browser, crypto, now = Date.now }) {
+export function createNativeAuthController({ plugin, browser, crypto, now = Date.now, platform }) {
   let exchanging = false;
   async function start() {
     const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));
@@ -17,7 +17,14 @@ export function createNativeAuthController({ plugin, browser, crypto, now = Date
     await plugin.setCredential({ key: 'pendingAuth', value: JSON.stringify({ state, verifier, createdAt: now() }) });
     const url = new URL('/auth/mobile/start', NATIVE_CONTROL_PLANE);
     url.search = new URLSearchParams({ callback: NATIVE_AUTH_CALLBACK, state, code_challenge: challenge, code_challenge_method: 'S256' }).toString();
-    try { await browser.open({ url: url.href }); }
+    try {
+      if (platform === 'ios') {
+        const result = await plugin.authenticate({ url: url.href });
+        return await complete(result.url);
+      }
+      await browser.open({ url: url.href });
+      return false;
+    }
     catch (error) { await plugin.removeCredential({ key: 'pendingAuth' }); throw error; }
   }
   async function complete(rawUrl) {

@@ -1,4 +1,4 @@
-import { registerPlugin } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { createNativeAuthController } from './native-auth-controller';
@@ -6,7 +6,7 @@ import { createNativeAuthController } from './native-auth-controller';
 export const nativePlugin = registerPlugin('SingulanceNative');
 let controller;
 export function nativeAuth() {
-  if (!controller) controller = createNativeAuthController({ plugin: nativePlugin, browser: Browser, crypto: window.crypto });
+  if (!controller) controller = createNativeAuthController({ plugin: nativePlugin, browser: Browser, crypto: window.crypto, platform: Capacitor.getPlatform() });
   return controller;
 }
 
