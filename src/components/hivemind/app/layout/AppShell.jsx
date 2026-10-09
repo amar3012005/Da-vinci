@@ -36,6 +36,7 @@ import ReferralTrialGateModal from '../components/ReferralTrialGateModal';
 import EntityProfileModalHost from '../shared/EntityProfileModalHost';
 import { RETURNING_USER_LANDING } from '../shared/routes';
 import { newWorkspaceLanding } from '../auth/mobile-routing';
+import { isNativeApp } from '../shared/native-app';
 
 /**
  * PlanLimitGate — listens for the global 'hm:plan-limit' window event
@@ -297,7 +298,9 @@ function AppShellContent() {
   const [mobileBrainAddOpen, setMobileBrainAddOpen] = useState(false);
   const closeMobileBrainAdd = useCallback(() => setMobileBrainAddOpen(false), []);
   const closeMobileApps = useCallback(() => setMobileAppsOpen(false), []);
-  const [mobileTeamOpen, setMobileTeamOpen] = useState(false);
+  const [mobileTeamOpen, setMobileTeamOpen] = useState(() => (
+    isNativeApp() && window.matchMedia('(max-width: 600px)').matches
+  ));
   const employeeRoom = location.pathname.startsWith('/hivemind/app/employee/harness');
   const nativeChatRoom = employeeRoom || /^\/hivemind\/app(?:\/overview(?:\/(?:new|session\/[^/]+))?)?\/?$/u.test(location.pathname);
   const brainChat = /^\/hivemind\/app\/overview(?:\/(?:new|session\/[^/]+))?\/?$/.test(location.pathname);
@@ -322,7 +325,11 @@ function AppShellContent() {
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
-  useEffect(() => { setMobileTeamOpen(false); }, [location.pathname]);
+  const mobileTeamRoute = useRef(location.pathname);
+  useEffect(() => {
+    if (mobileTeamRoute.current !== location.pathname) setMobileTeamOpen(false);
+    mobileTeamRoute.current = location.pathname;
+  }, [location.pathname]);
   const [compactViewport, setCompactViewport] = useState(() => (
     typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
   ));
