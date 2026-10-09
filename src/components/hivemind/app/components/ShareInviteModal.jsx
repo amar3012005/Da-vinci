@@ -4,6 +4,7 @@ import {
   AlertCircle, Loader2, RefreshCw, Trash2, Clock, CheckCircle2, XCircle,
   FolderKanban, Users, Link as LinkIcon,
 } from 'lucide-react';
+import { inviteDeliveryMessage } from './invite-delivery-message';
 import apiClient from '../shared/api-client';
 
 /**
@@ -45,6 +46,7 @@ export default function ShareInviteModal({
   const [invites, setInvites] = useState([]);
   const [loadingList, setLoadingList] = useState(false);
   const [busyById, setBusyById] = useState({});
+  const [deliveryNotice, setDeliveryNotice] = useState('');
 
   // Depend on the PRIMITIVE project id, never the array prop: `defaultProjectIds`
   // defaults to `[]`, which is a fresh identity on every parent render. With the
@@ -131,6 +133,7 @@ export default function ShareInviteModal({
 
   async function handleCreate() {
     if (!orgId) return;
+    setDeliveryNotice('');
     setCreating(true);
     setCreateError(null);
     setNewInvite(null);
@@ -163,12 +166,14 @@ export default function ShareInviteModal({
   }
 
   async function handleResend(inv) {
+    setDeliveryNotice('');
     setBusyById(b => ({ ...b, [inv.id]: 'resend' }));
     try {
-      await apiClient.resendInvite(orgId, inv.id);
+      const response = await apiClient.resendInvite(orgId, inv.id);
+      setDeliveryNotice(inviteDeliveryMessage(response.email_dispatch || response.invite?.email_dispatch, response.invite?.expires_at));
       await fetchInvites();
     } catch (err) {
-      alert(err.response?.data?.error || err.message);
+      setDeliveryNotice(`Email delivery was not confirmed: ${err.response?.data?.error || err.message}. You can copy the invitation link or retry.`);
     } finally {
       setBusyById(b => ({ ...b, [inv.id]: null }));
     }
@@ -217,6 +222,7 @@ export default function ShareInviteModal({
         </header>
 
         <div className="px-5 py-4 overflow-y-auto flex-1">
+          {deliveryNotice && <p role="status" className="mb-3 text-[12px] leading-5 text-[#525252]">{deliveryNotice}</p>}
           {/* Compose: email + role */}
           <section>
             <label className="block text-[11px] font-medium text-[#525252] mb-1.5">Invite by email (optional)</label>
@@ -298,11 +304,7 @@ export default function ShareInviteModal({
                           ? 'text-amber-700'
                           : 'text-[#737373]'
                   }`}>
-                    {newInvite.email_dispatch.ok || newInvite.email_dispatch.pending
-                      ? 'Email sent — invitation expires in 24 hours'
-                      : newInvite.email_dispatch.attempted
-                        ? `Email dispatch failed: ${newInvite.email_dispatch.error || 'delivery could not be confirmed'}`
-                          : 'Link-only — share via channels below'}
+                    {inviteDeliveryMessage(newInvite.email_dispatch, newInvite.expires_at)}
                   </div>
                 )}
 

@@ -24,3 +24,9 @@ html[data-native-increase-contrast="true"] [data-outer-reader-overlay] {
 html[data-native-increase-contrast="true"] [data-outer-reader-window] { border-color:#525252; }
 html[data-native-platform="android"] [data-outer-reader-overlay] button,
 html[data-native-platform="android"] [data-outer-reader-overlay] a[download] { min-width:48px; min-height:48px; }
+
+/* Keep outer mobile chrome sans-serif even while remote brand fonts are unavailable. */
+@media(max-width:700px) {
+ [data-outer-reader-window] { font-family:Inter,ui-sans-serif,system-ui,sans-serif; }
+ [data-outer-reader-window] [data-artifact-reader-header] h3 { font-family:'Space Grotesk',Inter,ui-sans-serif,system-ui,sans-serif; }
+}
