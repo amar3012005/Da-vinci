@@ -38,6 +38,7 @@ import {
   contractPills,
 } from '../shared/persona-contract';
 import { FIELDS, professionsForField, NAME_SUGGESTIONS } from '../shared/field-catalog';
+import { createEmployeeAndRefresh, mergeCreatedEmployee } from '../shared/employee-create-response';
 
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
 
@@ -1907,6 +1908,7 @@ export default function DigitalEmployees() {
   const [recentTasks, setRecentTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [activeWorkspaceTaskId, setActiveWorkspaceTaskId] = useState(null);
+  const rosterRequestRef = useRef(0);
 
   const loadRecentTasks = useCallback(async () => {
     setTasksLoading(true);
@@ -1920,18 +1922,22 @@ export default function DigitalEmployees() {
     }
   }, []);
 
-  const fetch = useCallback(async () => {
-    setLoading(true);
+  const fetch = useCallback(async (options = {}) => {
+    const request = ++rosterRequestRef.current;
+    const background = options?.background === true;
+    if (!background) setLoading(true);
     setError(null);
     try {
       const { employees: list } = await apiClient.listEmployees();
-      setEmployees(list || []);
+      if (request === rosterRequestRef.current) setEmployees(list || []);
     } catch (e) {
-      setError(e.response?.data?.error || e.message);
+      if (request === rosterRequestRef.current) setError(background
+        ? t('digitalemployees.createdRefreshFailed', 'Employee created. The team list could not be refreshed. Refresh to try again.')
+        : (e.response?.data?.error || e.message));
     } finally {
-      setLoading(false);
+      if (request === rosterRequestRef.current && !background) setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
@@ -1940,8 +1946,19 @@ export default function DigitalEmployees() {
   }, [surface, loadRecentTasks]);
 
   async function handleCreate(payload) {
-    await apiClient.createEmployee(payload);
-    await fetch();
+    return createEmployeeAndRefresh({
+      create: value => apiClient.createEmployee(value),
+      payload,
+      accept: response => {
+        // Invalidate a roster read begun before this POST. It must not erase
+        // the newly returned employee or keep the create dialog waiting.
+        rosterRequestRef.current += 1;
+        setEmployees(current => mergeCreatedEmployee(current, response));
+        setLoading(false);
+      },
+      refresh: () => fetch({ background: true }),
+      onRefreshError: () => setError(t('digitalemployees.createdRefreshFailed', 'Employee created. The team list could not be refreshed. Refresh to try again.')),
+    });
   }
   async function handlePause(emp)   { await apiClient.pauseEmployee(emp.id); await fetch(); }
   async function handleResume(emp)  { await apiClient.resumeEmployee(emp.id); await fetch(); }
@@ -1968,7 +1985,7 @@ export default function DigitalEmployees() {
     setInstallingMarketplaceId(preset.id);
     setError(null);
     try {
-      await apiClient.createEmployee({
+      await handleCreate({
         name: preset.name,
         persona: preset.persona,
         model: preset.model,
@@ -1987,7 +2004,6 @@ export default function DigitalEmployees() {
           persona_contract: buildPersonaContractLike(preset),
         },
       });
-      await fetch();
       flash(t('digitalemployees.agentInstalled', '{{name}} installed into your organization.', { name: preset.name }));
     } catch (e) {
       setError(e.response?.data?.error || e.message);
@@ -2013,13 +2029,12 @@ export default function DigitalEmployees() {
         });
         if (p) persona = p;
       } catch { /* fall back to the brief as the persona */ }
-      await apiClient.createEmployee({
+      await handleCreate({
         name: empName, persona, scope: 'organization', team_id: null,
         slack_team_id: null, slack_channels_allowed: [], tools: [],
         role_archetype: prof.role_archetype,
         policy_rules: { rate_limit_per_min: 30, marketplace_category: field, marketplace_profession: prof.title },
       });
-      await fetch();
       flash(t('digitalemployees.professionHired', '{{name}} hired into your organization.', { name: empName }));
     } catch (e) {
       setError(e.response?.data?.error || e.message);
