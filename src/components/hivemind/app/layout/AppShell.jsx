@@ -325,11 +325,9 @@ function AppShellContent() {
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
-  const mobileTeamRoute = useRef(location.pathname);
-  useEffect(() => {
-    if (mobileTeamRoute.current !== location.pathname) setMobileTeamOpen(false);
-    mobileTeamRoute.current = location.pathname;
-  }, [location.pathname]);
+  // The drawer closes through an intentional destination tap or close button.
+  // Automatic room restoration may change the URL while booting; it must not
+  // dismiss the requested first-open team view.
   const [compactViewport, setCompactViewport] = useState(() => (
     typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
   ));

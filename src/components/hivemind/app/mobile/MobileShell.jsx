@@ -62,7 +62,9 @@ export default function MobileShell({ children, rightAction = null, title = null
   const navigate = useNavigate();
   const location = useLocation();
   const { user, org, logout, needsOnboarding } = useAuth() || {};
-  const [drawer, setDrawer] = useState(() => isNativeApp() && location.pathname === '/hivemind/m/chat');
+  const [drawer, setDrawer] = useState(() => isNativeApp() && (
+    location.pathname === '/hivemind/m/chat' || location.pathname.startsWith('/hivemind/app/overview')
+  ));
   const [reminderDismissed, setReminderDismissed] = useState(false);
   const [showDesktopInstructions, setShowDesktopInstructions] = useState(false);
   const [companyOnboarded, setCompanyOnboarded] = useState(null);
