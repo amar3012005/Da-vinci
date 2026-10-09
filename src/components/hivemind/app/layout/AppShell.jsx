@@ -9,7 +9,8 @@ import { bindNativeChatViewport } from './mobile-chat-viewport';
 import './mobile-chat-viewport.css';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
+import { useNativeAppearance } from '../shared/useNativeAppearance';
 import Sidebar from './Sidebar';
 import EmployeeMobileNavigation from './EmployeeMobileNavigation';
 import './product-transition.css';
@@ -530,4 +531,7 @@ function AppShellContent() {
   );
 }
 
-export default function AppShell() { return <NativeAiConsentGate><AppShellContent /></NativeAiConsentGate>; }
+export default function AppShell() {
+  const appearance = useNativeAppearance();
+  return <NativeAiConsentGate><MotionConfig reducedMotion={appearance.reduceMotion ? 'always' : 'user'}><AppShellContent /></MotionConfig></NativeAiConsentGate>;
+}

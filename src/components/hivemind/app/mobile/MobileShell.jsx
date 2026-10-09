@@ -18,6 +18,7 @@ import AgentAvatar from '../hyperagents/AgentAvatar';
 import WorkspaceModeSwitcher from '../layout/WorkspaceModeSwitcher';
 import EmployeeMobileNavigation from '../layout/EmployeeMobileNavigation';
 import { bindNativeChatViewport } from '../layout/mobile-chat-viewport';
+import { useNativeAppearance } from '../shared/useNativeAppearance';
 import './mobile-shell.css';
 
 const SPLASH_FLAG = 'hm_m_splashed';
@@ -54,7 +55,9 @@ const NAV = [
 
 export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false, showBareLogo = true, renderHeader = null, nativeChatViewport = false, activeNavPath = null }) {
   const shell = useRef(null);
-  const reduceMotion = useReducedMotion();
+  const browserReduceMotion = useReducedMotion();
+  const nativeAppearance = useNativeAppearance();
+  const reduceMotion = browserReduceMotion || nativeAppearance.reduceMotion;
   const navigate = useNavigate();
   const location = useLocation();
   const { user, org, logout, needsOnboarding } = useAuth() || {};
