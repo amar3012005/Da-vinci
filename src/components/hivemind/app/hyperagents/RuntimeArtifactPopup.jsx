@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { bindNativeChatViewport } from '../layout/mobile-chat-viewport';
+import '../shared/mobile-popup.css';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { X, Download, Share2, Check } from 'lucide-react';
@@ -55,12 +57,31 @@ export default function RuntimeArtifactPopup({
   open, onClose, kind = 'text', title, subline, imageUrl, textContent, markdown,
   downloadUrl, downloadFilename, shareUrl, shareText, loading = false, children,
 }) {
+  const overlay = useRef(null);
+  useEffect(() => {
+    if (!open || !overlay.current) return undefined;
+    const release = bindNativeChatViewport(window, overlay.current.style, '--hm-popup-height');
+    const previous = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    overlay.current.querySelector('button')?.focus();
+    const keyboard = event => {
+      if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+      if (event.key !== 'Tab') return;
+      const items = [...overlay.current.querySelectorAll('button:not([disabled]),a[href],[tabindex="0"]')].filter(item => item.getClientRects().length);
+      if (!items.length) { event.preventDefault(); return; }
+      if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items[items.length-1].focus(); }
+      else if (!event.shiftKey && document.activeElement === items[items.length-1]) { event.preventDefault(); items[0].focus(); }
+    };
+    document.addEventListener('keydown', keyboard);
+    return () => { release(); document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', keyboard); previous?.focus(); };
+  }, [open, onClose]);
   const [copied, setCopied] = useState(false);
+  const generatedDownloadUrl = useMemo(() => open && !downloadUrl && kind !== 'image' && textContent
+    ? URL.createObjectURL(new Blob([textContent], { type: 'text/plain' })) : null, [open, downloadUrl, kind, textContent]);
+  useEffect(() => () => { if (generatedDownloadUrl) URL.revokeObjectURL(generatedDownloadUrl); }, [generatedDownloadUrl]);
   if (!open) return null;
-
-  const effectiveDownloadUrl = downloadUrl || (kind !== 'image' && textContent
-    ? URL.createObjectURL(new Blob([textContent], { type: 'text/plain' }))
-    : null);
+  const effectiveDownloadUrl = downloadUrl || generatedDownloadUrl;
 
   const share = async () => {
     const url = shareUrl || downloadUrl || window.location.href;
@@ -75,21 +96,21 @@ export default function RuntimeArtifactPopup({
     } catch { /* clipboard unavailable — no-op, button just does nothing */ }
   };
 
-  return <div className="fixed inset-0 z-[90] grid place-items-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-label={title || 'Runtime artifact'} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-[10px] border border-[#e3e0db] bg-white shadow-2xl">
-      <div className="relative shrink-0 border-b border-[#e3e0db] px-8 pb-5 pt-7">
+  return <div ref={overlay} data-outer-reader-overlay className="fixed inset-0 z-[90] grid place-items-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-label={title || 'Runtime artifact'} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div data-outer-reader-window className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-[10px] border border-[#e3e0db] bg-white shadow-2xl">
+      <div data-artifact-reader-header className="relative shrink-0 border-b border-[#e3e0db] px-8 pb-5 pt-7">
         <button type="button" onClick={onClose} aria-label="Close" title="Close" className="absolute right-5 top-6 grid h-8 w-8 place-items-center rounded-md text-[#a3a3a3] hover:bg-[#faf9f4] hover:text-[#0a0a0a]"><X size={18} /></button>
         <h3 className="pr-10 font-serif text-[28px] font-bold leading-tight text-[#171717]">{title || 'Untitled artifact'}</h3>
         {subline ? <p className="mt-2 text-[13px] leading-5 text-[#737373]">{subline}</p> : null}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-8 py-5">
+      <div data-artifact-reader-body className="min-h-0 flex-1 overflow-y-auto px-8 py-5">
         {loading ? <p className="py-8 text-center text-[13px] text-[#a3a3a3]">Loading…</p>
           : children ? children
             : markdown ? <ArtifactMarkdownBody markdown={markdown} />
               : kind === 'image' && imageUrl ? <img src={imageUrl} alt={title || 'Runtime artifact'} className="w-full rounded-md border border-[#e7e4df] object-cover" />
                 : <pre className="whitespace-pre-wrap break-words rounded-md border border-[#e7e4df] bg-[#faf9f4] px-3 py-2.5 font-mono text-[12px] leading-5 text-[#292824]">{textContent || 'No preview available.'}</pre>}
       </div>
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-[#e3e0db] px-6 py-3.5">
+      <div data-artifact-reader-footer className="flex shrink-0 items-center justify-between gap-2 border-t border-[#e3e0db] px-6 py-3.5">
         <button type="button" onClick={share} className="inline-flex h-9 items-center gap-2 px-3 text-[12px] font-semibold text-[#525252] hover:text-[#171717]">
           {copied ? <><Check size={13} className="text-[#328347]" />Link copied</> : <><Share2 size={13} />Share</>}
         </button>

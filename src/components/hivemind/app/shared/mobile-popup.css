@@ -1,0 +1,23 @@
+/* Outer readers only: native Harness previews retain their own layout contract. */
+@media(max-width:700px) {
+ [data-outer-reader-overlay] { height:var(--hm-popup-height,100dvh); bottom:auto; box-sizing:border-box; padding: max(8px,env(safe-area-inset-top,0px)) 8px max(8px,env(safe-area-inset-bottom,0px)); }
+ [data-outer-reader-overlay] > [data-outer-reader-window] { height:100%; max-height:100%; min-height:0; min-width:0; display:flex; flex-direction:column; overflow-wrap:anywhere; }
+ [data-outer-reader-window] [data-workspace-popup] { display:flex; flex-direction:column; min-height:0; max-height:100%; }
+ [data-outer-reader-window] [data-workspace-popup-body] { flex:1; min-height:0; overscroll-behavior:contain; overflow-wrap:anywhere; }
+ [data-outer-reader-window] [data-company-reader-content] { height:100%; min-height:0; }
+ [data-outer-reader-window] [data-artifact-reader-header] { padding:16px; max-height:45%; overflow-y:auto; }
+ [data-outer-reader-window] [data-artifact-reader-body] { padding:16px; overscroll-behavior:contain; overflow-wrap:anywhere; }
+ [data-outer-reader-window] [data-artifact-reader-footer] { padding:8px 12px; }
+ [data-outer-reader-overlay] button, [data-outer-reader-overlay] a[download] { min-height:44px; min-width:44px; }
+ [data-outer-reader-window] [data-artifact-reader-header] > button { top:8px; right:8px; }
+ [data-outer-reader-overlay] :focus-visible { outline:2px solid #117dff; outline-offset:2px; }
+}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more) {
+ [data-outer-reader-overlay] { backdrop-filter:none; -webkit-backdrop-filter:none; background:rgba(0,0,0,.55); }
+}
+/* Native preference bridge complements browser media queries; these remain web surfaces. */
+html[data-native-reduce-transparency="true"] [data-outer-reader-overlay],
+html[data-native-increase-contrast="true"] [data-outer-reader-overlay] {
+ backdrop-filter:none; -webkit-backdrop-filter:none; background:rgba(0,0,0,.55);
+}
+html[data-native-increase-contrast="true"] [data-outer-reader-window] { border-color:#525252; }

@@ -6,6 +6,7 @@ import MobileSettings from '../../src/components/hivemind/app/mobile/pages/Mobil
 import MobileProfile from '../../src/components/hivemind/app/mobile/pages/MobileProfile';
 import { NativeAiConsentGate } from '../../src/components/hivemind/app/mobile/MobileSafetyPanel';
 import MobileBilling from '../../src/components/hivemind/app/mobile/pages/MobileBilling';
+import RuntimeArtifactPopup from '../../src/components/hivemind/app/hyperagents/RuntimeArtifactPopup';
 import MobileProjects from '../../src/components/hivemind/app/mobile/pages/MobileProjects';
 import MobileConnectors from '../../src/components/hivemind/app/mobile/pages/MobileConnectors';
 import MobileShell from '../../src/components/hivemind/app/mobile/MobileShell';
@@ -27,5 +28,9 @@ function HeaderFixture() {
  const [open,setOpen]=useState(false);
  return <MobileShell bareHeader showBareLogo={false}><LegacyMobileChatHeader compact languageOpen={open} onLanguageToggle={()=>setOpen(!open)} onLanguageClose={()=>setOpen(false)} onLanguageSelect={()=>setOpen(false)} onRecents={()=>{}} /><p>Conversation content</p></MobileShell>;
 }
-const Page = query.get('view') === 'projects' ? MobileProjects : query.get('view') === 'connectors' ? MobileConnectors : query.get('view') === 'header' ? HeaderFixture : query.get('view') === 'gate' ? GateFixture : query.get('view') === 'profile' ? MobileProfile : query.get('view') === 'billing' ? MobileBilling : MobileSettings;
+function ArtifactFixture() {
+ const [open,setOpen]=useState(false);
+ return <MobileShell><button onClick={()=>setOpen(true)}>Open artifact</button><RuntimeArtifactPopup open={open} onClose={()=>setOpen(false)} title={'Dense report '+ 'Reference'.repeat(12)} textContent={'LongURLhttps://example.test/'+ 'evidence'.repeat(2000)} /></MobileShell>;
+}
+const Page = query.get('view') === 'artifact' ? ArtifactFixture : query.get('view') === 'projects' ? MobileProjects : query.get('view') === 'connectors' ? MobileConnectors : query.get('view') === 'header' ? HeaderFixture : query.get('view') === 'gate' ? GateFixture : query.get('view') === 'profile' ? MobileProfile : query.get('view') === 'billing' ? MobileBilling : MobileSettings;
 createRoot(document.getElementById('root')).render(<BrowserRouter><Page /></BrowserRouter>);

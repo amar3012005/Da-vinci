@@ -21,6 +21,7 @@ export default function WorkspacePopupSurface({
   const toast = variant === 'toast';
   const reader = variant === 'reader';
   return <section
+    data-workspace-popup
     role="dialog"
     aria-modal={!toast}
     aria-label={ariaLabel || title || label}
@@ -33,7 +34,7 @@ export default function WorkspacePopupSurface({
       <span className="ml-5 min-w-0 truncate font-mono text-[10px] font-semibold tracking-[0.1em] text-[#99978f]">{label}</span>
       {onClose ? <button type="button" onClick={onClose} className="ml-auto grid h-8 w-8 place-items-center rounded-full text-[#8b8c87] hover:bg-[#f0eee9] hover:text-[#111]" aria-label="Close"><X size={17} /></button> : null}
     </header>
-    <div className={`${reader ? 'min-h-0' : toast ? 'min-h-0 flex-1 px-7 py-7' : 'px-7 py-6 sm:px-9'} overflow-y-auto`}>
+    <div data-workspace-popup-body className={`${reader ? 'min-h-0' : toast ? 'min-h-0 flex-1 px-7 py-7' : 'px-7 py-6 sm:px-9'} overflow-y-auto`}>
       {!reader ? <>
         {visual ? <div className={`${toast ? 'mb-8 rounded-[14px] border border-[#deddd7] bg-white p-5' : 'mb-5'}`}>{visual}</div> : null}
         {title ? <h2 className={`${toast ? 'text-[27px]' : 'text-[28px]'} max-w-2xl font-semibold leading-[1.1] tracking-[-0.04em] text-[#111]`}>{title}</h2> : null}
