@@ -3,6 +3,8 @@ import { Bell, Check, Clock3, RefreshCw } from 'lucide-react';
 import MobileShell from '../MobileShell';
 import MobileSafetyPanel from '../MobileSafetyPanel';
 import apiClient from '../../shared/api-client';
+import { isNativeApp } from '../../shared/native-app';
+import { HAPTICS_PREFERENCE, touchFeedbackEnabled } from '../../shared/native-haptics';
 
 const DEFAULT_SETTINGS = {
   enabled: false,
@@ -11,13 +13,13 @@ const DEFAULT_SETTINGS = {
   quiet_end_hour: 8,
 };
 
-function Toggle({ checked, disabled, onChange }) {
+function Toggle({ checked, disabled, onChange, label = 'Enable email reflections' }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label="Enable email reflections"
+      aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`relative h-11 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 bg-transparent`}
@@ -29,6 +31,7 @@ function Toggle({ checked, disabled, onChange }) {
 }
 
 export default function MobileSettings() {
+  const [touchFeedback, setTouchFeedback] = useState(() => touchFeedbackEnabled());
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -125,6 +128,18 @@ export default function MobileSettings() {
             {saving ? 'Saving…' : notice?.type === 'success' ? 'Saved' : 'Save reminder preference'}
           </button>
         </section>
+        {isNativeApp() && <section className="rounded-[16px] border border-[#e3e0db] bg-white p-4">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-semibold text-[#0a0a0a]">Touch feedback</h2>
+              <p className="mt-1 text-sm leading-relaxed text-[#525252]">Light feedback when choosing an agent or using chat controls. Saved on this device.</p>
+            </div>
+            <Toggle label="Touch feedback" checked={touchFeedback} onChange={enabled => {
+              try { window.localStorage.setItem(HAPTICS_PREFERENCE, enabled ? 'on' : 'off'); setTouchFeedback(enabled); }
+              catch { setNotice({ type: 'error', text: 'Could not save touch feedback on this device.' }); }
+            }} />
+          </div>
+        </section>}
         <MobileSafetyPanel />
       </div>
     </MobileShell>

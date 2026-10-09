@@ -5,6 +5,7 @@ import posthog, { isPostHogEnabled } from '../../../../analytics/posthog';
 import { setStorageUser, clearUserScopedStorage } from '../shared/user-storage';
 import { defaultAuthReturnUrl } from './mobile-routing';
 import { isNativeApp } from '../shared/native-app';
+import { bindNativeTouchFeedback } from '../shared/native-haptics';
 import { bindNativeAuthCallbacks, nativeAuth } from '../shared/native-auth';
 
 const AuthContext = createContext(undefined);
@@ -18,6 +19,7 @@ const AuthContext = createContext(undefined);
  *   control_plane_unreachable → network failure or timeout — the only state that says "unavailable"
  */
 export function AuthProvider({ children }) {
+  useEffect(() => bindNativeTouchFeedback({ document, storage: window.localStorage }), []);
   const [authState, setAuthState] = useState('loading');
   const [user, setUser] = useState(null);
   const [org, setOrg] = useState(null);

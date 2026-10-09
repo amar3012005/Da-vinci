@@ -99,8 +99,12 @@ export default function MobileShell({ children, rightAction = null, title = null
     return bindNativeChatViewport(window, shell.current.style, '--hm-mobile-shell-height');
   }, []);
 
-  // Close the drawer on any route change.
-  useEffect(() => { setDrawer(false); }, [location.pathname]);
+  // Keep the requested first-open team view; close only on a real route change.
+  const drawerRoute = useRef(location.pathname);
+  useEffect(() => {
+    if (drawerRoute.current !== location.pathname) setDrawer(false);
+    drawerRoute.current = location.pathname;
+  }, [location.pathname]);
 
   // Organization creation and company onboarding are separate lifecycle
   // boundaries. A mobile-created account can already have an org while its
