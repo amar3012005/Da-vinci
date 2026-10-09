@@ -5,16 +5,21 @@ import { bytesToBase64 } from './native-body';
 /** URL rewriting is limited to the authenticated, release-owned DSH module graph. */
 export function createNativeHarnessLoader(fetchRunner) {
   const modules = new Map(); const classic = new Map(); const styles = new Map(); const assets = new Map();
+  const sources = new Map();
   const importModule = async (specifier, base = 'https://next.singulancelabs.com/') => {
     const url = trustedHarnessUrl(new URL(specifier, base));
     return import(/* webpackIgnore: true */ await moduleUrl(url));
   };
   window.__HIVEMIND_NATIVE_IMPORT__ = importModule;
   async function source(url) {
-    const response = await fetchRunner(url);
-    if (!response.ok) throw new Error(`Native Harness resource failed: HTTP ${response.status}`);
-    if (/text\/html/i.test(response.headers.get('content-type') || '')) throw new Error('Native Harness resource returned a webpage');
-    return response.text();
+    if (!sources.has(url)) sources.set(url, (async () => {
+      const response = await fetchRunner(url);
+      if (!response.ok) throw new Error(`Native Harness resource failed: HTTP ${response.status}`);
+      if (/text\/html/i.test(response.headers.get('content-type') || '')) throw new Error('Native Harness resource returned a webpage');
+      return response.text();
+    })());
+    try { return await sources.get(url); }
+    catch (error) { sources.delete(url); throw error; }
   }
   async function moduleUrl(url, ancestors = new Set()) {
     if (ancestors.has(url)) throw new Error('Native Harness cyclic static module graph is not supported');
@@ -22,6 +27,16 @@ export function createNativeHarnessLoader(fetchRunner) {
     const pending = (async () => {
       let text = await source(url); const replacements = [];
       const [imports] = parse(text, url); const chain = new Set([...ancestors, url]);
+      // Fetch siblings together, then retain ordered rewriting and the existing
+      // ancestor cycle check. Prefetching never executes a dependency early.
+      const siblings = imports.filter(item => item.d === -1 && item.n);
+      let nextSibling = 0;
+      await Promise.all(Array.from({ length: Math.min(6, siblings.length) }, async () => {
+        while (nextSibling < siblings.length) {
+          const item = siblings[nextSibling++];
+          await source(trustedHarnessUrl(new URL(item.n, url)));
+        }
+      }));
       for (const item of imports) {
         if (item.d === -2 && imports.some(parent => parent.d >= 0 && parent.s <= item.s && parent.e >= item.e)) continue;
         if (item.d === -2) { replacements.push({ start: item.s, end: item.e, value: `({url:${JSON.stringify(url)}})` }); continue; }

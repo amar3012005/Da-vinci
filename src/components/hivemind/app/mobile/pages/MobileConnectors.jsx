@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { Cable, Check, Loader2, Plug, Search, Wrench, X, Zap } from 'lucide-react';
 import apiClient from '../../shared/api-client';
 import MobileShell from '../MobileShell';
+import '../mobile-tools.css';
 
 const NATIVE_SLACK_TOOLKIT = 'slack';
 const REDUNDANT_TOOLKITS = new Set(['slackbot']);
@@ -61,6 +62,7 @@ function ToolkitDetailSheet({ toolkit, onClose }) {
         exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 360, damping: 34 }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog" aria-modal="true" aria-label={`Tools for ${toolkit.name}`}
         data-mobile-sheet className="w-full max-h-[80vh] overflow-y-auto bg-white rounded-t-[28px] border-t border-[#ece9e2] p-5"
       >
         <div className="mx-auto mb-3 h-1.5 w-14 rounded-full bg-[#dfdad1]" />
@@ -119,6 +121,8 @@ export default function MobileConnectors() {
   ));
   const [detailToolkit, setDetailToolkit] = useState(null);
   const debounceRef = useRef(null);
+  const requestRevision = useRef(0);
+  useEffect(() => () => { requestRevision.current += 1; }, []);
 
   useEffect(() => {
     if (!returnParams) return;
@@ -132,23 +136,27 @@ export default function MobileConnectors() {
   }, []);
 
   const load = useCallback(async (search, appendCursor) => {
+    const revision = ++requestRevision.current;
     setLoading(true);
     setError('');
     try {
       const data = await apiClient.listComposioToolkits({ search, cursor: appendCursor || null, limit: 40 });
+      if (revision !== requestRevision.current) return;
       setToolkits((prev) => (appendCursor ? [...prev, ...(data.toolkits || [])] : (data.toolkits || [])));
       setCursor(data.next_cursor || null);
       setTotalItems(data.total_items || 0);
     } catch (err) {
+      if (revision !== requestRevision.current) return;
       setError(err?.response?.data?.error || err?.message || 'Failed to load connectors');
     } finally {
-      setLoading(false);
+      if (revision === requestRevision.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => load(query, null), 300);
+    requestRevision.current += 1;
+    debounceRef.current = setTimeout(() => load(query, null), query ? 180 : 0);
     return () => clearTimeout(debounceRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
@@ -223,6 +231,7 @@ export default function MobileConnectors() {
 
   return (
     <MobileShell title="Connectors" rightAction={liveCount}>
+      <div data-mobile-tools>
       <div className="px-4 pt-2 pb-1">
         <h1 className="text-[21px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Connectors</h1>
         <p className="mt-1 text-[12px] leading-relaxed text-[#737373]">Connect your apps to let HIVEMIND preserve context and also perform automations.</p>
@@ -240,6 +249,7 @@ export default function MobileConnectors() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search connectors — Gmail, Slack, Airtable..."
+            aria-label="Search connectors" autoCapitalize="none" autoCorrect="off"
             className="flex-1 bg-transparent outline-none text-[14px] placeholder:text-[#b9b5ae]"
           />
         </label>
@@ -264,8 +274,8 @@ export default function MobileConnectors() {
           {totalItems ? `${totalItems.toLocaleString()} apps available` : ' '}
         </div>
 
-        {error && <div className="mb-2 p-3 rounded-[16px] bg-red-50 border border-red-100 text-[13px] text-red-700">{error}</div>}
-        {loading && toolkits.length === 0 && <div className="py-12 text-center text-[13px] text-[#737373]">Loading connectors...</div>}
+        {error && <div role="alert" className="mb-2 p-3 rounded-[16px] bg-red-50 border border-red-100 text-[13px] text-red-700">{error}</div>}
+        {loading && toolkits.length === 0 && <div role="status" className="py-12 text-center text-[13px] text-[#737373]">Loading connectors...</div>}
 
         <div className="space-y-1.5">
           {sorted.map((toolkit, index) => {
@@ -333,6 +343,7 @@ export default function MobileConnectors() {
       </div>
 
       {detailToolkit && <ToolkitDetailSheet toolkit={detailToolkit} onClose={() => setDetailToolkit(null)} />}
+      </div>
     </MobileShell>
   );
 }

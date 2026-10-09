@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   AlignLeft, MessageCircle, Brain, Mic2, Plug, Folder, Gauge, Network,
@@ -169,6 +169,7 @@ export default function MobileShell({ children, rightAction = null, title = null
   const showAwakening = location.pathname === '/hivemind/m/chat' && onboardingIncomplete && !reminderDismissed;
 
   return (
+    <MotionConfig reducedMotion={reduceMotion ? 'always' : 'user'}>
     <div
       ref={shell}
       data-mobile-shell
@@ -334,5 +335,6 @@ export default function MobileShell({ children, rightAction = null, title = null
         </div>
       )}
     </div>
+    </MotionConfig>
   );
 }

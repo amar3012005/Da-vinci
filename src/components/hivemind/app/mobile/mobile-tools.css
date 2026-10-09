@@ -1,0 +1,31 @@
+/* Dedicated phone destinations only: desktop pages keep their own geometry. */
+[data-mobile-tools] { min-width: 0; overflow-wrap: anywhere; }
+[data-mobile-tools] input:not([type='checkbox']):not([type='radio']),
+[data-mobile-tools] textarea,
+[data-mobile-tools] select { font-size: 16px; min-height: 44px; max-width: 100%; }
+[data-mobile-tools] button,
+[data-mobile-tools] summary,
+[data-mobile-tools] a { min-height: 44px; touch-action: manipulation; }
+[data-mobile-tools] button:focus-visible,
+[data-mobile-tools] summary:focus-visible { outline: 2px solid #117dff; outline-offset: 3px; }
+[data-mobile-tools] [role='dialog'],
+[data-mobile-tools] [data-mobile-sheet] {
+  max-height: calc(var(--hm-mobile-shell-height, 100dvh) - env(safe-area-inset-top, 0px) - 12px);
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  overscroll-behavior: contain;
+}
+[data-mobile-tools] table { display: block; max-width: 100%; overflow-x: auto; }
+[data-mobile-tools] pre { max-width: 100%; overflow-x: auto; }
+[data-mobile-tools] h1 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; }
+[data-mobile-tools] [data-meeting-stat] { padding: 12px; border-radius: 16px; }
+[data-mobile-tools] [data-meeting-stat] small { font-size: 11px; line-height: 1.35; }
+[data-mobile-tools] [data-meeting-stat] > div { font-size: 20px; line-height: 1.3; }
+[data-mobile-tools] [data-meeting-card] > :not(button) { position:relative; pointer-events:none; }
+[data-mobile-tools] [data-meeting-card] p { font-size:14px; line-height:1.5; }
+[data-mobile-tools] [data-meeting-stats] { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+[data-mobile-tools] [data-meeting-stats] > :last-child { grid-column: 1 / -1; }
+@media (prefers-reduced-motion: reduce) {
+  [data-mobile-tools] *, [data-mobile-tools] *::before, [data-mobile-tools] *::after {
+    animation: none !important; transition: none !important;
+  }
+}

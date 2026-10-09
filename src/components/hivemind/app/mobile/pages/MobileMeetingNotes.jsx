@@ -34,6 +34,7 @@ import MobileShell from '../MobileShell';
 import MeetingIntelligencePanel from '../../components/MeetingIntelligencePanel';
 import MeetingNotesIcon from '../../shared/MeetingNotesIcon';
 import EntityText from '../../shared/EntityText';
+import '../mobile-tools.css';
 
 function fmtAt(iso) {
   const d = new Date(iso);
@@ -51,10 +52,10 @@ function fmtAt(iso) {
 // screen instead of desktop's grid-cols-2-on-mobile.
 function StatCard({ icon: Icon, value, label, color = '#0a0a0a' }) {
   return (
-    <div className="bg-white border border-[#e3e0db] rounded-[9px] px-1.5 py-2 flex flex-col items-center text-center min-w-0">
+    <div data-meeting-stat className="bg-white border border-[#e3e0db] rounded-[9px] px-1.5 py-2 flex flex-col items-center text-center min-w-0">
       <Icon size={12} style={{ color }} />
       <div className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] tabular-nums leading-none mt-1">{value}</div>
-      <div className="text-[6.5px] leading-tight text-[#a3a3a3] uppercase tracking-tight mt-1 line-clamp-2">{label}</div>
+      <small className="leading-tight text-[#737373] uppercase tracking-tight mt-1">{label}</small>
     </div>
   );
 }
@@ -69,15 +70,16 @@ function MeetingCard({ m, onOpen, onDelete }) {
   const atLabel = fmtAt(m.created_at);
   const [atDay, ...atRest] = atLabel.split(' ');
   return (
-    <motion.button whileTap={{ scale: 0.98 }} onClick={() => onOpen(m)}
+    <motion.article data-meeting-card whileTap={{ scale: 0.98 }}
       className="w-full text-left bg-white border border-[#e3e0db] rounded-[12px] p-3 active:border-[#0a0a0a] transition-all relative">
+      <button type="button" aria-label={`Open ${m.title || 'meeting'}`} onClick={() => onOpen(m)} className="absolute inset-0 w-full rounded-[12px]" />
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="w-7 h-7 rounded-[8px] bg-blue-50 border border-blue-100 grid place-items-center flex-shrink-0"><MeetingNotesIcon size={14} className="text-[#117dff]" /></span>
           <span className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate">{m.title || 'Meeting'}</span>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <button type="button" onClick={(e) => onDelete(m, e)} className="text-[#a3a3a3] p-0.5 rounded" aria-label="Delete meeting">
+          <button type="button" onClick={(e) => onDelete(m, e)} className="relative z-10 pointer-events-auto text-[#737373] min-w-[44px] min-h-[44px] rounded" aria-label="Delete meeting">
             <Trash2 size={13} />
           </button>
           <ArrowUpRight size={12} className="text-[#a3a3a3]" />
@@ -99,7 +101,7 @@ function MeetingCard({ m, onOpen, onDelete }) {
         <span className="inline-flex items-center gap-1"><HelpCircle size={11} className="text-[#0891b2]" /> {quests}</span>
         {m.multi_speaker ? <span className="inline-flex items-center gap-1"><Users size={11} className="text-[#f59e0b]" /> {m.speaker_count || 2}</span> : null}
       </div>
-    </motion.button>
+    </motion.article>
   );
 }
 
@@ -338,6 +340,7 @@ export default function MobileMeetingNotes() {
       return /^\/hivemind\/app\/(?:overview|employee\/harness)(?:\/(?:new|session\/[^/]+))?\/?$/u.test(target || '')
         ? <a href={target} className="min-h-[44px] inline-flex items-center text-[13px] text-[#117dff]">Back to chat</a> : null;
     })()}>
+      <div data-mobile-tools>
       <div className="px-4 pt-2 pb-10">
         <div className="flex items-center gap-1.5 text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1">
           <MeetingNotesIcon size={12} /> HIVEMIND
@@ -346,7 +349,7 @@ export default function MobileMeetingNotes() {
         <p className="mt-1 text-[12px] leading-relaxed text-[#737373]">Record, transcribe and extract insights — saved straight into your memory.</p>
 
         {/* stat row — all five in one row, shrunk to fit */}
-        <div className="mt-4 grid grid-cols-5 gap-1.5">
+        <div data-meeting-stats className="mt-4 grid grid-cols-2 gap-2">
           <StatCard icon={MeetingNotesIcon} value={stats.total} label="Meetings" color="#117dff" />
           <StatCard icon={CalendarDays} value={stats.thisWeek} label="This week" color="#0A66C2" />
           <StatCard icon={ListChecks} value={stats.actions} label="Action items" color="#10b981" />
@@ -582,6 +585,7 @@ export default function MobileMeetingNotes() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </MobileShell>
   );
 }

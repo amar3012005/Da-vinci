@@ -41,14 +41,14 @@ describe('HarnessSurface module cache', () => {
 
     act(() => reactRoot.render(<LoadingSurface stage={2} />));
 
-    const progress = root.querySelector('[role="progressbar"]');
+    const progress = root.querySelector('[role="status"]');
     expect(progress).not.toBeNull();
-    expect(progress.getAttribute('aria-valuenow')).toBe('2');
     expect(root.textContent).toContain(HARNESS_BOOT_STAGES[2]);
-    expect(root.textContent).toContain('██████████');
+    expect(root.querySelector('.hm-chat-opening-mark')).not.toBeNull();
 
     act(() => reactRoot.render(<LoadingSurface stage={3} />));
-    expect(root.textContent).toContain('3/4');
+    expect(root.textContent).toContain(HARNESS_BOOT_STAGES[3]);
+    expect(root.textContent).not.toContain('3/4');
     expect(root.textContent).not.toContain('4/4');
 
     act(() => reactRoot.unmount());
@@ -65,3 +65,5 @@ describe('HarnessSurface module cache', () => {
     expect(HARNESS_BOOT_STAGES.at(-1)).toBe('Opening chat');
   });
 });
+jest.mock('../QueryStarters', () => () => null);
+jest.mock('../../shared/native-harness-loader', () => ({ createNativeHarnessLoader: jest.fn() }));

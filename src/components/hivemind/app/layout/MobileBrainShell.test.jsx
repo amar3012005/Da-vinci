@@ -30,6 +30,7 @@ jest.mock('react-i18next', () => ({ useTranslation: () => ({ i18n: mockI18n, t: 
 jest.mock('./LangSwitcher', () => () => <button aria-label="Language">EN</button>);
 jest.mock('./WorkspaceNotifications', () => () => <button>Notifications</button>);
 jest.mock('../hyperagents/AgentAvatar', () => () => null);
+jest.mock('./EmployeeMobileNavigation', () => () => <div data-mobile-employee-navigation />);
 let host, root;
 beforeEach(() => {
   window.localStorage.setItem('hm_m_splashed', '1');
@@ -114,12 +115,10 @@ test('native Brain uses original bare chat header and identical sidebar destinat
   expect(host.querySelector('.hm-legacy-chat-header-compact')).not.toBeNull();
   expect(host.querySelector('[data-mobile-brain-header]')).toBeNull();
   act(() => host.querySelector('[aria-label="Menu"]').click());
-  const nav = host.querySelector('nav');
-  expect([...nav.querySelectorAll('button')].map(button => button.textContent.trim())).toEqual(['Chat', 'Memories', 'Memory Graph', 'Meeting Notes', 'Connectors', 'Projects', 'Usage', 'Billing', 'Profile', 'Settings']);
-  expect(nav.textContent).not.toContain('Recents');
+  // The shared full-screen team component owns destinations; its own tests
+  // cover navigation. This shell must open that component, not a legacy rail.
+  expect(host.querySelector('[data-mobile-employee-navigation]')).not.toBeNull();
   expect(host.querySelector('[aria-label="Recent conversations"]')).not.toBeNull();
-  act(() => [...nav.querySelectorAll('button')].find(button => button.textContent.trim() === 'Connectors').click());
-  expect(mockNavigate).toHaveBeenCalledWith('/hivemind/m/connectors');
 });
 
 test('other legacy pages retain default MobileShell header and viewport', () => {

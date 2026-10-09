@@ -1,6 +1,30 @@
-jest.mock('es-module-lexer/js', () => ({ parse: () => [[]] }), { virtual: true });
+jest.mock('es-module-lexer/js', () => ({ parse: jest.fn(() => [[]]) }), { virtual: true });
+import { parse } from 'es-module-lexer/js';
 import { createNativeHarnessLoader } from './native-harness-loader';
 function response(text, type) { return { ok: true, headers: { get: () => type }, text: async () => text, arrayBuffer: async () => new Uint8Array([1,2,3]).buffer }; }
+test('prefetches sibling module sources together without duplicate fetches', async () => {
+  parse.mockImplementation(() => [[]]);
+  const text = 'export { a } from "./a.js"; export { b } from "./b.js";';
+  parse.mockReturnValueOnce([['./a.js', './b.js'].map(n => ({ d: -1, n, s: text.indexOf(n), e: text.indexOf(n) + n.length }))]);
+  const original = URL.createObjectURL;
+  URL.createObjectURL = jest.fn(() => 'blob:test');
+  let active = 0, peak = 0;
+  const calls = [];
+  try {
+    const loader = createNativeHarnessLoader(async url => {
+      calls.push(url);
+      if (url.endsWith('/root.js')) return response(text, 'text/javascript');
+      active++; peak = Math.max(peak, active);
+      await new Promise(resolve => setTimeout(resolve, 5)); active--;
+      return response('', 'text/javascript');
+    });
+    await loader.prepareModule('https://next.singulancelabs.com/assets/root.js');
+    expect(peak).toBe(2);
+    expect(calls).toHaveLength(3);
+    await loader.prepareModule('https://next.singulancelabs.com/assets/root.js');
+    expect(calls).toHaveLength(3);
+  } finally { URL.createObjectURL = original; }
+});
 test('CSS resources load concurrently, duplicate assets load once and source ordering stays intact', async () => {
   let active = 0, peak = 0; const calls = [];
   const fetcher = async url => {

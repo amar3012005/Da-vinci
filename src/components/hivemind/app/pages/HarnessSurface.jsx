@@ -165,41 +165,21 @@ export const HARNESS_BOOT_STAGES = [
 ];
 
 /**
- * A compact, milestone-driven boot indicator. Unlike a timer-based progress
- * bar, each advance corresponds to a completed browser or runner boundary.
+ * A quiet breathing indicator with the current real boot boundary.
+ * Animation communicates activity without pretending to measure progress.
  */
 export function LoadingSurface({ stage = 0, dreaming = false }) {
   if (dreaming) return <div className="h-full grid place-items-center bg-white" role="status" aria-label="Opening Dreaming">
     <span className="text-sm text-[#737373]">🌙 Opening Dreaming…</span>
   </div>;
   const safeStage = Math.max(0, Math.min(stage, HARNESS_BOOT_STAGES.length - 1));
-  // `stage` is the active boundary, not a completed one. The 4/4 state only
-  // exists after the overlay is removed and chat is interactive.
-  const completed = safeStage;
-  const width = 20;
-  const filled = Math.round((completed / HARNESS_BOOT_STAGES.length) * width);
-  const bar = `${'█'.repeat(filled)}${'░'.repeat(width - filled)}`;
+  // `stage` names the active boundary; the overlay disappears once interactive.
   return (
-    <div className="h-full min-h-[420px] grid place-items-center bg-[#faf9f4] px-6" aria-live="polite">
-      <div className="w-[300px] max-w-full rounded-2xl border border-[#ece9e2] bg-white/80 px-6 py-5 shadow-[0_10px_30px_rgba(20,20,20,0.04)]">
-        <div className="flex items-center justify-between text-[11px] font-mono text-[#8b857d]">
-          <span>hive-mind</span>
-          <span className="tabular-nums">{completed}/{HARNESS_BOOT_STAGES.length}</span>
-        </div>
-        <div
-          role="progressbar"
-          aria-label="Opening HIVE-MIND workspace"
-          aria-valuemin={0}
-          aria-valuemax={HARNESS_BOOT_STAGES.length}
-          aria-valuenow={completed}
-          className="mt-2 font-mono text-[13px] leading-none tracking-tight text-[#117dff]"
-          style={{ animation: 'hm-harness-tqdm-shimmer 1.6s ease-in-out infinite' }}
-        >
-          {bar}
-        </div>
-        <p className="mt-3 text-[13px] font-medium text-[#252525]">{HARNESS_BOOT_STAGES[safeStage]}</p>
-        <p className="mt-1 text-[11px] text-[#8b857d]">Opening your HIVE-MIND workspace</p>
+    <div className="hm-chat-opening" role="status" aria-live="polite" aria-label="Opening HIVE-MIND workspace">
+      <div className="hm-chat-opening-mark" aria-hidden="true">
+        <img src="/singulance-mark.svg" width="40" height="40" alt="" />
       </div>
+      <p>{HARNESS_BOOT_STAGES[safeStage]}</p>
     </div>
   );
 }
@@ -353,6 +333,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       await Promise.all([
         Promise.all(styles.map(runtime ? runtime.loader.loadStyle : loadHarnessStylesheet)),
         installedRevision !== bootRevision ? applyHarnessInjections(boot.injections, runtime?.loader) : Promise.resolve(),
+        runtime ? runtime.loader.prepareModule(shellUrl) : Promise.resolve(),
       ]);
       if (installedRevision !== bootRevision) window.__HIVE_HARNESS_BOOT_REV__ = bootRevision;
       setLoadingStage(2);

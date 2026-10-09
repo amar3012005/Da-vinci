@@ -4,20 +4,30 @@
   top:calc(env(safe-area-inset-top, 0px) + 9px);
   left:56px;
   right:118px;
-  height:36px;
+  min-height:44px;
   z-index:40;
-  display:flex;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
   align-items:center;
-  gap:4px;
+  column-gap:7px;
+  row-gap:0;
+  padding:5px 9px;
+  box-sizing:border-box;
+  border-radius:22px;
+  background:rgba(250,249,244,.88);
+  backdrop-filter:blur(12px);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.7), 0 2px 12px rgba(20,20,20,.04);
   min-width:0;
   color:#3d3d3a;
   pointer-events:none;
 }
-.hm-mobile-brain-header-icon { display:flex; flex:none; }
-.hm-mobile-brain-header-title { flex:none; font-size:15px; font-weight:700; letter-spacing:.02em; }
+.hm-mobile-brain-header-icon { display:flex; grid-row:1 / 3; }
+.hm-mobile-brain-header-title { grid-column:2; font-size:15px; font-weight:700; letter-spacing:.02em; }
 .hm-mobile-brain-header-org { display:flex; align-items:center; gap:3px; min-width:0; font-size:10px; line-height:14px; color:#737373; }
 .hm-mobile-brain-header-org svg { flex:none; }
 .hm-mobile-brain-header-org span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+html[data-native-reduce-transparency='true'] .hm-mobile-brain-header-identity { background:#faf9f4; backdrop-filter:none; }
+@media (prefers-reduced-transparency:reduce) { .hm-mobile-brain-header-identity { background:#faf9f4; backdrop-filter:none; } }
 
 /* The native Brain footer currently owns only the ChatGPT connection entry.
    Temporarily hide it on all screen sizes; retain the native connection flow. */

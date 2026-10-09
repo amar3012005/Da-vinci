@@ -64,3 +64,9 @@ html[data-dsh-mode='hivemind-chat'] [data-os-harness-rooms]
   }
   [data-hivemind-harness-surface] { min-width:0; width:100%; }
 }
+.hm-chat-opening { height:100%; min-height:240px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:#faf9f4; }
+.hm-chat-opening p { margin:0; color:#737373; font-size:14px; line-height:1.5; }
+.hm-chat-opening-mark { display:grid; place-items:center; width:72px; height:72px; border-radius:50%; background:#fff9; box-shadow:0 0 36px #117dff12; animation:hm-chat-breathe 2.4s ease-in-out infinite; }
+@keyframes hm-chat-breathe { 0%,100% { transform:scale(.96); opacity:.65; } 50% { transform:scale(1.04); opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .hm-chat-opening-mark { animation:none; } }
+html[data-native-reduce-motion='true'] .hm-chat-opening-mark { animation:none; }
