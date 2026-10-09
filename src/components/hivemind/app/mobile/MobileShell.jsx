@@ -19,6 +19,7 @@ import WorkspaceModeSwitcher from '../layout/WorkspaceModeSwitcher';
 import EmployeeMobileNavigation from '../layout/EmployeeMobileNavigation';
 import { bindNativeChatViewport } from '../layout/mobile-chat-viewport';
 import { useNativeAppearance } from '../shared/useNativeAppearance';
+import { isNativeApp } from '../shared/native-app';
 import './mobile-shell.css';
 
 const SPLASH_FLAG = 'hm_m_splashed';
@@ -61,7 +62,7 @@ export default function MobileShell({ children, rightAction = null, title = null
   const navigate = useNavigate();
   const location = useLocation();
   const { user, org, logout, needsOnboarding } = useAuth() || {};
-  const [drawer, setDrawer] = useState(false);
+  const [drawer, setDrawer] = useState(() => isNativeApp() && location.pathname === '/hivemind/m/chat');
   const [reminderDismissed, setReminderDismissed] = useState(false);
   const [showDesktopInstructions, setShowDesktopInstructions] = useState(false);
   const [companyOnboarded, setCompanyOnboarded] = useState(null);
