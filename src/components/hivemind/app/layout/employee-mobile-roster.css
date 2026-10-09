@@ -150,3 +150,12 @@
 [data-mobile-employee-navigation] {
   font-family:'Space Grotesk',Inter,ui-sans-serif,system-ui,sans-serif;
 }
+
+@media (max-width: 600px) {
+  .mobile-roster-grid { touch-action: pan-y; }
+  .mobile-roster-account { gap: 4px; padding: 6px; background: rgba(255,255,255,.55); }
+  .mobile-roster-account-identity { display:flex; align-items:center; gap:12px; min-width:0; flex:1; min-height:44px; padding:4px 8px; text-align:left; }
+  .mobile-roster-account-identity img { width:32px; height:32px; border-radius:50%; object-fit:cover; }
+  .mobile-roster-settings { width:44px; height:44px; display:grid; place-items:center; border-radius:14px; flex-shrink:0; }
+  .mobile-roster-settings:active, .mobile-roster-account-identity:active { background:#eeece6; }
+}

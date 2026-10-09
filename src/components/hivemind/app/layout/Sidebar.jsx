@@ -164,6 +164,12 @@ export default function Sidebar({
   const navigate = useNavigate();
   const [team, setTeam] = useState([]);
   const [rosterPage, setRosterPage] = useState(0);
+  const rosterGesture = useRef(null);
+  const rosterSwiped = useRef(false);
+  const profileImage = user?.avatar_url || user?.picture || user?.photoURL;
+  const [profileImageFailed, setProfileImageFailed] = useState(false);
+  useEffect(() => setProfileImageFailed(false), [profileImage]);
+  useEffect(() => setRosterPage(page => Math.min(page, Math.max(0, Math.ceil(team.length / 5) - 1))), [team.length]);
   const [rosterProfileOpen, setRosterProfileOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness') || location.pathname === '/hivemind/app/crm';
@@ -316,7 +322,20 @@ export default function Sidebar({
             {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm"><FolderKanban size={18}/><span>CRM</span></NavLink>}
             <div data-hivemind-artifacts-seat />
           </div></div>
-          <div className="mobile-roster-grid" aria-label="Your employees">
+          <div className="mobile-roster-grid" aria-label="Your employees"
+            onClickCapture={event => { if (rosterSwiped.current) { event.preventDefault(); event.stopPropagation(); rosterSwiped.current = false; } }}
+            onTouchStart={event => { rosterSwiped.current = false; const touch = event.touches[0]; rosterGesture.current = { x: touch.clientX, y: touch.clientY }; }}
+            onTouchCancel={() => { rosterGesture.current = null; }}
+            onTouchEnd={event => {
+              const start = rosterGesture.current;
+              rosterGesture.current = null;
+              if (!start || !event.changedTouches[0]) return;
+              const touch = event.changedTouches[0];
+              const dx = touch.clientX - start.x, dy = touch.clientY - start.y;
+              if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+              rosterSwiped.current = true;
+              setRosterPage(page => Math.max(0, Math.min(Math.max(0, Math.ceil(team.length / 5) - 1), page + (dx < 0 ? 1 : -1))));
+            }}>
             <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt=""/><strong>Runtime</strong><small>Chief of Staff</small></button>
             {team.slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span></button>)}
           </div>
@@ -330,7 +349,13 @@ export default function Sidebar({
           </div>
           {advancedOpen && <div className="mobile-unified-advanced-links" aria-label="Advanced features">{[{to:'/hivemind/app/mcp',label:'MCPs'},{to:'/hivemind/app/keys',label:'API keys'},{to:'/hivemind/m/projects',label:'Projects'},{to:'/hivemind/app/evaluation',label:'Evaluation'}].map(item => <NavLink key={item.to} to={item.to}>{item.label}<ChevronRight size={14}/></NavLink>)}</div>}
         </section>
-        <button type="button" className="mobile-roster-account" onClick={() => setRosterProfileOpen(true)}><User size={20}/><span>Account &amp; settings</span><ChevronRight size={18}/></button>
+        <div className="mobile-roster-account">
+          <button type="button" className="mobile-roster-account-identity" onClick={() => setRosterProfileOpen(true)}>
+            {profileImage && !profileImageFailed ? <img src={profileImage} alt="" referrerPolicy="no-referrer" onError={() => setProfileImageFailed(true)}/> : <User size={24}/>}
+            <span>Account and security</span>
+          </button>
+          <NavLink to="/hivemind/m/settings" aria-label="Settings" className="mobile-roster-settings"><Settings size={21}/></NavLink>
+        </div>
       </div>}
       <div className="mobile-roster-legacy shrink-0 px-4 pt-2 pb-3 border-b border-[#e3e0db]">
         <div className="flex items-center justify-between h-12">
