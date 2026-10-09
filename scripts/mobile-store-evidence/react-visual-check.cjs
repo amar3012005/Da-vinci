@@ -115,5 +115,13 @@ const fs = require('fs'); const assert = require('assert/strict');
   await page.screenshot({path:(process.env.EVIDENCE_OUTPUT||'/evidence')+'/artifact-'+viewport.width+'x'+viewport.height+'.png'});
   await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog').count(),0);assert.ok(await page.getByRole('button',{name:'Open artifact'}).evaluate(e=>e===document.activeElement));
  }
+ for(const viewport of [{width:320,height:568},{width:844,height:390},{width:390,height:280}]) {
+  await page.setViewportSize(viewport);await page.goto('http://fixture/?view=header');await page.getByRole('button',{name:'Reply language'}).waitFor();await page.waitForTimeout(50);await page.evaluate(()=>document.documentElement.setAttribute('data-native-platform','android'));
+  const buttons=await page.getByRole('button').evaluateAll(items=>items.map(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height,name:e.getAttribute("aria-label"),minWidth:getComputedStyle(e).minWidth,platform:document.documentElement.getAttribute("data-native-platform")};}));
+  for(const r of buttons) assert.ok(r.width>=48&&r.height>=48&&r.x>=0&&r.right<=viewport.width, JSON.stringify({viewport,r}));
+  for(let i=0;i<buttons.length;i++)for(let j=i+1;j<buttons.length;j++) {const a=buttons[i],b=buttons[j];assert.ok(a.right<=b.x||b.right<=a.x||a.bottom<=b.y||b.bottom<=a.y);}
+  await page.goto('http://fixture/?view=artifact');await page.getByRole('button',{name:'Open artifact'}).waitFor();await page.waitForTimeout(50);await page.evaluate(()=>document.documentElement.setAttribute('data-native-platform','android'));await page.getByRole('button',{name:'Open artifact'}).click();
+  for(const control of [page.getByRole('button',{name:'Close',exact:true}),page.getByRole('button',{name:'Share',exact:true}),page.getByRole('link',{name:'Download',exact:true})]) {const r=await control.boundingBox();assert.ok(r.width>=48&&r.height>=48&&r.y+r.height<=viewport.height);}
+ }
  await browser.close();assert.deepEqual(errors,[]);console.log('Passed: mobile viewport/keyboard/touch controls at 320/390/768px; native billing/web purchases; consent initial denial, grant, withdraw, account switch, GET/POST failures; settings/profile/logout; report success receipt and failure without false receipt. No browser page errors.');
 })().catch(e=>{console.error(e);process.exit(1)});

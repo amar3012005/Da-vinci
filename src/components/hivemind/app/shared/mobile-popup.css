@@ -22,3 +22,5 @@ html[data-native-increase-contrast="true"] [data-outer-reader-overlay] {
  backdrop-filter:none; -webkit-backdrop-filter:none; background:rgba(0,0,0,.55);
 }
 html[data-native-increase-contrast="true"] [data-outer-reader-window] { border-color:#525252; }
+html[data-native-platform="android"] [data-outer-reader-overlay] button,
+html[data-native-platform="android"] [data-outer-reader-overlay] a[download] { min-width:48px; min-height:48px; }

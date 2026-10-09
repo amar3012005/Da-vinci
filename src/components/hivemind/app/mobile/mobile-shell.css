@@ -35,3 +35,12 @@ html[data-native-reduce-motion="true"] [data-mobile-shell] *::before,
 html[data-native-reduce-motion="true"] [data-mobile-shell] *::after {
  animation-duration:.01ms !important; transition-duration:.01ms !important;
 }
+/* Packaged Android keeps the same visual language with larger CSS hit regions.
+   Physical dp correspondence still requires device viewport verification. */
+html[data-native-platform="android"] [data-mobile-shell] button,
+html[data-native-platform="android"] [data-mobile-shell] a[role="button"],
+html[data-native-platform="android"] [data-mobile-shell] nav a {
+ min-width:48px; min-height:48px;
+}
+html[data-native-platform="android"] [data-mobile-shell] button[role="switch"] > span:first-child { top:14px; }
+html[data-native-platform="android"] [data-mobile-shell] button[role="switch"] > span:last-child { top:16px; }
