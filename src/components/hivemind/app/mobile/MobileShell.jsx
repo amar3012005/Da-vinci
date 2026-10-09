@@ -104,7 +104,7 @@ export default function MobileShell({ children, rightAction = null, title = null
   // Keep the requested first-open team view; close only on a real route change.
   const drawerRoute = useRef(location.pathname);
   useEffect(() => {
-    if (drawerRoute.current !== location.pathname) setDrawer(false);
+    if (!isNativeApp() && drawerRoute.current !== location.pathname) setDrawer(false);
     drawerRoute.current = location.pathname;
   }, [location.pathname]);
 
