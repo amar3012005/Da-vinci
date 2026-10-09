@@ -4,7 +4,7 @@ import { bytesToBase64 } from './native-body';
 
 /** URL rewriting is limited to the authenticated, release-owned DSH module graph. */
 export function createNativeHarnessLoader(fetchRunner) {
-  const modules = new Map(); const classic = new Map(); const styles = new Map();
+  const modules = new Map(); const classic = new Map(); const styles = new Map(); const assets = new Map();
   const importModule = async (specifier, base = 'https://next.singulancelabs.com/') => {
     const url = trustedHarnessUrl(new URL(specifier, base));
     return import(/* webpackIgnore: true */ await moduleUrl(url));
@@ -13,6 +13,7 @@ export function createNativeHarnessLoader(fetchRunner) {
   async function source(url) {
     const response = await fetchRunner(url);
     if (!response.ok) throw new Error(`Native Harness resource failed: HTTP ${response.status}`);
+    if (/text\/html/i.test(response.headers.get('content-type') || '')) throw new Error('Native Harness resource returned a webpage');
     return response.text();
   }
   async function moduleUrl(url, ancestors = new Set()) {
@@ -59,13 +60,28 @@ export function createNativeHarnessLoader(fetchRunner) {
     const pending = (async () => {
       let text = await source(url);
       const references = [...text.matchAll(/url\(\s*(['"]?)([^'"()]+)\1\s*\)/g)];
+      const replacements = new Map();
+      let next = 0;
+      // Bound native requests, reuse duplicate URLs, and retain CSS source order.
+      await Promise.all(Array.from({ length: Math.min(6, references.length) }, async () => {
+        while (next < references.length) {
+          const match = references[next++];
+          if (match[2].startsWith('data:') || match[2].startsWith('#')) continue;
+          const assetUrl = trustedHarnessUrl(new URL(match[2], url));
+          if (!assets.has(assetUrl)) assets.set(assetUrl, (async () => {
+            const asset = await fetchRunner(assetUrl);
+            const type = asset.headers.get('content-type') || 'application/octet-stream';
+            if (!asset.ok || /text\/html/i.test(type)) throw new Error('Native Harness stylesheet asset could not be loaded');
+            const data = bytesToBase64(new Uint8Array(await asset.arrayBuffer()));
+            return `url("data:${type};base64,${data}")`;
+          })());
+          try { replacements.set(match.index, await assets.get(assetUrl)); }
+          catch (error) { assets.delete(assetUrl); throw error; }
+        }
+      }));
       for (const match of references.reverse()) {
-        if (match[2].startsWith('data:') || match[2].startsWith('#')) continue;
-        const asset = await fetchRunner(trustedHarnessUrl(new URL(match[2], url)));
-        if (!asset.ok) throw new Error('Native Harness stylesheet asset could not be loaded');
-        const data = bytesToBase64(new Uint8Array(await asset.arrayBuffer()));
-        const value = `url("data:${asset.headers.get('content-type') || 'application/octet-stream'};base64,${data}")`;
-        text = text.slice(0, match.index) + value + text.slice(match.index + match[0].length);
+        const value = replacements.get(match.index);
+        if (value) text = text.slice(0, match.index) + value + text.slice(match.index + match[0].length);
       }
       const style = document.createElement('style'); style.dataset.dshNativeStyle = url; style.textContent = text; document.head.append(style);
       return style;

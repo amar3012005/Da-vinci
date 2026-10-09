@@ -175,4 +175,15 @@ for (const path of ['/hivemind/app/overview', '/hivemind/app/overview/new', '/hi
   assert.equal(runnerCalls, 0, `admitted ${path} must retain the embedding host`);
 }
 
+for (const path of ['/assets/fonts/KaTeX_AMS-Regular-test.woff2', '/assets/fonts/KaTeX_Size1-Regular-test.ttf']) {
+  let runnerCalls = 0;
+  const response = await worker.fetch(new Request(`https://next.singulancelabs.com${path}`, {
+    headers: { cookie: 'hm_harness_admitted=1; dsh-auth-test=opaque' },
+  }), {
+    ASSETS: { fetch: async () => new Response('<html>SPA</html>') },
+    HARNESS_CHAT: { fetch: async () => { runnerCalls++; return new Response('font', { headers: { 'content-type': 'font/woff2' } }); } },
+  });
+  assert.equal(runnerCalls, 1);
+  assert.equal(await response.text(), 'font');
+}
 console.log('cloudflare static asset boundary: ok');

@@ -150,12 +150,13 @@ function isDavinciPublicAsset(pathname) {
 }
 
 function isHarnessViteAsset(pathname) {
-  // Harness compiled client is only files at /assets/<file>, never a subdirectory.
+  // Harness Vite output includes top-level bundles and /assets/fonts/* fonts.
   // /assets/onboarding/* is Da-vinci art and must be served by this Worker’s ASSETS.
   if (isDavinciPublicAsset(pathname)) return false;
   if (!pathname.startsWith('/assets/')) return false;
   const rest = pathname.slice('/assets/'.length);
-  return rest.length > 0 && !rest.includes('/');
+  return (rest.length > 0 && !rest.includes('/'))
+    || /^fonts\/[A-Za-z0-9_-]+\.(woff2?|ttf|otf)$/.test(rest);
 }
 
 function isHarnessDocumentOrAsset(request, pathname) {
