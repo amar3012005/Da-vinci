@@ -17,6 +17,7 @@ export function createNativeAuthController({ plugin, browser, crypto, now = Date
     await plugin.setCredential({ key: 'pendingAuth', value: JSON.stringify({ state, verifier, createdAt: now() }) });
     const url = new URL('/auth/mobile/start', NATIVE_CONTROL_PLANE);
     url.search = new URLSearchParams({ callback: NATIVE_AUTH_CALLBACK, state, code_challenge: challenge, code_challenge_method: 'S256' }).toString();
+    if (platform === 'ios') url.searchParams.set('flow', 'native');
     try {
       if (platform === 'ios') {
         const result = await plugin.authenticate({ url: url.href });
