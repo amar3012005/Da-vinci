@@ -1,3 +1,4 @@
+import { fetchHarness } from '../shared/harness-fetch';
 import CreateEmployeeDialog from './CreateEmployeeDialog';
 import CompanyWorkspaceOverlay from '../shared/CompanyWorkspaceOverlay';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -194,7 +195,7 @@ export default function Sidebar({
     const load = async () => {
       if (!scope || controller.signal.aborted) return;
       try {
-        const response = await fetch('/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal });
+        const response = await fetchHarness('/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal });
         if (!response.ok) throw new Error('team unavailable');
         const value = await response.json();
         if (!Array.isArray(value.profiles)) throw new Error('invalid team response');
@@ -211,7 +212,8 @@ export default function Sidebar({
     load();
     window.addEventListener('focus', refresh);
     window.addEventListener('online', refresh);
-    return () => { controller.abort(); clearTimeout(retryTimer); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); };
+    window.addEventListener('hivemind:session-established', refresh);
+    return () => { controller.abort(); clearTimeout(retryTimer); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); window.removeEventListener('hivemind:session-established', refresh); };
   }, [user?.id, org?.id, teamMode, teamRetry]);
 
   useEffect(() => {

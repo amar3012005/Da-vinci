@@ -265,6 +265,7 @@ async function establishHarnessSession({ fresh = false } = {}) {
     body: JSON.stringify({ ticket: admission.ticket, request_id: crypto.randomUUID() }),
   });
   if (!established.ok) throw new Error('Could not open your secure HIVEMIND session.');
+  window.dispatchEvent(new Event('hivemind:session-established'));
   return { mode: 'harness' };
 }
 

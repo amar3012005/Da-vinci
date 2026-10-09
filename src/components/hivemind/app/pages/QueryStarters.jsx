@@ -1,3 +1,4 @@
+import { fetchHarness } from '../shared/harness-fetch';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -64,7 +65,7 @@ export default function QueryStarters({ mount, ready }) {
       apiClient.listMemories({ limit: 24 }),
       apiClient.listMemories({ tags: 'flashback', limit: 6 }),
       apiClient.hivemindTriggers({ operation: 'suggestions', limit: 8 }, { timeoutMs: 4000 }),
-      fetch('/api/hivemind/employees', { credentials: 'same-origin' }).then(response => response.ok ? response.json() : { profiles: [] }),
+      fetchHarness('/api/hivemind/employees', { credentials: 'same-origin' }).then(response => response.ok ? response.json() : { profiles: [] }),
     ]).then(results => {
       if (cancelled) return;
       const memories = results.slice(0, 2).flatMap(result => result.status === 'fulfilled' ? rows(result.value) : []);
