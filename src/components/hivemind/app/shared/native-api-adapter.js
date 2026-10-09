@@ -21,7 +21,7 @@ export function createNativeApiAdapter(plugin, { coreProxy = false } = {}) {
     if (payload.contentType) headers['Content-Type'] = payload.contentType;
     const { contentType, ...bodyOptions } = payload;
     const binary = ['blob', 'arraybuffer'].includes(config.responseType);
-    const result = await plugin.request({ url: url.href, method: String(config.method || 'GET').toUpperCase(), headers, ...bodyOptions, responseType: binary ? 'base64' : 'text', authorize: true });
+    const result = await plugin.request({ url: url.href, method: String(config.method || 'GET').toUpperCase(), headers, ...bodyOptions, responseType: binary ? 'base64' : 'text', authorize: mapped !== '/auth/email/config' });
     if (config.signal?.aborted) throw new axios.CanceledError('canceled');
     let data;
     if (binary) {
