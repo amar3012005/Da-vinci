@@ -146,7 +146,7 @@ function cookieValue(request, name) {
 
 function isDavinciPublicAsset(pathname) {
   // Da-vinci public files. Not Harness. Never proxy these to the runner.
-  return pathname.startsWith('/assets/onboarding/') || pathname === '/assets/runtime-computer-c2305f5b.webp';
+  return pathname.startsWith('/assets/onboarding/') || pathname.startsWith('/assets/runtime-retro/') || pathname === '/assets/runtime-computer-c2305f5b.webp';
 }
 
 function isHarnessViteAsset(pathname) {
@@ -596,7 +596,7 @@ export default {
       ? new Request(new URL('/', request.url), request)
       : request;
     let response = await env.ASSETS.fetch(assetRequest);
-    if (pathname === '/assets/runtime-computer-c2305f5b.webp' && isHtml(response)) {
+    if (isDavinciPublicAsset(pathname) && isHtml(response)) {
       return new Response('Asset not found', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
     }
     if (appDocument && isHtml(response)) {

@@ -1,23 +1,70 @@
 import React, { useState } from 'react';
+import { ArrowRight, Plus, Minus, FileText, Network, Users, ClipboardCheck, Check, ArrowUpRight } from 'lucide-react';
 import Seo from './Seo';
 import './RuntimeProduct.css';
-const steps = [
- ['Notice', 'A signal worth your attention.', 'A recurring customer question. An unfinished handoff. A result from your team. Runtime follows relevant signals from the connections you authorize.'],
- ['Connect', 'Context gives a signal meaning.', 'A signal becomes useful when it meets your company’s priorities. Runtime consults retained context, distinguishes evidence from assumptions, and asks when the direction is unclear.'],
- ['Coordinate', 'The right work. The right specialist.', 'Runtime turns a confirmed agenda into assignments for HyperAgents, with clear scope, timing and expected outcomes. You stay in control of permissions.'],
- ['Review', 'A result is only the beginning.', 'Runtime checks the deliverable, requests corrections when needed, and brings important results or decisions back to you.'],
- ['Carry forward', 'Tomorrow starts with what you learned.', 'Accepted results and useful lessons inform the next step. Scheduled follow-ups keep unfinished work connected instead of starting from another blank prompt.']
+
+const appUrl = 'https://next.singulancelabs.com/hivemind';
+const features = [
+  ['Company context', 'Bring together the documents, goals and connections you authorize. Runtime connects each signal to what matters to your company.', 'Runtime consulting an archive of company documents'],
+  ['A specialist team', 'Turn a confirmed agenda into focused work for HyperAgents, with clear responsibilities, scope and expected outcomes.', 'Runtime coordinating specialist work around a table'],
+  ['Reviewed work', 'Check the deliverable, request corrections when needed, and bring important results and decisions back to you.', 'Runtime examining a report before carrying work forward'],
+];
+const cycle = [
+  ['Notice', 'Follow relevant signals.', FileText],
+  ['Connect', 'Bring the context together.', Network],
+  ['Coordinate', 'Assign the right specialist.', Users],
+  ['Review', 'Check and refine the result.', ClipboardCheck],
+  ['Carry forward', 'Retain lessons and next steps.', Check],
+];
+const team = [
+  ['Research', 'Find evidence. Understand what matters.'],
+  ['Content', 'Turn context into clear communication.'],
+  ['Strategy', 'Connect priorities to a useful next move.'],
+  ['Operations', 'Keep responsibilities and work connected.'],
+  ['Quality', 'Check assumptions and improve results.'],
+  ['Runtime', 'Your coordinating AI Chief of Staff.'],
+];
+const faqs = [
+  ['What is SINGULANCE Runtime?', 'Runtime is your AI Chief of Staff: it connects company context, coordinates specialist work and carries reviewed results into the next step. You set the goals and authority.'],
+  ['How does it get company context?', 'From the information you provide, retained context, and sources you authorize. Runtime should distinguish confirmed evidence from assumptions rather than treating every new signal as an instruction.'],
+  ['How does it work with HyperAgents?', 'Runtime delegates focused assignments to specialists, receives their results and reviews the work. Responsibilities, tools and available actions depend on your company configuration.'],
+  ['When does it ask for approval?', 'When your approval, an essential missing fact or a consequential decision is needed. It can handle routine choices within existing authority; initiative does not grant additional permissions.'],
 ];
 export default function RuntimeProduct() {
- const [active,setActive] = useState(0);
- return <main className="runtime-launch">
- <Seo pagePath="/runtime" canonical="https://runtime.singulancelabs.com/" />
- <nav className="rt-nav" aria-label="Runtime navigation"><a href="https://singulancelabs.com" className="rt-brand">SINGULANCE<span> / Runtime</span></a><div><a href="#intelligence">The idea</a><a href="https://singulancelabs.com/research/runtime">Research</a><a className="rt-nav-cta" href="https://next.singulancelabs.com/hivemind">Meet Runtime ↗</a></div></nav>
- <section className="rt-hero"><div className="rt-halo" aria-hidden="true"/><p className="rt-eyebrow">INTRODUCING RUNTIME · YOUR AI CHIEF OF STAFF</p><h1>Before you ask.<br/><span>Already connected.</span></h1><p className="rt-lead">Your company doesn’t move one prompt at a time.<br/>Its intelligence shouldn’t either.</p><a className="rt-link" href="#intelligence">Discover a different rhythm ↓</a><div className="rt-orbit" aria-hidden="true"><i/><i/><i/><div className="rt-character"><img src="/assets/runtime-computer-c2305f5b.webp" alt="" width="512" height="512"/></div><span className="rt-orbit-label rt-label-one">A signal appears.</span><span className="rt-orbit-label rt-label-two">A priority connects.</span><span className="rt-orbit-label rt-label-three">Work moves forward.</span></div><p className="rt-hero-foot">SIGNALS → CONTEXT → COORDINATION → REVIEW</p></section>
- <section id="intelligence" className="rt-statement"><p className="rt-eyebrow">FROM AGENDA TO MOMENTUM</p><h2>Less starting over.<br/><span>More moving forward.</span></h2><div className="rt-two"><p>You set the direction. Runtime connects what matters: your goals, your company’s context, and the work happening across your team.</p><p>It can notice relevant changes before your next request, surface a useful next step, and coordinate work within the authority you give it. When a decision belongs to you, it asks.</p></div></section>
- <section className="rt-timeline" aria-labelledby="rt-timeline-title"><header><p className="rt-eyebrow">INTELLIGENCE, IN MOTION</p><h2 id="rt-timeline-title">Not just an answer.<br/>A continuous thread.</h2><p>Follow the path from a signal to a reviewed result.</p></header><div className="rt-step-tabs" role="tablist" aria-label="Runtime work cycle">{steps.map((s,i)=><button key={s[0]} id={'rt-tab-'+i} role="tab" aria-selected={active===i} aria-controls="rt-step" onClick={()=>setActive(i)}><span>0{i+1}</span>{s[0]}</button>)}</div><div className="rt-step" id="rt-step" role="tabpanel" aria-labelledby={'rt-tab-'+active}><div className="rt-step-visual" aria-hidden="true"><div className="rt-lines"/><strong>0{active+1}</strong><span>{steps[active][0]}</span></div><div><p className="rt-eyebrow">THE RUNTIME CYCLE</p><h3>{steps[active][1]}</h3><p>{steps[active][2]}</p></div></div></section>
- <section className="rt-example"><p className="rt-eyebrow">AN ILLUSTRATIVE BUSINESS MOMENT</p><h2>One recurring question.<br/><span>A clearer next move.</span></h2><div className="rt-example-thread"><p><b>09:10 · Notice</b>A customer question keeps appearing in an authorized source.</p><p><b>09:12 · Connect</b>It relates to your confirmed goal: improve customer onboarding.</p><p><b>Next · Coordinate & review</b>A specialist investigates the gap. Runtime reviews the findings and brings you a proposed improvement.</p></div><small>Illustrative sequence, not a performance measurement. Sources, timing and available actions depend on your configuration and permissions.</small></section>
- <section className="rt-control"><p className="rt-eyebrow">YOUR COMPANY. YOUR DIRECTION.</p><h2>Proactive.<br/><span>With you in charge.</span></h2><div className="rt-principles"><article><span>01</span><h3>Selected signals.</h3><p>Connections you authorize. Context relevant to your goals.</p></article><article><span>02</span><h3>Visible uncertainty.</h3><p>Evidence stays distinct from hypotheses. Missing answers become questions.</p></article><article><span>03</span><h3>Human decisions.</h3><p>Approvals and consequential choices remain yours. Initiative doesn’t grant new authority.</p></article></div></section>
- <section className="rt-finale"><p className="rt-eyebrow">MEET YOUR COMPANY’S NEXT CHAPTER</p><h2>You shape the ambition.<br/><span>Runtime connects the work.</span></h2><a href="https://next.singulancelabs.com/hivemind" className="rt-button">Meet Runtime ↗</a><a href="https://singulancelabs.com/research/runtime" className="rt-read">Read the thinking behind Runtime →</a></section><footer className="rt-footer"><a href="https://singulancelabs.com">SINGULANCE</a><span>Intelligence with continuity.</span><a href="https://singulancelabs.com/privacy">Privacy</a></footer>
- </main>;
+  const [openFaq, setOpenFaq] = useState(null);
+  return <main className="runtime-retro">
+    <Seo pagePath="/runtime" canonical="https://runtime.singulancelabs.com/" />
+    <a className="rr-skip" href="#intelligence">Skip to content</a>
+    <div className="rr-page">
+      <header className="rr-header">
+        <a className="rr-brand" href="https://singulancelabs.com" aria-label="SINGULANCE home">SINGULANCE<span>RUNTIME</span></a>
+        <nav aria-label="Runtime navigation"><a href="#intelligence">The idea</a><a href="#team">Your team</a><a href="https://singulancelabs.com/research/runtime">Research</a></nav>
+        <a className="rr-button rr-outline rr-header-cta" href={appUrl}>Meet Runtime <ArrowUpRight size={15}/></a>
+      </header>
+      <section className="rr-hero" aria-labelledby="rr-title">
+        <div className="rr-hero-art"><img src="/assets/runtime-retro/hero.webp" width="1536" height="1024" fetchPriority="high" alt="Runtime, a vintage computer-headed Chief of Staff, with a team of specialists"/></div>
+        <div className="rr-hero-copy"><p className="rr-kicker">YOUR AI CHIEF OF STAFF</p><h1 id="rr-title">Runtime<br/>for your<br/>company.</h1><p className="rr-tagline">Intelligence that anticipates.</p><p className="rr-intro">Company context. Specialist work.<br/>Reviewed next steps.</p><div className="rr-actions"><a href={appUrl} className="rr-button rr-white">Meet Runtime <ArrowUpRight size={16}/></a><a href="#team" className="rr-button rr-outline">Explore HyperAgents</a></div></div>
+      </section>
+      <section id="intelligence" className="rr-features rr-paper">
+        <div className="rr-section-heading"><h2>Features</h2><span className="rr-small">CONTEXT → COORDINATION → CONTINUITY</span></div>
+        <div className="rr-feature-grid">{features.map(([name,copy,alt],i)=><article key={name}><span className="rr-number">0{i+1}</span><h3>{name}</h3><p>{copy}</p><div className={'rr-feature-art rr-panel-'+i} role="img" aria-label={alt}/></article>)}</div>
+      </section>
+      <section className="rr-work rr-paper" aria-labelledby="rr-work-title">
+        <h2 id="rr-work-title">From context to coordinated action.</h2><p className="rr-section-copy">You set the direction. Runtime connects the work, with specialists and review at every meaningful step.</p>
+        <div className="rr-flow-preview" aria-label="Illustrative Runtime coordination flow">
+          <div className="rr-source-stack"><span>Documents</span><span>Authorized apps</span><span>Company goals</span><FileText aria-hidden="true" size={48}/></div><ArrowRight className="rr-flow-arrow" aria-hidden="true"/>
+          <div className="rr-runtime-card"><div className="rr-monitor" aria-hidden="true"><span>· ·<br/>—</span></div><b>Runtime</b><small>Connects context.<br/>Coordinates specialists.</small></div><ArrowRight className="rr-flow-arrow" aria-hidden="true"/>
+          <div className="rr-result-card"><ClipboardCheck size={30} aria-hidden="true"/><b>A reviewed deliverable</b><div className="rr-report-lines" aria-hidden="true"><i/><i/><i/><i/></div><small>Evidence and next steps.</small></div><ArrowRight className="rr-flow-arrow" aria-hidden="true"/>
+          <div className="rr-approval-card"><span><Check size={18}/> Review the evidence</span><span><Check size={18}/> Add your decision</span><span><Check size={18}/> Move work forward</span></div>
+        </div>
+        <p className="rr-caption">Illustrative workflow. Sources and actions depend on your configuration and permissions.</p>
+        <ol className="rr-cycle">{cycle.map(([name,copy,Icon],i)=><li key={name}><span className="rr-cycle-dot">{i+1}</span><Icon size={25} strokeWidth={1.3} aria-hidden="true"/><h3>{name}</h3><p>{copy}</p></li>)}</ol>
+      </section>
+      <section id="team" className="rr-team rr-paper"><div className="rr-section-heading"><h2>Your team, working together.</h2><p>A shared direction.<br/>Different specialist strengths.</p></div><div className="rr-team-grid">{team.map(([name,copy],i)=><article key={name}><div className={'rr-portrait rr-person-'+i} role="img" aria-label={'Illustrated '+name+' specialist'}/><h3>{name}</h3><p>{copy}</p></article>)}</div><p className="rr-caption">Illustrated roles. Your employees and their responsibilities are configured for your company.</p></section>
+      <section className="rr-control rr-paper"><div><p className="rr-kicker">YOUR COMPANY. YOUR DIRECTION.</p><h2>You stay in control.</h2><p>Runtime acts within the permissions you set and asks when your decision matters.</p></div><div className="rr-control-mark" aria-hidden="true"><Check size={52} strokeWidth={1}/><span>CONTEXT.<br/>JUDGMENT.<br/>FOLLOW-THROUGH.</span></div></section>
+      <section className="rr-faq rr-paper"><h2>FAQs</h2><div>{faqs.map(([question,answer],i)=><article key={question}><h3><button aria-expanded={openFaq===i} aria-controls={'rr-faq-'+i} onClick={()=>setOpenFaq(openFaq===i?null:i)}>{question}{openFaq===i?<Minus size={18}/>:<Plus size={18}/>}</button></h3><div id={'rr-faq-'+i} hidden={openFaq!==i}><p>{answer}</p></div></article>)}</div></section>
+      <section className="rr-finale"><h2>Before you ask.<br/>Already connected.</h2><div><p>Shape the ambition. Runtime connects the work.</p><div className="rr-actions"><a href={appUrl} className="rr-button rr-white">Meet Runtime <ArrowUpRight size={16}/></a><a href="https://singulancelabs.com/research/runtime" className="rr-button rr-outline">Read the thinking</a></div></div></section>
+      <footer className="rr-footer"><span className="rr-footer-word" aria-hidden="true">RUNTIME</span><a href="https://singulancelabs.com">© {new Date().getFullYear()} SINGULANCE</a><nav aria-label="Footer"><a href="#intelligence">The idea</a><a href="#team">Your team</a><a href="https://singulancelabs.com/privacy">Privacy</a></nav><span>INTELLIGENCE WITH CONTINUITY.</span></footer>
+    </div>
+  </main>;
 }
