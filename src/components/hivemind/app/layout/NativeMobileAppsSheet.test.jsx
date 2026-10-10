@@ -70,3 +70,13 @@ test('catalog failures preserve connected apps and offer retry', async () => {
   expect(container.querySelector('[role="alert"]').textContent).toContain('Catalog unavailable');
   expect(container.textContent).toContain('Retry apps');
 });
+
+test.each([false, true])('upward swipe loads first catalog page even when connected list is too short to scroll, legacy=%s', async legacy => {
+  await act(async () => root.render(<NativeMobileAppsSheet legacy={legacy} onClose={() => {}} />));
+  const scroller = container.querySelector(legacy ? '[data-apps-scroll]' : '[role="dialog"]');
+  expect(apiClient.listComposioToolkits).not.toHaveBeenCalled();
+  act(() => Simulate.touchStart(scroller, { touches: [{ clientY: 300 }] }));
+  await act(async () => Simulate.touchMove(scroller, { touches: [{ clientY: 220 }] }));
+  expect(apiClient.listComposioToolkits).toHaveBeenCalledWith({ search: '', cursor: null, limit: 24 });
+  expect(container.textContent).toContain('Gmail'); expect(container.textContent).toContain('Slack');
+});

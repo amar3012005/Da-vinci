@@ -120,7 +120,7 @@ export function LegacyMobileAddSheet({ plusSheetOpen, onClose, onPickFiles, deep
         )}
       </AnimatePresence>
 ); }
-export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSearch, setConnectorSearch, visibleToolkits, chooseToolkit, loading = false, error = '', nativeViewport = false, onScroll, footer, emptyLabel = 'No apps match this search.' }) { useSheetKeyboard(connectorSheetOpen, '[data-legacy-mobile-apps]', onClose); return (
+export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSearch, setConnectorSearch, visibleToolkits, chooseToolkit, loading = false, error = '', nativeViewport = false, onScroll, onWheel, onTouchStart, onTouchMove, footer, emptyLabel = 'No apps match this search.' }) { useSheetKeyboard(connectorSheetOpen, '[data-legacy-mobile-apps]', onClose); return (
 <AnimatePresence>
         {connectorSheetOpen && (
           <motion.div
@@ -157,7 +157,7 @@ export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSe
                   autoFocus
                 />
               </label>
-              <div onScroll={onScroll} className="max-h-[52vh] overflow-y-auto pb-1" style={nativeViewport ? { maxHeight: 'max(80px, calc(var(--hm-app-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 170px))', overscrollBehavior: 'contain' } : undefined}>
+              <div data-apps-scroll onScroll={onScroll} onWheel={onWheel} onTouchStart={onTouchStart} onTouchMove={onTouchMove} className="max-h-[52vh] overflow-y-auto pb-1" style={nativeViewport ? { maxHeight: 'max(80px, calc(var(--hm-app-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 170px))', overscrollBehavior: 'contain' } : undefined}>
                 {loading && <div role="status" className="py-10 text-center text-[12px] text-[#737373]">Loading apps…</div>}
                 {error && <div role="alert" className="py-3 text-[12px] text-red-700">{error}</div>}
                 {visibleToolkits.length > 0 ? visibleToolkits.map((toolkit) => (

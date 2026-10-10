@@ -18,6 +18,7 @@ export default function NativeMobileAppsSheet({ onClose, legacy = false }) {
   const [connecting, setConnecting] = useState(null);
   const generation = useRef(0);
   const pageInFlight = useRef(false);
+  const touchOrigin = useRef(null);
   const alive = useRef(true);
   useEffect(() => () => { alive.current = false; generation.current += 1; }, []);
   const loadConnected = useCallback(async () => {
@@ -76,6 +77,17 @@ export default function NativeMobileAppsSheet({ onClose, legacy = false }) {
     const { scrollHeight, scrollTop, clientHeight } = event.currentTarget;
     if (scrollTop > 0 && scrollHeight - scrollTop - clientHeight < 160) more();
   };
+  const wheel = event => { if (event.deltaY > 0) scrollIntent(event.currentTarget); };
+  const scrollIntent = element => {
+    if (element.scrollHeight - element.scrollTop - element.clientHeight < 160) more();
+  };
+  const touchStart = event => { touchOrigin.current = event.touches[0]?.clientY ?? null; };
+  const touchMove = event => {
+    const y = event.touches[0]?.clientY;
+    if (touchOrigin.current !== null && y !== undefined && touchOrigin.current - y > 24) {
+      scrollIntent(event.currentTarget); touchOrigin.current = y;
+    }
+  };
   const canLoadMore = !browsing || Boolean(cursor);
   const feedback = <>
     {connectedError && <div role="alert"><p>{connectedError}</p><button type="button" onClick={loadConnected}>Retry connected apps</button></div>}
@@ -128,11 +140,11 @@ export default function NativeMobileAppsSheet({ onClose, legacy = false }) {
     finally { setConnecting(null); }
   };
   if (legacy) return <div ref={panel} data-legacy-brain-apps>
-    <LegacyMobileAppsSheet nativeViewport connectorSheetOpen onClose={onClose} connectorSearch={query} setConnectorSearch={setQuery} loading={false} error="" visibleToolkits={toolkits} chooseToolkit={choose} onScroll={scroll} footer={feedback} emptyLabel={connectedLoading || connectedError || loading || error ? '' : browsing || query ? 'No apps match this search.' : 'No connected apps yet. Browse apps to connect.'} />
+    <LegacyMobileAppsSheet nativeViewport connectorSheetOpen onClose={onClose} connectorSearch={query} setConnectorSearch={setQuery} loading={false} error="" visibleToolkits={toolkits} chooseToolkit={choose} onScroll={scroll} onWheel={wheel} onTouchStart={touchStart} onTouchMove={touchMove} footer={feedback} emptyLabel={connectedLoading || connectedError || loading || error ? '' : browsing || query ? 'No apps match this search.' : 'No connected apps yet. Browse apps to connect.'} />
   </div>;
   return <div className="fixed inset-0 z-[90] flex items-end" data-native-mobile-apps style={{ bottom: 'auto', height: 'var(--hm-app-viewport-height, 100dvh)' }}>
     <button type="button" className="absolute inset-0 bg-black/35" aria-label="Close apps and connectors" onClick={onClose} />
-    <section ref={panel} onScroll={scroll} role="dialog" aria-modal="true" aria-label="Apps and connectors" className="relative w-full rounded-t-[24px] bg-white text-[#202020] px-5 pt-3 max-h-[calc(100dvh-64px)] overflow-y-auto overscroll-contain" style={{ paddingBottom: 'max(18px, env(safe-area-inset-bottom))', maxHeight: 'calc(var(--hm-app-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - 12px)' }}>
+    <section ref={panel} onScroll={scroll} onWheel={wheel} onTouchStart={touchStart} onTouchMove={touchMove} role="dialog" aria-modal="true" aria-label="Apps and connectors" className="relative w-full rounded-t-[24px] bg-white text-[#202020] px-5 pt-3 max-h-[calc(100dvh-64px)] overflow-y-auto overscroll-contain" style={{ paddingBottom: 'max(18px, env(safe-area-inset-bottom))', maxHeight: 'calc(var(--hm-app-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - 12px)' }}>
       <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[#d5d1c8]" />
       <header className="flex items-start justify-between gap-3"><div><h2 className="text-[18px] font-semibold">Apps &amp; connectors</h2><p className="mt-1 text-[13px] text-[#777]">Choose a connected app, or connect a new one.</p></div><button type="button" aria-label="Close apps" onClick={onClose} className="min-w-[44px] min-h-[44px] grid place-items-center"><X size={20} /></button></header>
       <label className="my-4 flex items-center gap-2 rounded-xl border border-[#e3e0db] bg-[#faf9f4] px-3 min-h-[48px] focus-within:border-[#117dff]"><Search size={18} /><input type="search" aria-label="Search apps" placeholder="Search Gmail, Slack, Calendar…" value={query} onChange={event => setQuery(event.target.value)} className="w-full min-w-0 bg-transparent text-[16px] outline-none" /></label>
