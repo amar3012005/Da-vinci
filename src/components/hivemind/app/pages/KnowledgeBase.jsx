@@ -431,6 +431,7 @@ function UploadScopeModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        data-upload-dialog
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4"
         onClick={onClose}
       >
@@ -779,6 +780,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        data-upload-dialog
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4"
         onClick={onClose}
       >
@@ -2849,6 +2851,7 @@ export default function KnowledgeBase() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.18 }}
+            data-upload-bulk-actions
             className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-white border border-[#e3e0db] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] px-4 py-2.5"
           >
             <span className="text-[12px] font-mono text-[#0a0a0a]">

@@ -14,6 +14,7 @@ import WebsitePreview from './WebsitePreview';
 import AgentAvatar from './AgentAvatar';
 import { LANE_META } from './rooms/shared';
 import WorkspacePopupSurface from '../shared/WorkspacePopupSurface';
+import './company-mobile.css';
 
 /**
  * CompanyDashboard — the HyperAgents HERO page (Polsia-style operating view).
@@ -351,7 +352,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#faf9f4]">
+    <div data-company-dashboard className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#faf9f4]">
       {selectedWebArtifact ? (
         <div className="fixed inset-0 z-[92] grid place-items-center bg-black/35 p-3 backdrop-blur-[2px] sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedWebArtifact(null); }}>
           <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-[920px] flex-col">
@@ -390,10 +391,10 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
         </div>
       ) : null}
       {/* Header — Polsia's name bar */}
-      <div className="px-6 pt-5 pb-4 border-b border-[#e3e0db] flex items-start justify-between bg-[#faf9f4] z-10 shrink-0">
+      <div data-company-header className="px-6 pt-5 pb-4 border-b border-[#e3e0db] flex items-start justify-between bg-[#faf9f4] z-10 shrink-0">
         <div className="min-w-0">
           <h1 className="text-[26px] leading-tight font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{c.company}</h1>
-          <div className="flex items-center gap-2 mt-1 text-[11.5px] text-[#525252]">
+          <div data-company-contacts className="flex items-center gap-2 mt-1 text-[11.5px] text-[#525252]">
             <span className="flex items-center gap-1 text-[#16a34a]"><span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" /> {t('hyperDash.shipped', 'Operating')}</span>
             {c.website ? (
               <a href={c.website} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-[#0a0a0a] font-mono">
@@ -415,10 +416,10 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
             {(p.contact_details?.phones || []).slice(0, 1).map((phone) => (
               <a key={phone} href={`tel:${phone}`} className="inline-flex items-center gap-1 hover:text-[#0a0a0a] font-mono"><Phone size={11} /> {phone}</a>
             ))}
-            <button onClick={openContactEditor} title="Edit company contacts and social profiles" className="inline-flex h-5 w-5 items-center justify-center text-[#737373] hover:text-[#0a0a0a]"><Pencil size={12} /></button>
+            <button onClick={openContactEditor} aria-label="Edit company contacts and social profiles" title="Edit company contacts and social profiles" className="inline-flex h-5 w-5 items-center justify-center text-[#737373] hover:text-[#0a0a0a]"><Pencil size={12} /></button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div data-company-header-actions className="flex items-center gap-2">
           <button onClick={onShowRoster}
             className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#525252] hover:text-[#0a0a0a] border border-[#e3e0db] rounded-lg px-3 py-1.5 bg-white hover:bg-[#faf9f4] transition-colors">
             <LayoutGrid size={12} /> {t('hyperDash.agents', 'Agents')}
@@ -431,7 +432,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
       </div>
 
       {editingContacts && contactDraft ? (
-        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/25 p-4" role="dialog" aria-modal="true" aria-label="Edit company contacts">
+        <div data-company-contact-dialog className="fixed inset-0 z-[80] grid place-items-center bg-black/25 p-4" role="dialog" aria-modal="true" aria-label="Edit company contacts">
           <div className="w-full max-w-[620px] rounded-lg border border-[#d9dee5] bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#ece9e3] px-5 py-4">
               <div><h2 className="text-[16px] font-semibold text-[#0a0a0a]">Company contact details</h2><p className="mt-1 text-[11.5px] text-[#737373]">These corrections become the context your rooms use.</p></div>
