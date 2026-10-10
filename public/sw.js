@@ -7,7 +7,7 @@
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v7';
+const CACHE = 'hive-shell-v8';
 const SHELL = ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
 
 function offlineResponse() {
@@ -36,8 +36,16 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return; // never touch cross-origin (API/CDN)
 
-  // Never cache app/data APIs — always live.
-  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/v1')) return;
+  // Revisioned code is public build output; private routes and live plugin events stay live.
+  const nativeCombo = url.pathname === '/plugins/'
+    && /^\?\?@deepseek-ai\/[A-Za-z0-9_/-]+\.js(?:,@deepseek-ai\/[A-Za-z0-9_/-]+\.js)*&rev=[a-f0-9]{12}$/.test(url.search);
+  const nativeShell = url.pathname === '/assets/harness-shell.js'
+    && /^\?rev=[a-f0-9]{12}$/.test(url.search);
+  const hashedAsset = /^\/(?:static\/(?:js|css)\/[^/]+\.[a-f0-9]{8,}\.(?:js|css)|assets\/[^/]+-[A-Za-z0-9_-]{8}\.(?:js|css|woff2?))$/.test(url.pathname);
+  const immutableCode = nativeCombo || nativeShell || hashedAsset;
+  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/v1')
+    || url.pathname.startsWith('/__hivemind/')
+    || (url.pathname.startsWith('/plugins/') && !nativeCombo)) return;
 
   // SPA navigations → network-first, offline fallback to the cached shell.
   // Caddy sends no Cache-Control on index.html, so this fetch() — issued by
@@ -65,9 +73,11 @@ self.addEventListener('fetch', (event) => {
   // Static assets are network-first so a release can never keep an old entry
   // bundle alive. The cache remains an offline fallback.
   event.respondWith(
-    fetch(request, { cache: 'reload' })
+    // Let HTTP caching honor the immutable response and full versioned URL.
+    // Fetch still owns authorization, Vary/encoding and denial/private-cache policy.
+    fetch(request, { cache: immutableCode ? 'default' : 'reload' })
       .then((resp) => {
-        const executable = /\.(?:js|css)$/i.test(url.pathname);
+        const executable = immutableCode || /\.(?:js|css)$/i.test(url.pathname);
         const contentType = resp.headers.get('content-type') || '';
         if (executable && /text\/html/i.test(contentType)) {
           return new Response('Static asset unavailable. Reload to use the current version.', {
@@ -75,7 +85,8 @@ self.addEventListener('fetch', (event) => {
             headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
           });
         }
-        if (resp && resp.status === 200 && resp.type === 'basic') {
+        if (resp && resp.status === 200 && resp.type === 'basic' && !nativeCombo && !nativeShell
+          && !/private|no-store/i.test(resp.headers.get('cache-control') || '')) {
           const copy = resp.clone();
           caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
         }

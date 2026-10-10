@@ -1,3 +1,4 @@
+import { parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } from '../shared/native-harness-seat';
 import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../shared/api-client';
 import './HarnessSurface.css';
@@ -260,8 +261,11 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
   const [state, setState] = useState({ phase: 'loading', stage: 0, message: null });
 
   useEffect(() => {
-    const mount = mountRef.current;
-    if (!mount) return undefined;
+    const host = mountRef.current;
+    if (!host) return undefined;
+    const retained = takeNativeHarnessSeat(window.__DSH_EMBED_APP__, host);
+    const mount = retained?.container || document.createElement('div');
+    if (!retained) { mount.className = 'h-full min-h-0'; host.append(mount); }
     let cancelled = false;
     let recovering = false;
     let livenessTimer;
@@ -290,6 +294,20 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
     };
 
     const start = async () => {
+      if (retained) {
+        window.__DSH_EMBED_REQUEST__ = request;
+        if (window.__DSH_EMBED_INITIAL_MOUNT__) await window.__DSH_EMBED_INITIAL_MOUNT__;
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        await waitForNativeHarnessMount(mount, readinessAbort.signal);
+        if (!cancelled) {
+          setState({ phase: 'ready', stage: HARNESS_BOOT_STAGES.length - 1, message: null });
+          livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);
+          window.addEventListener('online', recoverExpiredSession);
+          document.addEventListener('visibilitychange', recoverExpiredSession);
+          void recoverExpiredSession();
+        }
+        return;
+      }
       const runtime = harnessRuntime();
       if (runtime) {
         window.__DSH_TRANSPORT__ = runtime.hooks;
@@ -409,6 +427,9 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       // cancelled seat visible: absent request means standalone mode to native
       // main.ts, which would mount into the outer React #root. The next embed
       // replaces this tombstone only after the previous app has disposed.
+      const currentApp = window.__DSH_EMBED_APP__;
+      if (parkNativeHarnessSeat(currentApp, mount, window.location.pathname)) return;
+      clearNativeHarnessSeat();
       window.__HIVEMIND_TRANSCRIBE_AUDIO__ = undefined;
       window.__HIVEMIND_DELETE_SESSION__ = undefined;
       const app = window.__DSH_EMBED_APP__;

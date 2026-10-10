@@ -120,3 +120,42 @@ it('a shell import completing after route exit cannot mount over the outer React
     delete window.__DSH_EMBED_REQUEST__;
   }
 });
+
+it('reattaches the same native app and draft across chat navigation without booting again', async () => {
+  const { createRoot } = require('react-dom/client');
+  const { act } = require('react');
+  const { parkNativeHarnessSeat, clearNativeHarnessSeat } = require('../../shared/native-harness-seat');
+  const previousPath = window.location.pathname;
+  const previousFetch = global.fetch;
+  const app = { dispose: jest.fn() };
+  const seat = document.createElement('div');
+  seat.innerHTML = '<textarea data-composer-seat>Saved draft</textarea>';
+  const draft = seat.querySelector('textarea');
+  const host = document.createElement('div'); document.body.append(host);
+  const root = createRoot(host);
+  createNativeHarnessLoader.mockClear();
+  global.fetch = jest.fn(async () => ({ status: 200 }));
+  window.__DSH_EMBED_APP__ = app;
+  window.history.replaceState({}, '', '/hivemind/app/overview');
+  parkNativeHarnessSeat(app, seat, window.location.pathname);
+  try {
+    await act(async () => { root.render(<HarnessSurface sessionEstablished />); });
+    expect(host.contains(draft)).toBe(true);
+    window.history.replaceState({}, '', '/hivemind/app/employee/harness/session/another');
+    await act(async () => { root.render(null); });
+    expect(app.dispose).not.toHaveBeenCalled();
+    await act(async () => { root.render(<HarnessSurface sessionEstablished />); });
+    expect(host.querySelector('textarea')).toBe(draft);
+    expect(draft.value).toBe('Saved draft');
+    expect(window.__DSH_EMBED_APP__).toBe(app);
+    expect(createNativeHarnessLoader).not.toHaveBeenCalled();
+    expect(global.fetch.mock.calls.every(([, options]) => options.method === 'HEAD' && options.cache === 'no-store')).toBe(true);
+    window.history.replaceState({}, '', '/hivemind/app/settings');
+    await act(async () => { root.unmount(); });
+    expect(app.dispose).toHaveBeenCalledTimes(1);
+  } finally {
+    clearNativeHarnessSeat(); host.remove(); global.fetch = previousFetch;
+    window.history.replaceState({}, '', previousPath);
+    delete window.__DSH_EMBED_APP__; delete window.__DSH_EMBED_REQUEST__;
+  }
+});

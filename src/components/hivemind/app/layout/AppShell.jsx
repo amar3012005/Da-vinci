@@ -1,3 +1,4 @@
+import { discardParkedNativeHarnessSeat } from '../shared/native-harness-seat';
 import { NativeAiConsentGate } from '../mobile/MobileSafetyPanel';
 import { useTranslation } from 'react-i18next';
 import { mobileBrainUserName, mobileBrainGreeting } from './mobile-brain-identity';
@@ -218,6 +219,7 @@ function AppShellContent() {
   const { needsOnboarding, org, logout, user } = useAuth();
   const { t } = useTranslation('dashboard');
   const location = useLocation();
+  useEffect(() => { discardParkedNativeHarnessSeat(location.pathname); }, [location.pathname]);
   const navigate = useNavigate();
   useEffect(() => {
     const destination = mobilePageDestination(location, window.matchMedia('(max-width: 600px)').matches);
