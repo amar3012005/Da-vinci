@@ -32,7 +32,7 @@ const faqs = [
 ];
 export default function RuntimeProduct() {
   const [openFaq, setOpenFaq] = useState(null);
-  return <main className="runtime-retro">
+  return <main className="runtime-retro" style={{'--rr-feature-art': 'url("/assets/runtime-retro/features.webp")', '--rr-team-art': 'url("/assets/runtime-retro/team.webp")'}}>
     <Seo pagePath="/runtime" canonical="https://runtime.singulancelabs.com/" />
     <a className="rr-skip" href="#intelligence">Skip to content</a>
     <div className="rr-page">

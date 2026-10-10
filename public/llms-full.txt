@@ -34,88 +34,160 @@ Canonical page: https://singulancelabs.com/account-deletion
 
 ---
 
-INTRODUCING RUNTIME · YOUR AI CHIEF OF STAFF
+[Skip to content](#intelligence)
 
-# Before you ask.
-Already connected.
+[SINGULANCERUNTIME](https://singulancelabs.com)[Meet Runtime](https://next.singulancelabs.com/hivemind)
 
-Your company doesn’t move one prompt at a time.
-Its intelligence shouldn’t either.
+![Runtime, a vintage computer-headed Chief of Staff, with a team of specialists](https://singulancelabs.com/assets/runtime-retro/hero.webp)
 
-[Discover a different rhythm ↓](#intelligence)
+YOUR AI CHIEF OF STAFF
 
-A signal appears.A priority connects.Work moves forward.
+# Runtime
+for your
+company.
 
-SIGNALS → CONTEXT → COORDINATION → REVIEW
+Intelligence that anticipates.
 
-FROM AGENDA TO MOMENTUM
+Company context. Specialist work.
+Reviewed next steps.
 
-## Less starting over.
-More moving forward.
+[Meet Runtime](https://next.singulancelabs.com/hivemind)[Explore HyperAgents](#team)
 
-You set the direction. Runtime connects what matters: your goals, your company’s context, and the work happening across your team.
+## Features
 
-It can notice relevant changes before your next request, surface a useful next step, and coordinate work within the authority you give it. When a decision belongs to you, it asks.
-
-INTELLIGENCE, IN MOTION
-
-## Not just an answer.
-A continuous thread.
-
-Follow the path from a signal to a reviewed result.
-
-01Notice
-
-THE RUNTIME CYCLE
-
-### A signal worth your attention.
-
-A recurring customer question. An unfinished handoff. A result from your team. Runtime follows relevant signals from the connections you authorize.
-
-AN ILLUSTRATIVE BUSINESS MOMENT
-
-## One recurring question.
-A clearer next move.
-
-09:10 · NoticeA customer question keeps appearing in an authorized source.
-
-09:12 · ConnectIt relates to your confirmed goal: improve customer onboarding.
-
-Next · Coordinate & reviewA specialist investigates the gap. Runtime reviews the findings and brings you a proposed improvement.
-
-Illustrative sequence, not a performance measurement. Sources, timing and available actions depend on your configuration and permissions.
-
-YOUR COMPANY. YOUR DIRECTION.
-
-## Proactive.
-With you in charge.
+CONTEXT → COORDINATION → CONTINUITY
 
 01
 
-### Selected signals.
+### Company context
 
-Connections you authorize. Context relevant to your goals.
+Bring together the documents, goals and connections you authorize. Runtime connects each signal to what matters to your company.
 
 02
 
-### Visible uncertainty.
+### A specialist team
 
-Evidence stays distinct from hypotheses. Missing answers become questions.
+Turn a confirmed agenda into focused work for HyperAgents, with clear responsibilities, scope and expected outcomes.
 
 03
 
-### Human decisions.
+### Reviewed work
 
-Approvals and consequential choices remain yours. Initiative doesn’t grant new authority.
+Check the deliverable, request corrections when needed, and bring important results and decisions back to you.
 
-MEET YOUR COMPANY’S NEXT CHAPTER
+## From context to coordinated action.
 
-## You shape the ambition.
-Runtime connects the work.
+You set the direction. Runtime connects the work, with specialists and review at every meaningful step.
 
-[Meet Runtime ↗](https://next.singulancelabs.com/hivemind)[Read the thinking behind Runtime →](https://singulancelabs.com/research/runtime)
+DocumentsAuthorized appsCompany goals
 
-[SINGULANCE](https://singulancelabs.com)Intelligence with continuity.[Privacy](https://singulancelabs.com/privacy)
+· ·
+—
+
+RuntimeConnects context.
+Coordinates specialists.
+
+A reviewed deliverable
+
+Evidence and next steps.
+
+Review the evidence Add your decision Move work forward
+
+Illustrative workflow. Sources and actions depend on your configuration and permissions.
+
+- 1
+
+### Notice
+
+Follow relevant signals.
+- 2
+
+### Connect
+
+Bring the context together.
+- 3
+
+### Coordinate
+
+Assign the right specialist.
+- 4
+
+### Review
+
+Check and refine the result.
+- 5
+
+### Carry forward
+
+Retain lessons and next steps.
+
+## Your team, working together.
+
+A shared direction.
+Different specialist strengths.
+
+### Research
+
+Find evidence. Understand what matters.
+
+### Content
+
+Turn context into clear communication.
+
+### Strategy
+
+Connect priorities to a useful next move.
+
+### Operations
+
+Keep responsibilities and work connected.
+
+### Quality
+
+Check assumptions and improve results.
+
+### Runtime
+
+Your coordinating AI Chief of Staff.
+
+Illustrated roles. Your employees and their responsibilities are configured for your company.
+
+YOUR COMPANY. YOUR DIRECTION.
+
+## You stay in control.
+
+Runtime acts within the permissions you set and asks when your decision matters.
+
+CONTEXT.
+JUDGMENT.
+FOLLOW-THROUGH.
+
+## FAQs
+
+###
+
+Runtime is your AI Chief of Staff: it connects company context, coordinates specialist work and carries reviewed results into the next step. You set the goals and authority.
+
+###
+
+From the information you provide, retained context, and sources you authorize. Runtime should distinguish confirmed evidence from assumptions rather than treating every new signal as an instruction.
+
+###
+
+Runtime delegates focused assignments to specialists, receives their results and reviews the work. Responsibilities, tools and available actions depend on your company configuration.
+
+###
+
+When your approval, an essential missing fact or a consequential decision is needed. It can handle routine choices within existing authority; initiative does not grant additional permissions.
+
+## Before you ask.
+Already connected.
+
+Shape the ambition. Runtime connects the work.
+
+[Meet Runtime](https://next.singulancelabs.com/hivemind)[Read the thinking](https://singulancelabs.com/research/runtime)
+
+RUNTIME[© 2026 SINGULANCE](https://singulancelabs.com)INTELLIGENCE WITH CONTINUITY.
 
 ## Products and workspace
 
