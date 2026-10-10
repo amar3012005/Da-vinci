@@ -23,7 +23,7 @@ jest.mock('../shared/SingulanceMark', () => () => <span data-legacy-fish-logo />
 jest.mock('../shared/SingulanceBrand', () => () => <span>SINGULANCE</span>);
 jest.mock('../mobile/SingulanceSplash', () => () => null);
 jest.mock('../shared/hooks', () => ({ useHealthStatus: () => true }));
-jest.mock('../shared/api-client', () => ({ listEmployees: () => Promise.resolve([]), listComposioToolkits: jest.fn(), startConnectorOAuth: jest.fn(), createComposioConnectLink: jest.fn() }));
+jest.mock('../shared/api-client', () => ({ listEmployees: () => Promise.resolve([]), listOAuthConnectors: jest.fn(), listComposioToolkits: jest.fn(), startConnectorOAuth: jest.fn(), createComposioConnectLink: jest.fn() }));
 jest.mock('../shared/QuickRecorderProvider', () => ({ useQuickRecorder: () => ({ supported: true, active: false, openConfig: jest.fn() }) }));
 const mockI18n = { language: 'en', changeLanguage: jest.fn() };
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ i18n: mockI18n, t: (key, fallback) => typeof fallback === 'string' ? fallback : fallback?.defaultValue || key }) }));
@@ -158,16 +158,17 @@ test.each([[8, 'overview.morning'], [14, 'overview.afternoon'], [21, 'overview.e
 test('native Apps reports loading from initial paint and connected selection does not start OAuth', async () => {
   jest.useFakeTimers();
   let resolveCatalog;
-  apiClient.listComposioToolkits.mockReturnValue(new Promise(resolve => { resolveCatalog = resolve; }));
+  apiClient.listOAuthConnectors.mockReturnValue(new Promise(resolve => { resolveCatalog = resolve; }));
   const selected = jest.fn(); const close = jest.fn();
   window.addEventListener('hivemind:connector-selected', selected);
   render(<NativeMobileAppsSheet legacy onClose={close} />);
-  expect(host.querySelector('[role="status"]').textContent).toBe('Loading apps…');
+  expect(host.querySelector('[role="status"]').textContent).toBe('Loading connected apps…');
   expect(host.textContent).not.toContain('No apps match');
   await act(async () => { jest.advanceTimersByTime(200); });
-  expect(apiClient.listComposioToolkits).toHaveBeenCalledWith({ catalog: true, limit: 100 });
+  expect(apiClient.listOAuthConnectors).toHaveBeenCalled();
+  expect(apiClient.listComposioToolkits).not.toHaveBeenCalled();
   expect(host.textContent).not.toContain('No apps match');
-  await act(async () => resolveCatalog({ toolkits: [{ slug: 'gmail', name: 'Gmail', connected: true }] }));
+  await act(async () => resolveCatalog({ connectors: [{ provider: 'gmail', label: 'Gmail', status: 'connected' }] }));
   expect(host.querySelector('[role="status"]')).toBeNull();
   expect(host.textContent).toContain('Connected');
   act(() => [...host.querySelectorAll('button')].find(button => button.textContent.includes('Gmail')).click());
@@ -180,20 +181,20 @@ test('native Apps reports loading from initial paint and connected selection doe
 
 test('native Apps surfaces request rejection without a false empty catalog', async () => {
   jest.useFakeTimers();
-  apiClient.listComposioToolkits.mockRejectedValue(new Error('Catalog request failed'));
+  apiClient.listOAuthConnectors.mockRejectedValue(new Error('Catalog request failed'));
   render(<NativeMobileAppsSheet legacy onClose={() => {}} />);
   await act(async () => { jest.advanceTimersByTime(200); });
-  expect(host.querySelector('[role="alert"]').textContent).toBe('Catalog request failed');
+  expect(host.querySelector('[role="alert"]').textContent).toContain('Catalog request failed');
   expect(host.textContent).not.toContain('No apps match');
   expect(host.querySelector('[role="status"]')).toBeNull();
 });
 
 test.each(['<html>Login page</html>', {}, { toolkits: 'bad' }, { toolkits: [null] }])('native Apps rejects malformed successful responses: %j', async data => {
   jest.useFakeTimers();
-  apiClient.listComposioToolkits.mockResolvedValue(data);
+  apiClient.listOAuthConnectors.mockResolvedValue(data);
   render(<NativeMobileAppsSheet legacy onClose={() => {}} />);
   await act(async () => { jest.advanceTimersByTime(200); });
-  expect(host.querySelector('[role="alert"]').textContent).toContain('invalid catalog');
+  expect(host.querySelector('[role="alert"]').textContent).toContain('invalid list');
   expect(host.textContent).not.toContain('No apps match');
 });
 
@@ -244,6 +245,6 @@ test('native Brain sheets use visible keyboard height while legacy sheet default
 
 test('employee Apps shows loading immediately before its catalog request starts', () => {
   render(<NativeMobileAppsSheet onClose={() => {}} />);
-  expect(host.querySelector('[role="status"]').textContent).toBe('Loading apps…');
+  expect(host.querySelector('[role="status"]').textContent).toBe('Loading connected apps…');
   expect(host.textContent).not.toContain('No apps found');
 });

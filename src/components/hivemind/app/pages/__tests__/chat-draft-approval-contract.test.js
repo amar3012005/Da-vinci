@@ -42,6 +42,7 @@ test('mobile keyboard path only opens connector discovery for explicit app menti
   expect(mobile).not.toContain('useDeferredValue(input)');
   expect(mobile).not.toContain('resolvePromptToolkits(');
   expect(mobile).toContain("const match = bounded.match(/(?:^|\\s)@([^\\s@]*)$/u);");
-  expect(mobile).toContain('aria-label="Apps and connectors"');
-  expect(mobile).toContain('Choose a connected app, or connect a new one.');
+  const sheet = read('mobile/LegacyChatSheets.jsx');
+  expect(sheet).toContain('aria-label="Apps and connectors"');
+  expect(sheet).toContain('Choose a connected app, or connect a new one.');
 });

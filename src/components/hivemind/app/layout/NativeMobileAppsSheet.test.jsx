@@ -1,18 +1,19 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
+import { Simulate } from 'react-dom/test-utils';
 import NativeMobileAppsSheet from './NativeMobileAppsSheet';
 import apiClient from '../shared/api-client';
-jest.mock('../shared/api-client', () => ({ __esModule: true, default: { listComposioToolkits: jest.fn(), createComposioConnectLink: jest.fn(), startConnectorOAuth: jest.fn() } }));
+jest.mock('../shared/api-client', () => ({ __esModule: true, default: { listOAuthConnectors: jest.fn(), listComposioToolkits: jest.fn(), createComposioConnectLink: jest.fn(), startConnectorOAuth: jest.fn() } }));
 global.IS_REACT_ACT_ENVIRONMENT = true;
 let container, root;
-beforeEach(() => { jest.useFakeTimers(); container = document.createElement('div'); document.body.append(container); root = createRoot(container); apiClient.listComposioToolkits.mockResolvedValue({ toolkits: [{ slug: 'gmail', name: 'Gmail', connected: true }, { slug: 'slack', name: 'Slack', connected: false }] }); });
+beforeEach(() => { jest.useFakeTimers(); container = document.createElement('div'); document.body.append(container); root = createRoot(container); apiClient.listOAuthConnectors.mockResolvedValue({ connectors: [{ provider: 'gmail', label: 'Gmail', status: 'connected' }] }); apiClient.listComposioToolkits.mockResolvedValue({ toolkits: [{ slug: 'gmail', name: 'Gmail', connected: true }, { slug: 'slack', name: 'Slack', connected: false }] }); });
 afterEach(() => { act(() => root.unmount()); container.remove(); jest.useRealTimers(); jest.clearAllMocks(); });
 test('loads authorized connected status and chooses an app without sending', async () => {
   const close = jest.fn(); const selected = jest.fn(); window.addEventListener('hivemind:connector-selected', selected);
   await act(async () => { root.render(<NativeMobileAppsSheet onClose={close} />); });
-  await act(async () => { jest.advanceTimersByTime(200); });
-  expect(apiClient.listComposioToolkits).toHaveBeenCalledWith({ search: '', cursor: null, limit: 40 });
+  expect(apiClient.listOAuthConnectors).toHaveBeenCalledTimes(1);
+  expect(apiClient.listComposioToolkits).not.toHaveBeenCalled();
   const connected = [...container.querySelectorAll('button')].find(button => button.textContent === 'Connected');
   act(() => connected.click());
   expect(selected).toHaveBeenCalledTimes(1); expect(selected.mock.calls[0][0].detail.name).toBe('Gmail');
@@ -27,4 +28,45 @@ test('Escape/backdrop closes and focus is contained in the sheet', async () => {
   expect(close).toHaveBeenCalledTimes(1);
   act(() => container.querySelector('[aria-label="Close apps and connectors"]').click());
   expect(close).toHaveBeenCalledTimes(2);
+});
+
+const browseButton = () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Browse apps to connect');
+test.each([false, true])('connected apps stay visible while bounded catalog loads, legacy=%s', async legacy => {
+  let resolveCatalog;
+  apiClient.listComposioToolkits.mockReturnValue(new Promise(resolve => { resolveCatalog = resolve; }));
+  await act(async () => root.render(<NativeMobileAppsSheet legacy={legacy} onClose={() => {}} />));
+  expect(container.textContent).toContain('Gmail');
+  expect(apiClient.listComposioToolkits).not.toHaveBeenCalled();
+  await act(async () => browseButton().click());
+  expect(apiClient.listComposioToolkits).toHaveBeenCalledWith({ search: '', cursor: null, limit: 24 });
+  expect(container.textContent).toContain('Gmail');
+  expect(container.textContent).toContain('Loading more apps');
+  await act(async () => resolveCatalog({ toolkits: [{ slug: 'gmail', name: 'Gmail', connected: true }, { slug: 'slack', name: 'Slack' }], next_cursor: 'page2' }));
+  expect(container.textContent.match(/Gmail/g)).toHaveLength(1);
+  apiClient.listComposioToolkits.mockResolvedValue({ toolkits: [{ slug: 'slack', name: 'Slack' }, { slug: 'github', name: 'GitHub' }] });
+  await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Show more apps').click());
+  expect(apiClient.listComposioToolkits).toHaveBeenLastCalledWith({ search: '', cursor: 'page2', limit: 24 });
+  expect(container.textContent.match(/Slack/g)).toHaveLength(1);
+  expect(container.textContent).toContain('GitHub');
+});
+test('a late catalog page cannot replace a newer search, and connected apps remain selectable', async () => {
+  let oldResult;
+  apiClient.listComposioToolkits.mockReturnValueOnce(new Promise(resolve => { oldResult = resolve; }));
+  await act(async () => root.render(<NativeMobileAppsSheet onClose={() => {}} />));
+  await act(async () => browseButton().click());
+  act(() => Simulate.change(container.querySelector('input'), { target: { value: 'notion' } }));
+  apiClient.listComposioToolkits.mockResolvedValue({ toolkits: [{ slug: 'notion', name: 'Notion' }] });
+  await act(async () => jest.advanceTimersByTime(180));
+  await act(async () => oldResult({ toolkits: [{ slug: 'slack', name: 'Slack' }] }));
+  expect(container.textContent).toContain('Notion'); expect(container.textContent).not.toContain('Slack');
+  act(() => Simulate.change(container.querySelector('input'), { target: { value: '' } }));
+  expect(container.textContent).toContain('Gmail');
+});
+test('catalog failures preserve connected apps and offer retry', async () => {
+  apiClient.listComposioToolkits.mockRejectedValue(new Error('Catalog unavailable'));
+  await act(async () => root.render(<NativeMobileAppsSheet legacy onClose={() => {}} />));
+  await act(async () => browseButton().click());
+  expect(container.textContent).toContain('Gmail');
+  expect(container.querySelector('[role="alert"]').textContent).toContain('Catalog unavailable');
+  expect(container.textContent).toContain('Retry apps');
 });
