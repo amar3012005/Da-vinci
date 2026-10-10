@@ -17,3 +17,6 @@ Typography: the existing main homepage Space Grotesk heading system and Inter bo
 Built-in imagegen mode. User-supplied poster is a composition and ink texture reference only. Preserve blue page, Space Grotesk and Inter. Hero: overhead three-quarter team coordination with cream documents, black contour hatching, muted olive and ochre; CRT Runtime identity. Features: equal panels of archive, top-down coordination, report review. Team: six distinct specialist busts including Runtime. All backgrounds ultramarine; no lettering, logos, skulls, flowers or sunflowers. Generated images inspected before WebP encoding; layout and fonts unchanged.
 
 Revision asset filenames: hero-ink.webp, features-ink.webp, team-ink.webp. New URLs avoid stale browser caches.
+
+## Restored hero
+User requested the original supplied sunflower group illustration back. Exact uploaded artwork restored; hero-original.webp uses a fresh URL. Blue layout, fonts and other section artwork preserved.
