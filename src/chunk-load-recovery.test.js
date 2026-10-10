@@ -42,3 +42,17 @@ test('still reloads once when browser storage is unavailable', () => {
   browserWindow.listeners.error({ target: { src: '/static/js/missing.chunk.js' } });
   expect(browserWindow.location.reload).toHaveBeenCalledTimes(1);
 });
+
+test('shows one accessible retry screen instead of staying blank after a repeated failure', () => {
+  const browserWindow = fakeWindow({ previous: 99_999 });
+  browserWindow.document = document.implementation.createHTMLDocument('Recovery');
+  installChunkLoadRecovery(browserWindow, () => 100_000);
+  const event = { reason: new Error('ChunkLoadError') };
+  browserWindow.listeners.unhandledrejection(event);
+  browserWindow.listeners.unhandledrejection(event);
+  expect(browserWindow.location.reload).not.toHaveBeenCalled();
+  expect(browserWindow.document.querySelectorAll('[role="alert"]')).toHaveLength(1);
+  expect(browserWindow.document.body.textContent).not.toContain('ChunkLoadError');
+  browserWindow.document.querySelector('button').click();
+  expect(browserWindow.location.reload).toHaveBeenCalledTimes(1);
+});
