@@ -11,3 +11,7 @@ Team prompt: Six-panel specialist portrait strip with five distinct illustrated 
 Assets: public/assets/runtime-retro/hero.webp, features.webp, team.webp. Generated originals retained in the Codex generated_images folder. WebP encoding only; no creative image modification.
 
 Typography: the existing main homepage Space Grotesk heading system and Inter body type, using the existing site font loading. Page CSS and motion are scoped to runtime-retro; reduced-motion preferences are respected.
+
+## Ink illustration revision
+
+Built-in imagegen mode. User-supplied poster is a composition and ink texture reference only. Preserve blue page, Space Grotesk and Inter. Hero: overhead three-quarter team coordination with cream documents, black contour hatching, muted olive and ochre; CRT Runtime identity. Features: equal panels of archive, top-down coordination, report review. Team: six distinct specialist busts including Runtime. All backgrounds ultramarine; no lettering, logos, skulls, flowers or sunflowers. Generated images inspected before WebP encoding; layout and fonts unchanged.
