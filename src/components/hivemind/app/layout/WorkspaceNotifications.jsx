@@ -5,7 +5,6 @@ import { Bell, Check, ChevronRight, Mail, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import WorkspacePopupSurface from '../shared/WorkspacePopupSurface';
 import AgentAvatar from '../hyperagents/AgentAvatar';
-import { isRuntimeAttention, nextAttentionPopup, runtimeAttentionCopy } from './runtime-attention-popup.mjs';
 
 export function GmailMark({ size = 18 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" aria-label="Gmail" role="img">
@@ -17,7 +16,6 @@ export function GmailMark({ size = 18 }) {
 }
 
 function NotificationIcon({ notice, size = 18 }) {
-  if (isRuntimeAttention(notice)) return <Bell size={size} className="text-[#117dff]" />;
   if (notice?.data?.icon === 'gmail' || notice?.data?.channel === 'email' || notice?.type === 'lifecycle.email.sent') return <GmailMark size={size} />;
   return <Mail size={size} className="text-[#117dff]" />;
 }
@@ -122,13 +120,9 @@ export default function WorkspaceNotifications() {
       // notification API. On a fresh app entry, surface the newest unread row;
       // during polling, surface only a newly inserted lifecycle row.
       const lifecycleToast = !initialized.current ? persistedLifecycle : newlyPersisted?.type === 'lifecycle.email.sent' ? newlyPersisted : null;
-      const attentionToast = nextAttentionPopup(next, (notice) => {
-        try { return window.localStorage.getItem(noticeSeenKey(notice)) === 'seen'; }
-        catch { return false; }
-      });
-      if (attentionToast || lifecycleToast) setToast(current => current || attentionToast || lifecycleToast);
+      if (lifecycleToast) setToast(lifecycleToast);
       initialized.current = true;
-      if (!attentionToast && !lifecycleToast && !announcementId.current) {
+      if (!lifecycleToast && !announcementId.current) {
         const nextAnnouncement = await apiClient.nextWorkspaceAnnouncement().catch(() => null);
         if (nextAnnouncement?.announcement) {
           announcementId.current = nextAnnouncement.announcement.id;
@@ -139,10 +133,6 @@ export default function WorkspaceNotifications() {
   }, [unseenLifecycle]);
 
   useEffect(() => { load(); const interval = window.setInterval(load, 5000); return () => window.clearInterval(interval); }, [load]);
-  useEffect(() => {
-    if (!isRuntimeAttention(toast)) return;
-    try { window.localStorage.setItem(noticeSeenKey(toast), 'seen'); } catch { /* durable read state remains the fallback */ }
-  }, [toast]);
   useEffect(() => {
     if (!toast || lifecycleDay(toast) !== 0) { setLifecycleContext(null); return undefined; }
     let active = true;
@@ -167,8 +157,7 @@ export default function WorkspaceNotifications() {
       setItems((current) => current.map((item) => item.id === notice.id ? { ...item, readAt: new Date().toISOString() } : item));
       setUnread((count) => Math.max(0, count - 1));
     }
-    if (navigate && isRuntimeAttention(notice)) window.location.assign(notice?.data?.href || '/hivemind/app/overview?runtime=1');
-    else if (navigate && notice?.data?.href) window.location.assign(notice.data.href);
+    if (navigate && notice?.data?.href) window.location.assign(notice.data.href);
     else if (navigate && notice?.href) window.location.assign(notice.href);
   };
 
@@ -207,7 +196,7 @@ export default function WorkspaceNotifications() {
     </div>
 
     {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{toast ? <motion.div className="fixed -bottom-3 left-4 z-[2147483647] w-[min(420px,calc(100vw-28px))] sm:left-6" initial={{ opacity: 1, y: 'calc(100% - 34px)' }} animate={{ y: 0 }} exit={{ opacity: 0, y: 'calc(100% - 34px)' }} transition={{ type: 'spring', stiffness: 190, damping: 25, mass: 0.9 }}>
-      <WorkspacePopupSurface variant="toast" label={isRuntimeAttention(toast) ? 'hivemind — Runtime update' : `hivemind — day ${lifecycleDay(toast) ?? 'update'}`} title={isRuntimeAttention(toast) ? runtimeAttentionCopy(toast).title : lifecycleDay(toast) === 0 ? 'DAY 0 TASK FINISHED.' : 'Your team moved the company forward.'} description={isRuntimeAttention(toast) ? runtimeAttentionCopy(toast).description : lifecycleDay(toast) === 0 ? 'Your company is ready. Your brief, first research and new HyperAgents are filed in HIVEMIND.' : (toast.body || 'Your report is ready.')} visual={isRuntimeAttention(toast) || lifecycleDay(toast) === 0 ? null : <LifecycleVisual notice={toast} />} onClose={dismissToast} secondaryAction={{ label: 'Later', onClick: dismissToast }} primaryAction={{ label: isRuntimeAttention(toast) ? 'Open Runtime' : lifecycleDay(toast) === 0 ? 'See Day 0 report' : 'Review update', onClick: () => isRuntimeAttention(toast) ? markRead(toast, { navigate: true }) : openDetail(toast) }}>
+      <WorkspacePopupSurface variant="toast" label={`hivemind — day ${lifecycleDay(toast) ?? 'update'}`} title={lifecycleDay(toast) === 0 ? 'DAY 0 TASK FINISHED.' : 'Your team moved the company forward.'} description={lifecycleDay(toast) === 0 ? 'Your company is ready. Your brief, first research and new HyperAgents are filed in HIVEMIND.' : (toast.body || 'Your report is ready.')} visual={lifecycleDay(toast) === 0 ? null : <LifecycleVisual notice={toast} />} onClose={dismissToast} secondaryAction={{ label: 'Later', onClick: dismissToast }} primaryAction={{ label: lifecycleDay(toast) === 0 ? 'See Day 0 report' : 'Review update', onClick: () => openDetail(toast) }}>
         {lifecycleDay(toast) === 0 ? <DayZeroCompanyBrief context={lifecycleContext} /> : null}
       </WorkspacePopupSurface>
     </motion.div> : null}</AnimatePresence>, document.body) : null}
@@ -219,8 +208,8 @@ export default function WorkspaceNotifications() {
     </motion.div> : null}</AnimatePresence>, document.body) : null}
 
     {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{detail ? <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[2147483647] grid place-items-center bg-black/35 p-4 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetail(null); }}>
-      <div className="w-full max-w-[700px]"><WorkspacePopupSurface label={isRuntimeAttention(detail) ? 'hivemind — Runtime update' : 'hivemind — workspace lifecycle'} title={detail.title} description={isRuntimeAttention(detail) ? runtimeAttentionCopy(detail).description : detail.body} visual={isRuntimeAttention(detail) ? null : <LifecycleVisual notice={detail} />} onClose={() => setDetail(null)} meta={`${relativeTime(detail.createdAt || detail.created_at)} · saved in notifications`} secondaryAction={{ label: 'Close', onClick: () => setDetail(null) }} primaryAction={(detail.href || detail?.data?.href) ? { label: isRuntimeAttention(detail) ? 'Open Runtime' : 'Open workspace', onClick: () => markRead(detail, { navigate: true }) } : null}>
-        <div className="mt-6 border-t border-[#deddd7] pt-4 text-[12px] leading-5 text-[#666861]">{isRuntimeAttention(detail) ? runtimeAttentionCopy(detail).detail : 'The in-app notification is the durable record for this update. Email delivery and the popup both refer to this same lifecycle event.'}</div>
+      <div className="w-full max-w-[700px]"><WorkspacePopupSurface label="hivemind — workspace lifecycle" title={detail.title} description={detail.body} visual={<LifecycleVisual notice={detail} />} onClose={() => setDetail(null)} meta={`${relativeTime(detail.createdAt || detail.created_at)} · saved in notifications`} secondaryAction={{ label: 'Close', onClick: () => setDetail(null) }} primaryAction={(detail.href || detail?.data?.href) ? { label: 'Open workspace', onClick: () => markRead(detail, { navigate: true }) } : null}>
+        <div className="mt-6 border-t border-[#deddd7] pt-4 text-[12px] leading-5 text-[#666861]">The in-app notification is the durable record for this update. Email delivery and the popup both refer to this same lifecycle event.</div>
       </WorkspacePopupSurface></div>
     </motion.div> : null}</AnimatePresence>, document.body) : null}
   </>;
