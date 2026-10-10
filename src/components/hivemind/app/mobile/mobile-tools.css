@@ -61,6 +61,22 @@
 }
 [data-mobile-uploads] [data-upload-document-actions]:has(button + button) { grid-area: 5 / 1 / auto / -1; }
 [data-mobile-uploads] [data-upload-document-actions] button { min-width: 44px; opacity: 1; }
+[data-mobile-uploads] [data-upload-dialog] {
+  height: var(--hm-mobile-shell-height, 100dvh);
+  bottom: auto;
+  box-sizing: border-box;
+  padding-top: max(12px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+[data-mobile-uploads] [data-upload-dialog] > div { max-height: 100%; min-width: 0; }
+[data-mobile-uploads] [data-upload-dialog] p { white-space: normal; max-width: 100%; }
+[data-mobile-uploads] [data-upload-bulk-actions] {
+  width: calc(100% - 24px); max-width: 520px; box-sizing: border-box;
+  flex-wrap: wrap; justify-content: center;
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+}
 @media (prefers-reduced-motion: reduce) {
   [data-mobile-tools] *, [data-mobile-tools] *::before, [data-mobile-tools] *::after {
     animation: none !important; transition: none !important;

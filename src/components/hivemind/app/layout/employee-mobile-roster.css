@@ -161,3 +161,12 @@
 }
 
 .mobile-roster-grid [data-agent-room-link] { position:relative; }
+
+/* Character controls are a separate sheet; preserve the verified roster layout. */
+@media (max-width:600px) {
+  [data-create-employee-card] button { min-width:44px; min-height:44px; touch-action:manipulation; }
+  [data-create-employee-card] input[type="color"] { width:44px; height:44px; }
+  [data-create-employee-card] [data-character-choices] { grid-template-columns:repeat(auto-fit,minmax(44px,1fr)); }
+  [data-create-employee-card] [data-character-parts] { grid-template-columns:repeat(auto-fit,minmax(52px,1fr)); }
+  [data-create-employee-card] [data-character-parts] button { overflow-wrap:anywhere; }
+}
