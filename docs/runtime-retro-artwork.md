@@ -10,4 +10,4 @@ Team prompt: Six-panel specialist portrait strip with five distinct illustrated 
 
 Assets: public/assets/runtime-retro/hero.webp, features.webp, team.webp. Generated originals retained in the Codex generated_images folder. WebP encoding only; no creative image modification.
 
-Typography: Six Caps and Barlow Condensed from Google Fonts, self-hosted for this page. Page CSS and motion are scoped to runtime-retro; reduced-motion preferences are respected.
+Typography: the existing main homepage Space Grotesk heading system and Inter body type, using the existing site font loading. Page CSS and motion are scoped to runtime-retro; reduced-motion preferences are respected.
