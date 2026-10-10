@@ -6,6 +6,7 @@ import { isNativeApp } from '../shared/native-app';
 import { nativePlugin } from '../shared/native-auth';
 import { createNativeHarnessFetch, createNativeHarnessStream, createNativeSaveFile } from '../shared/native-harness-transport';
 import { createNativeHarnessLoader } from '../shared/native-harness-loader';
+import { measureHarnessBoot } from '../shared/harness-boot-timing';
 
 let nativeRuntime;
 function harnessRuntime() {
@@ -231,7 +232,7 @@ function isFreshHarnessRoute() {
 
 async function establishHarnessSession({ fresh = false } = {}) {
   const path = fresh ? '/v1/harness-chat/new-session' : '/v1/harness-chat/bootstrap';
-  const { data: admission } = await apiClient.controlPlane.post(path, {});
+  const { data: admission } = await measureHarnessBoot('admission-ticket', () => apiClient.controlPlane.post(path, {}));
   // The rollout is deliberately binary.  A user outside the Harness cohort
   // must stay on the existing LangGraph conversation surface, including when
   // they arrive through a stale /overview/new or /overview/session/:id URL.
@@ -240,10 +241,10 @@ async function establishHarnessSession({ fresh = false } = {}) {
   if (typeof admission.ticket !== 'string' || admission.ticket.length === 0) {
     throw new Error('HIVEMIND could not authorize this session.');
   }
-  const established = await fetchHarness(HARNESS_SESSION_PATH, {
+  const established = await measureHarnessBoot('session-cookie', () => fetchHarness(HARNESS_SESSION_PATH, {
     method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ ticket: admission.ticket, request_id: crypto.randomUUID() }),
-  });
+  }));
   if (!established.ok) throw new Error('Could not open your secure HIVEMIND session.');
   window.dispatchEvent(new Event('hivemind:session-established'));
   return { mode: 'harness' };
@@ -304,7 +305,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
         return;
       }
       setLoadingStage(1);
-      let bootResponse = await fetchHarness(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
+      let bootResponse = await measureHarnessBoot('boot-graph', () => fetchHarness(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' }));
       // Dreaming just established this cookie. If it expires before boot,
       // re-admit once; the runner remains the authentication authority.
       if (sessionEstablished && [401, 403].includes(bootResponse.status)) {
@@ -313,7 +314,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
         bootResponse = await fetchHarness(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
       }
       if (!bootResponse.ok) throw new Error('HIVEMIND could not verify your session.');
-      const boot = await bootResponse.json();
+      const boot = await measureHarnessBoot('boot-body', () => bootResponse.json());
       if (cancelled) return;
       const bootRevision = harnessBootRevision(boot.injections);
       if (bootRevision === null) {
@@ -331,9 +332,9 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       // Styles and ordered script execution are independent downloads. Wait
       // for both before mounting, avoiding flashes of unstyled conversation.
       await Promise.all([
-        Promise.all(styles.map(runtime ? runtime.loader.loadStyle : loadHarnessStylesheet)),
-        installedRevision !== bootRevision ? applyHarnessInjections(boot.injections, runtime?.loader) : Promise.resolve(),
-        runtime ? runtime.loader.prepareModule(shellUrl) : Promise.resolve(),
+        measureHarnessBoot('styles', () => Promise.all(styles.map(runtime ? runtime.loader.loadStyle : loadHarnessStylesheet))),
+        measureHarnessBoot('ordered-injections', () => installedRevision !== bootRevision ? applyHarnessInjections(boot.injections, runtime?.loader) : Promise.resolve()),
+        measureHarnessBoot('native-module-prepare', () => runtime ? runtime.loader.prepareModule(shellUrl) : Promise.resolve()),
       ]);
       if (installedRevision !== bootRevision) window.__HIVE_HARNESS_BOOT_REV__ = bootRevision;
       setLoadingStage(2);
@@ -367,25 +368,24 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       // remounting the cached module, otherwise the old dispose can erase the
       // new DOM and leave a blank Overview canvas.
       const pendingDispose = window.__HIVE_HARNESS_DISPOSE_PROMISE__;
-      if (pendingDispose && typeof pendingDispose.then === 'function') await pendingDispose;
+      if (pendingDispose && typeof pendingDispose.then === 'function') await measureHarnessBoot('previous-dispose', () => pendingDispose);
       if (cancelled) return;
       window.__DSH_EMBED_REQUEST__ = request;
       setLoadingStage(3);
       // The module URL changes only when the authenticated Harness release
       // graph changes. Re-entering Overview reuses the parsed module and calls
       // its explicit mount entry instead of downloading ~500 KiB again.
-      if (runtime) await runtime.loader.importModule(shellUrl);
-      else await import(/* webpackIgnore: true */ shellUrl);
+      await measureHarnessBoot('shell-import', () => runtime ? runtime.loader.importModule(shellUrl) : import(/* webpackIgnore: true */ shellUrl));
       if (cancelled) return;
       if (window.__DSH_EMBED_APP__ === undefined) {
         if (typeof window.__DSH_EMBED_MOUNT__ !== 'function') {
           throw new Error('HIVEMIND could not reopen this conversation.');
         }
-        await window.__DSH_EMBED_MOUNT__();
+        await measureHarnessBoot('native-mount', () => window.__DSH_EMBED_MOUNT__());
       } else {
-        await window.__DSH_EMBED_INITIAL_MOUNT__;
+        await measureHarnessBoot('native-initial-mount', () => window.__DSH_EMBED_INITIAL_MOUNT__);
       }
-      await waitForNativeHarnessMount(mount, readinessAbort.signal);
+      await measureHarnessBoot('visible-chat', () => waitForNativeHarnessMount(mount, readinessAbort.signal));
       if (!cancelled) {
         setState({ phase: 'ready', stage: HARNESS_BOOT_STAGES.length - 1, message: null });
         livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);
