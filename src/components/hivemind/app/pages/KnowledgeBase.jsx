@@ -2599,7 +2599,7 @@ export default function KnowledgeBase() {
               const docType = meta.document_type || (doc.tags || []).find((t) => t.startsWith('document_type:'))?.split(':')[1];
               const typeStyle = docType ? TYPE_COLORS[docType] || TYPE_COLORS.general : null;
               return (
-                <div key={doc.id} className={`group flex items-center gap-4 px-4 py-3 rounded-xl border transition-colors ${bulkSelected.has(doc.id) ? 'border-[#117dff]/40 bg-[#117dff]/5' : 'border-[#eae7e1] hover:bg-[#faf9f4]'}`}>
+                <div key={doc.id} data-upload-document className={`group flex items-center gap-4 px-4 py-3 rounded-xl border transition-colors ${bulkSelected.has(doc.id) ? 'border-[#117dff]/40 bg-[#117dff]/5' : 'border-[#eae7e1] hover:bg-[#faf9f4]'}`}>
                   {/* Bulk-select checkbox — visible on hover OR when any selection active */}
                   <input
                     type="checkbox"
@@ -2623,7 +2623,7 @@ export default function KnowledgeBase() {
                       {TYPE_LABELS[docType] ? docType.charAt(0).toUpperCase() + docType.slice(1) : docType}
                     </span>
                   )}
-                  <div className="flex-1 min-w-0">
+                  <div data-upload-document-content className="flex-1 min-w-0">
                     <p className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] truncate">
                       {meta.document_title
                         || meta.filename
@@ -2645,14 +2645,14 @@ export default function KnowledgeBase() {
 
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div data-upload-document-tags className="flex items-center gap-2 shrink-0">
                     {(doc.tags || []).filter((t) => !['knowledge-base', 'document', 'document-summary', 'schema-record', 'enterprise'].includes(t) && !t.startsWith('document_type:') && !/^(source|platform|ts|doc-hash|filename|scope|project|organization|user|document_id):/.test(t)).slice(0, 3).map((tag) => (
                       <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252] border border-[#e3e0db]">
                         {tag}
                       </span>
                     ))}
                   </div>
-                  <details className="relative shrink-0 text-xs text-[#777]">
+                  <details data-upload-document-details className="relative shrink-0 text-xs text-[#777]">
                     <summary className="cursor-pointer rounded-md px-2 py-1 hover:bg-[#f3f1ec]">Details</summary>
                     <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-xl border border-[#e3e0db] bg-white p-3 shadow-lg space-y-1">
                       {phase1Stats[documentIdFrom(doc)] && <p>{phase1Stats[documentIdFrom(doc)].segments} source sections · {formatBytes(phase1Stats[documentIdFrom(doc)].evidenceBytes)} saved evidence</p>}
@@ -2662,11 +2662,11 @@ export default function KnowledgeBase() {
                       <p>Full content and sources are available in Memories.</p>
                     </div>
                   </details>
-                  <span className="text-[#a3a3a3] text-[10px] font-mono shrink-0 flex items-center gap-1">
+                  <span data-upload-document-date className="text-[#a3a3a3] text-[10px] font-mono shrink-0 flex items-center gap-1">
                     <Clock size={10} />
                     {formatDate(doc.created_at)}
                   </span>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div data-upload-document-actions className="flex items-center gap-1 shrink-0">
                     {deleteConfirmId === doc.id ? (
                       <div className="flex items-center gap-1">
                         <button
