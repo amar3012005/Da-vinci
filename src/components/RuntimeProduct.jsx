@@ -32,7 +32,7 @@ const faqs = [
 ];
 export default function RuntimeProduct() {
   const [openFaq, setOpenFaq] = useState(null);
-  return <main className="runtime-retro" style={{'--rr-feature-art': 'url("/assets/runtime-retro/features.webp")', '--rr-team-art': 'url("/assets/runtime-retro/team.webp")'}}>
+  return <main className="runtime-retro" style={{'--rr-feature-art': 'url("/assets/runtime-retro/features-ink.webp")', '--rr-team-art': 'url("/assets/runtime-retro/team-ink.webp")'}}>
     <Seo pagePath="/runtime" canonical="https://runtime.singulancelabs.com/" />
     <a className="rr-skip" href="#intelligence">Skip to content</a>
     <div className="rr-page">
@@ -42,7 +42,7 @@ export default function RuntimeProduct() {
         <a className="rr-button rr-outline rr-header-cta" href={appUrl}>Meet Runtime <ArrowUpRight size={15}/></a>
       </header>
       <section className="rr-hero" aria-labelledby="rr-title">
-        <div className="rr-hero-art"><img src="/assets/runtime-retro/hero.webp" width="1536" height="1024" fetchPriority="high" alt="Runtime, a vintage computer-headed Chief of Staff, with a team of specialists"/></div>
+        <div className="rr-hero-art"><img src="/assets/runtime-retro/hero-ink.webp" width="1536" height="1024" fetchPriority="high" alt="Runtime, a vintage computer-headed Chief of Staff, with a team of specialists"/></div>
         <div className="rr-hero-copy"><p className="rr-kicker">YOUR AI CHIEF OF STAFF</p><h1 id="rr-title">Runtime<br/>for your<br/>company.</h1><p className="rr-tagline">Intelligence that anticipates.</p><p className="rr-intro">Company context. Specialist work.<br/>Reviewed next steps.</p><div className="rr-actions"><a href={appUrl} className="rr-button rr-white">Meet Runtime <ArrowUpRight size={16}/></a><a href="#team" className="rr-button rr-outline">Explore HyperAgents</a></div></div>
       </section>
       <section id="intelligence" className="rr-features rr-paper">
