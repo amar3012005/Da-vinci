@@ -376,6 +376,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       // its explicit mount entry instead of downloading ~500 KiB again.
       if (runtime) await runtime.loader.importModule(shellUrl);
       else await import(/* webpackIgnore: true */ shellUrl);
+      if (cancelled) return;
       if (window.__DSH_EMBED_APP__ === undefined) {
         if (typeof window.__DSH_EMBED_MOUNT__ !== 'function') {
           throw new Error('HIVEMIND could not reopen this conversation.');
@@ -404,7 +405,10 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       document.removeEventListener('visibilitychange', recoverExpiredSession);
       request.cancelled = true;
       readinessAbort.abort();
-      if (window.__DSH_EMBED_REQUEST__ === request) window.__DSH_EMBED_REQUEST__ = undefined;
+      // An already-started shell import can evaluate after route exit. Keep its
+      // cancelled seat visible: absent request means standalone mode to native
+      // main.ts, which would mount into the outer React #root. The next embed
+      // replaces this tombstone only after the previous app has disposed.
       window.__HIVEMIND_TRANSCRIBE_AUDIO__ = undefined;
       window.__HIVEMIND_DELETE_SESSION__ = undefined;
       const app = window.__DSH_EMBED_APP__;

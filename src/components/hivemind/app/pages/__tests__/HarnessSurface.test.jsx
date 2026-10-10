@@ -10,6 +10,8 @@ import {
   harnessShellUrl,
   nativeHarnessMounted,
 } from '../HarnessSurface';
+import HarnessSurface from '../HarnessSurface';
+import { createNativeHarnessLoader } from '../../shared/native-harness-loader';
 
 describe('HarnessSurface module cache', () => {
   beforeAll(() => {
@@ -67,3 +69,54 @@ describe('HarnessSurface module cache', () => {
 });
 jest.mock('../QueryStarters', () => () => null);
 jest.mock('../../shared/native-harness-loader', () => ({ createNativeHarnessLoader: jest.fn() }));
+jest.mock('../../shared/native-app', () => ({ isNativeApp: () => true }));
+jest.mock('../../shared/native-auth', () => ({ nativePlugin: {} }));
+jest.mock('../../shared/native-harness-transport', () => ({
+  createNativeHarnessFetch: () => (...args) => global.fetch(...args),
+  createNativeHarnessStream: jest.fn(), createNativeSaveFile: jest.fn(),
+}));
+
+it('a shell import completing after route exit cannot mount over the outer React root', async () => {
+  const { createRoot } = require('react-dom/client');
+  const { act } = require('react');
+  let finishImport;
+  let importStarted;
+  const started = new Promise(resolve => { importStarted = resolve; });
+  const pending = new Promise(resolve => { finishImport = resolve; });
+  let capturedRequest;
+  const standaloneMount = jest.fn();
+  const loader = {
+    loadStyle: jest.fn(async () => {}), prepareModule: jest.fn(async () => {}),
+    importModule: jest.fn(async () => {
+      capturedRequest = window.__DSH_EMBED_REQUEST__;
+      importStarted();
+      await pending;
+      // Native apps/web/src/main.ts falls back to #root when no embed request
+      // exists. A cancelled request is its explicit no-mount signal.
+      const request = window.__DSH_EMBED_REQUEST__;
+      if (request?.cancelled) return;
+      if (!request) standaloneMount(document.getElementById('root'));
+    }),
+  };
+  createNativeHarnessLoader.mockReturnValue(loader);
+  const previousFetch = global.fetch;
+  global.fetch = jest.fn(async () => ({ ok: true, json: async () => ({
+    styles: ['/test.css'], injections: [{ kind: 'global', name: '__DSH_BOOT__', value: { rev: 'cancel-test' } }],
+  }) }));
+  window.__HIVE_HARNESS_BOOT_REV__ = 'cancel-test';
+  const host = document.createElement('div'); host.id = 'root'; document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () => { root.render(<HarnessSurface sessionEstablished />); });
+    await started;
+    act(() => root.render(<div>Connected apps</div>));
+    expect(capturedRequest.cancelled).toBe(true);
+    await act(async () => { finishImport(); await pending; });
+    expect(standaloneMount).not.toHaveBeenCalled();
+    expect(host.textContent).toBe('Connected apps');
+  } finally {
+    act(() => root.unmount()); host.remove(); global.fetch = previousFetch;
+    delete window.__HIVE_HARNESS_BOOT_REV__;
+    delete window.__DSH_EMBED_REQUEST__;
+  }
+});
