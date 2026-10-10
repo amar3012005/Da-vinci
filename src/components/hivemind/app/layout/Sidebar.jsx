@@ -1,4 +1,4 @@
-import { fetchHarness } from '../shared/harness-fetch';
+import { agentRoster } from '../shared/agent-roster';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 const CreateEmployeeDialog = React.lazy(() => import('./CreateEmployeeDialog'));
 const CompanyWorkspaceOverlay = React.lazy(() => import('../shared/CompanyWorkspaceOverlay'));
@@ -163,7 +163,13 @@ export default function Sidebar({
   const { logout, org, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [team, setTeam] = useState([]);
+  const scope = user?.id && org?.id ? `${user.id}:${org.id}` : null;
+  const [teamData, setTeamData] = useState(() => ({ scope, profiles: agentRoster.peek(scope) || [] }));
+  const team = teamData.scope === scope ? teamData.profiles : agentRoster.peek(scope) || [];
+  const setTeam = useCallback(value => setTeamData(previous => {
+    const current = previous.scope === scope ? previous.profiles : agentRoster.peek(scope) || [];
+    return { scope, profiles: typeof value === 'function' ? value(current) : value };
+  }), [scope]);
   const [rosterPage, setRosterPage] = useState(0);
   const rosterGesture = useRef(null);
   const rosterSwiped = useRef(false);
@@ -181,26 +187,26 @@ export default function Sidebar({
   const teamScope = useRef(null);
   const [teamLoadError, setTeamLoadError] = useState(false);
   const [teamRetry, setTeamRetry] = useState(0);
+  const rosterRefreshRevision = useRef(0);
 
   useEffect(() => {
     const controller = new AbortController();
-    const scope = user?.id && org?.id ? `${user.id}:${org.id}` : null;
     if (teamScope.current !== scope) {
       teamScope.current = scope;
-      setTeam([]);
+      setTeam(agentRoster.peek(scope) || []);
       setTeamLoadError(false);
     }
+    let forceRefresh = rosterRefreshRevision.current !== teamRetry;
+    rosterRefreshRevision.current = teamRetry;
     let retryTimer;
     let attempts = 0;
     const load = async () => {
       if (!scope || controller.signal.aborted) return;
       try {
-        const response = await fetchHarness('/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal });
-        if (!response.ok) throw new Error('team unavailable');
-        const value = await response.json();
-        if (!Array.isArray(value.profiles)) throw new Error('invalid team response');
+        const profiles = await agentRoster.load(scope, { force: forceRefresh || attempts > 0 });
         if (controller.signal.aborted || teamScope.current !== scope) return;
-        setTeam(value.profiles.filter(agent => typeof agent.id === 'string' && agent.id !== 'runtime' && typeof agent.name === 'string'));
+        setTeam(profiles);
+        forceRefresh = false;
         setTeamLoadError(false);
       } catch {
         if (controller.signal.aborted || teamScope.current !== scope) return;
@@ -214,7 +220,7 @@ export default function Sidebar({
     window.addEventListener('online', refresh);
     window.addEventListener('hivemind:session-established', refresh);
     return () => { controller.abort(); clearTimeout(retryTimer); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); window.removeEventListener('hivemind:session-established', refresh); };
-  }, [user?.id, org?.id, teamMode, teamRetry]);
+  }, [scope, setTeam, teamRetry]);
 
   useEffect(() => {
     const selection = event => setSelectedAgent(event.detail?.id || null);
@@ -253,6 +259,7 @@ export default function Sidebar({
   const employeeCreated = async employee => {
     if (!user?.id || !org?.id || teamScope.current !== `${user.id}:${org.id}`) return false;
     setTeam(current => current.some(item => item.id === employee.id) ? current : [...current, employee]);
+    agentRoster.remember(scope, [...team.filter(item => item.id !== employee.id), employee]);
     setTeamRetry(value => value + 1);
     return openAgent({ preventDefault() {} }, employee);
   };
@@ -338,8 +345,8 @@ export default function Sidebar({
               rosterSwiped.current = true;
               setRosterPage(page => Math.max(0, Math.min(Math.max(0, Math.ceil(team.length / 5) - 1), page + (dx < 0 ? 1 : -1))));
             }}>
-            <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt=""/><strong>Runtime</strong><small>Chief of Staff</small></button>
-            {team.slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span></button>)}
+            <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt=""/><strong>Runtime</strong><small>Chief of Staff</small><AgentRoomStatus room={aggregateAgentRooms(rooms, 'runtime')} compact /></button>
+            {team.slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span><AgentRoomStatus room={aggregateAgentRooms(rooms, agent.id)} compact /></button>)}
           </div>
           {team.length > 5 && <div className="mobile-roster-pages"><button type="button" disabled={rosterPage === 0} onClick={() => setRosterPage(value => value - 1)}>Previous</button><span>{rosterPage + 1} / {Math.ceil(team.length / 5)}</span><button type="button" disabled={(rosterPage + 1) * 5 >= team.length} onClick={() => setRosterPage(value => value + 1)}>Next</button></div>}
         </div>

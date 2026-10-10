@@ -159,3 +159,5 @@
   .mobile-roster-settings { width:44px; height:44px; display:grid; place-items:center; border-radius:14px; flex-shrink:0; }
   .mobile-roster-settings:active, .mobile-roster-account-identity:active { background:#eeece6; }
 }
+
+.mobile-roster-grid [data-agent-room-link] { position:relative; }
