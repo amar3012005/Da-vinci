@@ -7,11 +7,12 @@ import { Helmet } from 'react-helmet-async';
 import UpdateBanner from './components/hivemind/UpdateBanner';
 import CookieConsent from './components/CookieConsent';
 import apiClient from './components/hivemind/app/shared/api-client';
+import { measureHarnessBoot } from './components/hivemind/app/shared/harness-boot-timing';
 const MobileHomepage = React.lazy(() => import('./components/mobile/MobileHomepage'));
 
 // Hivemind
 const HivemindRedirect = React.lazy(() => import('./components/hivemind/HivemindRedirect'));
-const HiveMindApp = React.lazy(() => import('./components/hivemind/app/HiveMindApp'));
+const HiveMindApp = React.lazy(() => measureHarnessBoot('outer-workspace-import', () => import('./components/hivemind/app/HiveMindApp')));
 const PlatformAdmin = React.lazy(() => import('./components/hivemind/app/pages/PlatformAdmin'));
 const HivemindLogin = React.lazy(() => import('./components/hivemind/app/auth/HivemindLogin'));
 
