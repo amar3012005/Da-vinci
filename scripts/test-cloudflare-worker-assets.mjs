@@ -136,10 +136,10 @@ const servedAgentPrompt = await worker.fetch(
   new Request('https://icarus.singulancelabs.com/agent-setup/prompt.md'),
   envReturning(agentPrompt),
 );
-assert.equal(servedAgentPrompt.status, 200);
-assert.equal(servedAgentPrompt.headers.get('content-type'), 'text/markdown; charset=utf-8');
+assert.equal(servedAgentPrompt.status, 404);
+assert.equal(servedAgentPrompt.headers.get('content-type'), 'text/plain; charset=utf-8');
 assert.match(servedAgentPrompt.headers.get('x-robots-tag'), /noindex/);
-assert.equal(await servedAgentPrompt.text(), '# ICARUS coding-agent setup');
+assert.equal(await servedAgentPrompt.text(), 'Not found');
 
 const javascript = new Response('self.webpackChunk=[];', {
   headers: { 'content-type': 'text/javascript' },

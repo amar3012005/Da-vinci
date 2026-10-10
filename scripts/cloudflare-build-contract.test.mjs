@@ -29,6 +29,8 @@ test('browser package excludes known server-only dependencies', () => {
 test('production Worker runs before SPA assets on Harness RPC and overview paths', () => {
   const wrangler = JSON.parse(readFileSync(new URL('../wrangler.jsonc', import.meta.url)));
   const first = wrangler.assets?.run_worker_first;
+  // true routes every request through the Worker, including all paths below.
+  if (first === true) return;
   assert.ok(Array.isArray(first), 'wrangler.jsonc must set assets.run_worker_first');
   for (const path of ['/api/*', '/plugins/*', '/assets/*', '/hivemind/*']) {
     assert.ok(first.includes(path), `run_worker_first must include ${path}`);
