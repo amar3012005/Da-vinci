@@ -11,6 +11,7 @@ export function aggregateAgentRooms(rooms, agentId) {
     running: matching.some(room => room.running === true),
     unread: matching.some(room => room.unread === true),
     actionRequired: matching.some(room => room.actionRequired === true),
+    waitingForAnswer: matching.some(room => room.waitingForAnswer === true),
     scheduled: matching.some(room => room.scheduled === true),
   };
 }
@@ -22,6 +23,7 @@ export default function AgentRoomStatus({ room, collapsed = false, compact = fal
   const unread = room.unread === true;
   const actionRequired = room.actionRequired === true;
   const scheduled = room.scheduled === true;
+  const attentionLabel = room.waitingForAnswer ? 'Waiting for answer' : 'Action required';
   if (!working && !unread && !actionRequired && !scheduled) return null;
   return (
     <span className={(collapsed || compact) ? 'absolute right-1 top-1 z-20 flex items-center gap-1' : 'relative z-10 ml-auto flex shrink-0 items-center gap-1.5'}>
@@ -29,8 +31,8 @@ export default function AgentRoomStatus({ room, collapsed = false, compact = fal
       {unread && <span className="h-1.5 w-1.5 rounded-full bg-green-500" role="img" aria-label="Unread update" />}
       {scheduled && <CalendarClock size={14} className="text-[#737373]" role="img" aria-label="Work scheduled" />}
       {actionRequired && <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700" role="status">
-        <Bell size={13} aria-hidden="true" />
-        {(collapsed || compact) ? <span className="sr-only">Action required</span> : 'Action required'}
+        <Bell size={13} className="animate-pulse motion-reduce:animate-none" aria-hidden="true" />
+        {(collapsed || compact) ? <span className="sr-only">{attentionLabel}</span> : attentionLabel}
       </span>}
     </span>
   );
