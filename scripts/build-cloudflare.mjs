@@ -16,3 +16,4 @@ if (build.error) throw build.error;
 if (build.status !== 0) process.exit(build.status ?? 1);
 
 await import('./prune-cloudflare-assets.mjs');
+await import('./verify-cloudflare-public-assets.mjs');
