@@ -8,6 +8,7 @@ import { nativePlugin } from '../shared/native-auth';
 import { createNativeHarnessFetch, createNativeHarnessStream, createNativeSaveFile } from '../shared/native-harness-transport';
 import { createNativeHarnessLoader } from '../shared/native-harness-loader';
 import { measureHarnessBoot } from '../shared/harness-boot-timing';
+import { consumeHarnessExchange } from '../shared/harness-admission-handoff';
 
 let nativeRuntime;
 function harnessRuntime() {
@@ -24,7 +25,7 @@ function fetchHarness(input, init) { return harnessRuntime()?.fetch(input, init)
 const HARNESS_BOOT_PATH = '/api/hivemind/boot';
 const HARNESS_SESSION_PATH = '/api/hivemind/session/establish';
 const HARNESS_SHELL_PATH = '/assets/harness-shell.js';
-const HARNESS_LIVENESS_INTERVAL_MS = 5000;
+const HARNESS_LIVENESS_INTERVAL_MS = 60000;
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const HARNESS_EMPLOYEE_PATH = '/hivemind/app/employee/harness';
 
@@ -268,6 +269,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
     if (!retained) { mount.className = 'h-full min-h-0'; host.append(mount); }
     let cancelled = false;
     let recovering = false;
+    let checkingSession = false;
     let livenessTimer;
     const readinessAbort = new AbortController();
     const request = { container: mount, cancelled: false };
@@ -276,12 +278,15 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
     };
 
     const recoverExpiredSession = async () => {
-      if (cancelled || recovering || document.visibilityState === 'hidden') return;
+      if (cancelled || recovering || checkingSession || document.visibilityState === 'hidden') return;
+      checkingSession = true;
       try {
         const response = await fetchHarness(HARNESS_BOOT_PATH, {
           method: 'HEAD', credentials: 'include', cache: 'no-store',
+          signal: readinessAbort.signal,
         });
         if (response.status !== 401 && response.status !== 403) return;
+        if (cancelled) return;
         recovering = true;
         await establishHarnessSession();
         if (!cancelled) window.location.reload();
@@ -290,6 +295,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
         // Only an authoritative expired-session response triggers re-admission.
       } finally {
         recovering = false;
+        checkingSession = false;
       }
     };
 
@@ -313,7 +319,8 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
         window.__DSH_TRANSPORT__ = runtime.hooks;
         window.__DSH_FILE_UPLOAD__ = { fetch: runtime.fetch };
       }
-      const admission = sessionEstablished ? { mode: 'harness' }
+      const recentlyEstablished = sessionEstablished || consumeHarnessExchange(window.location.pathname);
+      const admission = recentlyEstablished ? { mode: 'harness' }
         : await establishHarnessSession({ fresh: isFreshHarnessRoute() });
       if (admission.mode === 'legacy') {
         // Never render or boot the native client for a legacy user.  This
@@ -326,7 +333,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       let bootResponse = await measureHarnessBoot('boot-graph', () => fetchHarness(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' }));
       // Dreaming just established this cookie. If it expires before boot,
       // re-admit once; the runner remains the authentication authority.
-      if (sessionEstablished && [401, 403].includes(bootResponse.status)) {
+      if (recentlyEstablished && [401, 403].includes(bootResponse.status)) {
         const renewed = await establishHarnessSession();
         if (renewed.mode !== 'harness') { window.location.replace(HARNESS_OVERVIEW_PATH); return; }
         bootResponse = await fetchHarness(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });

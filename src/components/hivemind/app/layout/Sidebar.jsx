@@ -1,7 +1,7 @@
 import { fetchHarness } from '../shared/harness-fetch';
-import CreateEmployeeDialog from './CreateEmployeeDialog';
-import CompanyWorkspaceOverlay from '../shared/CompanyWorkspaceOverlay';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+const CreateEmployeeDialog = React.lazy(() => import('./CreateEmployeeDialog'));
+const CompanyWorkspaceOverlay = React.lazy(() => import('../shared/CompanyWorkspaceOverlay'));
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
@@ -578,8 +578,8 @@ export default function Sidebar({
         </div>
       </div>
       {mobileRoster && rosterProfileOpen && <div className="mobile-roster-profile fixed inset-0 z-[95] flex items-end bg-black/25 p-2" onClick={() => setRosterProfileOpen(false)}><section data-mobile-roster-profile role="dialog" aria-modal="true" aria-label="Your profile" onClick={event => event.stopPropagation()} className="w-full rounded-[32px] bg-white p-6" style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))' }}><button type="button" autoFocus aria-label="Close profile" onClick={() => setRosterProfileOpen(false)} className="mb-6 h-11 w-11 rounded-full bg-[#f3f1ec]">×</button><div className="overflow-hidden rounded-3xl bg-[#f3f1ec]">{[{to:'/hivemind/m/profile',label:user?.display_name || user?.name || 'Profile'}, {to:'/hivemind/m/usage',label:'Usage'}, {to:'/hivemind/m/billing',label:'Billing'}, {to:'/hivemind/m/settings',label:'Settings'}, {to:'/hivemind/m/connectors',label:'Apps & connectors'}].map(item => <NavLink key={item.to} to={item.to} className="block border-b border-[#e3e0db] p-5 text-[17px]">{item.label}</NavLink>)}<button type="button" onClick={logout} className="block w-full p-5 text-left text-[17px]">Sign out</button></div></section></div>}
-      {companyOpen ? <CompanyWorkspaceOverlay onClose={closeCompany} /> : null}
-      {createEmployeeOpen && <CreateEmployeeDialog onClose={closeCreateEmployee} onCreated={employeeCreated} />}
+      {companyOpen ? <React.Suspense fallback={<div role="status">Opening company workspace…</div>}><CompanyWorkspaceOverlay onClose={closeCompany} /></React.Suspense> : null}
+      {createEmployeeOpen && <React.Suspense fallback={<div role="status">Opening employee setup…</div>}><CreateEmployeeDialog onClose={closeCreateEmployee} onCreated={employeeCreated} /></React.Suspense>}
     </aside>
   );
 }

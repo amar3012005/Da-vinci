@@ -21,7 +21,7 @@ import { useAuth } from '../auth/AuthProvider';
 import OnboardingFlow from '../pages/Onboarding';
 import SelfHostSetup from '../pages/SelfHostSetup';
 import apiClient from '../shared/api-client';
-import { ChatPanel } from '../pages/Chat';
+const ChatPanel = React.lazy(() => import('../pages/Chat').then(module => ({ default: module.ChatPanel })));
 import { Brain } from 'lucide-react';
 import { TeamProvider } from '../shared/team-context';
 import GlobalUploadStrip from './GlobalUploadStrip';
@@ -295,6 +295,9 @@ function AppShellContent() {
     return () => { alive = false; clearInterval(id); };
   }, [isSelfHost, shGate]);
   const [chatOpen, setChatOpen] = useState(false);
+  // Load the optional chat panel only after first use, then retain its state.
+  const [chatLoaded, setChatLoaded] = useState(false);
+  useEffect(() => { if (chatOpen) setChatLoaded(true); }, [chatOpen]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileAppsOpen, setMobileAppsOpen] = useState(() => new URLSearchParams(window.location.search).get('native_apps') === '1');
   const [mobileBrainAddOpen, setMobileBrainAddOpen] = useState(false);
@@ -513,7 +516,7 @@ function AppShellContent() {
         <GlobalUploadStrip />
 
         {/* Chat Panel */}
-        <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+        {(chatOpen || chatLoaded) && <React.Suspense fallback={<div role="status">Opening chat…</div>}><ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} /></React.Suspense>}
 
         {/* Global plan-limit upgrade prompt — reacts to 'hm:plan-limit' */}
         <PlanLimitGate />

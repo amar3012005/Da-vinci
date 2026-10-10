@@ -9,7 +9,7 @@ import CliVerified from './auth/CliVerified';
 import AppShell from './layout/AppShell';
 import { QuickRecorderProvider } from './shared/QuickRecorderProvider';
 import { TeamProvider } from './shared/team-context';
-import TaraConfig from './pages/TaraConfig';
+const TaraConfig = React.lazy(() => import('./pages/TaraConfig'));
 
 // Pages (lazy loaded for code splitting)
 const Overview = React.lazy(() => import('./pages/Overview'));

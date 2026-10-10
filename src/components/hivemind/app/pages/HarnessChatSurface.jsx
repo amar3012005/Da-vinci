@@ -4,6 +4,7 @@ import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
+import { rememberHarnessExchange } from '../shared/harness-admission-handoff';
 
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const HARNESS_EXCHANGE_PATH = '/api/hivemind/embed/exchange';
@@ -41,6 +42,7 @@ async function navigateHarnessTicket(ticket, destination, navigate) {
   if (!response.ok) throw new Error('Could not establish the secure Harness session.');
   const target = canonicalHarnessDestination(destination || response.url || window.location.href);
   if (typeof navigate === 'function') {
+    rememberHarnessExchange(new URL(target, window.location.origin).pathname);
     navigate(target, { replace: true });
   } else {
     window.location.replace(target);
