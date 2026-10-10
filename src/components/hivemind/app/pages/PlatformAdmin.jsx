@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, BarChart3, ChevronRight, Eye, EyeOff, FileText, Gift, LayoutDashboard, Mail, Megaphone, Menu, MessageCircle, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
 import apiClient from "../shared/api-client";
+import OrganizationSettingsPanel from './OrganizationSettingsPanel';
 import AccessApplicationsPanel from "./AccessApplicationsPanel";
 
 const when = (value) => (value ? new Date(value).toLocaleString() : "Never");
@@ -1946,6 +1947,7 @@ function CommercialManager() {
 const ADMIN_NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "users", label: "Users", icon: Users },
+  { id: "organizations", label: "Organizations", icon: Users },
   { id: "plans", label: "Plans & credits", icon: BarChart3 },
   { id: "promotions", label: "Promotions", icon: Gift },
   { id: "invitations", label: "Invitations", icon: Send },
@@ -2084,6 +2086,10 @@ export default function PlatformAdmin() {
       document.getElementById("admin-overview")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
+    if (target === "organizations") {
+      document.getElementById("admin-organizations")?.scrollIntoView({behavior:"smooth",block:"start"});
+      return;
+    }
     if (target === "users") {
       document.getElementById("admin-users")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
@@ -2172,6 +2178,7 @@ export default function PlatformAdmin() {
         </div>
       </div>
       <AnnouncementManager />
+      <OrganizationSettingsPanel />
       <CommercialManager />
       <SecurityChecklist />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">

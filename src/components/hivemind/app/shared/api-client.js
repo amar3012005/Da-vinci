@@ -1798,6 +1798,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getPlatformOrganizationSettings(orgId) {
+    const {data}=await this.controlPlane.get(`/admin/api/platform/organizations/${encodeURIComponent(orgId)}/settings`);
+    return data;
+  }
+
+  async updatePlatformOrganizationSettings(orgId, payload) {
+    const {data}=await this.controlPlane.patch(`/admin/api/platform/organizations/${encodeURIComponent(orgId)}/settings`,payload);
+    return data;
+  }
+
   async grantPlatformPilot(payload) {
     const { data } = await this.controlPlane.post('/admin/api/platform/pilots/grant', payload);
     return data;
