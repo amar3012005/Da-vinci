@@ -496,7 +496,7 @@ function AppShellContent() {
           style={{
             marginLeft: (overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '300px',
             ...(nativeChatRoom && employeeCompact ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : {}),
-            '--hm-harness-center-offset': `${-(overlayNavigation ? 0 : hyperFullscreen ? 120 : sidebarCollapsed ? 34 : 130)}px`,
+            '--hm-harness-center-offset': `${-((overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? 0 : sidebarCollapsed ? 34 : 150)}px`,
           }}
         >
           {!crmFullscreen && <TopBar floatingMobile={employeeRoom && brainPhone} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
