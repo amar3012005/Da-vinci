@@ -26,7 +26,7 @@ export default function AgentRoomStatus({ room, collapsed = false, compact = fal
   const attentionLabel = room.waitingForAnswer ? 'Waiting for answer' : 'Action required';
   if (!working && !unread && !actionRequired && !scheduled) return null;
   return (
-    <span className={(collapsed || compact) ? 'absolute right-1 top-1 z-20 flex items-center gap-1' : 'relative z-10 ml-auto flex shrink-0 items-center gap-1.5'}>
+    <span className={(collapsed || compact) ? 'absolute right-1 top-1 z-20 flex items-center gap-1' : 'relative z-10 mt-1 flex min-w-0 flex-wrap items-center gap-1.5'}>
       {working && <LoaderCircle size={14} className="text-[#737373] animate-spin motion-reduce:animate-none" role="img" aria-label="Working" />}
       {unread && <span className="h-1.5 w-1.5 rounded-full bg-green-500" role="img" aria-label="Unread update" />}
       {scheduled && <CalendarClock size={14} className="text-[#737373]" role="img" aria-label="Work scheduled" />}

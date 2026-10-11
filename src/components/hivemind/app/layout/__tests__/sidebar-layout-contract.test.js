@@ -9,9 +9,19 @@ test('the app shell and sidebar share one collapse state', () => {
 
   expect(shell).toContain('collapsed={sidebarCollapsed}');
   expect(shell).toContain('onCollapsedChange={setSidebarCollapsed}');
-  expect(shell).toContain("sidebarCollapsed ? '68px' : '260px'");
-  expect(sidebar).toContain('onClick={() => onCollapsedChange?.(!collapsed)}');
+  expect(shell).toContain("sidebarCollapsed ? '68px' : '300px'");
+  expect(sidebar).toContain('onClick={() => onCollapsedChange?.(true)}');
+  expect(sidebar).toContain('onClick={() => onCollapsedChange?.(false)}');
   expect(sidebar).toContain('const handleClose = () => onCollapsedChange?.(true);');
   expect(sidebar).toContain('const handleOpen = () => onCollapsedChange?.(false);');
   expect(sidebar).not.toContain('const [collapsed, setCollapsed]');
 });
+
+ test('expanded agent status has its own line beneath identity', () => {
+  const sidebar = read('../Sidebar.jsx');
+  const status = read('../AgentRoomStatus.jsx');
+  expect(sidebar).toContain('<AgentRoomStatus room={room} />');
+  expect(sidebar).toContain('{collapsed && teamMode');
+  expect(status).toContain('mt-1 flex min-w-0 flex-wrap');
+  expect(status).not.toContain('ml-auto');
+ });
