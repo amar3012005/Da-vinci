@@ -35,6 +35,8 @@ const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const HARNESS_EMPLOYEE_PATH = '/hivemind/app/employee/harness';
 const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
 const HARNESS_RETURN_COOKIE = 'hm_harness_return';
+const OPEN_DOT_ENTRY_PATH = '/hivemind/app/employee/dots';
+const OPEN_DOT_ORIGIN = 'https://dots.singulancelabs.com';
 const PUBLIC_MARKETING_HOSTS = new Set([
   'singulancelabs.com',
   'www.singulancelabs.com',
@@ -137,6 +139,25 @@ function canonicalHarnessDocumentPath(pathname) {
   const [encoded, ...suffix] = pathname.slice(prefix.length).split('/');
   if (!encoded || suffix.length === 0 || suffix.some(segment => segment !== 'overview')) return null;
   return harnessDocumentPath(`${prefix}${encoded}`);
+}
+
+function openDotIdFromEntryPath(pathname) {
+  const prefix = `${OPEN_DOT_ENTRY_PATH}/`;
+  if (!pathname.startsWith(prefix)) return null;
+  const encodedId = pathname.slice(prefix.length);
+  if (!encodedId || encodedId.includes('/')) return null;
+  try {
+    const dotId = decodeURIComponent(encodedId);
+    return /^dot_[a-f0-9]{16}$/u.test(dotId) ? dotId : null;
+  } catch {
+    return null;
+  }
+}
+
+function isOpenDotEntryPath(pathname) {
+  return pathname === OPEN_DOT_ENTRY_PATH
+    || pathname === `${OPEN_DOT_ENTRY_PATH}/`
+    || pathname.startsWith(`${OPEN_DOT_ENTRY_PATH}/`);
 }
 
 function cookieValue(request, name) {
@@ -456,6 +477,21 @@ export default {
 
     if (pathname.startsWith('/hivemind/app/login')) {
       return Response.redirect(new URL('/hivemind/login', request.url), 302);
+    }
+    // Open Dot remains a separately authenticated frontend. This entry route
+    // avoids path-mounting its root APIs/assets under HIVE; the target app
+    // validates the shared hm_cp_session cookie and tenant binding itself.
+    if (isOpenDotEntryPath(pathname)) {
+      const isListingPath = pathname === OPEN_DOT_ENTRY_PATH || pathname === `${OPEN_DOT_ENTRY_PATH}/`;
+      const dotId = isListingPath ? null : openDotIdFromEntryPath(pathname);
+      if (!isListingPath && !dotId) return noIndex(new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } }));
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return noIndex(new Response(null, { status: 405, headers: { allow: 'GET, HEAD', 'cache-control': 'no-store' } }));
+      }
+      const incoming = new URL(request.url);
+      const target = new URL(dotId ? `/dots/${encodeURIComponent(dotId)}` : '/', OPEN_DOT_ORIGIN);
+      target.search = incoming.search;
+      return noIndex(new Response(null, { status: 302, headers: { location: target.href, 'cache-control': 'private, no-store' } }));
     }
     const canonicalHarnessPath = canonicalHarnessDocumentPath(pathname);
     if (canonicalHarnessPath !== null && canonicalHarnessPath !== pathname) {
