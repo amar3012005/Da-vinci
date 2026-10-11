@@ -1,4 +1,5 @@
 import { agentRoster } from '../shared/agent-roster';
+import { needsAgentHarnessNavigation } from '../pages/employee-harness-route';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 const CreateEmployeeDialog = React.lazy(() => import('./CreateEmployeeDialog'));
 const CompanyWorkspaceOverlay = React.lazy(() => import('../shared/CompanyWorkspaceOverlay'));
@@ -238,7 +239,7 @@ export default function Sidebar({
     setOpeningAgent(agent.id); setTeamError('');
     document.documentElement.dataset.agentRoomOpening = 'true';
     const previousStart = window.__HIVEMIND_START_AGENT__;
-    const needsNavigation = !/^\/hivemind\/app\/(overview|employee\/harness)(\/|$)/.test(location.pathname);
+    const needsNavigation = needsAgentHarnessNavigation(location.pathname, previousStart);
     if (needsNavigation) navigate('/hivemind/app/employee/harness');
     try {
       let start;
