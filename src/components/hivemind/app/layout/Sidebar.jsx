@@ -453,9 +453,10 @@ export default function Sidebar({
                           >
                             {item.runtime ? <strong className="block text-[24px] font-semibold leading-tight tracking-tight">Runtime</strong> : item.label}
                             {teamMode && (item.agent || item.runtime) && <small className="block font-normal text-[12px] text-[#737373] leading-snug mt-1 truncate capitalize">{item.runtime ? 'AI Chief of Staff' : String(item.agent?.role || item.agent?.job_title || item.agent?.role_archetype || item.agent?.roleArchetype || 'Team member').replace(/_/g, ' ')}</small>}
+                            {teamMode && (item.agent || item.runtime) && <AgentRoomStatus room={room} />}
                           </span>
                         )}
-                        {teamMode && (item.agent || item.runtime) && <AgentRoomStatus room={room} collapsed={collapsed} />}
+                        {collapsed && teamMode && (item.agent || item.runtime) && <AgentRoomStatus room={room} collapsed />}
                       </ItemLink>
                     )}
                     {/* Always-visible children sub-nav */}
