@@ -33,3 +33,10 @@ test('the embedded Dot route keeps team mode and restores its bound employee sel
   expect(sidebar).toContain('openDotEmployeeIdFromPath(location.pathname)');
   expect(sidebar).toContain('setSelectedAgent(agent.id);');
 });
+
+test('the embedded Dot iframe receives the full remaining HIVE viewport', () => {
+  const shell = read('../AppShell.jsx');
+  expect(shell).toContain('buildOpenDotEmbedTarget(location.pathname.slice(openDotPrefix.length), location.search)');
+  expect(shell).toContain('onOverview || onOpenDotWorkspace');
+  expect(shell).toContain('min-w-0 overflow-hidden');
+});
