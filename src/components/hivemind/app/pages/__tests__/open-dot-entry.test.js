@@ -1,4 +1,4 @@
-import { buildOpenDotEmbedTarget } from '../OpenDotEntry';
+import { buildOpenDotEmbedTarget } from '../../shared/open-dot-embed-target';
 
 const EMPLOYEE_ID = 'c14aaef5-24fb-46c2-806c-c3f6c1d88b07';
 
