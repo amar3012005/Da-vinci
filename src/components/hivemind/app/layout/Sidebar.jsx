@@ -1,7 +1,5 @@
 import { agentRoster } from '../shared/agent-roster';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-const CreateEmployeeDialog = React.lazy(() => import('./CreateEmployeeDialog'));
-const CompanyWorkspaceOverlay = React.lazy(() => import('../shared/CompanyWorkspaceOverlay'));
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
@@ -50,6 +48,9 @@ import apiClient from '../shared/api-client';
 import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
 import AgentAvatar from '../hyperagents/AgentAvatar';
+
+const CreateEmployeeDialog = React.lazy(() => import('./CreateEmployeeDialog'));
+const CompanyWorkspaceOverlay = React.lazy(() => import('../shared/CompanyWorkspaceOverlay'));
 
 /** Build nav sections, conditionally including admin items. Filtered by activeSection. */
 function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection = 'hivemind', team = [] }) {

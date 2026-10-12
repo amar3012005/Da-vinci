@@ -21,7 +21,6 @@ import { useAuth } from '../auth/AuthProvider';
 import OnboardingFlow from '../pages/Onboarding';
 import SelfHostSetup from '../pages/SelfHostSetup';
 import apiClient from '../shared/api-client';
-const ChatPanel = React.lazy(() => import('../pages/Chat').then(module => ({ default: module.ChatPanel })));
 import { Brain } from 'lucide-react';
 import { TeamProvider } from '../shared/team-context';
 import GlobalUploadStrip from './GlobalUploadStrip';
@@ -38,6 +37,7 @@ import EntityProfileModalHost from '../shared/EntityProfileModalHost';
 import { RETURNING_USER_LANDING } from '../shared/routes';
 import { newWorkspaceLanding } from '../auth/mobile-routing';
 import { isNativeApp } from '../shared/native-app';
+const ChatPanel = React.lazy(() => import('../pages/Chat').then(module => ({ default: module.ChatPanel })));
 
 /**
  * PlanLimitGate — listens for the global 'hm:plan-limit' window event
