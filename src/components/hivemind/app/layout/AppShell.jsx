@@ -37,6 +37,7 @@ import EntityProfileModalHost from '../shared/EntityProfileModalHost';
 import { RETURNING_USER_LANDING } from '../shared/routes';
 import { newWorkspaceLanding } from '../auth/mobile-routing';
 import { isNativeApp } from '../shared/native-app';
+import { buildOpenDotEmbedTarget } from '../shared/open-dot-embed-target';
 const ChatPanel = React.lazy(() => import('../pages/Chat').then(module => ({ default: module.ChatPanel })));
 
 /**
@@ -403,6 +404,9 @@ function AppShellContent() {
   // every other page keeps the FAB.
   const onMemories = location.pathname === '/hivemind/app/memories';
   const onOverview = /\/hivemind\/app(?:\/(?:overview|employee\/harness)(?:\/.*)?)?\/?$/.test(location.pathname);
+  const openDotPrefix = '/hivemind/app/employee/dots';
+  const onOpenDotWorkspace = (location.pathname === openDotPrefix || location.pathname.startsWith(`${openDotPrefix}/`))
+    && buildOpenDotEmbedTarget(location.pathname.slice(openDotPrefix.length), location.search) !== null;
   const onMeetingNotes = /\/hivemind\/app\/meeting-notes\/?$/.test(location.pathname);
 
   // Track sidebar state for dynamic margin
@@ -503,7 +507,7 @@ function AppShellContent() {
           {nativeChatRoom && overlayNavigation && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
-          <main data-native-chat-main={nativeChatRoom || undefined} className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          <main data-native-chat-main={nativeChatRoom || undefined} className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview || onOpenDotWorkspace ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 min-w-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>

@@ -36,7 +36,6 @@ const HARNESS_EMPLOYEE_PATH = '/hivemind/app/employee/harness';
 const HARNESS_ADMISSION_COOKIE = 'hm_harness_admitted';
 const HARNESS_RETURN_COOKIE = 'hm_harness_return';
 const OPEN_DOT_ENTRY_PATH = '/hivemind/app/employee/dots';
-const OPEN_DOT_ORIGIN = 'https://dots.singulancelabs.com';
 const PUBLIC_MARKETING_HOSTS = new Set([
   'singulancelabs.com',
   'www.singulancelabs.com',
@@ -141,17 +140,13 @@ function canonicalHarnessDocumentPath(pathname) {
   return harnessDocumentPath(`${prefix}${encoded}`);
 }
 
-function openDotIdFromEntryPath(pathname) {
+function isValidOpenDotEntryPath(pathname) {
+  if (pathname === OPEN_DOT_ENTRY_PATH || pathname === `${OPEN_DOT_ENTRY_PATH}/`) return true;
   const prefix = `${OPEN_DOT_ENTRY_PATH}/`;
-  if (!pathname.startsWith(prefix)) return null;
-  const encodedId = pathname.slice(prefix.length);
-  if (!encodedId || encodedId.includes('/')) return null;
-  try {
-    const dotId = decodeURIComponent(encodedId);
-    return /^dot_[a-f0-9]{16}$/u.test(dotId) ? dotId : null;
-  } catch {
-    return null;
-  }
+  if (!pathname.startsWith(prefix)) return false;
+  const suffix = pathname.slice(prefix.length);
+  return /^employee\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/?$/iu.test(suffix)
+    || /^dot_[a-f0-9]{16}\/?$/u.test(suffix);
 }
 
 function isOpenDotEntryPath(pathname) {
@@ -409,6 +404,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const openDotEntryPath = isOpenDotEntryPath(pathname);
     if (url.protocol === 'http:' && env.ENVIRONMENT !== 'development') {
       url.protocol = 'https:';
       return Response.redirect(url.href, 308);
@@ -478,20 +474,14 @@ export default {
     if (pathname.startsWith('/hivemind/app/login')) {
       return Response.redirect(new URL('/hivemind/login', request.url), 302);
     }
-    // Open Dot remains a separately authenticated frontend. This entry route
-    // avoids path-mounting its root APIs/assets under HIVE; the target app
-    // validates the shared hm_cp_session cookie and tenant binding itself.
-    if (isOpenDotEntryPath(pathname)) {
-      const isListingPath = pathname === OPEN_DOT_ENTRY_PATH || pathname === `${OPEN_DOT_ENTRY_PATH}/`;
-      const dotId = isListingPath ? null : openDotIdFromEntryPath(pathname);
-      if (!isListingPath && !dotId) return noIndex(new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } }));
+    // Canonical employee and legacy Dot URLs are HIVE SPA routes. Keep the
+    // bounded path/method checks here, then let the normal private shell path
+    // preserve the browser auth session and React's employee binding checks.
+    if (openDotEntryPath) {
+      if (!isValidOpenDotEntryPath(pathname)) return noIndex(new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } }));
       if (request.method !== 'GET' && request.method !== 'HEAD') {
         return noIndex(new Response(null, { status: 405, headers: { allow: 'GET, HEAD', 'cache-control': 'no-store' } }));
       }
-      const incoming = new URL(request.url);
-      const target = new URL(dotId ? `/dots/${encodeURIComponent(dotId)}` : '/', OPEN_DOT_ORIGIN);
-      target.search = incoming.search;
-      return noIndex(new Response(null, { status: 302, headers: { location: target.href, 'cache-control': 'private, no-store' } }));
     }
     const canonicalHarnessPath = canonicalHarnessDocumentPath(pathname);
     if (canonicalHarnessPath !== null && canonicalHarnessPath !== pathname) {
@@ -625,7 +615,7 @@ export default {
     // All HIVE pages are client routes of the same current document. Fetch
     // index explicitly instead of caching a separate SPA fallback per route.
     // Only content-hashed assets, never the authenticated app shell, are cached.
-    const appDocument = request.method === 'GET'
+    const appDocument = (request.method === 'GET' || (openDotEntryPath && request.method === 'HEAD'))
       && pathname.startsWith('/hivemind/')
       && !pathname.split('/').pop().includes('.');
     const assetRequest = appDocument
