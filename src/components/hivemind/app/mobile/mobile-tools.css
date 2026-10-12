@@ -94,3 +94,20 @@
 @media (prefers-reduced-transparency:reduce),(prefers-contrast:more) { [data-mobile-tools] { --mobile-glass:#fcfcf9; } [data-mobile-meeting-notes] nav,[data-upload-bulk-actions] { backdrop-filter:none; -webkit-backdrop-filter:none; } }
 html[data-native-reduce-transparency='true'] [data-mobile-tools],html[data-native-increase-contrast='true'] [data-mobile-tools] { --mobile-glass:#fcfcf9; }
 html[data-native-reduce-transparency='true'] [data-mobile-tools] nav,html[data-native-increase-contrast='true'] [data-mobile-tools] nav { backdrop-filter:none; -webkit-backdrop-filter:none; }
+[data-mobile-uploads] [data-upload-zone] { padding:28px 22px; border:1px solid rgba(220,218,209,.75); border-radius:26px; background:var(--mobile-glass); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); box-shadow:inset 0 1px 0 #fff,0 8px 28px rgba(35,36,44,.04); }
+[data-mobile-uploads] [data-upload-zone] > svg { color:#117dff; background:#117dff0d; box-sizing:content-box; padding:14px; border-radius:50%; }
+[data-mobile-uploads] [data-upload-zone] > p:first-of-type { font-size:16px; }
+[data-mobile-uploads] [data-upload-zone] > p { line-height:1.55; color:#626570; }
+[data-mobile-uploads] [data-upload-options] { flex-wrap:wrap; }
+[data-mobile-uploads] [data-upload-options] input { flex:1 1 180px; min-width:0; font-family:inherit; }
+[data-mobile-uploads] [data-upload-options] button { margin-left:auto; border-radius:22px; background:var(--mobile-glass); }
+[data-mobile-uploads] [data-upload-entry] { padding:14px 12px; border-radius:18px; background:var(--mobile-glass); box-shadow:inset 0 1px 0 #fff; }
+[data-mobile-uploads] [data-upload-entry] > span { white-space:normal; font-size:12px; color:#696b75; }
+[data-mobile-uploads] [data-upload-library] { padding:18px; border-radius:24px; background:linear-gradient(145deg,#fff,#fcfbf7); }
+[data-mobile-uploads] [data-upload-document-toolbar] { flex-wrap:wrap; gap:12px; }
+[data-mobile-uploads] [data-upload-document-toolbar] > div:first-child { flex:none; min-width:0; }
+[data-mobile-uploads] [data-upload-document-toolbar] h3 { font-size:18px; white-space:nowrap; }
+[data-mobile-uploads] [data-upload-document-toolbar] > div:last-child { flex:1 1 140px; max-width:100%; }
+[data-mobile-uploads] [data-upload-document-toolbar] select { width:100%; min-width:0; font-size:14px; }
+html[data-native-reduce-transparency='true'] [data-upload-zone],html[data-native-increase-contrast='true'] [data-upload-zone] { backdrop-filter:none; -webkit-backdrop-filter:none; }
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more) { [data-upload-zone] { backdrop-filter:none; -webkit-backdrop-filter:none; } }

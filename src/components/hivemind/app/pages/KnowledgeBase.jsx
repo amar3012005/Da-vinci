@@ -2171,7 +2171,7 @@ export default function KnowledgeBase() {
             e.target.value = '';
           }}
         />
-        <div
+        <div data-upload-zone role="button" tabIndex={0} aria-label={t('knowledgebase.chooseFiles', 'Choose files')} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fileInputRef.current?.click(); } }}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -2194,7 +2194,7 @@ export default function KnowledgeBase() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 mt-3">
+        <div data-upload-options className="flex items-center gap-2 mt-3">
           <Tag size={12} className="text-[#a3a3a3]" />
           <input
             type="text"
@@ -2252,7 +2252,7 @@ export default function KnowledgeBase() {
             const Icon = type.icon;
             return (
               <button
-                key={type.key}
+                data-upload-entry key={type.key}
                 type="button"
                 onClick={() => openTypedImport(type.accept)}
                 className="group text-left rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2.5 transition-all hover:border-[#117dff]/40 hover:bg-[#faf9f4] focus:outline-none focus:border-[#117dff]/60"
@@ -2566,8 +2566,8 @@ export default function KnowledgeBase() {
         )}
       </AnimatePresence>
 
-      <motion.div variants={fadeUp} initial="hidden" animate="visible" className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between mb-5">
+      <motion.div variants={fadeUp} initial="hidden" animate="visible" data-upload-library className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div data-upload-document-toolbar className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <FileText size={16} className="text-[#525252]" />
             <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">{t('knowledgebase.documents', 'Documents')}</h3>
