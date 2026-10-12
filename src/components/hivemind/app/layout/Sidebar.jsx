@@ -1,5 +1,5 @@
 import { agentRoster } from '../shared/agent-roster';
-import { hasOpenDotEmployeeBinding, openDotEmployeePath } from '../shared/open-dot-employee-route';
+import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../shared/open-dot-employee-route';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -182,7 +182,7 @@ export default function Sidebar({
   useEffect(() => setRosterPage(page => Math.min(page, Math.max(0, Math.ceil(team.length / 5) - 1))), [team.length]);
   const [rosterProfileOpen, setRosterProfileOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness') || location.pathname === '/hivemind/app/crm';
+  const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness') || location.pathname.startsWith('/hivemind/app/employee/dots') || location.pathname === '/hivemind/app/crm';
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [openingAgent, setOpeningAgent] = useState(null);
   const [teamError, setTeamError] = useState('');
@@ -235,12 +235,19 @@ export default function Sidebar({
     return () => { window.removeEventListener('hivemind:agent-selected', selection); window.removeEventListener('hivemind:agent-rooms', activity); };
   }, [user?.id, org?.id]);
 
+  useEffect(() => {
+    const routeEmployeeId = openDotEmployeeIdFromPath(location.pathname);
+    const boundEmployee = routeEmployeeId && team.find(employee => employee.id?.toLowerCase() === routeEmployeeId.toLowerCase() && openDotEmployeePath(employee));
+    setSelectedAgent(boundEmployee ? routeEmployeeId : null);
+  }, [location.pathname, team]);
+
   const openAgent = async (event, agent) => {
     event.preventDefault();
     if (openingAgent) return false;
     const openDotPath = openDotEmployeePath(agent);
     if (openDotPath) {
       setTeamError('');
+      setSelectedAgent(agent.id);
       navigate(openDotPath);
       return true;
     }

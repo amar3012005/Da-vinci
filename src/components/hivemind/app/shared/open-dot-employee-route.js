@@ -1,5 +1,11 @@
 const CANONICAL_EMPLOYEE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** Read only a canonical employee UUID from the in-app Dot route. */
+export function openDotEmployeeIdFromPath(pathname) {
+  const match = /^\/hivemind\/app\/employee\/dots\/employee\/([^/]+)\/?$/.exec(pathname || '');
+  return match && CANONICAL_EMPLOYEE_ID.test(match[1]) ? match[1] : null;
+}
+
 /** Return the in-app Dot workspace route for a bound canonical employee. */
 export function openDotEmployeePath(employee) {
   if (!employee || typeof employee.id !== 'string' || !CANONICAL_EMPLOYEE_ID.test(employee.id)) return null;

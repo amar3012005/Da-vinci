@@ -26,3 +26,10 @@ test('the app shell and sidebar share one collapse state', () => {
   expect(status).toContain('mt-1 flex min-w-0 flex-wrap');
   expect(status).not.toContain('ml-auto');
  });
+
+test('the embedded Dot route keeps team mode and restores its bound employee selection', () => {
+  const sidebar = read('../Sidebar.jsx');
+  expect(sidebar).toContain("location.pathname.startsWith('/hivemind/app/employee/dots')");
+  expect(sidebar).toContain('openDotEmployeeIdFromPath(location.pathname)');
+  expect(sidebar).toContain('setSelectedAgent(agent.id);');
+});

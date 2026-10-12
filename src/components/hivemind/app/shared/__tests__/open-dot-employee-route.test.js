@@ -1,4 +1,4 @@
-import { hasOpenDotEmployeeBinding, openDotEmployeePath } from '../open-dot-employee-route';
+import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../open-dot-employee-route';
 
 const readyEmployee = (overrides = {}) => ({
   id: 'c14aaef5-24fb-46c2-806c-c3f6c1d88b07',
@@ -18,6 +18,12 @@ test('routes a ready canonical employee in-app by its unchanged HIVE employee ID
   const employee = readyEmployee();
   expect(openDotEmployeePath(employee)).toBe('/hivemind/app/employee/dots/employee/c14aaef5-24fb-46c2-806c-c3f6c1d88b07');
   expect(employee).toMatchObject({ id: 'c14aaef5-24fb-46c2-806c-c3f6c1d88b07', name: 'Maya', role: 'Research lead', avatar_url: '/maya.png' });
+});
+
+test('restores the exact bound employee identity from a direct Dot route', () => {
+  expect(openDotEmployeeIdFromPath('/hivemind/app/employee/dots/employee/c14aaef5-24fb-46c2-806c-c3f6c1d88b07'))
+    .toBe('c14aaef5-24fb-46c2-806c-c3f6c1d88b07');
+  expect(openDotEmployeeIdFromPath('/hivemind/app/employee/dots/employee/runtime')).toBeNull();
 });
 
 test('accepts the lifecycle response camel-case metadata shape', () => {
