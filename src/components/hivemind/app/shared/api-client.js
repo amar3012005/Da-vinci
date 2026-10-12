@@ -576,8 +576,17 @@ class HiveMindApiClient {
 
   /** Company operating dashboard (HyperAgents hero) — persisted onboarding state. */
   async hyperCompany() {
-    const { data } = await this.controlPlane.get('/v1/hyper/company');
-    return data;
+    try {
+      const { data } = await this.controlPlane.get('/v1/hyper/company');
+      return data;
+    } catch (error) {
+      // An authenticated workspace without onboarding is a valid empty state.
+      // Preserve every other API error, including unrelated 404 responses.
+      if (error.response?.status === 404 && error.response?.data?.onboarded === false) {
+        return { onboarded: false };
+      }
+      throw error;
+    }
   }
 
   hyperCompanyWebArtifactPreviewUrl(artifactId) {

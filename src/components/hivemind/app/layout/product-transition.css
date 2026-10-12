@@ -1,8 +1,7 @@
-/* BRAIN and OS use separate native roots. Same-origin document transitions
-   animate their sidebars during the clean handoff; unsupported browsers keep
-   the ordinary navigation. */
+/* Product roots navigate normally. Cross-document transitions can abort when
+   the embedded chat changes the viewport during authentication or handoff. */
 @view-transition {
-  navigation: auto;
+  navigation: none;
 }
 
 @keyframes hm-product-sidebar-out {
