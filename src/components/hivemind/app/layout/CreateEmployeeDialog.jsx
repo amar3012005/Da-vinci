@@ -11,7 +11,7 @@ const labels = { head: 'Hair', body: 'Top', bottom: 'Bottom', item: 'Accessory',
 const accents = ['117dff', '8755d8', 'e9a23b', 'e56c8b', '3f9d82', '667383'];
 
 function Character({ appearance, size, title, selections }) {
-  return <Avatar assets={humation1} seed={appearance.seed} selections={selections || appearance.selections} colors={appearance.colors} background={appearance.background} crop={appearance.crop} size={size} title={title} />;
+  return <Avatar assets={humation1} seed={appearance.seed} selections={selections || appearance.selections} colors={appearance.colors} background={appearance.background} crop={appearance.crop} size={size} title={title} {...(typeof size === 'string' ? { height: undefined, style: { height: 'auto' } } : {})} />;
 }
 
 export default function CreateEmployeeDialog({ onClose, onCreated }) {
