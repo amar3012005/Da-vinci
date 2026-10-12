@@ -23,6 +23,12 @@ export function createNativeApiAdapter(plugin, { coreProxy = false } = {}) {
     const binary = ['blob', 'arraybuffer'].includes(config.responseType);
     const result = await plugin.request({ url: url.href, method: String(config.method || 'GET').toUpperCase(), headers, ...bodyOptions, responseType: binary ? 'base64' : 'text', authorize: mapped !== '/auth/email/config' });
     if (config.signal?.aborted) throw new axios.CanceledError('canceled');
+    // Expired native sessions must return to authenticated bootstrap instead
+    // of leaving an old account/roster visible behind generic request errors.
+    // Bootstrap verifies the session; a route-specific 401 alone cannot log out.
+    if (result.status === 401 && mapped.startsWith('/v1/') && mapped !== '/v1/bootstrap' && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('hm:native-session-check'));
+    }
     let data;
     if (binary) {
       const bytes = base64ToBytes(result.data);

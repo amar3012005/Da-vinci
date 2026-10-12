@@ -28,3 +28,16 @@ test('native HTTP failure preserves Axios status and a canceled request is not s
   await expect(adapter({url:'/v1/bootstrap',signal:{aborted:true}})).rejects.toThrow('canceled');
   expect(plugin.request).toHaveBeenCalledTimes(1);
 });
+
+test('private API 401 requests session verification without looping on bootstrap or sign-in', async () => {
+  const dispatchEvent = jest.fn();
+  global.window = { dispatchEvent };
+  try {
+    const adapter = createNativeApiAdapter({ request: async () => ({ status: 401, data: '{}' }) });
+    for (const url of ['/v1/connectors/composio/toolkits', '/v1/bootstrap', '/auth/mobile/exchange']) {
+      await expect(adapter({ url })).rejects.toMatchObject({ response: { status: 401 } });
+    }
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe('hm:native-session-check');
+  } finally { delete global.window; }
+});

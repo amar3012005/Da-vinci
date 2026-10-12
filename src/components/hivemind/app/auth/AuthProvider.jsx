@@ -111,6 +111,18 @@ export function AuthProvider({ children }) {
   }, [runBootstrap]);
 
   useEffect(() => {
+    if (!isNativeApp() || authState !== 'signed_in') return undefined;
+    let checking = false;
+    const checkSession = () => {
+      if (checking) return;
+      checking = true;
+      void runBootstrap().finally(() => { checking = false; });
+    };
+    window.addEventListener('hm:native-session-check', checkSession);
+    return () => window.removeEventListener('hm:native-session-check', checkSession);
+  }, [authState, runBootstrap]);
+
+  useEffect(() => {
     if (authState !== 'control_plane_unreachable') return undefined;
     const retry = () => { void runBootstrap(); };
     window.addEventListener('online', retry);
