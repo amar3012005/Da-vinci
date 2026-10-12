@@ -1,3 +1,4 @@
+import { awaitAccountErasure } from './account-erasure';
 import axios from 'axios';
 import { isNativeApp } from './native-app';
 import { createNativeApiAdapter } from './native-api-adapter';
@@ -199,6 +200,7 @@ class HiveMindApiClient {
   }
 
   clearApiKey() {
+    this._accountErasurePending = null;
     this._apiKey = null;
     this._nativeAuthenticated = false;
     delete this.core.defaults.headers['X-API-Key'];
@@ -657,14 +659,26 @@ class HiveMindApiClient {
 
   async logout() {
     await this.controlPlane.post('/auth/logout');
+    this._accountErasurePending = null;
   }
 
-  async deleteAccount(confirm = 'DELETE') {
-    const { data } = await this.controlPlane.delete(ACCOUNT_DELETE_ENDPOINT, {
-      data: { confirm },
-      timeout: 300000,
-    });
-    return data;
+  async deleteAccount(confirm = 'DELETE', { onStatus } = {}) {
+    let initial = this._accountErasurePending;
+    if (!initial) {
+      const { data } = await this.controlPlane.delete(ACCOUNT_DELETE_ENDPOINT, {
+        data: { confirm }, timeout: 60000,
+      });
+      initial = data;
+      if (data?.operationId && data?.receiptToken) this._accountErasurePending = data;
+    }
+    const result = await awaitAccountErasure(initial, async (operationId, receiptToken) => {
+      const { data } = await this.controlPlane.get('/v1/account/erasure', {
+        params: { operationId }, headers: { Authorization: `Erasure ${receiptToken}` }, timeout: 15000,
+      });
+      return data;
+    }, { onStatus });
+    this._accountErasurePending = null;
+    return result;
   }
 
   // ─── Control Plane: Organizations ────────────────────────────

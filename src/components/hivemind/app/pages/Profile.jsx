@@ -861,7 +861,9 @@ function DataPrivacySection() {
     try {
       setDeleteProgress(20);
       setDeleteStep(t('profile.deletingAccountData', 'Deleting account data...'));
-      await apiClient.deleteAccount('DELETE');
+      await apiClient.deleteAccount('DELETE', { onStatus: () => {
+        setDeleteStep('Reconciling stored records. Your account stays active until cleanup is verified.');
+      } });
       apiClient.clearApiKey();
       setDeleteProgress(100);
       setDeleteStep(t('profile.deletingRedirecting', 'Account deleted. Redirecting...'));
