@@ -144,7 +144,7 @@ function trustedMcpOAuthReturnTo(search) {
 }
 
 export default function LoginPage() {
-  const { isAuthenticated, isUnreachable, loading, login, org, user, needsOnboarding } = useAuth();
+  const { isAuthenticated, isUnreachable, loading, login, org, user, needsOnboarding, refresh } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [emailConfig, setEmailConfig] = useState({ mode: 'off', enabled: false, email_only: false, turnstile_site_key: null });
@@ -736,6 +736,7 @@ export default function LoginPage() {
                       <div>
                         <p className="text-[#dc2626] text-xs font-semibold font-['Space_Grotesk']">Control plane unavailable</p>
                         <p className="text-[#dc2626]/60 text-[11px] mt-0.5">Unable to reach the authentication service. Please try again in a moment.</p>
+                        <button type="button" onClick={() => refresh()} className="mt-2 text-xs font-semibold underline">Try again</button>
                       </div>
                       {enterpriseInvitation && (
                         <div className="border border-[#117dff]/20 bg-[#117dff]/[0.05] rounded-[8px] px-3 py-2.5 text-[12px] text-[#255d9f]">

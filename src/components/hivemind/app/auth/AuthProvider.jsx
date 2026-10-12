@@ -111,6 +111,17 @@ export function AuthProvider({ children }) {
   }, [runBootstrap]);
 
   useEffect(() => {
+    if (authState !== 'control_plane_unreachable') return undefined;
+    const retry = () => { void runBootstrap(); };
+    window.addEventListener('online', retry);
+    window.addEventListener('focus', retry);
+    return () => {
+      window.removeEventListener('online', retry);
+      window.removeEventListener('focus', retry);
+    };
+  }, [authState, runBootstrap]);
+
+  useEffect(() => {
     if (!isNativeApp()) return undefined;
     let cancelled = false; let dispose;
     bindNativeAuthCallbacks(runBootstrap, () => { setAuthState(current => current === 'signed_in' ? current : 'signed_out'); })

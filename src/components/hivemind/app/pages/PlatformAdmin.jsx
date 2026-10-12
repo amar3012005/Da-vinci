@@ -437,6 +437,8 @@ function CommercialManager() {
   const [savingPlan, setSavingPlan] = useState(false);
   const [promotions, setPromotions] = useState([]);
   const [pilots, setPilots] = useState([]);
+  const [editingPilot, setEditingPilot] = useState(null);
+  const [savingPilot, setSavingPilot] = useState(false);
   const [redemptions, setRedemptions] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [referralCampaigns, setReferralCampaigns] = useState([]);
@@ -1901,32 +1903,24 @@ function CommercialManager() {
                     {pilot.version?.account_type} · ends {when(pilot.ends_at)}
                   </p>
                 </div>
-                <button
-                  onClick={() => {
-                    const ends_at = window.prompt(
-                      "New expiry (ISO 8601)",
-                      pilot.ends_at || "",
-                    );
-                    if (ends_at)
-                      apiClient
-                        .amendPlatformPilot(pilot.grant_id, {
-                          ends_at,
-                          reason: "admin_extension",
-                        })
-                        .then(load)
-                        .catch((err) =>
-                          setError(err.response?.data?.error || err.message),
-                        );
-                  }}
-                  className="border border-[#d8d6cf] px-3 py-1.5"
-                >
-                  Extend
-                </button>
+                <button type="button" onClick={() => setEditingPilot(pilot)} className="border border-[#d8d6cf] px-3 py-1.5">Edit plan & expiry</button>
               </div>
             ))}
           </div>
         </>
       )}
+      {editingPilot && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><form key={editingPilot.grant_id} className="w-full max-w-lg space-y-4 rounded-xl bg-white p-5" onSubmit={async event => {
+        event.preventDefault(); if (savingPilot) return;
+        const data = new FormData(event.currentTarget); setSavingPilot(true); setError("");
+        try { await apiClient.amendPlatformPilot(editingPilot.grant_id, {base_plan:data.get("base_plan"), ends_at:data.get("ends_at") || null, reason:data.get("reason")}); setEditingPilot(null); await load(); setNotice("New entitlement version saved."); }
+        catch (err) {setError(err.response?.data?.error || err.message);}
+        finally {setSavingPilot(false);}
+      }}><h3 className="font-semibold">Edit {editingPilot.organization?.name || "organization"}</h3><p className="text-sm text-[#737373]">Creates a new entitlement version. Existing usage and history remain saved. Seat and credit overrides are configured in Organizations.</p>
+        <label className="block text-sm">Plan<select name="base_plan" defaultValue={editingPilot.version?.plan || "enterprise"} disabled={savingPilot} className="mt-1 block w-full border p-2">{["free","pro","scale","enterprise"].map(plan => <option key={plan} value={plan}>{plan}</option>)}</select></label>
+        <label className="block text-sm">Expiry (ISO 8601; blank for no expiry)<input name="ends_at" defaultValue={editingPilot.ends_at || ""} disabled={savingPilot} className="mt-1 block w-full border p-2"/></label>
+        <label className="block text-sm">Reason<input name="reason" required minLength={3} maxLength={80} disabled={savingPilot} className="mt-1 block w-full border p-2"/></label>
+        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}<div className="flex gap-3"><button disabled={savingPilot} className="bg-[#117dff] px-3 py-2 text-white">{savingPilot ? "Saving…" : "Save new version"}</button><button type="button" disabled={savingPilot} onClick={() => setEditingPilot(null)} className="border px-3 py-2">Cancel</button></div>
+      </form></div>}
       {tab === "redemptions" && (
         <div className="mt-5 divide-y divide-[#e5e2dc]">
           {redemptions.map((row) => (
@@ -1947,7 +1941,7 @@ function CommercialManager() {
 const ADMIN_NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "users", label: "Users", icon: Users },
-  { id: "organizations", label: "Organizations", icon: Users },
+  { id: "organizations", label: "Organizations · team & credits", icon: Users },
   { id: "plans", label: "Plans & credits", icon: BarChart3 },
   { id: "promotions", label: "Promotions", icon: Gift },
   { id: "invitations", label: "Invitations", icon: Send },
