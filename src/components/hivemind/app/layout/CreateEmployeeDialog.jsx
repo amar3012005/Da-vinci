@@ -17,6 +17,7 @@ function Character({ appearance, size, title, selections }) {
 export default function CreateEmployeeDialog({ onClose, onCreated }) {
   const [creationKey] = useState(() => window.crypto.randomUUID());
   const [name, setName] = useState('');
+  const [needsComputerAccess, setNeedsComputerAccess] = useState(false);
   const [appearance, setAppearance] = useState(() => createEmployeeAppearance(creationKey, { colors: { clothes: LANE_META.Communicator.color } }));
   const [customizing, setCustomizing] = useState(false);
   const [slot, setSlot] = useState('head');
@@ -41,8 +42,11 @@ export default function CreateEmployeeDialog({ onClose, onCreated }) {
       let employee = created;
       if (!employee) {
         // Retry the exact submitted draft after an unknown connection outcome.
-        submitted.current ||= { operation: 'create', creation_key: creationKey, name: name.trim(), lifecycle: 'durable', appearance };
-        const result = await apiClient.manageNativeEmployeeLifecycle(submitted.current);
+        submitted.current ||= { needsComputerAccess, request: { operation: 'create', creation_key: creationKey, name: name.trim(), lifecycle: 'durable', appearance } };
+        const request = submitted.current.request;
+        const result = submitted.current.needsComputerAccess
+          ? await apiClient.createRegisteredOpenDotEmployee({ creation_key: request.creation_key, name: request.name, appearance: request.appearance })
+          : await apiClient.manageNativeEmployeeLifecycle(request);
         if (!result?.employee?.id) throw new Error(result?.message || result?.error || 'Employee creation was not confirmed.');
         employee = result.employee;
         setCreated(employee);
@@ -86,6 +90,10 @@ export default function CreateEmployeeDialog({ onClose, onCreated }) {
                 className={`aspect-square overflow-hidden rounded-[14px] border-2 bg-white ${selected ? 'border-[#6693d9]' : 'border-transparent'} disabled:opacity-50`}><Character appearance={candidate} size="100%" /></button>;
             })}
           </div>
+          <label className="mt-4 flex items-center justify-center gap-2 text-[13px] text-[#484848]">
+            <input type="checkbox" checked={needsComputerAccess} disabled={locked} onChange={event => setNeedsComputerAccess(event.target.checked)} className="h-4 w-4 accent-[#141414]" />
+            Needs computer access
+          </label>
           <button type="button" disabled={locked} onClick={() => setCustomizing(value => !value)} className="mt-4 w-full text-center text-[12px] font-medium text-[#666] underline underline-offset-4">{customizing ? 'Done customizing' : 'Customize character'}</button>
           {customizing && <div className="mt-4 border-t border-[#e5e5e1] pt-4">
             <div className="flex flex-wrap justify-center gap-1" role="group" aria-label="Character parts">{APPEARANCE_SLOTS.map(id => <button key={id} disabled={locked} type="button" onClick={() => setSlot(id)} aria-pressed={slot === id} className={`rounded-full px-3 py-1.5 text-[11px] ${slot === id ? 'bg-[#e4eaf5] text-[#284c82]' : 'text-[#666]'}`}>{labels[id]}</button>)}</div>
