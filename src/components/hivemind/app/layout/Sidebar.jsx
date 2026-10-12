@@ -1,5 +1,5 @@
 import { agentRoster } from '../shared/agent-roster';
-import { hasOpenDotEmployeeBinding, openDotEmployeeHref } from '../shared/open-dot-employee-route';
+import { hasOpenDotEmployeeBinding, openDotEmployeePath } from '../shared/open-dot-employee-route';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -42,6 +42,7 @@ import {
   Clock,
   PhoneCall,
   Database,
+  Monitor,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
@@ -237,10 +238,10 @@ export default function Sidebar({
   const openAgent = async (event, agent) => {
     event.preventDefault();
     if (openingAgent) return false;
-    const openDotHref = openDotEmployeeHref(agent);
-    if (openDotHref) {
+    const openDotPath = openDotEmployeePath(agent);
+    if (openDotPath) {
       setTeamError('');
-      window.location.assign(openDotHref);
+      navigate(openDotPath);
       return true;
     }
     if (hasOpenDotEmployeeBinding(agent)) {
@@ -464,7 +465,10 @@ export default function Sidebar({
                               isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#333333] group-hover:text-[#0a0a0a]'
                             }`}
                           >
-                            {item.runtime ? <strong className="block text-[24px] font-semibold leading-tight tracking-tight">Runtime</strong> : item.label}
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <span className="truncate">{item.runtime ? <strong className="block text-[24px] font-semibold leading-tight tracking-tight">Runtime</strong> : item.label}</span>
+                              {item.agent && openDotEmployeePath(item.agent) && <Monitor size={13} strokeWidth={1.8} aria-label="Open Dot workspace" title="Open Dot workspace" className="shrink-0 text-[#737373]" />}
+                            </span>
                             {teamMode && (item.agent || item.runtime) && <small className="block font-normal text-[12px] text-[#737373] leading-snug mt-1 truncate capitalize">{item.runtime ? 'AI Chief of Staff' : String(item.agent?.role || item.agent?.job_title || item.agent?.role_archetype || item.agent?.roleArchetype || 'Team member').replace(/_/g, ' ')}</small>}
                             {teamMode && (item.agent || item.runtime) && <AgentRoomStatus room={room} />}
                           </span>

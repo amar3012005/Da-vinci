@@ -1,8 +1,8 @@
-const OPEN_DOT_EMPLOYEE_ORIGIN = 'https://dots.singulancelabs.com';
+const CANONICAL_EMPLOYEE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/** Return the authenticated Dot entry only for a canonical employee whose binding is ready. */
-export function openDotEmployeeHref(employee) {
-  if (!employee || typeof employee.id !== 'string' || !employee.id || employee.id === 'runtime') return null;
+/** Return the in-app Dot workspace route for a bound canonical employee. */
+export function openDotEmployeePath(employee) {
+  if (!employee || typeof employee.id !== 'string' || !CANONICAL_EMPLOYEE_ID.test(employee.id)) return null;
 
   const policyRules = employee.policy_rules ?? employee.policyRules;
   const binding = policyRules?.open_dot_employee;
@@ -14,9 +14,7 @@ export function openDotEmployeeHref(employee) {
     && employee.status !== 'paused'
     && (!lifecycle || lifecycle.phase === 'active');
 
-  return ready
-    ? `${OPEN_DOT_EMPLOYEE_ORIGIN}/employees/${encodeURIComponent(employee.id)}`
-    : null;
+  return ready ? `/hivemind/app/employee/dots/employee/${employee.id}` : null;
 }
 
 /** Versioned Open Dot metadata claims this identity even while its route is provisioning. */
