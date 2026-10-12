@@ -231,10 +231,10 @@ export default function MobileConnectors() {
 
   return (
     <MobileShell title="Connectors" rightAction={liveCount}>
-      <div data-mobile-tools>
+      <div data-mobile-tools data-mobile-connectors>
       <div className="px-4 pt-2 pb-1">
         <h1 className="text-[21px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Connectors</h1>
-        <p className="mt-1 text-[12px] leading-relaxed text-[#737373]">Connect your apps to let HIVEMIND preserve context and also perform automations.</p>
+        <p className="mt-1 text-[12px] leading-relaxed text-[#737373]">Bring your apps and company context together.</p>
       </div>
 
       <details className="mx-3 my-3 rounded-xl border border-[#e3e0db] bg-white">
@@ -287,6 +287,7 @@ export default function MobileConnectors() {
             const disconnecting = disconnectingSlug === toolkit.slug;
             return (
               <motion.div
+                data-connector-card
                 key={toolkit.slug}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -297,7 +298,7 @@ export default function MobileConnectors() {
                   <button type="button" aria-label={`Details for ${toolkit.name}`} onClick={() => setDetailToolkit(toolkit)} className="min-w-0 flex-1 flex items-center gap-2.5 text-left"><LogoMark toolkit={toolkit} connected={connected} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[13px] font-bold leading-tight line-clamp-1">{toolkit.name}</span>
+                      <span className="text-[15px] font-semibold leading-tight line-clamp-1">{toolkit.name}</span>
                       <span className="flex items-center gap-1 text-[9.5px] font-mono text-[#a3a3a3] flex-shrink-0">
                         <Wrench size={10} /> {toolkit.toolsCount}
                         {toolkit.triggersCount > 0 && <><Zap size={10} className="ml-1" />{toolkit.triggersCount}</>}
@@ -309,7 +310,7 @@ export default function MobileConnectors() {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDisconnect(toolkit); }}
                       disabled={disconnecting}
-                      className="ml-1 inline-flex min-h-[44px] items-center gap-1 rounded-lg border border-[#e3e0db] bg-white px-2.5 text-[10.5px] font-bold text-[#6f6b63] active:scale-[0.97] disabled:opacity-50 flex-shrink-0"
+                      className="ml-1 inline-flex min-h-[44px] items-center gap-1 rounded-lg border border-[#e3e0db] bg-white px-2.5 text-[12px] font-semibold text-[#6f6b63] active:scale-[0.97] disabled:opacity-50 flex-shrink-0"
                     >
                       {disconnecting ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} className="text-emerald-500" />} Connected
                     </button>
@@ -319,7 +320,7 @@ export default function MobileConnectors() {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleConnect(toolkit); }}
                       disabled={connecting}
-                      className="ml-1 inline-flex min-h-[44px] items-center gap-1 rounded-lg bg-[#1a1a17] px-2.5 text-[10.5px] font-bold text-white active:scale-[0.97] disabled:opacity-50 flex-shrink-0"
+                      className="ml-1 inline-flex min-h-[44px] items-center gap-1 rounded-lg bg-[#1a1a17] px-2.5 text-[12px] font-semibold text-white active:scale-[0.97] disabled:opacity-50 flex-shrink-0"
                     >
                       {connecting ? <Loader2 size={12} className="animate-spin" /> : <Plug size={12} />} Connect
                     </button>

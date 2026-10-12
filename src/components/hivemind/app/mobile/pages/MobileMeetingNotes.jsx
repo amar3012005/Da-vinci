@@ -340,7 +340,7 @@ export default function MobileMeetingNotes() {
       return /^\/hivemind\/app\/(?:overview|employee\/harness)(?:\/(?:new|session\/[^/]+))?\/?$/u.test(target || '')
         ? <a href={target} className="min-h-[44px] inline-flex items-center text-[13px] text-[#117dff]">Back to chat</a> : null;
     })()}>
-      <div data-mobile-tools>
+      <div data-mobile-tools data-mobile-meeting-notes>
       <div className="px-4 pt-2 pb-10">
         <div className="flex items-center gap-1.5 text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1">
           <MeetingNotesIcon size={12} /> HIVEMIND
@@ -348,7 +348,7 @@ export default function MobileMeetingNotes() {
         <h1 className="text-[21px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">AI Meeting Notes</h1>
         <p className="mt-1 text-[12px] leading-relaxed text-[#737373]">Record, transcribe and extract insights — saved straight into your memory.</p>
 
-        {/* stat row — all five in one row, shrunk to fit */}
+        <details className="mobile-meeting-activity"><summary>Meeting activity</summary>
         <div data-meeting-stats className="mt-4 grid grid-cols-2 gap-2">
           <StatCard icon={MeetingNotesIcon} value={stats.total} label="Meetings" color="#117dff" />
           <StatCard icon={CalendarDays} value={stats.thisWeek} label="This week" color="#0A66C2" />
@@ -356,6 +356,8 @@ export default function MobileMeetingNotes() {
           <StatCard icon={Users} value={stats.multi} label="Multi-speaker" color="#f59e0b" />
           <StatCard icon={Clock} value={stats.last} label="Last meeting" color="#0a0a0a" />
         </div>
+
+        </details>
 
         {/* tabs */}
         <nav className="mt-4 border-b border-[#e3e0db] flex items-center gap-0.5">
@@ -373,13 +375,13 @@ export default function MobileMeetingNotes() {
         </nav>
 
         {tab === 'record' && (
-          <section className="mt-4 bg-white border border-[#e3e0db] rounded-[10px] p-4">
+          <section data-meeting-record className="mt-4 bg-white border border-[#e3e0db] rounded-[10px] p-4">
             <div className="w-9 h-9 rounded-[8px] bg-blue-50 border border-blue-100 grid place-items-center">
               <Mic size={17} className="text-[#117dff]" />
             </div>
             <h2 className="mt-3 text-[16px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Capture the meeting, keep the decisions</h2>
             <p className="mt-1.5 text-[12px] leading-relaxed text-[#737373]">
-              Add the people and context once. The recorder preserves transcript checkpoints, builds the report, and saves searchable meeting memories.
+              Capture the conversation, keep the decisions and save the next steps.
             </p>
             {qrec.status === 'interrupted' && (
               <div className="mt-3 rounded-[8px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">

@@ -2849,7 +2849,7 @@ export default function KnowledgeBase() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.18 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-white border border-[#e3e0db] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] px-4 py-2.5"
+            data-upload-bulk-actions className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-white border border-[#e3e0db] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] px-4 py-2.5"
           >
             <span className="text-[12px] font-mono text-[#0a0a0a]">
               <span className="font-bold text-[#117dff]">{bulkSelected.size}</span> selected
