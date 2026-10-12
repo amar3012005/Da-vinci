@@ -161,3 +161,18 @@
 }
 
 .mobile-roster-grid [data-agent-room-link] { position:relative; }
+
+/* Keep compact phone controls comfortably tappable without changing their icons. */
+@media (max-width:600px) {
+  .mobile-roster-top button,
+  .mobile-roster-header-utilities > div > button,
+  .mobile-unified-heading .mobile-roster-shortcuts > button,
+  .mobile-unified-heading .mobile-roster-shortcuts > a,
+  .mobile-unified-heading .mobile-roster-shortcuts [data-hivemind-artifacts-seat] button,
+  .employee-mobile-roster-close {
+    min-width:44px;
+    min-height:44px;
+    touch-action:manipulation;
+  }
+  .mobile-roster-intro { -webkit-overflow-scrolling:touch; }
+}

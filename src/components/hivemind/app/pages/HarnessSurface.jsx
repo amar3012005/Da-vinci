@@ -1,3 +1,4 @@
+import { establishHarnessSession } from '../shared/harness-admission';
 import { parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } from '../shared/native-harness-seat';
 import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../shared/api-client';
@@ -24,7 +25,6 @@ function harnessRuntime() {
 function fetchHarness(input, init) { return harnessRuntime()?.fetch(input, init) || fetch(input, init); }
 
 const HARNESS_BOOT_PATH = '/api/hivemind/boot';
-const HARNESS_SESSION_PATH = '/api/hivemind/session/establish';
 const HARNESS_SHELL_PATH = '/assets/harness-shell.js';
 const HARNESS_LIVENESS_INTERVAL_MS = 60000;
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
@@ -233,25 +233,6 @@ function isFreshHarnessRoute() {
     || window.location.pathname === `${HARNESS_EMPLOYEE_PATH}/new`;
 }
 
-async function establishHarnessSession({ fresh = false } = {}) {
-  const path = fresh ? '/v1/harness-chat/new-session' : '/v1/harness-chat/bootstrap';
-  const { data: admission } = await measureHarnessBoot('admission-ticket', () => apiClient.controlPlane.post(path, {}));
-  // The rollout is deliberately binary.  A user outside the Harness cohort
-  // must stay on the existing LangGraph conversation surface, including when
-  // they arrive through a stale /overview/new or /overview/session/:id URL.
-  if (admission?.mode === 'legacy') return { mode: 'legacy' };
-  if (admission?.mode !== 'harness') throw new Error('HIVEMIND could not open this session.');
-  if (typeof admission.ticket !== 'string' || admission.ticket.length === 0) {
-    throw new Error('HIVEMIND could not authorize this session.');
-  }
-  const established = await measureHarnessBoot('session-cookie', () => fetchHarness(HARNESS_SESSION_PATH, {
-    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ ticket: admission.ticket, request_id: crypto.randomUUID() }),
-  }));
-  if (!established.ok) throw new Error('Could not open your secure HIVEMIND session.');
-  window.dispatchEvent(new Event('hivemind:session-established'));
-  return { mode: 'harness' };
-}
 
 /**
  * Direct host for the complete native Harness browser graph. Da-vinci owns
@@ -359,7 +340,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       // for both before mounting, avoiding flashes of unstyled conversation.
       await Promise.all([
         measureHarnessBoot('styles', () => Promise.all(styles.map(runtime ? runtime.loader.loadStyle : loadHarnessStylesheet))),
-        measureHarnessBoot('ordered-injections', () => installedRevision !== bootRevision ? applyHarnessInjections(normalizeHarnessInjections(boot.injections, window.location.origin), runtime?.loader) : Promise.resolve()),
+        measureHarnessBoot('ordered-injections', () => installedRevision !== bootRevision ? applyHarnessInjections(normalizeHarnessInjections(boot.injections, runtime ? 'https://next.singulancelabs.com' : window.location.origin), runtime?.loader) : Promise.resolve()),
         measureHarnessBoot('native-module-prepare', () => runtime ? runtime.loader.prepareModule(shellUrl) : Promise.resolve()),
       ]);
       if (installedRevision !== bootRevision) window.__HIVE_HARNESS_BOOT_REV__ = bootRevision;
@@ -370,7 +351,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       // origin while retaining any shell-owned authenticated fetch carrier.
       const appOrigin = window.location.origin;
       const existingTransport = window.__DSH_TRANSPORT__ || {};
-      window.__DSH_TRANSPORT__ = {
+      if (!runtime) window.__DSH_TRANSPORT__ = {
         ...existingTransport,
         fetch: selectHarnessFetch(appOrigin, existingTransport.fetch, window.fetch.bind(window)),
         streamBaseUrl: existingTransport.streamBaseUrl ?? appOrigin,

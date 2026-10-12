@@ -1,3 +1,4 @@
+import { needsAgentHarnessNavigation } from '../pages/employee-harness-route';
 import { agentRoster } from '../shared/agent-roster';
 import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../shared/open-dot-employee-route';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -258,7 +259,7 @@ export default function Sidebar({
     setOpeningAgent(agent.id); setTeamError('');
     document.documentElement.dataset.agentRoomOpening = 'true';
     const previousStart = window.__HIVEMIND_START_AGENT__;
-    const needsNavigation = !/^\/hivemind\/app\/(overview|employee\/harness)(\/|$)/.test(location.pathname);
+    const needsNavigation = needsAgentHarnessNavigation(location.pathname, previousStart);
     if (needsNavigation) navigate('/hivemind/app/employee/harness');
     try {
       let start;
