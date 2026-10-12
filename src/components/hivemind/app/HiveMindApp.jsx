@@ -12,6 +12,7 @@ import { TeamProvider } from './shared/team-context';
 const TaraConfig = React.lazy(() => import('./pages/TaraConfig'));
 
 // Pages (lazy loaded for code splitting)
+const OpenDotEntry = React.lazy(() => import('./pages/OpenDotEntry'));
 const Overview = React.lazy(() => import('./pages/Overview'));
 const DocsPage = React.lazy(() => import('../DocsPage'));
 const MobileMemories = React.lazy(() => import('./mobile/pages/MobileMemories'));
@@ -250,6 +251,7 @@ export default function HiveMindApp() {
               route instead of falling through to the relative catch-all,
               which otherwise recursively appends `overview`. */}
           <Route path="overview/*" element={<PageSuspense><Overview /></PageSuspense>} />
+          <Route path="employee/dots/*" element={<PageSuspense><OpenDotEntry /></PageSuspense>} />
           <Route path="employee/harness/*" element={<PageSuspense><Overview /></PageSuspense>} />
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />

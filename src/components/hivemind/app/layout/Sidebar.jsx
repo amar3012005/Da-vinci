@@ -291,6 +291,7 @@ export default function Sidebar({
   const allNavSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection: activeSection === 'tara' ? 'tara' : 'hivemind', team });
   const navSections = activeSection === 'tara' ? allNavSections : teamMode
     ? [allNavSections[1], { label: null, items: [
+      { to: '/hivemind/app/employee/dots', icon: Cpu, label: 'My dots' },
       { to: '/hivemind/app/employees', companyWorkspace: true, icon: Building2, label: t('sidebar.companyWorkspace', { defaultValue: 'Company workspace' }) },
       ...(process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? [{ to: '/hivemind/app/crm', icon: FolderKanban, label: 'Your CRM' }] : []),
     ] }]
