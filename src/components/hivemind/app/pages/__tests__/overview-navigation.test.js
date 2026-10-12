@@ -40,3 +40,19 @@ it('renders native chat after SPA admission and returns to admission on back nav
   act(() => root.unmount());
   container.remove();
 });
+
+it('marks only the employee Harness surface as OS-owned Rooms chrome', () => {
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  let navigate;
+  act(() => root.render(React.createElement(MemoryRouter, { initialEntries: ['/hivemind/app/overview/new'] },
+    React.createElement(function Controls() { navigate = useNavigate(); return null; }), React.createElement(Overview))));
+  expect(container.querySelector('[data-os-harness-rooms]')).toBeNull();
+  act(() => navigate('/hivemind/app/employee/harness/session/runtime-room'));
+  expect(container.querySelector('[data-os-harness-rooms]')).not.toBeNull();
+  act(() => navigate('/hivemind/app/overview/session/chat-room'));
+  expect(container.querySelector('[data-os-harness-rooms]')).toBeNull();
+  act(() => root.unmount());
+  container.remove();
+});

@@ -7,6 +7,7 @@ import { isNativeApp } from '../shared/native-app';
 import { nativePlugin } from '../shared/native-auth';
 import { createNativeHarnessFetch, createNativeHarnessStream, createNativeSaveFile } from '../shared/native-harness-transport';
 import { createNativeHarnessLoader } from '../shared/native-harness-loader';
+import { normalizeHarnessInjections, selectHarnessFetch } from './harness-transport';
 import { measureHarnessBoot } from '../shared/harness-boot-timing';
 import { consumeHarnessExchange } from '../shared/harness-admission-handoff';
 
@@ -358,12 +359,22 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
       // for both before mounting, avoiding flashes of unstyled conversation.
       await Promise.all([
         measureHarnessBoot('styles', () => Promise.all(styles.map(runtime ? runtime.loader.loadStyle : loadHarnessStylesheet))),
-        measureHarnessBoot('ordered-injections', () => installedRevision !== bootRevision ? applyHarnessInjections(boot.injections, runtime?.loader) : Promise.resolve()),
+        measureHarnessBoot('ordered-injections', () => installedRevision !== bootRevision ? applyHarnessInjections(normalizeHarnessInjections(boot.injections, window.location.origin), runtime?.loader) : Promise.resolve()),
         measureHarnessBoot('native-module-prepare', () => runtime ? runtime.loader.prepareModule(shellUrl) : Promise.resolve()),
       ]);
       if (installedRevision !== bootRevision) window.__HIVE_HARNESS_BOOT_REV__ = bootRevision;
       setLoadingStage(2);
       if (cancelled) return;
+      // The native mux uses the document base by default. This surface can be
+      // mounted beneath a nested SPA route, so root browser RPC URLs at the app
+      // origin while retaining any shell-owned authenticated fetch carrier.
+      const appOrigin = window.location.origin;
+      const existingTransport = window.__DSH_TRANSPORT__ || {};
+      window.__DSH_TRANSPORT__ = {
+        ...existingTransport,
+        fetch: selectHarnessFetch(appOrigin, existingTransport.fetch, window.fetch.bind(window)),
+        streamBaseUrl: existingTransport.streamBaseUrl ?? appOrigin,
+      };
       // Reuse the exact authenticated speech-to-text transport used by
       // /hivemind/m/chat and AI Meeting Notes. The native Harness composer owns
       // draft state; Da-vinci owns only the authenticated audio transport.
