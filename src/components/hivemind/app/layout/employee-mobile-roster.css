@@ -18,7 +18,7 @@
   [data-mobile-roster] > .mobile-roster-legacy { display:none; }
   [data-mobile-roster] .mobile-roster-intro { display:flex; flex-direction:column; min-height:0; flex:1; padding:14px 22px 20px; gap:20px; }
   .mobile-roster-top { display:flex; align-items:center; gap:9px; padding-right:36px; }
-  .mobile-roster-top button { display:grid; place-items:center; width:40px; height:40px; flex-shrink:0; border:1px solid #e3e0db; border-radius:50%; }
+  .mobile-roster-top > button { display:grid; place-items:center; width:40px; height:40px; flex-shrink:0; border:1px solid #e3e0db; border-radius:50%; }
   .mobile-roster-top .mobile-roster-profile-button { background:#117dff15; color:#117dff; border:0; font-weight:600; }
   .mobile-roster-top select { min-width:0; flex:1; font-size:14px; background:transparent; border:0; padding:4px 0; }
   .employee-mobile-roster-close { top:calc(env(safe-area-inset-top,0px) + 13px) !important; right:0; background:transparent; }
@@ -164,7 +164,7 @@
 
 /* Keep compact phone controls comfortably tappable without changing their icons. */
 @media (max-width:600px) {
-  .mobile-roster-top button,
+  .mobile-roster-top > button,
   .mobile-roster-header-utilities > div > button,
   .mobile-unified-heading .mobile-roster-shortcuts > button,
   .mobile-unified-heading .mobile-roster-shortcuts > a,

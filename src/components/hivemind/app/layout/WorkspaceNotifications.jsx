@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, Check, ChevronRight, Mail, X } from 'lucide-react';
+import { Bell, Mail } from 'lucide-react';
+import NotificationDropdown from './NotificationDropdown';
 import apiClient from '../shared/api-client';
 import WorkspacePopupSurface from '../shared/WorkspacePopupSurface';
 import AgentAvatar from '../hyperagents/AgentAvatar';
@@ -97,6 +98,7 @@ export default function WorkspaceNotifications() {
   const [lifecycleContext, setLifecycleContext] = useState(null);
   const [announcement, setAnnouncement] = useState(null);
   const [announcementContext, setAnnouncementContext] = useState(null);
+  const bellRef = useRef(null);
   const initialized = useRef(false);
   const knownIds = useRef(new Set());
   const announcementId = useRef(null);
@@ -188,11 +190,8 @@ export default function WorkspaceNotifications() {
 
   return <>
     <div className="relative">
-      <button onClick={() => setOpen((value) => !value)} className="relative flex h-8 w-8 items-center justify-center rounded-[6px] text-[#737373] transition-colors hover:bg-[#f3f1ec] hover:text-[#0a0a0a]" aria-label="Notifications"><Bell size={15} />{unread > 0 ? <span className="absolute right-0.5 top-0.5 min-w-[14px] rounded-full bg-[#117dff] px-1 text-center text-[8px] font-bold leading-[14px] text-white">{unread > 9 ? '9+' : unread}</span> : null}</button>
-      <AnimatePresence>{open ? <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="absolute right-0 top-10 z-50 w-[390px] max-w-[calc(100vw-24px)] overflow-hidden rounded-[14px] border border-[#e3e0db] bg-white shadow-xl">
-        <header className="flex items-center justify-between border-b border-[#eae7e1] px-5 py-4"><div><div className="text-[14px] font-semibold text-[#0a0a0a]">Notifications</div><div className="mt-1 font-mono text-[9px] uppercase tracking-wider text-[#a3a3a3]">Your workspace lifecycle</div></div><button onClick={() => setOpen(false)} className="p-1 text-[#a3a3a3] hover:text-[#0a0a0a]" aria-label="Close notifications"><X size={16} /></button></header>
-        <div className="max-h-[480px] overflow-y-auto">{items.length ? items.map((notice) => { const isRead = Boolean(notice.readAt || notice.read_at); return <button key={notice.id} onClick={() => openDetail(notice)} className="flex w-full items-start gap-3 border-b border-[#eae7e1] px-5 py-4 text-left transition-colors hover:bg-[#faf9f4]"><span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center border border-[#e3e0db] bg-white"><NotificationIcon notice={notice} size={21} /></span><span className="min-w-0 flex-1"><span className="flex items-start gap-2"><span className="flex-1 text-[12px] font-semibold leading-5 text-[#0a0a0a]">{notice.title}</span>{!isRead ? <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#117dff]" /> : <Check size={12} className="mt-1 text-[#a3a3a3]" />}</span>{notice.body ? <span className="mt-1 block text-[11px] leading-4 text-[#737373]">{notice.body}</span> : null}<span className="mt-2 block font-mono text-[9px] text-[#a3a3a3]">{relativeTime(notice.createdAt || notice.created_at)}</span></span><ChevronRight size={14} className="mt-3 shrink-0 text-[#a3a3a3]" /></button>; }) : <div className="px-4 py-10 text-center text-[11px] text-[#a3a3a3]">No notifications yet.</div>}</div>
-      </motion.section> : null}</AnimatePresence>
+      <button ref={bellRef} onClick={() => setOpen((value) => !value)} className="relative flex h-8 w-8 items-center justify-center rounded-[6px] text-[#737373] transition-colors hover:bg-[#f3f1ec] hover:text-[#0a0a0a]" aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'} aria-expanded={open} aria-haspopup="dialog"><Bell size={15} />{unread > 0 ? <span className="absolute right-0.5 top-0.5 min-w-[14px] rounded-full bg-[#117dff] px-1 text-center text-[8px] font-bold leading-[14px] text-white">{unread > 9 ? '9+' : unread}</span> : null}</button>
+      {open ? <NotificationDropdown items={items} anchorRef={bellRef} onClose={() => setOpen(false)} onSelect={openDetail} renderIcon={(notice) => <NotificationIcon notice={notice} size={20} />} relativeTime={relativeTime} /> : null}
     </div>
 
     {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{toast ? <motion.div className="fixed -bottom-3 left-4 z-[2147483647] w-[min(420px,calc(100vw-28px))] sm:left-6" initial={{ opacity: 1, y: 'calc(100% - 34px)' }} animate={{ y: 0 }} exit={{ opacity: 0, y: 'calc(100% - 34px)' }} transition={{ type: 'spring', stiffness: 190, damping: 25, mass: 0.9 }}>
