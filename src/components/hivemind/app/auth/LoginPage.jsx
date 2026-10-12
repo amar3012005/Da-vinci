@@ -550,8 +550,10 @@ export default function LoginPage() {
         personalInvitationToken: appliedPersonalInvitationToken,
         referralToken: appliedReferralToken,
       });
-    } catch {
-      setCreateError('This invitation is unavailable.');
+    } catch (error) {
+      setCreateError(error.response?.status === 403
+        ? 'This invitation code or link is invalid, expired, or unavailable for the selected account type. Check your invitation or ask your workspace admin for a new one.'
+        : 'Could not verify your invitation. Please try again.');
       return;
     }
     const onboardingIntent = {

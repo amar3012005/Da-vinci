@@ -576,8 +576,17 @@ class HiveMindApiClient {
 
   /** Company operating dashboard (HyperAgents hero) — persisted onboarding state. */
   async hyperCompany() {
-    const { data } = await this.controlPlane.get('/v1/hyper/company');
-    return data;
+    try {
+      const { data } = await this.controlPlane.get('/v1/hyper/company');
+      return data;
+    } catch (error) {
+      // An authenticated workspace without onboarding is a valid empty state.
+      // Preserve every other API error, including unrelated 404 responses.
+      if (error.response?.status === 404 && error.response?.data?.onboarded === false) {
+        return { onboarded: false };
+      }
+      throw error;
+    }
   }
 
   hyperCompanyWebArtifactPreviewUrl(artifactId) {
@@ -671,12 +680,16 @@ class HiveMindApiClient {
       initial = data;
       if (data?.operationId && data?.receiptToken) this._accountErasurePending = data;
     }
-    const result = await awaitAccountErasure(initial, async (operationId, receiptToken) => {
+    let result;
+    try { result = await awaitAccountErasure(initial, async (operationId, receiptToken) => {
       const { data } = await this.controlPlane.get('/v1/account/erasure', {
         params: { operationId }, headers: { Authorization: `Erasure ${receiptToken}` }, timeout: 15000,
       });
       return data;
-    }, { onStatus });
+    }, { onStatus }); } catch (error) {
+      if (error.code === 'ACCOUNT_ERASURE_BLOCKED') this._accountErasurePending = null;
+      throw error;
+    }
     this._accountErasurePending = null;
     return result;
   }
@@ -1339,6 +1352,15 @@ class HiveMindApiClient {
 
   async manageNativeEmployeeLifecycle(payload) {
     const { data } = await this.controlPlane.post('/v1/employees/native-lifecycle', payload);
+    return data;
+  }
+
+  async createRegisteredOpenDotEmployee(payload) {
+    // Native bearer stays in the OS plugin; it must never be copied to another host.
+    if (isNativeApp()) throw new Error('Computer employee creation needs an authenticated Open Dot session. Open this form in your browser.');
+    const { data } = await axios.post('https://dots.singulancelabs.com/api/hivemind/employees/create', payload, {
+      withCredentials: true, timeout: 25000, headers: { 'Content-Type': 'application/json' },
+    });
     return data;
   }
 

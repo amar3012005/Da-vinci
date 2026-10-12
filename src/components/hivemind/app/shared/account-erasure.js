@@ -18,7 +18,7 @@ export async function awaitAccountErasure(initial, readStatus, { onStatus, timeo
         SHARED_SOURCE_TRANSFER_REQUIRED: 'Shared company source records need an ownership review before this account can be deleted.',
         ERASURE_INGEST_DRAIN_REQUIRED: 'An upload is still being reconciled. Your account remains active; cleanup will retry automatically.',
       };
-      throw new Error(messages[current.failureCode] || current.error || 'Account cleanup needs attention. Your account remains active.');
+      throw Object.assign(new Error(messages[current.failureCode] || current.error || 'Account cleanup needs attention. Your account remains active.'), { code: 'ACCOUNT_ERASURE_BLOCKED' });
     }
     if (!['pending', 'processing', 'reconciled'].includes(current.status)) throw new Error('Account cleanup status could not be verified.');
     if (now() >= deadline) throw Object.assign(new Error('Account cleanup is still running. Your account remains active until cleanup is verified; checking again resumes the same request.'), { code: 'ACCOUNT_ERASURE_PENDING' });

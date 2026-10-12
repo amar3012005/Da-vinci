@@ -859,7 +859,7 @@ function DataPrivacySection() {
     setDeleteProgress(0);
     setDeleteStep(t('profile.deletingInitiating', 'Initiating deletion...'));
     try {
-      setDeleteProgress(20);
+      setDeleteProgress(0);
       setDeleteStep(t('profile.deletingAccountData', 'Deleting account data...'));
       await apiClient.deleteAccount('DELETE', { onStatus: () => {
         setDeleteStep('Reconciling stored records. Your account stays active until cleanup is verified.');
@@ -1024,24 +1024,9 @@ function DataPrivacySection() {
         >
           {deleteLoading ? (
             <div className="space-y-3">
-              {/* Progress bar */}
-              <div className="w-full h-3 rounded-full bg-[#f3f1ec] overflow-hidden border border-[#e3e0db]">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{
-                    background: deleteProgress >= 100
-                      ? 'linear-gradient(90deg, #059669, #34d399)'
-                      : 'linear-gradient(90deg, #dc2626, #f87171)',
-                  }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${deleteProgress}%` }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
-                />
-              </div>
-              {/* Percentage + step */}
-              <div className="flex items-center justify-between">
+              <div role="status" aria-live="polite" className="flex items-center gap-3">
+                <span className="h-4 w-4 shrink-0 rounded-full border-2 border-[#e3e0db] border-t-[#525252] animate-spin" aria-hidden="true" />
                 <span className="text-[#525252] text-xs font-['Space_Grotesk']">{deleteStep}</span>
-                <span className="text-[#0a0a0a] text-sm font-mono font-bold">{deleteProgress}%</span>
               </div>
             </div>
           ) : (

@@ -9,7 +9,7 @@ import { createAvatar } from '@humation/core';
 import AgentAvatar from '../../hyperagents/AgentAvatar';
 import { Avatar } from '@humation/react';
 
-jest.mock('../../shared/api-client', () => ({ __esModule: true, default: { manageNativeEmployeeLifecycle: jest.fn() } }));
+jest.mock('../../shared/api-client', () => ({ __esModule: true, default: { manageNativeEmployeeLifecycle: jest.fn(), createRegisteredOpenDotEmployee: jest.fn() } }));
 beforeEach(() => {
   jest.clearAllMocks();
   Object.defineProperty(window, 'crypto', { configurable: true, value: { randomUUID: () => 'draft-uuid' } });
@@ -78,4 +78,32 @@ test('creation action follows the last team member and does not introduce a new 
   expect(sidebar).toContain('item.createEmployee ? () => setCreateEmployeeOpen(true)');
   expect(sidebar).toContain("return openAgent({ preventDefault() {} }, employee)");
   expect(sidebar).not.toContain("navigate('/hivemind/app/employee/create')");
+});
+
+
+test('computer choice uses the complete registered Dot flow and locks the exact retry draft', async () => {
+  apiClient.createRegisteredOpenDotEmployee.mockRejectedValueOnce(new Error('Connection interrupted')).mockResolvedValueOnce({ employee: { id: 'bound-employee', policyRules: { open_dot_employee: { version: 1, state: 'bound' } } } });
+  const open = jest.fn().mockResolvedValue(true);
+  render(<CreateEmployeeDialog onClose={jest.fn()} onCreated={open} />);
+  fireEvent.change(screen.getByLabelText('Employee name'), { target: { value: 'Maya' } });
+  fireEvent.click(screen.getByLabelText('Needs computer access'));
+  fireEvent.click(screen.getByText('Create'));
+  await screen.findByText('Connection interrupted');
+  expect(screen.getByLabelText('Needs computer access').disabled).toBe(true);
+  expect(screen.getByLabelText('Employee name').disabled).toBe(true);
+  fireEvent.click(screen.getByText('Retry create'));
+  await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+  expect(apiClient.manageNativeEmployeeLifecycle).not.toHaveBeenCalled();
+  const [first, second] = apiClient.createRegisteredOpenDotEmployee.mock.calls;
+  expect(first[0]).toEqual(second[0]);
+  expect(Object.keys(first[0]).sort()).toEqual(['appearance', 'creation_key', 'name']);
+});
+
+
+test('percentage character previews use CSS auto height without invalid SVG attributes', () => {
+  render(<CreateEmployeeDialog onClose={() => {}} onCreated={async () => {}} />);
+  expect(document.body.querySelectorAll('svg[height="auto"]').length).toBe(0);
+  const previews = [...document.body.querySelectorAll('svg[width="100%"]')];
+  expect(previews.length).toBe(6);
+  expect(previews.every(svg => svg.style.height === 'auto' && !svg.hasAttribute('height') && svg.hasAttribute('viewBox'))).toBe(true);
 });
