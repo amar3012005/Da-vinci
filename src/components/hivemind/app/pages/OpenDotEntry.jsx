@@ -36,7 +36,7 @@ export default function OpenDotEntry() {
   if (!src) return <main className="flex h-full min-h-0 items-center justify-center p-6 text-sm text-[#737373]">Invalid Dot address.</main>;
 
   return (
-    <main className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-white" aria-busy={!ready}>
+    <main className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-white" aria-busy={!ready && !timedOut}>
       {!ready && !timedOut && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-white" role="status" aria-live="polite">
           <span className="flex items-center gap-3 text-sm text-[#737373]"><span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d4d4d4] border-t-[#333333]" />Opening workspace…</span>

@@ -459,6 +459,7 @@ export default function Sidebar({
                             isActive ? 'text-[#0a0a0a]' : 'text-[#737373] group-hover:text-[#333333]'
                           }`}
                         />}
+                        {collapsed && item.agent && openDotEmployeePath(item.agent) && <Monitor size={11} strokeWidth={2} aria-label="Open Dot workspace" title="Open Dot workspace" className="absolute right-1 top-1 z-20 rounded-sm bg-white text-[#737373]" />}
                         {!collapsed && (
                           <span
                             className={`relative z-10 min-w-0 flex-1 transition-colors ${
