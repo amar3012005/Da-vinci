@@ -1,4 +1,5 @@
 import { agentRoster } from '../shared/agent-roster';
+import { hasOpenDotEmployeeBinding, openDotEmployeeHref } from '../shared/open-dot-employee-route';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -236,6 +237,16 @@ export default function Sidebar({
   const openAgent = async (event, agent) => {
     event.preventDefault();
     if (openingAgent) return false;
+    const openDotHref = openDotEmployeeHref(agent);
+    if (openDotHref) {
+      setTeamError('');
+      window.location.assign(openDotHref);
+      return true;
+    }
+    if (hasOpenDotEmployeeBinding(agent)) {
+      setTeamError(tt('teamWorkspacePending', 'This employee’s Open Dot workspace is still being set up. Try again shortly.'));
+      return false;
+    }
     setOpeningAgent(agent.id); setTeamError('');
     document.documentElement.dataset.agentRoomOpening = 'true';
     const previousStart = window.__HIVEMIND_START_AGENT__;
