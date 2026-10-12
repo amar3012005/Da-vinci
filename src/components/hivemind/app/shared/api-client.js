@@ -671,12 +671,16 @@ class HiveMindApiClient {
       initial = data;
       if (data?.operationId && data?.receiptToken) this._accountErasurePending = data;
     }
-    const result = await awaitAccountErasure(initial, async (operationId, receiptToken) => {
+    let result;
+    try { result = await awaitAccountErasure(initial, async (operationId, receiptToken) => {
       const { data } = await this.controlPlane.get('/v1/account/erasure', {
         params: { operationId }, headers: { Authorization: `Erasure ${receiptToken}` }, timeout: 15000,
       });
       return data;
-    }, { onStatus });
+    }, { onStatus }); } catch (error) {
+      if (error.code === 'ACCOUNT_ERASURE_BLOCKED') this._accountErasurePending = null;
+      throw error;
+    }
     this._accountErasurePending = null;
     return result;
   }
