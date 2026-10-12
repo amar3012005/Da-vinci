@@ -101,9 +101,9 @@ test('computer choice uses the complete registered Dot flow and locks the exact 
 
 
 test('percentage character previews use CSS auto height without invalid SVG attributes', () => {
-  const { container } = render(<CreateEmployeeDialog onClose={() => {}} onCreated={async () => {}} />);
-  expect(container.querySelectorAll('svg[height="auto"]').length).toBe(0);
-  const previews = [...container.querySelectorAll('svg[width="100%"]')];
+  render(<CreateEmployeeDialog onClose={() => {}} onCreated={async () => {}} />);
+  expect(document.body.querySelectorAll('svg[height="auto"]').length).toBe(0);
+  const previews = [...document.body.querySelectorAll('svg[width="100%"]')];
   expect(previews.length).toBe(6);
   expect(previews.every(svg => svg.style.height === 'auto' && !svg.hasAttribute('height') && svg.hasAttribute('viewBox'))).toBe(true);
 });
