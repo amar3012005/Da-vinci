@@ -2,6 +2,8 @@ import axios from 'axios';
 import { nativeRequestBody, base64ToBytes } from './native-body';
 import { NATIVE_CONTROL_PLANE } from './native-auth-controller';
 
+let lastSessionCheckAt = 0;
+
 /** Keep bearer credentials inside the trusted OS plugin, including on failed requests. */
 export function createNativeApiAdapter(plugin, { coreProxy = false } = {}) {
   return async config => {
@@ -26,8 +28,15 @@ export function createNativeApiAdapter(plugin, { coreProxy = false } = {}) {
     // Expired native sessions must return to authenticated bootstrap instead
     // of leaving an old account/roster visible behind generic request errors.
     // Bootstrap verifies the session; a route-specific 401 alone cannot log out.
-    if (result.status === 401 && mapped.startsWith('/v1/') && mapped !== '/v1/bootstrap' && typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('hm:native-session-check'));
+    // A 403 from a private route can also mean the bearer is stale (the roster
+    // reported "Could not refresh" on 403 with no way to recover). Bootstrap is
+    // idempotent, so throttle the re-check to one per 30s.
+    if ((result.status === 401 || result.status === 403) && !mapped.startsWith('/auth/') && mapped !== '/v1/bootstrap' && typeof window !== 'undefined') {
+      const now = Date.now();
+      if (now - lastSessionCheckAt > 30000) {
+        lastSessionCheckAt = now;
+        window.dispatchEvent(new Event('hm:native-session-check'));
+      }
     }
     let data;
     if (binary) {
