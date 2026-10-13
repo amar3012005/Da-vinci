@@ -31,6 +31,12 @@ function canonicalHarnessDestination(url) {
   return HARNESS_OVERVIEW_PATH;
 }
 
+function harnessAdmissionDestination(url) {
+  const destination = canonicalHarnessDestination(url);
+  return new URL(destination, window.location.origin).pathname === HARNESS_OVERVIEW_PATH
+    ? `${HARNESS_OVERVIEW_PATH}/new` : destination;
+}
+
 async function navigateHarnessTicket(ticket, destination, navigate) {
   const requestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
   const response = await fetchHarness(HARNESS_EXCHANGE_PATH, {
@@ -56,6 +62,7 @@ export default function HarnessChatSurface({ legacy }) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const mountedRef = useRef(true);
+  const destinationRef = useRef(harnessAdmissionDestination(window.location.href));
   // The only authority allowed to choose a surface is the successful
   // Cloudflare rollout receipt. Until that arrives, or after a bootstrap
   // failure, keep the current launcher visible rather than silently exposing
@@ -73,10 +80,9 @@ export default function HarnessChatSurface({ legacy }) {
     setConnecting(true);
     setNotice(null);
     try {
-      // The overview root is the flag-controlled launcher.  After a successful
-      // exchange, land on the explicit native route so an enabled account
-      // mounts Harness while a disabled account remains on the legacy root.
-      await navigateHarnessTicket(ticket, `${HARNESS_OVERVIEW_PATH}/new`, navigate);
+      // Only the launcher opens a new room. Preserve an admitted session link
+      // across asynchronous bootstrap and ticket exchange.
+      await navigateHarnessTicket(ticket, destinationRef.current, navigate);
     } catch (error) {
       if (!mountedRef.current) return;
       setConnecting(false);
@@ -125,4 +131,4 @@ export default function HarnessChatSurface({ legacy }) {
   );
 }
 
-export { HARNESS_EXCHANGE_PATH, HARNESS_OVERVIEW_PATH, canonicalHarnessDestination, navigateHarnessTicket, validBootstrap };
+export { HARNESS_EXCHANGE_PATH, HARNESS_OVERVIEW_PATH, canonicalHarnessDestination, harnessAdmissionDestination, navigateHarnessTicket, validBootstrap };
