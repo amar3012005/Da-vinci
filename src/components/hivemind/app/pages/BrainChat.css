@@ -99,3 +99,11 @@
 [data-brain-chat] .hm-query-ready {
   margin: 10px 0 0;
 }
+
+/* Brain pages: the top bar sits on the same beige as the session, with no
+   separate white strip. body:has() keeps this off Runtime and HyperAgent pages. */
+body:has([data-brain-chat]) header.sticky {
+  background-color: #faf9f4 !important;
+  box-shadow: none !important;
+  border-bottom-color: transparent !important;
+}
