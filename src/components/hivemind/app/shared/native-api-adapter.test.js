@@ -41,3 +41,20 @@ test('private API 401 requests session verification without looping on bootstrap
     expect(dispatchEvent.mock.calls[0][0].type).toBe('hm:native-session-check');
   } finally { delete global.window; }
 });
+
+test('403 on non-v1 private routes rechecks authentication once per thirty seconds', async () => {
+  const dispatchEvent = jest.fn();
+  global.window = { dispatchEvent };
+  let now = Date.now() + 60000;
+  const clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
+  try {
+    const adapter = createNativeApiAdapter({ request: async () => ({ status: 403, data: '{}' }) });
+    await expect(adapter({ url: '/hermes/agent/status' })).rejects.toMatchObject({ response: { status: 403 } });
+    await expect(adapter({ url: '/v1/employees' })).rejects.toMatchObject({ response: { status: 403 } });
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    now += 31000;
+    await expect(adapter({ url: '/v1/employees' })).rejects.toMatchObject({ response: { status: 403 } });
+    await expect(adapter({ url: '/auth/session' })).rejects.toMatchObject({ response: { status: 403 } });
+    expect(dispatchEvent).toHaveBeenCalledTimes(2);
+  } finally { clock.mockRestore(); delete global.window; }
+});
