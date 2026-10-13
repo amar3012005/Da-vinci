@@ -131,6 +131,9 @@ function PlanLimitGate() {
  *   • subtle scale-tap on press, slow ambient sheen behind it
  *   • respects reduced-motion preference
  */
+// The floating "Talk to HIVE" button is intentionally not shown on any page.
+const SHOW_TALK_TO_HIVE_FAB = false;
+
 function TalkToHiveFAB({ onOpen, hidden }) {
   return (
     <AnimatePresence>
@@ -509,7 +512,7 @@ function AppShellContent() {
         </div>
 
         {/* Chat FAB — glass-morph pill, slides in from right, blinking pulse */}
-        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || crmFullscreen || onOverview || onMeetingNotes || activeSection === 'hyperagents' || activeSection === 'tara'} />
+        {SHOW_TALK_TO_HIVE_FAB && <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || crmFullscreen || onOverview || onMeetingNotes || activeSection === 'hyperagents' || activeSection === 'tara'} />}
 
         {/* Global upload strip — survives KB unmount so users can browse
             other pages while files are still uploading */}

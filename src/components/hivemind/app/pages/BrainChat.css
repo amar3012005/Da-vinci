@@ -2,10 +2,71 @@
    HyperAgent and Dreaming surfaces keep their composer controls. The native
    sidebar is intentionally not targeted. Hidden controls remain in the DOM,
    so the native keyboard and send behaviour is unchanged. */
-[data-brain-chat] [data-composer-seat] [aria-label^="Access mode"],
 [data-brain-chat] [data-composer-seat] [class*="_pickerButton"],
 [data-brain-chat] [data-composer-seat] [aria-label^="Model:"] {
   display: none !important;
+}
+
+/* Minimal permission indicator: the access-mode control becomes a small
+   icon-only button. Its aria-label keeps the current mode readable. */
+[data-brain-chat] [data-composer-seat] [aria-label^="Access mode"] {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #8a8a84;
+  font-size: 0;
+}
+[data-brain-chat] [data-composer-seat] [aria-label^="Access mode"] svg:nth-of-type(2) {
+  display: none;
+}
+[data-brain-chat] [data-composer-seat] [aria-label^="Access mode"]:hover {
+  background: rgba(10, 10, 10, 0.06);
+  color: #0a0a0a;
+}
+
+/* Circular voice control: the speaker glyph is replaced by a quiet waveform
+   with a soft pulse ring. Motion stops for users who prefer reduced motion. */
+[data-brain-chat] [data-composer-seat] [aria-label^="Talk to"] {
+  position: relative;
+  border-radius: 50%;
+  animation: brainVoicePulse 2.8s ease-out infinite;
+}
+[data-brain-chat] [data-composer-seat] [aria-label^="Talk to"] svg {
+  display: none;
+}
+[data-brain-chat] [data-composer-seat] [aria-label^="Talk to"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 18px;
+  height: 16px;
+  background:
+    linear-gradient(#fff, #fff) 0 50% / 3px 6px no-repeat,
+    linear-gradient(#fff, #fff) 5px 50% / 3px 14px no-repeat,
+    linear-gradient(#fff, #fff) 10px 50% / 3px 9px no-repeat,
+    linear-gradient(#fff, #fff) 15px 50% / 3px 12px no-repeat;
+  animation: brainVoiceWave 1.3s ease-in-out infinite;
+}
+@keyframes brainVoiceWave {
+  0%, 100% { background-size: 3px 6px, 3px 14px, 3px 9px, 3px 12px; }
+  50% { background-size: 3px 13px, 3px 7px, 3px 14px, 3px 6px; }
+}
+@keyframes brainVoicePulse {
+  0% { box-shadow: 0 0 0 0 rgba(10, 10, 10, 0.22); }
+  70%, 100% { box-shadow: 0 0 0 9px rgba(10, 10, 10, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-brain-chat] [data-composer-seat] [aria-label^="Talk to"],
+  [data-brain-chat] [data-composer-seat] [aria-label^="Talk to"]::before {
+    animation: none;
+  }
 }
 
 /* Brain chat: the same beige as the mobile chat (#faf9f4) for the main column

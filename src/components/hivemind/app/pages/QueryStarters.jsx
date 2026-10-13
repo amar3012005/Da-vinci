@@ -13,7 +13,7 @@ function SourceLogo({ app, dream }) {
   return app ? <img className="hm-query-logo" src={appLogo(app)} alt="" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} /> : <span className="hm-query-logo hm-query-symbol" aria-hidden="true">{dream ? '🌙' : '↗'}</span>;
 }
 
-const AUTO_TYPE_SUGGESTIONS = false;
+const AUTO_TYPE_SUGGESTIONS = true;
 const rows = value => Array.isArray(value) ? value : value?.memories || value?.data || [];
 const clean = value => String(value || '').replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, '').replace(/\s+/g, ' ').trim();
 const dateOf = memory => memory.updated_at || memory.updatedAt || memory.created_at || memory.createdAt;
@@ -149,8 +149,8 @@ export default function QueryStarters({ mount, ready }) {
 
   useEffect(() => {
     const editor = target?.editor;
-    // Suggestions are offered as click-to-fill chips only. Auto-typing put an
-    // unrequested prompt into the composer and caused layout churn on send.
+    // Auto-typing of the first suggestion is on by default; set
+    // AUTO_TYPE_SUGGESTIONS to false to offer click-to-fill chips only.
     if (!AUTO_TYPE_SUGGESTIONS || target?.mobile || !editor || loadedEditor !== editor || !items[0] || typedEditors.current.has(editor)) return;
     const draftKey = `hivemind:generated-query:${identity}:${window.location.pathname}`;
     let previous = '';
