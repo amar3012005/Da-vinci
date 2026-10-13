@@ -114,3 +114,33 @@ body:has([data-brain-chat]) header.sticky {
   box-shadow: none !important;
   border-bottom-color: transparent !important;
 }
+
+/* Composer controls: every control in the row is centred, and the primary
+   circles (send, stop, voice) share one 36px perfect-circle size. */
+[data-brain-chat] [data-composer-seat] [class*="mk7YQa_card"] button,
+[data-brain-chat] [data-composer-seat] [class*="mk7YQa_card"] summary {
+  align-self: center;
+}
+[data-brain-chat] [data-composer-seat] [class*="mk7YQa_trailing"] {
+  align-items: center;
+  gap: 8px;
+}
+[data-brain-chat] [data-composer-seat] [aria-label="Send message"],
+[data-brain-chat] [data-composer-seat] [aria-label="Stop generating"] {
+  box-sizing: border-box;
+  flex: 0 0 36px;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px;
+  min-height: 36px;
+  aspect-ratio: 1 / 1;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  transform: none !important;
+}
+
+/* One circle while a chat turn is running: the voice control is hidden while
+   the stop button is shown. A voice call has no stop button, so it is unaffected. */
+[data-brain-chat] [data-composer-seat]:has([aria-label="Stop generating"]) [class*="_18XBsW_control"] {
+  display: none !important;
+}
