@@ -170,3 +170,14 @@ body:has([data-brain-chat]) header.sticky {
     margin-bottom: 4px;
   }
 }
+
+/* In a voice call the circular voice button is the single end-call control.
+   The call strip keeps its waveform and options, as a full pill without a second
+   hangup circle. */
+[data-brain-chat] [data-room-call-strip] {
+  border-radius: 999px;
+  padding-inline-start: 18px;
+}
+[data-brain-chat] [data-room-call-strip] > button[aria-label="End voice conversation"] {
+  display: none !important;
+}
