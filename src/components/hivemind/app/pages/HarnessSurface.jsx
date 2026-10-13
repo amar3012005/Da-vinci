@@ -311,7 +311,6 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
           livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);
           window.addEventListener('online', recoverExpiredSession);
           document.addEventListener('visibilitychange', recoverExpiredSession);
-          void recoverExpiredSession();
         }
         return;
       }
