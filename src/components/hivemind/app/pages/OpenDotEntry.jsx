@@ -1,3 +1,5 @@
+import { openDotEmployeeIdFromPath } from '../shared/open-dot-employee-route';
+import { openDotRoomStatus } from '../shared/open-dot-room-status';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { buildOpenDotEmbedTarget } from '../shared/open-dot-embed-target';
@@ -22,6 +24,11 @@ export default function OpenDotEntry() {
     const timer = window.setTimeout(() => setTimedOutFrameKey(frameKey), READY_TIMEOUT_MS);
     const onMessage = event => {
       if (event.origin !== DOT_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
+      const rooms = openDotRoomStatus(event.data, openDotEmployeeIdFromPath(pathname));
+      if (rooms !== null) {
+        window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { employeeId: openDotEmployeeIdFromPath(pathname), dotId: event.data.dotId, rooms, employees: event.data.employees } }));
+        return;
+      }
       if (event.data?.type !== 'hivemind.open-dot.ready' || event.data?.version !== 1) return;
       setReadyFrameKey(frameKey);
       window.clearTimeout(timer);
@@ -30,8 +37,9 @@ export default function OpenDotEntry() {
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener('message', onMessage);
+      window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { clear: true } }));
     };
-  }, [frameKey, src]);
+  }, [frameKey, src, pathname]);
 
   if (!src) return <main className="flex h-full min-h-0 items-center justify-center p-6 text-sm text-[#737373]">Invalid Dot address.</main>;
 

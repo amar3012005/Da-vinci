@@ -1,0 +1,183 @@
+/* Brain chat only (Overview route). Scoped by [data-brain-chat] so Runtime,
+   HyperAgent and Dreaming surfaces keep their composer controls. The native
+   sidebar is intentionally not targeted. Hidden controls remain in the DOM,
+   so the native keyboard and send behaviour is unchanged. */
+[data-brain-chat] [data-composer-seat] [class*="_pickerButton"],
+[data-brain-chat] [data-composer-seat] [aria-label^="Model:"] {
+  display: none !important;
+}
+
+/* Minimal permission indicator: the access-mode control becomes a small
+   icon-only button. Its aria-label keeps the current mode readable. */
+[data-brain-chat] [data-composer-seat] [aria-label^="Access mode"] {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #8a8a84;
+  font-size: 0;
+}
+[data-brain-chat] [data-composer-seat] [aria-label^="Access mode"] svg:nth-of-type(2) {
+  display: none;
+}
+[data-brain-chat] [data-composer-seat] [aria-label^="Access mode"]:hover {
+  background: rgba(10, 10, 10, 0.06);
+  color: #0a0a0a;
+}
+
+/* Circular voice control: the speaker glyph is replaced by a quiet waveform.
+   The button is a fixed square box with a 50% radius in every state (idle and
+   in-call), so it is always a perfect circle. Motion stops when reduced. */
+[data-brain-chat] [data-composer-seat] [aria-label^="Talk to"] {
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 36px;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px;
+  min-height: 36px;
+  aspect-ratio: 1 / 1;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  overflow: hidden;
+}
+[data-brain-chat] [data-composer-seat] [aria-label^="Talk to"] svg {
+  display: none;
+}
+[data-brain-chat] [data-composer-seat] [aria-label^="Talk to"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 18px;
+  height: 16px;
+  background:
+    linear-gradient(#fff, #fff) 0 50% / 3px 6px no-repeat,
+    linear-gradient(#fff, #fff) 5px 50% / 3px 14px no-repeat,
+    linear-gradient(#fff, #fff) 10px 50% / 3px 9px no-repeat,
+    linear-gradient(#fff, #fff) 15px 50% / 3px 12px no-repeat;
+  animation: brainVoiceWave 1.3s ease-in-out infinite;
+}
+@keyframes brainVoiceWave {
+  0%, 100% { background-size: 3px 6px, 3px 14px, 3px 9px, 3px 12px; }
+  50% { background-size: 3px 13px, 3px 7px, 3px 14px, 3px 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-brain-chat] [data-composer-seat] [aria-label^="Talk to"]::before {
+    animation: none;
+  }
+}
+
+/* Brain chat: the main column uses the mobile beige (#faf9f4); the composer
+   card stays white on top of it. The native sidebar panel is not targeted. */
+[data-brain-chat] [class*="_frame"],
+[data-brain-chat] [class*="eqEnzG_root"] {
+  background-color: #faf9f4 !important;
+}
+[data-brain-chat] [class*="mk7YQa_card"] {
+  background-color: #ffffff !important;
+}
+
+/* Brain hero layout: sit the title, composer and suggestions lower on the page
+   and align the suggestions to the composer's own width and left edge. */
+[data-brain-chat] [class*="eqEnzG_composerSeat"]:has([class*="composerHero"]) {
+  transform: translateY(clamp(24px, 9vh, 110px));
+}
+/* Width and left edge are set inline from the composer's measured box. */
+[data-brain-chat] .hm-query-starters {
+  max-width: none;
+  margin-top: 20px;
+  margin-bottom: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+[data-brain-chat] .hm-query-heading {
+  margin: 0 0 6px;
+  letter-spacing: 0.01em;
+}
+[data-brain-chat] .hm-query-options button {
+  padding: 12px 0;
+}
+[data-brain-chat] .hm-query-ready {
+  margin: 10px 0 0;
+}
+
+/* Brain pages: the top bar sits on the same beige as the session, with no
+   separate white strip. body:has() keeps this off Runtime and HyperAgent pages. */
+body:has([data-brain-chat]) header.sticky {
+  background-color: #faf9f4 !important;
+  box-shadow: none !important;
+  border-bottom-color: transparent !important;
+}
+
+/* Composer controls: every control in the row is centred, and the primary
+   circles (send, stop, voice) share one 36px perfect-circle size. */
+[data-brain-chat] [data-composer-seat] [class*="mk7YQa_card"] button,
+[data-brain-chat] [data-composer-seat] [class*="mk7YQa_card"] summary {
+  align-self: center;
+}
+[data-brain-chat] [data-composer-seat] [class*="mk7YQa_trailing"] {
+  align-items: center;
+  gap: 8px;
+}
+[data-brain-chat] [data-composer-seat] [aria-label="Send message"],
+[data-brain-chat] [data-composer-seat] [aria-label="Stop generating"] {
+  box-sizing: border-box;
+  flex: 0 0 36px;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px;
+  min-height: 36px;
+  aspect-ratio: 1 / 1;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  transform: none !important;
+}
+
+/* One circle while a chat turn is running: the voice control is hidden while
+   the stop button is shown. A voice call has no stop button, so it is unaffected. */
+[data-brain-chat] [data-composer-seat]:has([aria-label="Stop generating"]) [class*="_18XBsW_control"] {
+  display: none !important;
+}
+
+/* Every state of the voice and primary buttons is the same perfect 36px circle.
+   In a call the voice button's label changes, so it is matched by structure
+   (data-hivemind-live-voice + aria-pressed) and the primary circle by class. */
+[data-brain-chat] [data-composer-seat] [data-hivemind-live-voice] button[aria-pressed],
+[data-brain-chat] [data-composer-seat] [class*="mk7YQa_primary"] {
+  box-sizing: border-box;
+  flex: 0 0 36px;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px;
+  min-height: 36px;
+  aspect-ratio: 1 / 1;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  overflow: hidden;
+  transform: none !important;
+}
+
+/* Mobile: the composer grid bottom-aligns its items, so the 36px circle sits
+   4px below the centre of the 44px buttons. A matching bottom margin centres it. */
+@media (max-width: 600px) {
+  [data-brain-chat] [data-composer-seat] [class*="mk7YQa_trailing"] {
+    margin-bottom: 4px;
+  }
+}
+
+/* In a voice call the circular voice button is the single end-call control.
+   The call strip keeps its waveform and options, as a full pill without a second
+   hangup circle. */
+[data-brain-chat] [data-room-call-strip] {
+  border-radius: 999px;
+  padding-inline-start: 18px;
+}
+[data-brain-chat] [data-room-call-strip] > button[aria-label="End voice conversation"] {
+  display: none !important;
+}

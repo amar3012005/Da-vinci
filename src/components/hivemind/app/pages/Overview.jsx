@@ -1488,7 +1488,7 @@ export default function Overview() {
   if (pathname === '/hivemind/app/employee/harness' || /^\/hivemind\/app\/(?:overview|employee\/harness)\/(?:new|session\/[^/]+)$/u.test(pathname)) {
     rememberHarnessSessionPath(pathname);
     const employeeHarness = /^\/hivemind\/app\/employee\/harness(?:\/|$)/u.test(pathname);
-    return <section className="h-full min-h-0 w-full overflow-hidden" data-os-harness-rooms={employeeHarness ? '' : undefined}><HarnessSurface /></section>;
+    return <section className="h-full min-h-0 w-full overflow-hidden" data-os-harness-rooms={employeeHarness ? '' : undefined}><HarnessSurface brain={!employeeHarness} /></section>;
   }
   const cachedSession = cachedHarnessSessionPath();
   if (cachedSession) return <ResumeHarnessSession path={cachedSession} />;

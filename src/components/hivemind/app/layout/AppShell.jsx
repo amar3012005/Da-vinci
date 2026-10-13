@@ -1,3 +1,4 @@
+import { workspaceModeForPath } from '../shared/workspace-mode';
 import { discardParkedNativeHarnessSeat } from '../shared/native-harness-seat';
 import { NativeAiConsentGate } from '../mobile/MobileSafetyPanel';
 import { useTranslation } from 'react-i18next';
@@ -130,6 +131,9 @@ function PlanLimitGate() {
  *   • subtle scale-tap on press, slow ambient sheen behind it
  *   • respects reduced-motion preference
  */
+// The floating "Talk to HIVE" button is intentionally not shown on any page.
+const SHOW_TALK_TO_HIVE_FAB = false;
+
 function TalkToHiveFAB({ onOpen, hidden }) {
   return (
     <AnimatePresence>
@@ -204,12 +208,7 @@ function TalkToHiveFAB({ onOpen, hidden }) {
   );
 }
 
-function sectionForPath(pathname) {
-  if (pathname.startsWith('/hivemind/app/employee/harness')) return 'hivemind';
-  if (pathname.startsWith('/hivemind/app/employees') || pathname === '/hivemind/app/crm') return 'hyperagents';
-  if (pathname.startsWith('/hivemind/app/tara')) return 'tara';
-  return 'hivemind';
-}
+function sectionForPath(pathname) { return workspaceModeForPath(pathname); }
 
 /**
  * AppShell — layout:
@@ -513,7 +512,7 @@ function AppShellContent() {
         </div>
 
         {/* Chat FAB — glass-morph pill, slides in from right, blinking pulse */}
-        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || crmFullscreen || onOverview || onMeetingNotes || activeSection === 'hyperagents' || activeSection === 'tara'} />
+        {SHOW_TALK_TO_HIVE_FAB && <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || crmFullscreen || onOverview || onMeetingNotes || activeSection === 'hyperagents' || activeSection === 'tara'} />}
 
         {/* Global upload strip — survives KB unmount so users can browse
             other pages while files are still uploading */}

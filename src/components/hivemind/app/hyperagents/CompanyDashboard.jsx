@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { openCompanyRuntime } from '../shared/openCompanyRuntime';
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -273,9 +272,9 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
         <div className="max-w-[1280px] mx-auto">
           {entryError ? <p role="alert">{entryError}</p> : null}
           <HyperOnboarding
-            // Company details are already saved by onboarding. Open the native
-            // Runtime room without sending awakening or changing its draft.
-            onComplete={() => openCompanyRuntime(navigate).catch((error) => setEntryError(error.message))}
+            // Company details are already saved by onboarding. New users land in
+            // Brain chat; the Runtime room is no longer opened automatically.
+            onComplete={() => navigate('/hivemind/app/overview/new')}
             onSkip={() => load()}
           />
         </div>

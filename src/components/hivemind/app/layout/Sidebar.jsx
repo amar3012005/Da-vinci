@@ -1,4 +1,6 @@
 import { needsAgentHarnessNavigation } from '../pages/employee-harness-route';
+import { ownedOpenDotRoomStatuses } from '../shared/open-dot-room-status';
+import { workspaceModeForPath } from '../shared/workspace-mode';
 import { agentRoster } from '../shared/agent-roster';
 import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../shared/open-dot-employee-route';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -183,11 +185,36 @@ export default function Sidebar({
   useEffect(() => setRosterPage(page => Math.min(page, Math.max(0, Math.ceil(team.length / 5) - 1))), [team.length]);
   const [rosterProfileOpen, setRosterProfileOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness') || location.pathname.startsWith('/hivemind/app/employee/dots') || location.pathname === '/hivemind/app/crm';
+  const teamMode = workspaceModeForPath(location.pathname) === 'hyperagents';
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [openingAgent, setOpeningAgent] = useState(null);
   const [teamError, setTeamError] = useState('');
-  const [rooms, setRooms] = useState([]);
+  const [nativeRooms, setRooms] = useState([]);
+  const [dotRooms, setDotRooms] = useState({});
+  const rooms = [...nativeRooms, ...Object.values(dotRooms).flat()];
+  const dotReadAt = useRef({});
+  useEffect(() => {
+    const key = `hivemind.dot-read-at:${scope}`;
+    try { dotReadAt.current = JSON.parse(localStorage.getItem(key) || '{}'); } catch { dotReadAt.current = {}; }
+    const controller = new AbortController();
+    let timer;
+    let loading = false;
+    const load = async () => {
+      if (!scope || document.hidden || controller.signal.aborted || loading) return;
+      loading = true;
+      try {
+        const response = await fetch('https://dots.singulancelabs.com/api/hivemind/employees/status', { credentials: 'include', cache: 'no-store', signal: controller.signal });
+        if (!response.ok) throw new Error('Status unavailable');
+        const result = await response.json();
+        if (!controller.signal.aborted && result.version === 1) setDotRooms(ownedOpenDotRoomStatuses(result.employees, agentRoster.peek(scope) || [], dotReadAt.current));
+      } catch { if (!controller.signal.aborted) setDotRooms({}); }
+      finally { loading = false; if (!controller.signal.aborted) timer = setTimeout(load, 15000); }
+    };
+    const visible = () => { clearTimeout(timer); if (!document.hidden) load(); };
+    load();
+    document.addEventListener('visibilitychange', visible);
+    return () => { controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', visible); };
+  }, [scope]);
   const teamScope = useRef(null);
   const [teamLoadError, setTeamLoadError] = useState(false);
   const [teamRetry, setTeamRetry] = useState(0);
@@ -230,10 +257,24 @@ export default function Sidebar({
     const selection = event => setSelectedAgent(event.detail?.id || null);
     const activity = event => setRooms(event.detail?.rooms || []);
     setRooms([]);
+    setDotRooms({});
+    const dotActivity = event => {
+      if (event.detail?.clear === true) { setDotRooms({}); return; }
+      const employeeId = event.detail?.employeeId;
+      if (typeof employeeId !== 'string' || !Array.isArray(event.detail?.rooms)) return;
+      const entries = event.detail.employees ?? [{ employeeId, dotId: event.detail.dotId, rooms: event.detail.rooms }];
+      const verified = ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current);
+      for (const entry of Array.isArray(entries) ? entries : []) {
+        if (Number.isFinite(entry.readAt) && entry.readAt >= 0 && Object.hasOwn(verified, entry.employeeId)) dotReadAt.current[entry.employeeId] = entry.readAt;
+      }
+      try { localStorage.setItem(`hivemind.dot-read-at:${scope}`, JSON.stringify(dotReadAt.current)); } catch { /* Optional local watermark. */ }
+      setDotRooms(ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current));
+    };
+    window.addEventListener('hivemind:open-dot-rooms', dotActivity);
     window.addEventListener('hivemind:agent-rooms', activity);
     window.addEventListener('hivemind:agent-selected', selection);
     window.dispatchEvent(new Event('hivemind:request-agent-rooms'));
-    return () => { window.removeEventListener('hivemind:agent-selected', selection); window.removeEventListener('hivemind:agent-rooms', activity); };
+    return () => { window.removeEventListener('hivemind:open-dot-rooms', dotActivity); window.removeEventListener('hivemind:agent-selected', selection); window.removeEventListener('hivemind:agent-rooms', activity); };
   }, [user?.id, org?.id]);
 
   useEffect(() => {
@@ -367,8 +408,8 @@ export default function Sidebar({
               rosterSwiped.current = true;
               setRosterPage(page => Math.max(0, Math.min(Math.max(0, Math.ceil(team.length / 5) - 1), page + (dx < 0 ? 1 : -1))));
             }}>
-            <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt=""/><strong>Runtime</strong><small>Chief of Staff</small><AgentRoomStatus room={aggregateAgentRooms(rooms, 'runtime')} compact /></button>
-            {team.slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span><AgentRoomStatus room={aggregateAgentRooms(rooms, agent.id)} compact /></button>)}
+            <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt=""/><strong>Runtime</strong><small>Chief of Staff</small><AgentRoomStatus room={{ ...aggregateAgentRooms(rooms, 'runtime'), loading: openingAgent === 'runtime' }} compact /></button>
+            {team.slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span><AgentRoomStatus room={{ ...aggregateAgentRooms(rooms, agent.id), loading: openingAgent === agent.id }} compact /></button>)}
           </div>
           {team.length > 5 && <div className="mobile-roster-pages"><button type="button" disabled={rosterPage === 0} onClick={() => setRosterPage(value => value - 1)}>Previous</button><span>{rosterPage + 1} / {Math.ceil(team.length / 5)}</span><button type="button" disabled={(rosterPage + 1) * 5 >= team.length} onClick={() => setRosterPage(value => value + 1)}>Next</button></div>}
         </div>
@@ -424,7 +465,8 @@ export default function Sidebar({
                   (location.pathname.startsWith(`${pathOnly}/`)
                     && !(pathOnly === '/hivemind/app/overview' && location.pathname === '/hivemind/app/overview/dreaming'));
                 const ItemLink = item.agent || item.runtime || item.companyWorkspace || item.createEmployee ? 'button' : NavLink;
-                const room = aggregateAgentRooms(rooms, item.agent?.id || 'runtime');
+                const agentId = item.agent?.id || 'runtime';
+                const room = { ...aggregateAgentRooms(rooms, agentId), loading: openingAgent === agentId };
                 const hasChildren = item.children && item.children.length > 0;
 
                 return (

@@ -1,4 +1,3 @@
-import { openCompanyRuntime } from '../shared/openCompanyRuntime';
 /**
  * HyperAgents page — Slack/WhatsApp-style Cognitive Swarm Intelligence
  * workspace on HIVEMIND.
@@ -446,7 +445,8 @@ export default function HyperAgents({ harnessRooms = false }) {
       const u = new URL(window.location.href);
       if (u.searchParams.has('onboard')) { u.searchParams.delete('onboard'); window.history.replaceState({}, '', u); }
     } catch { /* noop */ }
-    if (result) openCompanyRuntime(navigate).catch((error) => setError(error.message));
+    // New users land in Brain chat; the Runtime room is no longer opened automatically.
+    if (result) navigate('/hivemind/app/overview/new');
     else goMode('hero', null);
     domainRoomsEnsuredRef.current = false;
     fetchRooms();
