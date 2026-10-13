@@ -79,14 +79,15 @@
 
 /* Brain hero layout: sit the title, composer and suggestions lower on the page
    and align the suggestions to the composer's own width and left edge. */
-[data-brain-chat] [class*="eqEnzG_composerHero"] {
+[data-brain-chat] [class*="eqEnzG_composerSeat"]:has([class*="composerHero"]) {
   transform: translateY(clamp(24px, 9vh, 110px));
 }
+/* Width and left edge are set inline from the composer's measured box. */
 [data-brain-chat] .hm-query-starters {
-  width: 100%;
-  max-width: 100%;
-  margin: 22px 0 0;
-  padding: 0 14px;
+  max-width: none;
+  margin-top: 20px;
+  margin-bottom: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 [data-brain-chat] .hm-query-heading {

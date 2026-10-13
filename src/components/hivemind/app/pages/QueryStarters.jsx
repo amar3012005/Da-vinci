@@ -254,7 +254,12 @@ export default function QueryStarters({ mount, ready }) {
     { id: 'remember', topic: t('overview.starters.firstMemory', 'Find something I remember'), query: t('overview.starters.firstMemoryQuery', 'Help me find something in my memories. Ask me what I remember about it.') },
     { id: 'project', topic: t('overview.starters.firstProject', 'Catch up on a project'), query: t('overview.starters.firstProjectQuery', 'Help me catch up on a project. Ask me which project, then bring together its relevant context.') },
   ];
-  return createPortal(<section className={`hm-query-starters${target.mobile ? ' hm-query-starters-mobile' : ''}`} aria-label={t('overview.starters.label', 'Suggested questions')}>
+  // Desktop: line the block up with the composer's own text box (measured by
+  // refresh()), so the suggestions share its left edge and width at any window size.
+  const alignStyle = !target.mobile && Number.isFinite(target.left) && target.width > 0
+    ? { marginLeft: `${target.left}px`, width: `${target.width}px` }
+    : undefined;
+  return createPortal(<section className={`hm-query-starters${target.mobile ? ' hm-query-starters-mobile' : ''}`} style={alignStyle} aria-label={t('overview.starters.label', 'Suggested questions')}>
 
     {draftSource?.app && <div className="hm-query-draft-source"><SourceLogo app={draftSource.app} /><span>{t('overview.starters.basedOn', 'Based on {{app}}', { app: draftSource.source })}</span></div>}
     <div className="hm-query-heading">{items.length ? t('overview.starters.heading', 'A starting point from your context') : t('overview.starters.firstHeading', 'What would you like help with?')}</div>
