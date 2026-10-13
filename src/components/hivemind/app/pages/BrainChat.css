@@ -144,3 +144,29 @@ body:has([data-brain-chat]) header.sticky {
 [data-brain-chat] [data-composer-seat]:has([aria-label="Stop generating"]) [class*="_18XBsW_control"] {
   display: none !important;
 }
+
+/* Every state of the voice and primary buttons is the same perfect 36px circle.
+   In a call the voice button's label changes, so it is matched by structure
+   (data-hivemind-live-voice + aria-pressed) and the primary circle by class. */
+[data-brain-chat] [data-composer-seat] [data-hivemind-live-voice] button[aria-pressed],
+[data-brain-chat] [data-composer-seat] [class*="mk7YQa_primary"] {
+  box-sizing: border-box;
+  flex: 0 0 36px;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px;
+  min-height: 36px;
+  aspect-ratio: 1 / 1;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  overflow: hidden;
+  transform: none !important;
+}
+
+/* Mobile: the composer grid bottom-aligns its items, so the 36px circle sits
+   4px below the centre of the 44px buttons. A matching bottom margin centres it. */
+@media (max-width: 600px) {
+  [data-brain-chat] [data-composer-seat] [class*="mk7YQa_trailing"] {
+    margin-bottom: 4px;
+  }
+}
