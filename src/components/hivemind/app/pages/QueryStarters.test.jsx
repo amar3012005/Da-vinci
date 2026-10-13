@@ -54,6 +54,20 @@ test('mobile context suggestions never auto-type into composer', async () => {
   expect(dock.textContent).toContain('A company project');
   expect(editor.textContent).toBe(''); expect(paste).not.toHaveBeenCalled();
 });
+test('desktop startup and loaded context suggestions preserve an empty or existing native draft', async () => {
+  mobile = false;
+  apiClient.listMemories.mockResolvedValue([{ id: 'memory-one', title: 'A company project', updated_at: '2026-10-06T12:00:00Z' }]);
+  const paste = jest.fn(); editor.addEventListener('paste', paste);
+  await show();
+  expect(seat.textContent).toContain('A company project');
+  expect(editor.textContent).toBe('');
+  expect(paste).not.toHaveBeenCalled();
+  editor.textContent = 'My unfinished question';
+  await show();
+  expect(editor.textContent).toBe('My unfinished question');
+  expect(paste).not.toHaveBeenCalled();
+  expect(window.__HIVEMIND_SEND_PROMPT__).not.toHaveBeenCalled();
+});
 test('mobile missing send bridge reports failure without changing or sending a draft', async () => {
   delete window.__HIVEMIND_SEND_PROMPT__; editor.textContent = 'Keep this';
   await show();

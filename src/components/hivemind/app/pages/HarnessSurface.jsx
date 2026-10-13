@@ -190,14 +190,15 @@ export function LoadingSurface({ stage = 0, dreaming = false }) {
 }
 
 /** Past-session navigation is independent of the first interactive composer. */
-export function nativeHarnessMounted(container, { dreaming = false } = {}) {
+export function nativeHarnessMounted(container, { dreaming = false, brain = false } = {}) {
   if (dreaming) return Boolean(container?.querySelector?.('[data-dreaming-ready="true"] [data-composer-seat]'));
+  if (brain) return Boolean(container?.querySelector?.('[data-composer-seat][data-hivemind-composer-ready="true"]'));
   return Boolean(container?.querySelector?.('[data-composer-seat]'));
 }
 
-function waitForNativeHarnessMount(container, signal) {
+function waitForNativeHarnessMount(container, signal, { brain = false } = {}) {
   const dreaming = window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`;
-  const mounted = () => nativeHarnessMounted(container, { dreaming });
+  const mounted = () => nativeHarnessMounted(container, { dreaming, brain });
   if (mounted()) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const observer = new MutationObserver(() => {
@@ -219,7 +220,7 @@ function waitForNativeHarnessMount(container, signal) {
       signal?.removeEventListener('abort', onAbort);
     };
     signal?.addEventListener('abort', onAbort, { once: true });
-    observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-dreaming-ready'] });
+    observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-dreaming-ready', 'data-hivemind-composer-ready'] });
     // A synchronous native insertion can occur between the first check and
     // observer registration.
     if (mounted()) {
@@ -306,7 +307,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
         window.__DSH_EMBED_REQUEST__ = request;
         if (window.__DSH_EMBED_INITIAL_MOUNT__) await window.__DSH_EMBED_INITIAL_MOUNT__;
         window.dispatchEvent(new PopStateEvent('popstate'));
-        await waitForNativeHarnessMount(mount, readinessAbort.signal);
+        await waitForNativeHarnessMount(mount, readinessAbort.signal, { brain });
         if (!cancelled) {
           setState({ phase: 'ready', stage: HARNESS_BOOT_STAGES.length - 1, message: null });
           livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);
@@ -421,7 +422,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
       } else {
         await measureHarnessBoot('native-initial-mount', () => window.__DSH_EMBED_INITIAL_MOUNT__);
       }
-      await measureHarnessBoot('visible-chat', () => waitForNativeHarnessMount(mount, readinessAbort.signal));
+      await measureHarnessBoot('visible-chat', () => waitForNativeHarnessMount(mount, readinessAbort.signal, { brain }));
       if (!cancelled) {
         setState({ phase: 'ready', stage: HARNESS_BOOT_STAGES.length - 1, message: null });
         livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);

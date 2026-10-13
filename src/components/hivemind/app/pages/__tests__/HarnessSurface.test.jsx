@@ -66,6 +66,14 @@ describe('HarnessSurface module cache', () => {
     expect(nativeHarnessMounted(root)).toBe(true);
     expect(HARNESS_BOOT_STAGES.at(-1)).toBe('Opening chat');
   });
+  it('does not expose the cold Brain bootstrap seat before native session context settles', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<div data-composer-seat="" data-hivemind-composer-ready="false"></div>';
+    expect(nativeHarnessMounted(root, { brain: true })).toBe(false);
+    root.querySelector('[data-composer-seat]').setAttribute('data-hivemind-composer-ready', 'true');
+    expect(nativeHarnessMounted(root, { brain: true })).toBe(true);
+    expect(root.querySelector('aside')).toBeNull();
+  });
 });
 jest.mock('../QueryStarters', () => () => null);
 jest.mock('../../shared/native-harness-loader', () => ({ createNativeHarnessLoader: jest.fn() }));

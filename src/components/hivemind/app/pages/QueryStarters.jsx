@@ -13,7 +13,6 @@ function SourceLogo({ app, dream }) {
   return app ? <img className="hm-query-logo" src={appLogo(app)} alt="" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} /> : <span className="hm-query-logo hm-query-symbol" aria-hidden="true">{dream ? '🌙' : '↗'}</span>;
 }
 
-const AUTO_TYPE_SUGGESTIONS = true;
 const rows = value => Array.isArray(value) ? value : value?.memories || value?.data || [];
 const clean = value => String(value || '').replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, '').replace(/\s+/g, ' ').trim();
 const dateOf = memory => memory.updated_at || memory.updatedAt || memory.created_at || memory.createdAt;
@@ -49,7 +48,6 @@ export default function QueryStarters({ mount, ready }) {
   const [draftSource, setDraftSource] = useState(null);
   const [finishedTyping, setFinishedTyping] = useState(false);
   const [target, setTarget] = useState(null);
-  const [loadedEditor, setLoadedEditor] = useState(null);
   const typedEditors = useRef(new WeakSet());
   const generatedDraft = useRef('');
   const stopTyping = useRef(() => {});
@@ -57,7 +55,6 @@ export default function QueryStarters({ mount, ready }) {
 
   useEffect(() => {
     setItems([]);
-    setLoadedEditor(null);
     if (!ready || !user?.id || !target?.editor) return;
     let cancelled = false;
     // Reuse only in this authenticated tab; revalidate authorization before display.
@@ -94,7 +91,6 @@ export default function QueryStarters({ mount, ready }) {
         picked.splice(Math.min(2, picked.length), 1, task);
       }
       setItems(picked);
-      setLoadedEditor(target.editor);
       try { sessionStorage.setItem(key, JSON.stringify({ generatedAt: Date.now(), items: picked })); } catch { /* storage is optional */ }
     });
     return () => { cancelled = true; };
@@ -147,58 +143,8 @@ export default function QueryStarters({ mount, ready }) {
     };
   }, [ready, mount]);
 
-  useEffect(() => {
-    const editor = target?.editor;
-    // Auto-typing of the first suggestion is on by default; set
-    // AUTO_TYPE_SUGGESTIONS to false to offer click-to-fill chips only.
-    if (!AUTO_TYPE_SUGGESTIONS || target?.mobile || !editor || loadedEditor !== editor || !items[0] || typedEditors.current.has(editor)) return;
-    const draftKey = `hivemind:generated-query:${identity}:${window.location.pathname}`;
-    let previous = '';
-    try { previous = sessionStorage.getItem(draftKey) || ''; } catch { /* optional storage */ }
-    const restored = editor.textContent.trim();
-    if (restored && restored !== previous.trim()) return;
-    generatedDraft.current = '';
-    setDraftSource(items[0]);
-    if (restored) {
-      editor.focus();
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(editor);
-      selection.removeAllRanges(); selection.addRange(range);
-      document.dispatchEvent(new Event('selectionchange'));
-    }
-    typedEditors.current.add(editor);
-    const text = items[0].query;
-    let index = 0;
-    let timer;
-    const stop = event => { if (!event || event.isTrusted) { clearInterval(timer); setFinishedTyping(false); try { sessionStorage.removeItem(draftKey); } catch { /* optional storage */ } } };
-    stopTyping.current = () => clearInterval(timer);
-    const insert = value => {
-      generatedDraft.current += value;
-      try { sessionStorage.setItem(draftKey, generatedDraft.current); } catch { /* optional storage */ }
-      const clipboard = new DataTransfer();
-      clipboard.setData('text/plain', value);
-      editor.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: clipboard }));
-    };
-    editor.addEventListener('keydown', stop);
-    target.seat.addEventListener('pointerdown', stop, true);
-    editor.addEventListener('paste', stop);
-    editor.focus();
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { insert(text); setFinishedTyping(true); }
-    else timer = setInterval(() => {
-      if (!editor.isConnected) { clearInterval(timer); return; }
-      const next = Math.min(text.length, index + 3);
-      insert(text.slice(index, next));
-      index = next;
-      if (index === text.length) { clearInterval(timer); setFinishedTyping(true); }
-    }, 40);
-    return () => {
-      clearInterval(timer);
-      editor.removeEventListener('keydown', stop);
-      target.seat.removeEventListener('pointerdown', stop, true);
-      editor.removeEventListener('paste', stop);
-    };
-  }, [target?.editor, target?.seat, target?.mobile, items, loadedEditor, identity]);
+  // Startup suggestions never write into the native draft. Explicit attention
+  // follow-ups retain their own native user-triggered typing path.
 
   if (!target) return null;
   const accept = async item => {
