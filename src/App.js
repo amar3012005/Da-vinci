@@ -30,6 +30,7 @@ const CookiePolicy = React.lazy(() => import('./components/CookiePolicy'));
 
 const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davinciai.eu';
 const PLATFORM_ADMIN_HOST = 'admin.hivemind.singulancelabs.com';
+const RUNTIME_RUNNER_HOST = 'runtime-runner.singulancelabs.com';
 // Preview is a first-class authenticated product origin. The production build
 // still embeds the production canonical host, so it must be allowed explicitly
 // instead of being redirected to production by HivemindExternalRedirect.
@@ -100,6 +101,7 @@ function App() {
   const isHivemindHost =
     typeof window !== 'undefined' && (
       window.location.hostname === HIVEMIND_SITE_HOST ||
+      window.location.hostname === RUNTIME_RUNNER_HOST ||
       HIVEMIND_PREVIEW_HOSTS.has(window.location.hostname) ||
       window.location.protocol === 'file:' ||
       window.Capacitor?.isNativePlatform?.() === true
