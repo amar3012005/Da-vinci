@@ -30,3 +30,15 @@ test('Runtime native transport selects only Runtime origin and preserves actual 
     assert.equal(requests[0].headers.get('x-forwarded-host'), 'runtime-runner.singulancelabs.com');
   } finally { globalThis.fetch = previous; }
 });
+
+test('Runtime Overview launchers return to Brain while historical session ownership remains native', async () => {
+  for (const route of ['/hivemind/app/overview','/hivemind/app/overview/new']) {
+    const response = await worker.fetch(new Request(`${publicOrigin}${route}`), env);
+    assert.equal(response.headers.get('cache-control'),'private, no-store');
+    assert.ok((await response.text()).includes(`location.replace("https://next.singulancelabs.com${route}")`));
+  }
+  const response = await worker.fetch(new Request(`${publicOrigin}/hivemind/app/overview/session/runtime-history`), {
+    ...env, ASSETS:{fetch:async()=>new Response('<html>native room</html>',{headers:{'content-type':'text/html'}})},
+  });
+  assert.equal((await response.text()).includes('location.replace'),false);
+});

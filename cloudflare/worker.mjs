@@ -198,6 +198,16 @@ function isHarnessRunnerRoute(pathname) {
     || isHarnessViteAsset(pathname);
 }
 
+function nativeRunnerHandoff(destination) {
+  // Let the browser navigate; old service workers cannot return foreign
+  // responses from their same-origin navigation fetch handlers.
+  const escaped = destination.href.replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+  const target = JSON.stringify(destination.href).replace(/</g, '\\u003c');
+  return new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Opening your conversation</title><meta http-equiv="refresh" content="0;url=${escaped}"></head><body><p>Opening your conversation… <a href="${escaped}">Continue</a></p><script>location.replace(${target})</script></body></html>`, {
+    headers: {'content-type':'text/html; charset=utf-8','cache-control':'private, no-store','cdn-cache-control':'no-store','x-robots-tag':'noindex, nofollow'},
+  });
+}
+
 async function proxyHarnessRunner(request, env) {
   if (env.RUNTIME_RUNNER_PUBLIC_ORIGIN && new URL(request.url).origin === env.RUNTIME_RUNNER_PUBLIC_ORIGIN) {
     env = { ...env, HARNESS_CHAT: undefined, RUNNER_ORIGIN: env.RUNTIME_RUNNER_ORIGIN };
@@ -407,6 +417,14 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    // Overview launchers belong to Brain. Historical /overview/session/:id
+    // may identify Runtime rooms, so do not infer their owner from the path.
+    if (url.origin === env.RUNTIME_RUNNER_PUBLIC_ORIGIN && ['GET', 'HEAD'].includes(request.method)
+      && ['/hivemind/app/overview', '/hivemind/app/overview/new'].includes(pathname)) {
+      const destination = new URL(url);
+      destination.host = 'next.singulancelabs.com';
+      return nativeRunnerHandoff(destination);
+    }
     // Native cookies, modules, RPC and streams remain on one authority.
     // The target signs in normally; no login token crosses host boundaries.
     if (env.RUNTIME_RUNNER_PUBLIC_ORIGIN && ['GET', 'HEAD'].includes(request.method)
@@ -416,14 +434,7 @@ export default {
       const authority = new URL(env.RUNTIME_RUNNER_PUBLIC_ORIGIN);
       destination.protocol = authority.protocol;
       destination.host = authority.host;
-      // An existing same-origin service worker may fetch navigations itself.
-      // Following a cross-origin 302 there produces an unusable response. Keep
-      // the response local and let the browser perform the actual navigation.
-      const escaped = destination.href.replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
-      const target = JSON.stringify(destination.href).replace(/</g, '\\u003c');
-      return new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Opening Runtime</title><meta http-equiv="refresh" content="0;url=${escaped}"></head><body><p>Opening Runtime… <a href="${escaped}">Continue</a></p><script>location.replace(${target})</script></body></html>`, {
-        headers: {'content-type':'text/html; charset=utf-8','cache-control':'private, no-store','cdn-cache-control':'no-store','x-robots-tag':'noindex, nofollow'},
-      });
+      return nativeRunnerHandoff(destination);
     }
     const openDotEntryPath = isOpenDotEntryPath(pathname);
     if (url.protocol === 'http:' && env.ENVIRONMENT !== 'development') {
