@@ -1,3 +1,4 @@
+import { workspaceModeForPath } from '../shared/workspace-mode';
 import { discardParkedNativeHarnessSeat } from '../shared/native-harness-seat';
 import { NativeAiConsentGate } from '../mobile/MobileSafetyPanel';
 import { useTranslation } from 'react-i18next';
@@ -204,12 +205,7 @@ function TalkToHiveFAB({ onOpen, hidden }) {
   );
 }
 
-function sectionForPath(pathname) {
-  if (pathname.startsWith('/hivemind/app/employee/harness')) return 'hivemind';
-  if (pathname.startsWith('/hivemind/app/employees') || pathname === '/hivemind/app/crm') return 'hyperagents';
-  if (pathname.startsWith('/hivemind/app/tara')) return 'tara';
-  return 'hivemind';
-}
+function sectionForPath(pathname) { return workspaceModeForPath(pathname); }
 
 /**
  * AppShell — layout:

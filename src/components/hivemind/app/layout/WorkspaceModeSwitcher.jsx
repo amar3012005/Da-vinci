@@ -1,3 +1,4 @@
+import { workspaceModeForPath } from '../shared/workspace-mode';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -13,8 +14,9 @@ export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
   const { t } = useTranslation('dashboard');
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const modeMenuRef = useRef(null);
-  const voiceMode = location.pathname.startsWith('/hivemind/app/tara');
-  const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness') || location.pathname === '/hivemind/app/crm';
+  const mode = workspaceModeForPath(location.pathname);
+  const voiceMode = mode === 'tara';
+  const teamMode = mode === 'hyperagents';
   useEffect(() => setModeMenuOpen(false), [location.pathname]);
   useEffect(() => {
     if (!modeMenuOpen) return undefined;

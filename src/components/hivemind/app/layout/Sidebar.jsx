@@ -1,3 +1,4 @@
+import { workspaceModeForPath } from '../shared/workspace-mode';
 import { agentRoster } from '../shared/agent-roster';
 import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../shared/open-dot-employee-route';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -182,11 +183,13 @@ export default function Sidebar({
   useEffect(() => setRosterPage(page => Math.min(page, Math.max(0, Math.ceil(team.length / 5) - 1))), [team.length]);
   const [rosterProfileOpen, setRosterProfileOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const teamMode = location.pathname.startsWith('/hivemind/app/employee/harness') || location.pathname.startsWith('/hivemind/app/employee/dots') || location.pathname === '/hivemind/app/crm';
+  const teamMode = workspaceModeForPath(location.pathname) === 'hyperagents';
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [openingAgent, setOpeningAgent] = useState(null);
   const [teamError, setTeamError] = useState('');
-  const [rooms, setRooms] = useState([]);
+  const [nativeRooms, setRooms] = useState([]);
+  const [dotRooms, setDotRooms] = useState({});
+  const rooms = [...nativeRooms, ...Object.values(dotRooms).flat()];
   const teamScope = useRef(null);
   const [teamLoadError, setTeamLoadError] = useState(false);
   const [teamRetry, setTeamRetry] = useState(0);
@@ -229,10 +232,17 @@ export default function Sidebar({
     const selection = event => setSelectedAgent(event.detail?.id || null);
     const activity = event => setRooms(event.detail?.rooms || []);
     setRooms([]);
+    setDotRooms({});
+    const dotActivity = event => {
+      const employeeId = event.detail?.employeeId;
+      if (typeof employeeId !== 'string' || !Array.isArray(event.detail?.rooms)) return;
+      setDotRooms(previous => ({ ...previous, [employeeId]: event.detail.rooms }));
+    };
+    window.addEventListener('hivemind:open-dot-rooms', dotActivity);
     window.addEventListener('hivemind:agent-rooms', activity);
     window.addEventListener('hivemind:agent-selected', selection);
     window.dispatchEvent(new Event('hivemind:request-agent-rooms'));
-    return () => { window.removeEventListener('hivemind:agent-selected', selection); window.removeEventListener('hivemind:agent-rooms', activity); };
+    return () => { window.removeEventListener('hivemind:open-dot-rooms', dotActivity); window.removeEventListener('hivemind:agent-selected', selection); window.removeEventListener('hivemind:agent-rooms', activity); };
   }, [user?.id, org?.id]);
 
   useEffect(() => {
