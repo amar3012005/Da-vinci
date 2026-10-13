@@ -10,7 +10,7 @@ export function openDotRoomStatus(data, expectedEmployeeId) {
 }
 
 /** Aggregate entries must match the signed-in canonical roster's durable Dot binding. */
-export function ownedOpenDotRoomStatuses(employees, roster) {
+export function ownedOpenDotRoomStatuses(employees, roster, readAt = {}) {
   if (!Array.isArray(employees) || employees.length > 64) return {};
   const statuses = {};
   for (const entry of employees) {
@@ -18,7 +18,11 @@ export function ownedOpenDotRoomStatuses(employees, roster) {
     const binding = (employee?.policy_rules ?? employee?.policyRules)?.open_dot_employee;
     if (!employee || binding?.version !== 1 || binding.state !== 'bound' || binding.dot_id !== entry.dotId) continue;
     const rooms = openDotRoomStatus({ type: 'hivemind.open-dot.room-status', version: 1, employeeId: entry.employeeId, rooms: entry.rooms }, entry.employeeId);
-    if (rooms !== null) statuses[entry.employeeId] = rooms;
+    if (rooms !== null) statuses[entry.employeeId] = rooms.map(room => {
+      const lastAssistantAt = entry.rooms.find(value => value.conversationId === room.sessionId)?.lastAssistantAt;
+      const watermark = readAt[entry.employeeId];
+      return { ...room, unread: Number.isFinite(lastAssistantAt) ? Number.isFinite(watermark) && lastAssistantAt > watermark : room.unread };
+    });
   }
   return statuses;
 }

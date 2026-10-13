@@ -191,6 +191,29 @@ export default function Sidebar({
   const [nativeRooms, setRooms] = useState([]);
   const [dotRooms, setDotRooms] = useState({});
   const rooms = [...nativeRooms, ...Object.values(dotRooms).flat()];
+  const dotReadAt = useRef({});
+  useEffect(() => {
+    const key = `hivemind.dot-read-at:${scope}`;
+    try { dotReadAt.current = JSON.parse(localStorage.getItem(key) || '{}'); } catch { dotReadAt.current = {}; }
+    const controller = new AbortController();
+    let timer;
+    let loading = false;
+    const load = async () => {
+      if (!scope || document.hidden || controller.signal.aborted || loading) return;
+      loading = true;
+      try {
+        const response = await fetch('https://dots.singulancelabs.com/api/hivemind/employees/status', { credentials: 'include', cache: 'no-store', signal: controller.signal });
+        if (!response.ok) throw new Error('Status unavailable');
+        const result = await response.json();
+        if (!controller.signal.aborted && result.version === 1) setDotRooms(ownedOpenDotRoomStatuses(result.employees, agentRoster.peek(scope) || [], dotReadAt.current));
+      } catch { if (!controller.signal.aborted) setDotRooms({}); }
+      finally { loading = false; if (!controller.signal.aborted) timer = setTimeout(load, 15000); }
+    };
+    const visible = () => { clearTimeout(timer); if (!document.hidden) load(); };
+    load();
+    document.addEventListener('visibilitychange', visible);
+    return () => { controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', visible); };
+  }, [scope]);
   const teamScope = useRef(null);
   const [teamLoadError, setTeamLoadError] = useState(false);
   const [teamRetry, setTeamRetry] = useState(0);
@@ -239,7 +262,11 @@ export default function Sidebar({
       const employeeId = event.detail?.employeeId;
       if (typeof employeeId !== 'string' || !Array.isArray(event.detail?.rooms)) return;
       const entries = event.detail.employees ?? [{ employeeId, dotId: event.detail.dotId, rooms: event.detail.rooms }];
-      setDotRooms(ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || []));
+      for (const entry of Array.isArray(entries) ? entries : []) {
+        if (Number.isFinite(entry.readAt) && entry.readAt >= 0 && agentRoster.peek(scope)?.some(employee => employee.id === entry.employeeId)) dotReadAt.current[entry.employeeId] = entry.readAt;
+      }
+      try { localStorage.setItem(`hivemind.dot-read-at:${scope}`, JSON.stringify(dotReadAt.current)); } catch { /* Optional local watermark. */ }
+      setDotRooms(ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current));
     };
     window.addEventListener('hivemind:open-dot-rooms', dotActivity);
     window.addEventListener('hivemind:agent-rooms', activity);
