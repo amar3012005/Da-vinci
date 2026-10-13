@@ -199,6 +199,9 @@ function isHarnessRunnerRoute(pathname) {
 }
 
 async function proxyHarnessRunner(request, env) {
+  if (env.RUNTIME_RUNNER_PUBLIC_ORIGIN && new URL(request.url).origin === env.RUNTIME_RUNNER_PUBLIC_ORIGIN) {
+    env = { ...env, HARNESS_CHAT: undefined, RUNNER_ORIGIN: env.RUNTIME_RUNNER_ORIGIN };
+  }
   if (env.HARNESS_CHAT && typeof env.HARNESS_CHAT.fetch === 'function') {
     return env.HARNESS_CHAT.fetch(request);
   }
@@ -404,6 +407,17 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    // Native cookies, modules, RPC and streams remain on one authority.
+    // The target signs in normally; no login token crosses host boundaries.
+    if (env.RUNTIME_RUNNER_PUBLIC_ORIGIN && ['GET', 'HEAD'].includes(request.method)
+      && /^\/hivemind\/app\/employee\/harness(?:\/|$)/u.test(pathname)
+      && url.origin !== env.RUNTIME_RUNNER_PUBLIC_ORIGIN) {
+      const destination = new URL(url);
+      const authority = new URL(env.RUNTIME_RUNNER_PUBLIC_ORIGIN);
+      destination.protocol = authority.protocol;
+      destination.host = authority.host;
+      return Response.redirect(destination, 302);
+    }
     const openDotEntryPath = isOpenDotEntryPath(pathname);
     if (url.protocol === 'http:' && env.ENVIRONMENT !== 'development') {
       url.protocol = 'https:';
