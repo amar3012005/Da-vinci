@@ -262,8 +262,9 @@ export default function Sidebar({
       const employeeId = event.detail?.employeeId;
       if (typeof employeeId !== 'string' || !Array.isArray(event.detail?.rooms)) return;
       const entries = event.detail.employees ?? [{ employeeId, dotId: event.detail.dotId, rooms: event.detail.rooms }];
+      const verified = ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current);
       for (const entry of Array.isArray(entries) ? entries : []) {
-        if (Number.isFinite(entry.readAt) && entry.readAt >= 0 && agentRoster.peek(scope)?.some(employee => employee.id === entry.employeeId)) dotReadAt.current[entry.employeeId] = entry.readAt;
+        if (Number.isFinite(entry.readAt) && entry.readAt >= 0 && Object.hasOwn(verified, entry.employeeId)) dotReadAt.current[entry.employeeId] = entry.readAt;
       }
       try { localStorage.setItem(`hivemind.dot-read-at:${scope}`, JSON.stringify(dotReadAt.current)); } catch { /* Optional local watermark. */ }
       setDotRooms(ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current));
