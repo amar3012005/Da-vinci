@@ -31,3 +31,11 @@ test('retains an active call from an older same-agent room without leaking anoth
     .toMatchObject({ activeCall: true, actionRequired: false });
   expect(aggregateAgentRooms([{ id: 'other', updatedAt: 3, activeCall: true }], 'runtime')).toBeUndefined();
 });
+
+test('shows only explicit loading and failed-work evidence', () => {
+  const view = render(<AgentRoomStatus room={{ loading: true, error: true }} />);
+  expect(screen.getByRole('img', { name: 'Opening workspace' })).toBeTruthy();
+  expect(screen.getByRole('img', { name: 'Work failed' })).toBeTruthy();
+  view.rerender(<AgentRoomStatus room={{}} />);
+  expect(screen.queryByRole('img', { name: 'Work failed' })).toBeNull();
+});
