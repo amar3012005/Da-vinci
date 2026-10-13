@@ -2,6 +2,7 @@ import { parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } 
 import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../shared/api-client';
 import './HarnessSurface.css';
+import './BrainChat.css';
 import QueryStarters from './QueryStarters';
 import { isNativeApp } from '../shared/native-app';
 import { nativePlugin } from '../shared/native-auth';
@@ -258,7 +259,7 @@ async function establishHarnessSession({ fresh = false } = {}) {
  * only placement and HIVE authentication; the mounted client owns sessions,
  * streams, replay, nodes, tool cards, approvals, subagents and trajectory.
  */
-export default function HarnessSurface({ sessionEstablished = false } = {}) {
+export default function HarnessSurface({ sessionEstablished = false, brain = false } = {}) {
   const mountRef = useRef(null);
   const [state, setState] = useState({ phase: 'loading', stage: 0, message: null });
 
@@ -475,7 +476,7 @@ export default function HarnessSurface({ sessionEstablished = false } = {}) {
     </div>;
   }
 
-  return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface>
+  return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface data-brain-chat={brain ? '' : undefined}>
     {state.phase === 'loading' && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} dreaming={window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`} /></div>}
     <div ref={mountRef} className="h-full min-h-0" style={{ visibility: state.phase === 'ready' ? 'visible' : 'hidden' }} />
     <QueryStarters mount={mountRef.current} ready={state.phase === 'ready'} />

@@ -1,0 +1,9 @@
+/* Brain chat only (Overview route). Scoped by [data-brain-chat] so Runtime,
+   HyperAgent and Dreaming surfaces keep their composer controls. The native
+   sidebar is intentionally not targeted. Hidden controls remain in the DOM,
+   so the native keyboard and send behaviour is unchanged. */
+[data-brain-chat] [data-composer-seat] [aria-label^="Access mode"],
+[data-brain-chat] [data-composer-seat] [class*="_pickerButton"],
+[data-brain-chat] [data-composer-seat] [aria-label^="Model:"] {
+  display: none !important;
+}
