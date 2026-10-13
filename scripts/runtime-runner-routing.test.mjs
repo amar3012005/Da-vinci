@@ -31,13 +31,14 @@ test('Runtime native transport selects only Runtime origin and preserves actual 
   } finally { globalThis.fetch = previous; }
 });
 
-test('Runtime Overview launchers return to Brain while historical session ownership remains native', async () => {
-  for (const route of ['/hivemind/app/overview','/hivemind/app/overview/new']) {
+test('Runtime Brain launchers and validated session paths strictly return to Next', async () => {
+  for (const route of ['/hivemind/app/overview','/hivemind/app/overview/new',
+    '/hivemind/app/overview/session/session-46d220df35a3f985de773d7832c82d8e?view=chat#turn-1']) {
     const response = await worker.fetch(new Request(`${publicOrigin}${route}`), env);
     assert.equal(response.headers.get('cache-control'),'private, no-store');
     assert.ok((await response.text()).includes(`location.replace("https://next.singulancelabs.com${route}")`));
   }
-  const response = await worker.fetch(new Request(`${publicOrigin}/hivemind/app/overview/session/runtime-history`), {
+  const response = await worker.fetch(new Request(`${publicOrigin}/hivemind/app/overview/session/a/b`), {
     ...env, ASSETS:{fetch:async()=>new Response('<html>native room</html>',{headers:{'content-type':'text/html'}})},
   });
   assert.equal((await response.text()).includes('location.replace'),false);

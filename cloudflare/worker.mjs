@@ -417,10 +417,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
-    // Overview launchers belong to Brain. Historical /overview/session/:id
-    // may identify Runtime rooms, so do not infer their owner from the path.
+    // Public path ownership is strict: Brain sessions stay on Next; Runtime
+    // rooms use their canonical employee route on the Runtime authority.
     if (url.origin === env.RUNTIME_RUNNER_PUBLIC_ORIGIN && ['GET', 'HEAD'].includes(request.method)
-      && ['/hivemind/app/overview', '/hivemind/app/overview/new'].includes(pathname)) {
+      && (/^\/hivemind\/app\/overview(?:\/new|\/session\/[A-Za-z0-9_-]+)?$/u.test(pathname))) {
       const destination = new URL(url);
       destination.host = 'next.singulancelabs.com';
       return nativeRunnerHandoff(destination);
@@ -429,7 +429,7 @@ export default {
     // The target signs in normally; no login token crosses host boundaries.
     if (env.RUNTIME_RUNNER_PUBLIC_ORIGIN && ['GET', 'HEAD'].includes(request.method)
       && /^\/hivemind\/app\/employee\/harness(?:\/|$)/u.test(pathname)
-      && url.origin !== env.RUNTIME_RUNNER_PUBLIC_ORIGIN) {
+      && url.origin === 'https://next.singulancelabs.com') {
       const destination = new URL(url);
       const authority = new URL(env.RUNTIME_RUNNER_PUBLIC_ORIGIN);
       destination.protocol = authority.protocol;
