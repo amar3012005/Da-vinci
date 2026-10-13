@@ -76,3 +76,26 @@
 [data-brain-chat] [class*="mk7YQa_card"] {
   background-color: #faf9f4 !important;
 }
+
+/* Brain hero layout: sit the title, composer and suggestions lower on the page
+   and align the suggestions to the composer's own width and left edge. */
+[data-brain-chat] [class*="eqEnzG_composerHero"] {
+  transform: translateY(clamp(24px, 9vh, 110px));
+}
+[data-brain-chat] .hm-query-starters {
+  width: 100%;
+  max-width: 100%;
+  margin: 22px 0 0;
+  padding: 0 14px;
+  box-sizing: border-box;
+}
+[data-brain-chat] .hm-query-heading {
+  margin: 0 0 6px;
+  letter-spacing: 0.01em;
+}
+[data-brain-chat] .hm-query-options button {
+  padding: 12px 0;
+}
+[data-brain-chat] .hm-query-ready {
+  margin: 10px 0 0;
+}
