@@ -1,4 +1,4 @@
-import { workspaceModeForPath } from '../shared/workspace-mode';
+import { workspaceModeDestination, workspaceModeForPath } from '../shared/workspace-mode';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,17 @@ export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
   const mode = workspaceModeForPath(location.pathname);
   const voiceMode = mode === 'tara';
   const teamMode = mode === 'hyperagents';
+  const chooseMode = (path) => {
+    setModeMenuOpen(false);
+    onChoose?.();
+    const destination = workspaceModeDestination(path, window.location.origin);
+    if (destination.startsWith('https://')) {
+      window.location.assign(destination);
+      return;
+    }
+    navigate(destination);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
   useEffect(() => setModeMenuOpen(false), [location.pathname]);
   useEffect(() => {
     if (!modeMenuOpen) return undefined;
@@ -38,7 +49,7 @@ export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
             {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), path: '/hivemind/app/overview/new', selected: !teamMode && !voiceMode, brain: true },
               { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), path: '/hivemind/app/employee/harness', selected: teamMode },
               { name: t('sidebar.voice', { defaultValue: 'Voice' }), description: t('sidebar.voiceDescription', { defaultValue: 'Speak. Connect. Represent.' }), path: '/hivemind/app/tara', selected: voiceMode, voice: true }].map(mode =>
-              <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button" onClick={() => { setModeMenuOpen(false); navigate(mode.path); onChoose?.(); window.dispatchEvent(new PopStateEvent('popstate')); }} className={`flex items-center gap-3 w-full rounded-xl px-3 py-3 text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f7f6f2]' : ''}`}>
+              <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button" onClick={() => chooseMode(mode.path)} className={`flex items-center gap-3 w-full rounded-xl px-3 py-3 text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f7f6f2]' : ''}`}>
                 <span className="shrink-0">{mode.brain ? <BrainModeIcon size={32} /> : mode.voice ? <VoiceModeIcon size={32} /> : <BotAvatar type="mech" shading="fabric" size={32} interactive={false} />}</span>
                 <span className="flex flex-col gap-1"><span className="text-[17px] font-medium leading-tight">{mode.name}</span><span className="text-[14px] text-[#858585] font-normal leading-snug">{mode.description}</span></span>
               </button>)}
