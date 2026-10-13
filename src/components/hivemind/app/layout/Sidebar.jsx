@@ -1,3 +1,4 @@
+import { ownedOpenDotRoomStatuses } from '../shared/open-dot-room-status';
 import { workspaceModeForPath } from '../shared/workspace-mode';
 import { agentRoster } from '../shared/agent-roster';
 import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../shared/open-dot-employee-route';
@@ -234,9 +235,11 @@ export default function Sidebar({
     setRooms([]);
     setDotRooms({});
     const dotActivity = event => {
+      if (event.detail?.clear === true) { setDotRooms({}); return; }
       const employeeId = event.detail?.employeeId;
       if (typeof employeeId !== 'string' || !Array.isArray(event.detail?.rooms)) return;
-      setDotRooms(previous => ({ ...previous, [employeeId]: event.detail.rooms }));
+      const entries = event.detail.employees ?? [{ employeeId, dotId: event.detail.dotId, rooms: event.detail.rooms }];
+      setDotRooms(ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || []));
     };
     window.addEventListener('hivemind:open-dot-rooms', dotActivity);
     window.addEventListener('hivemind:agent-rooms', activity);

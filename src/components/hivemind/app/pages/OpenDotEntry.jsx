@@ -26,7 +26,7 @@ export default function OpenDotEntry() {
       if (event.origin !== DOT_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
       const rooms = openDotRoomStatus(event.data, openDotEmployeeIdFromPath(pathname));
       if (rooms !== null) {
-        window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { employeeId: openDotEmployeeIdFromPath(pathname), rooms } }));
+        window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { employeeId: openDotEmployeeIdFromPath(pathname), dotId: event.data.dotId, rooms, employees: event.data.employees } }));
         return;
       }
       if (event.data?.type !== 'hivemind.open-dot.ready' || event.data?.version !== 1) return;
@@ -37,6 +37,7 @@ export default function OpenDotEntry() {
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener('message', onMessage);
+      window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { clear: true } }));
     };
   }, [frameKey, src, pathname]);
 
