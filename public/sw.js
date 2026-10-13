@@ -7,7 +7,7 @@
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v8';
+const CACHE = 'hive-shell-v9';
 const SHELL = ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
 
 function offlineResponse() {
@@ -35,6 +35,9 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return; // never touch cross-origin (API/CDN)
+  // Employee entry can hand off to a separate authenticated Runtime host.
+  // Let the browser own that navigation, not a same-origin SW fetch chain.
+  if (request.mode === 'navigate' && /^\/hivemind\/app\/employee\/harness(?:\/|$)/.test(url.pathname)) return;
 
   // Revisioned code is public build output; private routes and live plugin events stay live.
   const nativeCombo = url.pathname === '/plugins/'
@@ -59,8 +62,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request, { cache: 'reload' })
         .then((resp) => {
-          const copy = resp.clone();
-          caches.open(CACHE).then((c) => c.put('/index.html', copy)).catch(() => {});
+          if (resp.status === 200 && !resp.redirected && resp.type === 'basic'
+            && /text\/html/i.test(resp.headers.get('content-type') || '')
+            && !/private|no-store/i.test(resp.headers.get('cache-control') || '')) {
+            const copy = resp.clone();
+            caches.open(CACHE).then((c) => c.put('/index.html', copy)).catch(() => {});
+          }
           return resp;
         })
         .catch(() => caches.match('/index.html')

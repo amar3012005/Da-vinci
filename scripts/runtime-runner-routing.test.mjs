@@ -9,8 +9,10 @@ const env = { RUNTIME_RUNNER_PUBLIC_ORIGIN: publicOrigin,
 
 test('employee navigation transfers its exact route without transferring credentials', async () => {
   const response = await worker.fetch(new Request('https://next.singulancelabs.com/hivemind/app/employee/harness/session/existing#tab'), env);
-  assert.equal(response.status, 302);
-  assert.equal(response.headers.get('location'), `${publicOrigin}/hivemind/app/employee/harness/session/existing#tab`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('location'), null);
+  assert.equal(response.headers.get('cache-control'), 'private, no-store');
+  assert.match(await response.text(), /location\.replace\("https:\/\/runtime-runner\.singulancelabs\.com\/hivemind\/app\/employee\/harness\/session\/existing#tab"\)/);
   assert.equal(response.headers.get('set-cookie'), null);
 });
 

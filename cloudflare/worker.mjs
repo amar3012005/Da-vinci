@@ -416,7 +416,14 @@ export default {
       const authority = new URL(env.RUNTIME_RUNNER_PUBLIC_ORIGIN);
       destination.protocol = authority.protocol;
       destination.host = authority.host;
-      return Response.redirect(destination, 302);
+      // An existing same-origin service worker may fetch navigations itself.
+      // Following a cross-origin 302 there produces an unusable response. Keep
+      // the response local and let the browser perform the actual navigation.
+      const escaped = destination.href.replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+      const target = JSON.stringify(destination.href).replace(/</g, '\\u003c');
+      return new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Opening Runtime</title><meta http-equiv="refresh" content="0;url=${escaped}"></head><body><p>Opening Runtime… <a href="${escaped}">Continue</a></p><script>location.replace(${target})</script></body></html>`, {
+        headers: {'content-type':'text/html; charset=utf-8','cache-control':'private, no-store','cdn-cache-control':'no-store','x-robots-tag':'noindex, nofollow'},
+      });
     }
     const openDotEntryPath = isOpenDotEntryPath(pathname);
     if (url.protocol === 'http:' && env.ENVIRONMENT !== 'development') {
