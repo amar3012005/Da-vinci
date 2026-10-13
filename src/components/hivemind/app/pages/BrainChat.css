@@ -7,3 +7,11 @@
 [data-brain-chat] [data-composer-seat] [aria-label^="Model:"] {
   display: none !important;
 }
+
+/* Brain chat: the same beige as the mobile chat (#faf9f4) for the main column
+   and composer card. The native sidebar panel is not targeted. */
+[data-brain-chat] [class*="_frame"],
+[data-brain-chat] [class*="eqEnzG_root"],
+[data-brain-chat] [class*="mk7YQa_card"] {
+  background-color: #faf9f4 !important;
+}
