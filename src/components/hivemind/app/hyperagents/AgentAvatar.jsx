@@ -12,7 +12,7 @@ import React, { useMemo } from 'react';
 import { Avatar } from '@humation/react';
 import { humation1 } from '@humation/assets-humation-1';
 import { LANE_META } from './rooms/shared';
-import { employeeAppearance } from '../shared/employee-appearance';
+import { employeeAppearance, defaultEmployeeAppearance } from '../shared/employee-appearance';
 
 const HUMATION_FACE_ASSETS = {
   ...humation1,
@@ -76,11 +76,12 @@ export default function AgentAvatar({
 }) {
   const lane = resolveLane(agent);
   const meta = LANE_META[lane] || LANE_META.Communicator;
-  const appearance = employeeAppearance(agent);
+  const savedAppearance = employeeAppearance(agent);
+  const appearance = savedAppearance || defaultEmployeeAppearance(resolveSeed(agent));
   const seed = appearance?.seed || resolveSeed(agent);
   const name = resolveName(agent);
-  const img = appearance ? null : resolveImg(agent);
-  const radius = shape === 'square' ? Math.round(size * 0.28) : size;
+  const img = savedAppearance ? null : resolveImg(agent);
+  const radius = shape === 'none' ? 0 : shape === 'square' ? Math.round(size * 0.28) : size;
   const faceCrop = crop === 'face';
   const direction = facing === 'left' ? -1 : 1;
 
@@ -92,9 +93,9 @@ export default function AgentAvatar({
     width: size,
     height: size,
     borderRadius: radius,
-    background: ring ? meta.bg : 'transparent',
+    background: ring ? `#${appearance.colors.clothes}18` : 'transparent',
     boxShadow: ring ? `0 0 0 1.5px ${meta.color}22` : 'none',
-    overflow: 'hidden',
+    overflow: shape === 'none' ? 'visible' : 'hidden',
   };
 
   return (

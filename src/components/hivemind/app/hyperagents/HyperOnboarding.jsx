@@ -184,7 +184,7 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
               <div className="mt-14 grid grid-cols-1 divide-y divide-white/15 border-y border-white/20 bg-[#0b315f]/35 shadow-[inset_0_1px_0_rgba(255,255,255,.12),0_24px_80px_rgba(0,12,32,.2)] backdrop-blur-2xl sm:mt-20 md:grid-cols-3 md:divide-x md:divide-y-0">
                 {team.slice(0, 3).map((member, index) => (
                   <motion.div key={member.id || member.name} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : index * 0.14 }} className="min-h-[220px] p-6 text-center sm:p-8">
-                    <div className="mx-auto w-fit rounded-full border border-white/70 bg-white/35 p-1.5 shadow-[0_12px_35px_rgba(0,0,0,.1)] backdrop-blur-xl"><AgentAvatar agent={member} size={64} /></div>
+                    <div className="mx-auto w-fit"><AgentAvatar agent={member} size={132} shape="none" ring={false} /></div>
                     <h2 className="mt-4 text-[18px] font-semibold text-white font-['Space_Grotesk']">{member.name}</h2>
                     <div className="mt-1 text-[10px] font-mono uppercase tracking-[0.12em] text-[#a9d8ff]">{member.roleArchetype || member.role || 'HyperAgent'}</div>
                     <p className="mt-3 text-[11.5px] leading-5 text-white/65">{agentAssignment(member)}</p>
