@@ -2,18 +2,18 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-function worker() {
+function worker(origin = 'https://example.test') {
   const handlers = {};
   const puts = [];
   const fetch = jest.fn(async () => response());
   const caches = { open: async () => ({ put: (...args) => puts.push(args) }), match: async () => undefined };
   vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../../public/sw.js'), 'utf8'), {
-    self: { location: { origin: 'https://example.test' }, addEventListener: (kind, handler) => { handlers[kind] = handler; } },
+    self: { location: { origin }, addEventListener: (kind, handler) => { handlers[kind] = handler; } },
     URL, Response: class { constructor(body, options) { Object.assign(this, options); this.body = body; } }, fetch, caches,
   });
   return { fetch, puts, dispatch: async (pathname, mode = 'cors') => {
     let result;
-    handlers.fetch({ request: { method: 'GET', url: `https://example.test${pathname}`, mode }, respondWith: value => { result = value; } });
+    handlers.fetch({ request: { method: 'GET', url: `${origin}${pathname}`, mode }, respondWith: value => { result = value; } });
     const value = await result;
     await Promise.resolve();
     return value;
@@ -51,6 +51,29 @@ test('HTML fallthrough cannot become executable code or enter CacheStorage', asy
   sw.fetch.mockResolvedValue(response('text/html'));
   expect((await sw.dispatch(combo)).status).toBe(404);
   expect(sw.puts).toEqual([]);
+});
+
+test('Runtime recovers an HTML-poisoned native module cache once', async () => {
+  const sw = worker('https://runtime-runner.singulancelabs.com');
+  sw.fetch.mockResolvedValueOnce(response('text/html')).mockResolvedValueOnce(response());
+  expect((await sw.dispatch(combo)).status).toBe(200);
+  expect(sw.fetch.mock.calls.map(([, options]) => options.cache)).toEqual(['default', 'reload']);
+  expect(sw.puts).toEqual([]);
+});
+
+test('Runtime still rejects HTML after revalidation and does not cache it', async () => {
+  const sw = worker('https://runtime-runner.singulancelabs.com');
+  sw.fetch.mockResolvedValue(response('text/html'));
+  expect((await sw.dispatch(combo)).status).toBe(404);
+  expect(sw.fetch).toHaveBeenCalledTimes(2);
+  expect(sw.puts).toEqual([]);
+});
+
+test('Brain module cache behavior is unchanged', async () => {
+  const sw = worker('https://next.singulancelabs.com');
+  sw.fetch.mockResolvedValue(response('text/html'));
+  expect((await sw.dispatch(combo)).status).toBe(404);
+  expect(sw.fetch).toHaveBeenCalledTimes(1);
 });
 
 test('private responses, authorization denials and missing assets are never stored', async () => {

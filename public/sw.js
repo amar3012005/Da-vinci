@@ -83,7 +83,14 @@ self.addEventListener('fetch', (event) => {
     // Let HTTP caching honor the immutable response and full versioned URL.
     // Fetch still owns authorization, Vary/encoding and denial/private-cache policy.
     fetch(request, { cache: immutableCode ? 'default' : 'reload' })
-      .then((resp) => {
+      .then(async (resp) => {
+        // A pre-admission SPA document can survive in the HTTP cache under
+        // a revisioned Runtime module URL. Recover that exact request once;
+        // keep other hosts and valid immutable JavaScript on their fast path.
+        if (nativeCombo && url.hostname === 'runtime-runner.singulancelabs.com'
+          && /text\/html/i.test(resp.headers.get('content-type') || '')) {
+          resp = await fetch(request, { cache: 'reload' });
+        }
         const executable = immutableCode || /\.(?:js|css)$/i.test(url.pathname);
         const contentType = resp.headers.get('content-type') || '';
         if (executable && /text\/html/i.test(contentType)) {
