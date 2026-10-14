@@ -1,3 +1,4 @@
+import HeroCtas from '../../../mobile/HeroCtas';
 import { mobileAuthReturn } from '../shared/mobile-auth-return';
 import { isNativeApp } from '../shared/native-app';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -349,6 +350,17 @@ export default function LoginPage() {
     [location.search]
   );
 
+  const [productExperience, setProductExperience] = useState(null);
+  const [invitationEntry, setInvitationEntry] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/__hivemind/feature-flags/product-experience', { cache: 'no-store', signal: controller.signal })
+      .then(response => { if (!response.ok) throw new Error('Product configuration unavailable'); return response.json(); })
+      .then(value => setProductExperience({ mode: value.mode === 'operating_system' ? 'operating_system' : 'brain', publicSignup: value.publicSignup === true }))
+      .catch(() => { if (!controller.signal.aborted) setProductExperience({ mode: 'brain', publicSignup: false }); });
+    return () => controller.abort();
+  }, []);
+  const operatingSystem = productExperience?.mode === 'operating_system';
   const [showOnboarding, setShowOnboarding] = useState(wantsCreate);
   const [loadArtwork, setLoadArtwork] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
@@ -376,6 +388,9 @@ export default function LoginPage() {
   const [referralCode, setReferralCode] = useState('');
   const [personalInvitationCode, setPersonalInvitationCode] = useState('');
   const [createError, setCreateError] = useState('');
+  const invitationGate = productExperience?.publicSignup !== true && !invitationEntry
+    && !invitationLockedKind && !appliedEnterpriseInvitationToken && !appliedPersonalInvitationToken && !appliedReferralToken;
+
 
   // Provider identity is only a convenience prefill. The field stays editable,
   // and the value submitted by the user becomes canonical during org creation.
@@ -661,7 +676,7 @@ export default function LoginPage() {
       >
         {/* mono eyebrow above the card — supermemory-style section tag */}
         <div className={`${showOnboarding ? 'hidden' : 'flex'} items-center justify-center gap-2 mb-4 text-[10px] font-mono uppercase tracking-[0.28em] text-[#a3a3a3]`}>
-          <span className="text-[#117dff]">〉</span> The sovereign memory engine
+          <span className="text-[#117dff]">〉</span> {operatingSystem ? 'Proactive, anticipatory intelligence' : 'The sovereign memory engine'}
           <span className="hidden sm:inline text-[#d4d0ca]">· EU-hosted</span>
         </div>
 
@@ -679,7 +694,7 @@ export default function LoginPage() {
                 />
                 <div>
                   <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">SINGULANCE</h1>
-                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.18em]">HIVEMIND · MEMORY ENGINE</p>
+                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.18em]">{operatingSystem ? 'HIVEMIND · OPERATING SYSTEM' : 'HIVEMIND · MEMORY ENGINE'}</p>
                 </div>
               </div>
               <span className="hidden sm:inline text-[10px] font-mono text-[#d4d0ca] tabular-nums">[v2]</span>
@@ -882,17 +897,28 @@ export default function LoginPage() {
                     {onboardingStep === 1 ? 'Back to sign in' : 'Back'}
                   </button>
 
-                  {onboardingError && (
+                  {onboardingError && !invitationGate && (
                     <div className="mb-4 rounded-[7px] border border-red-200 bg-red-50 px-3 py-2.5 text-[12px] text-red-700">
                       {onboardingError === 'invalid_enterprise_code'
                         ? 'That Enterprise access code is invalid or no longer active. Check the code and try again.'
                         : onboardingError === 'missing_enterprise_code'
                           ? 'Enter the Enterprise access code supplied with your onboarding invitation.'
-                          : 'Workspace creation did not complete. Review the details and try again.'}
+                          : onboardingError === 'invitation_required' ? 'HIVEMIND is currently invitation-only. Use your invitation or referral link to continue.' : 'Workspace creation did not complete. Review the details and try again.'}
                     </div>
                   )}
                   <ReferralTrustBanner invitation={referralInvitation} />
 
+                  {invitationGate && (
+                    <section aria-label="Invitation required" className="my-8 max-w-lg rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] p-6 md:p-8">
+                      <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#117dff]">BY INVITATION</p>
+                      <h2 className="mt-3 text-[27px] font-medium leading-tight tracking-tight text-[#0a0a0a]">Looks like you haven't been invited yet.</h2>
+                      <p className="mt-4 mb-6 text-[13px] leading-relaxed text-[#737373]">HIVEMIND is currently invitation-only. Join our waitlist for early access, or meet our founder to explore HIVEMIND for your company.</p>
+                      <HeroCtas invitation delay={0} />
+                      {createError && <p role="alert" className="mt-4 text-[12px] text-red-700">{createError}</p>}
+                      <button type="button" onClick={() => setInvitationEntry(true)} className="mt-6 text-[12px] text-[#737373] underline underline-offset-4">I have an invitation code</button>
+                    </section>
+                  )}
+                  {!invitationGate && <>
                   {/* Step 1: Choose path */}
                   {onboardingStep === 1 && (
                     <div className="space-y-5">
@@ -901,7 +927,7 @@ export default function LoginPage() {
                           <span className="text-[#a3a3a3]">〉</span> NEW WORKSPACE <span className="text-[#d4d0ca]">· 01</span>
                         </div>
                         <h2 className="text-[24px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">How will you use HIVEMIND?</h2>
-                        <p className="text-[13px] text-[#737373] mt-1.5">Choose the workspace that fits you. You can grow into Enterprise anytime.</p>
+                        <p className="text-[13px] text-[#737373] mt-1.5">{operatingSystem ? 'Intelligence that learns your context, anticipates what matters and carries work forward — for you or your company.' : 'Choose the workspace that fits you. You can grow into Enterprise anytime.'}</p>
                         {invitationLockedKind && <p className="mt-3 rounded-[6px] border border-[#117dff]/20 bg-[#117dff]/[0.05] px-3 py-2 text-[11px] text-[#3b6da3]">{referralInvitation ? `${referralInvitation.referrer?.display_name} invited you: ${referralInvitation.offer?.trial_days} days free · ${Number(referralInvitation.offer?.monthly_credits || 0).toLocaleString()} monthly credits.` : `Your verified invitation has reserved the ${invitationLockedKind === 'enterprise' ? 'Enterprise' : 'Personal'} path. The other account type is unavailable for this setup.`}</p>}
                       </div>
 
@@ -915,9 +941,9 @@ export default function LoginPage() {
                             <Brain size={20} className="text-[#117dff]" />
                           </div>
                           <h3 className="text-[15px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">Personal</h3>
-                          <p className="text-[12px] text-[#525252] mt-1 leading-snug">Your Second Brain — connect all your platforms</p>
+                          <p className="text-[12px] text-[#525252] mt-1 leading-snug">{operatingSystem ? 'Proactive, anticipatory intelligence for you' : 'Your Second Brain — connect all your platforms'}</p>
                           <ul className="mt-3 space-y-1.5">
-                            {['Unified personal memory', 'Connect Gmail, Slack, Notion…', 'Free to start'].map((f) => (
+                            {(operatingSystem ? ['A Brain that grows with you', 'Specialist agents that learn from your feedback', 'Turn useful signals into completed work'] : ['Unified personal memory', 'Connect Gmail, Slack, Notion…', 'Free to start']).map((f) => (
                               <li key={f} className="flex items-center gap-1.5 text-[11px] text-[#737373]">
                                 <Check size={11} className="text-[#117dff] shrink-0" /> {f}
                               </li>
@@ -934,9 +960,9 @@ export default function LoginPage() {
                             <Building2 size={20} className="text-[#0a0a0a]" />
                           </div>
                           <h3 className="text-[15px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">Enterprise</h3>
-                          <p className="text-[12px] text-[#525252] mt-1 leading-snug">Sovereign Memory Engine for your team</p>
+                          <p className="text-[12px] text-[#525252] mt-1 leading-snug">{operatingSystem ? 'Proactive, anticipatory intelligence for your company' : 'Sovereign Memory Engine for your team'}</p>
                           <ul className="mt-3 space-y-1.5">
-                            {['Teams, projects & SSO', 'Cloud or self-hosted', 'EU data sovereignty'].map((f) => (
+                            {(operatingSystem ? ['Agents grounded in your Company Brain', 'Anticipate needs and carry work forward', 'Grow with your company, within your permissions'] : ['Teams, projects & SSO', 'Cloud or self-hosted', 'EU data sovereignty']).map((f) => (
                               <li key={f} className="flex items-center gap-1.5 text-[11px] text-[#737373]">
                                 <Check size={11} className="text-[#0a0a0a] shrink-0" /> {f}
                               </li>
@@ -955,8 +981,8 @@ export default function LoginPage() {
                         <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
                           <span className="text-[#a3a3a3]">〉</span> PERSONAL PLAN <span className="text-[#d4d0ca]">· 02</span>
                         </div>
-                        <h2 className="text-[22px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">Choose how your Brain grows</h2>
-                        <p className="text-[12px] text-[#737373] mt-1">Start free or choose the product layer you already need.</p>
+                        <h2 className="text-[22px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">{operatingSystem ? 'Choose how your intelligence works for you' : 'Choose how your Brain grows'}</h2>
+                        <p className="text-[12px] text-[#737373] mt-1">{operatingSystem ? 'A growing Brain, specialist agents and voice — choose the access that fits your life.' : 'Start free or choose the product layer you already need.'}</p>
                       </div>
 
                       <div className="divide-y divide-[#e3e0db] overflow-hidden rounded-[9px] border border-[#e3e0db] bg-white">
@@ -1088,8 +1114,8 @@ export default function LoginPage() {
                         <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
                           <span className="text-[#a3a3a3]">〉</span> DATA RESIDENCY <span className="text-[#d4d0ca]">· 02</span>
                         </div>
-                        <h2 className="text-[22px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">Where should your memory live?</h2>
-                        <p className="text-[13px] text-[#737373] mt-1.5">Your organization's memory is your most valuable asset. Choose who holds it.</p>
+                        <h2 className="text-[22px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">Where should your HIVEMIND live?</h2>
+                        <p className="text-[13px] text-[#737373] mt-1.5">Choose Managed Cloud, operated by us, or Self-hosted, on your own infrastructure.</p>
                       </div>
 
                       {/* Managed cloud */}
@@ -1193,7 +1219,7 @@ export default function LoginPage() {
                         </div>
                       )}
                       <div>
-                        <label className={LABEL_CLS}>Admin name</label>
+                        <label className={LABEL_CLS}>Your name</label>
                         <input value={userName} onChange={e => setUserName(e.target.value)} placeholder="Amar" className={INPUT_CLS} />
                       </div>
                       <div>
@@ -1201,7 +1227,7 @@ export default function LoginPage() {
                         <input value={enterpriseName} onChange={e => setEnterpriseName(e.target.value)} placeholder="DaVinci AI" className={INPUT_CLS} />
                       </div>
                       <div>
-                        <label className={LABEL_CLS}>Your Enterprise HIVEMIND</label>
+                        <label className={LABEL_CLS}>Your Enterprise HIVEMIND name</label>
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${(enterpriseName || 'company').toLowerCase().replace(/\s+/g, '')}_hivemind`} className={INPUT_CLS} />
                       </div>
                       <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-[#e3e0db] bg-[#faf9f4] p-3">
@@ -1216,7 +1242,7 @@ export default function LoginPage() {
                           <span className="mt-1 block text-[10.5px] leading-relaxed text-[#737373]">Email check-ins are optional, respect quiet hours, and include one-click unsubscribe. You can change this any time in Settings.</span>
                         </span>
                       </label>
-                      {!enterpriseInvitation && !referralInvitation && <div>
+                      {productExperience?.publicSignup !== true && !enterpriseInvitation && !referralInvitation && <div>
                         <label className={LABEL_CLS}>Enterprise access code</label>
                         <input
                           value={enterpriseAccessCode}
@@ -1272,6 +1298,7 @@ export default function LoginPage() {
                       </button>
                     </div>
                   )}
+                  </>}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1281,15 +1308,15 @@ export default function LoginPage() {
           {/* Right pane — artwork until a personal plan is selected, then a
               useful plan summary in the same half of the onboarding card. */}
           <div className={`hidden md:flex bg-[#f8f7f2] overflow-hidden relative flex-col ${showOnboarding ? 'h-full md:w-1/2' : 'md:w-[448px]'}`}>
-            {showOnboarding && accountType === 'personal' && onboardingStep === 2 ? (() => {
+            {showOnboarding && !invitationGate && accountType === 'personal' && onboardingStep === 2 ? (() => {
               const plan = PERSONAL_PLANS.find((candidate) => candidate.id === selectedPlan);
               if (!plan) {
                 return (
                   <div className="flex h-full flex-col justify-between p-10 lg:p-14 xl:p-16">
                     <div>
                       <p className="text-[9px] font-mono uppercase tracking-[0.22em] text-[#117dff]">HIVEMIND PRODUCT LAYERS</p>
-                      <h3 className="mt-4 max-w-md text-[38px] font-semibold leading-[1.04] tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">Choose the way your Brain grows.</h3>
-                      <p className="mt-5 max-w-md text-[15px] leading-relaxed text-[#525252]">Every plan begins with your memory. Add governed work and voice only when they belong in your workflow.</p>
+                      <h3 className="mt-4 max-w-md text-[38px] font-semibold leading-[1.04] tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">{operatingSystem ? 'Intelligence that grows with you.' : 'Choose the way your Brain grows.'}</h3>
+                      <p className="mt-5 max-w-md text-[15px] leading-relaxed text-[#525252]">{operatingSystem ? 'Your Brain connects what you know. Your specialist agents use that context to anticipate needs, complete work and improve through your feedback.' : 'Every plan begins with your memory. Add governed work and voice only when they belong in your workflow.'}</p>
                     </div>
 
                     <div className="my-10 space-y-3">
@@ -1362,14 +1389,14 @@ export default function LoginPage() {
                 {loadArtwork && !isNativeApp() && (
                   <img
                     src="/images/hivemind-login-art.webp"
-                    alt="HIVEMIND memory system"
+                    alt={operatingSystem ? 'HIVEMIND Operating System' : 'HIVEMIND memory system'}
                     decoding="async"
                     className="h-full w-full object-cover object-top block"
                   />
                 )}
                 <div className="absolute bottom-3 left-0 right-0 flex justify-center">
                   <span className="px-2.5 py-1 rounded-[4px] bg-black/35 backdrop-blur-sm text-white/85 text-[9px] font-mono uppercase tracking-[0.26em]">
-                    memory · running inside everything
+                    Proactive intelligence · one step ahead
                   </span>
                 </div>
               </>
@@ -1379,11 +1406,15 @@ export default function LoginPage() {
 
         {/* Feature pills — benchmark-style mono footer */}
         <div className={`${showOnboarding ? 'hidden' : 'flex'} items-center justify-center gap-5 mt-5`}>
-          {[
+          {(operatingSystem ? [
+            { icon: Brain, label: 'A growing Brain' },
+            { icon: Zap, label: 'Proactive intelligence' },
+            { icon: Workflow, label: 'Real work, completed' },
+          ] : [
             { icon: Brain, label: 'Persistent Memory' },
             { icon: Zap, label: '<50ms Recall' },
             { icon: Shield, label: 'EU Sovereign' },
-          ].map((feat) => (
+          ]).map((feat) => (
             <div key={feat.label} className="flex items-center gap-1.5 text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider">
               <feat.icon size={11} className="text-[#117dff]/60" />
               <span>{feat.label}</span>

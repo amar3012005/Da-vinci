@@ -590,6 +590,19 @@ export default {
       return Response.redirect(new URL(HARNESS_OVERVIEW_PATH, request.url), 302);
     }
 
+    if (pathname === '/__hivemind/feature-flags/product-experience') {
+      if (request.method !== 'GET') return new Response(null, { status: 405, headers: { allow: 'GET' } });
+      const context = { hostname: hostname(request), environment: env.ENVIRONMENT || 'production', surface: 'hivemind-onboarding' };
+      let mode = 'brain', publicSignup = false;
+      try {
+        const value = await env.FLAGS.getStringValue('hivemind-product-experience', 'brain', context);
+        if (value === 'operating_system') mode = value;
+      } catch { /* Existing Brain presentation remains the fallback. */ }
+      try { publicSignup = await env.FLAGS.getBooleanValue('hivemind-public-signup', false, context) === true; }
+      catch { /* Invitation-only remains the safe fallback. */ }
+      return Response.json({ mode, publicSignup }, { headers: { 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } });
+    }
+
     if (pathname === HIVE_HARNESS_CHAT_FLAG_PATH) {
       if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
       return harnessChatFlagResponse(request, env);
