@@ -27,6 +27,8 @@ import { TeamProvider } from '../shared/team-context';
 import GlobalUploadStrip from './GlobalUploadStrip';
 import { QuickRecorderProvider } from '../shared/QuickRecorderProvider';
 import { WelcomeSlides, ActivationGate } from '../shared/WelcomeFlow';
+import AccountSettingsDialog from '../shared/AccountSettingsDialog';
+const HyperOnboarding = React.lazy(() => import('../hyperagents/HyperOnboarding'));
 import PlanLimitModal from '../components/PlanLimitModal';
 import RunwayEstimatorModal from '../components/RunwayEstimatorModal';
 import { PLAN_LIMIT_CODE, PLAN_LIMIT_EVENT } from '../shared/planLimit';
@@ -307,6 +309,31 @@ function AppShellContent() {
     const id = setInterval(tick, 5000);
     return () => { alive = false; clearInterval(id); };
   }, [isSelfHost, shGate]);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const closeAccount = useCallback(() => setAccountOpen(false), []);
+  useEffect(() => {
+    const open = () => setAccountOpen(true);
+    window.addEventListener('hm:open-account-settings', open);
+    return () => window.removeEventListener('hm:open-account-settings', open);
+  }, []);
+  const companyEntry = location.pathname === '/hivemind/app/employees/mycompany';
+  const [companyAdmission, setCompanyAdmission] = useState({ scope: null, status: 'checking' });
+  const [companyRetry, setCompanyRetry] = useState(0);
+  useEffect(() => {
+    if (!org?.id || needsOnboarding) return;
+    let alive = true;
+    setCompanyAdmission({ scope: org.id, status: 'checking' });
+    apiClient.hyperCompany().then(data => {
+      if (alive) setCompanyAdmission({ scope: org.id, status: data?.onboarded === true && data?.company ? 'ready' : data?.onboarded === false ? 'required' : 'error' });
+    }).catch(() => {
+      if (alive) setCompanyAdmission({ scope: org.id, status: 'error' });
+    });
+    return () => { alive = false; };
+  }, [org?.id, needsOnboarding, companyRetry]);
+  const completeCompany = useCallback(() => {
+    setCompanyAdmission({ scope: org?.id, status: 'ready' });
+    navigate('/hivemind/app/overview/new', { replace: true });
+  }, [navigate, org?.id]);
   const [chatOpen, setChatOpen] = useState(false);
   // Load the optional chat panel only after first use, then retain its state.
   const [chatLoaded, setChatLoaded] = useState(false);
@@ -474,6 +501,17 @@ function AppShellContent() {
     return <ActivationGate onDone={finishGate} />;
   }
 
+  // Company setup is an admission stage, not a dismissible page walkthrough.
+  // Consult the saved company record; never trust a local 'skipped' marker.
+  const companyStatus = companyAdmission.scope === org?.id ? companyAdmission.status : 'checking';
+  if (companyStatus !== 'ready') return <div className="min-h-screen bg-[#faf9f4] p-4 sm:p-8">
+    {companyStatus === 'checking' ? <p role="status" className="p-8 text-center text-sm">Checking your company setup…</p>
+      : companyStatus === 'error' ? <div role="alert" className="mx-auto max-w-lg p-8"><p>We couldn’t check your company setup. Your progress is saved.</p><button type="button" onClick={() => setCompanyRetry(value => value + 1)} className="mt-4 text-[#117dff] underline">Try again</button></div>
+      : <React.Suspense fallback={<p role="status">Opening company onboarding…</p>}><HyperOnboarding onComplete={completeCompany} /></React.Suspense>}
+    {companyStatus !== 'required' && <button type="button" onClick={() => setAccountOpen(true)} className="fixed bottom-6 right-6 rounded-lg border bg-white px-4 py-2 text-sm">Account & Settings</button>}
+    {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}
+  </div>;
+
   if (brainChat && brainPhone) return (
     <QuickRecorderProvider>
       <TeamProvider>
@@ -489,6 +527,7 @@ function AppShellContent() {
             <CallContractModal />
             <ProductAccessModal open={Boolean(productUpgrade)} product={productUpgrade?.product} currentPlan={org?.plan} onClose={() => setProductUpgrade(null)} onUpgrade={plan => { setProductUpgrade(null); navigate(`/hivemind/m/billing?upgrade=${plan}`); }} />
             <EntityProfileModalHost />
+            {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}
           </MobileShell>
         </div>
       </TeamProvider>
@@ -515,15 +554,16 @@ function AppShellContent() {
             '--hm-harness-center-offset': `${-((overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? 0 : sidebarCollapsed ? 34 : 150)}px`,
           }}
         >
-          {!crmFullscreen && <TopBar floatingMobile={employeeRoom && brainPhone} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
+          {!companyEntry && !crmFullscreen && <TopBar floatingMobile={employeeRoom && brainPhone} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
           {nativeChatRoom && overlayNavigation && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
-          <main data-native-chat-main={nativeChatRoom || undefined} className={graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview || onOpenDotWorkspace ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 min-w-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          <main data-native-chat-main={nativeChatRoom || undefined} className={companyEntry ? 'min-h-screen p-4 sm:p-8' : graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview || onOpenDotWorkspace ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 min-w-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>
 
+        {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}
         {/* Chat FAB — glass-morph pill, slides in from right, blinking pulse */}
         {SHOW_TALK_TO_HIVE_FAB && <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || crmFullscreen || onOverview || onMeetingNotes || activeSection === 'hyperagents' || activeSection === 'tara'} />}
 

@@ -365,12 +365,6 @@ export default function Sidebar({
     ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })
     : t('sidebar.planLabel.free', { defaultValue: 'Free Plan' });
   const tt = (k, def) => t(`sidebar.${k}`, { defaultValue: def });
-  const accountItems = [
-    { to: '/hivemind/app/profile',  icon: User,       label: tt('profile',  'Profile') },
-    { to: '/hivemind/app/usage',    icon: Gauge,      label: tt('usage',    'Usage') },
-    { to: '/hivemind/app/billing',  icon: CreditCard, label: tt('billing',  'Billing') },
-    { to: '/hivemind/app/settings', icon: Settings,   label: tt('settings', 'Settings') },
-  ];
 
   const workspaceModeSwitcher = <WorkspaceModeSwitcher collapsed={collapsed} />;
 
@@ -575,56 +569,10 @@ export default function Sidebar({
             <CreditBalance credits={usage?.credits} compact collapsed />
           </div>
         )}
-        {/* Account section */}
-        <div className="px-2.5 pt-2.5 pb-1">
-          {!collapsed && (
-            <div className="px-2.5 mb-1.5">
-              <span className="text-[#737373] text-[11px] font-semibold uppercase tracking-[0.08em]">
-                {tt('groups.account', 'Account')}
-              </span>
-            </div>
-          )}
-          {collapsed && <div className="h-px bg-[#e3e0db] mx-2 mb-2" />}
-          <div className="space-y-0.5">
-            {accountItems.map((item) => {
-              const isActive =
-                location.pathname === item.to ||
-                location.pathname.startsWith(item.to);
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  data-tour-id={item.to}
-                  className={`relative w-full text-left flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[15px] transition-all duration-150 group`}
-                  title={collapsed ? item.label : undefined}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="sidebar-active-account"
-                      className="absolute inset-0 bg-[#f3f1ec] rounded-lg"
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    />
-                  )}
-                  <item.icon
-                    size={18}
-                    strokeWidth={1.75}
-                    className={`relative z-10 transition-colors flex-shrink-0 ${
-                      isActive ? 'text-[#0a0a0a]' : 'text-[#737373] group-hover:text-[#333333]'
-                    }`}
-                  />
-                  {!collapsed && (
-                    <span
-                      className={`relative z-10 min-w-0 flex-1 transition-colors ${
-                        isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#333333] group-hover:text-[#0a0a0a]'
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  )}
-                </NavLink>
-              );
-            })}
-          </div>
+        <div className="px-3 py-3">
+          <button type="button" title="Account & Settings" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] text-[#333333] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''}`}>
+            <Settings size={18}/>{!collapsed && <span>Account & Settings</span>}
+          </button>
         </div>
 
         {/* User + Logout */}

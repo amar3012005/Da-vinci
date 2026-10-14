@@ -252,6 +252,12 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
   const [savingLocation, setSavingLocation] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [awakeningOpen, setAwakeningOpen] = useState(false);
+  const completedRef = useRef(false);
+  useEffect(() => {
+    if (phase !== 'done' || !result || completedRef.current) return;
+    completedRef.current = true;
+    onComplete?.(result);
+  }, [phase, result, onComplete]);
   const [retryingCapture, setRetryingCapture] = useState(false);
   const pollRef = useRef(null);
 
@@ -402,8 +408,8 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
                 : <>{t('hyperOnboarding.start', 'Start onboarding')} <ArrowRight size={15} /></>}
             </button>
           </form>
-          <button onClick={() => onSkip?.()} className="mt-5 text-[12px] text-[#a3a3a3] hover:text-[#525252] transition-colors">
-            {t('hyperOnboarding.skip', 'Skip — take me to the playground')}
+          <button type="button" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))} className="mt-5 text-[12px] text-[#a3a3a3] hover:text-[#525252] transition-colors">
+            Account & Settings
           </button>
         </motion.div>
       </div>
