@@ -680,21 +680,7 @@ export default function HyperAgents({ harnessRooms = false }) {
           <div className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] px-2 mb-1">
             {t('hyperAgents.account', 'Account')}
           </div>
-          {[
-            { icon: User, label: t('hyperAgents.profile', 'Profile'), to: '/hivemind/app/profile' },
-            { icon: Gauge, label: t('hyperAgents.usage', 'Usage'), to: '/hivemind/app/usage' },
-            { icon: CreditCard, label: t('hyperAgents.billing', 'Billing'), to: '/hivemind/app/billing', badge: 'PRO' },
-            { icon: Settings, label: t('hyperAgents.settings', 'Settings'), to: '/hivemind/app/settings' },
-          ].map(({ icon: Icon, label, to, badge }) => (
-            <button
-              key={to}
-              onClick={() => navigate(to)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] text-[#525252] hover:text-[#0a0a0a] hover:bg-white transition-colors"
-            >
-              <Icon size={13} /> {label}
-              {badge ? <span className="ml-auto text-[8.5px] font-mono px-1.5 py-0.5 rounded bg-[#117dff]/10 text-[#117dff]">{badge}</span> : null}
-            </button>
-          ))}
+          <button type="button" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[12px] text-[#525252] hover:bg-white"><Settings size={15}/>Account & Settings</button>
           <div className="flex items-center gap-2 px-2 py-2 mt-1 border-t border-[#e3e0db]">
             <span className="w-7 h-7 rounded-lg bg-[#117dff]/10 text-[#117dff] flex items-center justify-center text-[11px] font-bold shrink-0">
               {(user?.display_name || user?.email || '?')[0].toUpperCase()}
