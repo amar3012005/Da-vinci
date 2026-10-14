@@ -34,3 +34,16 @@ test('proxy forwards only the company cookie and actual Origin, preserving tenan
     assert.equal(response.headers.get('cache-control'), 'private, no-store');
   } finally { globalThis.fetch = previous; }
 });
+
+test('employee JSON forwarding rejects oversized drafts before any upstream request', async () => {
+  const previous = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return Response.json({}); };
+  try {
+    const response = await worker.fetch(new Request(`${origin}${path}`, { method: 'POST', headers: {
+      origin, cookie: 'hm_cp_session=company', 'content-type': 'application/json',
+    }, body: 'x'.repeat(64001) }), {});
+    assert.equal(response.status, 413);
+    assert.equal(calls, 0);
+  } finally { globalThis.fetch = previous; }
+});

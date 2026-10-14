@@ -261,14 +261,31 @@ async function proxyEmployeeRegistry(request) {
   const headers = new Headers({ cookie: session, origin: origin || url.origin, accept: 'application/json' });
   if (request.headers.has('content-type')) headers.set('content-type', request.headers.get('content-type'));
   try {
+    let body;
+    if (create) {
+      const reader = request.body?.getReader();
+      const parts = []; let size = 0;
+      if (reader) while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > 64_000) { await reader.cancel(); return reply('employee_draft_too_large', 413); }
+        parts.push(value);
+      }
+      body = new Uint8Array(size); let offset = 0;
+      for (const part of parts) { body.set(part, offset); offset += part.byteLength; }
+    }
     const response = await fetch(new Request(`https://dots.singulancelabs.com${url.pathname}${url.search}`, {
-      method, headers, body: create ? request.body : undefined, redirect: 'error', ...(create ? { duplex: 'half' } : {}),
+      method, headers, body, redirect: 'error',
     }));
     return new Response(response.body, { status: response.status, headers: {
       'content-type': response.headers.get('content-type') || 'application/json',
       'cache-control': 'private, no-store',
     } });
-  } catch { return reply('employee_registry_unavailable', 502); }
+  } catch (error) {
+    console.error('employee_registry_proxy_fetch_failed', error instanceof Error ? error.name : 'UnknownError');
+    return reply('employee_registry_unavailable', 502);
+  }
 }
 
 async function harnessResponse(request, env) {
