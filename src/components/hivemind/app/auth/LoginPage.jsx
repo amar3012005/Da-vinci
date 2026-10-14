@@ -909,14 +909,26 @@ export default function LoginPage() {
                   <ReferralTrustBanner invitation={referralInvitation} />
 
                   {invitationGate && (
-                    <section aria-label="Invitation required" className="my-8 max-w-lg rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] p-6 md:p-8">
-                      <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#117dff]">BY INVITATION</p>
-                      <h2 className="mt-3 text-[27px] font-medium leading-tight tracking-tight text-[#0a0a0a]">Looks like you haven't been invited yet.</h2>
-                      <p className="mt-4 mb-6 text-[13px] leading-relaxed text-[#737373]">HIVEMIND is currently invitation-only. Join our waitlist for early access, or meet our founder to explore HIVEMIND for your company.</p>
-                      <HeroCtas invitation delay={0} />
-                      {createError && <p role="alert" className="mt-4 text-[12px] text-red-700">{createError}</p>}
-                      <button type="button" onClick={() => setInvitationEntry(true)} className="mt-6 text-[12px] text-[#737373] underline underline-offset-4">I have an invitation code</button>
-                    </section>
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-black/35 p-4 backdrop-blur-[3px]" role="presentation">
+                      <section role="dialog" aria-modal="true" aria-labelledby="invitation-dialog-title" onKeyDown={event => {
+                        if (!event.currentTarget.contains(event.target)) return;
+                        if (event.key === 'Escape') { event.stopPropagation(); resetOnboarding(); }
+                        if (event.key === 'Tab') {
+                          const controls = [...event.currentTarget.querySelectorAll('button:not([disabled]), a[href], input:not([disabled])')];
+                          const first = controls[0], last = controls[controls.length - 1];
+                          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+                          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+                        }
+                      }} className="relative my-auto w-full max-w-[800px] overflow-hidden rounded-[12px] border border-[#e3e0db] bg-white shadow-2xl">
+                        <button type="button" autoFocus aria-label="Close invitation notice and return to sign in" onClick={resetOnboarding} className="absolute right-3 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full text-[24px] text-[#737373] hover:bg-black/5">×</button>
+                        <HeroCtas invitation delay={0} />
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e3e0db] px-7 py-4">
+                          <button type="button" onClick={() => setInvitationEntry(true)} className="text-[12px] text-[#737373] underline underline-offset-4">I have an invitation code</button>
+                          <button type="button" onClick={resetOnboarding} className="text-[12px] text-[#737373]">Already invited? Sign in</button>
+                        </div>
+                        {createError && <p role="alert" className="px-7 pb-4 text-[12px] text-red-700">{createError}</p>}
+                      </section>
+                    </div>
                   )}
                   {!invitationGate && <>
                   {/* Step 1: Choose path */}
