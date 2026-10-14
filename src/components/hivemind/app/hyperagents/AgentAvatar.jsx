@@ -12,7 +12,7 @@ import React, { useMemo } from 'react';
 import { Avatar } from '@humation/react';
 import { humation1 } from '@humation/assets-humation-1';
 import { LANE_META } from './rooms/shared';
-import { employeeAppearance, defaultEmployeeAppearance } from '../shared/employee-appearance';
+import { employeeAppearance, defaultEmployeeAppearance, starterEmployeeAppearance } from '../shared/employee-appearance';
 
 const HUMATION_FACE_ASSETS = {
   ...humation1,
@@ -77,7 +77,7 @@ export default function AgentAvatar({
   const lane = resolveLane(agent);
   const meta = LANE_META[lane] || LANE_META.Communicator;
   const savedAppearance = employeeAppearance(agent);
-  const appearance = savedAppearance || defaultEmployeeAppearance(resolveSeed(agent));
+  const appearance = savedAppearance || starterEmployeeAppearance(agent?.name) || defaultEmployeeAppearance(resolveSeed(agent));
   const seed = appearance?.seed || resolveSeed(agent);
   const name = resolveName(agent);
   const img = savedAppearance ? null : resolveImg(agent);

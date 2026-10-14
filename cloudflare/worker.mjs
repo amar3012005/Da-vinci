@@ -475,6 +475,14 @@ export default {
     if (['/api/hivemind/employees/status', '/api/hivemind/employees/create'].includes(pathname)) {
       return proxyEmployeeRegistry(request);
     }
+    // Bare overview on Runtime is a Runtime entry alias, not a Brain session.
+    // Resolve before serving either app shell or crossing authentication hosts.
+    if (url.origin === env.RUNTIME_RUNNER_PUBLIC_ORIGIN && ['GET', 'HEAD'].includes(request.method)
+      && /^\/hivemind\/app\/overview\/?$/u.test(pathname)) {
+      const destination = new URL(url);
+      destination.pathname = '/hivemind/app/employee/harness';
+      return new Response(null, { status: 307, headers: { location: destination.toString(), 'cache-control': 'private, no-store' } });
+    }
     // Public path ownership is strict: Brain sessions stay on Next; Runtime
     // rooms use their canonical employee route on the Runtime authority.
     if (url.origin === env.RUNTIME_RUNNER_PUBLIC_ORIGIN && ['GET', 'HEAD'].includes(request.method)

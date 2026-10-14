@@ -42,3 +42,18 @@ export function defaultEmployeeAppearance(seed) {
     background: 'transparent',
   });
 }
+
+export function starterEmployeeAppearance(name) {
+  const starters = {
+    Faraday: { head: 'hm1-p-000011', item: 'hm1-p-000053', clothes: 'E9A637', background: 'FFF0CC' },
+    Feynmann: { head: 'hm1-p-000004', item: 'hm1-p-000041', clothes: 'E66A99', background: 'FBE3EC' },
+    Turing: { head: 'hm1-p-000003', item: 'hm1-p-000048', clothes: 'E9A637', background: 'EAE7FA' },
+  };
+  const starter = starters[name];
+  if (!starter) return null;
+  return createEmployeeAppearance(`starter-${name.toLowerCase()}`, {
+    selections: { head: starter.head, body: 'hm1-p-000030', bottom: 'hm1-p-000033', item: starter.item, glasses: 'hm1-p-000056' },
+    colors: { stroke: '171717', hair: '171717', skin: 'FFFFFF', clothes: starter.clothes, bottom: '283345' },
+    background: starter.background,
+  });
+}

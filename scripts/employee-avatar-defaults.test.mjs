@@ -11,3 +11,15 @@ test('human defaults are stable, varied and valid native appearance records', ()
     assert.notEqual(appearance.selections.glasses, appearanceParts('glasses').find(p => p.name === 'tiny').id);
   }
 });
+
+test('starter avatars have fixed parts and matching canonical native appearance records', async () => {
+  const { starterEmployeeAppearance } = await import('../src/components/hivemind/app/shared/employee-appearance.js');
+  const expected = [['Faraday','hm1-p-000053','FFF0CC'],['Feynmann','hm1-p-000041','FBE3EC'],['Turing','hm1-p-000048','EAE7FA']];
+  for (const [name,item,background] of expected) {
+    const appearance = starterEmployeeAppearance(name);
+    assert.equal(appearance.selections.item,item);
+    assert.equal(appearance.background,background);
+    assert.deepEqual(employeeAppearance({policyRules:{appearance}}),appearance);
+  }
+  assert.equal(starterEmployeeAppearance('Someone'),null);
+});

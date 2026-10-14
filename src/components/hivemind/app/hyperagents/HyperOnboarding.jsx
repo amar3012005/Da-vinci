@@ -7,6 +7,7 @@ import LangSwitcher from '../layout/LangSwitcher';
 import SingulanceMark from '../shared/SingulanceMark';
 import OnboardingTerminal from './OnboardingTerminal';
 import AgentAvatar from './AgentAvatar';
+import { starterEmployeeAppearance } from '../shared/employee-appearance';
 import WebsitePreview from './WebsitePreview';
 
 /**
@@ -183,8 +184,8 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
               </div>
               <div className="mt-14 grid grid-cols-1 divide-y divide-[#cbd7e3] overflow-hidden rounded-2xl border border-white/80 bg-[#f7f9fc]/95 shadow-[0_24px_80px_rgba(0,12,32,.18)] sm:mt-20 md:grid-cols-3 md:divide-x md:divide-y-0">
                 {team.slice(0, 3).map((member, index) => (
-                  <motion.div key={member.id || member.name} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : index * 0.14 }} className="min-h-[220px] p-6 text-center sm:p-8">
-                    <div className="mx-auto w-fit"><AgentAvatar agent={member} size={132} shape="none" ring={false} /></div>
+                  <motion.div key={member.id || member.name} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : index * 0.14 }} className="min-h-[220px] p-6 text-center sm:p-8" style={{ backgroundColor: starterEmployeeAppearance(member.name) ? `#${starterEmployeeAppearance(member.name).background}80` : undefined }}>
+                    <div className="mx-auto w-fit"><AgentAvatar agent={member} size={132} shape={starterEmployeeAppearance(member.name) ? 'circle' : 'none'} ring={Boolean(starterEmployeeAppearance(member.name))} /></div>
                     <h2 className="mt-4 text-[18px] font-semibold text-[#102b46] font-['Space_Grotesk']">{member.name}</h2>
                     <div className="mt-1 text-[10px] font-mono uppercase tracking-[0.12em] text-[#34688e]">{member.roleArchetype || member.role || 'HyperAgent'}</div>
                     <p className="mt-3 text-[11.5px] leading-5 text-[#526577]">{agentAssignment(member)}</p>
