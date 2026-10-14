@@ -198,21 +198,26 @@ export default function Sidebar({
     const controller = new AbortController();
     let timer;
     let loading = false;
+    let failures = 0;
+    let retryAllowed = true;
     const load = async () => {
       if (!scope || document.hidden || controller.signal.aborted || loading) return;
       loading = true;
       try {
-        const response = await fetch('https://dots.singulancelabs.com/api/hivemind/employees/status', { credentials: 'include', cache: 'no-store', signal: controller.signal });
+        const response = await fetch('/api/hivemind/employees/status', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
+        retryAllowed = ![401, 403, 404].includes(response.status);
         if (!response.ok) throw new Error('Status unavailable');
+        failures = 0;
         const result = await response.json();
         if (!controller.signal.aborted && result.version === 1) setDotRooms(ownedOpenDotRoomStatuses(result.employees, agentRoster.peek(scope) || [], dotReadAt.current));
-      } catch { if (!controller.signal.aborted) setDotRooms({}); }
-      finally { loading = false; if (!controller.signal.aborted) timer = setTimeout(load, 15000); }
+      } catch { failures += 1; if (!controller.signal.aborted) setDotRooms({}); }
+      finally { loading = false; if (!controller.signal.aborted && retryAllowed) timer = setTimeout(load, Math.min(300000, 15000 * (2 ** Math.min(failures, 5)))); }
     };
     const visible = () => { clearTimeout(timer); if (!document.hidden) load(); };
     load();
     document.addEventListener('visibilitychange', visible);
-    return () => { controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', visible); };
+    window.addEventListener('hivemind:session-established', visible);
+    return () => { controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', visible); window.removeEventListener('hivemind:session-established', visible); };
   }, [scope]);
   const teamScope = useRef(null);
   const [teamLoadError, setTeamLoadError] = useState(false);

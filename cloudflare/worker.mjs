@@ -235,6 +235,42 @@ async function proxyHarnessRunner(request, env) {
   }));
 }
 
+async function proxyEmployeeRegistry(request) {
+  const url = new URL(request.url);
+  const create = url.pathname === '/api/hivemind/employees/create';
+  const method = create ? 'POST' : 'GET';
+  const origin = request.headers.get('origin');
+  const allowed = ['https://next.singulancelabs.com', 'https://runtime-runner.singulancelabs.com'];
+  const reply = (error, status) => Response.json({ error }, { status,
+    headers: { 'cache-control': 'private, no-store' } });
+  if (!allowed.includes(url.origin) || (origin && origin !== url.origin)) return reply('origin_denied', 403);
+  if (request.method === 'OPTIONS') {
+    if (request.headers.get('access-control-request-method') !== method) return reply('method_not_allowed', 403);
+    return new Response(null, { status: 204, headers: {
+      'access-control-allow-origin': url.origin, 'access-control-allow-credentials': 'true',
+      'access-control-allow-methods': method, 'access-control-allow-headers': 'Content-Type',
+      vary: 'Origin', 'cache-control': 'private, no-store',
+    } });
+  }
+  if (request.method !== method) return new Response(null, { status: 405, headers: { allow: method, 'cache-control': 'private, no-store' } });
+  // Only the existing company session cookie crosses to its established
+  // employee registry. Native runner credentials and tenant headers do not.
+  const session = (request.headers.get('cookie') || '').split(';').map(value => value.trim())
+    .find(value => value.startsWith('hm_cp_session='));
+  if (!session) return reply('authentication_required', 401);
+  const headers = new Headers({ cookie: session, origin: origin || url.origin, accept: 'application/json' });
+  if (request.headers.has('content-type')) headers.set('content-type', request.headers.get('content-type'));
+  try {
+    const response = await fetch(new Request(`https://dots.singulancelabs.com${url.pathname}${url.search}`, {
+      method, headers, body: create ? request.body : undefined, redirect: 'error', ...(create ? { duplex: 'half' } : {}),
+    }));
+    return new Response(response.body, { status: response.status, headers: {
+      'content-type': response.headers.get('content-type') || 'application/json',
+      'cache-control': 'private, no-store',
+    } });
+  } catch { return reply('employee_registry_unavailable', 502); }
+}
+
 async function harnessResponse(request, env) {
   const pathname = new URL(request.url).pathname;
   const documentUrl = new URL(request.url);
@@ -417,6 +453,9 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    if (['/api/hivemind/employees/status', '/api/hivemind/employees/create'].includes(pathname)) {
+      return proxyEmployeeRegistry(request);
+    }
     // Public path ownership is strict: Brain sessions stay on Next; Runtime
     // rooms use their canonical employee route on the Runtime authority.
     if (url.origin === env.RUNTIME_RUNNER_PUBLIC_ORIGIN && ['GET', 'HEAD'].includes(request.method)
