@@ -252,12 +252,6 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
   const [savingLocation, setSavingLocation] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [awakeningOpen, setAwakeningOpen] = useState(false);
-  const completedRef = useRef(false);
-  useEffect(() => {
-    if (phase !== 'done' || !result || completedRef.current) return;
-    completedRef.current = true;
-    onComplete?.(result);
-  }, [phase, result, onComplete]);
   const [retryingCapture, setRetryingCapture] = useState(false);
   const pollRef = useRef(null);
 

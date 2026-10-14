@@ -33,7 +33,7 @@ import SingulanceMark from './SingulanceMark';
 /* ─── Shared blueprint canvas ──────────────────────────────────────────── */
 function BlueprintCanvas({ children }) {
   return (
-    <div className="fixed inset-0 z-[130] bg-[#faf9f4] overflow-hidden">
+    <div data-hivemind-app-shell className="fixed inset-0 z-[130] bg-[#faf9f4] overflow-hidden">
       {/* dot grid */}
       <div
         className="absolute inset-0 opacity-[0.5]"

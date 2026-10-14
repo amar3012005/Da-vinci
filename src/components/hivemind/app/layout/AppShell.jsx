@@ -27,6 +27,7 @@ import { TeamProvider } from '../shared/team-context';
 import GlobalUploadStrip from './GlobalUploadStrip';
 import { QuickRecorderProvider } from '../shared/QuickRecorderProvider';
 import { WelcomeSlides, ActivationGate } from '../shared/WelcomeFlow';
+import { companyAdmissionStatus } from '../shared/company-admission';
 import AccountSettingsDialog from '../shared/AccountSettingsDialog';
 const HyperOnboarding = React.lazy(() => import('../hyperagents/HyperOnboarding'));
 import PlanLimitModal from '../components/PlanLimitModal';
@@ -324,7 +325,7 @@ function AppShellContent() {
     let alive = true;
     setCompanyAdmission({ scope: org.id, status: 'checking' });
     apiClient.hyperCompany().then(data => {
-      if (alive) setCompanyAdmission({ scope: org.id, status: data?.onboarded === true && data?.company ? 'ready' : data?.onboarded === false ? 'required' : 'error' });
+      if (alive) setCompanyAdmission({ scope: org.id, status: companyAdmissionStatus(data) });
     }).catch(() => {
       if (alive) setCompanyAdmission({ scope: org.id, status: 'error' });
     });
@@ -477,7 +478,7 @@ function AppShellContent() {
   }, []);
 
   if (needsOnboarding) {
-    return <OnboardingFlow />;
+    return <div data-hivemind-app-shell><OnboardingFlow /></div>;
   }
 
   // Self-host org: brief status check, then either the workspace (agent was
@@ -504,7 +505,7 @@ function AppShellContent() {
   // Company setup is an admission stage, not a dismissible page walkthrough.
   // Consult the saved company record; never trust a local 'skipped' marker.
   const companyStatus = companyAdmission.scope === org?.id ? companyAdmission.status : 'checking';
-  if (companyStatus !== 'ready') return <div className="min-h-screen bg-[#faf9f4] p-4 sm:p-8">
+  if (companyStatus !== 'ready') return <div data-hivemind-app-shell className="min-h-[var(--hm-app-viewport-height,100dvh)] bg-[#faf9f4] p-4 sm:p-8">
     {companyStatus === 'checking' ? <p role="status" className="p-8 text-center text-sm">Checking your company setup…</p>
       : companyStatus === 'error' ? <div role="alert" className="mx-auto max-w-lg p-8"><p>We couldn’t check your company setup. Your progress is saved.</p><button type="button" onClick={() => setCompanyRetry(value => value + 1)} className="mt-4 text-[#117dff] underline">Try again</button></div>
       : <React.Suspense fallback={<p role="status">Opening company onboarding…</p>}><HyperOnboarding onComplete={completeCompany} /></React.Suspense>}
