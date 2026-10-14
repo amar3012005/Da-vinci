@@ -24,6 +24,7 @@ test('proxy forwards only the company cookie and actual Origin, preserving tenan
       origin, cookie: 'dsh-auth-runner=private; hm_cp_session=company; other=private',
       authorization: 'Bearer private', 'x-org-id': 'foreign', 'content-type': 'application/json',
     }, body: '{}' }), {});
+    assert.equal(forwarded.redirect, 'manual');
     assert.equal(forwarded.url, `https://dots.singulancelabs.com${path}`);
     assert.equal(forwarded.headers.get('origin'), origin);
     assert.equal(forwarded.headers.get('cookie'), 'hm_cp_session=company');

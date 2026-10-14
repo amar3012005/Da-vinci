@@ -276,8 +276,9 @@ async function proxyEmployeeRegistry(request) {
       for (const part of parts) { body.set(part, offset); offset += part.byteLength; }
     }
     const response = await fetch(new Request(`https://dots.singulancelabs.com${url.pathname}${url.search}`, {
-      method, headers, body, redirect: 'error',
+      method, headers, body, redirect: 'manual',
     }));
+    if (response.status >= 300 && response.status < 400) return reply('employee_registry_redirect_denied', 502);
     return new Response(response.body, { status: response.status, headers: {
       'content-type': response.headers.get('content-type') || 'application/json',
       'cache-control': 'private, no-store',
