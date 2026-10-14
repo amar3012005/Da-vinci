@@ -284,7 +284,8 @@ async function proxyEmployeeRegistry(request) {
       'cache-control': 'private, no-store',
     } });
   } catch (error) {
-    console.error('employee_registry_proxy_fetch_failed', error instanceof Error ? error.name : 'UnknownError');
+    console.error('employee_registry_proxy_fetch_failed', error instanceof Error ? error.name : 'UnknownError',
+      error instanceof Error ? error.message.replace(/https?:\/\/[^\s]+/g, '[upstream]').slice(0, 180) : 'unknown');
     return reply('employee_registry_unavailable', 502);
   }
 }
