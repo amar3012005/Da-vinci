@@ -180,6 +180,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   const [entryError, setEntryError] = useState('');
   const [state, setState] = useState(null); // {company, employees, hq_room_id}
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [openingTask, setOpeningTask] = useState(null);
   const [confirmRerun, setConfirmRerun] = useState(false);
   const [viewingProfile, setViewingProfile] = useState(null);
@@ -218,10 +219,12 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   };
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
     try {
       const d = await apiClient.hyperCompany();
       setState(d);
-    } catch { setState(null); }
+    } catch { setLoadError(true); }
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -261,6 +264,12 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
         {t('hyperDash.loading', 'Loading company…')}
       </div>
     );
+  }
+  if (loadError) {
+    return <div role="alert" className="flex-1 p-6 text-sm">
+      <p>We couldn’t load your company. Your setup hasn’t been reset.</p>
+      <button type="button" onClick={load} className="mt-3 text-[#117dff] underline">Try again</button>
+    </div>;
   }
   if (!state?.onboarded || !state?.company) {
     if (!allowOnboarding) return <p className="p-6 text-sm">Company information is not available yet.</p>;

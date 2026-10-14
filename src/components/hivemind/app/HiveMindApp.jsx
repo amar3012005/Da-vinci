@@ -1,4 +1,5 @@
 import React from 'react';
+import { importPage } from './shared/import-page';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
 import ProtectedRoute from './auth/ProtectedRoute';
@@ -56,7 +57,7 @@ const AuditLog = React.lazy(() => import('./pages/AuditLog'));
 const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
 const AdminSso = React.lazy(() => import('./pages/AdminSso'));
 const DigitalEmployees = React.lazy(() => import('./pages/DigitalEmployees'));
-const HyperAgents = React.lazy(() => import('./pages/HyperAgents'));
+const HyperAgents = React.lazy(() => importPage(() => import('./pages/HyperAgents')));
 const YourCRM = React.lazy(() => import('./pages/YourCRM'));
 const OperatingRooms = React.lazy(() => import('./pages/OperatingRooms'));
 const HermesAgents = React.lazy(() => import('./pages/HermesAgents'));

@@ -1,0 +1,20 @@
+import React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import CompanyDashboard from '../../hyperagents/CompanyDashboard';
+import apiClient from '../api-client';
+jest.mock('react-router-dom', () => ({ useNavigate: () => jest.fn() }));
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (_, fallback) => fallback }) }));
+jest.mock('../api-client', () => ({ hyperCompany: jest.fn() }));
+jest.mock('../../hyperagents/HyperOnboarding', () => () => <div>NEW COMPANY SETUP</div>);
+jest.mock('../../hyperagents/WebsitePreview', () => () => null);
+jest.mock('../../hyperagents/AgentAvatar', () => () => null);
+jest.mock('../../hyperagents/rooms/shared', () => ({ LANE_META: {} }));
+test('failed company reads never reopen onboarding and can be retried', async () => {
+  apiClient.hyperCompany.mockRejectedValueOnce(new Error('unavailable')).mockResolvedValueOnce({ onboarded: false });
+  render(<CompanyDashboard showRuntimeInvite={false} />);
+  expect((await screen.findByRole('alert')).textContent).toContain('Your setup hasn’t been reset');
+  expect(screen.queryByText('NEW COMPANY SETUP')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(await screen.findByText('NEW COMPANY SETUP')).toBeTruthy();
+  expect(apiClient.hyperCompany).toHaveBeenCalledTimes(2);
+});
