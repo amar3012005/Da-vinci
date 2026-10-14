@@ -54,15 +54,29 @@ function deferred() {
   const promise = new Promise((nextResolve, nextReject) => { resolve = nextResolve; reject = nextReject; });
   return { promise, resolve, reject };
 }
-function executeExternalScript(src) {
+export function executeExternalScript(src, { recoverRuntime = window.location.hostname === 'runtime-runner.singulancelabs.com' } = {}) {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = src;
     script.async = false;
     script.dataset.dshNativeScript = src;
     script.addEventListener('load', () => { resolve(); }, { once: true });
-    script.addEventListener('error', () => {
+    script.addEventListener('error', async () => {
       script.remove();
+      if (recoverRuntime) {
+        try {
+          // Refresh the exact native URL without query mutations or executing
+          // fetched text. This also recovers browsers without an active SW.
+          const response = await fetch(src, { credentials: 'include', cache: 'reload' });
+          if (!response.ok || !/(?:javascript|ecmascript)/i.test(response.headers.get('content-type') || '')) {
+            throw new Error(`Could not refresh Harness module: HTTP ${response.status}`);
+          }
+          await response.arrayBuffer();
+          await executeExternalScript(src, { recoverRuntime: false });
+          resolve();
+        } catch (error) { reject(error); }
+        return;
+      }
       reject(new Error(`Could not load Harness module: ${src}`));
     }, { once: true });
     document.head.append(script);

@@ -9,11 +9,38 @@ import {
   harnessBootRevision,
   harnessShellUrl,
   nativeHarnessMounted,
+  executeExternalScript,
 } from '../HarnessSurface';
 import HarnessSurface from '../HarnessSurface';
 import { createNativeHarnessLoader } from '../../shared/native-harness-loader';
 
 describe('HarnessSurface module cache', () => {
+  it('refreshes a failed Runtime module once and then uses its original script URL', async () => {
+    const previousFetch = global.fetch;
+    global.fetch = jest.fn(async () => ({ ok: true, status: 200, headers: { get: () => 'text/javascript' }, arrayBuffer: async () => new ArrayBuffer(0) }));
+    const src = '/plugins/??@deepseek-ai/dsh-client-modules/client.js&rev=c5ac06ee9d77';
+    const pending = executeExternalScript(src, { recoverRuntime: true });
+    document.head.querySelector('script[data-dsh-native-script]').dispatchEvent(new Event('error'));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const retry = document.head.querySelector('script[data-dsh-native-script]');
+    expect(retry.getAttribute('src')).toBe(src);
+    retry.dispatchEvent(new Event('load'));
+    await pending;
+    expect(global.fetch).toHaveBeenCalledWith(src, { credentials: 'include', cache: 'reload' });
+    retry.remove();
+    global.fetch = previousFetch;
+  });
+
+  it('rejects a refreshed authorization failure without executing its body', async () => {
+    const previousFetch = global.fetch;
+    global.fetch = jest.fn(async () => ({ ok: false, status: 401, headers: { get: () => 'application/json' } }));
+    const pending = executeExternalScript('/plugins/native.js', { recoverRuntime: true });
+    const rejected = expect(pending).rejects.toThrow('HTTP 401');
+    document.head.querySelector('script[data-dsh-native-script]').dispatchEvent(new Event('error'));
+    await rejected;
+    expect(document.head.querySelector('script[data-dsh-native-script]')).toBeNull();
+    global.fetch = previousFetch;
+  });
   beforeAll(() => {
     global.IS_REACT_ACT_ENVIRONMENT = true;
   });
