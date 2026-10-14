@@ -229,7 +229,7 @@ export function AuthProvider({ children }) {
     clientSupport,
 
     // Derived flags
-    needsOnboarding: onboarding?.needs_org_setup === true,
+    needsOnboarding: authState === 'signed_in' && (!org?.id || onboarding?.needs_org_setup === true),
     hasApiKey: onboarding?.has_api_key === true,
 
     // Actions
