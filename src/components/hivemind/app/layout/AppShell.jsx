@@ -237,23 +237,36 @@ function AppShellContent() {
   //   returning → activation checklist (auth=callback) → workspace
   // gate: null (undecided) | 'slides' | 'activation' | 'done'
   const [gate, setGate] = useState(null);
+  const welcomeProgressKey = `hm_welcome:${user?.id || 'user'}:${org?.id || org?.org_id || 'workspace'}`;
   useEffect(() => {
     if (needsOnboarding || gate !== null) return; // decide once, after onboarding clears
     let isNew = false;
     try { isNew = sessionStorage.getItem('hm_new_user') === '1'; } catch { /* noop */ }
     const fromCallback = new URLSearchParams(location.search).get('auth') === 'callback';
-    setGate(isNew ? 'slides' : fromCallback ? 'activation' : 'done');
-  }, [needsOnboarding, gate, location.search]);
+    let savedStage;
+    try { savedStage = sessionStorage.getItem(welcomeProgressKey); } catch { /* best effort */ }
+    setGate(['slides', 'activation', 'done'].includes(savedStage)
+      ? savedStage : isNew ? 'slides' : fromCallback ? 'activation' : 'done');
+  }, [needsOnboarding, gate, location.search, welcomeProgressKey]);
+  useEffect(() => {
+    if (gate !== null) {
+      try { sessionStorage.setItem(welcomeProgressKey, gate); } catch { /* best effort */ }
+    }
+  }, [gate, welcomeProgressKey]);
+  const finishSlides = useCallback(() => {
+    try { sessionStorage.setItem(welcomeProgressKey, 'activation'); } catch { /* best effort */ }
+    setGate('activation');
+  }, [welcomeProgressKey]);
 
-  const finishGate = () => {
+  const finishGate = useCallback(() => {
     let isNew = false;
     try { isNew = sessionStorage.getItem('hm_new_user') === '1'; } catch { /* noop */ }
-    try { sessionStorage.removeItem('hm_new_user'); } catch { /* noop */ }
+    try { sessionStorage.setItem(welcomeProgressKey, 'done'); sessionStorage.removeItem('hm_new_user'); } catch { /* noop */ }
     // New workspaces start in mobile chat on phones; desktop keeps the company
     // onboarding landing. Returning users keep the stable BRAIN overview.
     navigate(isNew ? newWorkspaceLanding() : RETURNING_USER_LANDING, { replace: true });
     setGate('done');
-  };
+  }, [navigate, welcomeProgressKey]);
   // Self-host gate: the workspace opens only after the control plane confirms
   // authenticated reachability. Registered-but-offline organizations see the
   // recovery state instead of entering a workspace whose storage cannot serve.
@@ -455,7 +468,7 @@ function AppShellContent() {
 
   // New-user capability deck → activation checklist → workspace reveal.
   if (gate === 'slides') {
-    return <WelcomeSlides onDone={() => setGate('activation')} />;
+    return <WelcomeSlides onDone={finishSlides} progressKey={welcomeProgressKey} />;
   }
   if (gate === 'activation') {
     return <ActivationGate onDone={finishGate} />;

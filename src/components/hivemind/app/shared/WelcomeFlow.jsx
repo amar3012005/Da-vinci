@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -212,8 +212,18 @@ export function SlideVisual({ kind }) {
   );
 }
 
-export function WelcomeSlides({ onDone }) {
-  const [index, setIndex] = useState(0);
+export function WelcomeSlides({ onDone, progressKey }) {
+  const [index, setIndex] = useState(() => {
+    try {
+      const saved = Number(sessionStorage.getItem(`${progressKey}:slide`));
+      return progressKey && Number.isInteger(saved) && saved >= 0 && saved < SLIDES.length ? saved : 0;
+    } catch { return 0; }
+  });
+  useEffect(() => {
+    if (progressKey) {
+      try { sessionStorage.setItem(`${progressKey}:slide`, String(index)); } catch { /* best effort */ }
+    }
+  }, [index, progressKey]);
   const total = SLIDES.length;
   const isLast = index === total - 1;
   const s = SLIDES[index];
@@ -227,7 +237,8 @@ export function WelcomeSlides({ onDone }) {
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'ArrowRight' || e.key === 'Enter') next();
+      if (e.defaultPrevented || e.target?.closest?.('button, input, textarea, select, a')) return;
+      if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); next(); }
       else if (e.key === 'ArrowLeft') prev();
       else if (e.key === 'Escape') onDone?.();
     };
@@ -341,14 +352,16 @@ const ACTIVATION_STEPS = [
 export function ActivationGate({ onDone, durationMs = 5000 }) {
   const stepMs = useMemo(() => durationMs / ACTIVATION_STEPS.length, [durationMs]);
   const [done, setDone] = useState(0); // how many steps completed
+  const onDoneRef = useRef(onDone);
+  useEffect(() => { onDoneRef.current = onDone; }, [onDone]);
 
   useEffect(() => {
     const timers = ACTIVATION_STEPS.map((_, i) =>
       setTimeout(() => setDone(i + 1), Math.round(stepMs * (i + 1)))
     );
-    const finish = setTimeout(() => onDone?.(), durationMs + 350);
+    const finish = setTimeout(() => onDoneRef.current?.(), durationMs + 350);
     return () => { timers.forEach(clearTimeout); clearTimeout(finish); };
-  }, [stepMs, durationMs, onDone]);
+  }, [stepMs, durationMs]);
 
   return (
     <BlueprintCanvas>
