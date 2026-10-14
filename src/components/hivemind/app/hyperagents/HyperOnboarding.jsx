@@ -181,14 +181,14 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
                 <h1 className="mt-2 text-[clamp(1.8rem,3.25vw,3.5rem)] font-semibold leading-none tracking-[-0.035em] text-white font-['Space_Grotesk']">Your company brain is alive.</h1>
                 <p className="mx-auto mt-2 max-w-[940px] text-[12px] leading-5 text-white/70 sm:text-[13px]">Three specialists were hired from your onboarding assignments. Each one is briefed with {company}’s context and ready to work.</p>
               </div>
-              <div className="mt-14 grid grid-cols-1 divide-y divide-white/15 border-y border-white/20 bg-[#0b315f]/35 shadow-[inset_0_1px_0_rgba(255,255,255,.12),0_24px_80px_rgba(0,12,32,.2)] backdrop-blur-2xl sm:mt-20 md:grid-cols-3 md:divide-x md:divide-y-0">
+              <div className="mt-14 grid grid-cols-1 divide-y divide-[#cbd7e3] overflow-hidden rounded-2xl border border-white/80 bg-[#f7f9fc]/95 shadow-[0_24px_80px_rgba(0,12,32,.18)] sm:mt-20 md:grid-cols-3 md:divide-x md:divide-y-0">
                 {team.slice(0, 3).map((member, index) => (
                   <motion.div key={member.id || member.name} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : index * 0.14 }} className="min-h-[220px] p-6 text-center sm:p-8">
                     <div className="mx-auto w-fit"><AgentAvatar agent={member} size={132} shape="none" ring={false} /></div>
-                    <h2 className="mt-4 text-[18px] font-semibold text-white font-['Space_Grotesk']">{member.name}</h2>
-                    <div className="mt-1 text-[10px] font-mono uppercase tracking-[0.12em] text-[#a9d8ff]">{member.roleArchetype || member.role || 'HyperAgent'}</div>
-                    <p className="mt-3 text-[11.5px] leading-5 text-white/65">{agentAssignment(member)}</p>
-                    <span className="mt-4 inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.13em] text-[#79e6b1]"><span className="h-1.5 w-1.5 rounded-full bg-[#52d892]" /> Online</span>
+                    <h2 className="mt-4 text-[18px] font-semibold text-[#102b46] font-['Space_Grotesk']">{member.name}</h2>
+                    <div className="mt-1 text-[10px] font-mono uppercase tracking-[0.12em] text-[#34688e]">{member.roleArchetype || member.role || 'HyperAgent'}</div>
+                    <p className="mt-3 text-[11.5px] leading-5 text-[#526577]">{agentAssignment(member)}</p>
+                    <span className="mt-4 inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.13em] text-[#23734e]"><span className="h-1.5 w-1.5 rounded-full bg-[#2b9b66]" /> Online</span>
                   </motion.div>
                 ))}
               </div>
