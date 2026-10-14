@@ -1,5 +1,6 @@
 import { agentDiscoveryResponse, isAgentDiscovery, markdownResponse, prefersMarkdown } from './agent-readiness.mjs';
 import { PUBLIC_PAGES, SITE, publicSeoResponse } from './public-seo.mjs';
+import { bugReport, withBugReporter } from './bug-reports.mjs';
 const STATIC_ASSET_PREFIX = '/static/';
 const AGENT_SETUP_PREFIX = '/agent-setup/';
 const DISCOVERY_PATHS = new Set(['/robots.txt', '/llms.txt', '/llms-full.txt', '/sitemap.xml']);
@@ -468,7 +469,7 @@ async function mobileLandingFlagResponse(request, env) {
   });
 }
 
-export default {
+const application = {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
@@ -736,5 +737,12 @@ export default {
     }
 
     return publicHost && !privatePath ? response : noIndex(response);
+  },
+};
+
+export default {
+  async fetch(request, env) {
+    if (new URL(request.url).pathname === '/api/hivemind/bug-reports') return bugReport(request, env);
+    return withBugReporter(await application.fetch(request, env), request, env);
   },
 };
