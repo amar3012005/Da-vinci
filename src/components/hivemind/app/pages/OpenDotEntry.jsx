@@ -7,9 +7,9 @@ import { buildOpenDotEmbedTarget } from '../shared/open-dot-embed-target';
 const DOT_ORIGIN = 'https://dots.singulancelabs.com';
 const READY_TIMEOUT_MS = 30000;
 
-export default function OpenDotEntry() {
+export default function OpenDotEntry({ apps = false }) {
   const { pathname, search } = useLocation();
-  const suffix = pathname.slice('/hivemind/app/employee/dots'.length);
+  const suffix = apps ? '/apps' : pathname.slice('/hivemind/app/employee/dots'.length);
   const src = useMemo(() => buildOpenDotEmbedTarget(suffix, search), [suffix, search]);
   const iframeRef = useRef(null);
   const [attempt, setAttempt] = useState(0);
@@ -59,7 +59,7 @@ export default function OpenDotEntry() {
       <iframe
         key={frameKey}
         ref={iframeRef}
-        title="Open Dot workspace"
+        title={apps ? 'Apps' : 'Open Dot workspace'}
         src={src}
         allow="microphone; autoplay"
         className="h-full min-h-0 w-full flex-1 border-0"

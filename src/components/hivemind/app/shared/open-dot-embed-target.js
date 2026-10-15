@@ -11,6 +11,7 @@ export function buildOpenDotEmbedTarget(suffix, search = '') {
 
   let path;
   if (!route) path = '/';
+  else if (route === '/apps') path = '/apps';
   else if (route.startsWith('/employee/')) {
     const employeeId = route.slice('/employee/'.length);
     if (!EMPLOYEE_ID.test(employeeId)) return null;
@@ -21,6 +22,8 @@ export function buildOpenDotEmbedTarget(suffix, search = '') {
 
   const target = new URL(path, DOT_ORIGIN);
   target.searchParams.set('embed', 'hivemind');
-  if (conversation) target.searchParams.set('c', conversation);
+  if (conversation && route !== '/apps') target.searchParams.set('c', conversation);
+  const provider = query.get('connect');
+  if (route === '/apps' && provider && /^[a-z0-9_-]{1,80}$/i.test(provider)) target.searchParams.set('connect', provider);
   return target.href;
 }

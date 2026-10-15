@@ -23,3 +23,8 @@ test.each([
 ])('rejects invalid or caller-controlled Dot route %s', (suffix, search) => {
   expect(buildOpenDotEmbedTarget(suffix, search)).toBeNull();
 });
+
+test('reuses native Apps catalog inside the Runtime shell with bounded provider intent', () => {
+  expect(buildOpenDotEmbedTarget('/apps', '?connect=gmail')).toBe('https://dots.singulancelabs.com/apps?embed=hivemind&connect=gmail');
+  expect(buildOpenDotEmbedTarget('/apps', '?connect=https://evil.test')).toBe('https://dots.singulancelabs.com/apps?embed=hivemind');
+});

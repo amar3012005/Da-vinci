@@ -257,7 +257,7 @@ export default function HiveMindApp() {
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
-          <Route path="employee/apps" element={<PageSuspense><Connectors /></PageSuspense>} />
+          <Route path="employee/apps" element={<PageSuspense><OpenDotEntry apps /></PageSuspense>} />
           <Route path="connectors" element={<PageSuspense><Connectors /></PageSuspense>} />
           <Route path="profile" element={<PageSuspense><Profile /></PageSuspense>} />
           <Route path="entities/:entityId" element={<PageSuspense><EntityProfilePage /></PageSuspense>} />
