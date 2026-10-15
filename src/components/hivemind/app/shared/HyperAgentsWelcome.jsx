@@ -34,7 +34,7 @@ export default function HyperAgentsWelcome({ company }) {
   }, [scope, open]);
   useEffect(() => {
     if (!open) return;
-    const root = document.getElementById('root');
+    const root = document.querySelector('[data-hivemind-app-shell]');
     const previous = document.activeElement, oldInert = root?.inert;
     const overflow = document.body.style.overflow;
     if (root) root.inert = true;
