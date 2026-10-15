@@ -13,7 +13,7 @@ test('combines only rooms for the selected employee', () => {
 });
 test('shows a pulsing bell for an unanswered native question and clears it when answered', () => {
   const view = render(<AgentRoomStatus room={{ actionRequired: true, waitingForAnswer: true }} />);
-  expect(screen.getByRole('status').textContent).toContain('Waiting for your response');
+  expect(screen.getByRole('status').textContent).toContain('Waiting for you');
   expect(view.container.querySelector('svg').classList.contains('animate-pulse')).toBe(true);
   view.rerender(<AgentRoomStatus room={{ actionRequired: false, waitingForAnswer: false }} />);
   expect(screen.queryByRole('status')).toBeNull();
@@ -38,4 +38,16 @@ test('shows only explicit loading and failed-work evidence', () => {
   expect(screen.getByRole('img', { name: 'Work failed' })).toBeTruthy();
   view.rerender(<AgentRoomStatus room={{}} />);
   expect(screen.queryByRole('img', { name: 'Work failed' })).toBeNull();
+});
+
+test('uses explicit employee status and keeps unread separate', () => {
+  const view = render(<AgentRoomStatus room={{ status: 'waiting', unread: true }} />);
+  expect(screen.getByRole('status').textContent).toBe('Waiting for you');
+  expect(screen.getByRole('img', { name: 'Unread update' })).toBeTruthy();
+  view.rerender(<AgentRoomStatus room={{ status: 'paused' }} />);
+  expect(screen.getByRole('status').textContent).toBe('Paused');
+  view.rerender(<AgentRoomStatus room={{ status: 'idle' }} />);
+  expect(screen.getByRole('status').textContent).toBe('Idle');
+  view.rerender(<AgentRoomStatus room={{}} />);
+  expect(screen.queryByRole('status')).toBeNull();
 });
