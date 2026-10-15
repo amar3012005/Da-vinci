@@ -1,0 +1,17 @@
+/* Glass is reserved for the setup controls; research and documents stay opaque. */
+.company-onboarding-glass {
+  background: #fff;
+  border: 1px solid #dedee5;
+  border-radius: 20px;
+  box-shadow: 0 8px 28px rgb(20 30 55 / 7%);
+}
+@supports (backdrop-filter: blur(16px)) {
+  .company-onboarding-glass {
+    background: rgb(255 255 255 / 82%);
+    backdrop-filter: blur(16px) saturate(120%);
+    border-color: rgb(255 255 255 / 90%);
+  }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .company-onboarding-glass { background: #fff; backdrop-filter: none; border-color: #737373; }
+}

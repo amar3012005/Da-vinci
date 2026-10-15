@@ -575,6 +575,11 @@ class HiveMindApiClient {
   }
 
   /** Company operating dashboard (HyperAgents hero) — persisted onboarding state. */
+  async activateHyperAgents() {
+    const { data } = await this.controlPlane.post('/v1/hyper/activate', {});
+    return data;
+  }
+
   async hyperCompany() {
     try {
       const { data } = await this.controlPlane.get('/v1/hyper/company');

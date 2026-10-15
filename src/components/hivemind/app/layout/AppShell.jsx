@@ -16,6 +16,7 @@ import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { useNativeAppearance } from '../shared/useNativeAppearance';
 import Sidebar from './Sidebar';
 import AgentWorkspaceOutlet from './AgentWorkspaceOutlet';
+import HyperAgentActivation from './HyperAgentActivation';
 import EmployeeMobileNavigation from './EmployeeMobileNavigation';
 import './product-transition.css';
 import TopBar from './TopBar';
@@ -526,7 +527,7 @@ function AppShellContent() {
         <div data-hivemind-app-shell data-native-chat-shell data-mobile-brain-user-name={mobileBrainUserName(user, brainChat && brainPhone)} data-mobile-brain-greeting={mobileBrainGreeting(user, brainChat && brainPhone, t)} className="font-[Inter,ui-sans-serif,system-ui,sans-serif]" style={{ '--hm-harness-center-offset': '0px' }}>
           <MobileShell noScroll bareHeader showBareLogo={false} nativeChatViewport activeNavPath="/hivemind/m/chat">
             <MobileBrainHeaderActions />
-            <main className="flex-1 min-h-0 min-w-0 overflow-hidden"><AgentWorkspaceOutlet key={`${user?.id || ""}:${org?.id || ""}`} /></main>
+            <main className="flex-1 min-h-0 min-w-0 overflow-hidden"><HyperAgentActivation /><AgentWorkspaceOutlet key={`${user?.id || ""}:${org?.id || ""}`} /></main>
             {mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy />}
             <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />
             <GlobalUploadStrip />
@@ -567,7 +568,7 @@ function AppShellContent() {
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
           <main data-native-chat-main={nativeChatRoom || undefined} className={companyEntry ? 'min-h-screen p-4 sm:p-8' : graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview || onOpenDotWorkspace ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 min-w-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
-            <AgentWorkspaceOutlet key={`${user?.id || ""}:${org?.id || ""}`} />
+            <HyperAgentActivation /><AgentWorkspaceOutlet key={`${user?.id || ""}:${org?.id || ""}`} />
           </main>
         </div>
 

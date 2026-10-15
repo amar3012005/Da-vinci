@@ -1,3 +1,4 @@
+import './company-onboarding-glass.css';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin, BrainCircuit, AudioWaveform, Orbit, Languages } from 'lucide-react';
@@ -266,7 +267,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
         const s = await apiClient.hyperOnboardingStatus();
         setLines(s.lines || []);
         if (s.done) {
-          if (s.error) setError(s.error);
+          if (s.error) { setError(s.error); setPhase('failed'); stopPolling(); }
           else {
             setResult(s.result);
             setPhase('done');
@@ -282,6 +283,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
       try {
         const s = await apiClient.hyperOnboardingStatus();
         if (s.running) { setPhase('running'); setLines(s.lines || []); poll(); }
+        else if (s.done && s.error) { setError(s.error); setLines(s.lines || []); setPhase('failed'); }
         else if (s.done && !s.error && s.result) {
           setResult(s.result); setLines(s.lines || []); setPhase('done');
           if (s.result?.screenshot_pending) poll();
@@ -371,9 +373,9 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             {t('hyperOnboarding.headline', 'Run your company with AI')}
           </h1>
           <p className="text-[13.5px] text-[#525252] mt-2 max-w-[520px]">
-            {t('hyperOnboarding.sub', 'Enter your website. Your agents read it, draft a grounded company profile and mission into HIVEMIND memory, assemble your team, plan first tasks and open your HQ room.')}
+            {t('hyperOnboarding.companySetupSub', 'Enter your website to save a grounded company profile, mission and first-task plan. Your predefined team will be created when you enter HyperAgents.')}
           </p>
-          <form onSubmit={start} className="mt-7 space-y-3">
+          <form onSubmit={start} className="company-onboarding-glass mt-7 space-y-3 p-5">
             <div className="relative">
               <Globe size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
               <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
@@ -448,7 +450,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           </div>
           <div className={`flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-lg ${done ? 'bg-[#16a34a]/10 text-[#16a34a]' : 'bg-violet-500/10 text-violet-700'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-[#16a34a]' : 'bg-violet-500 animate-pulse'}`} />
-            {done ? t('hyperOnboarding.completed', 'Completed') : t('hyperOnboarding.building', 'Building…')}
+            {error ? 'Setup needs attention' : done ? t('hyperOnboarding.completed', 'Completed') : t('hyperOnboarding.building', 'Building…')}
           </div>
         </div>
 
@@ -463,7 +465,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
               website={result?.website || websiteUrl}
               company={companyName}
               tagline={p.tagline}
-              loading={Boolean(result?.screenshot_pending) || (!done && !result?.screenshot)}
+              loading={!error && (Boolean(result?.screenshot_pending) || (!done && !result?.screenshot))}
               compact
               contentClassName="lg:h-[clamp(220px,31vh,380px)] lg:aspect-auto"
               className="w-full shadow-[0_12px_36px_rgba(10,10,10,0.06)]"
@@ -489,11 +491,12 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             <p className="text-[12px] text-[#0a0a0a] leading-snug line-clamp-4">{result?.mission || '—'}</p>
           </Panel>
 
-          <Panel icon={Users} title={t('hyperOnboarding.team', 'Your team')} lit={lit.team} complete={(result?.team || []).length > 0 || done} className="h-[116px]">
+          <Panel icon={Users} title={t('hyperOnboarding.plannedTeam', 'Your specialist roles')} lit={lit.team} complete={(result?.team || []).length > 0 || done} className="h-[116px]">
             <div className="flex flex-wrap gap-1.5">
-              {(result?.team || []).map((m, i) => (
+              {done && !result?.team?.length && <p className="text-xs text-[#525252] w-full">Created when you enter HyperAgents.</p>}
+              {(result?.team?.length ? result.team : result?.starter_plan || []).map((m, i) => (
                 <motion.span
-                  key={m.id}
+                  key={m.id || m.name}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.05 * i }}
