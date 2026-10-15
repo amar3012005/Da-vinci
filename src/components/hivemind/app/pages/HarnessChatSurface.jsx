@@ -112,6 +112,16 @@ export default function HarnessChatSurface({ legacy }) {
 
   useEffect(() => { bootstrap(); }, [bootstrap]);
 
+  if (notice && isNativeApp()) return (
+    <div role="alert" className="flex h-full min-h-0 flex-1 items-center justify-center bg-[#faf9f4] px-6">
+      <div className="max-w-sm text-center">
+        <p className="text-[16px] font-semibold text-[#0a0a0a]">Could not open chat</p>
+        <p className="mt-3 text-[14px] leading-6 text-[#737373]">{notice}</p>
+        <button type="button" onClick={() => bootstrap()} className="mt-5 min-h-[44px] rounded-xl bg-[#117dff] px-5 text-[14px] font-medium text-white">Try again</button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex h-full flex-1 min-h-0 flex-col bg-[#faf9f4]">
       {notice && (
