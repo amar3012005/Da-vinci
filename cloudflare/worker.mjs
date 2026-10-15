@@ -502,7 +502,7 @@ export default {
       if (pathname === '/hivemind/app/employee/apps' && ['GET','HEAD'].includes(request.method)) {
         url.pathname='/apps'; return Response.redirect(url.href,302);
       }
-      if (pathname === '/apps' || pathname.startsWith('/_next/') || pathname.startsWith('/shared-hyperagent-shell/') || ['/api/hivemind/apps','/api/hivemind/workspace-shell'].includes(pathname)) return proxyRuntimeApps(request);
+      if (pathname === '/apps' || pathname.startsWith('/_next/') || pathname.startsWith('/shared-hyperagent-shell/') || ['/api/hivemind/apps','/api/hivemind/workspace-shell','/api/events'].includes(pathname) || /^\/api\/apps\/[a-zA-Z0-9_-]+$/.test(pathname)) return proxyRuntimeApps(request);
     }
     if (['/api/hivemind/employees/status', '/api/hivemind/employees/create'].includes(pathname)) {
       return proxyEmployeeRegistry(request);

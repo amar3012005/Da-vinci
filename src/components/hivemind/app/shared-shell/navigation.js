@@ -7,7 +7,7 @@ export function dotAppsUrl(search = '', hash = '') {
 export function runtimeNavigation(to) {
   const raw = typeof to === 'string' ? to : `${to.pathname || ''}${to.search || ''}${to.hash || ''}`;
   const url = new URL(raw, RUNTIME_ORIGIN);
-  if (url.origin !== RUNTIME_ORIGIN || !url.pathname.startsWith('/hivemind/')) throw new Error('Invalid workspace destination');
+  if (url.origin !== RUNTIME_ORIGIN || !(url.pathname.startsWith('/hivemind/') || url.pathname === '/apps')) throw new Error('Invalid workspace destination');
   return url.pathname === '/hivemind/app/employee/apps' ? dotAppsUrl(url.search, url.hash) : url.href;
 }
 export function matchingShellIdentity(auth, expected) {
