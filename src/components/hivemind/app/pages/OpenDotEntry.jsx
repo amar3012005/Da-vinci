@@ -39,7 +39,6 @@ export default function OpenDotEntry({ apps = false, route, active = true }) {
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener('message', onMessage);
-      if (active) window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { clear: true } }));
     };
   }, [frameKey, src, pathname, apps, active]);
 

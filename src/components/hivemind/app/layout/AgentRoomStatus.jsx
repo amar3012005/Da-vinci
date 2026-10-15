@@ -23,9 +23,8 @@ export function aggregateAgentRooms(rooms, agentId) {
 /** Display only states published by the authenticated native room bridge. */
 export default function AgentRoomStatus({ room, collapsed = false, compact = false }) {
   if (!room) return null;
-  if (room.stale) return <span className={(collapsed || compact) ? 'absolute right-1 top-1 z-20 flex items-center gap-1' : 'relative mt-1 flex items-center gap-1 text-[10px] text-[#737373]'} title="Reconnecting. Last known activity is retained.">
-    <CircleAlert size={13} aria-label="Status reconnecting" role="img" />
-    {!(collapsed || compact) && <span>Status reconnecting</span>}
+  if (room.stale) return <span className={(collapsed || compact) ? 'absolute right-1 top-1 z-20 flex items-center gap-1' : 'relative mt-1 flex items-center gap-1 text-[10px] text-[#737373]'} title="Activity status unavailable; last update retained.">
+    <CircleAlert size={13} aria-label="Activity status unavailable" role="img" />
     {room.unread && <span className="h-1.5 w-1.5 rounded-full bg-green-500" role="img" aria-label="Unread update" />}
   </span>;
   const activeCall = room.activeCall === true;
