@@ -1,13 +1,16 @@
 "use client";
+import { useLocation } from "react-router-dom";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Check, ChevronDown, ExternalLink, Hammer, LayoutGrid, Plus, Search, ShieldCheck, X, Zap } from "lucide-react";
 import { appsResponse } from "./apps-response";
+import { openAfter } from "./popup";
 import apiClient from "../../shared/api-client";
 const INSTANT = ["serpapi", "firecrawl", "tavily", "exa", "elevenlabs", "peopledatalabs"];
 const PAGE = 60;
 const fmt = (n) => n.toLocaleString("en-US");
 function AppsDirectory({ apps, managedConnections = false }) {
+  const { search: routeSearch } = useLocation();
   const cloud = true;
   const savedApps = [];
   const [hiveApps, setHiveApps] = useState([]);
@@ -42,12 +45,15 @@ function AppsDirectory({ apps, managedConnections = false }) {
     const onVisible = () => {
       if (document.visibilityState === "visible") void refresh();
     };
+    const completion = typeof BroadcastChannel === "function" ? new BroadcastChannel("hivemind-apps-connected") : null;
+    if (completion) completion.onmessage = () => { void refresh(); };
     window.addEventListener("focus", refresh);
     window.addEventListener("hivemind:apps-refresh", refresh);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       disposed = true;
       controller.abort();
+      completion?.close();
       window.removeEventListener("focus", refresh);
       window.removeEventListener("hivemind:apps-refresh", refresh);
       document.removeEventListener("visibilitychange", onVisible);
@@ -66,10 +72,10 @@ function AppsDirectory({ apps, managedConnections = false }) {
   const instant = useMemo(() => INSTANT.flatMap((s) => bySlug.get(s) ?? []), [bySlug]);
   useEffect(() => {
     if (!cloud) return;
-    const query2 = new URLSearchParams(window.location.search);
+    const query2 = new URLSearchParams(routeSearch);
     const slug = query2.get("app") || query2.get("connect");
     if (slug && bySlug.has(slug)) setOpen(bySlug.get(slug));
-  }, [cloud, bySlug]);
+  }, [cloud, bySlug, routeSearch]);
   const pool = useMemo(() => {
     const q = query.trim().toLowerCase();
     return apps.filter((a) => {
@@ -298,21 +304,17 @@ function AppDrawer({ app, cloud, connected, signedIn, instant, onClose }) {
     setPending(true);
     try {
       setError(null);
-      // Use the same authenticated Composio link service as Connectors.
-      // Keep OAuth top-level and return to this native Runtime Apps route.
-      const catalog = await apiClient.listComposioToolkits({ search: app.slug, limit: 40 });
-      const toolkitMeta = catalog.toolkits?.find((toolkit) => toolkit.slug === app.slug);
-      const callback = new URL(window.location.href);
-      callback.searchParams.delete("status");
-      callback.searchParams.delete("connected_account_id");
-      callback.searchParams.set("app", app.slug);
-      callback.searchParams.set("composio_toolkit", app.slug);
-      const result = await apiClient.createComposioConnectLink(app.slug, {
-        toolkitMeta,
-        callbackUrl: callback.toString(),
-      });
-      if (!result.redirect_url) throw new Error("Authorization link unavailable");
-      window.location.assign(result.redirect_url);
+      await openAfter(async () => {
+        const catalog = await apiClient.listComposioToolkits({ search: app.slug, limit: 40 });
+        const toolkitMeta = catalog.toolkits?.find((toolkit) => toolkit.slug === app.slug);
+        const callback = new URL("/hivemind/apps/connected", window.location.origin);
+        const result = await apiClient.createComposioConnectLink(app.slug, {
+          toolkitMeta,
+          callbackUrl: callback.toString(),
+        });
+        if (!result.redirect_url) throw new Error("Authorization link unavailable");
+        return { url: result.redirect_url };
+      }, setError);
     } catch (error) {
       setError(error?.response?.data?.error || error?.message || "Unable to start connection. Please retry.");
     } finally {

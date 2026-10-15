@@ -501,6 +501,15 @@ export default {
     const url = new URL(request.url);
     const pathname = url.pathname;
     if (url.hostname === 'runtime-runner.singulancelabs.com') {
+      // OAuth finishes in its own window. Refresh the existing workspace instead
+      // of downloading and mounting another copy of the authenticated app shell.
+      if (pathname === '/hivemind/apps/connected' && request.method === 'GET') {
+        return new Response(`<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>Return to Apps</title></head><body style="font:16px system-ui;padding:40px"><h1>Sign-in returned</h1><p>Your Apps page will check the connection status.</p><a href="/hivemind/app/employee/apps">Return to Apps</a><script>
+          try { const channel = new BroadcastChannel('hivemind-apps-connected'); channel.postMessage('refresh'); channel.close(); } catch {}
+          window.close();
+        </script></body></html>`, {headers:{'content-type':'text/html; charset=utf-8','cache-control':'private, no-store','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"}});
+      }
+
       if (['GET','HEAD'].includes(request.method) && pathname === '/api/hivemind/apps/catalog') return Response.json(runtimeAppsCatalog, {headers:{'cache-control':'public, max-age=300'}});
       if (['GET','HEAD'].includes(request.method) && pathname === '/api/hivemind/apps/styles') return new Response(runtimeAppsStyles, {headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300'}});
       if (pathname === '/apps' && ['GET','HEAD'].includes(request.method)) {
