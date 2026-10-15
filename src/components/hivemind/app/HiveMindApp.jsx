@@ -1,4 +1,3 @@
-import OpenDotAppsNavigation from './pages/OpenDotAppsNavigation';
 import React from 'react';
 import { importPage } from './shared/import-page';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -14,6 +13,7 @@ import { TeamProvider } from './shared/team-context';
 const TaraConfig = React.lazy(() => import('./pages/TaraConfig'));
 
 // Pages (lazy loaded for code splitting)
+const OpenDotAppsNavigation = React.lazy(() => import('./pages/OpenDotAppsNavigation'));
 const OpenDotEntry = React.lazy(() => import('./pages/OpenDotEntry'));
 const Overview = React.lazy(() => import('./pages/Overview'));
 const DocsPage = React.lazy(() => import('../DocsPage'));

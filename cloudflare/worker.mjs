@@ -1,3 +1,5 @@
+import runtimeAppsCatalog from '../src/components/hivemind/app/pages/runtime-apps/apps.json';
+import runtimeAppsStyles from '../src/components/hivemind/app/pages/runtime-apps/styles.js';
 import { agentDiscoveryResponse, isAgentDiscovery, markdownResponse, prefersMarkdown } from './agent-readiness.mjs';
 import { PUBLIC_PAGES, SITE, publicSeoResponse } from './public-seo.mjs';
 const STATIC_ASSET_PREFIX = '/static/';
@@ -499,6 +501,8 @@ export default {
     const url = new URL(request.url);
     const pathname = url.pathname;
     if (url.hostname === 'runtime-runner.singulancelabs.com') {
+      if (['GET','HEAD'].includes(request.method) && pathname === '/api/hivemind/apps/catalog') return Response.json(runtimeAppsCatalog, {headers:{'cache-control':'public, max-age=300'}});
+      if (['GET','HEAD'].includes(request.method) && pathname === '/api/hivemind/apps/styles') return new Response(runtimeAppsStyles, {headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300'}});
       if (pathname === '/apps' && ['GET','HEAD'].includes(request.method)) {
         url.pathname='/hivemind/app/employee/apps'; return Response.redirect(url.href,302);
       }
