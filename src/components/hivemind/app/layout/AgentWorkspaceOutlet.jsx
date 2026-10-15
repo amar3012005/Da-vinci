@@ -21,7 +21,7 @@ export default function AgentWorkspaceOutlet() {
     {!dot && !apps && <Outlet />}
     {appsVisited && <div hidden={!apps} className="h-full min-h-0" style={{ display: apps ? 'block' : 'none' }}>
       <Suspense fallback={<div role="status">Opening Apps…</div>}><Apps /></Suspense>
-    </div>
+    </div>}
     {visited.map(row => <div key={row.key} hidden={row.key !== key} className="h-full min-h-0" style={{ display: row.key === key ? 'block' : 'none' }}>
       <Suspense fallback={<div role="status">Opening workspace…</div>}><OpenDotEntry route={row.route} active={row.key === key} /></Suspense>
     </div>)}
