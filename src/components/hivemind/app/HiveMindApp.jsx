@@ -1,3 +1,4 @@
+import OpenDotAppsNavigation from './pages/OpenDotAppsNavigation';
 import React from 'react';
 import { importPage } from './shared/import-page';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -257,7 +258,7 @@ export default function HiveMindApp() {
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
-          <Route path="employee/apps" element={<PageSuspense><OpenDotEntry apps /></PageSuspense>} />
+          <Route path="employee/apps" element={<PageSuspense><OpenDotAppsNavigation /></PageSuspense>} />
           <Route path="connectors" element={<PageSuspense><Connectors /></PageSuspense>} />
           <Route path="profile" element={<PageSuspense><Profile /></PageSuspense>} />
           <Route path="entities/:entityId" element={<PageSuspense><EntityProfilePage /></PageSuspense>} />

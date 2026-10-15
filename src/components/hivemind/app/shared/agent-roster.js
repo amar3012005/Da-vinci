@@ -4,7 +4,7 @@ export const agentRoster = createAgentRosterCache(async () => {
   const controller = new AbortController();
   const deadline = setTimeout(() => controller.abort(), 15000);
   try {
-    const response = await fetchHarness('/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal });
+    const response = await fetchHarness(window.location.hostname === 'dots.singulancelabs.com' ? '/api/hivemind/workspace-shell?resource=roster' : '/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal });
     if (!response.ok) throw new Error('team unavailable');
     const value = await response.json();
     if (!Array.isArray(value.profiles)) throw new Error('invalid team response');

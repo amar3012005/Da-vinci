@@ -6,7 +6,7 @@ import './mobile-popup.css';
 import WorkspacePopupSurface from './WorkspacePopupSurface';
 
 /** Keep the current room mounted beneath a large company-context reader. */
-export default function CompanyWorkspaceOverlay({ onClose }) {
+export default function CompanyWorkspaceOverlay({ onClose, portalContainer }) {
   const container = useRef(null);
   useEffect(() => {
     const releaseViewport = bindNativeChatViewport(window, container.current.parentElement.style, '--hm-popup-height');
@@ -32,5 +32,5 @@ export default function CompanyWorkspaceOverlay({ onClose }) {
         <div data-company-reader-content className="flex h-[min(82dvh,960px)] min-h-[320px] flex-col"><CompanyDashboard showTasks={false} showRuntimeInvite={false} allowOnboarding={false} /></div>
       </WorkspacePopupSurface>
     </div>
-  </div>, document.body);
+  </div>, portalContainer || document.body);
 }

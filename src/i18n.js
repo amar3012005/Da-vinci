@@ -180,7 +180,7 @@ i18n
     ns: ['common', 'dashboard', 'landing'],
     defaultNS: 'common',
     backend: {
-      loadPath: '/locales/{{lng}}/{{ns}}.json',
+      loadPath: process.env.REACT_APP_SHARED_SHELL_LOCALES || '/locales/{{lng}}/{{ns}}.json',
     },
     detection: {
       order: ['localStorage', 'navigator', 'htmlTag'],

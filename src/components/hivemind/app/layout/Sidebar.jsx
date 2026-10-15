@@ -1,3 +1,4 @@
+import { dotAppsUrl } from '../shared-shell/navigation';
 import { ownedOpenDotRoomStatuses, reconnectingOpenDotRoomStatuses } from '../shared/open-dot-room-status';
 import { workspaceModeForPath } from '../shared/workspace-mode';
 import { agentRoster } from '../shared/agent-roster';
@@ -163,6 +164,9 @@ export default function Sidebar({
   onCollapsedChange,
   mobileDrawer = false,
   mobileRoster = false,
+  onOpenEmployee,
+  portalContainer,
+  contextPath,
 }) {
   const { t } = useTranslation('dashboard');
   const { logout, org, user } = useAuth();
@@ -285,14 +289,15 @@ export default function Sidebar({
   }, [user?.id, org?.id]);
 
   useEffect(() => {
-    const routeEmployeeId = openDotEmployeeIdFromPath(location.pathname);
+    const routeEmployeeId = openDotEmployeeIdFromPath(contextPath || location.pathname);
     const boundEmployee = routeEmployeeId && team.find(employee => employee.id?.toLowerCase() === routeEmployeeId.toLowerCase() && openDotEmployeePath(employee));
     setSelectedAgent(boundEmployee ? routeEmployeeId : null);
-  }, [location.pathname, team]);
+  }, [location.pathname, contextPath, team]);
 
   const openAgent = async (event, agent) => {
     event.preventDefault();
     if (openingAgent) return false;
+    if (onOpenEmployee) return onOpenEmployee(agent);
     const openDotPath = openDotEmployeePath(agent);
     if (openDotPath) {
       setTeamError('');
@@ -322,6 +327,22 @@ export default function Sidebar({
     } catch { setTeamError(tt('teamOpenError', 'Could not open this agent. Please try again.')); return false; }
     finally { setOpeningAgent(null); delete document.documentElement.dataset.agentRoomOpening; }
   };
+  // Full-page return from the shared Apps shell uses the same existing selection action.
+  const handledEmployeeReturn = useRef(null);
+  useEffect(() => {
+    if (onOpenEmployee || window.location.hostname !== 'runtime-runner.singulancelabs.com') return;
+    const requested = new URLSearchParams(location.search).get('employee');
+    if (!requested || handledEmployeeReturn.current === requested || !scope) return;
+    const employee = requested === 'runtime' ? { id: 'runtime' } : team.find(row => row.id === requested);
+    if (!employee) return; // A URL never grants visibility to an employee.
+    handledEmployeeReturn.current = requested;
+    void openAgent({ preventDefault() {} }, employee).then(opened => {
+      if (!opened) { handledEmployeeReturn.current = null; return; }
+      const current = new URL(window.location.href);
+      current.searchParams.delete('employee');
+      window.history.replaceState(window.history.state, '', `${current.pathname}${current.search}${current.hash}`);
+    });
+  }, [scope, team, location.search, onOpenEmployee]);
   const [createEmployeeOpen, setCreateEmployeeOpen] = useState(false);
   const closeCreateEmployee = useCallback(() => setCreateEmployeeOpen(false), []);
   useEffect(() => setCreateEmployeeOpen(false), [org?.id, user?.id]);
@@ -360,7 +381,7 @@ export default function Sidebar({
   const navSections = activeSection === 'tara' ? allNavSections : teamMode
     ? [allNavSections[1], { label: null, items: [
       { to: '/hivemind/app/employee/dots', icon: Cpu, label: 'My dots' },
-      { to: '/hivemind/app/employee/apps', icon: Cable, label: t('sidebar.apps', { defaultValue: 'Apps' }) },
+      { to: window.location.hostname === 'dots.singulancelabs.com' ? '/hivemind/app/employee/apps' : dotAppsUrl(`?return_to=${encodeURIComponent(location.pathname + location.search)}`), icon: Cable, label: t('sidebar.apps', { defaultValue: 'Apps' }) },
       { to: '/hivemind/app/employees', companyWorkspace: true, icon: Building2, label: t('sidebar.companyWorkspace', { defaultValue: 'Company workspace' }) },
       ...(process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? [{ to: '/hivemind/app/crm', icon: FolderKanban, label: 'Your CRM' }] : []),
     ] }]
@@ -611,8 +632,8 @@ export default function Sidebar({
         </div>
       </div>
       {mobileRoster && rosterProfileOpen && <div className="mobile-roster-profile fixed inset-0 z-[95] flex items-end bg-black/25 p-2" onClick={() => setRosterProfileOpen(false)}><section data-mobile-roster-profile role="dialog" aria-modal="true" aria-label="Your profile" onClick={event => event.stopPropagation()} className="w-full rounded-[32px] bg-white p-6" style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))' }}><button type="button" autoFocus aria-label="Close profile" onClick={() => setRosterProfileOpen(false)} className="mb-6 h-11 w-11 rounded-full bg-[#f3f1ec]">×</button><div className="overflow-hidden rounded-3xl bg-[#f3f1ec]">{[{to:'/hivemind/m/profile',label:user?.display_name || user?.name || 'Profile'}, {to:'/hivemind/m/usage',label:'Usage'}, {to:'/hivemind/m/billing',label:'Billing'}, {to:'/hivemind/m/settings',label:'Settings'}, {to:'/hivemind/m/connectors',label:'Apps & connectors'}].map(item => <NavLink key={item.to} to={item.to} className="block border-b border-[#e3e0db] p-5 text-[17px]">{item.label}</NavLink>)}<button type="button" onClick={logout} className="block w-full p-5 text-left text-[17px]">Sign out</button></div></section></div>}
-      {companyOpen ? <React.Suspense fallback={<div role="status">Opening company workspace…</div>}><CompanyWorkspaceOverlay onClose={closeCompany} /></React.Suspense> : null}
-      {createEmployeeOpen && <React.Suspense fallback={<div role="status">Opening employee setup…</div>}><CreateEmployeeDialog onClose={closeCreateEmployee} onCreated={employeeCreated} /></React.Suspense>}
+      {companyOpen ? <React.Suspense fallback={<div role="status">Opening company workspace…</div>}><CompanyWorkspaceOverlay onClose={closeCompany} portalContainer={portalContainer} /></React.Suspense> : null}
+      {createEmployeeOpen && <React.Suspense fallback={<div role="status">Opening employee setup…</div>}><CreateEmployeeDialog onClose={closeCreateEmployee} onCreated={employeeCreated} portalContainer={portalContainer} /></React.Suspense>}
     </aside>
   );
 }

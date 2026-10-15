@@ -14,7 +14,7 @@ function Character({ appearance, size, title, selections }) {
   return <Avatar assets={humation1} seed={appearance.seed} selections={selections || appearance.selections} colors={appearance.colors} background={appearance.background} crop={appearance.crop} size={size} title={title} {...(typeof size === 'string' ? { height: undefined, style: { height: 'auto' } } : {})} />;
 }
 
-export default function CreateEmployeeDialog({ onClose, onCreated }) {
+export default function CreateEmployeeDialog({ onClose, onCreated, portalContainer }) {
   const [creationKey] = useState(() => window.crypto.randomUUID());
   const [name, setName] = useState('');
   const [needsComputerAccess, setNeedsComputerAccess] = useState(false);
@@ -106,6 +106,6 @@ export default function CreateEmployeeDialog({ onClose, onCreated }) {
         </div>
         <button type="submit" disabled={busy || !name.trim()} className="mt-6 h-12 shrink-0 rounded-full bg-[#141414] text-[15px] font-semibold text-white disabled:bg-[#a5a5a2]">{busy ? (created ? 'Opening…' : 'Creating…') : created ? 'Open employee' : submitted.current ? 'Retry create' : 'Create'}</button>
       </form>
-    </div>, document.body,
+    </div>, portalContainer || document.body,
   );
 }
