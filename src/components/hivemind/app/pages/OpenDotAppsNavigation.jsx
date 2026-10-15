@@ -24,7 +24,7 @@ export default function OpenDotAppsNavigation() {
     const shadow = host.current.shadowRoot || host.current.attachShadow({ mode: 'open' });
     const style = document.createElement('link');
     style.rel = 'stylesheet';
-    style.href = '/api/hivemind/apps/styles';
+    style.href = '/api/hivemind/apps/styles?v=native-2';
     const root = document.createElement('div');
     root.className = 'runtime-apps-root';
     let active = true;
