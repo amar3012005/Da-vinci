@@ -1,5 +1,5 @@
 export const RUNTIME_ORIGIN = 'https://runtime-runner.singulancelabs.com';
-export const DOT_APPS = 'https://dots.singulancelabs.com/apps';
+export const DOT_APPS = `${RUNTIME_ORIGIN}/apps`;
 export function dotAppsUrl(search = '', hash = '') {
   // Do not parse/re-serialize OAuth callback fields: their exact query survives.
   return DOT_APPS + (search.startsWith('?') ? search : search ? `?${search}` : '') + hash;

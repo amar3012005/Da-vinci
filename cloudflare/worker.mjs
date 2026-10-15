@@ -468,10 +468,42 @@ async function mobileLandingFlagResponse(request, env) {
   });
 }
 
+
+// Fixed-origin Apps transport. The browser stays on Runtime; Dot authenticates
+// the original company session. No arbitrary upstream or tenant headers.
+async function proxyRuntimeApps(request) {
+  const url = new URL(request.url);
+  const api = url.pathname.startsWith('/api/');
+  const reply = (error, status) => Response.json({error}, {status, headers:{'cache-control':'private, no-store'}});
+  const origin = request.headers.get('origin');
+  if (origin && origin !== url.origin) return reply('origin_denied',403);
+  if (!['GET','HEAD'].includes(request.method) && !(url.pathname === '/api/hivemind/apps' && request.method === 'POST')) return reply('method_not_allowed',405);
+  const cookie = (request.headers.get('cookie') || '').split(';').map(v=>v.trim()).find(v=>v.startsWith('hm_cp_session='));
+  if (!cookie) return reply('authentication_required',401);
+  const headers = new Headers({cookie, accept:request.headers.get('accept') || '*/*'});
+  if(origin) headers.set('origin',origin);
+  for(const key of ['content-type','rsc','next-router-state-tree','next-router-prefetch','next-url']) if(request.headers.has(key)) headers.set(key,request.headers.get(key));
+  try {
+    let body;
+    if(request.method === 'POST') {body=await request.arrayBuffer(); if(body.byteLength>64000)return reply('request_too_large',413);}
+    const response=await fetch('https://dots.singulancelabs.com'+url.pathname+url.search,{method:request.method,headers,body,redirect:'manual'});
+    const output=new Headers(response.headers); output.delete('set-cookie');
+    output.set('cache-control',api || url.pathname === '/apps' ? 'private, no-store' : 'private, max-age=31536000, immutable');
+    if(response.status>=300 && response.status<400) return reply('apps_redirect_denied',502);
+    return new Response(response.body,{status:response.status,headers:output});
+  } catch { return reply('apps_temporarily_unavailable',502); }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    if (url.hostname === 'runtime-runner.singulancelabs.com') {
+      if (pathname === '/hivemind/app/employee/apps' && ['GET','HEAD'].includes(request.method)) {
+        url.pathname='/apps'; return Response.redirect(url.href,302);
+      }
+      if (pathname === '/apps' || pathname.startsWith('/_next/') || pathname.startsWith('/shared-hyperagent-shell/') || ['/api/hivemind/apps','/api/hivemind/workspace-shell'].includes(pathname)) return proxyRuntimeApps(request);
+    }
     if (['/api/hivemind/employees/status', '/api/hivemind/employees/create'].includes(pathname)) {
       return proxyEmployeeRegistry(request);
     }

@@ -34,7 +34,7 @@ function Shell({ identity, host, portalContainer }) {
 
 // A separate React root owns only the sidebar, never Next's Apps subtree.
 export function mount(host, { identity, stylesheet }) {
-  if (window.location.hostname !== 'dots.singulancelabs.com' || window.location.pathname !== '/apps') throw new Error('Unsupported shell host');
+  if (!['dots.singulancelabs.com', 'runtime-runner.singulancelabs.com'].includes(window.location.hostname) || window.location.pathname !== '/apps') throw new Error('Unsupported shell host');
   const shadow = host.shadowRoot || host.attachShadow({ mode: 'open' });
   const style = document.createElement('link'); style.rel = 'stylesheet'; style.href = stylesheet;
   const container = document.createElement('div'); const portals = document.createElement('div');
