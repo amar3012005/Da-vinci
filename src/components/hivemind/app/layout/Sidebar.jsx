@@ -571,7 +571,7 @@ export default function Sidebar({
           </div>
         )}
         <div className="px-3 py-3">
-          {activeSection === 'hyperagents' && <button type="button" title={t('welcomeTour.replay', { defaultValue:'Explore your team' })} onClick={() => window.dispatchEvent(new Event('hm:replay-hyperagents-tour'))} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] text-[#333333] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''}`}><BookOpen size={18}/>{!collapsed && <span>{t('welcomeTour.replay', { defaultValue:'Explore your team' })}</span>}</button>}
+          {activeSection === 'hyperagents' && <button type="button" title={t('hyperagentsTour:replay', { defaultValue:'Explore your team' })} onClick={() => window.dispatchEvent(new Event('hm:replay-hyperagents-tour'))} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] text-[#333333] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''}`}><BookOpen size={18}/>{!collapsed && <span>{t('hyperagentsTour:replay', { defaultValue:'Explore your team' })}</span>}</button>}
           <button type="button" title="Account & Settings" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] text-[#333333] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''}`}>
             <Settings size={18}/>{!collapsed && <span>Account & Settings</span>}
           </button>
