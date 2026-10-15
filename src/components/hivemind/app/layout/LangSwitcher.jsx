@@ -20,7 +20,7 @@ export default function LangSwitcher({ compact = false, theme = 'light', variant
   useEffect(() => {
     if (!open) return;
     function onClick(e) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target) && !e.composedPath?.().includes(wrapRef.current)) setOpen(false);
     }
     function onKey(e) {
       if (e.key === 'Escape') setOpen(false);

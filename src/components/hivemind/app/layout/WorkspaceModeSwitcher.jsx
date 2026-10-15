@@ -34,7 +34,7 @@ export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
     const dismiss = event => {
       if (event.key === 'Escape') { setModeMenuOpen(false); modeMenuRef.current?.querySelector('button')?.focus(); }
     };
-    const outside = event => { if (!modeMenuRef.current?.contains(event.target)) setModeMenuOpen(false); };
+    const outside = event => { if (!modeMenuRef.current?.contains(event.target) && !event.composedPath?.().includes(modeMenuRef.current)) setModeMenuOpen(false); };
     window.addEventListener('keydown', dismiss);
     window.addEventListener('pointerdown', outside);
     return () => { window.removeEventListener('keydown', dismiss); window.removeEventListener('pointerdown', outside); };
