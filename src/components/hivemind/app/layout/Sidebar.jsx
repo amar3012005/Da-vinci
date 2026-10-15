@@ -268,7 +268,9 @@ export default function Sidebar({
 
   useEffect(() => {
     const selection = event => {
-      if (!/^\/hivemind\/app\/(overview|employee\/harness)(\/|$)/.test(currentPath.current) || selectionPending.current) return;
+      if (!/^\/hivemind\/app\/(overview|employee\/harness)(\/|$)/.test(currentPath.current)) return;
+      if (selectionPending.current && selectionPending.current !== (event.detail?.id || 'runtime')) return;
+      selectionPending.current = null;
       setSelectedAgent(event.detail?.id === 'runtime' ? null : event.detail?.id || null);
     };
     const activity = event => setRooms(event.detail?.rooms || []);
@@ -306,6 +308,7 @@ export default function Sidebar({
     if (onOpenEmployee) return onOpenEmployee(agent);
     const openDotPath = openDotEmployeePath(agent);
     if (openDotPath) {
+      selectionPending.current = null;
       setTeamError('');
       setSelectedAgent(agent.id);
       navigate(openDotPath);
@@ -319,7 +322,9 @@ export default function Sidebar({
     setSelectedAgent(agent.id === 'runtime' ? null : agent.id);
     const existingRoom = nativeRooms.find(room => room.id === agent.id && typeof room.sessionId === 'string');
     if (existingRoom) {
+      selectionPending.current = agent.id;
       navigate(`/hivemind/app/employee/harness/session/${encodeURIComponent(existingRoom.sessionId)}`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
       setTeamError('');
       return true;
     }
