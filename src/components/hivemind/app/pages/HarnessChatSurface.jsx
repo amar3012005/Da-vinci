@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
 import { rememberHarnessExchange } from '../shared/harness-admission-handoff';
+import { isNativeApp } from '../shared/native-app';
+import { nativeAdmissionMessage } from '../shared/native-session-recovery';
 
 const HARNESS_OVERVIEW_PATH = '/hivemind/app/overview';
 const HARNESS_EXCHANGE_PATH = '/api/hivemind/embed/exchange';
@@ -103,7 +105,7 @@ export default function HarnessChatSurface({ legacy }) {
     } catch (error) {
       if (!mountedRef.current) return;
       setConnecting(false);
-      setNotice(error?.response?.data?.error || error?.message
+      setNotice((isNativeApp() ? nativeAdmissionMessage(error) : null) || error?.response?.data?.error || error?.message
         || t('overview.harness.unavailable', 'Harness chat is temporarily unavailable.'));
     }
   }, [openHarness, t]);

@@ -7,7 +7,8 @@ import './BrainChat.css';
 import QueryStarters from './QueryStarters';
 import { isNativeApp } from '../shared/native-app';
 import { nativePlugin } from '../shared/native-auth';
-import { createNativeHarnessFetch, createNativeHarnessStream, createNativeSaveFile } from '../shared/native-harness-transport';
+import { createNativeHarnessStream, createNativeSaveFile } from '../shared/native-harness-transport';
+import { fetchHarness as fetchNativeOrWeb } from '../shared/harness-fetch';
 import { createNativeHarnessLoader } from '../shared/native-harness-loader';
 import { normalizeHarnessInjections, selectHarnessFetch } from './harness-transport';
 import { measureHarnessBoot } from '../shared/harness-boot-timing';
@@ -17,7 +18,7 @@ let nativeRuntime;
 function harnessRuntime() {
   if (!isNativeApp()) return null;
   if (!nativeRuntime) {
-    const fetchRunner = createNativeHarnessFetch(nativePlugin);
+    const fetchRunner = fetchNativeOrWeb;
     const loader = createNativeHarnessLoader(fetchRunner);
     nativeRuntime = { fetch: fetchRunner, loader, hooks: { remoteHost: true, fetch: fetchRunner, openStream: createNativeHarnessStream(nativePlugin), loadBundle: loader.loadBundle, saveFile: createNativeSaveFile(nativePlugin) } };
   }
@@ -251,6 +252,10 @@ function isFreshHarnessRoute() {
 }
 
 async function establishHarnessSession({ fresh = false } = {}) {
+  if (isNativeApp() && !fresh) {
+    await (await import('../shared/native-chat-session')).refreshNativeChatSession();
+    return { mode: 'harness' };
+  }
   const path = fresh ? '/v1/harness-chat/new-session' : '/v1/harness-chat/bootstrap';
   const { data: admission } = await measureHarnessBoot('admission-ticket', () => apiClient.controlPlane.post(path, {}));
   // The rollout is deliberately binary.  A user outside the Harness cohort

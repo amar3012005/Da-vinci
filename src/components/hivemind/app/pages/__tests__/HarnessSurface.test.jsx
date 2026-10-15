@@ -2,6 +2,8 @@ jest.mock('../../shared/api-client', () => ({
   __esModule: true,
   default: { controlPlane: {}, core: {} },
 }));
+jest.mock('../../auth/AuthProvider', () => ({ useAuth: () => ({user: null, org: null}) }));
+jest.mock('../../shared/harness-fetch', () => ({ fetchHarness: (...args) => global.fetch(...args) }));
 
 import {
   HARNESS_BOOT_STAGES,
@@ -172,7 +174,7 @@ it('reattaches the same native app and draft across chat navigation without boot
   global.fetch = jest.fn(async () => ({ status: 200 }));
   window.__DSH_EMBED_APP__ = app;
   window.history.replaceState({}, '', '/hivemind/app/overview');
-  parkNativeHarnessSeat(app, seat, window.location.pathname);
+  parkNativeHarnessSeat(app, seat, window.location.pathname, ':');
   try {
     await act(async () => { root.render(<HarnessSurface sessionEstablished />); });
     expect(host.contains(draft)).toBe(true);
