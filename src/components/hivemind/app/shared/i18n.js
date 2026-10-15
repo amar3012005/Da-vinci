@@ -58,6 +58,7 @@ const messages = {
       refreshHealth: 'Refresh health',
     },
     sidebar: {
+      apps: 'Apps',
       yourBrain: 'Your Brain',
       aiFeatures: 'AI Features',
       advanced: 'Advanced',
@@ -167,6 +168,7 @@ const messages = {
       copyToClipboard: 'Copiar al portapapeles',
     },
     sidebar: {
+      apps: 'Aplicaciones',
       yourBrain: 'Tu cerebro',
       aiFeatures: 'Funciones de IA',
       advanced: 'Avanzado',
@@ -274,6 +276,7 @@ const messages = {
       copyToClipboard: 'In die Zwischenablage kopieren',
     },
     sidebar: {
+      apps: 'Apps',
       yourBrain: 'Dein Gehirn',
       aiFeatures: 'KI-Funktionen',
       advanced: 'Erweitert',
@@ -381,6 +384,7 @@ const messages = {
       copyToClipboard: 'Kopírovať do schránky',
     },
     sidebar: {
+      apps: 'Aplikácie',
       yourBrain: 'Tvoj mozog',
       aiFeatures: 'AI funkcie',
       advanced: 'Rozšírené',
@@ -488,6 +492,7 @@ const messages = {
       copyToClipboard: 'Copier dans le presse-papiers',
     },
     sidebar: {
+      apps: 'Applications',
       yourBrain: 'Votre cerveau',
       aiFeatures: 'Fonctionnalités IA',
       advanced: 'Avancé',
@@ -595,6 +600,7 @@ const messages = {
       copyToClipboard: 'Copia negli appunti',
     },
     sidebar: {
+      apps: 'App',
       yourBrain: 'Il tuo cervello',
       aiFeatures: 'Funzioni IA',
       advanced: 'Avanzato',
@@ -702,6 +708,7 @@ const messages = {
       copyToClipboard: 'Copiar para a área de transferência',
     },
     sidebar: {
+      apps: 'Aplicações',
       yourBrain: 'Seu cérebro',
       aiFeatures: 'Recursos de IA',
       advanced: 'Avançado',
@@ -809,6 +816,7 @@ const messages = {
       copyToClipboard: 'Kopiëren naar klembord',
     },
     sidebar: {
+      apps: 'Apps',
       yourBrain: 'Jouw brein',
       aiFeatures: 'AI-functies',
       advanced: 'Geavanceerd',
@@ -916,6 +924,7 @@ const messages = {
       copyToClipboard: 'Skopiuj do schowka',
     },
     sidebar: {
+      apps: 'Aplikacje',
       yourBrain: 'Twój mózg',
       aiFeatures: 'Funkcje AI',
       advanced: 'Zaawansowane',
@@ -1023,6 +1032,7 @@ const messages = {
       copyToClipboard: 'Kopírovat do schránky',
     },
     sidebar: {
+      apps: 'Aplikace',
       yourBrain: 'Tvůj mozek',
       aiFeatures: 'AI funkce',
       advanced: 'Pokročilé',
@@ -1130,6 +1140,7 @@ const messages = {
       copyToClipboard: 'Kopiera till urklipp',
     },
     sidebar: {
+      apps: 'Appar',
       yourBrain: 'Din hjärna',
       aiFeatures: 'AI-funktioner',
       advanced: 'Avancerat',
@@ -1237,6 +1248,7 @@ const messages = {
       copyToClipboard: 'Kopier til utklippstavlen',
     },
     sidebar: {
+      apps: 'Apps',
       yourBrain: 'Din hjerne',
       aiFeatures: 'AI-funksjoner',
       advanced: 'Avansert',
@@ -1344,6 +1356,7 @@ const messages = {
       copyToClipboard: 'Kopioi leikepöydälle',
     },
     sidebar: {
+      apps: 'Sovellukset',
       yourBrain: 'Aivosi',
       aiFeatures: 'Tekoälytoiminnot',
       advanced: 'Lisäasetukset',
@@ -1451,6 +1464,7 @@ const messages = {
       copyToClipboard: 'Αντιγραφή στο πρόχειρο',
     },
     sidebar: {
+      apps: 'Εφαρμογές',
       yourBrain: 'Ο εγκέφαλός σου',
       aiFeatures: 'Λειτουργίες AI',
       advanced: 'Για προχωρημένους',
@@ -1558,6 +1572,7 @@ const messages = {
       copyToClipboard: 'Másolás a vágólapra',
     },
     sidebar: {
+      apps: 'Alkalmazások',
       yourBrain: 'Az agyad',
       aiFeatures: 'AI funkciók',
       advanced: 'Speciális',
@@ -1665,6 +1680,7 @@ const messages = {
       copyToClipboard: 'Copiază în clipboard',
     },
     sidebar: {
+      apps: 'Aplicații',
       yourBrain: 'Creierul tău',
       aiFeatures: 'Funcții AI',
       advanced: 'Avansat',
@@ -1772,6 +1788,7 @@ const messages = {
       copyToClipboard: 'Kopiraj v odložišče',
     },
     sidebar: {
+      apps: 'Aplikacije',
       yourBrain: 'Tvoj možgan',
       aiFeatures: 'AI funkcije',
       advanced: 'Napredno',
@@ -1879,6 +1896,7 @@ const messages = {
       copyToClipboard: 'نسخ إلى الحافظة',
     },
     sidebar: {
+      apps: 'التطبيقات',
       yourBrain: 'دماغك',
       aiFeatures: 'ميزات الذكاء الاصطناعي',
       advanced: 'متقدم',

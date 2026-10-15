@@ -357,7 +357,7 @@ export default function Sidebar({
   const navSections = activeSection === 'tara' ? allNavSections : teamMode
     ? [allNavSections[1], { label: null, items: [
       { to: '/hivemind/app/employee/dots', icon: Cpu, label: 'My dots' },
-      { to: '/hivemind/app/employee/apps', icon: Cable, label: t('sidebar.connectors', { defaultValue: 'Apps' }) },
+      { to: '/hivemind/app/employee/apps', icon: Cable, label: t('sidebar.apps', { defaultValue: 'Apps' }) },
       { to: '/hivemind/app/employees', companyWorkspace: true, icon: Building2, label: t('sidebar.companyWorkspace', { defaultValue: 'Company workspace' }) },
       ...(process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? [{ to: '/hivemind/app/crm', icon: FolderKanban, label: 'Your CRM' }] : []),
     ] }]
