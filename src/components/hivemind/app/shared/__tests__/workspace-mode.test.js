@@ -1,4 +1,4 @@
-import { workspaceModeForPath } from '../workspace-mode';
+import { workspaceModeForPath, workspaceModeDestination } from '../workspace-mode';
 import { openDotRoomStatus, ownedOpenDotRoomStatuses } from '../open-dot-room-status';
 test('Brain and employee workspaces use one truthful mode', () => {
   for (const route of ['/hivemind/app/overview/new', '/hivemind/app/knowledge', '/hivemind/app/employee/dots-fake']) expect(workspaceModeForPath(route)).toBe('hivemind');
@@ -17,4 +17,13 @@ test('background Dot unread requires an owned binding and real local read waterm
   expect(ownedOpenDotRoomStatuses(employees, roster).owned[0].unread).toBe(false);
   expect(ownedOpenDotRoomStatuses(employees, roster, { owned: 40 }).owned[0].unread).toBe(true);
   expect(ownedOpenDotRoomStatuses([{ ...employees[0], dotId: 'foreign' }], roster)).toEqual({});
+});
+
+test('shared apps keep employee shell and Runtime host without changing Brain connectors', () => {
+  const path = '/hivemind/app/employee/apps';
+  expect(workspaceModeForPath(path)).toBe('hyperagents');
+  expect(workspaceModeDestination(path, 'https://runtime-runner.singulancelabs.com')).toBe(path);
+  expect(workspaceModeDestination(path, 'https://next.singulancelabs.com')).toBe(`https://runtime-runner.singulancelabs.com${path}`);
+  expect(workspaceModeForPath('/hivemind/app/connectors')).toBe('hivemind');
+  expect(workspaceModeForPath('/hivemind/app/employee/apps-fake')).toBe('hivemind');
 });
