@@ -320,14 +320,6 @@ export default function Sidebar({
     }
     const previousSelection = selectedAgent;
     setSelectedAgent(agent.id === 'runtime' ? null : agent.id);
-    const existingRoom = nativeRooms.find(room => room.id === agent.id && typeof room.sessionId === 'string');
-    if (existingRoom) {
-      selectionPending.current = agent.id;
-      navigate(`/hivemind/app/employee/harness/session/${encodeURIComponent(existingRoom.sessionId)}`);
-      window.dispatchEvent(new PopStateEvent('popstate'));
-      setTeamError('');
-      return true;
-    }
     selectionPending.current = agent.id;
     setOpeningAgent(agent.id); setTeamError('');
     document.documentElement.dataset.agentRoomOpening = 'true';
