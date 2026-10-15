@@ -446,8 +446,9 @@ function AppShellContent() {
   const onMemories = location.pathname === '/hivemind/app/memories';
   const onOverview = /\/hivemind\/app(?:\/(?:overview|employee\/harness)(?:\/.*)?)?\/?$/.test(location.pathname);
   const openDotPrefix = '/hivemind/app/employee/dots';
-  const onOpenDotWorkspace = (location.pathname === openDotPrefix || location.pathname.startsWith(`${openDotPrefix}/`))
-    && buildOpenDotEmbedTarget(location.pathname.slice(openDotPrefix.length), location.search) !== null;
+  const onOpenDotWorkspace = location.pathname.replace(/\/+$/, '') === '/hivemind/app/employee/apps'
+    || ((location.pathname === openDotPrefix || location.pathname.startsWith(`${openDotPrefix}/`))
+      && buildOpenDotEmbedTarget(location.pathname.slice(openDotPrefix.length), location.search) !== null);
   const onMeetingNotes = /\/hivemind\/app\/meeting-notes\/?$/.test(location.pathname);
 
   // Track sidebar state for dynamic margin
