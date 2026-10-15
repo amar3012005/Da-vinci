@@ -286,7 +286,7 @@ export default function Sidebar({
         if (Number.isFinite(entry.readAt) && entry.readAt >= 0 && Object.hasOwn(verified, entry.employeeId)) dotReadAt.current[entry.employeeId] = entry.readAt;
       }
       try { localStorage.setItem(`hivemind.dot-read-at:${scope}`, JSON.stringify(dotReadAt.current)); } catch { /* Optional local watermark. */ }
-      setDotRooms(ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current));
+      setDotRooms(previous => ({ ...previous, ...ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current) }));
     };
     window.addEventListener('hivemind:open-dot-rooms', dotActivity);
     window.addEventListener('hivemind:agent-rooms', activity);
@@ -305,7 +305,18 @@ export default function Sidebar({
   const openAgent = async (event, agent) => {
     event.preventDefault();
     if (openingAgent) return false;
-    if (onOpenEmployee) return onOpenEmployee(agent);
+    if (onOpenEmployee) {
+      const previousSelection = selectedAgent;
+      setSelectedAgent(agent.id === 'runtime' ? null : agent.id);
+      try {
+        const opened = await onOpenEmployee(agent);
+        if (opened === false) setSelectedAgent(previousSelection);
+        return opened;
+      } catch (error) {
+        setSelectedAgent(previousSelection);
+        throw error;
+      }
+    }
     const openDotPath = openDotEmployeePath(agent);
     if (openDotPath) {
       selectionPending.current = null;

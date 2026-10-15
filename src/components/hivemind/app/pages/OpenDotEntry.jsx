@@ -27,7 +27,6 @@ export default function OpenDotEntry({ apps = false, route, active = true }) {
       if (event.origin !== DOT_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
       const rooms = openDotRoomStatus(event.data, openDotEmployeeIdFromPath(pathname));
       if (rooms !== null) {
-        if (!active) return;
         window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { employeeId: openDotEmployeeIdFromPath(pathname), dotId: event.data.dotId, rooms, employees: event.data.employees } }));
         return;
       }
