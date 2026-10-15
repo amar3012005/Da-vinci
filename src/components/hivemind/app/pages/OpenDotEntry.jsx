@@ -7,8 +7,9 @@ import { buildOpenDotEmbedTarget } from '../shared/open-dot-embed-target';
 const DOT_ORIGIN = 'https://dots.singulancelabs.com';
 const READY_TIMEOUT_MS = 30000;
 
-export default function OpenDotEntry({ apps = false }) {
-  const { pathname, search } = useLocation();
+export default function OpenDotEntry({ apps = false, route, active = true }) {
+  const location = useLocation();
+  const { pathname, search } = route || location;
   const suffix = apps ? '/apps' : pathname.slice('/hivemind/app/employee/dots'.length);
   const src = useMemo(() => buildOpenDotEmbedTarget(suffix, search), [suffix, search]);
   const iframeRef = useRef(null);
@@ -26,6 +27,7 @@ export default function OpenDotEntry({ apps = false }) {
       if (event.origin !== DOT_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
       const rooms = openDotRoomStatus(event.data, openDotEmployeeIdFromPath(pathname));
       if (rooms !== null) {
+        if (!active) return;
         window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { employeeId: openDotEmployeeIdFromPath(pathname), dotId: event.data.dotId, rooms, employees: event.data.employees } }));
         return;
       }
@@ -37,9 +39,9 @@ export default function OpenDotEntry({ apps = false }) {
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener('message', onMessage);
-      window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { clear: true } }));
+      if (active) window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { clear: true } }));
     };
-  }, [frameKey, src, pathname, apps]);
+  }, [frameKey, src, pathname, apps, active]);
 
   if (!src) return <main className="flex h-full min-h-0 items-center justify-center p-6 text-sm text-[#737373]">Invalid Dot address.</main>;
 

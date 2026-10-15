@@ -1,6 +1,7 @@
 import { parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } from '../shared/native-harness-seat';
 import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../shared/api-client';
+import { useAuth } from '../auth/AuthProvider';
 import './HarnessSurface.css';
 import './BrainChat.css';
 import QueryStarters from './QueryStarters';
@@ -275,13 +276,15 @@ async function establishHarnessSession({ fresh = false } = {}) {
  * streams, replay, nodes, tool cards, approvals, subagents and trajectory.
  */
 export default function HarnessSurface({ sessionEstablished = false, brain = false } = {}) {
+  const { user, org } = useAuth();
+  const ownerScope = `${user?.id || ""}:${org?.id || ""}`;
   const mountRef = useRef(null);
   const [state, setState] = useState({ phase: 'loading', stage: 0, message: null });
 
   useEffect(() => {
     const host = mountRef.current;
     if (!host) return undefined;
-    const retained = takeNativeHarnessSeat(window.__DSH_EMBED_APP__, host);
+    const retained = takeNativeHarnessSeat(window.__DSH_EMBED_APP__, host, ownerScope);
     const mount = retained?.container || document.createElement('div');
     if (!retained) { mount.className = 'h-full min-h-0'; host.append(mount); }
     let cancelled = false;
@@ -461,7 +464,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
       // main.ts, which would mount into the outer React #root. The next embed
       // replaces this tombstone only after the previous app has disposed.
       const currentApp = window.__DSH_EMBED_APP__;
-      if (parkNativeHarnessSeat(currentApp, mount, window.location.pathname)) return;
+      if (parkNativeHarnessSeat(currentApp, mount, window.location.pathname, ownerScope)) return;
       clearNativeHarnessSeat();
       window.__HIVEMIND_TRANSCRIBE_AUDIO__ = undefined;
       window.__HIVEMIND_DELETE_SESSION__ = undefined;
@@ -479,7 +482,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
         window.__HIVE_HARNESS_DISPOSE_PROMISE__ = disposePromise;
       }
     };
-  }, [sessionEstablished]);
+  }, [sessionEstablished, ownerScope]);
 
   if (state.phase === 'error') {
     return <div className="h-full min-h-[420px] grid place-items-center bg-[#faf9f4] px-6">

@@ -189,6 +189,9 @@ export default function Sidebar({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const teamMode = workspaceModeForPath(location.pathname) === 'hyperagents';
   const [selectedAgent, setSelectedAgent] = useState(null);
+  const selectionPending = useRef(null);
+  const currentPath = useRef(location.pathname);
+  currentPath.current = location.pathname;
   const [openingAgent, setOpeningAgent] = useState(null);
   const [teamError, setTeamError] = useState('');
   const [nativeRooms, setRooms] = useState([]);
@@ -264,7 +267,10 @@ export default function Sidebar({
   }, [scope, setTeam, teamRetry]);
 
   useEffect(() => {
-    const selection = event => setSelectedAgent(event.detail?.id || null);
+    const selection = event => {
+      if (!/^\/hivemind\/app\/(overview|employee\/harness)(\/|$)/.test(currentPath.current) || selectionPending.current) return;
+      setSelectedAgent(event.detail?.id === 'runtime' ? null : event.detail?.id || null);
+    };
     const activity = event => setRooms(event.detail?.rooms || []);
     setRooms([]);
     setDotRooms({});
@@ -290,7 +296,8 @@ export default function Sidebar({
   useEffect(() => {
     const routeEmployeeId = openDotEmployeeIdFromPath(contextPath || location.pathname);
     const boundEmployee = routeEmployeeId && team.find(employee => employee.id?.toLowerCase() === routeEmployeeId.toLowerCase() && openDotEmployeePath(employee));
-    setSelectedAgent(boundEmployee ? routeEmployeeId : null);
+    if (boundEmployee) setSelectedAgent(routeEmployeeId);
+    else if (!/^\/hivemind\/app\/(overview|employee\/harness)(\/|$)/.test(location.pathname)) setSelectedAgent(null);
   }, [location.pathname, contextPath, team]);
 
   const openAgent = async (event, agent) => {
@@ -308,6 +315,15 @@ export default function Sidebar({
       setTeamError(tt('teamWorkspacePending', 'This employee’s Open Dot workspace is still being set up. Try again shortly.'));
       return false;
     }
+    const previousSelection = selectedAgent;
+    setSelectedAgent(agent.id === 'runtime' ? null : agent.id);
+    const existingRoom = nativeRooms.find(room => room.id === agent.id && typeof room.sessionId === 'string');
+    if (existingRoom) {
+      navigate(`/hivemind/app/employee/harness/session/${encodeURIComponent(existingRoom.sessionId)}`);
+      setTeamError('');
+      return true;
+    }
+    selectionPending.current = agent.id;
     setOpeningAgent(agent.id); setTeamError('');
     document.documentElement.dataset.agentRoomOpening = 'true';
     const previousStart = window.__HIVEMIND_START_AGENT__;
@@ -317,14 +333,14 @@ export default function Sidebar({
       let start;
       for (let attempt = 0; attempt < 60; attempt += 1) {
         start = window.__HIVEMIND_START_AGENT__;
-        if (typeof start === 'function' && (!needsNavigation || start !== previousStart)) break;
+        if (typeof start === 'function' && (!needsNavigation || start !== previousStart || window.__DSH_EMBED_APP__)) break;
         await new Promise(resolve => setTimeout(resolve, 200));
       }
-      if (typeof start !== 'function' || (needsNavigation && start === previousStart) || !await start(agent.id)) throw new Error('selection unavailable');
+      if (typeof start !== 'function' || (needsNavigation && start === previousStart && !window.__DSH_EMBED_APP__) || !await start(agent.id)) throw new Error('selection unavailable');
       setSelectedAgent(agent.id === 'runtime' ? null : agent.id);
       return true;
-    } catch { setTeamError(tt('teamOpenError', 'Could not open this agent. Please try again.')); return false; }
-    finally { setOpeningAgent(null); delete document.documentElement.dataset.agentRoomOpening; }
+    } catch { setSelectedAgent(previousSelection); setTeamError(tt('teamOpenError', 'Could not open this agent. Please try again.')); return false; }
+    finally { selectionPending.current = null; setOpeningAgent(null); delete document.documentElement.dataset.agentRoomOpening; }
   };
   // Full-page return from the shared Apps shell uses the same existing selection action.
   const handledEmployeeReturn = useRef(null);
