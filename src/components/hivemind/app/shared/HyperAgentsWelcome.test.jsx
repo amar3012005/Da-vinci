@@ -3,7 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import HyperAgentsWelcome from './HyperAgentsWelcome';
 import { readTourProgress, tourKey } from './hyperagents-tour';
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user:{id:'user-a'}, org:{id:'company-a',name:'Acme'} }) }));
-jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: text => text, i18n:{dir:()=> 'ltr'} }) }));
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (text, options) => options?.defaultValue || text, i18n:{dir:()=> 'ltr'} }) }));
+jest.mock('./hyperagents-tour-i18n', () => ({ englishTour: require('./hyperagents-tour-locales.json').en }));
 jest.mock('../layout/LangSwitcher', () => () => <button>Choose language</button>);
 jest.mock('./agent-roster', () => ({ agentRoster:{peek:()=>[],load:()=>Promise.resolve([{id:'faraday',name:'Faraday',job_title:'Brand researcher'}])} }));
 beforeEach(()=>localStorage.clear());
@@ -18,12 +19,12 @@ test('renders a screen modal, saved company roles, six stages and replay without
  const view=render(<HyperAgentsWelcome company={{name:'Acme'}}/>);
  expect(screen.getByRole('dialog')).toBeTruthy();
  expect(screen.getByText('Acme')).toBeTruthy();
- fireEvent.click(screen.getByRole('button',{name:/Meet your team/}));
+ fireEvent.click(screen.getByRole('button',{name:'Next',exact:true}));
  await screen.findByText('Brand researcher');
  expect(screen.getByText('Faraday')).toBeTruthy();
- for(const name of ['See how we work','Stay in the loop','Explore your work','Choose a direction']) fireEvent.click(screen.getByRole('button',{name:new RegExp(name)}));
+ for(const name of ['See how we work','Stay in the loop','Explore your work','Choose a direction']) fireEvent.click(screen.getByRole('button',{name:'Next',exact:true}));
  expect(screen.getByText('What should we move forward?')).toBeTruthy();
- fireEvent.click(screen.getByRole('button',{name:/Continue to Runtime/}));
+ fireEvent.click(screen.getByRole('button',{name:'Continue',exact:true}));
  expect(screen.queryByRole('dialog')).toBeNull();
  expect(readTourProgress(localStorage,tourKey('user-a','company-a')).done).toBe(true);
  fireEvent(window,new Event('hm:replay-hyperagents-tour'));
@@ -32,10 +33,23 @@ test('renders a screen modal, saved company roles, six stages and replay without
 });
 test('refresh resumes the step; Escape skips without losing page state',async()=>{
  let view=render(<HyperAgentsWelcome/>);
- fireEvent.click(screen.getByRole('button',{name:/Meet your team/}));
+ fireEvent.click(screen.getByRole('button',{name:'Next',exact:true}));
  view.unmount(); view=render(<HyperAgentsWelcome/>);
  expect(screen.getByText('Meet your specialists.')).toBeTruthy();
  fireEvent.keyDown(document,{key:'Escape'});
  await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
  view.unmount();
+});
+test('all navbar languages have bundled copy and share one active i18next language',async()=>{
+ const { createInstance } = require('i18next');
+ const locales = require('./hyperagents-tour-locales.json');
+ const source = require('fs').readFileSync(require('path').join(__dirname,'../../../../i18n.js'),'utf8');
+ const codes = [...source.split('export const RTL_LANGUAGES')[0].matchAll(/code: '([^']+)'/g)].map(match=>match[1]);
+ expect(Object.keys(locales).sort()).toEqual(codes.sort());
+ for(const value of Object.values(locales)) { expect(value).toHaveLength(16); expect(value.every(text=>typeof text==='string'&&text.length>0)).toBe(true); }
+ const language = createInstance();
+ await language.init({lng:'en',fallbackLng:'en',resources:Object.fromEntries(Object.entries(locales).map(([code,value])=>[code,{translation:{title:value[2]}}]))});
+ const navbar=()=>language.language, popup=()=>language.t('title');
+ await language.changeLanguage('de'); expect(navbar()).toBe('de'); expect(popup()).toBe(locales.de[2]);
+ await language.changeLanguage('ar'); expect(navbar()).toBe('ar'); expect(popup()).toBe(locales.ar[2]);
 });

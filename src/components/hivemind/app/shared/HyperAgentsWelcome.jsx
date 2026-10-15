@@ -6,6 +6,7 @@ import { agentRoster } from './agent-roster';
 import LangSwitcher from '../layout/LangSwitcher';
 import { readTourProgress, tourCards, tourKey } from './hyperagents-tour';
 import './hyperagents-welcome.css';
+import { englishTour } from './hyperagents-tour-i18n';
 
 export default function HyperAgentsWelcome({ company }) {
   const { user, org } = useAuth();
@@ -62,17 +63,17 @@ export default function HyperAgentsWelcome({ company }) {
   }, [open, progress.step]);
   if (!open) return null;
   const card = tourCards[progress.step], [x,y,w,h] = card.crop;
+  const title = t(`welcomeTour.cards.${progress.step}.title`, { defaultValue: englishTour[progress.step * 2] });
+  const body = t(`welcomeTour.cards.${progress.step}.body`, { defaultValue: englishTour[progress.step * 2 + 1] });
   const companyName = company?.name || company?.company_name || org?.name;
   return createPortal(<div className="hm-team-welcome-backdrop">
     <section className="hm-team-welcome" role="dialog" aria-modal="true" aria-labelledby="hm-team-welcome-title" aria-describedby="hm-team-welcome-description" dir={i18n.dir()} tabIndex={-1} ref={panel}>
-      <header className="hm-team-welcome-header"><span>HIVEMIND <span className="hm-team-welcome-company">{companyName}</span></span><div><LangSwitcher compact/><button type="button" aria-label={t('Close walkthrough')} onClick={close}>×</button></div></header>
-      <div className="hm-team-welcome-heading" aria-live="polite"><h1 id="hm-team-welcome-title">{t(card.title)}</h1>{![0,5].includes(progress.step) && <p id="hm-team-welcome-description">{t(card.body)}</p>}</div>
-      <div className="hm-team-welcome-art" style={{ aspectRatio:`${w}/${h}` }} aria-hidden="true"><img src={`/assets/hyperagents-tour/${card.id}.webp`} alt="" decoding="async" style={{ width:`${1536/w*100}%`, height:`${1024/h*100}%`, left:`${-x/w*100}%`, top:`${-y/h*100}%` }}/>{[0,5].includes(progress.step) && <p id="hm-team-welcome-description" className={`hm-team-welcome-bubble hm-team-welcome-bubble-${progress.step}`}>{t(card.body)}</p>}</div>
-      {progress.step === 1 && <div className="hm-team-welcome-team">{team.slice(0,3).map(employee => <div key={employee.id}><strong>{employee.name}</strong><span>{t(employee.title || employee.job_title || employee.jobTitle || employee.role || employee.role_archetype || employee.roleArchetype || 'Company specialist')}</span></div>)}{team.length === 0 && <p>{t('Your specialists’ saved profiles are available in the sidebar.')}</p>}</div>}
-      {progress.step === 2 && <div className="hm-team-welcome-labels">{['Your direction','Coordinated teamwork','Reviewed results'].map(label=><span key={label}>{t(label)}</span>)}</div>}
-      {progress.step === 3 && <div className="hm-team-welcome-labels">{['Currently working','Work scheduled','Waiting for you','Unread messages'].map(label=><span key={label}>{t(label)}</span>)}</div>}
-      {progress.step === 5 && <p className="hm-team-welcome-note">{t('Continue to your existing Runtime room. No message will be sent automatically.')}</p>}
-      <footer className="hm-team-welcome-footer"><span>{String(progress.step+1).padStart(2,'0')} / 06</span><nav aria-label={t('Walkthrough steps')}>{tourCards.map((item,index)=><button key={item.id} type="button" aria-label={`${t('Step')} ${index+1}`} aria-current={progress.step===index?'step':undefined} onClick={()=>go(index)} />)}</nav><div className="hm-team-welcome-actions">{progress.step>0&&<button type="button" onClick={()=>go(progress.step-1)}>{t('Go back')}</button>}<button type="button" onClick={close}>{t('Skip tour')}</button><button className="hm-team-welcome-primary" type="button" onClick={()=>progress.step===5?close():go(progress.step+1)}>{t(card.next)} <span aria-hidden="true">→</span></button></div></footer>
+      <header className="hm-team-welcome-header"><span>HIVEMIND <span className="hm-team-welcome-company">{companyName}</span></span><div><LangSwitcher compact/><button type="button" aria-label={t('actions.close', { ns:'common', defaultValue:'Close' })} onClick={close}>×</button></div></header>
+      <div className="hm-team-welcome-heading" aria-live="polite"><h1 id="hm-team-welcome-title">{title}</h1>{![0,5].includes(progress.step) && <p id="hm-team-welcome-description">{body}</p>}</div>
+      <div className="hm-team-welcome-art" style={{ aspectRatio:`${w}/${h}` }} aria-hidden="true"><img src={`/assets/hyperagents-tour/${card.id}.webp`} alt="" decoding="async" style={{ width:`${1536/w*100}%`, height:`${1024/h*100}%`, left:`${-x/w*100}%`, top:`${-y/h*100}%` }}/>{[0,5].includes(progress.step) && <p id="hm-team-welcome-description" className={`hm-team-welcome-bubble hm-team-welcome-bubble-${progress.step}`}>{body}</p>}</div>
+      {progress.step === 1 && <div className="hm-team-welcome-team">{team.slice(0,3).map(employee => <div key={employee.id}><strong>{employee.name}</strong><span>{employee.title || employee.job_title || employee.jobTitle || employee.role || employee.role_archetype || employee.roleArchetype || ''}</span></div>)}</div>}
+      {progress.step === 3 && <div className="hm-team-welcome-labels">{englishTour.slice(12).map((label,index)=><span key={label}>{t(`welcomeTour.statuses.${index}`, { defaultValue:label })}</span>)}</div>}
+      <footer className="hm-team-welcome-footer"><span>{String(progress.step+1).padStart(2,'0')} / 06</span><nav aria-label={title}>{tourCards.map((item,index)=><button key={item.id} type="button" aria-label={`${index+1} / 6`} aria-current={progress.step===index?'step':undefined} onClick={()=>go(index)} />)}</nav><div className="hm-team-welcome-actions">{progress.step>0&&<button type="button" onClick={()=>go(progress.step-1)}>{t('actions.back', { ns:'common', defaultValue:'Back' })}</button>}<button type="button" onClick={close}>{t('actions.close', { ns:'common', defaultValue:'Close' })}</button><button className="hm-team-welcome-primary" type="button" onClick={()=>progress.step===5?close():go(progress.step+1)}>{t(progress.step === 5 ? 'actions.continue' : 'actions.next', { ns:'common', defaultValue:progress.step === 5 ? 'Continue' : 'Next' })} <span aria-hidden="true">→</span></button></div></footer>
     </section>
   </div>, document.body);
 }
