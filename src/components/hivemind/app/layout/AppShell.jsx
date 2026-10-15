@@ -1,4 +1,3 @@
-import { dotAppsUrl } from '../shared-shell/navigation';
 import { workspaceModeForPath } from '../shared/workspace-mode';
 import { discardParkedNativeHarnessSeat } from '../shared/native-harness-seat';
 import { NativeAiConsentGate } from '../mobile/MobileSafetyPanel';
@@ -387,12 +386,12 @@ function AppShellContent() {
   useEffect(() => {
     if (!nativeChatRoom) return undefined;
     const openApps = () => {
-      if (workspaceModeForPath(location.pathname) === 'hyperagents') { window.location.assign(dotAppsUrl(`?return_to=${encodeURIComponent(location.pathname + location.search)}`)); return; }
+      if (workspaceModeForPath(location.pathname) === 'hyperagents') { navigate(`/hivemind/app/employee/apps?return_to=${encodeURIComponent(location.pathname + location.search)}`); return; }
       setMobileAppsOpen(true);
     };
     window.addEventListener('hivemind:mobile-connectors', openApps);
     return () => window.removeEventListener('hivemind:mobile-connectors', openApps);
-  }, [nativeChatRoom, location.pathname, location.search]);
+  }, [nativeChatRoom, location.pathname, location.search, navigate]);
   const [activeSection, setActiveSection] = useState(() => sectionForPath(location.pathname));
   const [productUpgrade, setProductUpgrade] = useState(null);
   useEffect(() => {

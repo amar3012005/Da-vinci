@@ -1,0 +1,1 @@
+AppsDirectory, catalog and popup adapted from Open Dot commit 0e65324fe6f71d28e9418aadc6d7645e0dd7be61. Uses the existing managed HIVEMIND Apps API. React 19 promise rendering is adapted to React 18 effects; no Next server actions or private store are loaded. Styling is isolated in a shadow root; Runtime owns the persistent sidebar.
