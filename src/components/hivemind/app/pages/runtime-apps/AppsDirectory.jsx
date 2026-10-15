@@ -301,7 +301,7 @@ function AppDrawer({ app, cloud, connected, signedIn, instant, onClose }) {
       // Use the same authenticated Composio link service as Connectors.
       // Keep OAuth top-level and return to this native Runtime Apps route.
       const catalog = await apiClient.listComposioToolkits({ search: app.slug, limit: 40 });
-      const toolkitMeta = catalog.items?.find((toolkit) => toolkit.slug === app.slug);
+      const toolkitMeta = catalog.toolkits?.find((toolkit) => toolkit.slug === app.slug);
       const callback = new URL(window.location.href);
       callback.searchParams.delete("status");
       callback.searchParams.delete("connected_account_id");
