@@ -5,7 +5,7 @@ import { readTourProgress, tourKey } from './hyperagents-tour';
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user:{id:'user-a'}, org:{id:'company-a',name:'Acme'} }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: text => text, i18n:{dir:()=> 'ltr'} }) }));
 jest.mock('../layout/LangSwitcher', () => () => <button>Choose language</button>);
-jest.mock('./agent-roster', () => ({ agentRoster:{peek:()=>[],load:()=>Promise.resolve([{id:'faraday',name:'Faraday',title:'Brand researcher'}])} }));
+jest.mock('./agent-roster', () => ({ agentRoster:{peek:()=>[],load:()=>Promise.resolve([{id:'faraday',name:'Faraday',job_title:'Brand researcher'}])} }));
 beforeEach(()=>localStorage.clear());
 test('separates users and organizations, resumes safely and rejects invalid saved progress',()=>{
  expect(tourKey('a','b')).not.toBe(tourKey('b','a'));
