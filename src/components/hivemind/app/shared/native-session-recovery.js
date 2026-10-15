@@ -29,6 +29,8 @@ export function createNativeSessionRecovery({ request, admit, establish, checkBr
     async fetch(input, init = {}) {
       if (init.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
       const owner = scope;
+      await checkBridge();
+      if (owner !== scope || init.signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
       const pathname = new URL(String(input), 'https://next.singulancelabs.com').pathname;
       const read = ['GET', 'HEAD'].includes(String(init.method || 'GET').toUpperCase());
       // Retry reads only. Never replay a prompt, upload, approval or other mutation.
