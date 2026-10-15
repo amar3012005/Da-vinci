@@ -266,7 +266,7 @@ export default function Sidebar({
     setRooms([]);
     setDotRooms({});
     const dotActivity = event => {
-      if (event.detail?.clear === true) { setDotRooms({}); return; }
+      if (event.detail?.clear === true) { setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous)); return; }
       const employeeId = event.detail?.employeeId;
       if (typeof employeeId !== 'string' || !Array.isArray(event.detail?.rooms)) return;
       const entries = event.detail.employees ?? [{ employeeId, dotId: event.detail.dotId, rooms: event.detail.rooms }];
