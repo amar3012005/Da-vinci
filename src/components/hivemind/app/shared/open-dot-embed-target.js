@@ -24,6 +24,6 @@ export function buildOpenDotEmbedTarget(suffix, search = '') {
   target.searchParams.set('embed', 'hivemind');
   if (conversation && route !== '/apps') target.searchParams.set('c', conversation);
   const provider = query.get('connect');
-  if (route === '/apps' && provider && /^[a-z0-9_-]{1,80}$/i.test(provider)) target.searchParams.set('connect', provider);
+  if (route === '/apps' && provider && /^[a-z0-9_-]{1,80}$/i.test(provider)) target.searchParams.set('app', provider);
   return target.href;
 }
