@@ -1,0 +1,41 @@
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import HyperAgentsWelcome from './HyperAgentsWelcome';
+import { readTourProgress, tourKey } from './hyperagents-tour';
+jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user:{id:'user-a'}, org:{id:'company-a',name:'Acme'} }) }));
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: text => text, i18n:{dir:()=> 'ltr'} }) }));
+jest.mock('../layout/LangSwitcher', () => () => <button>Choose language</button>);
+jest.mock('./agent-roster', () => ({ agentRoster:{peek:()=>[],load:()=>Promise.resolve([{id:'faraday',name:'Faraday',title:'Brand researcher'}])} }));
+beforeEach(()=>localStorage.clear());
+test('separates users and organizations, resumes safely and rejects invalid saved progress',()=>{
+ expect(tourKey('a','b')).not.toBe(tourKey('b','a'));
+ localStorage.setItem('bad','{"step":99,"done":false}');
+ expect(readTourProgress(localStorage,'bad')).toEqual({step:5,done:false});
+ localStorage.setItem('bad','broken');
+ expect(readTourProgress(localStorage,'bad')).toEqual({step:0,done:false});
+});
+test('renders a screen modal, saved company roles, six stages and replay without sending work',async()=>{
+ const view=render(<HyperAgentsWelcome company={{name:'Acme'}}/>);
+ expect(screen.getByRole('dialog')).toBeTruthy();
+ expect(screen.getByText('Acme')).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:/Meet your team/}));
+ await screen.findByText('Brand researcher');
+ expect(screen.getByText('Faraday')).toBeTruthy();
+ for(const name of ['See how we work','Stay in the loop','Explore your work','Choose a direction']) fireEvent.click(screen.getByRole('button',{name:new RegExp(name)}));
+ expect(screen.getByText('What should we move forward?')).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:/Continue to Runtime/}));
+ expect(screen.queryByRole('dialog')).toBeNull();
+ expect(readTourProgress(localStorage,tourKey('user-a','company-a')).done).toBe(true);
+ fireEvent(window,new Event('hm:replay-hyperagents-tour'));
+ expect(screen.getByText('Your company is awake.')).toBeTruthy();
+ view.unmount();
+});
+test('refresh resumes the step; Escape skips without losing page state',async()=>{
+ let view=render(<HyperAgentsWelcome/>);
+ fireEvent.click(screen.getByRole('button',{name:/Meet your team/}));
+ view.unmount(); view=render(<HyperAgentsWelcome/>);
+ expect(screen.getByText('Meet your specialists.')).toBeTruthy();
+ fireEvent.keyDown(document,{key:'Escape'});
+ await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
+ view.unmount();
+});

@@ -29,6 +29,7 @@ import { QuickRecorderProvider } from '../shared/QuickRecorderProvider';
 import { WelcomeSlides, ActivationGate } from '../shared/WelcomeFlow';
 import { companyAdmissionStatus } from '../shared/company-admission';
 import AccountSettingsDialog from '../shared/AccountSettingsDialog';
+const HyperAgentsWelcome = React.lazy(() => import('../shared/HyperAgentsWelcome'));
 const HyperOnboarding = React.lazy(() => import('../hyperagents/HyperOnboarding'));
 import PlanLimitModal from '../components/PlanLimitModal';
 import RunwayEstimatorModal from '../components/RunwayEstimatorModal';
@@ -325,7 +326,7 @@ function AppShellContent() {
     let alive = true;
     setCompanyAdmission({ scope: org.id, status: 'checking' });
     apiClient.hyperCompany().then(data => {
-      if (alive) setCompanyAdmission({ scope: org.id, status: companyAdmissionStatus(data) });
+      if (alive) setCompanyAdmission({ scope: org.id, status: companyAdmissionStatus(data), company: data.company });
     }).catch(() => {
       if (alive) setCompanyAdmission({ scope: org.id, status: 'error' });
     });
@@ -564,6 +565,7 @@ function AppShellContent() {
           </main>
         </div>
 
+        {employeeRoom && <React.Suspense fallback={null}><HyperAgentsWelcome key={`${user?.id}:${org?.id}`} company={companyAdmission.company} /></React.Suspense>}
         {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}
         {/* Chat FAB — glass-morph pill, slides in from right, blinking pulse */}
         {SHOW_TALK_TO_HIVE_FAB && <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || crmFullscreen || onOverview || onMeetingNotes || activeSection === 'hyperagents' || activeSection === 'tara'} />}
