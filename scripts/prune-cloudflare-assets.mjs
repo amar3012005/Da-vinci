@@ -10,6 +10,8 @@ const externalizedAssets = [
   // SPA fallback through wrangler.jsonc. Keeping both makes Workers reject the
   // deployment as an infinite redirect loop.
   '_redirects',
+  // Unreferenced restaurant-demo CSVs; keep source, omit from production assets.
+  ...Array.from({ length: 8 }, (_, index) => `data/menu_${index + 1}.csv`),
 ];
 
 for (const relativePath of externalizedAssets) {
