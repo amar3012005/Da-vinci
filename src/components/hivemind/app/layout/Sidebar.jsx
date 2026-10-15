@@ -1,4 +1,4 @@
-import { ownedOpenDotRoomStatuses } from '../shared/open-dot-room-status';
+import { ownedOpenDotRoomStatuses, reconnectingOpenDotRoomStatuses } from '../shared/open-dot-room-status';
 import { workspaceModeForPath } from '../shared/workspace-mode';
 import { agentRoster } from '../shared/agent-roster';
 import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../shared/open-dot-employee-route';
@@ -193,6 +193,7 @@ export default function Sidebar({
   const rooms = [...nativeRooms, ...Object.values(dotRooms).flat()];
   const dotReadAt = useRef({});
   useEffect(() => {
+    setDotRooms({});
     const key = `hivemind.dot-read-at:${scope}`;
     try { dotReadAt.current = JSON.parse(localStorage.getItem(key) || '{}'); } catch { dotReadAt.current = {}; }
     const controller = new AbortController();
@@ -203,14 +204,16 @@ export default function Sidebar({
     const load = async () => {
       if (!scope || document.hidden || controller.signal.aborted || loading) return;
       loading = true;
+      let responseStatus;
       try {
         const response = await fetch('/api/hivemind/employees/status', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
+        responseStatus = response.status;
         retryAllowed = ![401, 403, 404].includes(response.status);
         if (!response.ok) throw new Error('Status unavailable');
         failures = 0;
         const result = await response.json();
         if (!controller.signal.aborted && result.version === 1) setDotRooms(ownedOpenDotRoomStatuses(result.employees, agentRoster.peek(scope) || [], dotReadAt.current));
-      } catch { failures += 1; if (!controller.signal.aborted) setDotRooms({}); }
+      } catch { failures += 1; if (!controller.signal.aborted) setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous, responseStatus)); }
       finally { loading = false; if (!controller.signal.aborted && retryAllowed) timer = setTimeout(load, Math.min(300000, 15000 * (2 ** Math.min(failures, 5)))); }
     };
     const visible = () => { clearTimeout(timer); if (!document.hidden) load(); };

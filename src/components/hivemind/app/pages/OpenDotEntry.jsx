@@ -21,7 +21,7 @@ export default function OpenDotEntry({ apps = false }) {
 
   useEffect(() => {
     if (!src) return undefined;
-    const timer = window.setTimeout(() => setTimedOutFrameKey(frameKey), READY_TIMEOUT_MS);
+    const timer = window.setTimeout(() => setTimedOutFrameKey(frameKey), apps ? 15000 : READY_TIMEOUT_MS);
     const onMessage = event => {
       if (event.origin !== DOT_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
       const rooms = openDotRoomStatus(event.data, openDotEmployeeIdFromPath(pathname));
@@ -39,7 +39,7 @@ export default function OpenDotEntry({ apps = false }) {
       window.removeEventListener('message', onMessage);
       window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { clear: true } }));
     };
-  }, [frameKey, src, pathname]);
+  }, [frameKey, src, pathname, apps]);
 
   if (!src) return <main className="flex h-full min-h-0 items-center justify-center p-6 text-sm text-[#737373]">Invalid Dot address.</main>;
 

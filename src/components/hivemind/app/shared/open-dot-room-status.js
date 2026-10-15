@@ -27,3 +27,9 @@ export function ownedOpenDotRoomStatuses(employees, roster, readAt = {}) {
   }
   return statuses;
 }
+
+/** Retain the last scoped snapshot during transport failure, never as current work state. */
+export function reconnectingOpenDotRoomStatuses(previous, status) {
+  if ([401, 403, 404].includes(status)) return {};
+  return Object.fromEntries(Object.entries(previous).map(([id, rooms]) => [id, rooms.map(room => ({ ...room, stale: true }))]));
+}

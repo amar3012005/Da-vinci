@@ -39,3 +39,10 @@ test('collapsed sidebar retains accessible status without a long label', () => {
   expect(aggregateAgentRooms(rooms, 'missing')).toBeUndefined();
   expect(rooms[0].preview).toBe('Working');
  });
+
+test('stale snapshot shows reconnecting rather than a false working spinner', () => {
+  const value = output({ stale: true, running: true, unread: true });
+  expect(value).toContain('Status reconnecting');
+  expect(value).toContain('Unread update');
+  expect(value).not.toContain('aria-label="Working"');
+});
