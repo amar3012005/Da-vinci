@@ -23,8 +23,6 @@ const walk=n=>{
 };
 const pages=Object.fromEntries(Object.entries(rendered).map(([path,body])=>{
  let html=body.replace(/style="([^"]*)"/g,(all,style)=>`style="${style.replace(/(^|;)opacity:0(?=;|$)/g,'$1opacity:1').replace(/(^|;)visibility:hidden(?=;|$)/g,'$1visibility:visible')}"`);
- const productLinks='<nav aria-label="SINGULANCE products" style="display:flex;flex-wrap:wrap;gap:20px;padding:20px 24px;background:#05070f;color:#dce8ff;font:600 14px system-ui"><a style="color:inherit" href="/">SINGULANCE</a><a style="color:inherit" href="/hivemind">HIVEMIND</a><a style="color:inherit" href="/tara">TARA</a><a style="color:inherit" href="/hyperagents">HYPERAGENTS</a><a style="color:inherit" href="https://next.singulancelabs.com/hivemind/login">Open your workspace</a></nav>';
- html=productLinks+html;
  if(path==='/')html='<h1 class="sr-only">SINGULANCE — AI workforce that runs inside memory</h1>'+html;
  const markdown=walk(parseDocument(html)).replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim()+`\n\n## Products and workspace\n\n- [HIVEMIND](${SITE}/hivemind)\n- [TARA](${SITE}/tara)\n- [HyperAgents](${SITE}/hyperagents)\n- [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.\n`;
  return [path,{html,markdown}];
