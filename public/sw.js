@@ -7,7 +7,7 @@
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v9';
+const CACHE = 'hive-shell-v10';
 const SHELL = ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
 
 function offlineResponse() {
@@ -35,9 +35,10 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return; // never touch cross-origin (API/CDN)
-  // Employee entry can hand off to a separate authenticated Runtime host.
-  // Let the browser own that navigation, not a same-origin SW fetch chain.
-  if (request.mode === 'navigate' && /^\/hivemind\/app\/employee\/harness(?:\/|$)/.test(url.pathname)) return;
+  // Authenticated workspace documents belong to the browser's navigation and
+  // authentication lifecycle. Never wrap them in the public offline-shell fetch
+  // chain or save them as a shared index.html fallback.
+  if (request.mode === 'navigate' && /^\/hivemind\/app(?:\/|$)/.test(url.pathname)) return;
 
   // Revisioned code is public build output; private routes and live plugin events stay live.
   const nativeCombo = url.pathname === '/plugins/'
