@@ -100,29 +100,60 @@ const PERSONAL_PLANS = [
   },
 ];
 
+function prepareEmailSecurityScript() {
+  let script = document.querySelector('script[data-singulance-turnstile]');
+  if (script?.dataset.loadState === 'error') { script.remove(); script = null; }
+  if (!script) {
+    script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.dataset.singulanceTurnstile = 'true';
+    script.addEventListener('load', () => { script.dataset.loadState = 'ready'; }, { once: true });
+    script.addEventListener('error', () => { script.dataset.loadState = 'error'; }, { once: true });
+    document.head.appendChild(script);
+  }
+  return script;
+}
+
 function EmailTurnstile({ siteKey, onToken, onStatus }) {
   const host = useRef(null);
   useEffect(() => {
     if (!siteKey || !host.current) return undefined;
     let widgetId;
-    const fail = () => { onToken(''); onStatus('error'); };
+    let disposed = false;
+    let timer;
+    const fail = () => {
+      if (disposed) return;
+      window.clearTimeout(timer);
+      onToken(''); onStatus('error');
+    };
+    const checking = () => {
+      if (disposed) return;
+      onToken(''); onStatus('checking');
+      window.clearTimeout(timer);
+      timer = window.setTimeout(fail, 15000);
+    };
+    checking();
     const render = () => {
       if (!window.turnstile || !host.current || widgetId !== undefined) return;
-      widgetId = window.turnstile.render(host.current, {
+      try { widgetId = window.turnstile.render(host.current, {
         sitekey: siteKey, action: 'email_auth', appearance: 'always', size: 'flexible',
         retry: 'auto', 'retry-interval': 3000, 'refresh-expired': 'auto',
-        callback: (token) => { onToken(token); onStatus('ready'); },
-        'expired-callback': () => { onToken(''); onStatus('checking'); },
+        callback: (token) => { if (!disposed) { window.clearTimeout(timer); onToken(token); onStatus('ready'); } },
+        'expired-callback': checking,
+        'timeout-callback': fail,
         'error-callback': fail,
-      });
+      }); } catch { fail(); }
     };
-    let script = document.querySelector('script[data-singulance-turnstile]');
-    if (!script) {
-      script = document.createElement('script'); script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-      script.async = true; script.defer = true; script.dataset.singulanceTurnstile = 'true'; document.head.appendChild(script);
-    }
+    const script = prepareEmailSecurityScript();
     script.addEventListener('load', render); script.addEventListener('error', fail); render();
-    return () => { script.removeEventListener('load', render); script.removeEventListener('error', fail); if (widgetId !== undefined) window.turnstile?.remove(widgetId); };
+    return () => {
+      disposed = true;
+      window.clearTimeout(timer);
+      script.removeEventListener('load', render); script.removeEventListener('error', fail);
+      if (widgetId !== undefined) window.turnstile?.remove(widgetId);
+    };
   }, [siteKey, onStatus, onToken]);
   return siteKey ? <div ref={host} className="min-h-[65px] w-full" aria-label="Bot verification" /> : null;
 }
@@ -150,6 +181,8 @@ export default function LoginPage() {
   const location = useLocation();
   const [emailConfig, setEmailConfig] = useState({ mode: 'off', enabled: false, email_only: false, turnstile_site_key: null });
   const [emailConfigLoaded, setEmailConfigLoaded] = useState(false);
+  const [emailConfigError, setEmailConfigError] = useState(false);
+  const [emailConfigAttempt, setEmailConfigAttempt] = useState(0);
   const [emailView, setEmailView] = useState('methods');
   const [emailAddress, setEmailAddress] = useState('');
   const [emailCode, setEmailCode] = useState('');
@@ -255,9 +288,19 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
+    let active = true;
+    setEmailConfigError(false);
+    setEmailConfigLoaded(false);
     apiClient.getEmailIdentityConfig().then((config) => {
+      if (!active) return;
       setEmailConfig(config);
-    }).catch(() => setEmailConfig({ mode: 'off', enabled: false, email_only: false, turnstile_site_key: null })).finally(() => setEmailConfigLoaded(true));
+      if (config.enabled && config.turnstile_site_key) prepareEmailSecurityScript();
+    }).catch(() => { if (active) setEmailConfigError(true); })
+      .finally(() => { if (active) setEmailConfigLoaded(true); });
+    return () => { active = false; };
+  }, [emailConfigAttempt]);
+
+  useEffect(() => {
     const fragment = new URLSearchParams(window.location.hash.slice(1));
     const challenge = fragment.get('email_challenge');
     const token = fragment.get('email_token');
@@ -764,6 +807,9 @@ export default function LoginPage() {
                     </div>
                   )}
 
+                  {emailConfigError && <div role="alert" className="mb-3 text-sm text-red-700">
+                    Email sign-in could not load. <button type="button" className="underline" onClick={() => setEmailConfigAttempt((attempt) => attempt + 1)}>Retry email sign-in</button>
+                  </div>}
                   {emailEnabled && emailView === 'methods' && (
                     <button onClick={() => leaveEmailChallenge('email')} className="w-full h-12 mb-2.5 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
                       <Mail size={16} /> Continue with Email
