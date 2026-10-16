@@ -1,3 +1,4 @@
+import { proxyRuntimeRecovery } from './runtime-recovery.mjs';
 import runtimeAppsCatalog from '../src/components/hivemind/app/pages/runtime-apps/apps.json';
 import runtimeAppsStyles from '../src/components/hivemind/app/pages/runtime-apps/styles.js';
 import { agentDiscoveryResponse, isAgentDiscovery, markdownResponse, prefersMarkdown } from './agent-readiness.mjs';
@@ -501,6 +502,7 @@ export default {
     const url = new URL(request.url);
     const pathname = url.pathname;
     if (url.hostname === 'runtime-runner.singulancelabs.com') {
+      if (pathname === '/api/hivemind/recovery') return proxyRuntimeRecovery(request);
       // OAuth finishes in its own window. Refresh the existing workspace instead
       // of downloading and mounting another copy of the authenticated app shell.
       if (pathname === '/hivemind/apps/connected' && request.method === 'GET') {

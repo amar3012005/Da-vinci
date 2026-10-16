@@ -65,6 +65,15 @@ function selectedPlatformAdminEnvironment() {
  */
 
 class HiveMindApiClient {
+  async getRuntimeRecovery(signal) {
+    const { data } = await axios.get('/api/hivemind/recovery', { withCredentials: true, signal, timeout: 22000 });
+    return data;
+  }
+  async enableRuntimeRecovery() {
+    const { data } = await axios.post('/api/hivemind/recovery', undefined, { withCredentials: true, timeout: 22000 });
+    return data;
+  }
+
   constructor() {
     this._platformAdminEnvironment = selectedPlatformAdminEnvironment();
     const platformAdminBases = this._platformAdminEnvironment
