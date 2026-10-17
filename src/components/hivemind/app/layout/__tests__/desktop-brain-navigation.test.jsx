@@ -8,6 +8,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Brain } from 'lucide-react';
 import DesktopBrainNavigation from '../DesktopBrainNavigation';
+import BrainUpdateBanner from '../BrainUpdateBanner';
+import { brainSidebarBanner } from '../brain-sidebar-banner';
 import '@testing-library/jest-dom';
 
 const link = (path, label) => ({ to: `/hivemind/app/${path}`, label, icon: Brain });
@@ -21,6 +23,24 @@ const testBanner = { image: "/images/brain-sidebar-update.svg", href: "/hivemind
 function setup(path = '/hivemind/app/memories', banner = testBanner) {
   return render(<MemoryRouter initialEntries={[path]}><DesktopBrainNavigation sections={sections} user={{ display_name: 'Amar' }} planLabel="Enterprise Plan" credits={{ percent_used: 41, remaining: 2358, included: 4000 }} logout={jest.fn()} banner={banner}/></MemoryRouter>);
 }
+
+test('the supplied banner links to Connectors without covering the artwork with duplicate text', () => {
+  setup('/hivemind/app/memories', brainSidebarBanner);
+  const banner = screen.getByRole('link', { name: 'Connect your apps to HIVEMIND' });
+  expect(banner).toHaveAttribute('href', '/hivemind/app/connectors');
+  expect(banner.querySelector('img')).toHaveAttribute('src', '/images/announcements/unlock-proactive-intelligence.png');
+  expect(banner.textContent).toBe('');
+  expect(screen.queryByRole('button', { name: 'Next banner' })).not.toBeInTheDocument();
+});
+
+test('future slideshow artwork changes the image and its destination together', () => {
+  render(<MemoryRouter><BrainUpdateBanner slides={[...brainSidebarBanner, { id: 'next', image: '/next.png', href: '/hivemind/app/knowledge', label: 'See uploads' }]}/></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: 'Next banner' }));
+  expect(screen.getByRole('link', { name: 'See uploads' })).toHaveAttribute('href', '/hivemind/app/knowledge');
+  expect(screen.getByRole('link', { name: 'See uploads' }).querySelector('img')).toHaveAttribute('src', '/next.png');
+  fireEvent.click(screen.getByRole('button', { name: 'Next banner' }));
+  expect(screen.getByRole('link', { name: 'Connect your apps to HIVEMIND' })).toBeInTheDocument();
+});
 
 test('advanced destinations stay collapsed until explicitly opened, and keep native routes', () => {
   setup();

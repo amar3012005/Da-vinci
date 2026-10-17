@@ -30,7 +30,13 @@
   .brain-footer-link { padding: 8px 10px; font-size: 13px; }
   .brain-update-banner { position: relative; display: block; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; background: #e9e5dc; }
   .brain-update-banner-empty { background: #eeece5; }
-  .brain-update-banner img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .brain-update-banner img { display: block; width: 100%; height: 100%; object-fit: contain; background: #141414; }
+  .brain-update-banner:focus-visible { outline: 2px solid #117dff; outline-offset: 3px; }
+  .brain-banner-controls { display: flex; align-items: center; justify-content: center; gap: 12px; padding-top: 5px; }
+  .brain-banner-controls button { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; }
+  .brain-banner-controls button:hover { background: #eeece5; }
+  .brain-banner-controls button:focus-visible { outline: 2px solid #117dff; }
+  .brain-banner-controls span { font-size: 11px; color: #77766f; }
   .brain-update-banner > div { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 16px; max-width: 78%; }
   .brain-update-banner strong { font-size: 16px; font-weight: 500; line-height: 19px; max-width: 155px; }
   .brain-update-banner span { font-size: 11px; color: #5a5a53; }

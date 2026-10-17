@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ChevronRight, LogOut, Settings } from 'lucide-react';
 import BrainFabricIcon from './BrainFabricIcon';
+import BrainUpdateBanner from './BrainUpdateBanner';
 import CreditBalance from '../shared/CreditBalance';
 import { brainSidebarBanner } from './brain-sidebar-banner';
 import './desktop-brain-navigation.css';
@@ -79,10 +80,7 @@ export default function DesktopBrainNavigation({ sections, user, planLabel, cred
       <div className="brain-account-actions">
         <button type="button" className="brain-footer-link" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))}><Settings size={19}/><span>Account &amp; Settings</span></button>
       </div>
-      {banner?.image ? <NavLink className="brain-update-banner" to={banner.href} aria-label={banner.label}>
-        <img src={banner.image} alt="" width="268" height="112" loading="lazy"/>
-        <div><strong>{banner.title}</strong><span>{banner.label}</span></div>
-      </NavLink> : <div className="brain-update-banner brain-update-banner-empty" role="img" aria-label="Reserved space for workspace updates" />}
+      <BrainUpdateBanner slides={banner}/>
       {user && <div className="brain-account-usage"><div className="brain-account-name"><span className="brain-account-initial" aria-hidden="true">{(user.display_name || user.email || 'U')[0].toUpperCase()}</span><div><strong>{user.display_name || user.email || 'User'}</strong><span>{planLabel}</span></div></div><CreditBalance credits={credits} inline/></div>}
       <button type="button" onClick={logout} className="brain-footer-link brain-sign-out"><LogOut size={17}/><span>Sign out</span></button>
     </footer>
