@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import RuntimeRecoverySettings from '../components/RuntimeRecoverySettings';
+import RuntimeTeamMemorySettings from '../components/RuntimeTeamMemorySettings';
 import DreamingSettings from '../components/DreamingSettings';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
@@ -242,7 +243,7 @@ export default function Settings() {
         animate="visible"
         className="space-y-6 max-w-3xl"
       >
-        {window.location.hostname === 'runtime-runner.singulancelabs.com' && <SectionCard><RuntimeRecoverySettings organizationId={org?.id} /></SectionCard>}
+        {window.location.hostname === 'runtime-runner.singulancelabs.com' && <><SectionCard><RuntimeRecoverySettings organizationId={org?.id} /></SectionCard><SectionCard><RuntimeTeamMemorySettings organizationId={org?.id} /></SectionCard></>}
         <SectionCard><DreamingSettings organizationId={org?.id} /></SectionCard>
 
         {/* ── Settings scope ───────────────────────────────────────── */}

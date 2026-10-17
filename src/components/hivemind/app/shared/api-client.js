@@ -65,6 +65,15 @@ function selectedPlatformAdminEnvironment() {
  */
 
 class HiveMindApiClient {
+  async getRuntimeTeamMemory(signal) {
+    const { data } = await axios.get('/api/hivemind/team-memory', { withCredentials: true, signal, timeout: 22000 });
+    return data;
+  }
+  async enableRuntimeTeamMemory() {
+    const { data } = await axios.post('/api/hivemind/team-memory', undefined, { withCredentials: true, timeout: 22000 });
+    return data;
+  }
+
   async getRuntimeRecovery(signal) {
     const { data } = await axios.get('/api/hivemind/recovery', { withCredentials: true, signal, timeout: 22000 });
     return data;
