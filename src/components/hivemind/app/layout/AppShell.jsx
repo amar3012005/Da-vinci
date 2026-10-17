@@ -583,7 +583,7 @@ function AppShellContent() {
         <GlobalUploadStrip />
 
         {/* Chat Panel */}
-        {(chatOpen || chatLoaded) && <React.Suspense fallback={<div role="status">Opening chat…</div>}><ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} /></React.Suspense>}
+        {(chatOpen || chatLoaded) && <React.Suspense fallback={<AsciiWorkspaceLoading label="Opening chat…" />}><ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} /></React.Suspense>}
 
         {/* Global plan-limit upgrade prompt — reacts to 'hm:plan-limit' */}
         <PlanLimitGate />

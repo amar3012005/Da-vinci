@@ -3,7 +3,7 @@ import './ascii-workspace-loading.css';
 
 const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/+*';
 
-export default function AsciiWorkspaceLoading({ label = 'Connecting…' }) {
+export default function AsciiWorkspaceLoading({ label = 'Connecting…', inline = false }) {
   const [display, setDisplay] = useState(label);
   useEffect(() => {
     const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
@@ -11,7 +11,7 @@ export default function AsciiWorkspaceLoading({ label = 'Connecting…' }) {
     const start = () => {
       window.clearInterval(timer);
       setDisplay(label);
-      if (motion?.matches) return;
+      if (motion?.matches || document.documentElement.dataset.nativeReduceMotion === 'true') return;
       let frame = 0;
       timer = window.setInterval(() => {
         frame = (frame + 1) % 48;
@@ -23,14 +23,18 @@ export default function AsciiWorkspaceLoading({ label = 'Connecting…' }) {
       }, 65);
     };
     start();
+    const appearance = new MutationObserver(start);
+    appearance.observe(document.documentElement, { attributes: true, attributeFilter: ['data-native-reduce-motion'] });
     motion?.addEventListener?.('change', start);
     return () => {
       window.clearInterval(timer);
+      appearance.disconnect();
       motion?.removeEventListener?.('change', start);
     };
   }, [label]);
-  return <div className="ascii-workspace-loading" role="status" aria-live="polite">
+  const Tag = inline ? 'span' : 'div';
+  return <Tag className={`ascii-workspace-loading${inline ? ' ascii-workspace-loading--inline' : ''}`} role="status" aria-live="polite">
     <span className="ascii-workspace-loading__label">{label}</span>
     <span aria-hidden="true" className="ascii-workspace-loading__visual">{display}</span>
-  </div>;
+  </Tag>;
 }

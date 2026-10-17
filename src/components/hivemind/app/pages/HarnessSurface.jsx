@@ -1,3 +1,4 @@
+import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } from '../shared/native-harness-seat';
 import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../shared/api-client';
@@ -184,24 +185,12 @@ export const HARNESS_BOOT_STAGES = [
   'Opening chat',
 ];
 
-/**
- * A quiet breathing indicator with the current real boot boundary.
- * Animation communicates activity without pretending to measure progress.
- */
+/** Show the current real boot boundary without a logo or simulated progress. */
 export function LoadingSurface({ stage = 0, dreaming = false }) {
-  if (dreaming) return <div className="h-full grid place-items-center bg-white" role="status" aria-label="Opening Dreaming">
-    <span className="text-sm text-[#737373]">🌙 Opening Dreaming…</span>
-  </div>;
   const safeStage = Math.max(0, Math.min(stage, HARNESS_BOOT_STAGES.length - 1));
-  // `stage` names the active boundary; the overlay disappears once interactive.
-  return (
-    <div className="hm-chat-opening" role="status" aria-live="polite" aria-label="Opening HIVE-MIND workspace">
-      <div className="hm-chat-opening-mark" aria-hidden="true">
-        <img src="/singulance-mark.svg" width="40" height="40" alt="" />
-      </div>
-      <p>{HARNESS_BOOT_STAGES[safeStage]}</p>
-    </div>
-  );
+  return <div className="hm-chat-opening">
+    <AsciiWorkspaceLoading label={dreaming ? 'Opening Dreaming…' : `${HARNESS_BOOT_STAGES[safeStage]}…`} />
+  </div>;
 }
 
 /** Past-session navigation is independent of the first interactive composer. */

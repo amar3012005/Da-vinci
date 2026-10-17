@@ -73,7 +73,8 @@ describe('HarnessSurface module cache', () => {
     const progress = root.querySelector('[role="status"]');
     expect(progress).not.toBeNull();
     expect(root.textContent).toContain(HARNESS_BOOT_STAGES[2]);
-    expect(root.querySelector('.hm-chat-opening-mark')).not.toBeNull();
+    expect(root.querySelector('.hm-chat-opening-mark')).toBeNull();
+    expect(root.querySelector('.ascii-workspace-loading__visual')?.getAttribute('aria-hidden')).toBe('true');
 
     act(() => reactRoot.render(<LoadingSurface stage={3} />));
     expect(root.textContent).toContain(HARNESS_BOOT_STAGES[3]);
