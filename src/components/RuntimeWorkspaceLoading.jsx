@@ -1,4 +1,5 @@
 import React from 'react';
+import AsciiWorkspaceLoading from './hivemind/app/components/AsciiWorkspaceLoading';
 
 /** Visible recovery while the existing Runtime workspace chunk is downloading. */
 export default function RuntimeWorkspaceLoading() {
@@ -9,7 +10,7 @@ export default function RuntimeWorkspaceLoading() {
   }, []);
   return <div className="min-h-screen flex items-center justify-center bg-[#faf9f4] p-6 text-[#333]">
     <div className="text-center" role={slow ? 'alert' : 'status'} aria-live="polite">
-      <p className="text-sm">{slow ? 'Your workspace is taking longer to load.' : 'Opening your workspace…'}</p>
+      {slow ? <p className="text-sm">Your workspace is taking longer to load.</p> : <AsciiWorkspaceLoading />}
       {slow && <><p className="mt-2 text-xs text-[#737373]">Your saved conversations are unchanged.</p><button type="button" onClick={() => window.location.reload()} className="mt-4 rounded-lg border border-[#d4d4d4] bg-white px-4 py-2 text-sm">Retry</button></>}
     </div>
   </div>;

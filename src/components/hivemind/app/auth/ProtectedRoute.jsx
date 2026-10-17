@@ -1,3 +1,4 @@
+import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import React, { useEffect } from 'react';
 import { RUNTIME_ORIGIN, runtimeLoginUrl, workspaceDocumentRedirect } from '../shared/workspace-authority.mjs';
 import { Navigate, useLocation } from 'react-router-dom';
@@ -16,18 +17,7 @@ export default function ProtectedRoute({ children }) {
   if (authorityRedirect || loginRedirect) return null;
 
   if (loading) {
-    const openingLabel = location.pathname === '/hivemind/app/graph'
-      || location.pathname === '/hivemind/app/graph-2d'
-      ? 'Opening Memory Graph…'
-      : 'Loading HIVEMIND...';
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-[#bdf213] border-t-transparent rounded-full animate-spin" />
-          <span className="text-white/50 text-sm font-['Space_Grotesk']">{openingLabel}</span>
-        </div>
-      </div>
-    );
+    return <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center"><AsciiWorkspaceLoading /></div>;
   }
 
   // signed_out or control_plane_unreachable → send to login

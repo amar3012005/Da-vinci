@@ -1,3 +1,4 @@
+import AsciiWorkspaceLoading from './components/AsciiWorkspaceLoading';
 import React, { useEffect } from 'react';
 import { workspaceDocumentRedirect } from './shared/workspace-authority.mjs';
 import { importPage } from './shared/import-page';
@@ -106,7 +107,7 @@ function PageSuspense({ children }) {
       <React.Suspense
         fallback={
           <div className="flex items-center justify-center h-64">
-            <div className="w-6 h-6 border-2 border-[#bdf213] border-t-transparent rounded-full animate-spin" />
+            <AsciiWorkspaceLoading />
           </div>
         }
       >

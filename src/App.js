@@ -12,7 +12,7 @@ const MobileHomepage = React.lazy(() => import('./components/mobile/MobileHomepa
 
 // Hivemind
 const HivemindRedirect = React.lazy(() => import('./components/hivemind/HivemindRedirect'));
-const HiveMindApp = React.lazy(() => measureHarnessBoot('outer-workspace-import', () => import('./components/hivemind/app/HiveMindApp')));
+const HiveMindApp = React.lazy(() => measureHarnessBoot('outer-workspace-import', () => import(/* webpackPreload: true */ './components/hivemind/app/HiveMindApp')));
 const PlatformAdmin = React.lazy(() => import('./components/hivemind/app/pages/PlatformAdmin'));
 const HivemindLogin = React.lazy(() => import('./components/hivemind/app/auth/HivemindLogin'));
 
