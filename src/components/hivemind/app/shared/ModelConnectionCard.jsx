@@ -3,7 +3,7 @@ import { ArrowUpRight, CheckCircle2, RefreshCw, Plug } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 
 const number = value => Number.isFinite(value) ? value.toLocaleString() : 'Unavailable';
-export default function ModelConnectionCard() {
+export default function ModelConnectionCard({ connectLabel = 'Connect ChatGPT' }) {
   const { org, user } = useAuth();
   const [status,setStatus]=useState(null), [error,setError]=useState(''), [busy,setBusy]=useState(false);
   const [consent,setConsent]=useState(false), [url,setUrl]=useState(''), [attempt,setAttempt]=useState(null), [prompt,setPrompt]=useState(null), [answer,setAnswer]=useState(''), [notice,setNotice]=useState(null);
@@ -13,7 +13,7 @@ export default function ModelConnectionCard() {
     if (!response.ok) { const value=await response.json().catch(()=>({}));throw new Error(response.status===401?'Sign in to your workspace again to manage the connection.':value.error==='cloud_execution_consent_required'?'Confirm cloud execution to continue.':'The model connection is unavailable. Your current provider has not changed.'); }
     return response;
   }
-  async function refresh(signal=lifetime.current?.signal) { const value=await (await request('status',undefined,signal)).json();if(!signal?.aborted)setStatus(value); }
+  async function refresh(signal=lifetime.current?.signal) { const value=await (await request('status',undefined,signal)).json();if(!signal?.aborted){setStatus(value);if(value.connected){setNotice(null);setUrl('');}} }
   useEffect(()=>{
     const controller=new AbortController();lifetime.current=controller;
     setNotice(null);setStatus(null);setConsent(false);setUrl('');setPrompt(null);setAttempt(null);setAnswer('');setError('');setBusy(false);
@@ -49,9 +49,9 @@ export default function ModelConnectionCard() {
   async function submit(event){event.preventDefault();const controller=lifetime.current;try{await request('answer',{attempt_id:attempt,prompt_id:prompt.id,answer},controller.signal);if(!controller.signal.aborted){setPrompt(null);setAnswer('');}}catch(e){if(!controller.signal.aborted)setError(e.message);}}
   const button='rounded-lg border border-[#dedbd5] px-3 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#f7f6f1]';
   return <section className="mb-5 rounded-2xl border border-[#e3e0db] bg-white p-5" aria-label="Your model connection">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="flex items-center gap-2 text-base font-semibold"><Plug size={18}/>Your model connection</h2><p className="mt-1 text-sm text-[#666]">Use your ChatGPT account across Runtime and your specialists.</p></div><span className="flex items-center gap-1.5 text-xs text-[#666]" role="status">{status?.connected&&<CheckCircle2 size={14} className="text-emerald-600"/>}{status?.connected?'Connected':status?.available?'Not connected':status?'Not enabled for this workspace':'Checking connection…'}</span></div>
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="flex items-center gap-2 text-base font-semibold"><Plug size={18}/>Your model connection</h2><p className="mt-1 text-sm text-[#666]">Use your ChatGPT account across Brain, Runtime and your specialists.</p></div><span className="flex items-center gap-1.5 text-xs text-[#666]" role="status">{status?.connected&&<CheckCircle2 size={14} className="text-emerald-600"/>}{status?.connected?'Connected':status?.available?'Not connected':status?'Not enabled for this workspace':'Checking connection…'}</span></div>
     {error&&<p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
-    {status?.available&&!status.connected&&<div className="mt-4 space-y-3"><label className="flex items-start gap-2 text-sm text-[#555]"><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)} className="mt-1"/>I allow this workspace to use my ChatGPT connection on the server, including while my Mac is closed.</label><button type="button" className={button+' bg-[#151515] text-white hover:bg-[#333]'} disabled={!consent||busy} onClick={start}>{busy?'Connecting…':'Connect ChatGPT'}</button></div>}
+    {status?.available&&!status.connected&&<div className="mt-4 space-y-3"><label className="flex items-start gap-2 text-sm text-[#555]"><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)} className="mt-1"/>I allow this workspace to use my ChatGPT connection on the server, including while my Mac is closed.</label><button type="button" className={button+' bg-[#151515] text-white hover:bg-[#333]'} disabled={!consent||busy} onClick={start}>{busy?'Connecting…':connectLabel}</button></div>}
     {url&&<a href={url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-700">Continue to ChatGPT <ArrowUpRight size={15}/></a>}
     {notice?.code&&<p className="mt-3 text-sm">Enter this code on the sign-in page: <strong className="select-all font-mono">{notice.code}</strong></p>}
     {prompt&&<form onSubmit={submit} className="mt-3 flex flex-col items-start gap-2"><label className="w-full text-sm">{prompt.message}<>{prompt.kind==='select'?<select value={answer} onChange={e=>setAnswer(e.target.value)} className="mt-1 block w-full rounded-lg border border-[#dedbd5] bg-white p-2"><option value="">Choose a sign-in method</option>{prompt.options?.map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</select>:<input type={prompt.kind==='secret'?'password':'text'} autoComplete="off" value={answer} onChange={e=>setAnswer(e.target.value)} className="mt-1 block w-full rounded-lg border border-[#dedbd5] p-2"/>}</></label><button className={button} disabled={!answer.trim()}>{prompt.kind==='select'?'Continue':'Complete sign-in'}</button></form>}
