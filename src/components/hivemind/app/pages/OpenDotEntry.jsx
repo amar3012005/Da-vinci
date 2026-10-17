@@ -1,3 +1,4 @@
+import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { openDotEmployeeIdFromPath } from '../shared/open-dot-employee-route';
 import { openDotRoomStatus } from '../shared/open-dot-room-status';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -57,8 +58,8 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
   return (
     <main className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-white" aria-busy={!ready && !timedOut}>
       {!ready && !timedOut && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white" role="status" aria-live="polite">
-          <span className="flex items-center gap-3 text-sm text-[#737373]"><span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d4d4d4] border-t-[#333333]" />Opening workspace…</span>
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white">
+          <AsciiWorkspaceLoading label="Opening workspace…" />
         </div>
       )}
       {timedOut && !ready && (

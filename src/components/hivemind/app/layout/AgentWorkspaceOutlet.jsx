@@ -1,3 +1,4 @@
+import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import React, { Suspense, useLayoutEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 const Apps = React.lazy(() => import('../pages/OpenDotAppsNavigation'));
@@ -18,10 +19,10 @@ export default function AgentWorkspaceOutlet() {
   return <>
     {!dot && !apps && <Outlet />}
     {appsVisited && <div hidden={!apps} className="h-full min-h-0" style={{ display: apps ? 'block' : 'none' }}>
-      <Suspense fallback={<div role="status">Opening Apps…</div>}><Apps /></Suspense>
+      <Suspense fallback={<AsciiWorkspaceLoading label="Opening Apps…" />}><Apps /></Suspense>
     </div>}
     {dotEntry && <div hidden={!dot} className="h-full min-h-0" style={{ display: dot ? 'block' : 'none' }}>
-      <Suspense fallback={<div role="status">Opening workspace…</div>}><OpenDotEntry initialRoute={dotEntry} route={dot ? location : dotEntry} active={dot} /></Suspense>
+      <Suspense fallback={<AsciiWorkspaceLoading label="Opening workspace…" />}><OpenDotEntry initialRoute={dotEntry} route={dot ? location : dotEntry} active={dot} /></Suspense>
     </div>}
   </>;
 }

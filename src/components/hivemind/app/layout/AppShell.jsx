@@ -1,3 +1,4 @@
+import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { workspaceModeForPath } from '../shared/workspace-mode';
 import { discardParkedNativeHarnessSeat } from '../shared/native-harness-seat';
 import { NativeAiConsentGate } from '../mobile/MobileSafetyPanel';
@@ -514,7 +515,7 @@ function AppShellContent() {
   // Consult the saved company record; never trust a local 'skipped' marker.
   const companyStatus = companyAdmission.scope === org?.id ? companyAdmission.status : 'checking';
   if (companyStatus !== 'ready') return <div data-hivemind-app-shell className="min-h-[var(--hm-app-viewport-height,100dvh)] bg-[#faf9f4] p-4 sm:p-8">
-    {companyStatus === 'checking' ? <p role="status" className="p-8 text-center text-sm">Checking your company setup…</p>
+    {companyStatus === 'checking' ? <AsciiWorkspaceLoading label="Checking your company setup…" />
       : companyStatus === 'error' ? <div role="alert" className="mx-auto max-w-lg p-8"><p>We couldn’t check your company setup. Your progress is saved.</p><button type="button" onClick={() => setCompanyRetry(value => value + 1)} className="mt-4 text-[#117dff] underline">Try again</button></div>
       : <React.Suspense fallback={<p role="status">Opening company onboarding…</p>}><HyperOnboarding onComplete={completeCompany} /></React.Suspense>}
     {companyStatus !== 'required' && <button type="button" onClick={() => setAccountOpen(true)} className="fixed bottom-6 right-6 rounded-lg border bg-white px-4 py-2 text-sm">Account & Settings</button>}
