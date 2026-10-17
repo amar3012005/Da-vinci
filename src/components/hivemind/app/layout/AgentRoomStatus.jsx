@@ -16,8 +16,8 @@ export function aggregateAgentRooms(rooms, agentId) {
     activeCall: matching.some(room => room.activeCall === true),
     running: activity.some(room => room.running === true),
     unread: matching.some(room => room.unread === true),
-    actionRequired: matching.some(room => room.actionRequired === true),
-    waitingForAnswer: matching.some(room => room.waitingForAnswer === true),
+    actionRequired: activity.some(room => room.actionRequired === true || room.status === 'waiting'),
+    waitingForAnswer: activity.some(room => room.waitingForAnswer === true),
     scheduled: matching.some(room => room.scheduled === true),
   };
 }
