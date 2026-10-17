@@ -1,3 +1,5 @@
+import { paneForPath, recalledPaneRoute } from '../shared/native-pane-protocol';
+import { useAuth } from '../auth/AuthProvider';
 import { workspaceModeDestination, workspaceModeForPath } from '../shared/workspace-mode';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -10,6 +12,7 @@ import VoiceModeIcon from './VoiceModeIcon';
 /** One workspace chooser shared by desktop and both mobile sidebars. */
 export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
   const location = useLocation();
+  const { user, org } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation('dashboard');
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
@@ -21,7 +24,7 @@ export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
     setModeMenuOpen(false);
     onChoose?.();
     if (selected) return;
-    const destination = workspaceModeDestination(path, window.location.origin);
+    const destination = workspaceModeDestination(recalledPaneRoute(paneForPath(path), `${user?.id || ''}:${org?.id || ''}`) || path, window.location.origin);
     if (destination.startsWith('https://')) {
       window.location.assign(destination);
       return;

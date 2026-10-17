@@ -2,7 +2,7 @@
 export async function proxyRuntimeRecovery(request) {
   const url = new URL(request.url);
   const reply = (error, status) => Response.json({ error }, { status, headers: { 'cache-control': 'private, no-store' } });
-  if (url.origin !== 'https://runtime-runner.singulancelabs.com') return reply('origin_denied', 403);
+  if (!['https://runtime-runner.singulancelabs.com', 'https://next.singulancelabs.com'].includes(url.origin)) return reply('origin_denied', 403);
   if (!['GET', 'POST'].includes(request.method)) return reply('method_not_allowed', 405);
   const origin = request.headers.get('origin');
   if ((origin && origin !== url.origin) || (request.method === 'POST' && origin !== url.origin) || request.headers.get('sec-fetch-site') === 'cross-site') return reply('origin_denied', 403);

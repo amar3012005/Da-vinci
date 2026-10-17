@@ -1,6 +1,6 @@
 import { proxyModelConnection } from './model-connection.mjs';
 import { proxyRuntimeRecovery } from './runtime-recovery.mjs';
-import runtimeAppsCatalog from '../src/components/hivemind/app/pages/runtime-apps/apps.json';
+import runtimeAppsCatalog from '../src/components/hivemind/app/pages/runtime-apps/apps.json' with { type: 'json' };
 import runtimeAppsStyles from '../src/components/hivemind/app/pages/runtime-apps/styles.js';
 import { agentDiscoveryResponse, isAgentDiscovery, markdownResponse, prefersMarkdown } from './agent-readiness.mjs';
 import { PUBLIC_PAGES, SITE, publicSeoResponse } from './public-seo.mjs';
@@ -502,7 +502,13 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
-    if (url.hostname === 'runtime-runner.singulancelabs.com') {
+    if (url.searchParams.get('native_pane') === '1') {
+      const runtimePane = /^\/hivemind\/app\/employee\/harness(?:\/(?:new|session\/[A-Za-z0-9_-]+))?\/?$/.test(pathname);
+      const brainPane = /^\/hivemind\/app\/overview(?:\/(?:new|dreaming|session\/[A-Za-z0-9_-]+))?\/?$/.test(pathname);
+      const expected = runtimePane ? 'https://runtime-runner.singulancelabs.com' : brainPane ? 'https://next.singulancelabs.com' : null;
+      if (!expected || url.origin !== expected || !['GET','HEAD'].includes(request.method)) return new Response('Invalid native pane owner', { status: 400, headers: { 'cache-control': 'private, no-store' } });
+    }
+    if (['runtime-runner.singulancelabs.com', 'next.singulancelabs.com'].includes(url.hostname)) {
       if (pathname === '/api/hivemind/recovery') return proxyRuntimeRecovery(request);
       // OAuth finishes in its own window. Refresh the existing workspace instead
       // of downloading and mounting another copy of the authenticated app shell.
@@ -531,25 +537,8 @@ export default {
       destination.pathname = '/hivemind/app/employee/harness';
       return new Response(null, { status: 307, headers: { location: destination.toString(), 'cache-control': 'private, no-store' } });
     }
-    // Public path ownership is strict: Brain sessions stay on Next; Runtime
-    // rooms use their canonical employee route on the Runtime authority.
-    if (url.origin === env.RUNTIME_RUNNER_PUBLIC_ORIGIN && ['GET', 'HEAD'].includes(request.method)
-      && (/^\/hivemind\/app\/overview(?:\/new|\/session\/[A-Za-z0-9_-]+)?$/u.test(pathname))) {
-      const destination = new URL(url);
-      destination.host = 'next.singulancelabs.com';
-      return nativeRunnerHandoff(destination);
-    }
-    // Native cookies, modules, RPC and streams remain on one authority.
-    // The target signs in normally; no login token crosses host boundaries.
-    if (env.RUNTIME_RUNNER_PUBLIC_ORIGIN && ['GET', 'HEAD'].includes(request.method)
-      && /^\/hivemind\/app\/employee\/harness(?:\/|$)/u.test(pathname)
-      && url.origin === 'https://next.singulancelabs.com') {
-      const destination = new URL(url);
-      const authority = new URL(env.RUNTIME_RUNNER_PUBLIC_ORIGIN);
-      destination.protocol = authority.protocol;
-      destination.host = authority.host;
-      return nativeRunnerHandoff(destination);
-    }
+    // The outer shell may display either mode on either app authority. Each
+    // native pane still loads modules, cookies and RPC from its owning runner.
     if (pathname.startsWith('/api/hivemind/model-connection/')) return proxyModelConnection(request, env);
     const openDotEntryPath = isOpenDotEntryPath(pathname);
     if (url.protocol === 'http:' && env.ENVIRONMENT !== 'development') {
@@ -789,6 +778,7 @@ export default {
       const headers = new Headers(response.headers);
       headers.set('cache-control', 'private, no-store');
       headers.set('cdn-cache-control', 'no-store');
+      if (url.searchParams.get('native_pane') === '1') headers.set('content-security-policy', "frame-ancestors https://next.singulancelabs.com https://runtime-runner.singulancelabs.com");
       response = new Response(response.body, { status: response.status, headers });
     }
 

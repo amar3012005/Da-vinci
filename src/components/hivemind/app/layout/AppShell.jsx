@@ -1,3 +1,5 @@
+import NativePaneBridge from './NativePaneBridge';
+import { initialNativePane, persistentShellEnabled } from '../shared/native-pane-protocol';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { workspaceModeForPath } from '../shared/workspace-mode';
 import { discardParkedNativeHarnessSeat } from '../shared/native-harness-seat';
@@ -522,7 +524,9 @@ function AppShellContent() {
     {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}
   </div>;
 
-  if (brainChat && brainPhone) return (
+  if (initialNativePane) return <div data-native-chat-shell className="h-[100dvh] min-h-0 overflow-hidden bg-[#faf9f4]"><NativePaneBridge scope={`${user?.id || ""}:${org?.id || ""}`} /><Outlet /></div>;
+
+  if (brainChat && brainPhone && !(persistentShellEnabled() && !isNativeApp())) return (
     <QuickRecorderProvider>
       <TeamProvider>
         <div data-hivemind-app-shell data-native-chat-shell data-mobile-brain-user-name={mobileBrainUserName(user, brainChat && brainPhone)} data-mobile-brain-greeting={mobileBrainGreeting(user, brainChat && brainPhone, t)} className="font-[Inter,ui-sans-serif,system-ui,sans-serif]" style={{ '--hm-harness-center-offset': '0px' }}>

@@ -7,13 +7,10 @@ const env = { RUNTIME_RUNNER_PUBLIC_ORIGIN: publicOrigin,
   RUNTIME_RUNNER_ORIGIN: 'https://runtime-runner-origin.singulancelabs.com',
   RUNNER_ORIGIN: 'https://harness-chat-origin.singulancelabs.com' };
 
-test('employee navigation transfers its exact route without transferring credentials', async () => {
-  const response = await worker.fetch(new Request('https://next.singulancelabs.com/hivemind/app/employee/harness/session/existing#tab'), env);
-  assert.equal(response.status, 200);
-  assert.equal(response.headers.get('location'), null);
-  assert.equal(response.headers.get('cache-control'), 'private, no-store');
-  assert.match(await response.text(), /location\.replace\("https:\/\/runtime-runner\.singulancelabs\.com\/hivemind\/app\/employee\/harness\/session\/existing#tab"\)/);
-  assert.equal(response.headers.get('set-cookie'), null);
+test('outer employee navigation stays on the current authority without credential forwarding', async () => {
+  const response = await worker.fetch(new Request('https://next.singulancelabs.com/hivemind/app/employee/harness/session/existing'), { ...env, ASSETS:{fetch:async()=>new Response('<html>persistent shell</html>',{headers:{'content-type':'text/html'}})} });
+  assert.equal(response.status,200); assert.equal(response.headers.get('location'),null);
+  assert.match(await response.text(), /persistent shell/);
 });
 
 test('Runtime native transport selects only Runtime origin and preserves actual browser Origin', async () => {
@@ -31,15 +28,14 @@ test('Runtime native transport selects only Runtime origin and preserves actual 
   } finally { globalThis.fetch = previous; }
 });
 
-test('Runtime Brain launchers and validated session paths strictly return to Next', async () => {
-  for (const route of ['/hivemind/app/overview','/hivemind/app/overview/new',
-    '/hivemind/app/overview/session/session-46d220df35a3f985de773d7832c82d8e?view=chat#turn-1']) {
-    const response = await worker.fetch(new Request(`${publicOrigin}${route}`), env);
-    assert.equal(response.headers.get('cache-control'),'private, no-store');
-    assert.ok((await response.text()).includes(`location.replace("https://next.singulancelabs.com${route}")`));
+test('Brain outer routes remain in the current shell while native panes enforce their own authority', async () => {
+  const assets={fetch:async()=>new Response('<html>persistent shell</html>',{headers:{'content-type':'text/html'}})};
+  for (const route of ['/hivemind/app/overview/new','/hivemind/app/overview/session/saved']) {
+    const response=await worker.fetch(new Request(publicOrigin+route),{...env,ASSETS:assets});
+    assert.equal(response.status,200);assert.match(await response.text(),/persistent shell/);
   }
-  const response = await worker.fetch(new Request(`${publicOrigin}/hivemind/app/overview/session/a/b`), {
-    ...env, ASSETS:{fetch:async()=>new Response('<html>native room</html>',{headers:{'content-type':'text/html'}})},
-  });
-  assert.equal((await response.text()).includes('location.replace'),false);
+  const wrong=await worker.fetch(new Request(publicOrigin+'/hivemind/app/overview/session/saved?native_pane=1'),{...env,ASSETS:assets});
+  assert.equal(wrong.status,400);
+  const correct=await worker.fetch(new Request('https://next.singulancelabs.com/hivemind/app/overview/session/saved?native_pane=1'),{...env,ASSETS:assets});
+  assert.equal(correct.status,200);assert.equal(correct.headers.get('content-security-policy'),'frame-ancestors https://next.singulancelabs.com https://runtime-runner.singulancelabs.com');
 });

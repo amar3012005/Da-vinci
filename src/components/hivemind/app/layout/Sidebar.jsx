@@ -359,10 +359,10 @@ export default function Sidebar({
       let start;
       for (let attempt = 0; attempt < 60; attempt += 1) {
         start = window.__HIVEMIND_START_AGENT__;
-        if (typeof start === 'function' && (!needsNavigation || start !== previousStart || window.__DSH_EMBED_APP__)) break;
+        if (typeof start === 'function' && (!needsNavigation || start !== previousStart || start?.nativePane || window.__DSH_EMBED_APP__)) break;
         await new Promise(resolve => setTimeout(resolve, 200));
       }
-      if (typeof start !== 'function' || (needsNavigation && start === previousStart && !window.__DSH_EMBED_APP__) || !await start(agent.id)) throw new Error('selection unavailable');
+      if (typeof start !== 'function' || (needsNavigation && start === previousStart && !start?.nativePane && !window.__DSH_EMBED_APP__) || !await start(agent.id)) throw new Error('selection unavailable');
       setSelectedAgent(agent.id === 'runtime' ? null : agent.id);
       return true;
     } catch { setSelectedAgent(previousSelection); setTeamError(tt('teamOpenError', 'Could not open this agent. Please try again.')); return false; }

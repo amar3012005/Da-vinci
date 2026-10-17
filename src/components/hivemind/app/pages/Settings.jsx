@@ -242,7 +242,7 @@ export default function Settings() {
         animate="visible"
         className="space-y-6 max-w-3xl"
       >
-        {window.location.hostname === 'runtime-runner.singulancelabs.com' && <SectionCard><RuntimeRecoverySettings organizationId={org?.id} /></SectionCard>}
+        {['runtime-runner.singulancelabs.com', 'next.singulancelabs.com'].includes(window.location.hostname) && <SectionCard><RuntimeRecoverySettings organizationId={org?.id} /></SectionCard>}
         <SectionCard><DreamingSettings organizationId={org?.id} /></SectionCard>
 
         {/* ── Settings scope ───────────────────────────────────────── */}
