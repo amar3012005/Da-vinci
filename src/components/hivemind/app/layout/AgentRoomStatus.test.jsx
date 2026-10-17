@@ -47,7 +47,22 @@ test('uses explicit employee status and keeps unread separate', () => {
   view.rerender(<AgentRoomStatus room={{ status: 'paused' }} />);
   expect(screen.getByRole('status').textContent).toBe('Paused');
   view.rerender(<AgentRoomStatus room={{ status: 'idle' }} />);
-  expect(screen.getByRole('status').textContent).toBe('Idle');
+  expect(screen.getByRole('status').textContent).toBe('Ready');
   view.rerender(<AgentRoomStatus room={{}} />);
   expect(screen.queryByRole('status')).toBeNull();
+});
+
+test('live chat activity wins over stale polling and retains the same employee calendar', () => {
+ const room = aggregateAgentRooms([
+  { id: 'a', updatedAt: 20, running: true, status: 'working' },
+  { id: 'a', updatedAt: 19, live: true, running: false, status: 'idle' },
+  { id: 'a', updatedAt: 0, scheduleOnly: true, scheduled: true },
+  { id: 'b', updatedAt: 30, live: true, running: true, activity: 'Thinking' },
+ ], 'a');
+ expect(room).toMatchObject({ status: 'idle', running: false, scheduled: true });
+ const view = render(<AgentRoomStatus room={room} />);
+ expect(screen.getByRole('img', { name: 'Work scheduled' })).toBeTruthy();
+ expect(screen.getByRole('status').textContent).toBe('Ready');
+ view.rerender(<AgentRoomStatus room={{ status: 'working', activity: 'Running commands' }} />);
+ expect(screen.getByRole('status').textContent).toBe('Running commands');
 });

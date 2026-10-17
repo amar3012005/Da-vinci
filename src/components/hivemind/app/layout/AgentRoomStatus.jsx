@@ -5,14 +5,16 @@ import { CalendarClock, LoaderCircle, Bell, Phone, CircleAlert } from 'lucide-re
 export function aggregateAgentRooms(rooms, agentId) {
   const matching = rooms.filter(room => room.id === agentId);
   if (matching.length === 0) return undefined;
-  const latest = matching.reduce((current, room) => room.updatedAt > current.updatedAt ? room : current);
+  const live = matching.filter(room => room.live === true);
+  const activity = live.length ? live : matching.filter(room => !room.scheduleOnly);
+  const latest = (activity.length ? activity : matching).reduce((current, room) => room.updatedAt > current.updatedAt ? room : current);
   return {
     ...latest,
     stale: matching.every(room => room.stale === true),
     error: matching.some(room => room.error === true),
     loading: matching.some(room => room.loading === true),
     activeCall: matching.some(room => room.activeCall === true),
-    running: matching.some(room => room.running === true),
+    running: activity.some(room => room.running === true),
     unread: matching.some(room => room.unread === true),
     actionRequired: matching.some(room => room.actionRequired === true),
     waitingForAnswer: matching.some(room => room.waitingForAnswer === true),
@@ -31,6 +33,7 @@ export default function AgentRoomStatus({ room, collapsed = false, compact = fal
   const failed = room.error === true;
   const loading = room.loading === true;
   const working = room.running === true || room.status === 'working';
+  const workLabel = room.activity || 'Working';
   const paused = room.status === 'paused';
   const idle = room.status === 'idle';
   const unread = room.unread === true;
@@ -43,8 +46,9 @@ export default function AgentRoomStatus({ room, collapsed = false, compact = fal
       {failed && <CircleAlert size={14} className="text-red-700" role="img" aria-label="Work failed" />}
       {loading && !working && <LoaderCircle size={14} className="text-[#737373] animate-spin motion-reduce:animate-none" role="img" aria-label="Opening workspace" />}
       {activeCall && <Phone size={14} className="text-green-700" role="img" aria-label="In call" />}
-      {working && <LoaderCircle size={14} className="text-[#737373] animate-spin motion-reduce:animate-none" role="img" aria-label="Working" />}
-      {!working && !actionRequired && !failed && (paused || idle) && <span className={(collapsed || compact) ? 'sr-only' : 'text-[10px] text-[#737373]'} role="status">{paused ? 'Paused' : 'Idle'}</span>}
+      {working && <LoaderCircle size={14} className="text-[#737373] animate-spin motion-reduce:animate-none" role="img" aria-label={workLabel} />}
+      {working && !(collapsed || compact) && <span className="text-[10px] text-[#737373]" role="status">{workLabel}</span>}
+      {!working && !actionRequired && !failed && (paused || idle) && <span className={(collapsed || compact) ? 'sr-only' : 'text-[10px] text-[#737373]'} role="status">{paused ? 'Paused' : 'Ready'}</span>}
       {unread && <span className="h-1.5 w-1.5 rounded-full bg-green-500" role="img" aria-label="Unread update" />}
       {scheduled && <CalendarClock size={14} className="text-[#737373]" role="img" aria-label="Work scheduled" />}
       {actionRequired && <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700" role="status">

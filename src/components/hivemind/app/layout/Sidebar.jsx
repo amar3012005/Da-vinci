@@ -196,7 +196,9 @@ export default function Sidebar({
   const [teamError, setTeamError] = useState('');
   const [nativeRooms, setRooms] = useState([]);
   const [dotRooms, setDotRooms] = useState({});
-  const rooms = [...nativeRooms, ...Object.values(dotRooms).flat()];
+  const [liveDotRooms, setLiveDotRooms] = useState({});
+  const [scheduledEmployees, setScheduledEmployees] = useState([]);
+  const rooms = [...nativeRooms, ...Object.values(dotRooms).flat(), ...Object.values(liveDotRooms).flat(), ...scheduledEmployees.map(id => ({ id, scheduled: true, scheduleOnly: true, updatedAt: 0 }))];
   const dotReadAt = useRef({});
   useEffect(() => {
     setDotRooms({});
@@ -274,13 +276,22 @@ export default function Sidebar({
       setSelectedAgent(event.detail?.id === 'runtime' ? null : event.detail?.id || null);
     };
     const activity = event => setRooms(event.detail?.rooms || []);
+    const schedules = event => setScheduledEmployees(Array.isArray(event.detail?.employees) ? event.detail.employees.filter(id => typeof id === 'string') : []);
+    setScheduledEmployees([]);
+    setLiveDotRooms({});
+    window.addEventListener('hivemind:agent-schedules', schedules);
+    window.dispatchEvent(new Event('hivemind:request-agent-schedules'));
     setRooms([]);
     setDotRooms({});
     const dotActivity = event => {
-      if (event.detail?.clear === true) { setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous)); return; }
+      if (event.detail?.clear === true) { setLiveDotRooms({}); setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous)); return; }
       const employeeId = event.detail?.employeeId;
       if (typeof employeeId !== 'string' || !Array.isArray(event.detail?.rooms)) return;
       const entries = event.detail.employees ?? [{ employeeId, dotId: event.detail.dotId, rooms: event.detail.rooms }];
+      if (entries.some(entry => entry.rooms?.some(room => room.live === true))) {
+        setLiveDotRooms(ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current));
+        return;
+      }
       const verified = ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current);
       for (const entry of Array.isArray(entries) ? entries : []) {
         if (Number.isFinite(entry.readAt) && entry.readAt >= 0 && Object.hasOwn(verified, entry.employeeId)) dotReadAt.current[entry.employeeId] = entry.readAt;
@@ -292,7 +303,7 @@ export default function Sidebar({
     window.addEventListener('hivemind:agent-rooms', activity);
     window.addEventListener('hivemind:agent-selected', selection);
     window.dispatchEvent(new Event('hivemind:request-agent-rooms'));
-    return () => { window.removeEventListener('hivemind:open-dot-rooms', dotActivity); window.removeEventListener('hivemind:agent-selected', selection); window.removeEventListener('hivemind:agent-rooms', activity); };
+    return () => { window.removeEventListener('hivemind:agent-schedules', schedules); window.removeEventListener('hivemind:open-dot-rooms', dotActivity); window.removeEventListener('hivemind:agent-selected', selection); window.removeEventListener('hivemind:agent-rooms', activity); };
   }, [user?.id, org?.id]);
 
   useEffect(() => {

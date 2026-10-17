@@ -42,7 +42,7 @@ test('collapsed sidebar retains accessible status without a long label', () => {
 
 test('stale snapshot shows reconnecting rather than a false working spinner', () => {
   const value = output({ stale: true, running: true, unread: true });
-  expect(value).toContain('Status reconnecting');
+  expect(value).toContain('Activity status unavailable');
   expect(value).toContain('Unread update');
   expect(value).not.toContain('aria-label="Working"');
 });
