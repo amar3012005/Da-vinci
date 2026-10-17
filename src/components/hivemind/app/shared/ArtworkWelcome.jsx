@@ -20,7 +20,7 @@ export default function ArtworkWelcome({ artwork, title, closeLabel, actionLabel
   return createPortal(<dialog ref={dialog} className="connectors-welcome" aria-label={title} onCancel={event => { event.preventDefault(); setOpen(false); }} onClick={event => { if (event.target === event.currentTarget) setOpen(false); }}>
     <div className="connectors-welcome-card">
       <button type="button" className="connectors-welcome-close" aria-label={closeLabel} onClick={() => setOpen(false)} autoFocus><X size={20}/></button>
-      <img src={artwork.image} alt={artwork.alt} width="1050" height="600" />
+      <div className="connectors-welcome-artwork"><img src={artwork.image} alt={artwork.alt} width="1050" height="600" /></div>
       <div className="connectors-welcome-action"><button type="button" onClick={() => { dialog.current.close(); setOpen(false); onAction?.(); }}>{actionLabel}</button></div>
     </div>
   </dialog>, document.body);

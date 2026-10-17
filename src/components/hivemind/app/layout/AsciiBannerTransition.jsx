@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 
-const DURATION = 900;
+const DURATION = 1500;
 const GLYPHS = ' .,:;-+=*abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&';
 function crop(context, image, width, height) {
-  const scale = Math.max(width / image.width, height / image.height) * 1.12;
+  const scale = Math.max(width / image.width, height / image.height) * 1.45;
   context.drawImage(image, (width - image.width * scale) / 2, (height - image.height * scale) / 2, image.width * scale, image.height * scale);
 }
 function loadImage(source) {
@@ -31,7 +31,7 @@ export default function AsciiBannerTransition({ from, to, onFinish }) {
     const context = element.getContext('2d');
     const finish = () => { if (!cancelled) onFinish(); };
     // Image failures must never strand the carousel behind a blank overlay.
-    const deadline = window.setTimeout(finish, 2000);
+    const deadline = window.setTimeout(finish, 5000);
     if (!context) { finish(); return () => window.clearTimeout(deadline); }
     Promise.all([loadImage(from), loadImage(to)]).then(([before, after]) => {
       if (cancelled) return;
