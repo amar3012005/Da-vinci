@@ -7,9 +7,12 @@ export default function BrainFabricIcon({ kind, size = 46 }) {
     memories: ['#d9c5e5', '#9574ad'], uploads: ['#e6d5ad', '#b19a68'],
     connectors: ['#b7cfbd', '#6e9479'], notes: ['#dfb9b4', '#ad7774'],
     graph: ['#b9cde0', '#7896b4'], advanced: ['#cac6bc', '#8d887d'],
+    dreaming: ['#d8d2e8', '#8d80ae'], workspace: ['#c3cec2', '#7a907b'],
   };
   const [light, dark] = colors[kind] || colors.memories;
   const shapes = {
+    dreaming: <><path d="M31 5A20 20 0 1 0 44 32C23 40 13 17 31 5Z"/><path d="m37 8 1.5 4.5L43 14l-4.5 1.5L37 20l-1.5-4.5L31 14l4.5-1.5Z"/></>,
+    workspace: <><rect x="7" y="17" width="10" height="29" rx="3"/><rect x="17" y="5" width="22" height="41" rx="4"/><path d="M24 12h8m-8 7h8m-8 7h8m-8 7h8M27 46v-7h5v7" fill="none"/><path d="M3 46h42" fill="none" strokeWidth="3"/></>,
     memories: <><rect x="12" y="7" width="30" height="35" rx="6" transform="rotate(10 27 24)"/><rect x="6" y="11" width="30" height="35" rx="6" transform="rotate(-7 21 28)"/><path d="M14 22h14M15 28h10M16 34h12" fill="none"/></>,
     uploads: <><path d="M5 16Q5 11 10 11h9l4 5h16q4 0 4 5v20H5Z"/><path d="M24 35V22m-6 6 6-6 6 6" fill="none"/></>,
     connectors: <><path d="M12 6v9m9-9v9M8 15h17v7q0 7-8 7v9q0 5 7 5t7-7v-8" fill="none" strokeWidth="5"/><path d="M26 20h15v7q0 6-7 6t-8-6Z"/><path d="M30 12v8m8-8v8" fill="none" strokeWidth="4"/></>,

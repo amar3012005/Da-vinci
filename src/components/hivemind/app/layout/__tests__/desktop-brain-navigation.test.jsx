@@ -41,7 +41,10 @@ test('the selected Brain destination has its own active state; banner precedes r
   const banner = screen.getByRole('link', { name: 'Explore your Brain' });
   const usage = screen.getByRole('link', { name: /View credit usage: 41% used/ });
   expect(banner.compareDocumentPosition(usage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(container.querySelectorAll('.brain-icon-grid > *')).toHaveLength(6);
+  expect(container.querySelectorAll('.brain-icon-grid > *')).toHaveLength(8);
+  expect(screen.queryByRole('link', { name: 'Overview' })).not.toBeInTheDocument();
+  expect(container.querySelector('.brain-icon-grid')).toContainElement(screen.getByRole('link', { name: 'Dreaming' }));
+  expect(container.querySelector('.brain-icon-grid')).toContainElement(screen.getByRole('link', { name: 'Workspace Admin' }));
 });
 
 test('account settings uses the existing account action', () => {
@@ -51,4 +54,24 @@ test('account settings uses the existing account action', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Account & Settings' }));
   expect(listener).toHaveBeenCalledTimes(1);
   window.removeEventListener('hm:open-account-settings', listener);
+});
+
+
+test('Advanced opens outside the scroll container, supports Escape and outside dismissal', () => {
+  const { container } = setup();
+  const trigger = screen.getByRole('button', { name: 'Advanced' });
+  fireEvent.click(trigger);
+  const flyout = screen.getByRole('dialog', { name: 'Advanced features' });
+  expect(container).not.toContainElement(flyout);
+  expect(document.body).toContainElement(flyout);
+  expect(screen.getByRole('link', { name: 'MCP Server' })).toHaveFocus();
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(trigger).toHaveFocus();
+  fireEvent.click(trigger);
+  fireEvent.pointerDown(screen.getByRole('button', { name: 'Account & Settings' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  fireEvent.click(trigger);
+  fireEvent.click(screen.getByRole('link', { name: 'API Keys' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
