@@ -1,14 +1,21 @@
 .hm-runtime-workspace { display:flex; min-width:0; min-height:0; height:calc(var(--hm-app-viewport-height,100dvh) - 56px); }
 .hm-runtime-workspace > main { flex:1; min-width:0; min-height:0; }
-.hm-runtime-start { box-sizing:border-box; flex:0 0 272px; width:272px; display:flex; flex-direction:column; padding:24px 14px; overflow-y:auto; border-right:1px solid #e7e5e1; background:#f7f7f5; }
-.hm-runtime-start-card { margin-top:auto; flex-shrink:0; border:1px solid #e3e3e0; border-radius:20px; background:#fff; box-shadow:0 3px 8px #1a1a1a06; padding:20px 16px 12px; color:#242728; }
+/* Float in the native chat gutter; never reserve a second sidebar column. */
+.hm-runtime-workspace { position:relative; }
+.hm-runtime-start { position:absolute; z-index:20; left:16px; bottom:16px; width:248px; max-width:calc(100% - 32px); max-height:calc(100% - 32px); overflow-y:auto; box-sizing:border-box; }
+.hm-runtime-start-card { border:1px solid #e5e5e3; border-radius:18px; background:#fff; box-shadow:0 4px 14px #1a1a1a08; padding:18px 16px 12px; color:#242728; }
 .hm-runtime-start-card summary { cursor:pointer; display:flex; flex-wrap:wrap; align-items:flex-start; gap:12px 4px; list-style:none; }
 .hm-runtime-start-card summary::-webkit-details-marker { display:none; }
 .hm-runtime-start-title { flex:1; font-size:16px; font-weight:600; line-height:1.45; }
 .hm-runtime-start-count { display:flex; align-items:center; gap:4px; color:#8a8d8c; font-size:12px; padding-top:3px; white-space:nowrap; }
-.hm-runtime-start-card:not([open]) .hm-runtime-start-count,
-.hm-runtime-start-card:not([open]) .hm-runtime-start-progress { display:none; }
-.hm-runtime-start-card:not([open]) { padding-bottom:20px; }
+.hm-runtime-start-card:not([open]) .hm-runtime-start-progress,
+.hm-runtime-start-card:not([open]) .hm-runtime-start-count svg { display:none; }
+.hm-runtime-start-card:not([open]) { padding:11px 14px; border-radius:16px; }
+.hm-runtime-start-card:not([open]) summary { align-items:center; gap:9px; }
+.hm-runtime-start-card:not([open]) .hm-runtime-start-title { font-size:14px; font-weight:500; }
+.hm-runtime-start-card:not([open]) .hm-runtime-start-count { padding-top:0; }
+.hm-runtime-start-ring { display:none; }
+.hm-runtime-start-card:not([open]) .hm-runtime-start-ring { display:block; flex:0 0 15px; width:15px; height:15px; border-radius:50%; background:conic-gradient(#242928 var(--hm-start-progress),#e9e9e7 0); mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 0); }
 .hm-runtime-start-progress { display:block; flex-basis:100%; height:5px; background:#e9e9e7; border-radius:8px; overflow:hidden; margin:3px 0 8px; }
 .hm-runtime-start-progress > span { display:block; height:100%; background:#242928; border-radius:inherit; transition:width .2s; }
 .hm-runtime-start-card ol { list-style:none; padding:0; margin:12px 0 10px; display:grid; gap:3px; }
@@ -20,6 +27,6 @@
 .hm-runtime-start-card li[data-complete=true] button > span:last-child { text-decoration:line-through; color:#8a8d8c; }
 .hm-runtime-start-hint { font-size:11px; line-height:1.6; color:#8a8d8c; margin:14px 0 2px; }
 .hm-runtime-start-error { font-size:12px; line-height:1.5; color:#8f3e23; }
-@media (max-width:1200px) and (min-width:1001px) { .hm-runtime-start { flex-basis:234px; width:234px; padding:20px 10px; } .hm-runtime-start-card { padding:16px 12px 10px; } }
-@media (max-width:1000px) { .hm-runtime-workspace { flex-direction:column; flex:1; } .hm-runtime-workspace > main[data-native-chat-main],.hm-runtime-workspace > main { height:auto; flex:1; min-height:0; } .hm-runtime-start { flex:0 0 auto; width:100%; max-height:42vh; padding:8px 12px; border-right:0; border-bottom:1px solid #e7e5e1; } .hm-runtime-start-card { padding:10px 13px 6px; border-radius:14px; } .hm-runtime-start-title { font-size:14px; } .hm-runtime-start-progress { margin-bottom:0; height:4px; } .hm-runtime-start-card ol { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:12px; } .hm-runtime-start-card li button { font-size:12px; } }
+@media (max-width:1200px) { .hm-runtime-start { width:216px; left:12px; bottom:12px; } .hm-runtime-start-card { padding:14px 12px 10px; } .hm-runtime-start-title { font-size:14px; } .hm-runtime-start-card li button { font-size:13px; padding:8px 0; } }
+@media (max-width:1000px) { .hm-runtime-start { width:224px; bottom:calc(88px + env(safe-area-inset-bottom, 0px)); max-height:60%; } .hm-runtime-start-card ol { gap:0; } }
 @media (prefers-reduced-motion:reduce) { .hm-runtime-start-progress > span,.hm-runtime-start-count svg { transition:none; } }
