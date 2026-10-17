@@ -8,7 +8,8 @@ import { snapshotProductionAssets, restoreRetainedAssets } from './retain-cloudf
 const a = '/static/js/1.aaaaaaaa.chunk.js';
 const b = '/static/js/2.bbbbbbbb.chunk.js';
 const c = '/static/js/3.cccccccc.chunk.js';
-function production({ history = [[b], [c]], missing = null } = {}) {
+const d = '/static/js/4.dddddddd.chunk.js';
+function production({ history = [[b], [c], [d]], missing = null } = {}) {
   const requests = [];
   return { requests, fetcher: async input => {
     const path = new URL(input).pathname; requests.push(path);
@@ -20,17 +21,17 @@ function production({ history = [[b], [c]], missing = null } = {}) {
   } };
 }
 
-test('keeps exactly two previous generations; private and older files never enter the artifact', async () => {
+test('keeps exactly three previous generations; private and older files never enter the artifact', async () => {
   const remote = production();
   const snapshot = await snapshotProductionAssets(remote.fetcher);
-  assert.deepEqual(snapshot.generations, [[a], [b]]);
-  assert.equal(remote.requests.includes(c), false);
+  assert.deepEqual(snapshot.generations, [[a], [b], [c]]);
+  assert.equal(remote.requests.includes(d), false);
   assert.equal(remote.requests.includes('/v1/bootstrap'), false);
   const directory = await mkdtemp(join(tmpdir(), 'hm-assets-'));
   try {
     await restoreRetainedAssets(directory, snapshot);
     assert.equal(await readFile(join(directory, a.slice(1)), 'utf8'), `/* ${a} */`);
-    assert.deepEqual(JSON.parse(await readFile(join(directory, 'asset-history.json'))).generations, [[a], [b]]);
+    assert.deepEqual(JSON.parse(await readFile(join(directory, 'asset-history.json'))).generations, [[a], [b], [c]]);
   } finally { await rm(directory, { recursive: true }); }
 });
 

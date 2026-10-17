@@ -46,7 +46,7 @@ export async function snapshotProductionAssets(fetcher = fetch) {
   const generations = [current, ...previous].filter((paths, index, all) => {
     if (!Array.isArray(paths) || !paths.every(staticPath)) throw new Error('Invalid retained asset path');
     return all.findIndex(other => JSON.stringify(other) === JSON.stringify(paths)) === index;
-  }).slice(0, 2);
+  }).slice(0, 3);
   const paths = [...new Set(generations.flat())];
   const files = new Map();
   let bytes = 0;

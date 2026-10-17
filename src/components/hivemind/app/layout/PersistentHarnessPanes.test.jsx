@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { act } from 'react';
 let mockLocation = { pathname:'/hivemind/app/overview/session/brain-saved', search:'', hash:'' };
 const mockNavigate = jest.fn();
-jest.mock('react-router-dom',()=>({ useLocation:()=>mockLocation, useNavigate:()=>mockNavigate }));
+jest.mock('react-router-dom',()=>({ useLocation:()=>mockLocation, useNavigate:()=>mockNavigate }), { virtual: true });
 jest.mock('../auth/AuthProvider',()=>({useAuth:()=>({user:{id:'user-a'},org:{id:'org-a'}})}));
 import PersistentHarnessPanes from './PersistentHarnessPanes';
 it('retains both exact client documents and URLs when switching modes, and rejects foreign messages',async()=>{
@@ -25,4 +25,26 @@ it('retains both exact client documents and URLs when switching modes, and rejec
     expect(host.querySelector('[data-native-pane="runtime"] iframe')).toBe(runtime);
     expect(host.querySelector('[data-native-pane="runtime"]').hidden).toBe(true);
   } finally { await act(async()=>root.unmount());host.remove(); }
+});
+
+it('preserves identity received before window.load and retries a missed handshake without reloading', async()=>{
+  global.IS_REACT_ACT_ENVIRONMENT=true;
+  jest.useFakeTimers();
+  mockLocation={pathname:'/hivemind/app/overview/session/brain-saved',search:'',hash:''};
+  const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
+  try {
+    await act(async()=>root.render(<PersistentHarnessPanes />));
+    const brain=host.querySelector('iframe'); const source=brain.getAttribute('src');
+    const post=jest.spyOn(brain.contentWindow,'postMessage');
+    await act(async()=>jest.advanceTimersByTime(2000));
+    expect(post).toHaveBeenCalledWith(expect.objectContaining({kind:'hello',scope:'user-a:org-a'}),'https://next.singulancelabs.com');
+    await act(async()=>window.dispatchEvent(new MessageEvent('message',{origin:'https://next.singulancelabs.com',source:brain.contentWindow,data:{type:'hivemind.native-pane',version:1,scope:'user-a:org-a',kind:'identity'}})));
+    expect(brain.style.visibility).toBe('visible');
+    await act(async()=>brain.dispatchEvent(new Event('load')));
+    await act(async()=>jest.advanceTimersByTime(31000));
+    expect(brain.style.visibility).toBe('visible');
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(host.querySelector('iframe')).toBe(brain);
+    expect(brain.getAttribute('src')).toBe(source);
+  } finally { await act(async()=>root.unmount());host.remove();jest.useRealTimers(); }
 });

@@ -8,7 +8,14 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
   const frame = useRef(null); const [identified, setIdentified] = useState(false); const [error, setError] = useState(false); const [retry, setRetry] = useState(0);
   const latest = useRef({ active, route }); latest.current = { active, route };
   const nativePath = useRef(entry); const pending = useRef(new Map());
-  useEffect(() => { if (identified) { setError(false); return undefined; } const timeout = window.setTimeout(() => setError(true), 30000); return () => window.clearTimeout(timeout); }, [identified, retry]);
+  useEffect(() => {
+    if (identified) { setError(false); return undefined; }
+    // The child's React bridge may install before or after window.load.
+    // Repeat only the idempotent, scoped handshake; keep the document resident.
+    const handshake = window.setInterval(() => send({ kind: 'hello' }), 1000);
+    const timeout = window.setTimeout(() => { window.clearInterval(handshake); setError(true); }, 30000);
+    return () => { window.clearTimeout(timeout); window.clearInterval(handshake); };
+  }, [identified, retry, mode, scope]);
   const send = data => frame.current?.contentWindow?.postMessage({ type: 'hivemind.native-pane', version: 1, scope, ...data }, PANE_ORIGINS[mode]);
   useEffect(() => {
     let start;
@@ -54,7 +61,7 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
   }, [active, identified, route, mode]);
   return <section hidden={!active} data-native-pane={mode} className="relative h-full min-h-0" style={{ display: active ? 'block' : 'none' }}>
     {!identified && <div className="absolute inset-0 grid place-items-center bg-[#faf9f4]">{error ? <div role="alert" className="max-w-sm text-center text-sm"><p>This conversation hasn’t connected yet. Your saved work is unchanged.</p><button className="mt-3 underline" onClick={() => { setError(false); setRetry(value => value + 1); frame.current.src = paneSource(nativePath.current || entry, mode); }}>Try again</button></div> : <AsciiWorkspaceLoading />}</div>}
-    <iframe ref={frame} title={mode === 'brain' ? 'Brain conversation' : 'Runtime and HyperAgents conversation'} src={paneSource(entry, mode)} onLoad={() => { setIdentified(false); send({ kind: 'hello' }); }} allow="microphone; autoplay; clipboard-write" referrerPolicy="strict-origin" className="h-full w-full border-0 bg-[#faf9f4]" style={{ visibility: identified ? 'visible' : 'hidden' }} />
+    <iframe ref={frame} title={mode === 'brain' ? 'Brain conversation' : 'Runtime and HyperAgents conversation'} src={paneSource(entry, mode)} onLoad={() => send({ kind: 'hello' })} allow="microphone; autoplay; clipboard-write" referrerPolicy="strict-origin" className="h-full w-full border-0 bg-[#faf9f4]" style={{ visibility: identified ? 'visible' : 'hidden' }} />
   </section>;
 }
 
