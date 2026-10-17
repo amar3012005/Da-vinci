@@ -20,7 +20,12 @@ export async function snapshotProductionAssets(fetcher = fetch) {
   // Retry transient transport failures only; validation still fails closed.
   const request = async (url, options) => {
     for (let attempt = 0; ; attempt++) {
-      try { return await fetcher(url, { ...options, signal: AbortSignal.timeout(30000) }); } catch (error) {
+      try {
+        const response = await fetcher(url, { ...options, signal: AbortSignal.timeout(30000) });
+        // A reset can occur after headers arrive; retry the complete download.
+        const body = await response.arrayBuffer();
+        return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
+      } catch (error) {
         if (attempt === 3) throw new Error(`Cannot download retained public asset ${url.pathname}`, { cause: error });
         await delay(300 * (attempt + 1));
       }
