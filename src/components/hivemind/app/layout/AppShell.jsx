@@ -524,7 +524,12 @@ function AppShellContent() {
     {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}
   </div>;
 
-  if (initialNativePane) return <div data-native-chat-shell className="h-[100dvh] min-h-0 overflow-hidden bg-[#faf9f4]"><NativePaneBridge scope={`${user?.id || ""}:${org?.id || ""}`} /><Outlet /></div>;
+  if (initialNativePane) return <div data-native-chat-shell className="h-[100dvh] min-h-0 overflow-hidden bg-[#faf9f4]">
+    <NativePaneBridge scope={`${user?.id || ""}:${org?.id || ""}`} /><Outlet />
+    <PlanLimitGate /><ServiceErrorToast /><CallContractModal /><EntityProfileModalHost />
+    {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}
+    <ProductAccessModal open={Boolean(productUpgrade)} product={productUpgrade?.product} currentPlan={org?.plan} onClose={() => setProductUpgrade(null)} onUpgrade={plan => { setProductUpgrade(null); navigate(`/hivemind/app/billing?upgrade=${plan}`); }} />
+  </div>;
 
   if (brainChat && brainPhone && !(persistentShellEnabled() && !isNativeApp())) return (
     <QuickRecorderProvider>
