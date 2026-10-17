@@ -1,5 +1,4 @@
 import RuntimeGetStarted from './RuntimeGetStarted';
-import { initialNativePane } from '../shared/native-pane-protocol';
 import BrainFeatureWelcome from '../shared/BrainFeatureWelcome';
 import NativePaneBridge from './NativePaneBridge';
 import { initialNativePane, persistentShellEnabled } from '../shared/native-pane-protocol';
