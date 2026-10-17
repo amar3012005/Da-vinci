@@ -29,6 +29,3 @@
 html[data-native-reduce-transparency='true'] .hm-mobile-brain-header-identity { background:#faf9f4; backdrop-filter:none; }
 @media (prefers-reduced-transparency:reduce) { .hm-mobile-brain-header-identity { background:#faf9f4; backdrop-filter:none; } }
 
-/* The native Brain footer currently owns only the ChatGPT connection entry.
-   Temporarily hide it on all screen sizes; retain the native connection flow. */
-[data-brain-chat] [data-conversation-page-footer] { display: none; }

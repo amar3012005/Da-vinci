@@ -1,0 +1,8 @@
+/* The original logo connection entry belongs to the empty Brain page only. */
+[data-brain-chat] .hm-chatgpt-footer { display: none; position: absolute; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 5; text-align: center; }
+[data-brain-chat]:has([data-phase="hero"]) .hm-chatgpt-footer { display: block; }
+.hm-chatgpt-connection { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; padding: 5px 8px; border: 0; background: transparent; color: #666; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.hm-chatgpt-connection:hover { text-decoration: underline; }
+.hm-chatgpt-marks { display: flex; align-items: center; justify-content: center; gap: 10px; color: #222; }
+.hm-chatgpt-dots { display: flex; align-items: center; gap: 5px; }
+.hm-chatgpt-dots i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .35; }
