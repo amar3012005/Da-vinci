@@ -9,7 +9,10 @@ export function workspaceDocumentRedirect(input) {
   const url = new URL(input);
   if (url.origin !== RUNTIME_ORIGIN) return null;
   if (isEmployeePage(url.pathname) || url.pathname === '/hivemind/apps/connected') return null;
-  if (url.pathname !== '/' && !/^\/hivemind(?:\/|$)/.test(url.pathname)) return null;
+  // Restrict authority changes to UI documents; dreamer RPC and future
+  // transport endpoints must retain same-origin authentication.
+  if (!['/', '/hivemind', '/hivemind/', '/hivemind/login'].includes(url.pathname)
+    && !/^\/hivemind\/app(?:\/|$)/.test(url.pathname)) return null;
   url.host = new URL(MAIN_ORIGIN).host;
   url.searchParams.delete('native_pane');
   if (url.pathname === '/' || url.pathname === '/hivemind') url.pathname = '/hivemind/app/overview/new';

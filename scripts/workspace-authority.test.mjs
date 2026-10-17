@@ -11,3 +11,10 @@ test('sign in preserves only a validated HyperAgent destination without nested n
  assert.equal(trustedRuntimeReturn(login.search),RUNTIME_ORIGIN+'/hivemind/app/employee/harness/session/abc?auth=callback');
  for(const target of ['https://evil.test/hivemind/app/employee/harness',RUNTIME_ORIGIN+'/hivemind/app/overview/new', 'not a URL']) assert.equal(trustedRuntimeReturn('?runtime_return_to='+encodeURIComponent(target)),null);
 });
+
+test('native dreamer APIs never redirect authenticated requests across origins', () => {
+ for (const endpoint of ['credits', 'connectors', 'settings', 'agenda']) {
+   assert.equal(workspaceDocumentRedirect(RUNTIME_ORIGIN + '/hivemind/dreamer/' + endpoint + '?session=test'), null);
+ }
+ assert.equal(workspaceDocumentRedirect(RUNTIME_ORIGIN + '/hivemind/future-transport'), null);
+});
