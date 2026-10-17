@@ -11,7 +11,7 @@ test('enrollment preserves tenant authentication without forwarding other creden
   assert.equal(response.status, 200);
   assert.equal(forwarded.url, 'https://dots.singulancelabs.com/api/hivemind/setup');
   assert.equal(forwarded.init.headers.get('cookie'), 'hm_cp_session=company');
-  assert.equal(forwarded.init.headers.get('origin'), origin);
+  assert.equal(forwarded.init.headers.get('origin'), 'https://dots.singulancelabs.com');
   assert.deepEqual(JSON.parse(forwarded.init.body), {action:'enable_private_writes',confirm:true});
   assert.equal(forwarded.init.headers.get('authorization'), null);
   assert.equal(forwarded.init.headers.get('x-org-id'), null);

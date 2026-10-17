@@ -14,7 +14,9 @@ export async function proxyRuntimeTeamMemory(request) {
     finally { reader.releaseLock(); }
   }
   const headers = new Headers({ cookie, accept: 'application/json' });
-  if (origin) headers.set('origin', origin);
+  // The facade validated the browser origin above; the fixed upstream receives
+  // its own same-origin setup request, with the original authenticated cookie.
+  headers.set('origin', 'https://dots.singulancelabs.com');
   if (request.headers.has('sec-fetch-site')) headers.set('sec-fetch-site', request.headers.get('sec-fetch-site'));
   if (request.method === 'POST') headers.set('content-type', 'application/json');
   try {
