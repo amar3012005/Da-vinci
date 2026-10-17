@@ -197,6 +197,7 @@ export default function Sidebar({
   const [nativeRooms, setRooms] = useState([]);
   const [dotRooms, setDotRooms] = useState({});
   const [liveDotRooms, setLiveDotRooms] = useState({});
+  const liveDotSnapshot = useRef(null);
   const [scheduledEmployees, setScheduledEmployees] = useState([]);
   const rooms = [...nativeRooms, ...Object.values(dotRooms).flat(), ...Object.values(liveDotRooms).flat(), ...scheduledEmployees.map(id => ({ id, scheduled: true, scheduleOnly: true, updatedAt: 0 }))];
   const dotReadAt = useRef({});
@@ -279,16 +280,18 @@ export default function Sidebar({
     const schedules = event => setScheduledEmployees(Array.isArray(event.detail?.employees) ? event.detail.employees.filter(id => typeof id === 'string') : []);
     setScheduledEmployees([]);
     setLiveDotRooms({});
+    liveDotSnapshot.current = null;
     window.addEventListener('hivemind:agent-schedules', schedules);
     window.dispatchEvent(new Event('hivemind:request-agent-schedules'));
     setRooms([]);
     setDotRooms({});
     const dotActivity = event => {
-      if (event.detail?.clear === true) { setLiveDotRooms({}); setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous)); return; }
+      if (event.detail?.clear === true) { liveDotSnapshot.current = null; setLiveDotRooms({}); setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous)); return; }
       const employeeId = event.detail?.employeeId;
       if (typeof employeeId !== 'string' || !Array.isArray(event.detail?.rooms)) return;
       const entries = event.detail.employees ?? [{ employeeId, dotId: event.detail.dotId, rooms: event.detail.rooms }];
-      if (entries.some(entry => entry.rooms?.some(room => room.live === true))) {
+      if (Array.isArray(entries) && entries.length <= 64 && entries.some(entry => entry.rooms?.some(room => room.live === true))) {
+        liveDotSnapshot.current = entries;
         setLiveDotRooms(ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current));
         return;
       }
@@ -312,6 +315,10 @@ export default function Sidebar({
     if (boundEmployee) setSelectedAgent(routeEmployeeId);
     else if (!/^\/hivemind\/app\/(overview|employee\/harness)(\/|$)/.test(location.pathname)) setSelectedAgent(null);
   }, [location.pathname, contextPath, team]);
+
+  useEffect(() => {
+    if (liveDotSnapshot.current) setLiveDotRooms(ownedOpenDotRoomStatuses(liveDotSnapshot.current, team, dotReadAt.current));
+  }, [team]);
 
   const openAgent = async (event, agent) => {
     event.preventDefault();
