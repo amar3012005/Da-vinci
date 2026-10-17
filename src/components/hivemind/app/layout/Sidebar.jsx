@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
 import WorkspaceModeSwitcher from './WorkspaceModeSwitcher';
 import BrainModeIcon from './BrainModeIcon';
+import DesktopBrainNavigation from './DesktopBrainNavigation';
 import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
 import {
@@ -434,6 +435,7 @@ export default function Sidebar({
   const workspaceModeSwitcher = <WorkspaceModeSwitcher collapsed={collapsed} />;
 
   const sidebarWidth = collapsed ? 'w-[68px]' : 'w-[300px]';
+  const desktopBrain = !collapsed && !mobileDrawer && !mobileRoster && !teamMode && activeSection !== 'tara';
 
   return (
     <aside
@@ -506,8 +508,9 @@ export default function Sidebar({
 
       {(teamMode || mobileRoster) && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">Could not refresh our team. <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>Retry</button></p>}
       {teamError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{teamError}</p>}
+      {desktopBrain && <DesktopBrainNavigation sections={navSections} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} />}
       {/* Navigation */}
-      <nav className="mobile-roster-legacy flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4">
+      <nav className={`${desktopBrain ? 'desktop-brain-legacy ' : ''}mobile-roster-legacy flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4`}>
         {navSections.map((section, si) => (
           <div key={si}>
             {section.label && !collapsed && (
@@ -628,7 +631,7 @@ export default function Sidebar({
       </nav>
 
       {/* Fixed bottom: Account nav + upgrade banner + user/logout */}
-      <div className="mobile-roster-legacy flex-shrink-0 border-t border-[#e3e0db]">
+      <div className={`${desktopBrain ? 'desktop-brain-legacy ' : ''}mobile-roster-legacy flex-shrink-0 border-t border-[#e3e0db]`}>
         {collapsed && (
           <div className="pt-2">
             <CreditBalance credits={usage?.credits} compact collapsed />
