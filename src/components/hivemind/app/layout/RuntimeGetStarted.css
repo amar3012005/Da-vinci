@@ -1,13 +1,14 @@
 .hm-runtime-workspace { display:flex; min-width:0; min-height:0; height:calc(var(--hm-app-viewport-height,100dvh) - 56px); }
 .hm-runtime-workspace > main { flex:1; min-width:0; min-height:0; }
-.hm-runtime-start { box-sizing:border-box; flex:0 0 272px; width:272px; padding:24px 14px; overflow-y:auto; border-right:1px solid #e7e5e1; background:#f7f7f5; }
-.hm-runtime-start-card { border:1px solid #e3e3e0; border-radius:20px; background:#fff; box-shadow:0 3px 8px #1a1a1a06; padding:20px 16px 12px; color:#242728; }
+.hm-runtime-start { box-sizing:border-box; flex:0 0 272px; width:272px; display:flex; flex-direction:column; padding:24px 14px; overflow-y:auto; border-right:1px solid #e7e5e1; background:#f7f7f5; }
+.hm-runtime-start-card { margin-top:auto; flex-shrink:0; border:1px solid #e3e3e0; border-radius:20px; background:#fff; box-shadow:0 3px 8px #1a1a1a06; padding:20px 16px 12px; color:#242728; }
 .hm-runtime-start-card summary { cursor:pointer; display:flex; flex-wrap:wrap; align-items:flex-start; gap:12px 4px; list-style:none; }
 .hm-runtime-start-card summary::-webkit-details-marker { display:none; }
 .hm-runtime-start-title { flex:1; font-size:16px; font-weight:600; line-height:1.45; }
 .hm-runtime-start-count { display:flex; align-items:center; gap:4px; color:#8a8d8c; font-size:12px; padding-top:3px; white-space:nowrap; }
-.hm-runtime-start-count svg { transition:transform .15s; }
-.hm-runtime-start-card[open] .hm-runtime-start-count svg { transform:rotate(180deg); }
+.hm-runtime-start-card:not([open]) .hm-runtime-start-count,
+.hm-runtime-start-card:not([open]) .hm-runtime-start-progress { display:none; }
+.hm-runtime-start-card:not([open]) { padding-bottom:20px; }
 .hm-runtime-start-progress { display:block; flex-basis:100%; height:5px; background:#e9e9e7; border-radius:8px; overflow:hidden; margin:3px 0 8px; }
 .hm-runtime-start-progress > span { display:block; height:100%; background:#242928; border-radius:inherit; transition:width .2s; }
 .hm-runtime-start-card ol { list-style:none; padding:0; margin:12px 0 10px; display:grid; gap:3px; }

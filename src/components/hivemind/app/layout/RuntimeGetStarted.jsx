@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, Minus } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { openCompanyRuntime } from '../shared/openCompanyRuntime';
 import './RuntimeGetStarted.css';
@@ -78,7 +78,7 @@ export default function RuntimeGetStarted({ scope }) {
   };
   return <aside className="hm-runtime-start" aria-label="Get started with Runtime">
     <details className="hm-runtime-start-card" open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}>
-      <summary><span className="hm-runtime-start-title">Get started with Runtime</span><span className="hm-runtime-start-count">{count} of 6 <ChevronDown size={14} aria-hidden="true" /></span>
+      <summary><span className="hm-runtime-start-title">Getting Started</span><span className="hm-runtime-start-count">{count} of 6 <Minus size={16} aria-hidden="true" /></span>
         <span className="hm-runtime-start-progress" role="progressbar" aria-label="Getting started progress" aria-valuemin={0} aria-valuemax={6} aria-valuenow={count}><span style={{ width: `${count / 6 * 100}%` }} /></span>
       </summary>
       <ol>{STEPS.map(([key, label, description]) => <li key={key} data-complete={progress[key] === true}>
