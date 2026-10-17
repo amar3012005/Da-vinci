@@ -17,8 +17,9 @@ const sections = [
   { items: [link('workspace', 'Workspace Admin')] },
   { items: [link('mcp', 'MCP Server'), link('keys', 'API Keys'), link('evaluation', 'Evaluation')] },
 ];
-function setup(path = '/hivemind/app/memories') {
-  return render(<MemoryRouter initialEntries={[path]}><DesktopBrainNavigation sections={sections} user={{ display_name: 'Amar' }} planLabel="Enterprise Plan" credits={{ percent_used: 41, remaining: 2358, included: 4000 }} logout={jest.fn()}/></MemoryRouter>);
+const testBanner = { image: "/images/brain-sidebar-update.svg", href: "/hivemind/app/overview", title: "Workspace update", label: "Explore your Brain" };
+function setup(path = '/hivemind/app/memories', banner = testBanner) {
+  return render(<MemoryRouter initialEntries={[path]}><DesktopBrainNavigation sections={sections} user={{ display_name: 'Amar' }} planLabel="Enterprise Plan" credits={{ percent_used: 41, remaining: 2358, included: 4000 }} logout={jest.fn()} banner={banner}/></MemoryRouter>);
 }
 
 test('advanced destinations stay collapsed until explicitly opened, and keep native routes', () => {
@@ -92,4 +93,12 @@ test('flyout coordinates account for the production shell CSS zoom', () => {
     expect(parseFloat(flyout.style.left) * 0.9).toBeCloseTo(249);
     expect(parseFloat(flyout.style.top) * 0.9).toBeCloseTo(300);
   } finally { measure.mockRestore(); width.mockRestore(); }
+});
+
+
+test('an empty banner slot reserves the artwork space without invented content', () => {
+  setup('/hivemind/app/memories', null);
+  expect(screen.getByRole('img', { name: 'Reserved space for workspace updates' })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Explore your Brain' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Your Brain' })).not.toBeInTheDocument();
 });

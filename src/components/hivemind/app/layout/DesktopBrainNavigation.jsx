@@ -61,7 +61,6 @@ export default function DesktopBrainNavigation({ sections, user, planLabel, cred
 
   return <div className="desktop-brain-slice" data-desktop-brain>
     <nav className="brain-destinations" aria-label="Brain navigation">
-      <h2 className="brain-section-title">Your Brain</h2>
       <div className="brain-icon-grid">{destinations.map(([kind, suffix]) => {
         const item = items.find(entry => entry.to.endsWith(suffix));
         return item ? <NavLink key={kind} to={item.to} className={({ isActive }) => `brain-icon-link${isActive ? ' is-current' : ''}`}><BrainFabricIcon kind={kind}/><span>{kind === 'uploads' ? 'Uploads' : item.label}</span></NavLink> : null;
@@ -80,10 +79,10 @@ export default function DesktopBrainNavigation({ sections, user, planLabel, cred
       <div className="brain-account-actions">
         <button type="button" className="brain-footer-link" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))}><Settings size={19}/><span>Account &amp; Settings</span></button>
       </div>
-      {banner && <NavLink className="brain-update-banner" to={banner.href} aria-label={banner.label}>
+      {banner?.image ? <NavLink className="brain-update-banner" to={banner.href} aria-label={banner.label}>
         <img src={banner.image} alt="" width="268" height="112" loading="lazy"/>
         <div><strong>{banner.title}</strong><span>{banner.label}</span></div>
-      </NavLink>}
+      </NavLink> : <div className="brain-update-banner brain-update-banner-empty" role="img" aria-label="Reserved space for workspace updates" />}
       {user && <div className="brain-account-usage"><div className="brain-account-name"><span className="brain-account-initial" aria-hidden="true">{(user.display_name || user.email || 'U')[0].toUpperCase()}</span><div><strong>{user.display_name || user.email || 'User'}</strong><span>{planLabel}</span></div></div><CreditBalance credits={credits} inline/></div>}
       <button type="button" onClick={logout} className="brain-footer-link brain-sign-out"><LogOut size={17}/><span>Sign out</span></button>
     </footer>
