@@ -1,7 +1,7 @@
 // Each native client keeps its own document, cookies, module graph and transport.
 export const PANE_ORIGINS = { brain: 'https://next.singulancelabs.com', runtime: 'https://runtime-runner.singulancelabs.com' };
-export const PANE_EVENTS = ['hivemind:agent-rooms', 'hivemind:agent-selected', 'hivemind:agent-schedules', 'hivemind:close-sidebar', 'hivemind:open-sidebar'];
-export const PANE_REQUESTS = ['hivemind:request-agent-rooms', 'hivemind:request-agent-schedules'];
+export const PANE_EVENTS = ['hivemind:agent-rooms', 'hivemind:agent-selected', 'hivemind:agent-schedules', 'hivemind:runtime-get-started', 'hivemind:close-sidebar', 'hivemind:open-sidebar'];
+export const PANE_REQUESTS = ['hivemind:request-agent-rooms', 'hivemind:request-agent-schedules', 'hivemind:request-get-started'];
 export function paneForPath(path = '') {
   if (/^\/hivemind\/app\/overview(?:\/(?:new|dreaming|session\/[A-Za-z0-9_-]+))?\/?$/.test(path)) return 'brain';
   if (/^\/hivemind\/app\/employee\/harness(?:\/(?:new|session\/[A-Za-z0-9_-]+))?\/?$/.test(path)) return 'runtime';
