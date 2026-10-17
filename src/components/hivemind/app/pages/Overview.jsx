@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import OverviewTour, { useOverviewTour } from '../shared/OverviewTour';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
@@ -1499,7 +1498,6 @@ function LegacyOverview() {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   // First-visit guided tour — glass overlay + arrows to each sidebar page.
-  const tour = useOverviewTour();
   const chatInputRef = useRef(null);
 
   // Mobile QR promo — single bottom-right corner widget; tapping it slides
@@ -1625,9 +1623,6 @@ function LegacyOverview() {
   return (
     <div className="max-w-6xl mx-auto font-['Space_Grotesk'] flex flex-col h-[calc(100vh-104px)] overflow-hidden">
       {/* First-visit guided tour */}
-      <AnimatePresence>
-        {tour.open && <OverviewTour onClose={tour.close} userName={welcomeName} />}
-      </AnimatePresence>
 
       {/* Status bar — flat white card matching every other page's theme:
           badge + live clock on the left, the numbers that matter on the right. */}
@@ -1644,21 +1639,6 @@ function LegacyOverview() {
 
         {/* Live clock */}
         <ConsoleClock />
-
-        {/* Re-entry into the first-run tour. Dismissing it is permanent
-            (localStorage), so without this a user who skipped once could never
-            see it again. Quiet by default, beside the clock. */}
-        <button
-          type="button"
-          onClick={tour.reopen}
-          title="Replay the guided tour"
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-[#e3e0db]
-            px-2.5 py-1.5 text-[11px] font-medium text-[#6b6b70] hover:text-[#0a0a0a]
-            hover:border-[#c9c6c0] transition-colors"
-        >
-          <HelpCircle size={13} />
-          Guide
-        </button>
 
         {/* The numbers that matter */}
         <div className="ml-auto flex items-center gap-5 flex-wrap">

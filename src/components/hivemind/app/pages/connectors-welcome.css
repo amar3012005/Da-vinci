@@ -1,11 +1,17 @@
-.connectors-welcome { padding: 0; border: 1px solid #3b3b3b; border-radius: 18px; background: #141414; color: #fff; width: min(840px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); margin: auto; overflow: auto; box-shadow: 0 24px 90px #0006; }
+.connectors-welcome { padding: 0; border: 1px solid #e7e5df; border-radius: 18px; background: #f9f9f6; color: #202326; width: min(840px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); margin: auto; overflow: auto; box-shadow: 0 24px 90px #0006; }
 .connectors-welcome::backdrop { background: #0008; }
 .connectors-welcome-card { position: relative; }
 .connectors-welcome-artwork { overflow: hidden; aspect-ratio: 1050 / 600; }
 .connectors-welcome-artwork > img { display: block; width: 100%; height: auto; transform: scale(1.45); }
-.connectors-welcome-close { position: absolute; z-index: 1; top: 12px; right: 12px; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #282828; color: #ddd; }
-.connectors-welcome-close:hover { background: #3a3a3a; color: #fff; }
+.connectors-welcome-close { position: absolute; z-index: 1; top: 12px; right: 12px; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: transparent; color: #727471; }
+.connectors-welcome-close:hover { background: #eae9e3; color: #202326; }
 .connectors-welcome-action { display: flex; justify-content: center; padding: 0 24px 24px; }
-.connectors-welcome-action button { padding: 10px 26px; border: 1px solid #707070; border-radius: 9px; background: #2c2c2c; color: #fff; font-size: 14px; }
+.connectors-welcome-action button { padding: 10px 26px; border: 1px solid #707070; border-radius: 9px; background: #202326; color: #fff; font-size: 14px; }
 .connectors-welcome-action button:hover { background: #383838; }
-.connectors-welcome button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.connectors-welcome button:focus-visible { outline: 2px solid #117dff; outline-offset: 3px; }
+
+.feature-welcome-chrome { height: 56px; display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid #e9e7e1; }
+.feature-window-dots { display: flex; gap: 9px; }
+.feature-window-dots i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+.feature-window-dots i:nth-child(2) { background: #febc2e; }
+.feature-window-dots i:nth-child(3) { background: #28c840; }

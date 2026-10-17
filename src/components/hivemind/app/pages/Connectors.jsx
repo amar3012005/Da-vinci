@@ -46,7 +46,6 @@ import ApiKeyPrompt from '../shared/ApiKeyPrompt';
 import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
 import WhatsAppQRModal from './WhatsAppQRModal';
-import { PageWalkthrough, CONNECTORS_STEPS } from '../shared/Walkthrough';
 import UsageTracker from '../components/UsageTracker';
 import ComposioToolkitBrowser from './ComposioToolkitBrowser';
 import RuntimeEventSubscriptions from './RuntimeEventSubscriptions';
@@ -3564,7 +3563,7 @@ export default function Connectors() {
   return (
     <div className="w-full max-w-none space-y-6">
       <ConnectorsWelcome />
-      <PageWalkthrough pageKey="connectors" steps={CONNECTORS_STEPS} />
+
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (

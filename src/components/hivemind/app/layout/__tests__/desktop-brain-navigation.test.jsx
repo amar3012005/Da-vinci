@@ -28,7 +28,7 @@ test('the supplied banner links to Connectors without covering the artwork with 
   setup('/hivemind/app/memories', brainSidebarBanner);
   const banner = screen.getByRole('link', { name: 'Connect your apps to HIVEMIND' });
   expect(banner).toHaveAttribute('href', '/hivemind/app/connectors');
-  expect(banner.querySelector('img')).toHaveAttribute('src', '/images/announcements/unlock-proactive-intelligence.png');
+  expect(banner.querySelector('img')).toHaveAttribute('src', '/images/feature-banners/connectors.webp');
   expect(banner.textContent).toBe('');
   expect(screen.queryByRole('button', { name: 'Next banner' })).not.toBeInTheDocument();
 });

@@ -1128,7 +1128,7 @@ export default function McpServer() {
 
   const source = searchParams.get('source');
   const connector = searchParams.get('connector');
-  const isGuidedWalkthrough = source === 'connectors';
+  const isGuidedWalkthrough = false; // The shared Brain feature card replaces the visual walkthrough.
   const recommendedPrompt = connector === 'claude-code' || connector === 'cursor' || connector === 'vscode'
     ? 'coding'
     : 'agent';

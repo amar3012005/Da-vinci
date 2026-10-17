@@ -2,8 +2,8 @@ import React, { useEffect, useRef } from 'react';
 
 const DURATION = 1500;
 const GLYPHS = ' .,:;-+=*abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&';
-function crop(context, image, width, height) {
-  const scale = Math.max(width / image.width, height / image.height) * 1.45;
+function crop(context, image, width, height, zoom = 1.45) {
+  const scale = Math.max(width / image.width, height / image.height) * zoom;
   context.drawImage(image, (width - image.width * scale) / 2, (height - image.height * scale) / 2, image.width * scale, image.height * scale);
 }
 function loadImage(source) {
@@ -12,18 +12,18 @@ function loadImage(source) {
     image.onload = () => resolve(image); image.onerror = reject; image.src = source;
   });
 }
-function sample(image, columns, rows, width, height) {
+function sample(image, columns, rows, width, height, zoom = 1.45) {
   const canvas = document.createElement('canvas'); canvas.width = columns; canvas.height = rows;
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Canvas unavailable');
   context.scale(columns / width, rows / height);
-  crop(context, image, width, height);
+  crop(context, image, width, height, zoom);
   return context.getImageData(0, 0, columns, rows).data;
 }
 
 // A short image → character field → next image diffusion, sampled from the
 // actual artwork. No video, WebGL, library or permanent rendering loop.
-export default function AsciiBannerTransition({ from, to, onFinish }) {
+export default function AsciiBannerTransition({ from, to, fromZoom = 1.45, toZoom = 1.45, onFinish }) {
   const canvas = useRef(null);
   useEffect(() => {
     let cancelled = false, frame, started, lastDraw = -100;
@@ -42,7 +42,7 @@ export default function AsciiBannerTransition({ from, to, onFinish }) {
       context.scale(ratio, ratio);
       const cellWidth = 5, cellHeight = 7;
       const columns = Math.ceil(width / cellWidth), rows = Math.ceil(height / cellHeight);
-      const a = sample(before, columns, rows, width, height), b = sample(after, columns, rows, width, height);
+      const a = sample(before, columns, rows, width, height, fromZoom), b = sample(after, columns, rows, width, height, toZoom);
       const draw = timestamp => {
         if (cancelled) return;
         started ??= timestamp;
@@ -52,7 +52,7 @@ export default function AsciiBannerTransition({ from, to, onFinish }) {
           const strength = Math.sin(Math.PI * progress);
           context.globalAlpha = 1; context.fillStyle = '#141414'; context.fillRect(0, 0, width, height);
           context.globalAlpha = 1 - strength;
-          crop(context, progress < 0.5 ? before : after, width, height);
+          crop(context, progress < 0.5 ? before : after, width, height, progress < 0.5 ? fromZoom : toZoom);
           context.globalAlpha = strength; context.font = '7px ui-monospace, SFMono-Regular, monospace'; context.textBaseline = 'top';
           for (let y = 0; y < rows; y++) for (let x = 0; x < columns; x++) {
             const cell = y * columns + x, offset = cell * 4;
@@ -74,6 +74,6 @@ export default function AsciiBannerTransition({ from, to, onFinish }) {
       frame = requestAnimationFrame(draw);
     }).catch(finish);
     return () => { cancelled = true; cancelAnimationFrame(frame); window.clearTimeout(deadline); };
-  }, [from, to, onFinish]);
+  }, [from, to, fromZoom, toZoom, onFinish]);
   return <canvas ref={canvas} className="brain-banner-ascii" aria-hidden="true" data-ascii-diffusion="true"/>;
 }

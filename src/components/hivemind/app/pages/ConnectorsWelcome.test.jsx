@@ -8,8 +8,8 @@ beforeAll(() => {
 });
 test('shows the supplied artwork on entry, dismisses without navigation, and opens on a later entry', () => {
   const view = render(<ConnectorsWelcome/>);
-  expect(screen.getByRole('dialog', { name: 'Unlock ProActive Intelligence' })).toBeVisible();
-  expect(screen.getByRole('img')).toHaveAttribute('src', '/images/announcements/unlock-proactive-intelligence.png');
+  expect(screen.getByRole('dialog', { name: 'Connectors' })).toBeVisible();
+  expect(screen.getByRole('img')).toHaveAttribute('src', '/images/feature-banners/connectors.webp');
   expect(document.body.style.overflow).toBe('hidden');
   fireEvent.click(screen.getByRole('button', { name: 'Connect apps' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

@@ -54,7 +54,6 @@ import {
   getTemporalCutoff,
 } from "./MemoryGraphTemporal";
 import MemoryMoss from "./MemoryMoss";
-import { PageWalkthrough, GRAPH_STEPS } from "../shared/Walkthrough";
 
 /* ─── Constants ──────────────────────────────────────────────────── */
 // Presentation switch: preserve the timeline for a future UI, but keep the
@@ -1412,7 +1411,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
   return (
     <div className="relative h-full min-h-0 flex flex-col overflow-hidden" style={atmosphereStyle}>
-      <PageWalkthrough pageKey="memory-graph-3d" steps={GRAPH_STEPS} />
+
       {/* ── Compact unified toolbar ── single row, theme-consistent ── */}
       <div
         className="shrink-0 px-3 sm:px-5 py-3 flex items-center gap-2.5 z-20 overflow-x-auto"

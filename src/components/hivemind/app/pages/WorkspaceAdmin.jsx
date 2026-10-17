@@ -10,7 +10,6 @@ import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
 import ShareInviteModal from '../components/ShareInviteModal';
 import CognitionSettings from '../components/CognitionSettings';
-import { PageWalkthrough, WORKSPACE_ADMIN_STEPS } from '../shared/Walkthrough';
 
 // Sub-pages — lazy so the tab strip is fast even when admin pages bloat.
 const AdminUsers       = React.lazy(() => import('./AdminUsers'));
@@ -79,7 +78,7 @@ export default function WorkspaceAdmin() {
 
   return (
     <div className="max-w-[1200px] mx-auto">
-      <PageWalkthrough pageKey="workspace-admin" steps={WORKSPACE_ADMIN_STEPS} />
+
       {/* Header */}
       <header className="mb-5">
         <div className="flex items-center gap-2 text-[11px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1">

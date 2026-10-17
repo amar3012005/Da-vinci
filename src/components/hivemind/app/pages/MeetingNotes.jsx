@@ -1225,10 +1225,6 @@ export default function MeetingNotes() {
 
             {status === 'idle' && !insights && (
               <div className="text-[12px] text-[#737373] leading-relaxed mb-4">
-                <p className="font-medium text-[#525252] mb-1">{t('meetingnotes.howItWorks', 'How it works')}</p>
-                <p>1. {t('meetingnotes.step1', 'Click “Start transcribing” to record the meeting.')}</p>
-                <p>2. {t('meetingnotes.step2', 'Add notes below — the AI uses them to make insights smarter.')}</p>
-                <p>3. {t('meetingnotes.step3', 'Click “Stop” → full transcript + insights are generated.')}</p>
                 <p className="mt-2 text-[11px] text-[#a3a3a3]">{t('meetingnotes.consent', 'By recording, you confirm everyone present has given consent.')}</p>
               </div>
             )}

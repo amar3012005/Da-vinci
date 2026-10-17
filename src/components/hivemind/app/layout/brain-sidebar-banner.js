@@ -1,19 +1,3 @@
-import { proactiveIntelligenceArtwork } from '../shared/proactive-intelligence';
-import { uploadEverythingArtwork } from '../shared/upload-everything-artwork';
-
-// Add future slides here. Images carry their own artwork/copy; labels provide
-// an accessible destination without duplicating text over the supplied image.
-export const brainSidebarBanner = [
-  {
-    id: 'unlock-proactive-intelligence',
-    ...proactiveIntelligenceArtwork,
-    href: '/hivemind/app/connectors',
-    label: 'Connect your apps to HIVEMIND',
-  },
-  {
-    id: 'upload-everything',
-    ...uploadEverythingArtwork,
-    href: '/hivemind/app/knowledge',
-    label: 'Upload everything to HIVEMIND',
-  },
-];
+import { brainFeatureArtwork } from '../shared/brain-feature-artwork';
+// One banner-only carousel, with destination and art supplied by the page catalog.
+export const brainSidebarBanner = brainFeatureArtwork.map(({ title, ...slide }) => slide);
