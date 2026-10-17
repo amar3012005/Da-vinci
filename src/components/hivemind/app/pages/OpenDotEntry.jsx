@@ -59,7 +59,7 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
     <main className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-white" aria-busy={!ready && !timedOut}>
       {!ready && !timedOut && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-white">
-          <AsciiWorkspaceLoading label="Opening workspace…" />
+          <AsciiWorkspaceLoading label="Connecting…" />
         </div>
       )}
       {timedOut && !ready && (

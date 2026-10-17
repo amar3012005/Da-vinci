@@ -1,3 +1,4 @@
+import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { fetchHarness } from '../shared/harness-fetch';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
@@ -122,9 +123,7 @@ export default function HarnessChatSurface({ legacy }) {
       )}
       {connecting || mode === null ? (
         <div className="flex min-h-[360px] flex-1 items-center justify-center bg-[#faf9f4]">
-          <div className="h-1 w-44 overflow-hidden rounded-full bg-[#e7e4dc]" aria-label={notice ? 'HIVE-MIND chat unavailable' : 'Opening HIVE-MIND chat'}>
-            <div className="h-full w-1/2 animate-pulse rounded-full bg-[#117dff]" />
-          </div>
+          <AsciiWorkspaceLoading label={notice ? 'Connection unavailable' : 'Connecting…'} />
         </div>
       ) : mode === 'legacy' ? legacy : null}
     </div>

@@ -187,9 +187,8 @@ export const HARNESS_BOOT_STAGES = [
 
 /** Show the current real boot boundary without a logo or simulated progress. */
 export function LoadingSurface({ stage = 0, dreaming = false }) {
-  const safeStage = Math.max(0, Math.min(stage, HARNESS_BOOT_STAGES.length - 1));
   return <div className="hm-chat-opening">
-    <AsciiWorkspaceLoading label={dreaming ? 'Opening Dreaming…' : `${HARNESS_BOOT_STAGES[safeStage]}…`} />
+    <AsciiWorkspaceLoading label={'Connecting…'} />
   </div>;
 }
 

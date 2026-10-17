@@ -515,7 +515,7 @@ function AppShellContent() {
   // Consult the saved company record; never trust a local 'skipped' marker.
   const companyStatus = companyAdmission.scope === org?.id ? companyAdmission.status : 'checking';
   if (companyStatus !== 'ready') return <div data-hivemind-app-shell className="min-h-[var(--hm-app-viewport-height,100dvh)] bg-[#faf9f4] p-4 sm:p-8">
-    {companyStatus === 'checking' ? <AsciiWorkspaceLoading label="Checking your company setup…" />
+    {companyStatus === 'checking' ? <AsciiWorkspaceLoading label="Connecting…" />
       : companyStatus === 'error' ? <div role="alert" className="mx-auto max-w-lg p-8"><p>We couldn’t check your company setup. Your progress is saved.</p><button type="button" onClick={() => setCompanyRetry(value => value + 1)} className="mt-4 text-[#117dff] underline">Try again</button></div>
       : <React.Suspense fallback={<p role="status">Opening company onboarding…</p>}><HyperOnboarding onComplete={completeCompany} /></React.Suspense>}
     {companyStatus !== 'required' && <button type="button" onClick={() => setAccountOpen(true)} className="fixed bottom-6 right-6 rounded-lg border bg-white px-4 py-2 text-sm">Account & Settings</button>}
@@ -583,7 +583,7 @@ function AppShellContent() {
         <GlobalUploadStrip />
 
         {/* Chat Panel */}
-        {(chatOpen || chatLoaded) && <React.Suspense fallback={<AsciiWorkspaceLoading label="Opening chat…" />}><ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} /></React.Suspense>}
+        {(chatOpen || chatLoaded) && <React.Suspense fallback={<AsciiWorkspaceLoading label="Connecting…" />}><ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} /></React.Suspense>}
 
         {/* Global plan-limit upgrade prompt — reacts to 'hm:plan-limit' */}
         <PlanLimitGate />
