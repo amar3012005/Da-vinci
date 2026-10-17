@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { workspaceDocumentRedirect } from './shared/workspace-authority.mjs';
 import { importPage } from './shared/import-page';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
@@ -128,6 +129,10 @@ function CanonicalCRMRoute() {
  * Mounts under /hivemind/app/* and /hivemind/login
  */
 export default function HiveMindApp() {
+  const authorityLocation = useLocation();
+  const authorityRedirect = workspaceDocumentRedirect(new URL(authorityLocation.pathname + authorityLocation.search + authorityLocation.hash, window.location.origin));
+  useEffect(() => { if (authorityRedirect) window.location.replace(authorityRedirect); }, [authorityRedirect]);
+  if (authorityRedirect) return null;
   const isPlatformAdminHost = typeof window !== 'undefined'
     && window.location.hostname === 'admin.hivemind.singulancelabs.com';
   // The admin host deliberately exposes only the passkey-gated platform

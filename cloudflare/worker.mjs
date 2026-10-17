@@ -1,3 +1,4 @@
+import { workspaceDocumentRedirect } from '../src/components/hivemind/app/shared/workspace-authority.mjs';
 import { proxyModelConnection } from './model-connection.mjs';
 import { proxyRuntimeRecovery } from './runtime-recovery.mjs';
 import runtimeAppsCatalog from '../src/components/hivemind/app/pages/runtime-apps/apps.json' with { type: 'json' };
@@ -502,6 +503,8 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const workspaceRedirect = workspaceDocumentRedirect(url);
+    if (workspaceRedirect && ['GET', 'HEAD'].includes(request.method)) return Response.redirect(workspaceRedirect, 302);
     if (url.searchParams.get('native_pane') === '1') {
       const runtimePane = /^\/hivemind\/app\/employee\/harness(?:\/(?:new|session\/[A-Za-z0-9_-]+))?\/?$/.test(pathname);
       const brainPane = /^\/hivemind\/app\/overview(?:\/(?:new|dreaming|session\/[A-Za-z0-9_-]+))?\/?$/.test(pathname);

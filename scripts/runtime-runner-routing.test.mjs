@@ -28,14 +28,14 @@ test('Runtime native transport selects only Runtime origin and preserves actual 
   } finally { globalThis.fetch = previous; }
 });
 
-test('Brain outer routes remain in the current shell while native panes enforce their own authority', async () => {
+test('Brain documents always redirect to next while correct native panes remain owned', async () => {
   const assets={fetch:async()=>new Response('<html>persistent shell</html>',{headers:{'content-type':'text/html'}})};
   for (const route of ['/hivemind/app/overview/new','/hivemind/app/overview/session/saved']) {
     const response=await worker.fetch(new Request(publicOrigin+route),{...env,ASSETS:assets});
-    assert.equal(response.status,200);assert.match(await response.text(),/persistent shell/);
+    assert.equal(response.status,302);assert.equal(response.headers.get('location'),'https://next.singulancelabs.com'+route);
   }
   const wrong=await worker.fetch(new Request(publicOrigin+'/hivemind/app/overview/session/saved?native_pane=1'),{...env,ASSETS:assets});
-  assert.equal(wrong.status,400);
+  assert.equal(wrong.status,302);assert.equal(wrong.headers.get('location'),'https://next.singulancelabs.com/hivemind/app/overview/session/saved');
   const correct=await worker.fetch(new Request('https://next.singulancelabs.com/hivemind/app/overview/session/saved?native_pane=1'),{...env,ASSETS:assets});
   assert.equal(correct.status,200);assert.equal(correct.headers.get('content-security-policy'),'frame-ancestors https://next.singulancelabs.com https://runtime-runner.singulancelabs.com');
 });

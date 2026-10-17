@@ -1,3 +1,4 @@
+import { trustedRuntimeReturn } from '../shared/workspace-authority.mjs';
 import HeroCtas from '../../../mobile/HeroCtas';
 import { mobileAuthReturn } from '../shared/mobile-auth-return';
 import { isNativeApp } from '../shared/native-app';
@@ -338,6 +339,8 @@ export default function LoginPage() {
       // params encoded inside). Pass through verbatim.
       return cliReturnTo;
     }
+    const runtimeReturn = trustedRuntimeReturn(location.search);
+    if (runtimeReturn) return runtimeReturn;
     const from = location.state && location.state.from;
     if (!from || !from.pathname) return null;
     // Don't bounce back to /login itself.
@@ -572,7 +575,9 @@ export default function LoginPage() {
         window.location.href = cliReturnTo;
         return;
       }
-      const from = location.state && location.state.from;
+      const runtimeReturn = trustedRuntimeReturn(location.search);
+    if (runtimeReturn) return runtimeReturn;
+    const from = location.state && location.state.from;
       const hasDeepLink = from && from.pathname && !from.pathname.startsWith('/hivemind/login');
       const isDesktopAppLanding = hasDeepLink && !isNativeChatDeepLink(from.pathname) && from.pathname.startsWith('/hivemind/app/');
       const dest = hasDeepLink && !(isMobileAuthClient() && isDesktopAppLanding)
