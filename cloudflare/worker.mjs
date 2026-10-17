@@ -1,3 +1,4 @@
+import { proxyModelConnection } from './model-connection.mjs';
 import { proxyRuntimeRecovery } from './runtime-recovery.mjs';
 import runtimeAppsCatalog from '../src/components/hivemind/app/pages/runtime-apps/apps.json';
 import runtimeAppsStyles from '../src/components/hivemind/app/pages/runtime-apps/styles.js';
@@ -549,6 +550,7 @@ export default {
       destination.host = authority.host;
       return nativeRunnerHandoff(destination);
     }
+    if (pathname.startsWith('/api/hivemind/model-connection/')) return proxyModelConnection(request, env);
     const openDotEntryPath = isOpenDotEntryPath(pathname);
     if (url.protocol === 'http:' && env.ENVIRONMENT !== 'development') {
       url.protocol = 'https:';
