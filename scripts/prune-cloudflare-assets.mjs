@@ -32,7 +32,8 @@ const allowedExtensions = new Set([
   '.txt', '.wasm', '.webp', '.woff', '.woff2', '.xml',
 ]);
 const maxFileBytes = 25 * 1024 * 1024;
-const maxArtifactBytes = 100 * 1024 * 1024;
+// Current public assets plus a bounded 40 MiB of previous hashed build output.
+const maxArtifactBytes = 140 * 1024 * 1024;
 
 function filesUnder(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -58,7 +59,7 @@ for (const path of buildFiles) {
 }
 
 if (artifactBytes > maxArtifactBytes) {
-  throw new Error(`Refusing ${(artifactBytes / 1024 / 1024).toFixed(1)} MiB Cloudflare artifact; budget is 100 MiB.`);
+  throw new Error(`Refusing ${(artifactBytes / 1024 / 1024).toFixed(1)} MiB Cloudflare artifact; budget is 140 MiB.`);
 }
 
 console.log(`Cloudflare artifact verified: ${buildFiles.length} files, ${(artifactBytes / 1024 / 1024).toFixed(1)} MiB.`);
