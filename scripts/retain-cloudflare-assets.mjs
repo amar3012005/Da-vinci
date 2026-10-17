@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 const ORIGIN = 'https://next.singulancelabs.com';
 const HISTORY = '/asset-history.json';
@@ -16,7 +17,16 @@ const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 // Only public, content-addressed build output crosses release boundaries.
 // Never retain documents, manifests, cookies, bootstrap or API responses.
 export async function snapshotProductionAssets(fetcher = fetch) {
-  const get = path => fetcher(new URL(path, ORIGIN), {
+  // Retry transient transport failures only; validation still fails closed.
+  const request = async (url, options) => {
+    for (let attempt = 0; ; attempt++) {
+      try { return await fetcher(url, { ...options, signal: AbortSignal.timeout(30000) }); } catch (error) {
+        if (attempt === 3) throw new Error(`Cannot download retained public asset ${url.pathname}`, { cause: error });
+        await delay(300 * (attempt + 1));
+      }
+    }
+  };
+  const get = path => request(new URL(path, ORIGIN), {
     cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30000),
   });
   const manifestResponse = await get('/asset-manifest.json');
@@ -34,7 +44,7 @@ export async function snapshotProductionAssets(fetcher = fetch) {
   } else if (historyResponse.status !== 404 && !/text\/html/i.test(historyResponse.headers.get('content-type') || '')) {
     throw new Error('Cannot read production asset history');
   } else {
-    const recoveryResponse = await fetcher(new URL('/asset-manifest.json', RECOVERY_ORIGIN), {
+    const recoveryResponse = await request(new URL('/asset-manifest.json', RECOVERY_ORIGIN), {
       cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30000),
     });
     if (!recoveryResponse.ok) throw new Error('Cannot recover the observed older release');
@@ -51,11 +61,11 @@ export async function snapshotProductionAssets(fetcher = fetch) {
   const files = new Map();
   let bytes = 0;
   let cursor = 0;
-  await Promise.all(Array.from({ length: 8 }, async () => {
+  await Promise.all(Array.from({ length: 3 }, async () => {
     while (cursor < paths.length) {
       const path = paths[cursor++];
       const response = recoveryPaths.has(path) && !current.includes(path)
-        ? await fetcher(new URL(path, RECOVERY_ORIGIN), { redirect: 'error', signal: AbortSignal.timeout(30000) })
+        ? await request(new URL(path, RECOVERY_ORIGIN), { redirect: 'error', signal: AbortSignal.timeout(30000) })
         : await get(path);
       const type = response.headers.get('content-type') || '';
       if (!response.ok || /text\/html/i.test(type)
