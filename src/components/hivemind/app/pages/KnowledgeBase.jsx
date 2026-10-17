@@ -1,4 +1,6 @@
 import { TEXT_PAGE_FORMATS, textPageEquivalents, officePageCount } from './UploadPageCount';
+import ArtworkWelcome from '../shared/ArtworkWelcome';
+import { uploadEverythingArtwork } from '../shared/upload-everything-artwork';
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -2128,6 +2130,7 @@ export default function KnowledgeBase() {
 
   return (
     <div className="min-h-full">
+      <ArtworkWelcome artwork={uploadEverythingArtwork} title="Upload Everything" closeLabel="Close uploads introduction" actionLabel="Upload files" onAction={() => fileInputRef.current?.click()}/>
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">{t('knowledgebase.title', 'Upload Everything')}</h1>

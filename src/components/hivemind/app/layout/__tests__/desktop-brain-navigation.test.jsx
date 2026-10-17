@@ -4,7 +4,7 @@ jest.mock('react-router-dom', () => {
   global.TextEncoder = require('util').TextEncoder;
   return require('../../../../../../node_modules/react-router/dist/development/index.js');
 }, { virtual: true });
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Brain } from 'lucide-react';
 import DesktopBrainNavigation from '../DesktopBrainNavigation';
@@ -30,16 +30,59 @@ test('the supplied banner links to Connectors without covering the artwork with 
   expect(banner).toHaveAttribute('href', '/hivemind/app/connectors');
   expect(banner.querySelector('img')).toHaveAttribute('src', '/images/announcements/unlock-proactive-intelligence.png');
   expect(banner.textContent).toBe('');
-  expect(screen.queryByRole('button', { name: 'Next banner' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Next banner' })).toBeInTheDocument();
 });
 
 test('future slideshow artwork changes the image and its destination together', () => {
-  render(<MemoryRouter><BrainUpdateBanner slides={[...brainSidebarBanner, { id: 'next', image: '/next.png', href: '/hivemind/app/knowledge', label: 'See uploads' }]}/></MemoryRouter>);
+  render(<MemoryRouter><BrainUpdateBanner slides={[...brainSidebarBanner.slice(0, 1), { id: 'next', image: '/next.png', href: '/hivemind/app/knowledge', label: 'See uploads' }]}/></MemoryRouter>);
   fireEvent.click(screen.getByRole('button', { name: 'Next banner' }));
   expect(screen.getByRole('link', { name: 'See uploads' })).toHaveAttribute('href', '/hivemind/app/knowledge');
   expect(screen.getByRole('link', { name: 'See uploads' }).querySelector('img')).toHaveAttribute('src', '/next.png');
   fireEvent.click(screen.getByRole('button', { name: 'Next banner' }));
   expect(screen.getByRole('link', { name: 'Connect your apps to HIVEMIND' })).toBeInTheDocument();
+});
+
+test('slideshow pauses on hover, keyboard focus and the pause control; missing canvas never strands navigation', () => {
+  jest.useFakeTimers();
+  const media = window.matchMedia;
+  window.matchMedia = () => ({ matches: false, addEventListener: jest.fn(), removeEventListener: jest.fn() });
+  const context = jest.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+  const slides = [...brainSidebarBanner.slice(0, 1), { id: 'next', image: '/next.png', href: '/hivemind/app/knowledge', label: 'See uploads' }];
+  let view;
+  try {
+    view = render(<MemoryRouter><BrainUpdateBanner slides={slides}/></MemoryRouter>);
+    const region = screen.getByRole('region', { name: 'Workspace updates' });
+    fireEvent.mouseEnter(region);
+    act(() => jest.advanceTimersByTime(14000));
+    expect(screen.getByRole('link', { name: 'Connect your apps to HIVEMIND' })).toBeInTheDocument();
+    fireEvent.mouseLeave(region);
+    act(() => jest.advanceTimersByTime(7000));
+    expect(screen.getByRole('link', { name: 'See uploads' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next banner' })).not.toBeDisabled();
+    act(() => screen.getByRole('button', { name: 'Next banner' }).focus());
+    fireEvent.mouseEnter(region); fireEvent.mouseLeave(region);
+    act(() => jest.advanceTimersByTime(14000));
+    expect(screen.getByRole('link', { name: 'See uploads' })).toBeInTheDocument();
+    act(() => screen.getByRole('button', { name: 'Next banner' }).blur());
+    fireEvent.click(screen.getByRole('button', { name: 'Pause slideshow' }));
+    act(() => jest.advanceTimersByTime(14000));
+    expect(screen.getByRole('link', { name: 'See uploads' })).toBeInTheDocument();
+  } finally { view?.unmount(); context.mockRestore(); window.matchMedia = media; jest.useRealTimers(); }
+});
+
+test('reduced motion has no autoplay or character animation, while manual navigation remains available', () => {
+  jest.useFakeTimers();
+  const media = window.matchMedia;
+  window.matchMedia = () => ({ matches: true, addEventListener: jest.fn(), removeEventListener: jest.fn() });
+  let view;
+  try {
+    view = render(<MemoryRouter><BrainUpdateBanner slides={[...brainSidebarBanner.slice(0, 1), { image: '/next.png', href: '/hivemind/app/knowledge', label: 'See uploads' }]}/></MemoryRouter>);
+    act(() => jest.advanceTimersByTime(21000));
+    expect(screen.getByRole('link', { name: 'Connect your apps to HIVEMIND' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Next banner' }));
+    expect(screen.getByRole('link', { name: 'See uploads' })).toBeInTheDocument();
+    expect(view.container.querySelector('canvas')).toBeNull();
+  } finally { view?.unmount(); window.matchMedia = media; jest.useRealTimers(); }
 });
 
 test('advanced destinations stay collapsed until explicitly opened, and keep native routes', () => {
