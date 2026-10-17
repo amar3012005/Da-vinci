@@ -36,7 +36,7 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
         nativePath.current = panePath(data.path, mode); onRoute(mode, nativePath.current, latest.current.active);
       }
       if (data.kind === 'open-page' && latest.current.active && typeof data.path === 'string' && data.path.startsWith('/hivemind/app/') && !data.path.includes('\\')) onRoute(mode, data.path, true);
-      if (data.kind === 'event' && PANE_EVENTS.includes(data.name) && (latest.current.active || ['hivemind:agent-rooms', 'hivemind:agent-schedules'].includes(data.name))) window.dispatchEvent(new CustomEvent(data.name, { detail: data.detail }));
+      if (data.kind === 'event' && PANE_EVENTS.includes(data.name) && (mode === 'runtime' || ['hivemind:close-sidebar', 'hivemind:open-sidebar'].includes(data.name)) && (latest.current.active || ['hivemind:agent-rooms', 'hivemind:agent-schedules'].includes(data.name))) window.dispatchEvent(new CustomEvent(data.name, { detail: data.detail }));
     };
     const request = event => send({ kind: 'request', name: event.type });
     window.addEventListener('message', receive);
