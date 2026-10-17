@@ -12,6 +12,7 @@ function production({ history = [[b], [c]], missing = null } = {}) {
   const requests = [];
   return { requests, fetcher: async input => {
     const path = new URL(input).pathname; requests.push(path);
+    if (new URL(input).hostname.startsWith('69eda68b-') && path === '/asset-manifest.json') return Response.json({ files: { 'main.js': '/static/js/main.cc29df13.js' } });
     if (path === '/asset-manifest.json') return Response.json({ files: { main: a, html: '/index.html', api: '/v1/bootstrap' } });
     if (path === '/asset-history.json') return history === null ? new Response('Not found', { status: 404 }) : Response.json({ version: 1, generations: history });
     return path === missing ? new Response('Not found', { status: 404 })
@@ -33,9 +34,9 @@ test('keeps exactly two previous generations; private and older files never ente
   } finally { await rm(directory, { recursive: true }); }
 });
 
-test('first retention release accepts a genuinely absent history manifest', async () => {
+test('first retention release recovers the observed older release from its immutable Worker version', async () => {
   const snapshot = await snapshotProductionAssets(production({ history: null }).fetcher);
-  assert.deepEqual(snapshot.generations, [[a]]);
+  assert.deepEqual(snapshot.generations, [[a], ['/static/js/main.cc29df13.js']]);
 });
 
 test('missing old code and malicious history fail the build instead of publishing a broken promise', async () => {
