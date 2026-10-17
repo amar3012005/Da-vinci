@@ -62,7 +62,7 @@ describe('HarnessSurface module cache', () => {
     expect(harnessBootRevision([])).toBeNull();
   });
 
-  it('shows a bounded native boot progress indicator using real milestones', () => {
+  it('keeps one diffusion label across native boot milestones', () => {
     const root = document.createElement('div');
     document.body.appendChild(root);
     const { createRoot } = require('react-dom/client');
@@ -78,7 +78,7 @@ describe('HarnessSurface module cache', () => {
     expect(root.querySelector('.ascii-workspace-loading__visual')?.getAttribute('aria-hidden')).toBe('true');
 
     act(() => reactRoot.render(<LoadingSurface stage={3} />));
-    expect(root.textContent).toContain(HARNESS_BOOT_STAGES[3]);
+    expect(root.textContent).toContain('Connecting…');
     expect(root.textContent).not.toContain('3/4');
     expect(root.textContent).not.toContain('4/4');
 
