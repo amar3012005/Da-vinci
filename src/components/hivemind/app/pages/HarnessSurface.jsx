@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthProvider';
 import './HarnessSurface.css';
 import './BrainChat.css';
 import QueryStarters from './QueryStarters';
+import ChatModelConnection from '../shared/ChatModelConnection';
 import { isNativeApp } from '../shared/native-app';
 import { nativePlugin } from '../shared/native-auth';
 import { createNativeHarnessFetch, createNativeHarnessStream, createNativeSaveFile } from '../shared/native-harness-transport';
@@ -488,6 +489,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
   return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface data-brain-chat={brain ? '' : undefined}>
     {state.phase === 'loading' && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} dreaming={window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`} /></div>}
     <div ref={mountRef} className="h-full min-h-0" style={{ visibility: state.phase === 'ready' ? 'visible' : 'hidden' }} />
+    {brain && <ChatModelConnection />}
     <QueryStarters mount={mountRef.current} ready={state.phase === 'ready'} />
   </div>;
 }
