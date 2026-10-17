@@ -32,3 +32,11 @@ test('app entry keeps authentication on the actual Runtime application origin', 
   const response = await getRuntimePublic(new Request(origin + '/hivemind/login'), env(), handlers);
   assert.equal(response.status, 302); assert.equal(response.headers.get('location'), 'https://runtime-runner.singulancelabs.com/hivemind/app/employee/harness');
 });
+
+test('shared cookie-consent policy links resolve to the existing published legal pages', async () => {
+  for (const path of ['/privacy', '/cookies', '/security']) {
+    const response = await getRuntimePublic(new Request(origin + path), env(), handlers);
+    assert.equal(response.status, 308);
+    assert.equal(response.headers.get('location'), 'https://singulancelabs.com' + path);
+  }
+});

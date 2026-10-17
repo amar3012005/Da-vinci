@@ -6,6 +6,7 @@ export async function getRuntimePublic(request, env, { seo, markdown, prefersMar
   if (url.hostname !== HOST) return null;
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD', 'cache-control': 'no-store' } });
   if (url.protocol !== 'https:' && env.ENVIRONMENT !== 'development') { url.protocol = 'https:'; return Response.redirect(url.href, 308); }
+  if (['/privacy', '/cookies', '/security'].includes(url.pathname)) return Response.redirect(`https://singulancelabs.com${url.pathname}`, 308);
   if (url.pathname === '/getruntime' || url.pathname === '/getruntime/') return Response.redirect(`https://${HOST}/`, 308);
   if (/^\/hivemind(?:\/|$)/.test(url.pathname)) return Response.redirect(RUNTIME, 302);
   const pageMarkdown = () => {
@@ -24,7 +25,7 @@ export async function getRuntimePublic(request, env, { seo, markdown, prefersMar
     assetRequest.headers.delete('if-none-match'); assetRequest.headers.delete('if-modified-since');
     return seo(await env.ASSETS.fetch(assetRequest), '/getruntime');
   }
-  if (/^\/(?:static|assets)\//.test(url.pathname) || ['/favicon.ico', '/singulance-mark.svg'].includes(url.pathname)) {
+  if (/^\/(?:static|assets)\//.test(url.pathname) || ['/favicon.ico', '/favicon.svg', '/logo.svg', '/singulance-mark.svg', '/singulance-mark-192.png', '/singulance-mark-512.png', '/manifest.json', '/manifest.webmanifest'].includes(url.pathname)) {
     const response = await env.ASSETS.fetch(request);
     if (!/text\/html/i.test(response.headers.get('content-type') || '')) return response;
   }
