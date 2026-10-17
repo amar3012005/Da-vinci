@@ -27,10 +27,13 @@ export default function DesktopBrainNavigation({ sections, user, planLabel, cred
       const sidebar = advancedButton.current?.closest('aside')?.getBoundingClientRect();
       if (!trigger) return;
       const width = flyout.current?.offsetWidth || 228;
-      const height = flyout.current?.offsetHeight || 166;
+      // The web shell applies CSS zoom. DOM rects are scaled, while fixed
+      // left/top use the portal's CSS units; convert between those spaces.
+      const scale = (flyout.current?.getBoundingClientRect().width / width) || 1;
+      const height = (flyout.current?.offsetHeight || 166) * scale;
       setFlyoutPosition({
-        left: Math.min((sidebar?.right || trigger.right) + 10, window.innerWidth - width - 12),
-        top: Math.max(12, Math.min(trigger.top, window.innerHeight - height - 12)),
+        left: Math.min((sidebar?.right || trigger.right) + 10 * scale, window.innerWidth - width * scale - 12) / scale,
+        top: Math.max(12, Math.min(trigger.top, window.innerHeight - height - 12)) / scale,
       });
     };
     const dismiss = event => {

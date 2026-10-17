@@ -75,3 +75,21 @@ test('Advanced opens outside the scroll container, supports Escape and outside d
   fireEvent.click(screen.getByRole('link', { name: 'API Keys' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
+
+
+test('flyout coordinates account for the production shell CSS zoom', () => {
+  const original = HTMLElement.prototype.getBoundingClientRect;
+  const measure = jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
+    if (this.classList.contains('brain-advanced-flyout')) return { width: 205.2, height: 149.4, left: 0, right: 205.2, top: 0, bottom: 149.4 };
+    if (this.tagName === 'BUTTON') return { width: 100, height: 90, left: 140, right: 240, top: 300, bottom: 390 };
+    return original.call(this);
+  });
+  const width = jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(228);
+  setup();
+  try {
+    fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+    const flyout = screen.getByRole('dialog', { name: 'Advanced features' });
+    expect(parseFloat(flyout.style.left) * 0.9).toBeCloseTo(249);
+    expect(parseFloat(flyout.style.top) * 0.9).toBeCloseTo(300);
+  } finally { measure.mockRestore(); width.mockRestore(); }
+});
