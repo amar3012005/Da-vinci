@@ -576,8 +576,11 @@ export default function LoginPage() {
         return;
       }
       const runtimeReturn = trustedRuntimeReturn(location.search);
-    if (runtimeReturn) return runtimeReturn;
-    const from = location.state && location.state.from;
+      if (runtimeReturn) {
+        window.location.replace(runtimeReturn);
+        return;
+      }
+      const from = location.state && location.state.from;
       const hasDeepLink = from && from.pathname && !from.pathname.startsWith('/hivemind/login');
       const isDesktopAppLanding = hasDeepLink && !isNativeChatDeepLink(from.pathname) && from.pathname.startsWith('/hivemind/app/');
       const dest = hasDeepLink && !(isMobileAuthClient() && isDesktopAppLanding)
