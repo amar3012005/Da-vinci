@@ -67,11 +67,3 @@ describe('native Harness same-origin transport', () => {
     expect(browserFetch).toHaveBeenCalledWith(new URL('/api/hivemind/boot', appOrigin), {});
   });
 });
-
-it('narrows the legacy embed notification to the actual configured parent without granting an origin', () => {
-  const row = Object.freeze({ kind:'global', name:'__HIVEMIND_EMBED_CONFIG__', value:Object.freeze({version:1,parentOrigins:Object.freeze(['https://next.singulancelabs.com'])}) });
-  expect(normalizeHarnessInjections([row],'https://next.singulancelabs.com','https://runtime-runner.singulancelabs.com')[0].value.parentOrigins).toEqual([]);
-  expect(normalizeHarnessInjections([row],'https://next.singulancelabs.com','https://next.singulancelabs.com')[0].value.parentOrigins).toEqual(['https://next.singulancelabs.com']);
-  expect(normalizeHarnessInjections([row],'https://next.singulancelabs.com')[0]).toBe(row);
-  expect(row.value.parentOrigins).toEqual(['https://next.singulancelabs.com']);
-});

@@ -1,3 +1,4 @@
+import { normalizeHarnessInjections } from '../../pages/harness-transport';
 import { PANE_ORIGINS, paneForPath, panePath, paneSource, validPaneMessage, rememberPaneRoute, recalledPaneRoute } from '../native-pane-protocol';
 test('native clients keep exact fixed runner authority and safe chat routes', () => {
   expect(paneForPath('/hivemind/app/overview/session/brain-id')).toBe('brain');
@@ -18,4 +19,12 @@ test('mode return paths are scoped and cannot be used as foreign URLs or another
   expect(recalledPaneRoute('brain','b:org')).toBeNull();
   sessionStorage.setItem('hivemind.native-pane:a:org:brain','https://evil.example');
   expect(recalledPaneRoute('brain','a:org')).toBeNull();
+});
+
+it('narrows the legacy embed notification to the actual configured parent without granting an origin', () => {
+  const row = Object.freeze({ kind:'global', name:'__HIVEMIND_EMBED_CONFIG__', value:Object.freeze({version:1,parentOrigins:Object.freeze(['https://next.singulancelabs.com'])}) });
+  expect(normalizeHarnessInjections([row],'https://next.singulancelabs.com','https://runtime-runner.singulancelabs.com')[0].value.parentOrigins).toEqual([]);
+  expect(normalizeHarnessInjections([row],'https://next.singulancelabs.com','https://next.singulancelabs.com')[0].value.parentOrigins).toEqual(['https://next.singulancelabs.com']);
+  expect(normalizeHarnessInjections([row],'https://next.singulancelabs.com')[0]).toBe(row);
+  expect(row.value.parentOrigins).toEqual(['https://next.singulancelabs.com']);
 });
