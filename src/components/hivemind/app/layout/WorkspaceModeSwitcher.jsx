@@ -23,12 +23,12 @@ export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
   const chooseMode = (path, selected) => {
     setModeMenuOpen(false);
     onChoose?.();
-    if (selected) return;
     const destination = workspaceModeDestination(recalledPaneRoute(paneForPath(path), `${user?.id || ''}:${org?.id || ''}`) || path, window.location.origin);
     if (destination.startsWith('https://')) {
       window.location.assign(destination);
       return;
     }
+    if (selected) return;
     navigate(destination);
     window.dispatchEvent(new PopStateEvent('popstate'));
   };

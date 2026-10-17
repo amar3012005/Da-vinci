@@ -5,13 +5,12 @@ export function workspaceModeForPath(pathname = '') {
   return 'hivemind';
 }
 
-/** The outer shell stays put; isolated native panes retain runner ownership. */
+/** Each workspace mode opens on its owning production frontend origin. */
 export function workspaceModeDestination(pathname, currentOrigin) {
   const brainOrigin = 'https://next.singulancelabs.com';
   const runtimeOrigin = 'https://runtime-runner.singulancelabs.com';
   if (![brainOrigin, runtimeOrigin].includes(currentOrigin)) return pathname;
   const mode = workspaceModeForPath(pathname);
-  if (mode === 'hyperagents' || mode === 'hivemind') return pathname;
   const owner = mode === 'hyperagents' ? runtimeOrigin : brainOrigin;
   return owner === currentOrigin ? pathname : `${owner}${pathname}`;
 }
