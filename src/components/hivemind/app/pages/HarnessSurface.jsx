@@ -1,3 +1,4 @@
+import { initialNativePane } from '../shared/native-pane-protocol';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } from '../shared/native-harness-seat';
 import React, { useEffect, useRef, useState } from 'react';
@@ -357,6 +358,8 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
         window.location.reload();
         return;
       }
+      let embeddedParentOrigin;
+      if (initialNativePane) { try { embeddedParentOrigin = new URL(document.referrer).origin; } catch { embeddedParentOrigin = null; } }
       const styles = Array.isArray(boot.styles) ? boot.styles : [];
       if (styles.length === 0) throw new Error('HIVEMIND could not load the conversation appearance.');
       const shellUrl = harnessShellUrl(boot.injections);
@@ -365,7 +368,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
       // for both before mounting, avoiding flashes of unstyled conversation.
       await Promise.all([
         measureHarnessBoot('styles', () => Promise.all(styles.map(runtime ? runtime.loader.loadStyle : loadHarnessStylesheet))),
-        measureHarnessBoot('ordered-injections', () => installedRevision !== bootRevision ? applyHarnessInjections(normalizeHarnessInjections(boot.injections, window.location.origin), runtime?.loader) : Promise.resolve()),
+        measureHarnessBoot('ordered-injections', () => installedRevision !== bootRevision ? applyHarnessInjections(normalizeHarnessInjections(boot.injections, window.location.origin, embeddedParentOrigin), runtime?.loader) : Promise.resolve()),
         measureHarnessBoot('native-module-prepare', () => runtime ? runtime.loader.prepareModule(shellUrl) : Promise.resolve()),
       ]);
       if (installedRevision !== bootRevision) window.__HIVE_HARNESS_BOOT_REV__ = bootRevision;

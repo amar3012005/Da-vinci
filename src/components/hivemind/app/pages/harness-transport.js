@@ -1,5 +1,5 @@
 /** Resolve authenticated Harness graph resources at the application origin root. */
-export function normalizeHarnessInjections(rows, appOrigin) {
+export function normalizeHarnessInjections(rows, appOrigin, embeddedParentOrigin) {
   if (!Array.isArray(rows)) throw new Error('Harness returned an invalid boot graph.');
   const resolveUrl = (value) => {
     if (typeof value !== 'string') throw new Error('Harness returned an invalid module URL.');
@@ -13,6 +13,11 @@ export function normalizeHarnessInjections(rows, appOrigin) {
     if (!row || typeof row !== 'object') throw new Error('Harness returned an invalid boot row.');
     if (row.kind === 'script-src' || row.kind === 'script-preload') {
       return { ...row, src: resolveUrl(row.src) };
+    }
+    if (embeddedParentOrigin !== undefined && row.kind === 'global' && row.name === '__HIVEMIND_EMBED_CONFIG__' && row.value?.version === 1) {
+      // This pane establishes its own native session. Never send the legacy
+      // ticket handshake to another configured parent or expand its allowlist.
+      return { ...row, value: { ...row.value, parentOrigins: (row.value.parentOrigins || []).filter(origin => origin === embeddedParentOrigin) } };
     }
     if (row.kind === 'global' && row.name === '__DSH_BOOT__') {
       const graph = row.value;
