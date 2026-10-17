@@ -28,6 +28,7 @@
     "RUNTIME_RUNNER_ORIGIN": "https://runtime-runner-origin.singulancelabs.com"
   },
   "routes": [
+    { "pattern": "getruntime.singulancelabs.com", "custom_domain": true },
     {
       "pattern": "runtime.singulancelabs.com",
       "custom_domain": true

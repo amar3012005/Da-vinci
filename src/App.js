@@ -20,6 +20,7 @@ const HivemindLogin = React.lazy(() => import('./components/hivemind/app/auth/Hi
 const ResearchIndex = React.lazy(() => import('./components/ResearchIndex'));
 const BenchmarkResearch = React.lazy(() => import('./components/BenchmarkResearch'));
 const AccountDeletion = React.lazy(() => import('./components/AccountDeletion'));
+const GetRuntime = React.lazy(() => import('./components/GetRuntime'));
 const RuntimeProduct = React.lazy(() => import('./components/RuntimeProduct'));
 const RuntimeResearch = React.lazy(() => import('./components/RuntimeResearch'));
 const IcarusResearch = React.lazy(() => import('./components/IcarusResearch'));
@@ -124,6 +125,8 @@ function App() {
     );
   }
 
+  if (window.location.hostname === 'getruntime.singulancelabs.com') return <Router><CookieConsent/><React.Suspense fallback={<PublicPageLoading/>}><GetRuntime/></React.Suspense></Router>;
+
   return (
     <Router>
       <UpdateBanner />
@@ -164,6 +167,7 @@ function App() {
         {/* Research pages */}
         <Route path="/research" element={<React.Suspense fallback={<PublicPageLoading />}><ResearchIndex /></React.Suspense>} />
         <Route path="/account-deletion" element={<React.Suspense fallback={<PublicPageLoading />}><AccountDeletion /></React.Suspense>} />
+        <Route path="/getruntime" element={<React.Suspense fallback={<PublicPageLoading />}><GetRuntime /></React.Suspense>} />
         <Route path="/runtime" element={<React.Suspense fallback={<PublicPageLoading />}><RuntimeProduct /></React.Suspense>} />
         <Route path="/research/runtime" element={<React.Suspense fallback={<PublicPageLoading />}><RuntimeResearch /></React.Suspense>} />
         <Route path="/research/icarus" element={<React.Suspense fallback={<PublicPageLoading />}><IcarusResearch /></React.Suspense>} />

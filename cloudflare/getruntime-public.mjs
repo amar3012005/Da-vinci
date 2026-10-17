@@ -1,0 +1,32 @@
+const HOST = 'getruntime.singulancelabs.com';
+const RUNTIME = 'https://runtime-runner.singulancelabs.com/hivemind/app/employee/harness';
+// This origin is a public product cover. It never serves app APIs or sessions.
+export async function getRuntimePublic(request, env, { seo, markdown, prefersMarkdown }) {
+  const url = new URL(request.url);
+  if (url.hostname !== HOST) return null;
+  if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD', 'cache-control': 'no-store' } });
+  if (url.protocol !== 'https:' && env.ENVIRONMENT !== 'development') { url.protocol = 'https:'; return Response.redirect(url.href, 308); }
+  if (url.pathname === '/getruntime' || url.pathname === '/getruntime/') return Response.redirect(`https://${HOST}/`, 308);
+  if (/^\/hivemind(?:\/|$)/.test(url.pathname)) return Response.redirect(RUNTIME, 302);
+  const pageMarkdown = () => {
+    const response = markdown(request, '/getruntime');
+    const headers = new Headers(response.headers);
+    headers.set('content-location', `https://${HOST}/`);
+    headers.set('link', `<https://${HOST}/>; rel="canonical"`);
+    return new Response(response.body, { status: response.status, headers });
+  };
+  if (url.pathname === '/robots.txt') return new Response(request.method === 'HEAD' ? null : `User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=no\nAllow: /\nSitemap: https://${HOST}/sitemap.xml\n`, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=300' } });
+  if (url.pathname === '/sitemap.xml') return new Response(request.method === 'HEAD' ? null : `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://${HOST}/</loc></url></urlset>`, { headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=300' } });
+  if (['/index.md', '/index.txt'].includes(url.pathname)) return pageMarkdown();
+  if (url.pathname === '/') {
+    if (prefersMarkdown(request.headers.get('accept'))) return pageMarkdown();
+    const assetRequest = new Request(new URL('/', url), request);
+    assetRequest.headers.delete('if-none-match'); assetRequest.headers.delete('if-modified-since');
+    return seo(await env.ASSETS.fetch(assetRequest), '/getruntime');
+  }
+  if (/^\/(?:static|assets)\//.test(url.pathname) || ['/favicon.ico', '/singulance-mark.svg'].includes(url.pathname)) {
+    const response = await env.ASSETS.fetch(request);
+    if (!/text\/html/i.test(response.headers.get('content-type') || '')) return response;
+  }
+  return new Response(request.method === 'HEAD' ? null : 'Not found', { status: 404, headers: { 'cache-control': 'no-store', 'x-robots-tag': 'noindex', 'content-type': 'text/plain; charset=utf-8' } });
+}

@@ -1,3 +1,4 @@
+import { getRuntimePublic } from './getruntime-public.mjs';
 import { workspaceDocumentRedirect } from '../src/components/hivemind/app/shared/workspace-authority.mjs';
 import { proxyModelConnection } from './model-connection.mjs';
 import { proxyRuntimeRecovery } from './runtime-recovery.mjs';
@@ -503,6 +504,8 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const runtimeCover = await getRuntimePublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
+    if (runtimeCover) return runtimeCover;
     const workspaceRedirect = workspaceDocumentRedirect(url);
     if (workspaceRedirect && ['GET', 'HEAD'].includes(request.method)) return Response.redirect(workspaceRedirect, 302);
     if (url.searchParams.get('native_pane') === '1') {
