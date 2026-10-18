@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 jest.mock('react-router-dom', () => ({ useLocation: () => ({ pathname: '/hivemind/app/employee/apps', search: '' }) }));
-import OpenDotEntry from '../OpenDotEntry';
+import OpenDotEntry, { postToDotFrame } from '../OpenDotEntry';
 
 test('Apps shows a bounded retry when embedded service never becomes ready', () => {
   jest.useFakeTimers();
@@ -29,3 +29,13 @@ test('readiness is accepted only from the owned Dot frame and cancels the timeou
   expect(screen.queryByRole('alert')).toBeNull();
   jest.useRealTimers();
 });
+
+ test('handshake ignores initial same-origin document and uses exact Dot origin after navigation', () => {
+  const postMessage = jest.fn();
+  postToDotFrame({contentWindow:{location:{origin:'https://runtime-runner.singulancelabs.com'},postMessage}}, {type:'probe'});
+  expect(postMessage).not.toHaveBeenCalled();
+  const target = {postMessage};
+  Object.defineProperty(target,'location',{get(){throw new DOMException('Cross origin','SecurityError')}});
+  postToDotFrame({contentWindow:target},{type:'probe'});
+  expect(postMessage).toHaveBeenCalledWith({type:'probe'},'https://dots.singulancelabs.com');
+ });

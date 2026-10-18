@@ -8,6 +8,16 @@ import { buildOpenDotEmbedTarget } from '../shared/open-dot-embed-target';
 const DOT_ORIGIN = 'https://dots.singulancelabs.com';
 const READY_TIMEOUT_MS = 30000;
 
+export function postToDotFrame(frame, message) {
+  const target = frame?.contentWindow;
+  if (!target) return;
+  // The initial about:blank document and same-origin login redirects are not
+  // the Dot application. Never send its handshake into those documents.
+  try { if (target.location.origin !== DOT_ORIGIN) return; }
+  catch { /* Cross-origin window: the exact targetOrigin below enforces delivery. */ }
+  target.postMessage(message, DOT_ORIGIN);
+}
+
 export default function OpenDotEntry({ apps = false, route, initialRoute, active = true }) {
   const location = useLocation();
   const { pathname, search } = route || location;
@@ -16,6 +26,7 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
   const initialTarget = useRef(initialRoute ? buildOpenDotEmbedTarget(initialRoute.pathname.slice('/hivemind/app/employee/dots'.length), initialRoute.search) : src);
   const iframeRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
+  const [loadedFrameKey, setLoadedFrameKey] = useState(null);
   const [readyEmployee, setReadyEmployee] = useState(null);
   const employeeId = openDotEmployeeIdFromPath(pathname);
   const [attempt, setAttempt] = useState(0);
@@ -28,7 +39,7 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
   useEffect(() => {
     if (!src) return undefined;
     const timer = window.setTimeout(() => { setTimedOutFrameKey(frameKey); window.clearInterval(probe); }, apps ? 15000 : READY_TIMEOUT_MS);
-    const connect = () => iframeRef.current?.contentWindow?.postMessage({ type: 'hivemind.open-dot.connect', version: 1 }, DOT_ORIGIN);
+    const connect = () => { if (loadedFrameKey === frameKey) postToDotFrame(iframeRef.current, { type: 'hivemind.open-dot.connect', version: 1 }); };
     connect();
     const probe = window.setInterval(connect, 1000);
     const onMessage = event => {
@@ -51,11 +62,11 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
       window.clearInterval(probe);
       window.removeEventListener('message', onMessage);
     };
-  }, [frameKey, src, pathname, apps, active]);
+  }, [frameKey, loadedFrameKey, src, pathname, apps, active]);
 
   useEffect(() => {
     if (!active || !loaded || !employeeId || !src || readyEmployee === employeeId) return;
-    iframeRef.current?.contentWindow?.postMessage({ type: 'hivemind.open-dot.navigate', version: 1, employeeId, target: src }, DOT_ORIGIN);
+    postToDotFrame(iframeRef.current, { type: 'hivemind.open-dot.navigate', version: 1, employeeId, target: src });
   }, [active, loaded, employeeId, src, readyEmployee]);
 
   if (!src) return <main className="flex h-full min-h-0 items-center justify-center p-6 text-sm text-[#737373]">Invalid Dot address.</main>;
@@ -76,6 +87,7 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
       <iframe
         key={frameKey}
         ref={iframeRef}
+        onLoad={() => setLoadedFrameKey(frameKey)}
         title={apps ? 'Apps' : 'Open Dot workspace'}
         src={initialTarget.current}
         allow="microphone; autoplay"
