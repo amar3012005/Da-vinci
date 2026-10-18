@@ -670,7 +670,19 @@ export default {
           status: 401, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
         });
       }
-      return noIndex(await harnessResponse(request, env));
+      const response = await harnessResponse(request, env);
+      // JSON APIs must never redirect a credentialed fetch to a document host.
+      // Keep denial/status semantics, and prevent stale redirects in browser/CDN caches.
+      if (response.status >= 300 && response.status < 400) {
+        return Response.json({ error: 'native_api_redirect_refused' }, {
+          status: 502, headers: { 'cache-control': 'private, no-store', 'cdn-cache-control': 'no-store' },
+        });
+      }
+      const headers = new Headers(response.headers);
+      headers.set('cache-control', 'private, no-store');
+      headers.set('cdn-cache-control', 'no-store');
+      headers.set('x-hivemind-api-owner', new URL(request.url).hostname);
+      return noIndex(new Response(response.body, { status: response.status, statusText: response.statusText, headers }));
     }
     // Establishment validates a signed ticket at the runner. Boot must also
     // reach native authorization without cookies so liveness sees an expired

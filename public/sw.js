@@ -7,7 +7,7 @@
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v10';
+const CACHE = 'hive-shell-v11';
 const SHELL = ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
 
 function offlineResponse() {
@@ -48,6 +48,7 @@ self.addEventListener('fetch', (event) => {
   const hashedAsset = /^\/(?:static\/(?:js|css)\/[^/]+\.[a-f0-9]{8,}\.(?:js|css)|assets\/[^/]+-[A-Za-z0-9_-]{8}\.(?:js|css|woff2?))$/.test(url.pathname);
   const immutableCode = nativeCombo || nativeShell || hashedAsset;
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/v1')
+    || url.pathname.startsWith('/hivemind/dreamer/')
     || url.pathname.startsWith('/__hivemind/')
     || (url.pathname.startsWith('/plugins/') && !nativeCombo)) return;
 
