@@ -188,9 +188,10 @@ export const HARNESS_BOOT_STAGES = [
 ];
 
 /** Show the current real boot boundary without a logo or simulated progress. */
-export function LoadingSurface({ stage = 0, dreaming = false }) {
+export function LoadingSurface({ stage = 0, dreaming = false, reconnecting = false }) {
   return <div className="hm-chat-opening">
-    <AsciiWorkspaceLoading label={'Connecting…'} />
+    <AsciiWorkspaceLoading label={reconnecting ? 'Reconnecting…' : 'Connecting…'} />
+    {reconnecting && <button type="button" onClick={() => window.location.reload()} className="rounded-md border border-black/10 px-3 py-2 text-[12px]">Try again</button>}
   </div>;
 }
 
@@ -201,7 +202,8 @@ export function nativeHarnessMounted(container, { dreaming = false, brain = fals
   return Boolean(container?.querySelector?.('[data-composer-seat]'));
 }
 
-function waitForNativeHarnessMount(container, signal, { brain = false } = {}) {
+export function waitForNativeHarnessMount(container, signal, { brain = false, onSlow = () => {} } = {}) {
+  if (signal?.aborted) return Promise.reject(new DOMException('Harness mount cancelled.', 'AbortError'));
   const dreaming = window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`;
   const mounted = () => nativeHarnessMounted(container, { dreaming, brain });
   if (mounted()) return Promise.resolve();
@@ -212,8 +214,9 @@ function waitForNativeHarnessMount(container, signal, { brain = false } = {}) {
       resolve();
     });
     const timeout = window.setTimeout(() => {
-      cleanup();
-      reject(new Error('HIVEMIND could not finish opening this conversation.'));
+      // The native connection still owns reconnect/backoff. Retain its mount
+      // observer so a late transport recovery can reveal the existing chat.
+      onSlow();
     }, 30000);
     const onAbort = () => {
       cleanup();
@@ -283,6 +286,9 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
     let livenessTimer;
     const readinessAbort = new AbortController();
     const request = { container: mount, cancelled: false };
+    const onSlowMount = () => {
+      if (!cancelled) setState({ phase: 'reconnecting', stage: HARNESS_BOOT_STAGES.length - 1, message: null });
+    };
     const setLoadingStage = (stage) => {
       if (!cancelled) setState({ phase: 'loading', stage, message: null });
     };
@@ -314,7 +320,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
         window.__DSH_EMBED_REQUEST__ = request;
         if (window.__DSH_EMBED_INITIAL_MOUNT__) await window.__DSH_EMBED_INITIAL_MOUNT__;
         window.dispatchEvent(new PopStateEvent('popstate'));
-        await waitForNativeHarnessMount(mount, readinessAbort.signal, { brain });
+        await waitForNativeHarnessMount(mount, readinessAbort.signal, { brain, onSlow: onSlowMount });
         if (!cancelled) {
           setState({ phase: 'ready', stage: HARNESS_BOOT_STAGES.length - 1, message: null });
           livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);
@@ -431,7 +437,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
       } else {
         await measureHarnessBoot('native-initial-mount', () => window.__DSH_EMBED_INITIAL_MOUNT__);
       }
-      await measureHarnessBoot('visible-chat', () => waitForNativeHarnessMount(mount, readinessAbort.signal, { brain }));
+      await measureHarnessBoot('visible-chat', () => waitForNativeHarnessMount(mount, readinessAbort.signal, { brain, onSlow: onSlowMount }));
       if (!cancelled) {
         setState({ phase: 'ready', stage: HARNESS_BOOT_STAGES.length - 1, message: null });
         livenessTimer = window.setInterval(() => { void recoverExpiredSession(); }, HARNESS_LIVENESS_INTERVAL_MS);

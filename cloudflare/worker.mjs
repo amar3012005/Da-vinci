@@ -684,6 +684,23 @@ export default {
       headers.set('x-hivemind-api-owner', new URL(request.url).hostname);
       return noIndex(new Response(response.body, { status: response.status, statusText: response.statusText, headers }));
     }
+    // Plugin graph events are a native stream, including before admission or
+    // after a cookie expires. The runner retains ownership of authorization;
+    // never substitute the public SPA document for an EventSource request.
+    if (pathname === '/plugins/events') {
+      const response = await harnessResponse(request, env);
+      if ((response.status >= 300 && response.status < 400)
+        || (response.ok && !/^text\/event-stream(?:;|$)/i.test(response.headers.get('content-type') || ''))) {
+        await response.body?.cancel();
+        return Response.json({ error: 'native_event_stream_unavailable' }, {
+          status: 502, headers: { 'cache-control': 'private, no-store', 'cdn-cache-control': 'no-store' },
+        });
+      }
+      const headers = new Headers(response.headers);
+      headers.set('cache-control', 'private, no-store');
+      headers.set('cdn-cache-control', 'no-store');
+      return noIndex(new Response(response.body, { status: response.status, statusText: response.statusText, headers }));
+    }
     // Establishment validates a signed ticket at the runner. Boot must also
     // reach native authorization without cookies so liveness sees an expired
     // session as 401, never a successful SPA document. Cookie presence below

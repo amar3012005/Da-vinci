@@ -10,6 +10,7 @@ import {
   harnessBootRevision,
   harnessShellUrl,
   nativeHarnessMounted,
+  waitForNativeHarnessMount,
   executeExternalScript,
 } from '../HarnessSurface';
 import HarnessSurface from '../HarnessSurface';
@@ -195,4 +196,34 @@ it('reattaches the same native app and draft across chat navigation without boot
     window.history.replaceState({}, '', previousPath);
     delete window.__DSH_EMBED_APP__; delete window.__DSH_EMBED_REQUEST__;
   }
+});
+
+
+describe('native mount transport recovery', () => {
+  afterEach(() => { jest.useRealTimers(); });
+  it('keeps the mounted client observable after the slow-connection threshold', async () => {
+    jest.useFakeTimers();
+    const container = document.createElement('div');
+    const onSlow = jest.fn();
+    const controller = new AbortController();
+    let resolved = false;
+    const pending = waitForNativeHarnessMount(container, controller.signal, { onSlow }).then(() => { resolved = true; });
+    jest.advanceTimersByTime(30000);
+    await Promise.resolve();
+    expect(onSlow).toHaveBeenCalledTimes(1);
+    expect(resolved).toBe(false);
+    container.innerHTML = '<div data-composer-seat></div>';
+    await pending;
+    expect(resolved).toBe(true);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+  it('releases a slow mount observer on cancellation without re-mounting or sending', async () => {
+    jest.useFakeTimers();
+    const controller = new AbortController();
+    const pending = waitForNativeHarnessMount(document.createElement('div'), controller.signal);
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    expect(jest.getTimerCount()).toBe(0);
+    await expect(waitForNativeHarnessMount(document.createElement('div'), controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+  });
 });
