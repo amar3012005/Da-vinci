@@ -3,16 +3,16 @@ import test from 'node:test';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-function serviceWorker(response) {
+function serviceWorker(response, origin='https://next.singulancelabs.com') {
   const handlers = {}, calls = [], writes = [];
   vm.runInNewContext(fs.readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8'), {
-    self: {location:{origin:'https://next.singulancelabs.com'},addEventListener:(name,handler)=>{handlers[name]=handler;}},
+    self: {location:{origin},addEventListener:(name,handler)=>{handlers[name]=handler;},skipWaiting:()=>{}},
     URL, Response, fetch:async(...args)=>{calls.push(args);return response;},
-    caches:{open:async()=>({put:(...args)=>writes.push(args)}),match:async()=>undefined},
+    caches:{open:async()=>({addAll:async urls=>calls.push(['precache',urls]),put:(...args)=>writes.push(args)}),match:async()=>undefined},
   });
-  return {calls,writes,dispatch:async (pathname,mode='navigate')=>{
+  return {calls,writes,install:async()=>{let pending;handlers.install({waitUntil:value=>{pending=value;}});await pending;},dispatch:async (pathname,mode='navigate')=>{
     let result;
-    handlers.fetch({request:{method:'GET',mode,url:`https://next.singulancelabs.com${pathname}`},respondWith:promise=>{result=promise;}});
+    handlers.fetch({request:{method:'GET',mode,url:`${origin}${pathname}`},respondWith:promise=>{result=promise;}});
     await result;
     await Promise.resolve();
   }};
@@ -40,4 +40,14 @@ test('authenticated dreamer reads never enter asset caching or offline fallback'
   }
   assert.equal(worker.calls.length,0);
   assert.equal(worker.writes.length,0);
+});
+
+test('Runtime never precaches its redirected root or fetches document navigation',async()=>{
+  const worker=serviceWorker({},'https://runtime-runner.singulancelabs.com');
+  await worker.install();
+  assert.equal(worker.calls[0][0],'precache');
+  assert.equal(worker.calls[0][1].length,0);
+  worker.calls.length=0;
+  for(const path of ['/','/hivemind/login','/hivemind/app/employee/harness']) await worker.dispatch(path);
+  assert.equal(worker.calls.length,0);
 });
