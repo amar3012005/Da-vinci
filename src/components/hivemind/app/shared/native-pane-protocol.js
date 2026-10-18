@@ -23,7 +23,18 @@ export function validPaneMessage(event, frame, mode, scope) {
   return event.source === frame?.contentWindow && event.origin === PANE_ORIGINS[mode]
     && event.data?.type === 'hivemind.native-pane' && event.data?.version === 1 && event.data?.scope === scope;
 }
-export const initialNativePane = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('native_pane') === '1' ? paneForPath(window.location.pathname) : null;
+// Embedded presentation only; account scope is still verified by the message bridge.
+// Redirects/reloads may lose the query marker, but must never nest the app shell.
+export function detectNativePane(location, embedded, referrer = '') {
+  const mode = paneForPath(location.pathname);
+  if (!mode || location.origin !== PANE_ORIGINS[mode]) return null;
+  if (new URLSearchParams(location.search).get('native_pane') === '1') return mode;
+  if (!embedded) return null;
+  try { return Object.values(PANE_ORIGINS).includes(new URL(referrer).origin) ? mode : null; }
+  catch { return null; }
+}
+export const initialNativePane = typeof window !== 'undefined'
+  ? detectNativePane(window.location, window.parent !== window, document.referrer) : null;
 export function persistentShellEnabled() {
   return !initialNativePane && typeof window !== 'undefined' && Object.values(PANE_ORIGINS).includes(window.location.origin);
 }
