@@ -25,6 +25,12 @@ export function readGettingStarted(scope) {
 export default function RuntimeGetStarted({ scope }) {
   const navigate = useNavigate(); const location = useLocation();
   const [progress, setProgress] = useState(() => readGettingStarted(scope));
+  const [previewOpen, setPreviewOpen] = useState(false);
+  useEffect(() => {
+    const changed = event => setPreviewOpen(event.detail?.open === true);
+    window.addEventListener('hivemind:preview-visibility', changed);
+    return () => window.removeEventListener('hivemind:preview-visibility', changed);
+  }, []);
   const [error, setError] = useState(''); const [opening, setOpening] = useState(false);
   const [expanded, setExpanded] = useState(() => !window.matchMedia?.('(max-width: 1000px)').matches);
   useEffect(() => {
@@ -76,7 +82,7 @@ export default function RuntimeGetStarted({ scope }) {
     try { await openCompanyRuntime(navigate); } catch { setError('Runtime is still connecting. Open it from the sidebar to continue.'); }
     finally { setOpening(false); }
   };
-  return <aside className="hm-runtime-start" aria-label="Get started with Runtime">
+  return <aside hidden={previewOpen} className="hm-runtime-start" aria-label="Get started with Runtime">
     <details className="hm-runtime-start-card" open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}>
       <summary><span className="hm-runtime-start-ring" style={{ '--hm-start-progress': `${count / 6 * 100}%` }} aria-hidden="true" /><span className="hm-runtime-start-title">Getting Started</span><span className="hm-runtime-start-count">{count} of 6 <Minus size={16} aria-hidden="true" /></span>
         <span className="hm-runtime-start-progress" role="progressbar" aria-label="Getting started progress" aria-valuemin={0} aria-valuemax={6} aria-valuenow={count}><span style={{ width: `${count / 6 * 100}%` }} /></span>

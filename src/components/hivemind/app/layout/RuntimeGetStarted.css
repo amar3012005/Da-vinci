@@ -30,3 +30,16 @@
 @media (max-width:1200px) { .hm-runtime-start { width:216px; left:12px; bottom:12px; } .hm-runtime-start-card { padding:14px 12px 10px; } .hm-runtime-start-title { font-size:14px; } .hm-runtime-start-card li button { font-size:13px; padding:8px 0; } }
 @media (max-width:1000px) { .hm-runtime-start { width:224px; bottom:calc(88px + env(safe-area-inset-bottom, 0px)); max-height:60%; } .hm-runtime-start-card ol { gap:0; } }
 @media (prefers-reduced-motion:reduce) { .hm-runtime-start-progress > span,.hm-runtime-start-count svg { transition:none; } }
+
+/* Compact helper: disappears entirely while a preview owns the workspace. */
+.hm-runtime-start[hidden]{display:none}
+.hm-runtime-start{width:228px}
+.hm-runtime-start-card{padding:13px 13px 9px;border-radius:14px;box-shadow:0 2px 10px #1a1a1a05}
+.hm-runtime-start-title{font-size:14px;line-height:1.4}
+.hm-runtime-start-count{font-size:11px;padding-top:1px}
+.hm-runtime-start-card summary{gap:8px 4px}
+.hm-runtime-start-card ol{margin:8px 0 6px;gap:0}
+.hm-runtime-start-card li button{font-size:12px;padding:7px 0;gap:8px}
+.hm-runtime-start-check{width:15px;height:15px;flex-basis:15px;margin-top:1px}
+.hm-runtime-start-progress{height:3px;margin:2px 0 4px}
+.hm-runtime-start-hint{font-size:10px;margin-top:9px}

@@ -34,3 +34,15 @@ it('rejects stale identity messages and applies a fresh reset snapshot', async (
   await act(async () => dispatch({ awakened: false }));
   expect(readGettingStarted('user:org').awakened).toBe(false);
 });
+
+it('hides for preview and restores the same progress and expansion state', async () => {
+  render(<RuntimeGetStarted scope="user:org" />);
+  const aside = screen.getByLabelText('Get started with Runtime');
+  const details = aside.querySelector('details');
+  await act(async () => window.dispatchEvent(new CustomEvent('hivemind:preview-visibility',{detail:{open:true}})));
+  expect(aside.hidden).toBe(true);
+  expect(details.open).toBe(true);
+  await act(async () => window.dispatchEvent(new CustomEvent('hivemind:preview-visibility',{detail:{open:false}})));
+  expect(aside.hidden).toBe(false);
+  expect(details.open).toBe(true);
+});

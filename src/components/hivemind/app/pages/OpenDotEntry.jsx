@@ -44,6 +44,10 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
     const probe = window.setInterval(connect, 1000);
     const onMessage = event => {
       if (event.origin !== DOT_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
+      if (event.data?.type === 'hivemind.open-dot.preview' && event.data.version === 1 && active) {
+        window.dispatchEvent(new CustomEvent('hivemind:preview-visibility', {detail:{open:event.data.open === true}}));
+        return;
+      }
       const rooms = openDotRoomStatus(event.data, openDotEmployeeIdFromPath(pathname));
       if (rooms !== null) {
         window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { employeeId: openDotEmployeeIdFromPath(pathname), dotId: event.data.dotId, clear: event.data.connected === false, rooms, employees: event.data.employees } }));
@@ -61,6 +65,7 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
       window.clearTimeout(timer);
       window.clearInterval(probe);
       window.removeEventListener('message', onMessage);
+      if (active) window.dispatchEvent(new CustomEvent('hivemind:preview-visibility', {detail:{open:false}}));
     };
   }, [frameKey, loadedFrameKey, src, pathname, apps, active]);
 

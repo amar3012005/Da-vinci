@@ -59,6 +59,25 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
     const path = panePath(route, mode);
     if (active && identified && path && path !== nativePath.current) send({ kind: 'navigate', path });
   }, [active, identified, route, mode]);
+  useEffect(() => {
+    if (mode !== 'runtime' || !active || !identified) return undefined;
+    let observer; let scheduled; let stopped = false; let last;
+    const publish = open => { if (open !== last) { last = open; window.dispatchEvent(new CustomEvent('hivemind:preview-visibility', {detail:{open}})); } };
+    const attach = () => {
+      observer?.disconnect();
+      let doc; try { doc = frame.current?.contentDocument; } catch { return; }
+      if (!doc?.body) return;
+      const update = () => {
+        scheduled = undefined; if (stopped) return;
+        publish([...doc.querySelectorAll('[data-sidebar-right-panel]')].some(panel => panel.getAttribute('aria-hidden') !== 'true' && !panel.hidden && panel.getBoundingClientRect().width > 1));
+      };
+      observer = new MutationObserver(() => { if (!scheduled) scheduled = requestAnimationFrame(update); });
+      observer.observe(doc.body, {subtree:true,childList:true,attributes:true,attributeFilter:['aria-hidden','hidden','style','data-sidebar-right-panel']});
+      update();
+    };
+    const element = frame.current; element?.addEventListener('load',attach); attach();
+    return () => { stopped=true; observer?.disconnect(); if (scheduled) cancelAnimationFrame(scheduled); element?.removeEventListener('load',attach); publish(false); };
+  }, [mode, active, identified, route]);
   return <section hidden={!active} data-native-pane={mode} className="relative h-full min-h-0" style={{ display: active ? 'block' : 'none' }}>
     {!identified && <div className="absolute inset-0 grid place-items-center bg-[#faf9f4]">{error ? <div role="alert" className="max-w-sm text-center text-sm"><p>This conversation hasn’t connected yet. Your saved work is unchanged.</p><button className="mt-3 underline" onClick={() => { setError(false); setRetry(value => value + 1); frame.current.src = paneSource(nativePath.current || entry, mode); }}>Try again</button></div> : <AsciiWorkspaceLoading />}</div>}
     <iframe ref={frame} title={mode === 'brain' ? 'Brain conversation' : 'Runtime and HyperAgents conversation'} src={paneSource(entry, mode)} onLoad={() => send({ kind: 'hello' })} allow="microphone; autoplay; clipboard-write" referrerPolicy="strict-origin" className="h-full w-full border-0 bg-[#faf9f4]" style={{ visibility: identified ? 'visible' : 'hidden' }} />
