@@ -5,7 +5,7 @@ let mockLocation = { pathname:'/hivemind/app/overview/session/brain-saved', sear
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom',()=>({ useLocation:()=>mockLocation, useNavigate:()=>mockNavigate }), { virtual: true });
 jest.mock('../auth/AuthProvider',()=>({useAuth:()=>({user:{id:'user-a'},org:{id:'org-a'}})}));
-import PersistentHarnessPanes from './PersistentHarnessPanes';
+import PersistentHarnessPanes, { nativePreviewExpanded } from './PersistentHarnessPanes';
 it('retains both exact client documents and URLs when switching modes, and rejects foreign messages',async()=>{
   global.IS_REACT_ACT_ENVIRONMENT=true;
   const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
@@ -47,4 +47,12 @@ it('preserves identity received before window.load and retries a missed handshak
     expect(host.querySelector('iframe')).toBe(brain);
     expect(brain.getAttribute('src')).toBe(source);
   } finally { await act(async()=>root.unmount());host.remove();jest.useRealTimers(); }
+});
+
+it('ignores the mounted closed panel and follows only its native expanded flag',()=>{
+ const doc=document.implementation.createHTMLDocument();
+ const panel=doc.createElement('div');panel.setAttribute('data-sidebar-right-panel','push');panel.style.width='671px';doc.body.append(panel);
+ expect(nativePreviewExpanded(doc)).toBe(false);
+ panel.setAttribute('data-sidebar-right-open','true');expect(nativePreviewExpanded(doc)).toBe(true);
+ panel.removeAttribute('data-sidebar-right-open');expect(nativePreviewExpanded(doc)).toBe(false);
 });

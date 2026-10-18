@@ -4,6 +4,8 @@ import { useAuth } from '../auth/AuthProvider';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { PANE_ORIGINS, PANE_EVENTS, PANE_REQUESTS, paneForPath, panePath, paneSource, validPaneMessage, rememberPaneRoute } from '../shared/native-pane-protocol';
 
+export function nativePreviewExpanded(doc) { return Boolean(doc.querySelector('[data-sidebar-right-panel][data-sidebar-right-open]')); }
+
 function NativePane({ mode, entry, active, route, scope, onRoute }) {
   const frame = useRef(null); const [identified, setIdentified] = useState(false); const [error, setError] = useState(false); const [retry, setRetry] = useState(0);
   const latest = useRef({ active, route }); latest.current = { active, route };
@@ -69,10 +71,10 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
       if (!doc?.body) return;
       const update = () => {
         scheduled = undefined; if (stopped) return;
-        publish([...doc.querySelectorAll('[data-sidebar-right-panel]')].some(panel => panel.getAttribute('aria-hidden') !== 'true' && !panel.hidden && panel.getBoundingClientRect().width > 1));
+        publish(nativePreviewExpanded(doc));
       };
       observer = new MutationObserver(() => { if (!scheduled) scheduled = requestAnimationFrame(update); });
-      observer.observe(doc.body, {subtree:true,childList:true,attributes:true,attributeFilter:['aria-hidden','hidden','style','data-sidebar-right-panel']});
+      observer.observe(doc.body, {subtree:true,childList:true,attributes:true,attributeFilter:['data-sidebar-right-open','data-sidebar-right-panel']});
       update();
     };
     const element = frame.current; element?.addEventListener('load',attach); attach();
