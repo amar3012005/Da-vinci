@@ -27,7 +27,10 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
 
   useEffect(() => {
     if (!src) return undefined;
-    const timer = window.setTimeout(() => setTimedOutFrameKey(frameKey), apps ? 15000 : READY_TIMEOUT_MS);
+    const timer = window.setTimeout(() => { setTimedOutFrameKey(frameKey); window.clearInterval(probe); }, apps ? 15000 : READY_TIMEOUT_MS);
+    const connect = () => iframeRef.current?.contentWindow?.postMessage({ type: 'hivemind.open-dot.connect', version: 1 }, DOT_ORIGIN);
+    connect();
+    const probe = window.setInterval(connect, 1000);
     const onMessage = event => {
       if (event.origin !== DOT_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
       const rooms = openDotRoomStatus(event.data, openDotEmployeeIdFromPath(pathname));
@@ -40,10 +43,12 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
       setReadyEmployee(event.data.employeeId || null);
       setReadyFrameKey(frameKey);
       window.clearTimeout(timer);
+      window.clearInterval(probe);
     };
     window.addEventListener('message', onMessage);
     return () => {
       window.clearTimeout(timer);
+      window.clearInterval(probe);
       window.removeEventListener('message', onMessage);
     };
   }, [frameKey, src, pathname, apps, active]);
