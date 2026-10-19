@@ -1,3 +1,4 @@
+import { proxyConnectorTransport } from './connector-transport.mjs';
 import { handleModeAccess, gateWorkspaceDocument, proxyPlatformAdmin } from './account-mode-access.mjs';
 export { AccountModeAccess } from './account-mode-access.mjs';
 import { getRuntimePublic } from './getruntime-public.mjs';
@@ -506,6 +507,8 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const connectorResponse = await proxyConnectorTransport(request);
+    if (connectorResponse) return connectorResponse;
     const adminProxyResponse = await proxyPlatformAdmin(request);
     if (adminProxyResponse) return adminProxyResponse;
     const accountAccessResponse = await handleModeAccess(request, env);

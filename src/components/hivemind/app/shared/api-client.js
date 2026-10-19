@@ -103,6 +103,15 @@ class HiveMindApiClient {
       return config;
     });
 
+    this.controlPlane.interceptors.request.use(config => {
+      if (typeof window !== 'undefined' && ['runtime-runner.singulancelabs.com', 'next.singulancelabs.com'].includes(window.location.hostname)
+        && /^\/v1\/connectors\/composio\//.test(String(config.url))) {
+        config.baseURL = window.location.origin;
+        config.url = String(config.url).replace('/v1/connectors/', '/__hivemind/connectors/');
+      }
+      return config;
+    });
+
     this._apiKey = null;
     this._coreBaseUrl = null;
     this._productAccessPlan = 'free';

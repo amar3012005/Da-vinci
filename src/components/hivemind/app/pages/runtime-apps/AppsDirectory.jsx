@@ -235,9 +235,12 @@ function Grid({ title, action, count, children }) {
   ] });
 }
 function AppLogo({ app, size = 36 }) {
+  const [failed, setFailed] = useState(false);
+  if (failed || !app.logo) return jsx("span", { "aria-hidden": true, className: "grid shrink-0 place-items-center rounded-md bg-black/5 font-semibold", style: { width: size, height: size }, children: app.name.slice(0, 1) });
+  const logo = app.logo === "https://imagekit.io/static/imagekit-logo.svg" ? "https://logos.composio.dev/api/imagekit" : app.logo;
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    /* @__PURE__ */ jsx("img", { src: app.logo, alt: "", width: size, height: size, loading: "lazy", className: "shrink-0 rounded-md object-contain", style: { width: size, height: size } })
+    /* @__PURE__ */ jsx("img", { src: logo, onError: () => setFailed(true), alt: "", width: size, height: size, loading: "lazy", className: "shrink-0 rounded-md object-contain", style: { width: size, height: size } })
   );
 }
 function AppCard({ app, connected, instant, onOpen }) {
@@ -300,13 +303,32 @@ function loadDetail(slug) {
 function AppDrawer({ app, cloud, connected, signedIn, instant, onClose }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
+  const [toolkitMeta, setToolkitMeta] = useState(null);
+  const [key, setKey] = useState("");
+  const [keyConnected, setKeyConnected] = useState(false);
+  useEffect(() => {
+    let disposed = false;
+    apiClient.listComposioToolkits({ search: app.slug, limit: 40 }).then(catalog => {
+      const meta = catalog.toolkits?.find(toolkit => toolkit.slug === app.slug);
+      if (!meta) throw new Error("Authentication details unavailable. Close and reopen this app to retry.");
+      if (!disposed) setToolkitMeta(meta);
+    }).catch(error => { if (!disposed) setError(error?.response?.data?.error || error?.message || "Authentication details unavailable."); });
+    return () => { disposed = true; };
+  }, [app.slug]);
+  const schemes = toolkitMeta?.authSchemes || [];
+  const usesKey = !schemes.includes("OAUTH2") && schemes.includes("API_KEY");
   const connect = async () => {
     setPending(true);
     try {
       setError(null);
+      if (usesKey) {
+        if (!key.trim()) throw new Error("Enter your API key to connect.");
+        await apiClient.createComposioApiKeyConnection(app.slug, key.trim());
+        setKey("");
+        setKeyConnected(true);
+        return;
+      }
       await openAfter(async () => {
-        const catalog = await apiClient.listComposioToolkits({ search: app.slug, limit: 40 });
-        const toolkitMeta = catalog.toolkits?.find((toolkit) => toolkit.slug === app.slug);
         const callback = new URL("/hivemind/apps/connected", window.location.origin);
         const result = await apiClient.createComposioConnectLink(app.slug, {
           toolkitMeta,
@@ -346,14 +368,15 @@ function AppDrawer({ app, cloud, connected, signedIn, instant, onClose }) {
         /* @__PURE__ */ jsx("dt", { className: "eyebrow", children: k }),
         /* @__PURE__ */ jsx("dd", { className: "mt-0.5 text-[15px]", children: v })
       ] }, k)) }),
-      connected ? /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 rounded-lg bg-success/10 px-3.5 py-2.5 text-body-sm text-success", children: [
+      connected || keyConnected ? /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 rounded-lg bg-success/10 px-3.5 py-2.5 text-body-sm text-success", children: [
         /* @__PURE__ */ jsx(Check, { className: "size-4", strokeWidth: 2 }),
         " ",
         cloud ? "Connected through HIVEMIND." : "Connected. Your dots can use",
         " ",
         !cloud && app.name
       ] }) : /* @__PURE__ */ jsxs("div", { className: "space-y-1.5", children: [
-        /* @__PURE__ */ jsx("button", { className: "btn-primary h-10 w-full", disabled: pending, onClick: connect, children: cloud ? `Sign in to ${app.name}` : signedIn ? `Connect ${app.name}` : "Sign in with Composio to connect" }),
+        usesKey && jsx("label", { className: "block text-body-sm", children: ["API key", jsx("input", { type: "password", autoComplete: "off", value: key, onChange: e => setKey(e.target.value), className: "mt-2 w-full rounded-lg border p-3", "aria-label": `${app.name} API key` })] }),
+        /* @__PURE__ */ jsx("button", { className: "btn-primary h-10 w-full", disabled: pending || !toolkitMeta || (usesKey && !key.trim()), onClick: connect, children: pending ? "Connecting…" : !toolkitMeta ? "Checking connection options…" : usesKey ? `Connect ${app.name}` : `Sign in to ${app.name}` }),
         error && /* @__PURE__ */ jsx("p", { className: "text-caption text-destructive", children: error }),
         /* @__PURE__ */ jsxs("p", { className: "text-caption text-foreground/45", children: [
           "You'll sign in with ",
