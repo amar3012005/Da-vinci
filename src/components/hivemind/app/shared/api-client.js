@@ -1869,6 +1869,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getPlatformUserErasure(userId) {
+    const { data } = await this.controlPlane.get(`/admin/api/platform/users/${encodeURIComponent(userId)}/erasure`);
+    return data;
+  }
+
+  async erasePlatformUser(userId, email) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/users/${encodeURIComponent(userId)}/erasure`, { email, confirm: 'DELETE' });
+    return data;
+  }
+
   async getPlatformOrganizationSettings(orgId) {
     const {data}=await this.controlPlane.get(`/admin/api/platform/organizations/${encodeURIComponent(orgId)}/settings`);
     return data;
