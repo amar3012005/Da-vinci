@@ -34,3 +34,6 @@ https://openrouter.ai/docs/cookbook/get-started/free-models-router-playground
 
 Type-check note: the broader source graph reports existing SessionProjection and vendored Cordis type errors;
 that broader check is not recorded as passing. OAuth, HTTP and text streaming checks use controlled mocks.
+
+Source status: Da-vinci branch pushed. Runtime commits are local: the pre-push
+workspace dependency/typecheck gate failed. It has not been bypassed. No deployment occurred.
