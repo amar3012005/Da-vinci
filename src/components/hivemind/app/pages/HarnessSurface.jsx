@@ -299,6 +299,12 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
     let checkingSession = false;
     let livenessTimer;
     const readinessAbort = new AbortController();
+    const onSessionOpenError = (event) => {
+      const detail = event.detail;
+      if (cancelled || detail?.path !== window.location.pathname) return;
+      setState({ phase: 'error', stage: 0, message: String(detail.message || 'The chat could not be opened.') });
+    };
+    window.addEventListener('hivemind:session-open-error', onSessionOpenError);
     const request = { container: mount, cancelled: false };
     const onSlowMount = () => {
       if (!cancelled) setState({ phase: 'reconnecting', stage: HARNESS_BOOT_STAGES.length - 1, message: null });
@@ -471,6 +477,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
       document.removeEventListener('visibilitychange', recoverExpiredSession);
       request.cancelled = true;
       readinessAbort.abort();
+      window.removeEventListener('hivemind:session-open-error', onSessionOpenError);
       // An already-started shell import can evaluate after route exit. Keep its
       // cancelled seat visible: absent request means standalone mode to native
       // main.ts, which would mount into the outer React #root. The next embed
