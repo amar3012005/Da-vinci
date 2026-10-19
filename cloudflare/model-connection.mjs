@@ -3,7 +3,9 @@ export async function proxyModelConnection(request, env) {
   const url = new URL(request.url);
   const reply = (error, status) => Response.json({ error }, { status, headers: { 'cache-control': 'private, no-store' } });
   const action = url.pathname.split('/').at(-1);
-  if (!['status', 'models', 'start', 'answer', 'cancel', 'select', 'disconnect'].includes(action)) return reply('not_found', 404);
+  const openrouter = url.pathname.startsWith('/api/hivemind/model-connection/openrouter/');
+  if (openrouter && !['status', 'start', 'callback', 'select', 'disconnect'].includes(action)) return reply('not_found', 404);
+  if (!['status', 'models', 'start', 'answer', 'cancel', 'select', 'disconnect', ...(openrouter ? ['callback'] : [])].includes(action)) return reply('not_found', 404);
   const method = ['status', 'models'].includes(action) ? 'GET' : 'POST';
   if (request.method !== method) return reply('method_not_allowed', 405);
   const origin = request.headers.get('origin');
@@ -13,7 +15,7 @@ export async function proxyModelConnection(request, env) {
   const target = new URL(env.RUNTIME_RUNNER_ORIGIN || 'https://runtime-runner-origin.singulancelabs.com');
   if (target.origin !== 'https://runtime-runner-origin.singulancelabs.com') return reply('runtime_origin_invalid', 503);
   target.pathname = url.pathname;
-  const headers = new Headers({ cookie, accept: action === 'start' ? 'text/event-stream' : 'application/json', 'x-forwarded-host': url.host, 'x-forwarded-proto': 'https' });
+  const headers = new Headers({ cookie, accept: action === 'start' && !openrouter ? 'text/event-stream' : 'application/json', 'x-forwarded-host': url.host, 'x-forwarded-proto': 'https' });
   if (origin) headers.set('origin', origin);
   let body;
   if (method === 'POST') {

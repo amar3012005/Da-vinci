@@ -10,6 +10,7 @@ import apiClient from '../shared/api-client';
 import CreditBalance from '../shared/CreditBalance';
 import CreditUsageBreakdown from '../shared/CreditUsageBreakdown';
 import WorkspaceAccessCard from '../shared/WorkspaceAccessCard';
+import OpenRouterConnectionCard from '../shared/OpenRouterConnectionCard';
 import ModelConnectionCard from '../shared/ModelConnectionCard';
 
 // One screen, whole-platform, high-level usage. Cards = current month (DB-sourced,
@@ -281,6 +282,7 @@ export default function Usage() {
       <div className="mb-5"><WorkspaceAccessCard billing={billing} compact /></div>
 
       <ModelConnectionCard />
+        <OpenRouterConnectionCard />
 
       {data?.credits && (
         <section className="mb-5 grid gap-3 lg:grid-cols-[minmax(280px,0.8fr)_1.2fr]">
