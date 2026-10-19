@@ -28,7 +28,10 @@
     "RUNTIME_RUNNER_ORIGIN": "https://runtime-runner-origin.singulancelabs.com"
   },
   "routes": [
-    { "pattern": "getruntime.singulancelabs.com", "custom_domain": true },
+    {
+      "pattern": "getruntime.singulancelabs.com",
+      "custom_domain": true
+    },
     {
       "pattern": "runtime.singulancelabs.com",
       "custom_domain": true
@@ -52,6 +55,22 @@
     {
       "pattern": "runtime-runner.singulancelabs.com",
       "custom_domain": true
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ACCOUNT_MODE_ACCESS",
+        "class_name": "AccountModeAccess"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "account-mode-access-v1",
+      "new_sqlite_classes": [
+        "AccountModeAccess"
+      ]
     }
   ]
 }

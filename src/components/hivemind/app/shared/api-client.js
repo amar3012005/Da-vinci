@@ -65,6 +65,12 @@ function selectedPlatformAdminEnvironment() {
  */
 
 class HiveMindApiClient {
+  async platformAccountModeAccess(payload) {
+    if (this.getPlatformAdminEnvironment() !== 'production') throw new Error('Workspace mode access is configured for Production only.');
+    const { data } = await axios.post('/__hivemind/admin/account-mode-access', payload, { withCredentials: true, timeout: 20000 });
+    return data;
+  }
+
   async getRuntimeRecovery(signal) {
     const { data } = await axios.get('/api/hivemind/recovery', { withCredentials: true, signal, timeout: 22000 });
     return data;
@@ -90,6 +96,11 @@ class HiveMindApiClient {
       baseURL: platformAdminBases?.core || API_DEFAULTS.coreApiBase,
       timeout: 15000,
       headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (this._platformAdminEnvironment === 'production') this.controlPlane.interceptors.request.use(config => {
+      if (String(config.url).startsWith('/admin/api/platform/')) config.baseURL = window.location.origin;
+      return config;
     });
 
     this._apiKey = null;
@@ -1764,7 +1775,12 @@ class HiveMindApiClient {
   }
 
   async createPlatformEnterpriseInvitation(payload) {
-    const { data } = await this.controlPlane.post('/admin/api/platform/invitations', payload);
+    const { workspace_modes_enabled = false, ...invitation } = payload;
+    const { data } = await this.controlPlane.post('/admin/api/platform/invitations', invitation);
+    if (workspace_modes_enabled) {
+      try { await this.platformAccountModeAccess({ email: payload.recipient_email, enabled: true }); }
+      catch { throw new Error('Invitation was created, but workspace access was not saved. Enable access from Users; do not create the invitation again.'); }
+    }
     return data;
   }
 
@@ -1829,7 +1845,12 @@ class HiveMindApiClient {
   }
 
   async createPartnerReferralCampaign(payload) {
-    const { data } = await this.controlPlane.post('/admin/api/platform/partner-referrals', payload);
+    const { workspace_modes_enabled = false, ...invitation } = payload;
+    const { data } = await this.controlPlane.post('/admin/api/platform/partner-referrals', invitation);
+    if (workspace_modes_enabled) {
+      try { await this.platformAccountModeAccess({ email: payload.referrer_email, enabled: true }); }
+      catch { throw new Error('Referral invitation was created, but workspace access was not saved. Enable access from Users; do not create the invitation again.'); }
+    }
     return data;
   }
 

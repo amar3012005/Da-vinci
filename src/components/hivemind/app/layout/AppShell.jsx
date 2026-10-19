@@ -19,7 +19,7 @@ import NativeMobileAppsSheet from './NativeMobileAppsSheet';
 import { bindNativeChatViewport } from './mobile-chat-viewport';
 import './mobile-chat-viewport.css';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { useNativeAppearance } from '../shared/useNativeAppearance';
 import Sidebar from './Sidebar';
@@ -231,7 +231,7 @@ function sectionForPath(pathname) { return workspaceModeForPath(pathname); }
  *   2. otherwise -> full dashboard (API key generated on-demand when needed)
  */
 function AppShellContent() {
-  const { needsOnboarding, org, logout, user } = useAuth();
+  const { needsOnboarding, org, logout, user, workspaceModesEnabled, workspaceModesReady } = useAuth();
   const { t } = useTranslation('dashboard');
   const location = useLocation();
   useEffect(() => { discardParkedNativeHarnessSeat(location.pathname); }, [location.pathname]);
@@ -497,6 +497,9 @@ function AppShellContent() {
     media.addEventListener?.('change', handleChange);
     return () => media.removeEventListener?.('change', handleChange);
   }, []);
+
+  if (!workspaceModesReady && workspaceModeForPath(location.pathname) !== 'hivemind') return <AsciiWorkspaceLoading label="Connecting…" />;
+  if (!workspaceModesEnabled && workspaceModeForPath(location.pathname) !== 'hivemind') return <Navigate to="/hivemind/app/overview/new" replace />;
 
   if (needsOnboarding) {
     return <div data-hivemind-app-shell><OnboardingFlow /></div>;

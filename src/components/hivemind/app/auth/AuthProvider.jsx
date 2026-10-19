@@ -26,6 +26,34 @@ export function AuthProvider({ children }) {
   const [onboarding, setOnboarding] = useState(null);
   const [connectivity, setConnectivity] = useState(null);
   const [clientSupport, setClientSupport] = useState([]);
+  const [modeAccess, setModeAccess] = useState({ userId: null, enabled: false });
+  useEffect(() => {
+    if (authState !== 'signed_in' || !user?.id) return undefined;
+    const controller = new AbortController();
+    let pending = false;
+    const refreshAccess = async () => {
+      if (pending || document.visibilityState === 'hidden') return;
+      pending = true;
+      try {
+        const response = await fetch('/__hivemind/account-mode-access', {
+          credentials: 'include', cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
+        });
+        const result = response.ok ? await response.json() : { enabled: false };
+        if (!controller.signal.aborted) setModeAccess({ userId: user.id, enabled: result.enabled === true });
+      } catch { if (!controller.signal.aborted) setModeAccess({ userId: user.id, enabled: false }); }
+      finally { pending = false; }
+    };
+    void refreshAccess();
+    const interval = window.setInterval(refreshAccess, 15000);
+    window.addEventListener('focus', refreshAccess);
+    document.addEventListener('visibilitychange', refreshAccess);
+    return () => {
+      controller.abort(); window.clearInterval(interval);
+      window.removeEventListener('focus', refreshAccess);
+      document.removeEventListener('visibilitychange', refreshAccess);
+    };
+  }, [authState, user?.id]);
+
   const bootstrapAttempted = useRef(false);
   const activeTenantRef = useRef(null);
   const location = useLocation();
@@ -227,6 +255,9 @@ export function AuthProvider({ children }) {
     onboarding,
     connectivity,
     clientSupport,
+
+    workspaceModesReady: authState === 'signed_in' && modeAccess.userId === user?.id,
+    workspaceModesEnabled: authState === 'signed_in' && modeAccess.userId === user?.id && modeAccess.enabled,
 
     // Derived flags
     needsOnboarding: authState === 'signed_in' && (!org?.id || onboarding?.needs_org_setup === true),

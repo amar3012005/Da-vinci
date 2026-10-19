@@ -1,3 +1,5 @@
+import { handleModeAccess, gateWorkspaceDocument, proxyPlatformAdmin } from './account-mode-access.mjs';
+export { AccountModeAccess } from './account-mode-access.mjs';
 import { getRuntimePublic } from './getruntime-public.mjs';
 import { workspaceDocumentRedirect } from '../src/components/hivemind/app/shared/workspace-authority.mjs';
 import { proxyModelConnection } from './model-connection.mjs';
@@ -504,6 +506,12 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const adminProxyResponse = await proxyPlatformAdmin(request);
+    if (adminProxyResponse) return adminProxyResponse;
+    const accountAccessResponse = await handleModeAccess(request, env);
+    if (accountAccessResponse) return accountAccessResponse;
+    const accountRouteGate = await gateWorkspaceDocument(request, env);
+    if (accountRouteGate) return accountRouteGate;
     const runtimeCover = await getRuntimePublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
     if (runtimeCover) return runtimeCover;
     const workspaceRedirect = workspaceDocumentRedirect(url);

@@ -12,7 +12,7 @@ import VoiceModeIcon from './VoiceModeIcon';
 /** One workspace chooser shared by desktop and both mobile sidebars. */
 export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
   const location = useLocation();
-  const { user, org } = useAuth();
+  const { user, org, workspaceModesEnabled } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation('dashboard');
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
@@ -43,6 +43,7 @@ export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
     window.addEventListener('pointerdown', outside);
     return () => { window.removeEventListener('keydown', dismiss); window.removeEventListener('pointerdown', outside); };
   }, [modeMenuOpen]);
+  if (!workspaceModesEnabled) return <div className="mt-1 flex items-center gap-2 px-1 py-1.5 text-[#383838]" aria-label="Brain workspace"><BrainModeIcon size={32} />{!collapsed && <span className="text-[15px] font-medium">Brain</span>}</div>;
   return (
         <div ref={modeMenuRef} className="relative mt-1">
           <button type="button" aria-label="Choose workspace mode" aria-expanded={modeMenuOpen} aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)} className="flex items-center gap-2 rounded-xl px-1 py-1.5 text-[#383838] hover:bg-[#eeece6]">

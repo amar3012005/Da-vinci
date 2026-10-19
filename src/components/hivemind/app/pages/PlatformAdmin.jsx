@@ -448,6 +448,7 @@ function CommercialManager() {
     company_name: "",
     workspace_name: "",
     recipient_email: "",
+    workspace_modes_enabled: false,
     account_type: "enterprise_managed",
     storage_mode: "hybrid",
     onboarding_days: 14,
@@ -508,6 +509,7 @@ function CommercialManager() {
   const [referralForm, setReferralForm] = useState({
     referrer_display_name: "",
     referrer_email: "",
+    workspace_modes_enabled: false,
     internal_name: "",
     account_type: "enterprise_managed",
     trial_days: 14,
@@ -683,7 +685,7 @@ function CommercialManager() {
       };
       const result = await apiClient.createPartnerReferralCampaign(payload);
       setNotice(`Partner trial invitation ready: ${result.campaign.invitation_url}`);
-      setReferralForm({ ...referralForm, referrer_display_name: "", referrer_email: "", internal_name: "" });
+      setReferralForm({ ...referralForm, referrer_display_name: "", referrer_email: "", internal_name: "", workspace_modes_enabled: false });
       await load();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -719,6 +721,7 @@ function CommercialManager() {
         company_name: "",
         workspace_name: "",
         recipient_email: "",
+        workspace_modes_enabled: false,
         max_invites: 0,
         monthly_credits: 20000,
         welcome_message: "",
@@ -1292,6 +1295,8 @@ function CommercialManager() {
               onSubmit={submitEnterpriseInvitation}
               className="grid gap-3 md:grid-cols-2"
             >
+<label className="flex items-center gap-2 text-sm md:col-span-2"><input type="checkbox" checked={enterpriseInvitationForm.workspace_modes_enabled} onChange={event => setEnterpriseInvitationForm({ ...enterpriseInvitationForm, workspace_modes_enabled: event.target.checked })} />Enable HyperAgents and Voice for this recipient</label>
+
               <input
                 required
                 placeholder="Company / workspace name"
@@ -1730,6 +1735,8 @@ function CommercialManager() {
             onSubmit={submitReferralCampaign}
             className="mt-3 grid gap-3 md:grid-cols-3"
           >
+<label className="flex items-center gap-2 text-sm md:col-span-2"><input type="checkbox" checked={referralForm.workspace_modes_enabled} onChange={event => setReferralForm({ ...referralForm, workspace_modes_enabled: event.target.checked })} />Enable HyperAgents and Voice for the named referral account only</label>
+
             <input
               required
               placeholder="Referrer name (for example Wolfgang)"
@@ -1995,6 +2002,8 @@ export default function PlatformAdmin() {
   const [environment] = useState(() => apiClient.getPlatformAdminEnvironment());
   const [passcode, setPasscode] = useState("");
   const [data, setData] = useState(null);
+  const [accountAccess, setAccountAccess] = useState({});
+  const [accessSaving, setAccessSaving] = useState(null);
   const [metrics, setMetrics] = useState(null);
   const [logs, setLogs] = useState(emptyLogs);
   const [logsOpen, setLogsOpen] = useState(false);
@@ -2023,6 +2032,10 @@ export default function PlatformAdmin() {
         apiClient.getPlatformMetrics(),
       ]);
       setData(users);
+      if (environment === 'production') {
+        const grants = await apiClient.platformAccountModeAccess({ action: 'read', emails: users.users.map(user => user.email) });
+        setAccountAccess(grants.access || {});
+      }
       setLogs(logData.logs || emptyLogs);
       setMetrics(nextMetrics);
     } catch (err) {
@@ -2030,6 +2043,16 @@ export default function PlatformAdmin() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const changeAccountAccess = async (user, enabled) => {
+    setAccessSaving(user.id); setError('');
+    try {
+      const result = await apiClient.platformAccountModeAccess({ email: user.email, enabled });
+      setAccountAccess(previous => ({ ...previous, [user.email.toLowerCase()]: result.enabled }));
+      if (result.enabled !== enabled) setError('Access was saved, but the Cloudflare rollout flag is off.');
+    } catch (failure) { setError(failure.response?.data?.error || failure.message); }
+    finally { setAccessSaving(null); }
   };
 
   const unlock = async (event) => {
@@ -2200,6 +2223,7 @@ export default function PlatformAdmin() {
               <th>Organizations</th>
               <th>Last seen</th>
               <th>Status</th>
+              <th>HyperAgents / Voice</th>
               <th className="pr-3">Lifecycle</th>
             </tr>
           </thead>
@@ -2225,6 +2249,7 @@ export default function PlatformAdmin() {
                 <td>{user.organization_count}</td>
                 <td>{when(user.lastActiveAt)}</td>
                 <td>{user.active ? "Active" : "Sleeping"}</td>
+                <td><label className="flex items-center gap-2"><input type="checkbox" aria-label={`Enable HyperAgents and Voice for ${user.email}`} checked={accountAccess[user.email?.toLowerCase()] === true} disabled={environment !== 'production' || accessSaving === user.id} onChange={event => changeAccountAccess(user, event.target.checked)} />{accessSaving === user.id ? 'Saving…' : accountAccess[user.email?.toLowerCase()] ? 'Enabled' : 'Off'}</label></td>
                 <td className="pr-3">
                   <button
                     type="button"
