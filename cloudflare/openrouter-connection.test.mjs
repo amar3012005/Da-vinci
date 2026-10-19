@@ -34,3 +34,30 @@ test('top-level OAuth callback exchanges server-side and redirects without codes
   assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
  } finally { globalThis.fetch = previous; }
 });
+test('Brain model connection stays on Brain and preserves its native admission cookie', async () => {
+ const previous = globalThis.fetch;
+ globalThis.fetch = async (url, options) => {
+  assert.equal(String(url), 'https://harness-chat-origin.singulancelabs.com/api/hivemind/model-connection/status');
+  assert.equal(options.headers.get('cookie'), 'hm_cp_session=member; native_session=admitted');
+  assert.equal(options.headers.get('x-forwarded-host'), 'next.singulancelabs.com');
+  return Response.json({ available:false, connected:false });
+ };
+ try {
+  const response = await proxyModelConnection(new Request('https://next.singulancelabs.com/api/hivemind/model-connection/status', { headers:{cookie:'hm_cp_session=member; native_session=admitted'} }), {});
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(), {available:false,connected:false});
+ } finally { globalThis.fetch=previous; }
+});
+test('Runtime retains its owner and arbitrary Brain origins are rejected', async () => {
+ const previous=globalThis.fetch;
+ globalThis.fetch=async(url,options)=>{
+  assert.equal(new URL(url).origin,'https://runtime-runner-origin.singulancelabs.com');
+  assert.equal(options.headers.get('cookie'),'hm_cp_session=member');
+  return Response.json({connected:false});
+ };
+ try {
+  const headers={cookie:'hm_cp_session=member; native_session=admitted'};
+  assert.equal((await proxyModelConnection(new Request('https://runtime-runner.singulancelabs.com/api/hivemind/model-connection/status',{headers}),{})).status,200);
+  assert.equal((await proxyModelConnection(new Request('https://next.singulancelabs.com/api/hivemind/model-connection/status',{headers}),{RUNNER_ORIGIN:'https://attacker.example'})).status,503);
+ } finally {globalThis.fetch=previous;}
+});

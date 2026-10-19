@@ -17,6 +17,7 @@ test('connects and selects a default inside the chat dialog',async()=>{
   return {ok:true,json:async()=>({available:true,connected,selected_model:selected,models:['gpt-6-luna','gpt-6-astra']})};
  });
  render(<ChatModelConnection/>);
+ expect(global.fetch).not.toHaveBeenCalled();
  fireEvent.click(screen.getByRole('button',{name:'Connect to your ChatGPT'}));
  await screen.findByRole('button',{name:'Connect now'});
  fireEvent.click(screen.getByRole('checkbox'));

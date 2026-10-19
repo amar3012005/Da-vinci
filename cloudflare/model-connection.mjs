@@ -1,4 +1,4 @@
-/** Fixed Runtime transport for the authenticated Usage page; no identity or token exchange in the browser. */
+/** Fixed owner transport; Brain and Runtime keep separate native authorization. */
 export async function proxyModelConnection(request, env) {
   const url = new URL(request.url);
   const reply = (error, status) => Response.json({ error }, { status, headers: { 'cache-control': 'private, no-store' } });
@@ -13,10 +13,12 @@ export async function proxyModelConnection(request, env) {
   if (!oauthCallback && ((origin && origin !== url.origin) || (method === 'POST' && origin !== url.origin) || request.headers.get('sec-fetch-site') === 'cross-site')) return reply('origin_denied', 403);
   const cookie = (request.headers.get('cookie') || '').split(';').map(part => part.trim()).find(part => part.startsWith('hm_cp_session='));
   if (!cookie) return reply('authentication_required', 401);
-  const target = new URL(env.RUNTIME_RUNNER_ORIGIN || 'https://runtime-runner-origin.singulancelabs.com');
-  if (target.origin !== 'https://runtime-runner-origin.singulancelabs.com') return reply('runtime_origin_invalid', 503);
+  const brain = !openrouter && url.hostname === 'next.singulancelabs.com';
+  const expectedOrigin = brain ? 'https://harness-chat-origin.singulancelabs.com' : 'https://runtime-runner-origin.singulancelabs.com';
+  const target = new URL((brain ? env.RUNNER_ORIGIN : env.RUNTIME_RUNNER_ORIGIN) || expectedOrigin);
+  if (target.origin !== expectedOrigin) return reply('model_origin_invalid', 503);
   target.pathname = url.pathname;
-  const headers = new Headers({ cookie, accept: action === 'start' && !openrouter ? 'text/event-stream' : 'application/json', 'x-forwarded-host': url.host, 'x-forwarded-proto': 'https' });
+  const headers = new Headers({ cookie: brain ? request.headers.get('cookie') : cookie, accept: action === 'start' && !openrouter ? 'text/event-stream' : 'application/json', 'x-forwarded-host': url.host, 'x-forwarded-proto': 'https' });
   if (origin) headers.set('origin', origin);
   let body;
   if (oauthCallback) {
