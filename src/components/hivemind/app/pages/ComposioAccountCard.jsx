@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { BRAND_LOGOS } from '../shared/connectors-catalog';
+import './ComposioAccountCard.css';
 const BASE='/__hivemind/composio-account/';
 export default function ComposioAccountCard() {
   const [status,setStatus]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -7,14 +9,17 @@ export default function ComposioAccountCard() {
   const act=async action=>{setBusy(true);setError('');try{const response=await fetch(BASE+action,{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({consent:action==='start'})});const value=await response.json();if(!response.ok)throw new Error(value.error);if(action==='start'){const next=new URL(value.url);if(next.origin!=='https://connect.composio.dev')throw new Error('Invalid authorization address');window.location.assign(next.href);}else{await load();setError(value.message||'');}}catch{setError('The account connection could not be completed. Please try again.');}finally{setBusy(false);}};
   const connected=status?.connected && !status?.expired;
   const connect=()=>{if(window.confirm('Connect your Composio account and securely save its authorization for this user and workspace?'))act('start');};
-  return <section className="py-3" aria-label="Composio account connection">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 className="text-sm font-medium text-[#171717]">Composio</h2><p className="mt-1 text-xs text-[#737373]">{connected?'Connected':status?.expired?'Reconnect your account':'Use your own account.'}</p></div>
-      <div className="flex items-center gap-4">
-        {status?.connected && <button className="text-xs text-[#737373] underline-offset-4 hover:text-black hover:underline disabled:opacity-40" disabled={busy} onClick={connected?connect:()=>act('disconnect')}>{connected?'Reconnect':'Disconnect'}</button>}
-        <button className="min-h-[40px] rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-[#262626] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:cursor-not-allowed disabled:opacity-40" disabled={busy || !status} onClick={connected?()=>act('disconnect'):connect}>{busy?'Please wait…':connected?'Disconnect':status?.expired?'Reconnect':'Connect to Composio'}</button>
+  return <section className="hm-composio-banner" aria-label="Composio account connection">
+    <div className="hm-composio-banner-main">
+      <div className="hm-composio-apps" aria-hidden="true">
+        {[['Gmail',BRAND_LOGOS.gmail],['Calendar','https://api.iconify.design/logos/google-calendar.svg'],['Slack',BRAND_LOGOS.slack],['Notion',BRAND_LOGOS.notion],['GitHub',BRAND_LOGOS.github]].map(([name,src])=><span key={name}><img src={src} alt="" width="26" height="26" /></span>)}
+      </div>
+      <div className="hm-composio-copy"><h2>Connect your apps for proactive HIVEMIND intelligence</h2><p>{connected?'Your Composio account is connected.':status?.expired?'Reconnect your Composio account.':'Gmail, Calendar, Slack, Notion and more.'}</p></div>
+      <div className="hm-composio-actions">
+        {status?.connected && <button className="hm-composio-secondary" disabled={busy} onClick={connected?connect:()=>act('disconnect')}>{connected?'Reconnect':'Disconnect'}</button>}
+        <button className="hm-composio-connect" disabled={busy || !status} onClick={connected?()=>act('disconnect'):connect}>{busy?'Please wait…':connected?'Disconnect':status?.expired?'Reconnect':'Connect to Composio'}</button>
       </div>
     </div>
-    {error && <p role="status" className="mt-3 text-xs text-[#737373]">{error}</p>}
+    {error && <p role="status" className="hm-composio-error">{error}</p>}
   </section>;
 }
