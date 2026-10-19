@@ -1,3 +1,4 @@
+import AllUsersSection from './AllUsersSection';
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, BarChart3, ChevronRight, Eye, EyeOff, FileText, Gift, LayoutDashboard, Mail, Megaphone, Menu, MessageCircle, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
 import apiClient from "../shared/api-client";
@@ -1947,7 +1948,7 @@ function CommercialManager() {
 
 const ADMIN_NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "users", label: "Users", icon: Users },
+  { id: "users", label: "All users", icon: Users },
   { id: "organizations", label: "Organizations · team & credits", icon: Users },
   { id: "plans", label: "Plans & credits", icon: BarChart3 },
   { id: "promotions", label: "Promotions", icon: Gift },
@@ -2002,8 +2003,6 @@ export default function PlatformAdmin() {
   const [environment] = useState(() => apiClient.getPlatformAdminEnvironment());
   const [passcode, setPasscode] = useState("");
   const [data, setData] = useState(null);
-  const [accountAccess, setAccountAccess] = useState({});
-  const [accessSaving, setAccessSaving] = useState(null);
   const [metrics, setMetrics] = useState(null);
   const [logs, setLogs] = useState(emptyLogs);
   const [logsOpen, setLogsOpen] = useState(false);
@@ -2014,7 +2013,7 @@ export default function PlatformAdmin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [activeItem, setActiveItem] = useState("overview");
+  const [activeItem, setActiveItem] = useState(() => new URLSearchParams(window.location.search).get('section') === 'users' ? 'users' : 'overview');
 
   const changeEnvironment = (next) => {
     if (next === environment) return;
@@ -2032,10 +2031,6 @@ export default function PlatformAdmin() {
         apiClient.getPlatformMetrics(),
       ]);
       setData(users);
-      if (environment === 'production') {
-        const grants = await apiClient.platformAccountModeAccess({ action: 'read', emails: users.users.map(user => user.email) });
-        setAccountAccess(grants.access || {});
-      }
       setLogs(logData.logs || emptyLogs);
       setMetrics(nextMetrics);
     } catch (err) {
@@ -2043,16 +2038,6 @@ export default function PlatformAdmin() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const changeAccountAccess = async (user, enabled) => {
-    setAccessSaving(user.id); setError('');
-    try {
-      const result = await apiClient.platformAccountModeAccess({ email: user.email, enabled });
-      setAccountAccess(previous => ({ ...previous, [user.email.toLowerCase()]: result.enabled }));
-      if (result.enabled !== enabled) setError('Access was saved, but the Cloudflare rollout flag is off.');
-    } catch (failure) { setError(failure.response?.data?.error || failure.message); }
-    finally { setAccessSaving(null); }
   };
 
   const unlock = async (event) => {
@@ -2098,9 +2083,12 @@ export default function PlatformAdmin() {
 
   const navigateAdmin = useCallback((target) => {
     setActiveItem(target);
+    const url = new URL(window.location.href);
+    if (target === 'users') url.searchParams.set('section', 'users');else url.searchParams.delete('section');
+    window.history.replaceState(null, '', url);
     setMobileNavOpen(false);
     if (target === "overview") {
-      document.getElementById("admin-overview")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.requestAnimationFrame(() => document.getElementById("admin-overview")?.scrollIntoView({ behavior: "smooth", block: "start" }));
       return;
     }
     if (target === "organizations") {
@@ -2108,7 +2096,7 @@ export default function PlatformAdmin() {
       return;
     }
     if (target === "users") {
-      document.getElementById("admin-users")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.requestAnimationFrame(() => document.getElementById("admin-users")?.scrollIntoView({ behavior: "smooth", block: "start" }));
       return;
     }
     if (target === "logs") {
@@ -2171,6 +2159,7 @@ export default function PlatformAdmin() {
         <EnvironmentToggle environment={environment} onChange={changeEnvironment} compact />
       </header>
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-8 lg:px-8">
+      {activeItem === 'users' ? <AllUsersSection environment={environment} onLifecycle={openLifecycle} /> : <>
       <div id="admin-overview" className="mb-6 flex flex-col gap-3 scroll-mt-20 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Platform Admin</h1>
@@ -2212,58 +2201,7 @@ export default function PlatformAdmin() {
         ))}
       </div>
       <CapacityPanel metrics={metrics} />
-      <div id="admin-users" className="overflow-x-auto rounded-[10px] border border-[#e3e0db] bg-white scroll-mt-20">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left bg-[#faf9f4]">
-              <th className="p-3">User</th>
-              <th>Type</th>
-              <th>Memory plane</th>
-              <th>Memories</th>
-              <th>Organizations</th>
-              <th>Last seen</th>
-              <th>Status</th>
-              <th>HyperAgents / Voice</th>
-              <th className="pr-3">Lifecycle</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.users.map((user) => (
-              <tr key={user.id} className="border-t align-top">
-                <td className="p-3">
-                  <div>{user.displayName || "Unnamed"}</div>
-                  <div className="text-xs text-[#737373]">{user.email}</div>
-                </td>
-                <td className="capitalize">{user.user_type || user.tier}</td>
-                <td>
-                  <div>{user.filesystem || "hybrid"}</div>
-                  <div className="text-xs text-[#737373]">
-                    {(user.memory_storage_modes || []).join(", ")}
-                  </div>
-                </td>
-                <td>
-                  {user.memory_count == null
-                    ? "Unavailable"
-                    : user.memory_count}
-                </td>
-                <td>{user.organization_count}</td>
-                <td>{when(user.lastActiveAt)}</td>
-                <td>{user.active ? "Active" : "Sleeping"}</td>
-                <td><label className="flex items-center gap-2"><input type="checkbox" aria-label={`Enable HyperAgents and Voice for ${user.email}`} checked={accountAccess[user.email?.toLowerCase()] === true} disabled={environment !== 'production' || accessSaving === user.id} onChange={event => changeAccountAccess(user, event.target.checked)} />{accessSaving === user.id ? 'Saving…' : accountAccess[user.email?.toLowerCase()] ? 'Enabled' : 'Off'}</label></td>
-                <td className="pr-3">
-                  <button
-                    type="button"
-                    onClick={() => openLifecycle(user)}
-                    className="rounded-[6px] border border-[#d8d6cf] px-2.5 py-1.5 text-xs font-medium text-[#303030] hover:border-[#117dff] hover:text-[#117dff]"
-                  >
-                    Lifecycle
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      </>}
       {logsOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center">
           <section className="w-full max-w-6xl h-[80vh] rounded-xl overflow-hidden bg-[#111827] shadow-2xl flex flex-col">
