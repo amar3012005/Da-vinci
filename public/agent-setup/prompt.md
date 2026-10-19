@@ -1,6 +1,6 @@
 # ICARUS coding-agent setup
 
-Version: `v1`
+Version: `v2` — CLI v0.3.91
 Canonical URL: `https://icarus.singulancelabs.com/agent-setup/prompt.md`
 
 You are setting up ICARUS for the repository currently open in this coding-agent session. Follow this procedure deliberately and report the result. Do not claim setup succeeded without running the verification step.
@@ -70,11 +70,19 @@ Run these commands from the repository root, replacing `<agent>` with `codex`, `
 
 ```bash
 icarus mcp install <agent>
-icarus harness init --agent <agent> --repo .
-icarus doctor --repo .
 ```
 
-Both registration and initialization are idempotent. If MCP registration changed, restart the coding agent before relying on its ICARUS tools.
+Registration creates the repository memory shard without enabling Harness. If registration changed, restart the coding agent before relying on its ICARUS tools. Initialize task governance only when the user explicitly selects it: `icarus mcp install <agent> --harness`.
+
+## Optional developer identity
+
+Local memory needs no account. Only if the user wants developer sign-in, run `icarus connect`.
+Choose email or Google in the browser's ICARUS developer account page. The user enters the emailed
+six-digit code and chooses Verify and continue. Keep the terminal open for the callback; v0.3.91
+waits up to fifteen minutes. If it times out after browser verification, rerun `icarus connect`
+to use that verified session. No purchase or company workspace is required. Developer credentials
+are identity-only, separate from customer API keys, and do not upload local memory. Never ask the
+user to paste an email code into agent chat. `icarus connect --logout` removes the local credential.
 
 ## 4. Use ICARUS correctly after setup
 

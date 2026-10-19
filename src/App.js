@@ -132,7 +132,7 @@ function App() {
       <UpdateBanner />
       <CookieConsent />
       <Routes>
-        <Route path="/" element={window.location.hostname === "runtime.singulancelabs.com" ? <React.Suspense fallback={<PublicPageLoading />}><RuntimeProduct /></React.Suspense> : PRODUCT_HOST ? <ReturningUserMarketingHomepage /> : (isHivemindHost ? <React.Suspense fallback={<PublicPageLoading />}><HivemindRedirect /></React.Suspense> : <ReturningUserMarketingHomepage />)} />
+        <Route path="/" element={window.location.hostname === "icarus.singulancelabs.com" ? <React.Suspense fallback={<PublicPageLoading />}><IcarusResearch productHome /></React.Suspense> : window.location.hostname === "runtime.singulancelabs.com" ? <React.Suspense fallback={<PublicPageLoading />}><RuntimeProduct /></React.Suspense> : PRODUCT_HOST ? <ReturningUserMarketingHomepage /> : (isHivemindHost ? <React.Suspense fallback={<PublicPageLoading />}><HivemindRedirect /></React.Suspense> : <ReturningUserMarketingHomepage />)} />
 
         {/* HIVEMIND — only served on the HIVEMIND subdomain; every /hivemind* hit
             on the marketing domain hard-redirects to HIVEMIND_SITE_HOST. */}
@@ -170,6 +170,7 @@ function App() {
         <Route path="/getruntime" element={<React.Suspense fallback={<PublicPageLoading />}><GetRuntime /></React.Suspense>} />
         <Route path="/runtime" element={<React.Suspense fallback={<PublicPageLoading />}><RuntimeProduct /></React.Suspense>} />
         <Route path="/research/runtime" element={<React.Suspense fallback={<PublicPageLoading />}><RuntimeResearch /></React.Suspense>} />
+        <Route path="/icarus" element={<React.Suspense fallback={<PublicPageLoading />}><IcarusResearch productHome /></React.Suspense>} />
         <Route path="/research/icarus" element={<React.Suspense fallback={<PublicPageLoading />}><IcarusResearch /></React.Suspense>} />
         <Route path="/research/cognitive-swarm-intelligence" element={<React.Suspense fallback={<PublicPageLoading />}><CsiResearch /></React.Suspense>} />
         <Route path="/research/post-quantum-cryptography" element={<React.Suspense fallback={<PublicPageLoading />}><PostQuantumResearch /></React.Suspense>} />

@@ -52,7 +52,7 @@ const NewsArticleLayout = ({
           <a href="/" className="flex items-center gap-2 bg-transparent text-[13px] font-medium text-white/80 hover:text-white">
             SINGULANCE
           </a>
-          <span className="font-mono text-[11px] uppercase tracking-[0.28em] text-white/50">Research</span>
+          <span className="font-mono text-[11px] uppercase tracking-[0.28em] text-white/50">{badge}</span>
         </div>
 
         {/* centered title */}

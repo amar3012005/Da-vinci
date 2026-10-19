@@ -4,6 +4,7 @@ import { proxyConnectorTransport } from './connector-transport.mjs';
 import { handleModeAccess, gateWorkspaceDocument, proxyPlatformAdmin } from './account-mode-access.mjs';
 export { AccountModeAccess } from './account-mode-access.mjs';
 import { getRuntimePublic } from './getruntime-public.mjs';
+import { icarusPublic } from './icarus-public.mjs';
 import { workspaceDocumentRedirect } from '../src/components/hivemind/app/shared/workspace-authority.mjs';
 import { proxyModelConnection } from './model-connection.mjs';
 import { proxyRuntimeRecovery } from './runtime-recovery.mjs';
@@ -519,6 +520,8 @@ export default {
     if (accountAccessResponse) return accountAccessResponse;
     const accountRouteGate = await gateWorkspaceDocument(request, env);
     if (accountRouteGate) return accountRouteGate;
+    const icarusCover = await icarusPublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
+    if (icarusCover) return icarusCover;
     const runtimeCover = await getRuntimePublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
     if (runtimeCover) return runtimeCover;
     const workspaceRedirect = workspaceDocumentRedirect(url);

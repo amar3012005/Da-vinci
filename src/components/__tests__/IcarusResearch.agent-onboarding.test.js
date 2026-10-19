@@ -31,6 +31,10 @@ test('research hero exposes a copyable ICARUS coding-agent onboarding prompt', a
   await act(async () => { root.render(<IcarusResearch />); });
   const banner = container.querySelector('[aria-label="Copy the ICARUS coding-agent onboarding prompt"]');
   expect(container.textContent).toContain('Onboard your coding agent to ICARUS');
+  expect(container.textContent).toContain('CLI v0.3.91');
+  expect(container.textContent).toContain('icarus connect');
+  expect(container.textContent).toContain('fifteen minutes');
+  expect(container.textContent).toContain('No purchase or company workspace');
   expect(banner).not.toBeNull();
   expect(container.querySelector('img[alt="OpenAI Codex logo"]')).not.toBeNull();
   expect(container.querySelector('img[alt="Claude Code logo"]')).not.toBeNull();

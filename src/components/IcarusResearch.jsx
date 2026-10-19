@@ -60,6 +60,40 @@ const AgentOnboardingPill = () => {
   );
 };
 
+const InstallCommand = ({ children }) => <pre className="my-4 overflow-x-auto rounded-lg bg-[#101522] p-4 text-[12px] leading-6 text-[#e3e8f1]"><code>{children}</code></pre>;
+
+const IcarusQuickstart = () => (
+  <section id="install" className="mb-16 scroll-mt-6 border-y py-10" style={{ borderColor: BORDER }} aria-label="Install and sign in to ICARUS">
+    <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#77746d]">Start here · CLI v0.3.91</div>
+    <H2>Local memory. Ready for your agent.</H2>
+    <P>One self-contained binary. No Node.js or Rust required on macOS Apple Silicon/Intel, Linux x64/ARM64, or Windows x64. Local memory works without an account or API key.</P>
+    <h3 className="mt-6 font-semibold">1. Install</h3>
+    <p className="text-[13px] text-[#54514b]">macOS / Linux / WSL</p>
+    <InstallCommand>{'curl -fsSL https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.sh | bash'}</InstallCommand>
+    <p className="text-[13px] text-[#54514b]">Native Windows PowerShell</p>
+    <InstallCommand>{'irm https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.ps1 | iex'}</InstallCommand>
+    <P>Choose Agent Memory for the default local experience. Knowledge Space is a preview; Harness is an explicit opt-in. On Windows, run <code>icarus setup</code> after installation for guided setup.</P>
+    <P>Open a new terminal after installation. To use the current macOS/Linux terminal:</P>
+    <InstallCommand>{'export PATH="$HOME/.icarus/bin:$PATH"\nicarus --version'}</InstallCommand>
+    <h3 className="mt-6 font-semibold">2. Save and recall</h3>
+    <InstallCommand>{'icarus save "The release checklist lives in docs/release.md" --org first-memory\nicarus recall "release checklist" --org first-memory'}</InstallCommand>
+    <h3 className="mt-6 font-semibold">3. Connect your coding agent — optional</h3>
+    <P>From the repository root, choose <code>codex</code>, <code>claude</code>, or <code>cursor</code>. This registers memory tools and creates the repository memory shard. Restart the coding agent after registration.</P>
+    <InstallCommand>{'icarus mcp install codex\n# Add --harness only when this repository should use task governance.'}</InstallCommand>
+    <h3 className="mt-6 font-semibold">4. Developer sign-in — optional</h3>
+    <InstallCommand>icarus connect</InstallCommand>
+    <P>Choose email or Google on the ICARUS developer account page. For email, enter the six-digit code from your ICARUS email and choose Verify and continue. The browser returns to the waiting terminal, which confirms sign-in.</P>
+    <P>Keep the terminal open; it waits up to fifteen minutes. If it expires after the browser verified you, run <code>icarus connect</code> again to finish using that session. No purchase or company workspace is required. Developer identity grants no hosted customer API access and does not upload local memory.</P>
+    <P>Skip sign-in to keep working offline. Use <code>icarus connect --logout</code> to remove the local developer credential. Upgrade later with <code>icarus update</code>.</P>
+    <p className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[13px] font-medium">
+      <a className="text-[#cc3f20] underline underline-offset-4" href="https://github.com/amar3012005/ICARUS#start-here">Read the quickstart</a>
+      <a className="text-[#cc3f20] underline underline-offset-4" href="https://github.com/amar3012005/ICARUS/releases/tag/v0.3.91">Downloads and checksums</a>
+      <a className="text-[#cc3f20] underline underline-offset-4" href="https://github.com/amar3012005/ICARUS/blob/main/docs/DEVELOPER_AUTH.md">Developer sign-in details</a>
+    </p>
+    <P>Agent Bus is experimental with no public installer; the proposed bridge is not shipped. Computer Use is a separate experimental module. Installing Memory enables neither.</P>
+  </section>
+);
+
 const ThesisLicenseNotice = () => (
   <aside className="mt-14 border-t pt-8" style={{ borderColor: BORDER }} aria-label="Thesis license">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
@@ -383,24 +417,25 @@ const VERSION_META = {
   },
 };
 
-const IcarusResearch = () => {
+const IcarusResearch = ({ productHome = false }) => {
   const motionOk = useMotionOk();
   const [version, setVersion] = useState('v2');
   const meta = VERSION_META[version];
 
   return (
     <NewsArticleLayout
-      badge="Research"
-      title={meta.title}
-      date={meta.date}
+      badge={productHome ? "Open source · local first" : "Research"}
+      title={productHome ? "ICARUS — the memory filesystem for AI agents" : meta.title}
+      date={productHome ? "October 19, 2026" : meta.date}
       author="SINGULANCE Labs"
       heroImg={HERO_IMG}
       heroScene={motionOk ? <Suspense fallback={null}><IcarusHeroScene /></Suspense> : null}
-      heroAccessory={<AgentOnboardingPill />}
-      seo={meta.seo}
+      heroAccessory={productHome ? <div className="space-y-4"><a href="#install" className="inline-block rounded-full bg-white px-5 py-2 text-[14px] font-medium text-[#101522]">Install ICARUS v0.3.91 ↓</a><AgentOnboardingPill /></div> : <AgentOnboardingPill />}
+      seo={productHome ? { title: "ICARUS — Memory Filesystem for AI Agents", description: "Install ICARUS v0.3.91 for local agent memory. Optional email and Google developer sign-in. No account or company workspace needed for local memory.", canonical: "https://icarus.singulancelabs.com/" } : meta.seo}
       product={{ name: 'ICARUS', tag: '.amr format', desc: 'A memory filesystem for AI agents — one mmap’d file per tenant, no server.' }}
-      highlights={meta.highlights}
+      highlights={productHome ? ["Durable local memory with lexical recall, without an account or API key.", "A self-contained CLI for macOS, Linux and Windows.", "Memory tools for Codex, Claude Code and Cursor; Harness stays opt-in.", "Optional developer email/Google sign-in, separate from company workspaces."] : meta.highlights}
     >
+      <IcarusQuickstart />
       <VersionToggle version={version} onChange={setVersion} />
       <div key={version} className="animate-[icarusFade_.45s_ease]">
         {version === 'v1' ? <V1Body motionOk={motionOk} /> : <V2Body motionOk={motionOk} />}
