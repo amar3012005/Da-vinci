@@ -12,7 +12,7 @@ Enterprise invitation and named partner-referral forms default to off. Selecting
 
 The existing account context refreshes on focus and every 15 seconds while visible, without retaining the last account's access across sign-out. Denied Runtime/Voice document links return to Brain. Hidden tabs refresh upon visibility. Existing backend roles, tenant ownership and execution policies remain unchanged.
 
-Rollback: restore the preceding Worker version to restore prior UI. Flag rollback alone is fail-closed (Brain only), not a return to the old open selector. Keep the Durable Object class/migration on future source releases; rollback does not delete grant records.
+Rollback: disabling the Flagship flag is the immediate fail-closed switch (Brain only). The previous Worker version is provenance, not a directly usable version rollback across this new Durable Object migration. To restore the prior UI, redeploy prior frontend source ee894221 with AccountModeAccess still exported and its binding/migration retained; use the normal guarded promotion/build path. Never delete grant records or the namespace to roll back. Cloudflare documents this lifecycle restriction at https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/.
 
 ## Acceptance
 
