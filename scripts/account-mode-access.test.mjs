@@ -44,14 +44,14 @@ test('admin API denies missing session, wrong host and cross-origin writes',asyn
   assert.equal(result.status,expected);
  }
 });
-test('flag/store failure is closed and direct Runtime/Voice links return to Brain',async()=>{
- assert.equal(await evaluateModeAccess({},'amarsai2005@gmail.com'),false);
+test('flag/store failure is unavailable and denied workspace links stay on their route',async()=>{
+ await assert.rejects(evaluateModeAccess({},'amarsai2005@gmail.com'),/account_mode_access_unavailable/);
  const original=globalThis.fetch;
  globalThis.fetch=async()=>Response.json({authenticated:true,user:{id:'ordinary',email:'other@example.com'}});
  try {
   for(const path of ['/hivemind/app/employee/harness','/hivemind/app/employee/dots/employee/test','/hivemind/app/tara']) {
    const result=await gateWorkspaceDocument(new Request('https://runtime-runner.singulancelabs.com'+path,{headers:{cookie:'hm_cp_session=x'}}),env(grants()));
-   assert.equal(result.status,302);assert.equal(result.headers.get('location'),'https://next.singulancelabs.com/hivemind/app/overview/new');
+   assert.equal(result.status,403);assert.equal(result.headers.get('location'),null);
   }
  } finally {globalThis.fetch=original;}
 });
@@ -70,5 +70,17 @@ test('admin proxy keeps host-only cookie server-verified and rejects cross-origi
   assert.match(response.headers.get('set-cookie'),/HttpOnly/);
   const denied=await proxyPlatformAdmin(new Request('https://admin.hivemind.singulancelabs.com/admin/api/platform/unlock',{method:'POST',headers:{origin:'https://evil.example'},body:'{}'}));
   assert.equal(denied.status,403);
+ } finally {globalThis.fetch=original;}
+});
+
+test('upstream access failure returns 503 without fabricating a denial or redirect', async () => {
+ const original=globalThis.fetch;
+ globalThis.fetch=async()=>Response.json({authenticated:true,user:{id:'owner',email:'amarsai2005@gmail.com'}});
+ try {
+  const request=new Request('https://runtime-runner.singulancelabs.com/__hivemind/account-mode-access',{headers:{cookie:'hm_cp_session=x'}});
+  const result=await handleModeAccess(request,{});
+  assert.equal(result.status,503);assert.deepEqual(await result.json(),{error:'account_mode_access_unavailable'});
+  const document=await gateWorkspaceDocument(new Request('https://runtime-runner.singulancelabs.com/hivemind/app/employee/harness',{headers:{cookie:'hm_cp_session=x'}}),{});
+  assert.equal(document.status,503);assert.equal(document.headers.get('location'),null);
  } finally {globalThis.fetch=original;}
 });

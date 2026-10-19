@@ -38,9 +38,18 @@ export function AuthProvider({ children }) {
         const response = await fetch('/__hivemind/account-mode-access', {
           credentials: 'include', cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
         });
-        const result = response.ok ? await response.json() : { enabled: false };
-        if (!controller.signal.aborted) setModeAccess({ userId: user.id, enabled: result.enabled === true });
-      } catch { if (!controller.signal.aborted) setModeAccess({ userId: user.id, enabled: false }); }
+        if (!response.ok) throw new Error('workspace_access_unavailable');
+        const result = await response.json();
+        if (typeof result.enabled !== 'boolean') throw new Error('workspace_access_unavailable');
+        if (!controller.signal.aborted) setModeAccess({ userId: user.id, enabled: result.enabled, error: null });
+      } catch {
+        // An unavailable check is not a revocation. Keep this account's last
+        // verified display state; server authorization still gates every request.
+        if (!controller.signal.aborted) setModeAccess(previous => ({
+          userId: user.id, enabled: previous.userId === user.id && previous.enabled,
+          error: 'Workspace access could not be checked. Please retry.',
+        }));
+      }
       finally { pending = false; }
     };
     void refreshAccess();
@@ -256,6 +265,7 @@ export function AuthProvider({ children }) {
     connectivity,
     clientSupport,
 
+    workspaceModesError: modeAccess.userId === user?.id ? modeAccess.error : null,
     workspaceModesReady: authState === 'signed_in' && modeAccess.userId === user?.id,
     workspaceModesEnabled: authState === 'signed_in' && modeAccess.userId === user?.id && modeAccess.enabled,
 

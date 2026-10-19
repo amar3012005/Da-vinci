@@ -33,12 +33,12 @@ export async function evaluateModeAccess(env, email, userId = '') {
   if (!normalized) return false;
   try {
     const grant = await (await grantStub(env, normalized)).fetch('https://account-grant/');
-    if (!grant.ok) return false;
+    if (!grant.ok) throw new Error('account_mode_access_unavailable');
     const state = await grant.json();
     return await env.FLAGS.getBooleanValue(MODE_ACCESS_FLAG, false, {
       email: normalized, userId, admin_granted: state.enabled === true, admin_denied: state.enabled === false,
     }) === true;
-  } catch { return false; }
+  } catch { throw new Error('account_mode_access_unavailable'); }
 }
 function cookies(request, name) {
   return (request.headers.get('cookie') || '').split(';').map(v => v.trim()).find(v => v.startsWith(`${name}=`));
@@ -49,7 +49,8 @@ async function sessionUser(request) {
   const response = await fetch('https://api.singulancelabs.com/auth/session', {
     headers: { cookie, accept: 'application/json' }, redirect: 'manual', signal: AbortSignal.timeout(8000),
   });
-  if (!response.ok) return null;
+  if (response.status === 401 || response.status === 403) return null;
+  if (!response.ok) throw new Error('account_session_unavailable');
   const data = await response.json();
   return data.authenticated === true && data.user?.id && normalizeAccessEmail(data.user.email) ? data.user : null;
 }
@@ -107,7 +108,7 @@ export async function gateWorkspaceDocument(request, env) {
     // Existing sign-in keeps the intended return destination for unauthenticated users.
     if (!user) return null;
     if (await evaluateModeAccess(env, user.email, user.id)) return null;
-    return new Response(null, { status: 302, headers: { ...headers, location: 'https://next.singulancelabs.com/hivemind/app/overview/new' } });
+    return reply({ error: 'workspace_access_disabled', message: 'Workspace access is not enabled for this account. Your saved conversations are unchanged.' }, 403);
   } catch { return reply({ error: 'account_mode_access_unavailable' }, 503); }
 }
 

@@ -231,7 +231,7 @@ function sectionForPath(pathname) { return workspaceModeForPath(pathname); }
  *   2. otherwise -> full dashboard (API key generated on-demand when needed)
  */
 function AppShellContent() {
-  const { needsOnboarding, org, logout, user, workspaceModesEnabled, workspaceModesReady } = useAuth();
+  const { needsOnboarding, org, logout, user, workspaceModesEnabled, workspaceModesReady, workspaceModesError } = useAuth();
   const { t } = useTranslation('dashboard');
   const location = useLocation();
   useEffect(() => { discardParkedNativeHarnessSeat(location.pathname); }, [location.pathname]);
@@ -499,7 +499,12 @@ function AppShellContent() {
   }, []);
 
   if (!workspaceModesReady && workspaceModeForPath(location.pathname) !== 'hivemind') return <AsciiWorkspaceLoading label="Connecting…" />;
-  if (!workspaceModesEnabled && workspaceModeForPath(location.pathname) !== 'hivemind') return <Navigate to="/hivemind/app/overview/new" replace />;
+  if (!workspaceModesEnabled && workspaceModeForPath(location.pathname) !== 'hivemind') return (
+    <section role="alert" className="grid min-h-screen place-content-center gap-4 p-6 text-center">
+      <p>{workspaceModesError || 'Workspace access is not enabled for this account. Your saved conversations are unchanged.'}</p>
+      <button type="button" onClick={() => window.location.reload()}>Retry this workspace</button>
+    </section>
+  );
 
   if (needsOnboarding) {
     return <div data-hivemind-app-shell><OnboardingFlow /></div>;
