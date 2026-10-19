@@ -31,8 +31,13 @@ test('one card dismisses, then changes artwork and reopens for the next feature'
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
   expect(screen.getAllByRole('dialog')).toHaveLength(1);
-  expect(screen.getByRole('img')).toHaveAttribute('src', '/images/feature-banners/meeting-notes.webp');
+  expect(screen.getByRole('dialog', { name: 'Meeting Intelligence' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Connect your team’s thinking to the company Brain.' })).toBeInTheDocument();
+  expect(screen.getByRole('img')).toHaveAccessibleName('Meeting conversations connect with company knowledge to surface decisions, commitments and next steps.');
   expect(document.body.style.overflow).toBe('hidden');
+  fireEvent.click(screen.getByRole('button', { name: 'Explore Meeting Intelligence' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(document.body.style.overflow).toBe('');
 });
 test.each(['connectors', 'knowledge'])('%s keeps its own page modal without a duplicate shell dialog', page => {
   render(<MemoryRouter initialEntries={['/hivemind/app/' + page]}><BrainFeatureWelcome/></MemoryRouter>);

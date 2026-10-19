@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
+import MeetingIntelligenceStory from '../shared/MeetingIntelligenceStory';
 import MeetingIntelligencePanel from '../components/MeetingIntelligencePanel';
 import EntityText from '../shared/EntityText';
 import { useTranslation } from 'react-i18next';
@@ -760,21 +761,23 @@ export default function MeetingNotes() {
   }, [meetings]);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-5">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="meeting-intelligence-page space-y-5">
       <style>{`@keyframes mn-sweep{0%{left:-35%}100%{left:105%}}`}</style>
 
       {/* header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2 text-[11px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1"><MeetingNotesIcon size={13} /> HIVEMIND</div>
-          <h1 className="text-[24px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('meetingnotes.title', 'AI Meeting Notes')}</h1>
-          <p className="text-[12px] text-[#737373] mt-1">{t('meetingnotes.subtitle', 'Record, transcribe and extract insights — saved straight into your memory.')}</p>
+          <h1 className="text-[24px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('meetingnotes.intelligenceTitle', 'Meeting Intelligence')}</h1>
+          <p className="text-[12px] text-[#737373] mt-1">{t('meetingnotes.intelligenceSubtitle', 'Conversations, connected to what your company knows.')}</p>
         </div>
         <div className="flex items-center gap-3">
           <UsageTracker resource="meetingMinutes" />
           <ClockChip />
         </div>
       </div>
+
+      <MeetingIntelligenceStory/>
 
       {/* stat row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
@@ -812,30 +815,32 @@ export default function MeetingNotes() {
 
       {tab === 'record' && (
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4">
-          <section className="bg-white border border-[#e3e0db] rounded-[10px] p-5 min-h-[220px] flex flex-col justify-between">
+          <section className="meeting-glass-panel p-6 min-h-[260px] flex flex-col justify-between">
             <div>
               <div className="w-10 h-10 rounded-[8px] bg-blue-50 border border-blue-100 grid place-items-center">
                 <Mic size={19} className="text-[#117dff]" />
               </div>
-              <h2 className="mt-4 text-[19px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Capture the meeting, keep the decisions</h2>
-              <p className="mt-1.5 max-w-[620px] text-[12px] leading-relaxed text-[#737373]">Add the people and context once. The recorder preserves transcript checkpoints, builds the report, and saves searchable meeting memories.</p>
+              <h2 className="mt-4 text-[19px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Turn conversations into company understanding.</h2>
+              <p className="mt-1.5 max-w-[620px] text-[12px] leading-relaxed text-[#737373]">Add participants and an agenda, then capture your meeting. HIVEMIND remembers the decisions and commitments, connects them to your company’s knowledge, and highlights what needs attention next.</p>
               {quickRecorder.status === 'interrupted' && (
                 <div className="mt-4 rounded-[8px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">An interrupted meeting is ready to resume. Open the recorder to continue or finish it.</div>
               )}
             </div>
             <button onClick={quickRecorder.openConfig} disabled={!quickRecorder.supported}
-              className="mt-5 self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-[8px] bg-[#117dff] text-white text-[13px] font-semibold hover:bg-[#0066e0] disabled:opacity-40">
+              className="meeting-start-button mt-5 self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-[8px] bg-[#117dff] text-white text-[13px] font-semibold hover:bg-[#0066e0] disabled:opacity-40">
               <Mic size={14} /> {quickRecorder.active ? 'Open current meeting' : 'Start meeting'}
             </button>
           </section>
-          <section className="bg-[#faf9f4] border border-[#e3e0db] rounded-[10px] p-4">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">Meeting flow</div>
-            {['Transcript protected', 'Summary and decisions', 'Company context', 'Saved to HIVEMIND'].map((label, index) => (
+          <section className="meeting-glass-panel p-5">
+            <div className="text-[13px] font-semibold text-[#344c67]">From conversation to understanding</div>
+            {['Capture people and context', 'Remember decisions and commitments', 'Connect company knowledge', 'Surface what needs attention'].map((label, index) => (
               <div key={label} className="flex items-center gap-3 py-3 border-b last:border-b-0 border-[#e3e0db]">
                 <span className="w-6 h-6 rounded-full border border-[#d4d0ca] bg-white grid place-items-center text-[10px] font-semibold text-[#737373]">{index + 1}</span>
                 <span className="text-[12px] font-medium text-[#525252]">{label}</span>
               </div>
             ))}
+            <p className="meeting-runtime-connection">What your people know becomes knowledge your company can act on.</p>
+            <p className="mt-3 text-[11px] leading-relaxed text-[#68778a]">HIVEMIND develops the shared understanding; Runtime carries the resulting work forward.</p>
           </section>
         </div>
       )}
