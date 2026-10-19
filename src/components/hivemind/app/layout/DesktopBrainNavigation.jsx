@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, ArrowUp, ChevronRight, CornerDownLeft, LogOut, Settings } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUp, ChevronRight, CornerDownLeft, LogOut, MessageCircle, Settings, ArrowUpRight } from 'lucide-react';
 import BrainKeyboardFace from './BrainKeyboardFace';
 import BrainUpdateBanner from './BrainUpdateBanner';
 import CreditBalance from '../shared/CreditBalance';
@@ -68,6 +68,10 @@ export default function DesktopBrainNavigation({ sections, user, planLabel, cred
 
   return <div className="desktop-brain-slice" data-desktop-brain>
     <nav ref={destinationsScroll} className="brain-destinations" aria-label="Brain navigation">
+      <div className="brain-keyboard-stack">
+        <NavLink to="/hivemind/app/overview/new" className="brain-key brain-key-chat">
+          <span className="brain-key-face"><MessageCircle size={22} aria-hidden="true"/><span>Ask Me Anything</span><ArrowUpRight size={17} aria-hidden="true"/></span>
+        </NavLink>
       <div className="brain-icon-grid">{destinations.map(([kind, suffix]) => {
         const item = items.find(entry => entry.to.endsWith(suffix));
         return item ? <NavLink key={kind} to={item.to} className={({ isActive }) => `brain-icon-link brain-key brain-key-${kind}${isActive ? ' is-current' : ''}`}><BrainKeyboardFace kind={kind} label={kind === 'uploads' ? 'Uploads' : item.label}/></NavLink> : null;
@@ -81,6 +85,7 @@ export default function DesktopBrainNavigation({ sections, user, planLabel, cred
         {previous && <NavLink to={previous.to} className="brain-key brain-key-arrow brain-key-previous" aria-label={`Previous Brain page: ${previous.label}`}><span className="brain-key-face"><ArrowLeft size={22} aria-hidden="true"/></span></NavLink>}
         <button type="button" className="brain-key brain-key-arrow brain-key-top" aria-label="Scroll Brain navigation to top" onClick={() => destinationsScroll.current?.scrollTo({ top: 0, behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}><span className="brain-key-face"><ArrowUp size={22} aria-hidden="true"/></span></button>
         {next && <NavLink to={next.to} className="brain-key brain-key-arrow brain-key-next" aria-label={`Next Brain page: ${next.label}`}><span className="brain-key-face"><ArrowRight size={22} aria-hidden="true"/></span></NavLink>}
+      </div>
       </div>
       {advancedOpen && createPortal(<div ref={flyout} role="dialog" aria-label="Advanced features" id={advancedId} className="brain-advanced-flyout" style={{ ...flyoutPosition, visibility: flyoutPosition ? 'visible' : 'hidden' }}>
         <nav aria-label="Advanced destinations">{advanced.map(item => <NavLink key={item.to} to={item.to} onClick={() => setAdvancedOpen(false)}><item.icon size={17}/><span>{item.label}</span><ChevronRight size={14}/></NavLink>)}</nav>

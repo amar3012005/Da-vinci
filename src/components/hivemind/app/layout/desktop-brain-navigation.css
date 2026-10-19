@@ -1,19 +1,20 @@
-.desktop-brain-slice, .desktop-brain-chat, .brain-advanced-flyout { display: none; }
+.desktop-brain-slice, .brain-advanced-flyout { display: none; }
 @media (min-width: 768px) {
   .desktop-brain-legacy { display: none; }
   .desktop-brain-slice { display: flex; flex: 1; flex-direction: column; min-height: 0; color: #333; }
   .brain-destinations { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 14px; scrollbar-width: thin; }
   .desktop-brain-header-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .desktop-brain-chat { display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 9px; font-size: 13px; color: #41413d; }
-  .desktop-brain-chat:hover { background: #eeece5; }
-  .desktop-brain-chat[aria-current="page"] { color: #171717; }
-  .desktop-brain-chat:focus-visible { outline: 2px solid #117dff; outline-offset: 2px; }
   .brain-primary-link, .brain-footer-link { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 10px; font-size: 14px; line-height: 20px; text-align: left; width: 100%; }
   .brain-primary-link svg, .brain-footer-link svg { flex-shrink: 0; color: #77766f; }
   /* The keys sit on the existing sidebar surface: no keyboard case or frame. */
-  .brain-icon-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(72px, 1fr)) 32px; gap: 6px; flex-shrink: 0; min-height: 438px; height: clamp(438px, 60vh, 510px); max-height: 510px; margin-block: auto; padding: 2px 1px 6px; }
+  .brain-keyboard-stack { display: flex; flex-direction: column; flex-shrink: 0; gap: 9px; width: 100%; margin-block: auto; }
+  .brain-icon-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(72px, 1fr)) 32px; gap: 6px; flex-shrink: 0; min-height: 438px; height: clamp(438px, 60vh, 510px); max-height: 510px; padding: 2px 1px 6px; }
   .brain-key { position: relative; display: block; min-width: 0; min-height: 0; padding: 4px 5px 8px; border: 0; border-radius: 7px; text-align: left; color: #333941; background: linear-gradient(140deg, #fffdf5, #d8d5cd 50%, #b5b3ad 85%, #e3e0d8); box-shadow: 0 3px 1px #676b7275, 0 5px 5px #343b4520, inset 0 1px 1px white; transition: transform 120ms ease, box-shadow 120ms ease; }
   .brain-key .brain-key-face { position: relative; display: flex; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 4px; width: 100%; height: 100%; min-width: 0; padding: 7px 8px 7px; border-radius: 4px; background: linear-gradient(140deg, #fffdf7, #ece9e1 78%, #f5f3ed); box-shadow: inset 0 1px 2px #fff, inset 1px 0 2px #ffffffa0, inset -1px -1px 3px #6b728025; }
+  .brain-key.brain-key-chat { width: 100%; min-height: 57px; background: linear-gradient(135deg, #f1f6ff, #b8cbe4 65%, #8da8cb); }
+  .brain-key-chat .brain-key-face { flex-direction: row; align-items: center; justify-content: flex-start; gap: 11px; padding: 10px 12px; background: linear-gradient(135deg, #f5f8fd, #dce8f7); color: #315982; font-size: 13px; font-weight: 500; }
+  .brain-key-chat .brain-key-face > span { flex: 1; }
+  .brain-key-chat svg { flex-shrink: 0; }
   .brain-key-symbol { display: flex; justify-content: space-between; align-items: flex-start; color: #343b45; min-height: 0; }
   .brain-key-symbol svg { flex-shrink: 0; width: 40px; height: 40px; max-width: 100%; }
   .brain-key-label { font-size: 12px; line-height: 1.2; font-weight: 500; letter-spacing: -.2px; overflow-wrap: anywhere; }

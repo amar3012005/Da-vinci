@@ -13,7 +13,6 @@ import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
 import {
   LayoutDashboard,
-  MessageCircle,
   Moon,
   Brain,
   Key,
@@ -504,7 +503,7 @@ export default function Sidebar({
           {!collapsed && !mobileDrawer && <button type="button" aria-label="Collapse sidebar" aria-expanded="true" onClick={() => onCollapsedChange?.(true)} className="p-1 rounded-md hover:bg-[#eeece6] text-[#737373]"><PanelLeft size={18} strokeWidth={1.75} /></button>}
         </div>
         {collapsed && <button type="button" aria-label="Expand sidebar" aria-expanded="false" onClick={() => onCollapsedChange?.(false)} className="mx-auto block p-1 text-[#737373]"><PanelLeft size={18} /></button>}
-        {!mobileRoster && (desktopBrain ? <div className="desktop-brain-header-controls">{workspaceModeSwitcher}<NavLink to="/hivemind/app/overview/new" className="desktop-brain-chat"><MessageCircle size={17}/><span>Chat</span></NavLink></div> : workspaceModeSwitcher)}
+        {!mobileRoster && (desktopBrain ? <div className="desktop-brain-header-controls">{workspaceModeSwitcher}</div> : workspaceModeSwitcher)}
       </div>
 
       {(teamMode || mobileRoster) && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">Could not refresh our team. <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>Retry</button></p>}

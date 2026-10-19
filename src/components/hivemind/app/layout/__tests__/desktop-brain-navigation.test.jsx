@@ -172,6 +172,7 @@ test('keyboard arrows use the available Brain routes and the return key keeps th
   expect(screen.getByRole('link', { name: 'Previous Brain page: Workspace Admin' })).toHaveAttribute('href', '/hivemind/app/workspace');
   expect(screen.getByRole('link', { name: 'Next Brain page: Upload Everything' })).toHaveAttribute('href', '/hivemind/app/knowledge');
   expect(screen.getByRole('link', { name: 'Open Brain chat' })).toHaveAttribute('href', '/hivemind/app/overview/new');
+  expect(screen.getByRole('link', { name: 'Ask Me Anything' })).toHaveAttribute('href', '/hivemind/app/overview/new');
   fireEvent.click(screen.getByRole('link', { name: 'Next Brain page: Upload Everything' }));
   expect(screen.getByRole('link', { name: 'Uploads' })).toHaveAttribute('aria-current', 'page');
   expect(screen.getByRole('link', { name: 'Next Brain page: Connectors' })).toHaveAttribute('href', '/hivemind/app/connectors');
