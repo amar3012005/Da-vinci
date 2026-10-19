@@ -8,7 +8,9 @@ const HISTORY = '/asset-history.json';
 // One-time recovery for the observed cc29df13 tab. This is an immutable,
 // already-public Worker version, not an alternate application/API origin.
 const RECOVERY_ORIGIN = 'https://69eda68b-hivemind-web.amarsai2005.workers.dev';
-const MAX_BYTES = 40 * 1024 * 1024;
+// Three current frontend generations exceed the old 40 MiB limit. Retain
+// the same bounded history rather than dropping chunks needed by open tabs.
+const MAX_BYTES = 64 * 1024 * 1024;
 const staticPath = path => typeof path === 'string'
   && /^\/static\/(?:js|css|media)\/[A-Za-z0-9_.-]+$/.test(path)
   && /\.[a-f0-9]{8,}\./.test(path) && !path.endsWith('.map');
@@ -78,7 +80,7 @@ export async function snapshotProductionAssets(fetcher = fetch) {
         || (path.endsWith('.css') && !/text\/css/i.test(type))) throw new Error(`Cannot retain ${path}`);
       const body = Buffer.from(await response.arrayBuffer());
       bytes += body.length;
-      if (bytes > MAX_BYTES) throw new Error('Previous release assets exceed the retention budget');
+      if (bytes > MAX_BYTES) throw new Error(`Previous release assets exceed the ${MAX_BYTES} byte retention budget (${files.size + 1}/${paths.length} assets)`);
       files.set(path, body);
     }
   }));
