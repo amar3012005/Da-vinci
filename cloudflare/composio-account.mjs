@@ -11,7 +11,7 @@ const b64 = bytes => btoa(String.fromCharCode(...bytes)).replaceAll('+','-').rep
 const un64 = value => Uint8Array.from(atob(value.replaceAll('-','+').replaceAll('_','/')), c => c.charCodeAt(0));
 const random = () => b64(crypto.getRandomValues(new Uint8Array(32)));
 async function jsonFetch(url, init) {
-  const response = await fetch(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(10000) });
+  const response = await fetch(url, { ...init, redirect: 'manual', signal: AbortSignal.timeout(10000) });
   if (!response.ok) throw new Error(response.status === 401 || response.status === 400 ? 'composio_reconnect_required' : 'composio_temporarily_unavailable');
   const text = await boundedText(response);
   return JSON.parse(text);
@@ -45,7 +45,7 @@ export class ComposioAccount {
     const rpc=async (method,params,id) => {
       const h={'content-type':'application/json',accept:'application/json, text/event-stream',authorization:`Bearer ${accessToken}`,'mcp-protocol-version':'2025-03-26'};
       if(session) h['mcp-session-id']=session;
-      const response=await fetch(MCP,{method:'POST',headers:h,body:JSON.stringify({jsonrpc:'2.0',...(id ? {id}:{}),method,params}),redirect:'error',signal:AbortSignal.timeout(10000)});
+      const response=await fetch(MCP,{method:'POST',headers:h,body:JSON.stringify({jsonrpc:'2.0',...(id ? {id}:{}),method,params}),redirect:'manual',signal:AbortSignal.timeout(10000)});
       if(!response.ok) throw new Error('composio_connection_unconfirmed');
       session=response.headers.get('mcp-session-id') || session;
       if(!id) {await response.body?.cancel();return;}
