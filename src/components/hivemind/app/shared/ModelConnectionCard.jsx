@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, CheckCircle2, RefreshCw, Plug } from 'lucide-react';
+import ProviderConnectionFrame from './ProviderConnectionFrame';
+import ProviderModelCatalog from './ProviderModelCatalog';
 import { useAuth } from '../auth/AuthProvider';
 
 const number = value => Number.isFinite(value) ? value.toLocaleString() : 'Unavailable';
-export default function ModelConnectionCard({ connectLabel = 'Connect ChatGPT' }) {
+export default function ModelConnectionCard({ connectLabel = 'Connect ChatGPT', compact = false }) {
   const { org, user } = useAuth();
   const [status,setStatus]=useState(null), [error,setError]=useState(''), [busy,setBusy]=useState(false);
   const [consent,setConsent]=useState(false), [url,setUrl]=useState(''), [attempt,setAttempt]=useState(null), [prompt,setPrompt]=useState(null), [answer,setAnswer]=useState(''), [notice,setNotice]=useState(null);
@@ -48,7 +50,7 @@ export default function ModelConnectionCard({ connectLabel = 'Connect ChatGPT' }
   }
   async function submit(event){event.preventDefault();const controller=lifetime.current;try{await request('answer',{attempt_id:attempt,prompt_id:prompt.id,answer},controller.signal);if(!controller.signal.aborted){setPrompt(null);setAnswer('');}}catch(e){if(!controller.signal.aborted)setError(e.message);}}
   const button='rounded-lg border border-[#dedbd5] px-3 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#f7f6f1]';
-  return <section className="mb-5 rounded-2xl border border-[#e3e0db] bg-white p-5" aria-label="Your model connection">
+  return <ProviderConnectionFrame provider="ChatGPT" connected={status?.connected} compact={compact}><section className="mb-5 rounded-2xl border border-[#e3e0db] bg-white p-5" aria-label="Your model connection">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="flex items-center gap-2 text-base font-semibold"><Plug size={18}/>Your model connection</h2><p className="mt-1 text-sm text-[#666]">Use your ChatGPT account across Brain, Runtime and your specialists.</p></div><span className="flex items-center gap-1.5 text-xs text-[#666]" role="status">{status?.connected&&<CheckCircle2 size={14} className="text-emerald-600"/>}{status?.connected?'Connected':status?.available?'Not connected':status?'Not enabled for this workspace':'Checking connection…'}</span></div>
     {error&&<p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
     {status?.available&&!status.connected&&<div className="mt-4 space-y-3"><label className="flex items-start gap-2 text-sm text-[#555]"><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)} className="mt-1"/>I allow this workspace to use my ChatGPT connection on the server, including while my Mac is closed.</label><button type="button" className={button+' bg-[#151515] text-white hover:bg-[#333]'} disabled={!consent||busy} onClick={start}>{busy?'Connecting…':connectLabel}</button></div>}
@@ -59,5 +61,6 @@ export default function ModelConnectionCard({ connectLabel = 'Connect ChatGPT' }
     {status?.connected&&<div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="text-sm">Default ChatGPT model<select className="mt-1 block w-full rounded-lg border border-[#dedbd5] bg-white p-2" value={status.selected_model||''} disabled={busy} onChange={e=>act('select',{model:e.target.value||null})}>{status.models?.map(model=><option key={model} value={model}>{model.replace(/^gpt-/, "GPT-").replace(/-luna$/, " Luna")}</option>)}</select></label><div className="text-sm text-[#555]"><p>Input tokens: {number(status.usage?.inputTokens)}</p><p>Output tokens: {number(status.usage?.outputTokens)}</p><p className="mt-1 text-xs">Subscription balance and limits: unavailable</p></div></div>}
     <div className="mt-4 flex flex-wrap items-center gap-2"><button type="button" className={button+' inline-flex items-center gap-1.5'} disabled={busy} onClick={()=>refresh().catch(e=>setError(e.message))}><RefreshCw size={14}/>Refresh connection</button>{status?.connected&&<button type="button" className={button} disabled={busy} onClick={()=>act('disconnect',{})}>Disconnect</button>}</div>
     <p className="mt-3 text-xs text-[#777]">This connection is scoped to your account in {org?.name||'this workspace'}. Credentials stay on the server. If the selected connection is unavailable, work pauses without switching to a paid provider.</p>
-  </section>;
+    <ProviderModelCatalog provider="ChatGPT" models={status?.models || []}/>
+  </section></ProviderConnectionFrame>;
 }
