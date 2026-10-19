@@ -15,7 +15,7 @@ export default function AdminUserErasureDialog({ user, onClose, onCompleted }) {
     return () => { active = false; };
   }, [user.id, user.email, refresh]);
   useEffect(() => {
-    if (!operation || !['pending','processing','reconciled'].includes(operation.status)) return undefined;
+    if (!operation || !['pending','processing','reconciled','blocked'].includes(operation.status)) return undefined;
     let active = true, pending = false;
     const poll = async () => {
       if (pending) return;
@@ -29,7 +29,7 @@ export default function AdminUserErasureDialog({ user, onClose, onCompleted }) {
       } catch (reason) { if (active) setError(`Status unavailable; deletion has not been repeated. ${failure(reason)}`); }
       finally { pending = false; }
     };
-    const timer = window.setInterval(poll, 2500);void poll();
+    const timer = window.setInterval(poll, operation.status === 'blocked' ? 10000 : 2500);void poll();
     return () => { active = false;window.clearInterval(timer); };
   }, [operation?.id, operation?.status, user.id, onCompleted]);
   const submit = async event => {
