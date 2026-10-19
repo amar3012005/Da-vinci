@@ -528,6 +528,8 @@ function IcarusDocs() {
         <CodeBlock label="macOS · Linux · WSL">{`curl -fsSL https://raw.githubusercontent.com/${ICARUS_REPO}/main/install.sh | bash`}</CodeBlock>
         <CodeBlock label="native Windows PowerShell">{`irm https://raw.githubusercontent.com/${ICARUS_REPO}/main/install.ps1 | iex`}</CodeBlock>
         <P>Supported platforms download and checksum-verify one self-contained <Mono>icarus</Mono> binary; Node.js and Rust are not required. Use the POSIX command in WSL, and the PowerShell command only from native Windows.</P>
+        <P>CLI v0.3.91 supports macOS Apple Silicon/Intel, Linux x64/ARM64, and Windows x64. Local memory needs no account. Run <Mono>icarus connect</Mono> only for optional developer email/Google sign-in. Verify the email code in your browser and return to the waiting terminal; it waits up to fifteen minutes. No purchase or company workspace is required, and this identity grants no customer API access.</P>
+        <P>Open a new terminal after installation. On macOS/Linux, use <Mono>export PATH="$HOME/.icarus/bin:$PATH"</Mono> in the current terminal. On Windows, run <Mono>icarus setup</Mono> for guided setup. Upgrade with <Mono>icarus update</Mono>.</P>
         <P>Manual source build is for unsupported platforms or contributors:</P>
         <CodeBlock label="terminal · manual">{`git clone https://github.com/${ICARUS_REPO}
 cd ICARUS/crate/mneme-node && npm install && npx napi build --release`}</CodeBlock>
@@ -541,7 +543,7 @@ cd ICARUS/crate/mneme-node && npm install && npx napi build --release`}</CodeBlo
           The default workflow is small and local: retrieve a narrow slice of prior project knowledge before a meaningful change, then persist only the result that would be costly or risky to rediscover. No LLM key, embedding provider, or remote reranker is needed for that memory loop; local lexical recall remains available by default.
         </P>
         <CodeBlock label="repository root">{`icarus mcp install codex
-icarus harness init --agent codex --repo .
+# Harness is optional: icarus mcp install codex --harness
 
 # The agent then uses MCP tools such as:
 # icarus_recall, icarus_save_memory, icarus_log_decision,
@@ -553,7 +555,7 @@ icarus harness init --agent codex --repo .
           Save current facts, decisions, standing instructions, and significant completed events with explicit tags: <Mono>memory:fact</Mono>, <Mono>memory:decision</Mono>, <Mono>memory:instruction</Mono>, and <Mono>memory:event</Mono>. Use <Mono>memory:task</Mono> only for short-lived handoffs, then remove or supersede it when the task closes. Never save credentials, raw customer data, or routine transcripts.
         </P>
         <P>
-          The harness is complementary: initialize it once per repository, but use its full governed lifecycle only for high-risk work such as production, security, tenant, billing, migration, destructive, or major-refactor changes. Normal investigation and code work continue with memory plus ordinary repository inspection if graph or harness services are unavailable.
+          The harness is complementary: initialize it only when this repository opts in, and use its full governed lifecycle only for high-risk work such as production, security, tenant, billing, migration, destructive, or major-refactor changes. Normal investigation and code work continue with memory plus ordinary repository inspection if graph or harness services are unavailable.
         </P>
       </section>
 
@@ -567,7 +569,7 @@ icarus harness init --agent codex --repo .
             label: 'Node',
             code: `const { MnemeVectorStore } = require('singulance-amr'); // drop-in for QdrantVectorStore
 
-const store = new MnemeVectorStore({ dataRoot: '~/.mneme/data', dim: 1024 });
+const store = new MnemeVectorStore({ dataRoot: '~/.icarus/data', dim: 1024 });
 await store.upsert('org_acme', [
   { id: 'm1', vector: embed('user prefers dark mode'), payload: { kind: 'preference' } },
 ]);
@@ -575,7 +577,11 @@ const hits = await store.search('org_acme', embed('ui settings'), 5); // [{ id, 
           },
           {
             label: 'Python',
-            code: `pip install mneme-python
+            code: `# Python binding: build from source (see the GitHub Python guide)
+git clone https://github.com/amar3012005/ICARUS
+cd ICARUS/crate/mneme-python
+pip install maturin
+maturin develop --release
 # then
 from mneme_python import MnemeStore
 
