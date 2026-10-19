@@ -47,8 +47,8 @@
   .brain-key-memories .brain-key-symbol, .brain-key-notes .brain-key-symbol, .brain-key-graph .brain-key-symbol { position: relative; flex-shrink: 0; }
   .brain-key-symbol .brain-key-indicator { position: absolute; top: 0; right: -3px; }
   .brain-key-symbol { position: relative; }
-  .brain-key-connectors .brain-key-face { flex-direction: row; align-items: center; gap: 5px; padding-left: 4px; padding-right: 4px; }
-  .brain-key-connectors .brain-key-symbol svg { width: 28px; height: 28px; }
+  .brain-key-connectors .brain-key-face, .brain-key-dreaming .brain-key-face, .brain-key-workspace .brain-key-face { flex-direction: row; align-items: center; gap: 5px; padding-left: 4px; padding-right: 4px; }
+  .brain-key-connectors .brain-key-symbol svg, .brain-key-dreaming .brain-key-symbol svg, .brain-key-workspace .brain-key-symbol svg { width: 28px; height: 28px; }
   .brain-key-connectors .brain-key-label { font-size: 11px; }
   .brain-key-return .brain-key-face, .brain-key-arrow .brain-key-face { justify-content: center; align-items: center; padding: 0; color: #426b9d; }
   .brain-key-arrow, .brain-key-return { padding: 3px 4px 7px; }
