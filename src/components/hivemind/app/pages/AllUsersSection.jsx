@@ -85,7 +85,7 @@ export default function AllUsersSection({ environment, onLifecycle }) {
   const users = result?.users || [];
   const orgs = [...new Map(users.flatMap(activeUserOrganizations).map(org => [org.id, org])).values()].sort((a,b) => a.name.localeCompare(b.name));
   const filtered = users.filter(user => !orgFilter || activeUserOrganizations(user).some(org => org.id === orgFilter));
-  const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const visible = loading ? [] : filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const visibleKey = visible.map(user => user.id).join(':');
   useEffect(() => {
     let active = true;
@@ -109,10 +109,10 @@ export default function AllUsersSection({ environment, onLifecycle }) {
     catch (failure) { setError(message(failure)); }
     finally { setSavingAccess(null); }
   };
-  const refresh = () => { setBalances({});setRevision(value => value + 1); };
+  const refresh = () => { setLoading(true);setEditor(null);setExpanded(null);setBalances({});setRevision(value => value + 1); };
   return <section id="admin-users" className="scroll-mt-20" aria-labelledby="all-users-title">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 id="all-users-title" className="text-2xl font-semibold">All users</h1><p className="mt-1 text-sm text-[#737373]">Every account across your organizations, with usage, credits and workspace access in one place.</p></div><button type="button" onClick={refresh} disabled={loading} className="rounded-lg border bg-white px-4 py-2 text-sm">Refresh</button></div>
-    <form onSubmit={event => { event.preventDefault();setSearch(query.trim());setPage(0); }} className="my-5 flex flex-wrap gap-2"><input aria-label="Search all users" placeholder="Search email or name" value={query} onChange={event => setQuery(event.target.value)} className="min-w-64 flex-1 rounded-lg border p-2 text-sm"/><button disabled={loading} className="rounded-lg bg-[#117dff] px-4 py-2 text-sm font-medium text-white">Search</button><select aria-label="Filter users by organization" value={orgFilter} onChange={event => { setOrgFilter(event.target.value);setPage(0); }} className="max-w-xs rounded-lg border p-2 text-sm"><option value="">All organizations</option>{orgs.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}</select></form>
+    <form onSubmit={event => { event.preventDefault();setLoading(true);setResult(null);setEditor(null);setExpanded(null);setSearch(query.trim());setOrgFilter('');setPage(0);setRevision(value => value + 1); }} className="my-5 flex flex-wrap gap-2"><input aria-label="Search all users" placeholder="Search email or name" value={query} onChange={event => setQuery(event.target.value)} className="min-w-64 flex-1 rounded-lg border p-2 text-sm"/><button disabled={loading} className="rounded-lg bg-[#117dff] px-4 py-2 text-sm font-medium text-white">Search</button><select aria-label="Filter users by organization" value={orgFilter} onChange={event => { setOrgFilter(event.target.value);setPage(0); }} className="max-w-xs rounded-lg border p-2 text-sm"><option value="">All organizations</option>{orgs.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}</select></form>
     <p className="mb-4 text-xs text-[#737373]">{number(result?.total)} matching accounts · {filtered.length} in the current organization filter. Credits belong to organization pools; a shared pool is never added up once per member.</p>
     {result && result.total > users.length && <p role="status" className="mb-4 text-sm text-amber-700">Showing {users.length} of {result.total} matches. Search by name or email to reach any account beyond this result window.</p>}
     {error && <p role="alert" className="mb-4 text-sm text-red-700">{error}</p>}
