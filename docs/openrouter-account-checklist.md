@@ -1,39 +1,20 @@
-# User-owned OpenRouter connection
+# User-owned OpenRouter connection — release evidence, 19 October 2026
 
-Task branch: codex/openrouter-account. Runtime companion: /tmp/runtime-openrouter.
+Runtime source: 4658a5cd9e1f715055aa1b7750f3afa8d2f62e2b. OpenDot: 742b173138e40278ba63f11f09ce147e0ff54c10. Frontend product source: 1f27d4e0b064c45313b6462aa4abbe2ce4aebeb4; Worker 1b0fd613-cb3e-4251-9e68-261bba52f2b6. This document updates evidence only.
 
 | Item | Code | Deployed | Live verified |
 | --- | --- | --- | --- |
-| Usage connection card, cloud consent, separate Free-mode selection | [x] | [ ] | [ ] |
-| Same-origin authenticated Worker transport | [x] | [ ] | [ ] |
-| Server PKCE exchange, encrypted per-connection grant, single-use state | [x] | [ ] | [ ] |
-| Native model adapter with zero-price free routing and no paid fallback | [x] | [ ] | [ ] |
-| Bounded pre-output retry; stop on account quota or partial output | [x] | [ ] | [ ] |
-| OpenRouter-reported key usage; unavailable values remain unavailable | [x] | [ ] | [ ] |
-| Real user OAuth and tool-call acceptance | [ ] | [ ] | [ ] |
-| Automatic connection provisioning for users outside the existing bridge registry | [ ] | [ ] | [ ] |
-| Open Dot and separate Brain native-provider consumption | [ ] | [ ] | [ ] |
+| Usage connection card, cloud consent, separate Free-mode selection | [x] | [x] | [x] card/status in SINGULANCE; selection awaits grant |
+| Same-origin authenticated Worker transport | [x] | [x] | [x] authenticated status / anonymous 401 |
+| Server PKCE exchange, encrypted user/workspace grant, single-use state | [x] | [x] | [ ] real OAuth pending |
+| Native model adapter with zero-price free routing and no paid fallback | [x] | [x] | [ ] real inference pending |
+| Bounded pre-output retry; stop on account quota or partial output | [x] | [x] | [ ] controlled provider tests only |
+| OpenRouter-reported key usage; unavailable values remain unavailable | [x] | [x] | [ ] actual key pending |
+| Automatic provisioning outside the ChatGPT bridge registry | [x] | [x] | [ ] isolated native profile tested; real grant pending |
+| OpenDot provider catalog, routing and account erasure | [x] | [x] | [ ] native adapter/container tests only |
+| Separate Brain native-provider consumption | [ ] | [ ] | [ ] separate owner, not changed |
+| Real user OAuth and free tool-call round trip | [x] | [x] | [ ] human authorization pending |
 
-Evidence: two React checks (including StrictMode single exchange), two Worker transport checks,
-four account checks, three native worker checks, and 15 existing ChatGPT connection regression checks. Native text streaming verified with mock OpenRouter
-HTTP responses, not a real account. Free-only payload contains max_price prompt/completion 0.
-Native 503 responses dispatch at most twice; daily 429 quota dispatches once.
-Current credential storage and transport are reused; no Core or Control changes.
+Four services deployed healthy on srv2069173. Existing mounts and unrelated services preserved. This release did not deploy Core or Control. Existing users retain their provider until explicitly connected and switched. Usage card evidence is SINGULANCE, not Sakana acceptance.
 
-Release gate: current bridge is account-erasure-d550774, ahead of the available Runtime bridge
-source baseline 04e826f63c. Preserve and reconcile that erasure change before releasing the worker.
-No live deployment or user account connection has occurred for this feature.
-
-Provider facts: OAuth creates an account API key, not a refresh-token grant. openrouter/free selects
-an eligible free model randomly, rather than guaranteeing a best-ranked model. Account-wide quotas
-cannot be bypassed by rotating models. This first implementation intentionally offers Free only.
-
-Docs: https://openrouter.ai/docs/guides/overview/auth/oauth
-https://openrouter.ai/docs/guides/routing/model-variants/free
-https://openrouter.ai/docs/cookbook/get-started/free-models-router-playground
-
-Type-check note: the broader source graph reports existing SessionProjection and vendored Cordis type errors;
-that broader check is not recorded as passing. OAuth, HTTP and text streaming checks use controlled mocks.
-
-Source status: Da-vinci branch pushed. Runtime commits are local: the pre-push
-workspace dependency/typecheck gate failed. It has not been bypassed. No deployment occurred.
+Passed: native account/worker/service cases, 15 ChatGPT connection regression cases, full Runtime typecheck, isolated bridge profile and OpenDot cached-image adapter/model/erasure checks. Actual free-provider calls were simulated; no real quota or token cost is inferred from those tests.
