@@ -1,3 +1,4 @@
+import { trustedDeveloperReturn } from './developer-auth-return.mjs';
 import { trustedRuntimeReturn } from '../shared/workspace-authority.mjs';
 import HeroCtas from '../../../mobile/HeroCtas';
 import { mobileAuthReturn } from '../shared/mobile-auth-return';
@@ -180,6 +181,8 @@ export default function LoginPage() {
   const { isAuthenticated, isUnreachable, loading, login, org, user, needsOnboarding, refresh } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const developerReturn = trustedDeveloperReturn(location.search, apiClient.controlPlane.defaults.baseURL);
+  const isDeveloperFlow = Boolean(developerReturn);
   const [emailConfig, setEmailConfig] = useState({ mode: 'off', enabled: false, email_only: false, turnstile_site_key: null });
   const [emailConfigLoaded, setEmailConfigLoaded] = useState(false);
   const [emailConfigError, setEmailConfigError] = useState(false);
@@ -279,7 +282,7 @@ export default function LoginPage() {
       // workspace creation still completes. Ordinary mobile sign-ins must not
       // follow a stale desktop redirect supplied by the API.
       const fallback = defaultAuthReturnUrl(window.location.origin);
-      const redirectTo = emailIntent !== 'register' && isMobileAuthClient() ? fallback
+      const redirectTo = !isDeveloperFlow && emailIntent !== 'register' && isMobileAuthClient() ? fallback
         : (result.redirect_to || emailConfig.default_redirect_to || fallback);
       window.location.assign(redirectTo);
     } catch (error) {
@@ -384,8 +387,8 @@ export default function LoginPage() {
   // create-account view directly and suppress the signed-in redirect below —
   // otherwise we'd bounce them straight back to /app in a loop.
   const wantsCreate = useMemo(
-    () => new URLSearchParams(location.search).get('create') === '1',
-    [location.search]
+    () => !isDeveloperFlow && new URLSearchParams(location.search).get('create') === '1',
+    [location.search, isDeveloperFlow]
   );
   const enterpriseInvitationToken = useMemo(
     () => new URLSearchParams(location.search).get('enterprise_invite') || '',
@@ -549,6 +552,7 @@ export default function LoginPage() {
   // Already signed in → go to dashboard (or original deep link, e.g. invite path)
   useEffect(() => {
     if (isAuthenticated) {
+      if (developerReturn) { window.location.replace(developerReturn); return; }
       if (wantsCreate && needsOnboarding) return; // org-less new user finishing create-account — stay here
       if (org?.id) {
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
@@ -588,7 +592,7 @@ export default function LoginPage() {
         : defaultAuthenticatedPath();
       navigate(dest, { replace: true });
     }
-  }, [isAuthenticated, navigate, location.state, location.search, oauthReturnTo, wantsCreate, needsOnboarding, org?.id]);
+  }, [isAuthenticated, navigate, location.state, location.search, oauthReturnTo, wantsCreate, needsOnboarding, org?.id, developerReturn]);
 
   // Auto-update hivemindName based on account type
   useEffect(() => {
@@ -757,7 +761,7 @@ export default function LoginPage() {
                 <div className="flex items-start gap-2">
                   <Zap size={14} className="text-[#117dff] mt-0.5 shrink-0" />
                   <div className="text-[12px] leading-relaxed text-[#0a5fcc]">
-                    <span className="font-semibold">Signing you in to wire HIVEMIND into your CLI.</span>
+                    <span className="font-semibold">{isDeveloperFlow ? 'Sign in to your ICARUS developer account.' : 'Signing you in to wire HIVEMIND into your CLI.'}</span>
                     <br />
                     <span className="text-[#3b6da3]">After this you'll see a confirmation screen, then control returns to your terminal.</span>
                   </div>
@@ -791,10 +795,10 @@ export default function LoginPage() {
                     <span className="text-[#a3a3a3]">〉</span> {isCliFlow ? 'CLI HANDSHAKE' : isMcpOAuthFlow ? 'SECURE CONNECTION' : 'SIGN IN'}
                   </div>
                   <h2 className="text-[#0a0a0a] text-[26px] leading-tight font-medium font-['Space_Grotesk'] mb-2 tracking-tight">
-                    {isCliFlow ? 'Authorize HIVEMIND CLI' : isMcpOAuthFlow ? 'Connect to HIVEMIND' : 'Your memory is waiting'}
+                    {isDeveloperFlow ? 'ICARUS developer account' : isCliFlow ? 'Authorize HIVEMIND CLI' : isMcpOAuthFlow ? 'Connect to HIVEMIND' : 'Your memory is waiting'}
                   </h2>
                   <p className="text-[#737373] text-[13px] mb-7 leading-relaxed">
-                    One workspace that remembers everything — chat, agents, meetings, connectors.
+                    {isDeveloperFlow ? 'Continue with email or Google. No purchase or company workspace is required. Your local memory works without signing in.' : 'One workspace that remembers everything — chat, agents, meetings, connectors.'}
                   </p>
 
                   {/* State: control_plane_unreachable */}
@@ -872,7 +876,7 @@ export default function LoginPage() {
                     </button>
                   )}
                   {/* Visible provider roadmap is production-only. */}
-                  {emailConfigLoaded && !emailOnly && emailView === 'methods' && <div className="flex items-center gap-2 mt-2.5">
+                  {emailConfigLoaded && !emailOnly && !isDeveloperFlow && emailView === 'methods' && <div className="flex items-center gap-2 mt-2.5">
                     <ComingSoonProvider label="Microsoft">
                       <MicrosoftIcon size={15} />
                       <span className="text-[12px] font-medium">Microsoft</span>
@@ -883,7 +887,7 @@ export default function LoginPage() {
                     </ComingSoonProvider>
                   </div>}
 
-                  {emailConfigLoaded && !emailOnly && emailView === 'methods' && <button
+                  {emailConfigLoaded && !emailOnly && !isDeveloperFlow && emailView === 'methods' && <button
                     type="button"
                     disabled
                     aria-label="Enterprise SSO — coming soon"
@@ -901,7 +905,7 @@ export default function LoginPage() {
                   </div>
 
                   {/* Create New Account */}
-                  {emailView === 'methods' && <div className="text-center mt-5">
+                  {emailView === 'methods' && !isDeveloperFlow && <div className="text-center mt-5">
                     <p className="text-[13px] text-[#737373]">
                       New here?{' '}
                       <button onClick={() => { if (emailEnabled) { setEmailIntent('register'); setEmailView('email'); } else setShowOnboarding(true); }} className="text-[#117dff] font-semibold hover:underline">
@@ -1374,7 +1378,14 @@ export default function LoginPage() {
           {/* Right pane — artwork until a personal plan is selected, then a
               useful plan summary in the same half of the onboarding card. */}
           <div className={`hidden md:flex bg-[#f8f7f2] overflow-hidden relative flex-col ${showOnboarding ? 'h-full md:w-1/2' : 'md:w-[448px]'}`}>
-            {showOnboarding && !invitationGate && accountType === 'personal' && onboardingStep === 2 ? (() => {
+            {isDeveloperFlow ? (
+              <div className="flex h-full flex-col justify-center gap-5 p-10">
+                <p className="font-mono text-xs tracking-widest text-[#117dff]">SINGULANCE DEVELOPERS</p>
+                <h3 className="text-3xl font-semibold tracking-tight">Build with ICARUS.</h3>
+                <p className="text-sm leading-relaxed text-[#525252]">Memory by default. Harness when you opt in. Experimental Bus and Computer Use modules stay independently installed.</p>
+                <p className="text-sm leading-relaxed text-[#525252]">This signs in your developer identity and returns to your terminal. Hosted capabilities require their own permissions.</p>
+              </div>
+            ) : showOnboarding && !invitationGate && accountType === 'personal' && onboardingStep === 2 ? (() => {
               const plan = PERSONAL_PLANS.find((candidate) => candidate.id === selectedPlan);
               if (!plan) {
                 return (
@@ -1471,7 +1482,7 @@ export default function LoginPage() {
         </div>
 
         {/* Feature pills — benchmark-style mono footer */}
-        <div className={`${showOnboarding ? 'hidden' : 'flex'} items-center justify-center gap-5 mt-5`}>
+        <div className={`${showOnboarding || isDeveloperFlow ? 'hidden' : 'flex'} items-center justify-center gap-5 mt-5`}>
           {(operatingSystem ? [
             { icon: Brain, label: 'A growing Brain' },
             { icon: Zap, label: 'Proactive intelligence' },
