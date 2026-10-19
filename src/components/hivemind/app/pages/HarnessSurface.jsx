@@ -256,13 +256,20 @@ function isFreshHarnessRoute() {
     || window.location.pathname === `${HARNESS_EMPLOYEE_PATH}/new`;
 }
 
-async function establishHarnessSession({ fresh = false } = {}) {
+export async function establishHarnessSession({ fresh = false } = {}) {
   const path = fresh ? '/v1/harness-chat/new-session' : '/v1/harness-chat/bootstrap';
   const { data: admission } = await measureHarnessBoot('admission-ticket', () => apiClient.controlPlane.post(path, {}));
   // The rollout is deliberately binary.  A user outside the Harness cohort
   // must stay on the existing LangGraph conversation surface, including when
   // they arrive through a stale /overview/new or /overview/session/:id URL.
-  if (admission?.mode === 'legacy') return { mode: 'legacy' };
+  if (admission?.mode === 'legacy') {
+    // Brain rollout eligibility cannot move an existing employee conversation
+    // to another product or discard a pending native draft during recovery.
+    if (/^\/hivemind\/app\/employee\/harness(?:\/|$)/.test(window.location.pathname)) {
+      throw new Error('Runtime admission is temporarily unavailable. Your conversation is saved; retry this room.');
+    }
+    return { mode: 'legacy' };
+  }
   if (admission?.mode !== 'harness') throw new Error('HIVEMIND could not open this session.');
   if (typeof admission.ticket !== 'string' || admission.ticket.length === 0) {
     throw new Error('HIVEMIND could not authorize this session.');

@@ -5,6 +5,7 @@ jest.mock('../../shared/api-client', () => ({
 }));
 
 import {
+  establishHarnessSession,
   HARNESS_BOOT_STAGES,
   LoadingSurface,
   harnessBootRevision,
@@ -260,4 +261,23 @@ it('keeps the Runtime settling root covered until the transcript and composer ar
    await ready;
    expect(nativeHarnessMounted(container)).toBe(true);
  } finally { window.history.replaceState({}, '', old); }
+});
+
+
+describe('Runtime admission ownership', () => {
+  const api = require('../../shared/api-client').default;
+  const previousPath = window.location.pathname;
+  afterEach(() => { window.history.replaceState({}, '', previousPath); });
+  it('rejects Brain legacy admission without leaving the Runtime room', async () => {
+    const room = '/hivemind/app/employee/harness/session/existing';
+    window.history.replaceState({}, '', room);
+    api.controlPlane.post = jest.fn(async () => ({ data: { mode: 'legacy' } }));
+    await expect(establishHarnessSession()).rejects.toThrow('Runtime admission is temporarily unavailable');
+    expect(window.location.pathname).toBe(room);
+  });
+  it('preserves the legacy rollback contract for Brain', async () => {
+    window.history.replaceState({}, '', '/hivemind/app/overview/new');
+    api.controlPlane.post = jest.fn(async () => ({ data: { mode: 'legacy' } }));
+    await expect(establishHarnessSession()).resolves.toEqual({ mode: 'legacy' });
+  });
 });
