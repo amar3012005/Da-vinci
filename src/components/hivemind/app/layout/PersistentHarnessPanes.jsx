@@ -96,9 +96,11 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
 }
 
 // One shell, at most one native client document per runner, retained until identity changes.
-export default function PersistentHarnessPanes() {
+export default function PersistentHarnessPanes({ retainBrain = true }) {
   const location = useLocation(); const navigate = useNavigate(); const navigateRef = useRef(navigate); navigateRef.current = navigate; const { user, org } = useAuth();
-  const scope = `${user?.id || ''}:${org?.id || ''}`; const active = paneForPath(location.pathname);
+  const scope = `${user?.id || ''}:${org?.id || ''}`;
+  const candidate = paneForPath(location.pathname);
+  const active = retainBrain || candidate !== 'brain' ? candidate : null;
   const path = location.pathname + location.search + location.hash;
   const [visited, setVisited] = useState(() => active ? { [active]: path } : {});
   const lastRoutes = useRef({}); const activePath = useRef(path); activePath.current = path;
@@ -108,5 +110,5 @@ export default function PersistentHarnessPanes() {
     lastRoutes.current[mode] = next; rememberPaneRoute(mode, next, scope);
     if (isActive && next !== activePath.current) navigateRef.current(next, { replace: true });
   }, [scope]);
-  return <>{Object.entries(visited).map(([mode, entry]) => <NativePane key={`${scope}:${mode}`} mode={mode} entry={entry} active={active === mode} route={active === mode ? path : lastRoutes.current[mode] || entry} scope={scope} onRoute={routeChanged} />)}</>;
+  return <>{Object.entries(visited).filter(([mode]) => retainBrain || mode !== 'brain').map(([mode, entry]) => <NativePane key={`${scope}:${mode}`} mode={mode} entry={entry} active={active === mode} route={active === mode ? path : lastRoutes.current[mode] || entry} scope={scope} onRoute={routeChanged} />)}</>;
 }

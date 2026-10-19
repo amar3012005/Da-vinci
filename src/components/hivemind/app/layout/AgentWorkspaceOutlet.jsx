@@ -2,7 +2,7 @@ import PersistentHarnessPanes from './PersistentHarnessPanes';
 import { paneForPath, persistentShellEnabled } from '../shared/native-pane-protocol';
 import { isNativeApp } from '../shared/native-app';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
-import React, { Suspense, useLayoutEffect, useState } from 'react';
+import React, { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 const Apps = React.lazy(() => import('../pages/OpenDotAppsNavigation'));
 const OpenDotEntry = React.lazy(() => import('../pages/OpenDotEntry'));
@@ -11,7 +11,19 @@ const OpenDotEntry = React.lazy(() => import('../pages/OpenDotEntry'));
 export default function AgentWorkspaceOutlet() {
   const location = useLocation();
   const persistent = persistentShellEnabled() && !isNativeApp();
-  const nativeChat = persistent && Boolean(paneForPath(location.pathname));
+  const [desktop, setDesktop] = useState(() => window.matchMedia?.('(min-width: 768px)').matches ?? false);
+  useEffect(() => {
+    const media = window.matchMedia?.('(min-width: 768px)');
+    const changed = () => setDesktop(media?.matches ?? false);
+    changed(); media?.addEventListener?.('change', changed);
+    return () => media?.removeEventListener?.('change', changed);
+  }, []);
+  // Brain already has a native HarnessSurface seat in this same document.
+  // A second authenticated SPA inside an iframe duplicates its boot and puts
+  // a UI handshake in front of the working chat. Runtime keeps its own origin;
+  // mobile keeps the existing embedded presentation.
+  const mode = paneForPath(location.pathname);
+  const nativeChat = persistent && Boolean(mode) && !(desktop && mode === 'brain');
   const dot = /^\/hivemind\/app\/employee\/dots(?:\/|$)/.test(location.pathname);
   const apps = location.pathname === '/hivemind/app/employee/apps';
   const [appsVisited, setAppsVisited] = useState(apps);
@@ -23,7 +35,7 @@ export default function AgentWorkspaceOutlet() {
   }, [dot, dotEntry, location.pathname, location.search]);
   return <>
     {!dot && !apps && !nativeChat && <Outlet />}
-    {persistent && <PersistentHarnessPanes />}
+    {persistent && <PersistentHarnessPanes retainBrain={!desktop} />}
     {appsVisited && <div hidden={!apps} className="h-full min-h-0" style={{ display: apps ? 'block' : 'none' }}>
       <Suspense fallback={<AsciiWorkspaceLoading label="Opening Apps…" />}><Apps /></Suspense>
     </div>}
