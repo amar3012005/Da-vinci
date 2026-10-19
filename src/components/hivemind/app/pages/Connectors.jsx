@@ -1,3 +1,4 @@
+import ComposioAccountCard from './ComposioAccountCard';
 import { McpClientSetupModal } from '../shared/McpClientSetup';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -3563,6 +3564,7 @@ export default function Connectors() {
   return (
     <div className="w-full max-w-none space-y-6">
       <ConnectorsWelcome />
+      <ComposioAccountCard />
 
       {/* Toast Notification */}
       <AnimatePresence>

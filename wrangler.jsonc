@@ -59,6 +59,7 @@
   ],
   "durable_objects": {
     "bindings": [
+      { "name": "COMPOSIO_ACCOUNTS", "class_name": "ComposioAccount" },
       {
         "name": "ACCOUNT_MODE_ACCESS",
         "class_name": "AccountModeAccess"
@@ -71,6 +72,7 @@
       "new_sqlite_classes": [
         "AccountModeAccess"
       ]
-    }
+    },
+    { "tag": "composio-account-v1", "new_sqlite_classes": ["ComposioAccount"] }
   ]
 }

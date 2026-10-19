@@ -1,3 +1,5 @@
+import { handleComposioAccount } from './composio-account.mjs';
+export { ComposioAccount } from './composio-account.mjs';
 import { proxyConnectorTransport } from './connector-transport.mjs';
 import { handleModeAccess, gateWorkspaceDocument, proxyPlatformAdmin } from './account-mode-access.mjs';
 export { AccountModeAccess } from './account-mode-access.mjs';
@@ -507,6 +509,8 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const composioAccountResponse = await handleComposioAccount(request, env);
+    if (composioAccountResponse) return composioAccountResponse;
     const connectorResponse = await proxyConnectorTransport(request);
     if (connectorResponse) return connectorResponse;
     const adminProxyResponse = await proxyPlatformAdmin(request);
