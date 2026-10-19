@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 // Original inline artwork: no asset requests, filters, fonts, or shared SVG IDs.
 const ink = '#343b45';
@@ -8,6 +8,7 @@ const paper = '#fffdf7';
 const shade = '#ddd8cb';
 
 function FeatureArtwork({ kind }) {
+  const nodeFill = useId();
   const drawings = {
     memories: <>
       <path d="M16 11 43 7l5 28-27 5z" fill={pale}/>
@@ -43,14 +44,21 @@ function FeatureArtwork({ kind }) {
       <path d="M22 9h17v6H22z" fill={paper}/>
     </>,
     graph: <>
-      <path d="M30 18v13M13 39v-8h34v8" strokeWidth="2"/>
-      <path d="m15 13 15-8 15 8-15 8z" fill={paper}/>
-      <path d="m15 13 15 8v12l-15-8z" fill={shade}/>
-      <path d="m30 21 15-8v12l-15 8z" fill={pale}/>
-      <rect x="5" y="39" width="16" height="13" rx="3" fill={paper}/>
-      <rect x="39" y="39" width="16" height="13" rx="3" fill={pale}/>
-      <path d="M11 45h4m30 0h4" stroke={blue} strokeWidth="2"/>
-      <circle cx="30" cy="37" r="3" fill={blue} stroke={paper}/>
+      <defs>
+        <radialGradient id={nodeFill} cx="30%" cy="22%" r="85%">
+          <stop stopColor="#eff3ee"/>
+          <stop offset=".38" stopColor="#b9cbd6"/>
+          <stop offset=".75" stopColor="#7e9ab5"/>
+          <stop offset="1" stopColor="#506e8e"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="31" cy="53" rx="24" ry="3" fill="#394c63" fillOpacity=".09" stroke="none"/>
+      <path d="m14 39 17-25 15 31z" stroke="#647f99" strokeWidth="5.5"/>
+      <path d="m14 38 17-25 15 31z" stroke="#d1dce2" strokeWidth="2.2"/>
+      <circle cx="31" cy="14" r="10" fill={`url(#${nodeFill})`} stroke="#6d879e" strokeWidth=".6"/>
+      <circle cx="14" cy="39" r="9" fill={`url(#${nodeFill})`} stroke="#6d879e" strokeWidth=".6"/>
+      <circle cx="46" cy="45" r="11" fill={`url(#${nodeFill})`} stroke="#6d879e" strokeWidth=".6"/>
+      <path d="M25 11a7 7 0 0 1 7-4M9 36a5 5 0 0 1 5-3m25 9a7 7 0 0 1 7-4" stroke="#fff" strokeOpacity=".5" strokeWidth="1.2"/>
     </>,
     advanced: <>
       <rect x="8" y="9" width="44" height="43" rx="4" fill="#333b48" stroke="#9aa7b8"/>
