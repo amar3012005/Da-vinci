@@ -1,6 +1,7 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import ProductCard from './ProductCard';
+import { HeroMotionBoundary } from './MobileHero';
 import { HIVEMIND_URL, hivemindHref } from './hivemindLinks';
 
 const NebulaBackdrop = lazy(() => import('./three/NebulaBackdrop'));
@@ -37,28 +38,40 @@ const PRODUCTS = [
   },
 ];
 
-const useMotionOk = () => {
+const useMotionOk = (host) => {
   const [ok, setOk] = useState(false);
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setOk(
-      window.matchMedia('(min-width: 768px)').matches &&
-        !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    );
-  }, []);
+    const wide = window.matchMedia('(min-width: 768px)');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let visible = !('IntersectionObserver' in window);
+    const sync = () => setOk(visible && wide.matches && !reduced.matches);
+    const observer = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+      visible = entries.some(entry => entry.isIntersecting); sync();
+    }) : null;
+    if (host.current) observer?.observe(host.current);
+    wide.addEventListener('change', sync);
+    reduced.addEventListener('change', sync);
+    sync();
+    return () => {
+      observer?.disconnect();
+      wide.removeEventListener('change', sync);
+      reduced.removeEventListener('change', sync);
+    };
+  }, [host]);
   return ok;
 };
 
 const SubProducts = () => {
-  const motionOk = useMotionOk();
+  const host = useRef(null);
+  const motionOk = useMotionOk(host);
 
   return (
-    <section id="solutions" className="relative overflow-hidden py-28" style={{ background: '#05070f' }}>
+    <section ref={host} id="solutions" className="relative overflow-hidden py-28" style={{ background: '#05070f' }}>
       {/* R3F nebula depth */}
       {motionOk && (
-        <Suspense fallback={null}>
+        <HeroMotionBoundary><Suspense fallback={null}>
           <NebulaBackdrop />
-        </Suspense>
+        </Suspense></HeroMotionBoundary>
       )}
       {/* static gradient fallback / overlay tint */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,rgba(20,40,60,0.35),transparent_70%)]" />
