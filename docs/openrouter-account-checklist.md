@@ -15,8 +15,9 @@ Task branch: codex/openrouter-account. Runtime companion: /tmp/runtime-openroute
 | Open Dot and separate Brain native-provider consumption | [ ] | [ ] | [ ] |
 
 Evidence: two React checks (including StrictMode single exchange), two Worker transport checks,
-four account checks, two native worker checks. Native text streaming verified with mock OpenRouter
+four account checks, three native worker checks, and 15 existing ChatGPT connection regression checks. Native text streaming verified with mock OpenRouter
 HTTP responses, not a real account. Free-only payload contains max_price prompt/completion 0.
+Native 503 responses dispatch at most twice; daily 429 quota dispatches once.
 Current credential storage and transport are reused; no Core or Control changes.
 
 Release gate: current bridge is account-erasure-d550774, ahead of the available Runtime bridge
@@ -30,3 +31,6 @@ cannot be bypassed by rotating models. This first implementation intentionally o
 Docs: https://openrouter.ai/docs/guides/overview/auth/oauth
 https://openrouter.ai/docs/guides/routing/model-variants/free
 https://openrouter.ai/docs/cookbook/get-started/free-models-router-playground
+
+Type-check note: the broader source graph reports existing SessionProjection and vendored Cordis type errors;
+that broader check is not recorded as passing. OAuth, HTTP and text streaming checks use controlled mocks.
