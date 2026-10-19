@@ -82,14 +82,13 @@ function CoverPlane({ pointer }) {
     [tex]
   );
 
-  // Match the persistent DOM poster: cover-fit with a top-aligned crop, so
-  // revealing the textured canvas does not jump or expose empty bands.
+  // Preserve the original width-fit composition: the full wordmark remains
+  // visible even on a narrow desktop. The DOM poster uses the same framing.
   const scale = useMemo(() => {
     const img = tex.image;
     const imgAspect = img ? img.width / img.height : 1.6;
-    const width = Math.max(viewport.width, viewport.height * imgAspect);
-    return [width, width / imgAspect, 1];
-  }, [tex, viewport.width, viewport.height]);
+    return [viewport.width, viewport.width / imgAspect, 1];
+  }, [tex, viewport.width]);
 
   useFrame((_, delta) => {
     if (mat.current) {
@@ -105,7 +104,7 @@ function CoverPlane({ pointer }) {
   });
 
   return (
-    <mesh ref={mesh} scale={scale} position={[0, (viewport.height - scale[1]) / 2, 0]}>
+    <mesh ref={mesh} scale={scale}>
       <planeGeometry args={[1, 1]} />
       <shaderMaterial
         ref={mat}

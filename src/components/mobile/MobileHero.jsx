@@ -127,7 +127,7 @@ const DesktopHero = ({ immersive }) => (
   >
     {/* plate — fill full width, crop top/bottom (wordmark sides never cut) */}
     <div className="absolute inset-0">
-      <HeroPoster className="absolute inset-0 h-full w-full object-cover object-top" />
+      <HeroPoster className="absolute left-0 top-1/2 h-auto w-full -translate-y-1/2" />
       {immersive && <HeroMotionBoundary><Suspense fallback={null}><HeroScene /></Suspense></HeroMotionBoundary>}
     </div>
 
