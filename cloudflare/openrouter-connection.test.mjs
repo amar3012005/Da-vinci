@@ -19,3 +19,18 @@ test('OpenRouter transport rejects foreign origins, arbitrary actions and missin
  assert.equal((await proxyModelConnection(new Request('https://next.singulancelabs.com/api/hivemind/model-connection/openrouter/stream'), {})).status, 404);
  assert.equal((await proxyModelConnection(new Request('https://next.singulancelabs.com/api/hivemind/model-connection/openrouter/status'), {})).status, 401);
 });
+test('top-level OAuth callback exchanges server-side and redirects without codes', async () => {
+ const previous = globalThis.fetch;
+ globalThis.fetch = async (_url, options) => {
+  assert.equal(options.method, 'POST');
+  assert.equal(options.headers.get('origin'), 'https://next.singulancelabs.com');
+  assert.equal(JSON.parse(options.body).code, 'one-use-code');
+  return Response.json({ connected: true });
+ };
+ try {
+  const response = await proxyModelConnection(new Request('https://next.singulancelabs.com/api/hivemind/model-connection/openrouter/callback?code=one-use-code&state='+ 's'.repeat(43), { headers: { cookie: 'hm_cp_session=test', 'sec-fetch-site': 'cross-site' } }), {});
+  assert.equal(response.status, 303);
+  assert.equal(response.headers.get('location'), '/hivemind/app/usage?openrouter_connected=1');
+  assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+ } finally { globalThis.fetch = previous; }
+});

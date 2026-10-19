@@ -26,6 +26,11 @@ export default function OpenRouterConnectionCard() {
     setStatus(null); setError(''); setBusy(false); setConsent(false);
     // Capture once, remove the single-use code from browser history before other requests.
     const url = new URL(window.location.href);
+    if (url.searchParams.has('openrouter_error')) setError('Sign-in could not be confirmed. Refresh the connection before trying again.');
+    if (url.searchParams.has('openrouter_connected') || url.searchParams.has('openrouter_error')) {
+      ['openrouter_connected', 'openrouter_error'].forEach(key => url.searchParams.delete(key));
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+    }
     if (url.searchParams.get('model_connection') === 'openrouter') {
       callback.current = { code: url.searchParams.get('code'), state: url.searchParams.get('state'), owner: `${org?.id}:${user?.id}` };
       ['code', 'state', 'model_connection'].forEach(key => url.searchParams.delete(key));

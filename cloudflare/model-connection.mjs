@@ -6,10 +6,11 @@ export async function proxyModelConnection(request, env) {
   const openrouter = url.pathname.startsWith('/api/hivemind/model-connection/openrouter/');
   if (openrouter && !['status', 'start', 'callback', 'select', 'disconnect'].includes(action)) return reply('not_found', 404);
   if (!['status', 'models', 'start', 'answer', 'cancel', 'select', 'disconnect', ...(openrouter ? ['callback'] : [])].includes(action)) return reply('not_found', 404);
-  const method = ['status', 'models'].includes(action) ? 'GET' : 'POST';
+  const oauthCallback = openrouter && action === 'callback' && request.method === 'GET';
+  const method = oauthCallback ? 'GET' : ['status', 'models'].includes(action) ? 'GET' : 'POST';
   if (request.method !== method) return reply('method_not_allowed', 405);
   const origin = request.headers.get('origin');
-  if ((origin && origin !== url.origin) || (method === 'POST' && origin !== url.origin) || request.headers.get('sec-fetch-site') === 'cross-site') return reply('origin_denied', 403);
+  if (!oauthCallback && ((origin && origin !== url.origin) || (method === 'POST' && origin !== url.origin) || request.headers.get('sec-fetch-site') === 'cross-site')) return reply('origin_denied', 403);
   const cookie = (request.headers.get('cookie') || '').split(';').map(part => part.trim()).find(part => part.startsWith('hm_cp_session='));
   if (!cookie) return reply('authentication_required', 401);
   const target = new URL(env.RUNTIME_RUNNER_ORIGIN || 'https://runtime-runner-origin.singulancelabs.com');
@@ -18,6 +19,13 @@ export async function proxyModelConnection(request, env) {
   const headers = new Headers({ cookie, accept: action === 'start' && !openrouter ? 'text/event-stream' : 'application/json', 'x-forwarded-host': url.host, 'x-forwarded-proto': 'https' });
   if (origin) headers.set('origin', origin);
   let body;
+  if (oauthCallback) {
+    const code = url.searchParams.get('code'), state = url.searchParams.get('state');
+    if (!code || code.length > 4096 || !state || !/^[A-Za-z0-9_-]{43}$/.test(state)) return reply('invalid_callback', 400);
+    body = JSON.stringify({ code, state });
+    headers.set('content-type', 'application/json');
+    headers.set('origin', url.origin);
+  }
   if (method === 'POST') {
     if (!request.headers.get('content-type')?.startsWith('application/json')) return reply('json_required', 415);
     const reader = request.body?.getReader();let size = 0;const parts = [];
@@ -26,8 +34,12 @@ export async function proxyModelConnection(request, env) {
     headers.set('content-type','application/json');
   }
   try {
-    const response = await fetch(target, { method, headers, body, redirect: 'manual', signal: request.signal });
+    const response = await fetch(target, { method: oauthCallback ? 'POST' : method, headers, body, redirect: 'manual', signal: request.signal });
     if (response.status >= 300 && response.status < 400) return reply('runtime_redirect_denied',502);
+    if (oauthCallback) {
+      await response.body?.cancel();
+      return new Response(null, { status: 303, headers: { location: `/hivemind/app/usage?openrouter_${response.ok ? 'connected' : 'error'}=1`, 'cache-control': 'private, no-store', 'referrer-policy': 'no-referrer' } });
+    }
     return new Response(response.body, { status: response.status, headers: { 'content-type': response.headers.get('content-type') || 'application/json', 'cache-control': 'private, no-store', 'x-accel-buffering':'no' } });
   } catch { return reply('model_connection_unavailable',503); }
 }
