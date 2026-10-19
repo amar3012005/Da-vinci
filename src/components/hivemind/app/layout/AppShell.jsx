@@ -38,6 +38,7 @@ import { TeamProvider } from '../shared/team-context';
 import GlobalUploadStrip from './GlobalUploadStrip';
 import { QuickRecorderProvider } from '../shared/QuickRecorderProvider';
 import { WelcomeSlides, ActivationGate } from '../shared/WelcomeFlow';
+import { requiresWorkspaceModeAccess, isCompanyOnboardingPath } from '../shared/workspace-mode-policy.mjs';
 import { companyAdmissionStatus } from '../shared/company-admission';
 import AccountSettingsDialog from '../shared/AccountSettingsDialog';
 const HyperAgentsWelcome = React.lazy(() => import('../shared/HyperAgentsWelcome'));
@@ -498,13 +499,6 @@ function AppShellContent() {
     return () => media.removeEventListener?.('change', handleChange);
   }, []);
 
-  if (!workspaceModesReady && workspaceModeForPath(location.pathname) !== 'hivemind') return <AsciiWorkspaceLoading label="Connecting…" />;
-  if (!workspaceModesEnabled && workspaceModeForPath(location.pathname) !== 'hivemind') return (
-    <section role="alert" className="grid min-h-screen place-content-center gap-4 p-6 text-center">
-      <p>{workspaceModesError || 'Workspace access is not enabled for this account. Your saved conversations are unchanged.'}</p>
-      <button type="button" onClick={() => window.location.reload()}>Retry this workspace</button>
-    </section>
-  );
 
   if (needsOnboarding) {
     return <div data-hivemind-app-shell><OnboardingFlow /></div>;
@@ -541,6 +535,16 @@ function AppShellContent() {
     {companyStatus !== 'required' && <button type="button" onClick={() => setAccountOpen(true)} className="fixed bottom-6 right-6 rounded-lg border bg-white px-4 py-2 text-sm">Account & Settings</button>}
     {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}
   </div>;
+
+  if (!workspaceModesReady && requiresWorkspaceModeAccess(location.pathname)) return <AsciiWorkspaceLoading label="Connecting…" />;
+  if (!workspaceModesEnabled && requiresWorkspaceModeAccess(location.pathname)) return (
+    <section role="alert" className="grid min-h-screen place-content-center gap-4 p-6 text-center">
+      <p>{workspaceModesError || 'Workspace access is not enabled for this account. Your saved conversations are unchanged.'}</p>
+      <button type="button" onClick={() => window.location.reload()}>Retry this workspace</button>
+    </section>
+  );
+
+  if (isCompanyOnboardingPath(location.pathname) && workspaceModesReady && !workspaceModesEnabled) return <Navigate to="/hivemind/app/overview/new" replace />;
 
   if (initialNativePane) return <div data-native-chat-shell className="h-[100dvh] min-h-0 overflow-hidden bg-[#faf9f4]">
     <NativePaneBridge scope={`${user?.id || ""}:${org?.id || ""}`} /><Outlet />

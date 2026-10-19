@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Check, Minus } from 'lucide-react';
 import { openCompanyRuntime } from '../shared/openCompanyRuntime';
 import './RuntimeGetStarted.css';
@@ -20,6 +20,10 @@ export function readGettingStarted(scope) {
 /** One shell-owned rail across native Runtime, DSH and OpenDot rooms. */
 export default function RuntimeGetStarted({ scope }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  // Embedded chat owns the full viewport: keep progress listening, but never
+  // float onboarding over its composer, transcript, or virtual keyboard.
+  const chatOpen = /^\/hivemind\/app\/employee\/(?:harness|dots)(?:\/|$)/.test(pathname);
   const [progress, setProgress] = useState(() => readGettingStarted(scope));
   const [previewOpen, setPreviewOpen] = useState(false);
   useEffect(() => {
@@ -57,7 +61,7 @@ export default function RuntimeGetStarted({ scope }) {
     try { await openCompanyRuntime(navigate); } catch { setError('Runtime is still connecting. Open it from the sidebar to continue.'); }
     finally { setOpening(false); }
   };
-  return <aside hidden={previewOpen} className="hm-runtime-start" aria-label="Get started with Runtime">
+  return <aside hidden={previewOpen || chatOpen} className="hm-runtime-start" aria-label="Get started with Runtime">
     <details className="hm-runtime-start-card" open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}>
       <summary><span className="hm-runtime-start-ring" style={{ '--hm-start-progress': `${count / STEPS.length * 100}%` }} aria-hidden="true" /><span className="hm-runtime-start-title">Getting Started</span><span className="hm-runtime-start-count">{count} of {STEPS.length} <Minus size={16} aria-hidden="true" /></span>
         <span className="hm-runtime-start-progress" role="progressbar" aria-label="Getting started progress" aria-valuemin={0} aria-valuemax={STEPS.length} aria-valuenow={count}><span style={{ width: `${count / STEPS.length * 100}%` }} /></span>

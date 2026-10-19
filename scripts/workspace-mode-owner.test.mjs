@@ -5,10 +5,15 @@ import test from 'node:test';
 
 test('workspace mode switches respect Brain and Runtime production owners', () => {
   const source = fs.readFileSync(new URL('../src/components/hivemind/app/shared/workspace-mode.js', import.meta.url), 'utf8');
-  const destination = vm.runInNewContext(`${source.replaceAll('export function', 'function')}; workspaceModeDestination`);
+  const policy = fs.readFileSync(new URL('../src/components/hivemind/app/shared/workspace-mode-policy.mjs', import.meta.url), 'utf8');
+  const destination = vm.runInNewContext(`${policy.replaceAll('export function', 'function')}\n${source.replace(/^import .*;\n/m, '').replaceAll('export function', 'function')}; workspaceModeDestination`);
   const brain = 'https://next.singulancelabs.com';
   const runtime = 'https://runtime-runner.singulancelabs.com';
   const room = '/hivemind/app/employee/harness';
+  for (const path of ['/hivemind/app/employees', '/hivemind/app/employees/mycompany']) {
+    assert.equal(destination(path, brain), path);
+    assert.equal(destination(path, runtime), `${brain}${path}`);
+  }
   assert.equal(destination(room, brain), `${runtime}${room}`);
   assert.equal(destination(room, runtime), room);
   assert.equal(destination('/hivemind/app/overview/new', runtime), `${brain}/hivemind/app/overview/new`);
@@ -23,4 +28,13 @@ test('workspace mode switches respect Brain and Runtime production owners', () =
   assert.match(component, /window.location.assign\(destination\)/);
   assert.ok(component.indexOf('window.location.assign(destination)') < component.indexOf('if (selected) return;'), 'a selected mode on the wrong host still corrects its owner');
   assert.match(component, /onClick=\{\(\) => chooseMode\(mode.path, mode.selected\)\}/);
+});
+
+
+test('company and organization onboarding run before optional mode admission', () => {
+ const shell=fs.readFileSync(new URL('../src/components/hivemind/app/layout/AppShell.jsx',import.meta.url),'utf8');
+ assert(shell.indexOf('if (needsOnboarding)')<shell.indexOf('if (!workspaceModesReady &&'));
+ assert(shell.indexOf("if (companyStatus !== 'ready')")<shell.indexOf('if (!workspaceModesReady &&'));
+ const selector=fs.readFileSync(new URL('../src/components/hivemind/app/layout/WorkspaceModeSwitcher.jsx',import.meta.url),'utf8');
+ assert(selector.indexOf('if (!workspaceModesEnabled) return')<selector.indexOf('aria-label="Choose workspace mode"'));
 });

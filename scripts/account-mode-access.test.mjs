@@ -84,3 +84,12 @@ test('upstream access failure returns 503 without fabricating a denial or redire
   assert.equal(document.status,503);assert.equal(document.headers.get('location'),null);
  } finally {globalThis.fetch=original;}
 });
+
+test('company onboarding and Brain bypass optional mode lookup even when the flag service is unavailable',async()=>{
+ const original=globalThis.fetch;let calls=0;globalThis.fetch=async()=>{calls++;throw Error('must not gate onboarding')};
+ try{for(const host of ['next.singulancelabs.com','runtime-runner.singulancelabs.com'])for(const path of ['/hivemind/app/employees/mycompany','/hivemind/app/employees/mycompany/','/hivemind/app/employees','/hivemind/app/overview/new','/hivemind/app/overview/session/saved'])assert.equal(await gateWorkspaceDocument(new Request('https://'+host+path),{}),null);assert.equal(calls,0)}finally{globalThis.fetch=original}
+});
+test('lookalike onboarding links do not bypass restricted agent routes',async()=>{
+ const {requiresWorkspaceModeAccess}=await import('../src/components/hivemind/app/shared/workspace-mode-policy.mjs');
+ for(const path of ['/hivemind/app/employees/mycompany/agents','/hivemind/app/employees/mycompany-other','/hivemind/app/employee/harness','/hivemind/app/employee/dots','/hivemind/app/tara'])assert.equal(requiresWorkspaceModeAccess(path),true);
+});

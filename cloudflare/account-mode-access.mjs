@@ -1,3 +1,4 @@
+import {requiresWorkspaceModeAccess} from '../src/components/hivemind/app/shared/workspace-mode-policy.mjs';
 /** Account grants are strongly consistent; only this Worker's verified admin path writes them. */
 export class AccountModeAccess {
   constructor(ctx) { this.ctx = ctx; }
@@ -102,7 +103,7 @@ export async function handleModeAccess(request, env) {
 export async function gateWorkspaceDocument(request, env) {
   const url = new URL(request.url);
   if (!['next.singulancelabs.com', 'runtime-runner.singulancelabs.com'].includes(url.hostname) || !['GET', 'HEAD'].includes(request.method)) return null;
-  if (!/^\/hivemind\/app\/(?:employee(?:\/|$)|employees(?:\/|$)|crm(?:\/|$)|tara(?:\/|$))/.test(url.pathname)) return null;
+  if (!requiresWorkspaceModeAccess(url.pathname)) return null;
   try {
     const user = await sessionUser(request);
     // Existing sign-in keeps the intended return destination for unauthenticated users.
