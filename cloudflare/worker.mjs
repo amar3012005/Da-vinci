@@ -701,6 +701,19 @@ export default {
       headers.set('cdn-cache-control', 'no-store');
       return noIndex(new Response(response.body, { status: response.status, statusText: response.statusText, headers }));
     }
+    // Plugin graph bundles are native-owned public code. Cookie presence is
+    // not an authorization decision and must never select the SPA as fallback.
+    // The native runner retains all authentication for its protected endpoints.
+    if (pathname.startsWith('/plugins/')) {
+      const response = await harnessResponse(request, env);
+      if (response.ok && (response.headers.get('content-type') || '').includes('text/html')) {
+        await response.body?.cancel();
+        return Response.json({ error: 'native_plugin_invalid_response' }, {
+          status: 502, headers: { 'cache-control': 'private, no-store' },
+        });
+      }
+      return noIndex(response);
+    }
     // Establishment validates a signed ticket at the runner. Boot must also
     // reach native authorization without cookies so liveness sees an expired
     // session as 401, never a successful SPA document. Cookie presence below

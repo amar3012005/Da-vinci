@@ -15,3 +15,13 @@ test('events preserve native denials and refuse cached documents/redirects',asyn
   assert.equal(response.status,status===200||status===302?502:status);assert.equal(response.headers.get('location'),null);
  }
 });
+test('cold plugin code reaches native owner without an admission cookie',async()=>{
+ for(const cookie of [null,'dsh-auth-fixture=expired']){
+  const response=await worker.fetch(new Request(origin+'/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=fixture',{headers:cookie?{cookie}:{}}),{HARNESS_CHAT:{fetch:async()=>new Response('/* native */',{headers:{'content-type':'text/javascript','cache-control':'public, max-age=31536000, immutable'}})},ASSETS:{fetch:()=>{throw Error('Plugin reached SPA')}}});
+  assert.equal(response.status,200);assert.match(response.headers.get('content-type'),/javascript/);assert.match(response.headers.get('cache-control'),/immutable/);
+ }
+});
+test('plugin fallback never masquerades as a successful document',async()=>{
+ const response=await worker.fetch(new Request(origin+'/plugins/??missing.js'),{HARNESS_CHAT:{fetch:async()=>new Response('<html/>',{headers:{'content-type':'text/html'}})}});
+ assert.equal(response.status,502);
+});
