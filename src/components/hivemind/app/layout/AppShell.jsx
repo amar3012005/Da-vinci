@@ -528,7 +528,7 @@ function AppShellContent() {
   // Company setup is an admission stage, not a dismissible page walkthrough.
   // Consult the saved company record; never trust a local 'skipped' marker.
   const companyStatus = companyAdmission.scope === org?.id ? companyAdmission.status : 'checking';
-  const modelAccountSettings = ['/hivemind/app/usage', '/hivemind/m/usage'].includes(location.pathname);
+  const modelAccountSettings = ['/hivemind/app/usage', '/hivemind/m/usage', '/hivemind/app/connectors', '/hivemind/m/connectors'].includes(location.pathname);
   if (companyStatus !== 'ready' && !modelAccountSettings) return <div data-hivemind-app-shell className="min-h-[var(--hm-app-viewport-height,100dvh)] bg-[#faf9f4] p-4 sm:p-8">
     {companyStatus === 'checking' ? <AsciiWorkspaceLoading label="Connecting…" />
       : companyStatus === 'error' ? <div role="alert" className="mx-auto max-w-lg p-8"><p>We couldn’t check your company setup. Your progress is saved.</p><button type="button" onClick={() => (clearCompanyRead(`${user?.id}:${org?.id}`), setCompanyRetry(value => value + 1))} className="mt-4 text-[#117dff] underline">Try again</button></div>

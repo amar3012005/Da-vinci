@@ -49,8 +49,18 @@ export class ComposioAccount {
       if(!response.ok) throw new Error('composio_connection_unconfirmed');
       session=response.headers.get('mcp-session-id') || session;
       if(!id) {await response.body?.cancel();return;}
-      const text=await boundedText(response);
-      const value=response.headers.get('content-type')?.includes('text/event-stream') ? text.split('\n').filter(x=>x.startsWith('data:')).map(x=>{try{return JSON.parse(x.slice(5));}catch{return null;}}).find(x=>x?.id===id) : JSON.parse(text);
+      let value;
+      if(response.headers.get('content-type')?.includes('text/event-stream')) {
+        const reader=response.body.getReader(), decoder=new TextDecoder(); let buffer='',size=0;
+        try { for (;;) {
+          const chunk=await reader.read(); if(chunk.done) break; size+=chunk.value.length;
+          if(size>262144) throw new Error('composio_response_too_large');
+          buffer+=decoder.decode(chunk.value,{stream:true});
+          const lines=buffer.split('\n');buffer=lines.pop();
+          for(const line of lines) { if(!line.startsWith('data:')) continue; let parsed;try{parsed=JSON.parse(line.slice(5));}catch{continue;} if(parsed?.id===id){value=parsed;break;} }
+          if(value) break;
+        } } finally { await reader.cancel();reader.releaseLock(); }
+      } else value=JSON.parse(await boundedText(response));
       if(value?.error || !value?.result) throw new Error('composio_connection_unconfirmed');
       return value.result;
     };
