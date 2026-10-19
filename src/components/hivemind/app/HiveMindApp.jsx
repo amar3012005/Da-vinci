@@ -40,6 +40,7 @@ const Evaluation = React.lazy(() => import('./pages/Evaluation'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 const Billing = React.lazy(() => import('./pages/Billing'));
 const Usage = React.lazy(() => import('./pages/Usage'));
+const AIModels = React.lazy(() => import('./pages/AIModels'));
 const WebStudio = React.lazy(() => import('./pages/WebStudio'));
 const McpServer = React.lazy(() => import('./pages/McpServer'));
 const MemoryGraph = React.lazy(() => import('./pages/MemoryGraph'));
@@ -271,6 +272,7 @@ export default function HiveMindApp() {
           <Route path="evaluation" element={<PageSuspense><Evaluation /></PageSuspense>} />
           <Route path="settings" element={<PageSuspense><Settings /></PageSuspense>} />
           <Route path="billing" element={<PageSuspense><Billing /></PageSuspense>} />
+          <Route path="ai-models" element={<PageSuspense><AIModels /></PageSuspense>} />
           <Route path="usage" element={<PageSuspense><Usage /></PageSuspense>} />
           <Route path="web" element={<PageSuspense><WebStudio /></PageSuspense>} />
           {/* Legacy /web-admin deep-link → studio with health drawer pre-opened. */}

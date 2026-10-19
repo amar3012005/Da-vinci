@@ -30,7 +30,7 @@ test('top-level OAuth callback exchanges server-side and redirects without codes
  try {
   const response = await proxyModelConnection(new Request('https://next.singulancelabs.com/api/hivemind/model-connection/openrouter/callback?code=one-use-code&state='+ 's'.repeat(43), { headers: { cookie: 'hm_cp_session=test', 'sec-fetch-site': 'cross-site' } }), {});
   assert.equal(response.status, 303);
-  assert.equal(response.headers.get('location'), '/hivemind/app/usage?openrouter_connected=1');
+  assert.equal(response.headers.get('location'), '/hivemind/app/ai-models?openrouter_connected=1');
   assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
  } finally { globalThis.fetch = previous; }
 });

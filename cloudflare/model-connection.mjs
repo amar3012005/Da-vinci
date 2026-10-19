@@ -40,7 +40,7 @@ export async function proxyModelConnection(request, env) {
     if (response.status >= 300 && response.status < 400) return reply('runtime_redirect_denied',502);
     if (oauthCallback) {
       await response.body?.cancel();
-      return new Response(null, { status: 303, headers: { location: `/hivemind/app/usage?openrouter_${response.ok ? 'connected' : 'error'}=1`, 'cache-control': 'private, no-store', 'referrer-policy': 'no-referrer' } });
+      return new Response(null, { status: 303, headers: { location: `/hivemind/app/ai-models?openrouter_${response.ok ? 'connected' : 'error'}=1`, 'cache-control': 'private, no-store', 'referrer-policy': 'no-referrer' } });
     }
     return new Response(response.body, { status: response.status, headers: { 'content-type': response.headers.get('content-type') || 'application/json', 'cache-control': 'private, no-store', 'x-accel-buffering':'no' } });
   } catch { return reply('model_connection_unavailable',503); }

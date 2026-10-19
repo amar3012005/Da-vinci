@@ -1,9 +1,10 @@
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { User, Gauge, CreditCard, Settings, X } from 'lucide-react';
+import { User, Gauge, CreditCard, Settings, Cpu, X } from 'lucide-react';
 const sections = [
   { id: 'profile', label: 'Profile', icon: User, page: React.lazy(() => import('../pages/Profile')) },
   { id: 'usage', label: 'Usage', icon: Gauge, page: React.lazy(() => import('../pages/Usage')) },
+  { id: 'ai-models', label: 'AI Models', icon: Cpu, page: React.lazy(() => import('../pages/AIModels')) },
   { id: 'billing', label: 'Billing', icon: CreditCard, page: React.lazy(() => import('../pages/Billing')) },
   { id: 'settings', label: 'Settings', icon: Settings, page: React.lazy(() => import('../pages/Settings')) },
 ];
