@@ -1,3 +1,4 @@
+import {isCompanyOnboardingPath} from './workspace-mode-policy.mjs';
 /** One route-derived mode for the shell, selector and sidebar. */
 export function workspaceModeForPath(pathname = '') {
   if (/^\/hivemind\/app\/tara(?:\/|$)/.test(pathname)) return 'tara';
@@ -11,7 +12,7 @@ export function workspaceModeDestination(pathname, currentOrigin) {
   const runtimeOrigin = 'https://runtime-runner.singulancelabs.com';
   if (![brainOrigin, runtimeOrigin].includes(currentOrigin)) return pathname;
   const mode = workspaceModeForPath(pathname);
-  const owner = mode === 'hyperagents' ? runtimeOrigin : brainOrigin;
+  const owner = mode === 'hyperagents' && !isCompanyOnboardingPath(pathname) ? runtimeOrigin : brainOrigin;
   return owner === currentOrigin ? pathname : `${owner}${pathname}`;
 }
 
