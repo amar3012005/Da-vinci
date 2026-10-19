@@ -14,3 +14,10 @@ export function workspaceModeDestination(pathname, currentOrigin) {
   const owner = mode === 'hyperagents' ? runtimeOrigin : brainOrigin;
   return owner === currentOrigin ? pathname : `${owner}${pathname}`;
 }
+
+/** Reopening Apps preserves the original employee return destination. */
+export function employeeAppsPath(location) {
+  const apps = '/hivemind/app/employee/apps';
+  if (location.pathname.replace(/\/+$/, '') === apps) return apps + (location.search || '');
+  return `${apps}?return_to=${encodeURIComponent(location.pathname + (location.search || ''))}`;
+}

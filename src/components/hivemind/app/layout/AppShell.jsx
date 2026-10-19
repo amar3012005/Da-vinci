@@ -6,7 +6,7 @@ import BrainFeatureWelcome from '../shared/BrainFeatureWelcome';
 import NativePaneBridge from './NativePaneBridge';
 import { initialNativePane, persistentShellEnabled } from '../shared/native-pane-protocol';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
-import { workspaceModeForPath } from '../shared/workspace-mode';
+import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
 import { discardParkedNativeHarnessSeat } from '../shared/native-harness-seat';
 import { NativeAiConsentGate } from '../mobile/MobileSafetyPanel';
 import { useTranslation } from 'react-i18next';
@@ -402,7 +402,7 @@ function AppShellContent() {
   useEffect(() => {
     if (!nativeChatRoom) return undefined;
     const openApps = () => {
-      if (workspaceModeForPath(location.pathname) === 'hyperagents') { navigate(`/hivemind/app/employee/apps?return_to=${encodeURIComponent(location.pathname + location.search)}`); return; }
+      if (workspaceModeForPath(location.pathname) === 'hyperagents') { navigate(employeeAppsPath(location)); return; }
       setMobileAppsOpen(true);
     };
     window.addEventListener('hivemind:mobile-connectors', openApps);

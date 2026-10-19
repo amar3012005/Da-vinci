@@ -378,7 +378,7 @@ function AppDrawer({ app, cloud, connected, signedIn, instant, onClose }) {
         usesKey && jsx("label", { className: "block text-body-sm", children: ["API key", jsx("input", { type: "password", autoComplete: "off", value: key, onChange: e => setKey(e.target.value), className: "mt-2 w-full rounded-lg border p-3", "aria-label": `${app.name} API key` })] }),
         /* @__PURE__ */ jsx("button", { className: "btn-primary h-10 w-full", disabled: pending || !toolkitMeta || (usesKey && !key.trim()), onClick: connect, children: pending ? "Connecting…" : !toolkitMeta ? "Checking connection options…" : usesKey ? `Connect ${app.name}` : `Sign in to ${app.name}` }),
         error && /* @__PURE__ */ jsx("p", { className: "text-caption text-destructive", children: error }),
-        /* @__PURE__ */ jsxs("p", { className: "text-caption text-foreground/45", children: [
+        /* @__PURE__ */ jsxs("p", { className: "text-caption text-foreground/45", children: usesKey ? "Your key is submitted securely to connect this account. It is not included in agent conversations." : [
           "You'll sign in with ",
           app.name,
           " directly. Your dots never see your password."

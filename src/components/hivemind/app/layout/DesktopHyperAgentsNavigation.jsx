@@ -1,3 +1,4 @@
+import { employeeAppsPath } from '../shared/workspace-mode';
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Plus, Cable, Building2, FolderKanban, Monitor, FolderOpen, Settings, LogOut } from 'lucide-react';
@@ -53,7 +54,7 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
       </div>
     </div>
     <nav className="ha-workspace-shortcuts" aria-label="Workspace tools">
-      <NavLink to={`/hivemind/app/employee/apps?return_to=${encodeURIComponent(location.pathname + location.search)}`} title={collapsed ? 'Apps' : undefined}><Cable size={18}/>{!collapsed && <span>Apps</span>}</NavLink>
+      <NavLink to={employeeAppsPath(location)} title={collapsed ? 'Apps' : undefined}><Cable size={18}/>{!collapsed && <span>Apps</span>}</NavLink>
       <div className="ha-artifact-cell"><div className="ha-artifacts-action" data-hivemind-artifacts-seat data-collapsed={collapsed || undefined}/><button type="button" className="ha-artifacts-unavailable" disabled title="Artifacts become available when the Runtime workspace connects"><FolderOpen size={18}/>{!collapsed && <span>Artifacts</span>}</button></div>
       <button type="button" onClick={onCompany} title={collapsed ? 'Company HQ' : undefined}><Building2 size={18}/>{!collapsed && <span>Company HQ</span>}</button>
       {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm" title={collapsed ? 'CRM' : undefined}><FolderKanban size={18}/>{!collapsed && <span>CRM</span>}</NavLink>}
