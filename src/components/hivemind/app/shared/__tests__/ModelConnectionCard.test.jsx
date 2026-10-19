@@ -9,6 +9,9 @@ test('requires explicit consent before starting cloud sign-in',async()=>{
  render(<ModelConnectionCard/>);
  await screen.findByRole('button',{name:'Connect ChatGPT'});
  expect(screen.getByRole('button',{name:'Connect ChatGPT'}).disabled).toBe(true);
+ expect(screen.getByRole('complementary',{name:'ChatGPT device sign-in setup'})).toBeTruthy();
+ expect(screen.getByText('Personal ChatGPT account')).toBeTruthy();
+ expect(screen.getByText('Business or Enterprise workspace')).toBeTruthy();
  fireEvent.click(screen.getByRole('checkbox'));
  expect(screen.getByRole('button',{name:'Connect ChatGPT'}).disabled).toBe(false);
  expect(global.fetch).toHaveBeenCalledTimes(1);
