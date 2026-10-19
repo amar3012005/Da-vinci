@@ -1,4 +1,5 @@
 import './company-onboarding-glass.css';
+import {awakeningTeam} from '../shared/awakening-team.mjs';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin, BrainCircuit, AudioWaveform, Orbit, Languages } from 'lucide-react';
@@ -82,7 +83,20 @@ function agentAssignment(member) {
     || 'Briefed with your company context and ready for the first move.';
 }
 
-function AwakeningOverlay({ company, team, onContinue, onClose }) {
+function AwakeningOverlay({ company, team, starterPlan, onContinue, onClose }) {
+  const [roster, setRoster] = useState(null);
+  const [rosterError, setRosterError] = useState(false);
+  const members = useMemo(() => awakeningTeam({team, roster, starterPlan}), [team, roster, starterPlan]);
+  const hired = members.some(member => member.awakeningState === 'hired');
+  useEffect(() => {
+    let alive = true;
+    apiClient.listEmployees().then(data => {
+      const saved = Array.isArray(data) ? data : data?.employees;
+      if (!Array.isArray(saved)) throw new Error('Employee roster unavailable');
+      if (alive) setRoster(saved);
+    }).catch(() => { if (alive) setRosterError(true); });
+    return () => { alive = false; };
+  }, []);
   const reduceMotion = useReducedMotion();
   const [lineIndex, setLineIndex] = useState(0);
   const [characterIndex, setCharacterIndex] = useState(0);
@@ -178,23 +192,24 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
             </motion.div>
           ) : !systemVisible ? (
             <motion.div key="agents" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[1120px]">
-              <div className="-translate-y-14 text-center sm:-translate-y-20 lg:-translate-y-24">
+              <div className="text-center">
                 <div className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#a9d8ff]">HIVEMIND · HyperAgents online</div>
-                <h1 className="mt-2 text-[clamp(1.8rem,3.25vw,3.5rem)] font-semibold leading-none tracking-[-0.035em] text-white font-['Space_Grotesk']">Your company brain is alive.</h1>
-                <p className="mx-auto mt-2 max-w-[940px] text-[12px] leading-5 text-white/70 sm:text-[13px]">Three specialists were hired from your onboarding assignments. Each one is briefed with {company}’s context and ready to work.</p>
+                <h1 className="mx-auto mt-3 max-w-[1000px] text-[clamp(1.8rem,3.25vw,3.5rem)] font-semibold leading-[1.08] tracking-[-0.035em] text-white font-['Space_Grotesk']">Your company brain is alive.</h1>
+                <p className="mx-auto mt-2 max-w-[940px] text-[12px] leading-5 text-white/70 sm:text-[13px]">{hired ? `${members.length} ${members.length === 1 ? 'specialist is' : 'specialists are'} part of your company team, briefed with ${company}’s context.` : members.length ? `Meet the ${members.length} specialist roles prepared for ${company}. They will be created when you enter HyperAgents.` : 'Your saved company context is ready. Your team will appear here when it is available.'}</p>
               </div>
-              <div className="mt-14 grid grid-cols-1 divide-y divide-[#cbd7e3] overflow-hidden rounded-2xl border border-white/80 bg-[#f7f9fc]/95 shadow-[0_24px_80px_rgba(0,12,32,.18)] sm:mt-20 md:grid-cols-3 md:divide-x md:divide-y-0">
-                {team.slice(0, 3).map((member, index) => (
-                  <motion.div key={member.id || member.name} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : index * 0.14 }} className="min-h-[220px] p-6 text-center sm:p-8" style={{ backgroundColor: starterEmployeeAppearance(member.name) ? `#${starterEmployeeAppearance(member.name).background}80` : undefined }}>
-                    <div className="mx-auto w-fit"><AgentAvatar agent={member} size={132} shape={starterEmployeeAppearance(member.name) ? 'circle' : 'none'} ring={Boolean(starterEmployeeAppearance(member.name))} /></div>
+              <div data-awakening-team className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {members.map((member, index) => (
+                  <motion.div key={member.id || member.name} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : index * 0.14 }} data-awakening-agent={member.id || member.name} className="flex min-w-0 flex-col items-center rounded-2xl border border-white/80 bg-[#f7f9fc] p-5 text-center text-[#102b46] shadow-[0_12px_36px_rgba(0,12,32,.15)] sm:p-6" style={{ backgroundColor: starterEmployeeAppearance(member.name) ? `#${starterEmployeeAppearance(member.name).background}` : undefined }}>
+                    <div className="mx-auto w-fit"><AgentAvatar agent={member} size={104} shape={starterEmployeeAppearance(member.name) ? 'circle' : 'none'} ring={Boolean(starterEmployeeAppearance(member.name))} /></div>
                     <h2 className="mt-4 text-[18px] font-semibold text-[#102b46] font-['Space_Grotesk']">{member.name}</h2>
-                    <div className="mt-1 text-[10px] font-mono uppercase tracking-[0.12em] text-[#34688e]">{member.roleArchetype || member.role || 'HyperAgent'}</div>
-                    <p className="mt-3 text-[11.5px] leading-5 text-[#526577]">{agentAssignment(member)}</p>
-                    <span className="mt-4 inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.13em] text-[#23734e]"><span className="h-1.5 w-1.5 rounded-full bg-[#2b9b66]" /> Online</span>
+                    <div className="mt-1 text-[10px] font-mono uppercase tracking-[0.12em] text-[#34688e]">{member.title || member.role || member.roleArchetype || 'HyperAgent'}</div>
+                    <p className="mt-3 line-clamp-4 flex-1 break-words text-[12px] leading-5 text-[#526577]">{agentAssignment(member)}</p>
+                    <span className="mt-4 inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.13em] text-[#23734e]"><span className="h-1.5 w-1.5 rounded-full bg-[#2b9b66]" /> {member.awakeningState === 'hired' ? 'Hired' : 'Planned role'}</span>
                   </motion.div>
                 ))}
               </div>
-              <div className="mt-8 text-center">
+              {rosterError && <p role="status" className="mt-3 text-center text-xs text-white/70">We couldn’t refresh your team. Showing the saved onboarding details.</p>}
+              <div className="mt-8 border-t border-white/30 pt-7 text-center">
                 <p className="text-[clamp(1.15rem,1.8vw,1.6rem)] font-medium tracking-[-0.02em] text-white font-['Space_Grotesk']">Let’s make {company} an AI company.</p>
                 <button type="button" onClick={() => setSystemVisible(true)} className="mt-5 inline-flex h-12 items-center justify-center gap-3 rounded-full border border-white/20 bg-white px-7 text-[12px] font-semibold text-[#08264e] shadow-[0_12px_35px_rgba(0,13,35,.28)] transition-all hover:bg-[#eaf6ff] hover:px-8">
                   See your operating system <ArrowRight size={15} />
@@ -202,7 +217,7 @@ function AwakeningOverlay({ company, team, onContinue, onClose }) {
               </div>
             </motion.div>
           ) : (
-            <motion.div key="system" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="relative top-10 w-full max-w-[1080px] text-center sm:top-12">
+            <motion.div key="system" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[1080px] text-center">
               <div className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#cce8ff]">Your AI company architecture</div>
               <h1 className="mt-3 text-[clamp(1.65rem,3vw,3rem)] font-medium tracking-[-0.035em] text-white font-['Space_Grotesk']">One intelligence. Three interfaces.</h1>
               <div className="relative mx-auto mt-9 w-[min(82vw,1020px)]">
@@ -594,6 +609,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           <AwakeningOverlay
             company={companyName}
             team={result?.team || []}
+            starterPlan={result?.starter_plan || []}
             onContinue={beginWorkspaceEntry}
             onClose={() => setAwakeningOpen(false)}
           />
