@@ -1,3 +1,4 @@
+import RuntimeAvatar from '../shared/RuntimeAvatar';
 import { employeeAppsPath } from '../shared/workspace-mode';
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -33,7 +34,7 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
     <div className="ha-team-scroll">
       {!collapsed && <div className="ha-team-heading"><h2>Your team</h2><span>{team.length} {team.length === 1 ? 'employee' : 'employees'}</span></div>}
       <button type="button" data-agent-room-link className={`ha-runtime-card${!selectedAgent ? ' is-selected' : ''}`} aria-label="Runtime, AI Chief of Staff" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => onOpenAgent(event, { id: 'runtime' })} title={collapsed ? 'Runtime · AI Chief of Staff' : undefined}>
-        <img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt=""/>
+        <RuntimeAvatar alt=""/>
         {!collapsed && <span className="ha-runtime-identity"><strong>Runtime</strong><small>AI Chief of Staff</small><LiveStatus room={runtimeRoom}/></span>}
         {collapsed && <LiveStatus room={runtimeRoom} collapsed/>}
       </button>

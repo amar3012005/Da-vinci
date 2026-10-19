@@ -1,0 +1,506 @@
+{
+  "version": "1",
+  "characters": [
+    "capsule",
+    "pebble",
+    "prism",
+    "orbit",
+    "spark",
+    "fold"
+  ],
+  "default": "orbit",
+  "states": [
+    "sleeping",
+    "ready",
+    "listening",
+    "thinking",
+    "working",
+    "needs-you",
+    "blocked",
+    "done"
+  ],
+  "size": 160,
+  "source": "Runtime pose animation pack 2026-10-19; original generated pose art, resized for UI",
+  "assets": [
+    {
+      "path": "animations/capsule-blocked.webp",
+      "bytes": 32602,
+      "sha256": "aea4c990202b05c1dc85410cb70aa00256046c2b3015bee10d81b7dfb565dc6c"
+    },
+    {
+      "path": "animations/capsule-done.webp",
+      "bytes": 59334,
+      "sha256": "c6bd7fd66934a1988199a8a7c07ecb76c98ae04f2ab087f617c4f2b4a555a5cf"
+    },
+    {
+      "path": "animations/capsule-listening.webp",
+      "bytes": 139912,
+      "sha256": "3828db9acaf23a7e453e012e874d4419bbbed5884c6e52b37e35e56a75ea646d"
+    },
+    {
+      "path": "animations/capsule-needs-you.webp",
+      "bytes": 49032,
+      "sha256": "05329dfac5e81c8068f32639fc5c23099a7387fca9c039a78a83a270a9d4dd2e"
+    },
+    {
+      "path": "animations/capsule-ready.webp",
+      "bytes": 94834,
+      "sha256": "1cf6bca0af69baaa261bcd80fd9a5ecf99c48714fdd63fbadd287f143f2c0773"
+    },
+    {
+      "path": "animations/capsule-sleeping.webp",
+      "bytes": 109422,
+      "sha256": "537fb0082e047bccf1f8b484fbabe0090ae9714303141a5d0902258708213619"
+    },
+    {
+      "path": "animations/capsule-thinking.webp",
+      "bytes": 154224,
+      "sha256": "f34d8d0dc3d621fa30c915731eef8962ca2171172b07011a4ab1028939dede76"
+    },
+    {
+      "path": "animations/capsule-working.webp",
+      "bytes": 138524,
+      "sha256": "ddea6cd5af0a3b2d02eb14f5c7bff47b3816298cb541451e7a064797676261f3"
+    },
+    {
+      "path": "animations/fold-blocked.webp",
+      "bytes": 30558,
+      "sha256": "de5ae6efc1dfaad441a84ee655dc6da1081d1d335897c29b165446a333468a7f"
+    },
+    {
+      "path": "animations/fold-done.webp",
+      "bytes": 56608,
+      "sha256": "8bb4121d9d964a2fbcab7392e4b216e9e2b7529b6c2406e4113c285acb5b6fbc"
+    },
+    {
+      "path": "animations/fold-listening.webp",
+      "bytes": 139386,
+      "sha256": "54d29ddfe794c4cdecb12744f3367bd3d0a4265c10b9370d4b682fafcc8171f5"
+    },
+    {
+      "path": "animations/fold-needs-you.webp",
+      "bytes": 42870,
+      "sha256": "aea0c6edff8940d0fadf2adfa3b1756cd5c8f04e25f31b0508184dcc3a4d20f4"
+    },
+    {
+      "path": "animations/fold-ready.webp",
+      "bytes": 104352,
+      "sha256": "6455dcdeb0506f67465ac08fdd149c61b4808aa70766b9a191bf1b5d0c52acd0"
+    },
+    {
+      "path": "animations/fold-sleeping.webp",
+      "bytes": 89474,
+      "sha256": "777ea9ef4a2a595aaf6c5957c685e6aeeab759a3c04626e41479307bf73e0e03"
+    },
+    {
+      "path": "animations/fold-thinking.webp",
+      "bytes": 132290,
+      "sha256": "9a17efa1b878c9b828f7b3427ecd078f352758ddbf5dddfed3b8fabe22834edd"
+    },
+    {
+      "path": "animations/fold-working.webp",
+      "bytes": 136568,
+      "sha256": "a04a261d09152d4af79058a0befdf660613adcd7cf03b0e2db8efad70705f43b"
+    },
+    {
+      "path": "animations/orbit-blocked.webp",
+      "bytes": 9762,
+      "sha256": "d27a31407c7b039ebfce8fb87241e3e41ce013bd7484520bce745645504f4406"
+    },
+    {
+      "path": "animations/orbit-done.webp",
+      "bytes": 55322,
+      "sha256": "fdd1bd6e1d47c7d6b8ecc10bab30ea24a4aa86e67812e25c25c3df1b6670e966"
+    },
+    {
+      "path": "animations/orbit-listening.webp",
+      "bytes": 96884,
+      "sha256": "3131a23b8908bd5f5fdd2f24f60715f7e3e1948390354912d63cc5f4bc530ed3"
+    },
+    {
+      "path": "animations/orbit-needs-you.webp",
+      "bytes": 42906,
+      "sha256": "ced9c5627f71082a58feacaf36ba81931c8450b972a17cf10945fd8bbbaf187b"
+    },
+    {
+      "path": "animations/orbit-ready.webp",
+      "bytes": 75710,
+      "sha256": "a8161146cdf1e8ae4e005b3063a1d7d1434603d01e2c77ba2d22e9c707787c81"
+    },
+    {
+      "path": "animations/orbit-sleeping.webp",
+      "bytes": 66340,
+      "sha256": "9f4f51815e2558254a5d63957a1e993f60e550544912e5783ac0d5d6dfe49d7a"
+    },
+    {
+      "path": "animations/orbit-thinking.webp",
+      "bytes": 128778,
+      "sha256": "fe04b402509c04cc96328027fd61a3d55fd0325ebdc1571b77d3f059d24d0749"
+    },
+    {
+      "path": "animations/orbit-working.webp",
+      "bytes": 127374,
+      "sha256": "4815e580fcfdcf50bedc9ce18bea35dbb429363f2669a3ebe1fed319c0b84c91"
+    },
+    {
+      "path": "animations/pebble-blocked.webp",
+      "bytes": 16764,
+      "sha256": "39aef5567b64fd889873eb29cc0b2b50c85e760a83f4b63e8a85ce7bbbdc5939"
+    },
+    {
+      "path": "animations/pebble-done.webp",
+      "bytes": 43812,
+      "sha256": "3321b42b182f99f2638b585e957020de28a1cf36aa78c814265cff528f4ce45e"
+    },
+    {
+      "path": "animations/pebble-listening.webp",
+      "bytes": 69256,
+      "sha256": "21c6c5a82edcc5036b1a912af09f2a369f84d950705f90a4ed9fae9a15e8e78b"
+    },
+    {
+      "path": "animations/pebble-needs-you.webp",
+      "bytes": 37132,
+      "sha256": "3a4e58ab028e216fa7e7ea888432b3e954dc95e0ccb6e7f98c5b14dc36137ced"
+    },
+    {
+      "path": "animations/pebble-ready.webp",
+      "bytes": 50412,
+      "sha256": "685d884c50a4bc748a8b16bc99dab6eb06be64a90048639faf4dff366181de03"
+    },
+    {
+      "path": "animations/pebble-sleeping.webp",
+      "bytes": 62514,
+      "sha256": "98aed659e171a5fde4fb5c66fedea50696ff70dc2a484fb54ffc11d36c402510"
+    },
+    {
+      "path": "animations/pebble-thinking.webp",
+      "bytes": 89842,
+      "sha256": "87f80978badc175edaba967553ca5e97bcbd7f4745509595f8002e8b07818cb5"
+    },
+    {
+      "path": "animations/pebble-working.webp",
+      "bytes": 102906,
+      "sha256": "ac4a891053b719e8ced479b812b1e62c18ebdb11311c66790330b04580d7e64d"
+    },
+    {
+      "path": "animations/prism-blocked.webp",
+      "bytes": 20518,
+      "sha256": "ed33accc6ecf2259d094ce8d91db806651417d1d487eb02bf2af0731a324bdd0"
+    },
+    {
+      "path": "animations/prism-done.webp",
+      "bytes": 60500,
+      "sha256": "3e5869d24c2e5102b11681b20c49e36b3418a9b2bf64442e8575a8d75634c3fd"
+    },
+    {
+      "path": "animations/prism-listening.webp",
+      "bytes": 107310,
+      "sha256": "b69504e7d2937cd2a09a77804891b7980048960553211d462151a36dc2870f99"
+    },
+    {
+      "path": "animations/prism-needs-you.webp",
+      "bytes": 43116,
+      "sha256": "1ed08da3a96c0177a895ec7f0345b99052ddb1c59da10f9b8d7cc5a4b239ad07"
+    },
+    {
+      "path": "animations/prism-ready.webp",
+      "bytes": 80632,
+      "sha256": "b2c35fc331e0eee3d4c8e3ba9d0c696b0be6b442c605889a5f73078569deff23"
+    },
+    {
+      "path": "animations/prism-sleeping.webp",
+      "bytes": 75390,
+      "sha256": "34ef77afa5e1a659100fdc8b8a012d5377543e5bc391dbce8ff6ef0aaff6657b"
+    },
+    {
+      "path": "animations/prism-thinking.webp",
+      "bytes": 131938,
+      "sha256": "151010469112c2e71f336f258c621d6bcff5aaac64025a7d2082237e2b89f6d2"
+    },
+    {
+      "path": "animations/prism-working.webp",
+      "bytes": 126902,
+      "sha256": "d5a3d825a72d279d8b9b7b865ebd44ada9ac49799f963090b0d291240e478bda"
+    },
+    {
+      "path": "animations/spark-blocked.webp",
+      "bytes": 14324,
+      "sha256": "bfd5621fb12ff213ed7957aabbaed13807ea43b8b8cf61649bcf1066e676eced"
+    },
+    {
+      "path": "animations/spark-done.webp",
+      "bytes": 74686,
+      "sha256": "613a77bc2f0f65fb2e3bf95298e43d5b9e67200cced67cc28ad2053788ceaf48"
+    },
+    {
+      "path": "animations/spark-listening.webp",
+      "bytes": 94856,
+      "sha256": "73e1628602f47d9570f492e3871e9f5bbf19b1e62214f351163337adf12d3168"
+    },
+    {
+      "path": "animations/spark-needs-you.webp",
+      "bytes": 31610,
+      "sha256": "5be0aadf199bb29946ceaa4e4eb234d89acaf26cf51d02874e80a067cd46f4bc"
+    },
+    {
+      "path": "animations/spark-ready.webp",
+      "bytes": 65238,
+      "sha256": "d994924bfda7b96a093c71ebcd23a9185393343b1157d509834a7da42cc14f20"
+    },
+    {
+      "path": "animations/spark-sleeping.webp",
+      "bytes": 63408,
+      "sha256": "9a58efe1fdde02ba0834517f62507baf5f42a5f3c65f5bb076081c8a4ce5f27b"
+    },
+    {
+      "path": "animations/spark-thinking.webp",
+      "bytes": 103168,
+      "sha256": "d7004aca878677f616a9111003096ec684c1569c7e7505f73166152ed754eee7"
+    },
+    {
+      "path": "animations/spark-working.webp",
+      "bytes": 95922,
+      "sha256": "195f85bba4462bb247ff5f9650745d8ee6de863ede3db551dea0661c0e1918ba"
+    },
+    {
+      "path": "stills/capsule-blocked.webp",
+      "bytes": 1666,
+      "sha256": "b3c165c138543cd76cf228b451c8b9d54fb1daf109e1f0c4ae3b8250d5493285"
+    },
+    {
+      "path": "stills/capsule-done.webp",
+      "bytes": 1734,
+      "sha256": "8f60a7830e1fbb19e6e123da1faf81606d671b68dfa148a494fcb063e8b0763e"
+    },
+    {
+      "path": "stills/capsule-listening.webp",
+      "bytes": 1748,
+      "sha256": "5d7d48f4bb8bc61d1d46970fa193ef13a7b6129b9dd681c67931d7166f335fde"
+    },
+    {
+      "path": "stills/capsule-needs-you.webp",
+      "bytes": 1852,
+      "sha256": "4d2bea69cba3dda585e3900a461c7fa2111b3d78040026fade12f8133c630ee5"
+    },
+    {
+      "path": "stills/capsule-ready.webp",
+      "bytes": 1642,
+      "sha256": "6b78ef173253cb202ac2693923f535e34f00664e05e3541ccb0757e58430383a"
+    },
+    {
+      "path": "stills/capsule-sleeping.webp",
+      "bytes": 1736,
+      "sha256": "37dd0c487d45667d76d1576bd02abad2e208499d9b481cf2dddfdeb2cd53a1b2"
+    },
+    {
+      "path": "stills/capsule-thinking.webp",
+      "bytes": 1764,
+      "sha256": "4727f3f61fefbbc30b51dfae72b2c84bbb4b4ece81bd25de9112e3dc8decf1b8"
+    },
+    {
+      "path": "stills/capsule-working.webp",
+      "bytes": 1740,
+      "sha256": "0d0afcf4128129fc8afc2184f896968deb66b6cf313dbda4bf8aa580fbdff365"
+    },
+    {
+      "path": "stills/fold-blocked.webp",
+      "bytes": 1666,
+      "sha256": "3d56583b8487f70e6d6440b2b7f97168f081635680202a097d5e360b1ef41cf7"
+    },
+    {
+      "path": "stills/fold-done.webp",
+      "bytes": 1702,
+      "sha256": "4bf81cdd5b22f95f0b70aac9b8ea5282b158ef346fc15180f2454b462de9e343"
+    },
+    {
+      "path": "stills/fold-listening.webp",
+      "bytes": 1632,
+      "sha256": "2345eb700946acd9898cea41878b3b86e45a62bb2e5f4c6e3727f13447f98013"
+    },
+    {
+      "path": "stills/fold-needs-you.webp",
+      "bytes": 1688,
+      "sha256": "7f79d62eb6d501b7e6fb3f5c0d935fc79488009e757750669e3ef88180d26ec2"
+    },
+    {
+      "path": "stills/fold-ready.webp",
+      "bytes": 1654,
+      "sha256": "5274e7ab73f7865b52c7525a658c00add3a78b39f43fc93e9de41a47d9e80bc1"
+    },
+    {
+      "path": "stills/fold-sleeping.webp",
+      "bytes": 1682,
+      "sha256": "2752a05165b85210b19aca68fc24e875ab4d702a86f5385916bae50de86eb350"
+    },
+    {
+      "path": "stills/fold-thinking.webp",
+      "bytes": 1698,
+      "sha256": "f7425287b07caff4b33594048b40d10b3d294dfdbd7b2b43e7309522f7073cd6"
+    },
+    {
+      "path": "stills/fold-working.webp",
+      "bytes": 1586,
+      "sha256": "27e6baa0298f348aadf3297e3c6d11074df696a7b66dd722e60051634e771015"
+    },
+    {
+      "path": "stills/orbit-blocked.webp",
+      "bytes": 1488,
+      "sha256": "3120f485ce68f39beb713308557593f60037fd7914fe1fbbe747b4c08ed0a333"
+    },
+    {
+      "path": "stills/orbit-done.webp",
+      "bytes": 1512,
+      "sha256": "ff20bf0059901f8b2281ca53155b1d0c0bbf18edc0313efc685045ceeaab1bb9"
+    },
+    {
+      "path": "stills/orbit-listening.webp",
+      "bytes": 1464,
+      "sha256": "2fe42bb30949702436aa06e86ca5cbae3006c759b1f4435dd63fee8bcabcb20c"
+    },
+    {
+      "path": "stills/orbit-needs-you.webp",
+      "bytes": 1550,
+      "sha256": "7db5f4c2b457acccaec321cb8f308aabf644dcbaf75fc1b13e30da2f9c8814bb"
+    },
+    {
+      "path": "stills/orbit-ready.webp",
+      "bytes": 1526,
+      "sha256": "7ec23dc6325dbb47322cb4992c7319442bd0636dad47d80b4afa19fd9186c7cc"
+    },
+    {
+      "path": "stills/orbit-sleeping.webp",
+      "bytes": 1432,
+      "sha256": "6826084b56afc09535ea4566aec6d213a23055384816603eea2e37d8558259e9"
+    },
+    {
+      "path": "stills/orbit-thinking.webp",
+      "bytes": 1526,
+      "sha256": "80d7c4612d3b9d52cf19bcb7de2c1432d0ea5f8b610735c57a25adad557e6baf"
+    },
+    {
+      "path": "stills/orbit-working.webp",
+      "bytes": 1472,
+      "sha256": "c24f09c759b925b93a43d4cbcd20e058fa279a1fa916009dc6d1ff7d594bf839"
+    },
+    {
+      "path": "stills/pebble-blocked.webp",
+      "bytes": 1330,
+      "sha256": "4787682486d3a7155c3d0350f2205f66268f8c2a1ccccbaf1b11edf16497cd53"
+    },
+    {
+      "path": "stills/pebble-done.webp",
+      "bytes": 1328,
+      "sha256": "f79b0d0cfd19c4ab0e7709eb3245bec7fa111d2b568b1188da601e7bffd8ae2a"
+    },
+    {
+      "path": "stills/pebble-listening.webp",
+      "bytes": 1110,
+      "sha256": "329e84bef972063cabe48c941b11d0f09a44ab4f045e5b9a51c893b771f46dd4"
+    },
+    {
+      "path": "stills/pebble-needs-you.webp",
+      "bytes": 1316,
+      "sha256": "dfbd4e17b97a0f826cb05bfb16aa53cb2d2ad2f3b38cb601b49f47e3204dce34"
+    },
+    {
+      "path": "stills/pebble-ready.webp",
+      "bytes": 1124,
+      "sha256": "1a142b009b7e6ec450b039184c06d11c4551f725cb816b1a15f4772c9ce5e271"
+    },
+    {
+      "path": "stills/pebble-sleeping.webp",
+      "bytes": 1116,
+      "sha256": "d664a9562602948c2797dc5f8665d87c99a1594bb9bc3be2b082b280f8b7e068"
+    },
+    {
+      "path": "stills/pebble-thinking.webp",
+      "bytes": 1140,
+      "sha256": "211701435b36e6f8b636a4f978461d052da8b517564ca3bfe1d41e830fe49079"
+    },
+    {
+      "path": "stills/pebble-working.webp",
+      "bytes": 1304,
+      "sha256": "f3fb6eb7b82307a10be773d07ced8437dbcd8dd811d9a787cccb34271250cbc7"
+    },
+    {
+      "path": "stills/prism-blocked.webp",
+      "bytes": 1560,
+      "sha256": "6f8d045735f9fa845855270cd1239240197844648d47bf1e717bbc75568f354e"
+    },
+    {
+      "path": "stills/prism-done.webp",
+      "bytes": 1620,
+      "sha256": "667c99d1aa4a21c4f24d0a98a6c4a1f6ba878294f6887a82c2a273d6fea9ff7a"
+    },
+    {
+      "path": "stills/prism-listening.webp",
+      "bytes": 1524,
+      "sha256": "8a2bb8ea9d99fab40d299c64ad5a109e7f5eda42aed3b7f6743df3a3135947e4"
+    },
+    {
+      "path": "stills/prism-needs-you.webp",
+      "bytes": 1656,
+      "sha256": "74b8a70ef1bd550b5f597aa5163a3da69ab5e4a8e1878911a15fcd2584bb20c5"
+    },
+    {
+      "path": "stills/prism-ready.webp",
+      "bytes": 1566,
+      "sha256": "ed4736285d899fa8002c7688acdd8dc47e64c28574d876da30c92a2bbac20a39"
+    },
+    {
+      "path": "stills/prism-sleeping.webp",
+      "bytes": 1504,
+      "sha256": "c8f661721d1d5bf394c3d45cf5192c15daf5f64fef72b20e08d55d310a16178e"
+    },
+    {
+      "path": "stills/prism-thinking.webp",
+      "bytes": 1624,
+      "sha256": "5e7c09119b6e1ea38008c4fe460a8cde26923546af26d2fc21ad6e487b68963b"
+    },
+    {
+      "path": "stills/prism-working.webp",
+      "bytes": 1576,
+      "sha256": "0357646dba22c686cb2354917995a6b79b776675dbed992440a0dea53b2d559d"
+    },
+    {
+      "path": "stills/spark-blocked.webp",
+      "bytes": 1212,
+      "sha256": "722538d30ab7b5c76aea64d4797618d8ec57293c1366eeff8851722bee9c05a7"
+    },
+    {
+      "path": "stills/spark-done.webp",
+      "bytes": 1182,
+      "sha256": "cddcaeee65f540a61b5c662466fde76c67dc61b589b3773f890c75ba3c2f0fa2"
+    },
+    {
+      "path": "stills/spark-listening.webp",
+      "bytes": 1162,
+      "sha256": "2d2c629970035cfe4f74579a0a75983193324370838d316a51b72738b9cbf05e"
+    },
+    {
+      "path": "stills/spark-needs-you.webp",
+      "bytes": 1218,
+      "sha256": "63586cefb5a334a5d7c6f18c1c1599111be21802f7089556452ec56f96beed54"
+    },
+    {
+      "path": "stills/spark-ready.webp",
+      "bytes": 1186,
+      "sha256": "fe55349bf5602b457f736949ce2d44ef4736fc613a93d4b1e7ef80d1b844bc4e"
+    },
+    {
+      "path": "stills/spark-sleeping.webp",
+      "bytes": 1064,
+      "sha256": "956df18bdb5e5fd333275b269a2ca92bd3a57f5b44d9a286dad6605a7f32aecc"
+    },
+    {
+      "path": "stills/spark-thinking.webp",
+      "bytes": 1184,
+      "sha256": "729d0f27b72c192d2f29b470cade08fd615411325d56ddc11d5f098f920b5b60"
+    },
+    {
+      "path": "stills/spark-working.webp",
+      "bytes": 1210,
+      "sha256": "33de05aca56d17646792150bcfcadc29dc7cd2c0d3b9bfd881c3ab64cc28770d"
+    }
+  ]
+}

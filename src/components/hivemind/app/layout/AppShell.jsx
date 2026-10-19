@@ -1,3 +1,4 @@
+import { RuntimeAppearanceProvider } from '../shared/RuntimeAvatar';
 import { measureHarnessBoot } from '../shared/harness-boot-timing';
 import { scopedCompanyRead, clearCompanyRead } from '../shared/company-read-cache';
 import BrainGetStarted from './BrainGetStarted';
@@ -654,5 +655,5 @@ function AppShellContent() {
 
 export default function AppShell() {
   const appearance = useNativeAppearance();
-  return <NativeAiConsentGate><MotionConfig reducedMotion={appearance.reduceMotion ? 'always' : 'user'}><AppShellContent /></MotionConfig></NativeAiConsentGate>;
+  return <NativeAiConsentGate><MotionConfig reducedMotion={appearance.reduceMotion ? 'always' : 'user'}><RuntimeAppearanceProvider><AppShellContent /></RuntimeAppearanceProvider></MotionConfig></NativeAiConsentGate>;
 }

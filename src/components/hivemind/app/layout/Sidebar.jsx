@@ -1,3 +1,4 @@
+import RuntimeAvatar from '../shared/RuntimeAvatar';
 import { ownedOpenDotRoomStatuses, reconnectingOpenDotRoomStatuses } from '../shared/open-dot-room-status';
 import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
 import { agentRoster } from '../shared/agent-roster';
@@ -493,7 +494,7 @@ export default function Sidebar({
               rosterSwiped.current = true;
               setRosterPage(page => Math.max(0, Math.min(Math.max(0, Math.ceil(team.length / 5) - 1), page + (dx < 0 ? 1 : -1))));
             }}>
-            <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt=""/><strong>Runtime</strong><small>Chief of Staff</small><AgentRoomStatus room={{ ...aggregateAgentRooms(rooms, 'runtime'), loading: openingAgent === 'runtime' }} compact /></button>
+            <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><RuntimeAvatar alt=""/><strong>Runtime</strong><small>Chief of Staff</small><AgentRoomStatus room={{ ...aggregateAgentRooms(rooms, 'runtime'), loading: openingAgent === 'runtime' }} compact /></button>
             {team.slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span><AgentRoomStatus room={{ ...aggregateAgentRooms(rooms, agent.id), loading: openingAgent === agent.id }} compact /></button>)}
           </div>
           {team.length > 5 && <div className="mobile-roster-pages"><button type="button" disabled={rosterPage === 0} onClick={() => setRosterPage(value => value - 1)}>Previous</button><span>{rosterPage + 1} / {Math.ceil(team.length / 5)}</span><button type="button" disabled={(rosterPage + 1) * 5 >= team.length} onClick={() => setRosterPage(value => value + 1)}>Next</button></div>}
@@ -594,7 +595,7 @@ export default function Sidebar({
                             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                           />
                         )}
-                        {item.runtime ? <img src="/assets/runtime-computer-c2305f5b.webp?v=c2305f5b" alt="" aria-hidden="true" width={collapsed ? 24 : 80} height={collapsed ? 24 : 80} style={{ mixBlendMode: 'multiply', filter: 'brightness(1.08)' }} className="relative z-10 flex-shrink-0 object-contain" /> : item.agent ? <AgentAvatar agent={item.agent} size={25} className="relative z-10" /> : <item.icon
+                        {item.runtime ? <RuntimeAvatar alt="" aria-hidden="true" size={collapsed ? 24 : 80} className="relative z-10 flex-shrink-0 object-contain" /> : item.agent ? <AgentAvatar agent={item.agent} size={25} className="relative z-10" /> : <item.icon
                           size={18}
                           strokeWidth={1.75}
                           className={`relative z-10 transition-colors flex-shrink-0 ${

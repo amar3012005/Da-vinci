@@ -3834,6 +3834,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getRuntimeAppearance() {
+    const { data } = await this.controlPlane.get('/v1/runtime/appearance');
+    return data;
+  }
+
 }
 
 const apiClient = new HiveMindApiClient();

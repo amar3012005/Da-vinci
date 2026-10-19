@@ -81,3 +81,20 @@ it('a document finishing after the recovery deadline still completes the scoped 
     expect(brain.getAttribute('src')).toBe(source);
   } finally { await act(async()=>root.unmount());host.remove();jest.useRealTimers(); }
 });
+
+it('forwards Runtime appearance invalidation only from the exact scoped Runtime pane', async()=>{
+ global.IS_REACT_ACT_ENVIRONMENT=true;
+ mockLocation={pathname:'/hivemind/app/employee/harness/session/runtime-saved',search:'',hash:''};
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host);const refresh=jest.fn();
+ window.addEventListener('hivemind:runtime-appearance-saved',refresh);
+ try {
+  await act(async()=>root.render(<PersistentHarnessPanes/>));
+  const runtime=host.querySelector('[data-native-pane="runtime"] iframe');
+  const emit=async(origin,scope)=>act(async()=>window.dispatchEvent(new MessageEvent('message',{origin,source:runtime.contentWindow,data:{type:'hivemind.native-pane',version:1,scope,kind:'event',name:'hivemind:runtime-appearance-saved'}})));
+  await emit('https://runtime-runner.singulancelabs.com','foreign:org-a');
+  await emit('https://next.singulancelabs.com','user-a:org-a');
+  expect(refresh).not.toHaveBeenCalled();
+  await emit('https://runtime-runner.singulancelabs.com','user-a:org-a');
+  expect(refresh).toHaveBeenCalledTimes(1);
+ } finally {window.removeEventListener('hivemind:runtime-appearance-saved',refresh);await act(async()=>root.unmount());host.remove();}
+});
