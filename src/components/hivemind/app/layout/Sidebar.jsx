@@ -9,6 +9,7 @@ import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
 import WorkspaceModeSwitcher from './WorkspaceModeSwitcher';
 import BrainModeIcon from './BrainModeIcon';
 import DesktopBrainNavigation from './DesktopBrainNavigation';
+import DesktopHyperAgentsNavigation, { HYPERAGENT_WIDTHS, columnsForWidth } from './DesktopHyperAgentsNavigation';
 import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
 import {
@@ -167,6 +168,8 @@ export default function Sidebar({
   onOpenEmployee,
   portalContainer,
   contextPath,
+  desktopColumns = 3,
+  onDesktopColumnsChange,
 }) {
   const { t } = useTranslation('dashboard');
   const { logout, org, user } = useAuth();
@@ -189,6 +192,22 @@ export default function Sidebar({
   const [rosterProfileOpen, setRosterProfileOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const teamMode = workspaceModeForPath(location.pathname) === 'hyperagents';
+  const [desktopRosterViewport, setDesktopRosterViewport] = useState(() => window.matchMedia('(min-width: 901px)').matches);
+  const [fallbackColumns, setFallbackColumns] = useState(3);
+  const rosterColumns = onDesktopColumnsChange ? desktopColumns : fallbackColumns;
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 901px)');
+    const update = () => setDesktopRosterViewport(query.matches);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  const desktopHyperAgents = teamMode && !mobileDrawer && !mobileRoster && desktopRosterViewport;
+  const resizeGesture = useRef(false);
+  const resizeRoster = count => {
+    if (count === 0) { onCollapsedChange?.(true); return; }
+    (onDesktopColumnsChange || setFallbackColumns)(count);
+    onCollapsedChange?.(false);
+  };
   const [selectedAgent, setSelectedAgent] = useState(null);
   const selectionPending = useRef(null);
   const currentPath = useRef(location.pathname);
@@ -439,10 +458,11 @@ export default function Sidebar({
 
   return (
     <aside
+      data-desktop-hyperagents={desktopHyperAgents || undefined}
       data-mobile-roster={mobileRoster || undefined}
       data-tour-sidebar
       data-crm-enabled={process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? 'true' : undefined}
-      style={{ viewTransitionName: 'product-sidebar', ...(mobileDrawer ? { paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : {}) }}
+      style={{ viewTransitionName: 'product-sidebar', ...(desktopHyperAgents ? { width: collapsed ? 68 : HYPERAGENT_WIDTHS[rosterColumns] } : {}), ...(mobileDrawer ? { paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : {}) }}
       className={`${mobileDrawer ? 'absolute' : 'fixed'} left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] ${mobileDrawer ? 'w-[min(300px,85vw)]' : sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
     >
       {mobileRoster && <div className="mobile-roster-intro">
@@ -509,8 +529,14 @@ export default function Sidebar({
       {(teamMode || mobileRoster) && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">Could not refresh our team. <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>Retry</button></p>}
       {teamError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{teamError}</p>}
       {desktopBrain && <DesktopBrainNavigation sections={navSections} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} />}
+      {desktopHyperAgents && <DesktopHyperAgentsNavigation team={team} rooms={rooms} selectedAgent={selectedAgent} openingAgent={openingAgent} onOpenAgent={openAgent} onCreate={() => setCreateEmployeeOpen(true)} onCompany={() => setCompanyOpen(true)} columns={rosterColumns} collapsed={collapsed} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout}/>}
+      {desktopHyperAgents && <div className="ha-resize-grip" role="separator" aria-label="Resize team sidebar" aria-orientation="vertical" aria-valuemin={68} aria-valuemax={452} aria-valuenow={collapsed ? 68 : HYPERAGENT_WIDTHS[rosterColumns]} aria-valuetext={collapsed ? 'Collapsed' : `${rosterColumns} columns`} tabIndex={0}
+        onKeyDown={event => { const current = collapsed ? 0 : rosterColumns; if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeRoster(Math.max(0, Math.min(3, current + (event.key === 'ArrowLeft' ? -1 : 1)))); } }}
+        onPointerDown={event => { resizeGesture.current = true; event.currentTarget.setPointerCapture(event.pointerId); }}
+        onPointerMove={event => { if (!resizeGesture.current) return; const aside = event.currentTarget.closest('aside'); const rect = aside.getBoundingClientRect(); const scale = rect.width / aside.offsetWidth; resizeRoster(columnsForWidth((event.clientX - rect.left) / scale)); }}
+        onPointerUp={event => { resizeGesture.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { resizeGesture.current = false; }}><span/></div>}
       {/* Navigation */}
-      <nav className={`${desktopBrain ? 'desktop-brain-legacy ' : ''}mobile-roster-legacy flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4`}>
+      {!desktopHyperAgents && <nav className={`${desktopBrain ? 'desktop-brain-legacy ' : ''}mobile-roster-legacy flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4`}>
         {navSections.map((section, si) => (
           <div key={si}>
             {section.label && !collapsed && (
@@ -628,10 +654,10 @@ export default function Sidebar({
         {teamMode && !mobileRoster && location.pathname.startsWith('/hivemind/app/employee/harness') && (
           <div data-hivemind-artifacts-seat data-collapsed={collapsed || undefined} />
         )}
-      </nav>
+      </nav>}
 
       {/* Fixed bottom: Account nav + upgrade banner + user/logout */}
-      <div className={`${desktopBrain ? 'desktop-brain-legacy ' : ''}mobile-roster-legacy flex-shrink-0 border-t border-[#e3e0db]`}>
+      {!desktopHyperAgents && <div className={`${desktopBrain ? 'desktop-brain-legacy ' : ''}mobile-roster-legacy flex-shrink-0 border-t border-[#e3e0db]`}>
         {collapsed && (
           <div className="pt-2">
             <CreditBalance credits={usage?.credits} compact collapsed />
@@ -673,7 +699,7 @@ export default function Sidebar({
             {!collapsed && <span>{t('sidebar.signOut', 'Sign Out')}</span>}
           </button>
         </div>
-      </div>
+      </div>}
       {mobileRoster && rosterProfileOpen && <div className="mobile-roster-profile fixed inset-0 z-[95] flex items-end bg-black/25 p-2" onClick={() => setRosterProfileOpen(false)}><section data-mobile-roster-profile role="dialog" aria-modal="true" aria-label="Your profile" onClick={event => event.stopPropagation()} className="w-full rounded-[32px] bg-white p-6" style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))' }}><button type="button" autoFocus aria-label="Close profile" onClick={() => setRosterProfileOpen(false)} className="mb-6 h-11 w-11 rounded-full bg-[#f3f1ec]">×</button><div className="overflow-hidden rounded-3xl bg-[#f3f1ec]">{[{to:'/hivemind/m/profile',label:user?.display_name || user?.name || 'Profile'}, {to:'/hivemind/m/usage',label:'Usage'}, {to:'/hivemind/m/billing',label:'Billing'}, {to:'/hivemind/m/settings',label:'Settings'}, {to:'/hivemind/m/connectors',label:'Apps & connectors'}].map(item => <NavLink key={item.to} to={item.to} className="block border-b border-[#e3e0db] p-5 text-[17px]">{item.label}</NavLink>)}<button type="button" onClick={logout} className="block w-full p-5 text-left text-[17px]">Sign out</button></div></section></div>}
       {companyOpen ? <React.Suspense fallback={<div role="status">Opening company workspace…</div>}><CompanyWorkspaceOverlay onClose={closeCompany} portalContainer={portalContainer} /></React.Suspense> : null}
       {createEmployeeOpen && <React.Suspense fallback={<div role="status">Opening employee setup…</div>}><CreateEmployeeDialog onClose={closeCreateEmployee} onCreated={employeeCreated} portalContainer={portalContainer} /></React.Suspense>}

@@ -23,6 +23,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { useNativeAppearance } from '../shared/useNativeAppearance';
 import Sidebar from './Sidebar';
+import { HYPERAGENT_WIDTHS } from './DesktopHyperAgentsNavigation';
 import AgentWorkspaceOutlet from './AgentWorkspaceOutlet';
 import HyperAgentActivation from './HyperAgentActivation';
 import EmployeeMobileNavigation from './EmployeeMobileNavigation';
@@ -353,6 +354,7 @@ function AppShellContent() {
   const [chatLoaded, setChatLoaded] = useState(false);
   useEffect(() => { if (chatOpen) setChatLoaded(true); }, [chatOpen]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [desktopRosterColumns, setDesktopRosterColumns] = useState(3);
   const [mobileAppsOpen, setMobileAppsOpen] = useState(() => new URLSearchParams(window.location.search).get('native_apps') === '1');
   const [mobileBrainAddOpen, setMobileBrainAddOpen] = useState(false);
   const closeMobileBrainAdd = useCallback(() => setMobileBrainAddOpen(false), []);
@@ -391,6 +393,8 @@ function AppShellContent() {
     typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
   ));
   const overlayNavigation = compactViewport || (nativeChatRoom && employeeCompact);
+  const desktopTeamNavigation = !employeeCompact && workspaceModeForPath(location.pathname) === 'hyperagents';
+  const desktopTeamWidth = sidebarCollapsed ? 68 : HYPERAGENT_WIDTHS[desktopRosterColumns];
   useEffect(() => {
     if (!(nativeChatRoom && employeeCompact) && !(chatOpen && compactViewport)) return undefined;
     return bindNativeChatViewport(window, document.documentElement.style);
@@ -568,15 +572,17 @@ function AppShellContent() {
             activeSection={activeSection}
             collapsed={sidebarCollapsed}
             onCollapsedChange={setSidebarCollapsed}
+            desktopColumns={desktopRosterColumns}
+            onDesktopColumnsChange={setDesktopRosterColumns}
           />
         )}
         <div
           data-native-chat-frame={nativeChatRoom || undefined}
           className={`min-w-0 transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen || crmFullscreen ? 'sidebar-content-expanded' : ''}`}
           style={{
-            marginLeft: (overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '300px',
+            marginLeft: (overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? '0px' : desktopTeamNavigation ? `${desktopTeamWidth}px` : sidebarCollapsed ? '68px' : '300px',
             ...(nativeChatRoom && employeeCompact ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : {}),
-            '--hm-harness-center-offset': `${-((overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? 0 : sidebarCollapsed ? 34 : 150)}px`,
+            '--hm-harness-center-offset': `${-((overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? 0 : desktopTeamNavigation ? desktopTeamWidth / 2 : sidebarCollapsed ? 34 : 150)}px`,
           }}
         >
           {!companyEntry && !crmFullscreen && <TopBar floatingMobile={employeeRoom && brainPhone} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
