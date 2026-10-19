@@ -114,7 +114,7 @@ export class ComposioAccount {
         return reply({connected:true,toolCount});
       }
       return reply({error:'not_found'},404);
-    } catch(error) { return reply({error:/^composio_[a-z_]+$/.test(error.message) ? error.message : 'composio_connection_unavailable'},503); }
+    } catch(error) { console.warn(JSON.stringify({event:'composio_account_failure',stage:'credential_store',reason:/^composio_[a-z_]+$/.test(error.message) ? error.message : error.name})); return reply({error:/^composio_[a-z_]+$/.test(error.message) ? error.message : 'composio_connection_unavailable'},503); }
   }
 }
 export async function handleComposioAccount(request,env) {
@@ -127,6 +127,7 @@ export async function handleComposioAccount(request,env) {
   if(!callback && ((request.headers.get('origin') && request.headers.get('origin')!==url.origin) || (request.method==='POST' && request.headers.get('origin')!==url.origin) || request.headers.get('sec-fetch-site')==='cross-site')) return reply({error:'origin_denied'},403);
   const cookie=(request.headers.get('cookie')||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('hm_cp_session='));
   if(!cookie) return reply({error:'authentication_required'},401);
+  let stage='identity';
   try {
     const identity=await jsonFetch('https://api.singulancelabs.com/v1/bootstrap',{headers:{cookie,accept:'application/json'}});
     if(identity.authenticated!==true || !identity.user?.id || !identity.organization?.id) return reply({error:'workspace_authentication_required'},401);
@@ -134,9 +135,10 @@ export async function handleComposioAccount(request,env) {
     const input={action,origin:url.origin};
     if(action==='start') { if(request.headers.get('content-length')>1024) return reply({error:'request_too_large'},413); const text=await request.text(); if(text.length>1024)return reply({error:'request_too_large'},413); input.consent=JSON.parse(text).consent; }
     if(callback) { input.code=url.searchParams.get('code'); input.state=url.searchParams.get('state'); }
+    stage='account_object';
     const id=env.COMPOSIO_ACCOUNTS.idFromName(JSON.stringify([identity.organization.id,identity.user.id]));
     const response=await env.COMPOSIO_ACCOUNTS.get(id).fetch('https://composio-account/',{method:'POST',body:JSON.stringify(input)});
     if(callback) { await response.body?.cancel(); return new Response(null,{status:303,headers:{...headers,location:`/hivemind/app/connectors?composio_account_${response.ok?'connected':'error'}=1`}}); }
     return response;
-  } catch { return reply({error:'composio_connection_unavailable'},503); }
+  } catch(error) { console.warn(JSON.stringify({event:'composio_account_failure',stage,reason:/^composio_[a-z_]+$/.test(error.message) ? error.message : error.name})); return reply({error:'composio_connection_unavailable'},503); }
 }
