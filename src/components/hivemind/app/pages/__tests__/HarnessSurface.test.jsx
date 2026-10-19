@@ -227,3 +227,16 @@ describe('native mount transport recovery', () => {
     await expect(waitForNativeHarnessMount(document.createElement('div'), controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
   });
 });
+
+ it('surfaces native plugin failure instead of hiding it behind Connecting', async () => {
+   const container = document.createElement('div');
+   container.innerHTML = '<div data-dsh-boot>HARNESS<div>Failed to load plugins</div><div>example: import failed</div></div>';
+   await expect(waitForNativeHarnessMount(container)).rejects.toThrow('example: import failed');
+ });
+ it('surfaces a native failure that appears during boot', async () => {
+   const container = document.createElement('div');
+   container.innerHTML = '<div data-dsh-boot><div data-dsh-boot-spinner></div></div>';
+   const pending = waitForNativeHarnessMount(container);
+   container.firstChild.innerHTML = '<div>Failed to load plugins: example</div>';
+   await expect(pending).rejects.toThrow('Failed to load plugins: example');
+ });

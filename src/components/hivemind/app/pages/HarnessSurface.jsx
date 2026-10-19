@@ -206,9 +206,19 @@ export function waitForNativeHarnessMount(container, signal, { brain = false, on
   if (signal?.aborted) return Promise.reject(new DOMException('Harness mount cancelled.', 'AbortError'));
   const dreaming = window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`;
   const mounted = () => nativeHarnessMounted(container, { dreaming, brain });
+  // AppWebEntry.run renders native failures instead of rejecting. Forward that
+  // report; otherwise the host hides it forever waiting for a composer.
+  const failure = () => {
+    const boot = container?.querySelector?.('[data-dsh-boot]');
+    return boot && !boot.querySelector('[data-dsh-boot-spinner]')
+      ? boot.textContent?.replace(/^HARNESS\s*/, '').trim() : null;
+  };
+  if (failure()) return Promise.reject(new Error(failure()));
   if (mounted()) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const observer = new MutationObserver(() => {
+      const error = failure();
+      if (error) { cleanup(); reject(new Error(error)); return; }
       if (!mounted()) return;
       cleanup();
       resolve();
