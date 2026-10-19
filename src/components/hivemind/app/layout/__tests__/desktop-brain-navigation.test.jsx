@@ -105,7 +105,7 @@ test('the selected Brain destination has its own active state; banner precedes r
   const banner = screen.getByRole('link', { name: 'Explore your Brain' });
   const usage = screen.getByRole('link', { name: /View credit usage: 41% used/ });
   expect(banner.compareDocumentPosition(usage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(container.querySelectorAll('.brain-icon-grid > *')).toHaveLength(8);
+  expect(container.querySelectorAll('.brain-icon-grid > .brain-icon-link')).toHaveLength(8);
   expect(screen.queryByRole('link', { name: 'Overview' })).not.toBeInTheDocument();
   expect(container.querySelector('.brain-icon-grid')).toContainElement(screen.getByRole('link', { name: 'Dreaming' }));
   expect(container.querySelector('.brain-icon-grid')).toContainElement(screen.getByRole('link', { name: 'Workspace Admin' }));
@@ -164,4 +164,15 @@ test('an empty banner slot reserves the artwork space without invented content',
   expect(screen.getByRole('img', { name: 'Reserved space for workspace updates' })).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'Explore your Brain' })).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Your Brain' })).not.toBeInTheDocument();
+});
+
+
+test('keyboard arrows use the available Brain routes and the return key keeps the existing chat entry', () => {
+  setup();
+  expect(screen.getByRole('link', { name: 'Previous Brain page: Workspace Admin' })).toHaveAttribute('href', '/hivemind/app/workspace');
+  expect(screen.getByRole('link', { name: 'Next Brain page: Upload Everything' })).toHaveAttribute('href', '/hivemind/app/knowledge');
+  expect(screen.getByRole('link', { name: 'Open Brain chat' })).toHaveAttribute('href', '/hivemind/app/overview/new');
+  fireEvent.click(screen.getByRole('link', { name: 'Next Brain page: Upload Everything' }));
+  expect(screen.getByRole('link', { name: 'Uploads' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('link', { name: 'Next Brain page: Connectors' })).toHaveAttribute('href', '/hivemind/app/connectors');
 });
