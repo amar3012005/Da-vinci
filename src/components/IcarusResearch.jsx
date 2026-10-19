@@ -431,7 +431,7 @@ const IcarusResearch = ({ productHome = false }) => {
       heroImg={HERO_IMG}
       heroScene={motionOk ? <Suspense fallback={null}><IcarusHeroScene /></Suspense> : null}
       heroAccessory={productHome ? <div className="space-y-4"><a href="#install" className="inline-block rounded-full bg-white px-5 py-2 text-[14px] font-medium text-[#101522]">Install ICARUS v0.3.91 ↓</a><AgentOnboardingPill /></div> : <AgentOnboardingPill />}
-      seo={productHome ? { title: "ICARUS — Memory Filesystem for AI Agents", description: "Install ICARUS v0.3.91 for local agent memory. Optional email and Google developer sign-in. No account or company workspace needed for local memory.", canonical: "https://icarus.singulancelabs.com/" } : meta.seo}
+      seo={productHome ? { pagePath: "/icarus", title: "ICARUS — Memory Filesystem for AI Agents", description: "Install ICARUS v0.3.91 for local agent memory. Optional email and Google developer sign-in. No account or company workspace needed for local memory.", canonical: "https://icarus.singulancelabs.com/" } : meta.seo}
       product={{ name: 'ICARUS', tag: '.amr format', desc: 'A memory filesystem for AI agents — one mmap’d file per tenant, no server.' }}
       highlights={productHome ? ["Durable local memory with lexical recall, without an account or API key.", "A self-contained CLI for macOS, Linux and Windows.", "Memory tools for Codex, Claude Code and Cursor; Harness stays opt-in.", "Optional developer email/Google sign-in, separate from company workspaces."] : meta.highlights}
     >
