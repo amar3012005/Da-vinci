@@ -1,4 +1,5 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import SceneVisibility, { useMotionInView } from './SceneVisibility';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import {
@@ -120,23 +121,30 @@ export default function CinematicPlate({
   bloom = 0.5,
 }) {
   const pointer = useRef({ x: 0, y: 0 });
+  const [host, active] = useMotionInView();
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const onReady = useCallback(() => setReady(true), []);
+  const onLost = useCallback(() => setFailed(true), []);
   const onPointerMove = (e) => {
     pointer.current.x = (e.clientX / window.innerWidth) * 2 - 1;
     pointer.current.y = -((e.clientY / window.innerHeight) * 2 - 1);
   };
+  if (failed) return null;
   return (
-    <div className="absolute inset-0" onPointerMove={onPointerMove}>
-      <Canvas dpr={[1, 2]} camera={{ position: [0, 0, 5], fov: 45 }} gl={{ antialias: true, alpha: false }} style={{ background: '#05070f' }}>
+    <div ref={host} data-hero-motion={ready ? "ready" : "loading"} className="absolute inset-0" style={{ opacity: ready ? 1 : 0, transition: "opacity 300ms ease" }} onPointerMove={onPointerMove}>
+      <Canvas frameloop={active ? "always" : "never"} dpr={[1, 1.5]} camera={{ position: [0, 0, 5], fov: 45 }} gl={{ antialias: true, alpha: true }} fallback={null} style={{ background: "transparent" }}>
         <React.Suspense fallback={null}>
           <Plate src={src} zoom={zoom} tint={tint} warp={warp} pointer={pointer} />
           <Rig pointer={pointer} />
-        </React.Suspense>
         <EffectComposer>
           <Bloom intensity={bloom} luminanceThreshold={0.55} luminanceSmoothing={0.25} mipmapBlur />
           <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={[0.0009, 0.0009]} />
           <Vignette eskil={false} offset={0.3} darkness={0.95} />
           <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.16} />
         </EffectComposer>
+          <SceneVisibility onReady={onReady} onLost={onLost} />
+        </React.Suspense>
       </Canvas>
     </div>
   );

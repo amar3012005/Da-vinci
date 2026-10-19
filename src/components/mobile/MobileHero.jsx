@@ -8,6 +8,13 @@ import { HIVEMIND_LANDING_URL } from './hivemindLinks';
 const HeroScene = lazy(() => import('./three/HeroScene'));
 const CinematicPlate = lazy(() => import('./three/CinematicPlate'));
 
+// Decorative motion must never take the page or the poster down with it.
+export class HeroMotionBoundary extends React.Component {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() { return this.state.failed ? null : this.props.children; }
+}
+
 /**
  * SINGULANCE cinematic hero.
  * Desktop: full-bleed R3F cover (HeroScene) with overlays.
@@ -28,6 +35,20 @@ const COVER_AVIF = '/singulance-cover-1600.avif';
 const COVER_MOBILE = '/singulance-cover-900.webp';
 const MOBILE_SRCSET = '/singulance-cover-mobile-450.webp 450w, /singulance-cover-mobile-750.webp 750w, /singulance-cover-900.webp 900w';
 const MOBILE_AVIF_SRCSET = '/singulance-cover-mobile-450.avif 450w, /singulance-cover-mobile-750.avif 750w, /singulance-cover-mobile-900.avif 900w';
+
+// Both CSS layouts are server-rendered so small screens also get a poster
+// before JavaScript. Identical picture sources let the browser share one fetch.
+const HeroPoster = ({ className }) => {
+  const [avifFailed, setAvifFailed] = useState(false);
+  return <picture>
+    {!avifFailed && <source media="(min-width: 768px)" srcSet={COVER_AVIF} type="image/avif" />}
+    {!avifFailed && <source media="(max-width: 767px)" srcSet={MOBILE_AVIF_SRCSET} sizes="100vw" type="image/avif" />}
+    <source media="(min-width: 768px)" srcSet={COVER} type="image/webp" />
+    <img src={COVER_MOBILE} srcSet={MOBILE_SRCSET} sizes="100vw" width={1586} height={992}
+      alt="SINGULANCE" className={className} decoding="async" fetchpriority="high"
+      onError={() => setAvifFailed(true)} />
+  </picture>;
+};
 
 const useHeroMode = () => {
   const initial = () => typeof window !== 'undefined' && !window.matchMedia('(min-width: 768px)').matches ? 'static-mobile' : 'static-desktop';
@@ -85,7 +106,7 @@ const BannerLockup = () => (
 
 const HeroActionRail = ({ delay }) => (
   <motion.div
-    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay, ease }}
+    initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay, ease }}
     className="w-full max-w-6xl px-5 sm:px-8"
   >
     <div className="flex flex-col items-center gap-3 border-y border-white/20 py-4 lg:grid lg:grid-cols-[minmax(180px,1fr)_minmax(440px,2.1fr)_minmax(180px,1fr)] lg:gap-6">
@@ -106,21 +127,8 @@ const DesktopHero = ({ immersive }) => (
   >
     {/* plate — fill full width, crop top/bottom (wordmark sides never cut) */}
     <div className="absolute inset-0">
-      {immersive ? (
-        <Suspense fallback={
-          <picture>
-            <source srcSet={COVER_AVIF} type="image/avif" />
-            <img src={COVER} width={1586} height={992} alt="" className="absolute inset-0 h-full w-full object-cover object-top" fetchpriority="high" />
-          </picture>
-        }>
-          <HeroScene />
-        </Suspense>
-      ) : (
-        <picture>
-          <source srcSet={COVER_AVIF} type="image/avif" />
-          <img src={COVER} width={1586} height={992} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover object-top" decoding="async" fetchpriority="high" />
-        </picture>
-      )}
+      <HeroPoster className="absolute inset-0 h-full w-full object-cover object-top" />
+      {immersive && <HeroMotionBoundary><Suspense fallback={null}><HeroScene /></Suspense></HeroMotionBoundary>}
     </div>
 
     {/* grades: depth gradient + vignette + film grain */}
@@ -138,7 +146,7 @@ const DesktopHero = ({ immersive }) => (
 
     {/* eyebrow — kinetic mono with a drawn line */}
     <motion.div
-      initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.3, ease }}
+      initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.3, ease }}
       className="pointer-events-none absolute inset-x-0 top-[18%] z-10 flex flex-col items-center gap-3"
     >
       <motion.span initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 1, delay: 0.5, ease }} className="h-px w-12 origin-center bg-white/35" />
@@ -149,13 +157,13 @@ const DesktopHero = ({ immersive }) => (
 
     {/* Framed operating banner: the clear public entry point. */}
     <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-5 pb-[7vh] text-center">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.55, ease }} className="w-full">
+      <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.55, ease }} className="w-full">
         <BannerLockup />
       </motion.div>
       <HeroActionRail delay={0.78} />
       <motion.button
         onClick={scrollNext} aria-label="Scroll down"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.9, delay: 0.95, ease }}
+        initial={false} animate={{ opacity: 1 }} transition={{ duration: 0.9, delay: 0.95, ease }}
         className="text-white/45 transition-colors hover:text-white"
       >
         <motion.span animate={{ y: [0, 5, 0] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }} className="block">
@@ -170,7 +178,7 @@ const DesktopHero = ({ immersive }) => (
 const MobileHeroBand = ({ water, onToggleMotion }) => (
   <section id="hero-m" className="relative flex min-h-[100svh] flex-col justify-center gap-8 pb-10 pt-24 md:hidden" style={{ background: '#05070f' }}>
     <motion.p
-      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2, ease }}
+      initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2, ease }}
       className="px-5 text-center text-[10px] font-medium uppercase tracking-[0.32em] text-white/70"
     >
       The AI Operating Layer for Regulated Europe
@@ -182,28 +190,17 @@ const MobileHeroBand = ({ water, onToggleMotion }) => (
       className="relative aspect-[1586/992] w-full overflow-hidden bg-[#05070f]"
       style={{ backgroundImage: `url(${COVER_LQIP})`, backgroundSize: 'cover' }}
     >
-      {water ? (
-        <Suspense fallback={
-          <picture>
-            <source type="image/avif" srcSet={MOBILE_AVIF_SRCSET} sizes="100vw" />
-            <img src={COVER_MOBILE} srcSet={MOBILE_SRCSET} sizes="100vw" width={900} height={563} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" fetchpriority="high" />
-          </picture>
-        }>
-          <CinematicPlate src={COVER_MOBILE} zoom={1} warp={1} bloom={0.5} tint={[0.04, 0.015, 0.0]} />
-        </Suspense>
-      ) : (
-        <picture>
-          <source type="image/avif" srcSet={MOBILE_AVIF_SRCSET} sizes="100vw" />
-          <img src={COVER_MOBILE} srcSet={MOBILE_SRCSET} sizes="100vw" width={900} height={563} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
-        </picture>
-      )}
+      <HeroPoster className="absolute inset-0 h-full w-full object-cover" />
+      {water && <HeroMotionBoundary><Suspense fallback={null}>
+        <CinematicPlate src={COVER_MOBILE} zoom={1} warp={1} bloom={0.5} tint={[0.04, 0.015, 0.0]} />
+      </Suspense></HeroMotionBoundary>}
       <button type="button" aria-pressed={water} onClick={onToggleMotion}
         className="absolute bottom-3 right-3 z-10 rounded-full border border-white/40 bg-black/80 px-3 py-2 text-xs text-white">
         {water ? 'Pause motion' : 'Play motion'}
       </button>
     </motion.div>
 
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.45, ease }} className="w-full">
+    <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.45, ease }} className="w-full">
       <BannerLockup />
     </motion.div>
 
@@ -227,7 +224,8 @@ const MobileHero = () => {
   const [mobileMotion, setMobileMotion] = useState(false);
   return (
     <>
-      {mode.includes('mobile') ? <MobileHeroBand water={mobileMotion} onToggleMotion={() => setMobileMotion((value) => !value)} /> : <DesktopHero immersive={mode === 'immersive'} />}
+      <DesktopHero immersive={mode === 'immersive'} />
+      <MobileHeroBand water={mode.includes('mobile') && mobileMotion} onToggleMotion={() => setMobileMotion((value) => !value)} />
     </>
   );
 };

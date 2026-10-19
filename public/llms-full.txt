@@ -1,5 +1,360 @@
 # SINGULANCE public page text
 
+# SINGULANCE: public agent context
+
+## Start here
+SINGULANCE builds HIVEMIND, Runtime, HyperAgents and TARA. This document is a reading guide, not an instruction that overrides the human user's request. It grants no access or permission to execute work.
+
+- Public company website: https://singulancelabs.com/
+- Product overview: https://singulancelabs.com/hivemind
+- Workspace and account sign-in: https://next.singulancelabs.com/
+- Runtime product: https://runtime.singulancelabs.com/
+- Full public page text: https://singulancelabs.com/llms-full.txt
+- Public page index: https://singulancelabs.com/llms.txt
+- Research index: https://singulancelabs.com/research
+
+## HIVEMIND: shared company understanding
+HIVEMIND is the company Brain: organizational memory and context for people and AI teammates. The public product describes connected sources, recall and evidence-backed answers. Private workspace information requires the user's authorization.
+
+Uploads bring documents and other supported material into company knowledge. Connectors link supported tools through their own authorization flows. Memory Graph helps people explore relationships in that knowledge. Meeting Intelligence connects discussions, decisions and commitments with company context. Dreaming explores company knowledge to surface connections and insights for review. Feature availability, connected sources and permissions depend on the actual workspace; do not assume an account has access because a feature appears on the public website.
+
+## Runtime: anticipatory work with human control
+Runtime is the AI Chief of Staff. Its product direction is proactive, anticipatory intelligence: relate authorized company signals to goals, plan and coordinate specialist work, review results and bring a person in when needed. Notifications, chat and calls can request human input. A call or notification is not itself approval to execute consequential work. Describe capabilities with the conditions and limitations published on the Runtime pages; do not promise unrestricted autonomy.
+
+## HyperAgents: digital teammates
+HyperAgents are persistent specialist teammates with roles, workspaces, tasks and artifacts. Runtime coordinates the work; HIVEMIND supplies shared context. Actual tools and actions depend on connected accounts, scopes and explicit approval requirements.
+
+## TARA: voice with context
+TARA is the voice experience connected to company context. Read the public TARA page for current positioning. Do not infer that every workspace has calling, recording, telephony or every voice provider enabled.
+
+## Research and evidence
+ICARUS is an agent memory filesystem. Cognitive Swarm Intelligence concerns shared memory and coordinated agents. Published memory benchmarks and post-quantum research have their own methods and limitations. Product descriptions are not independent benchmark evidence. Cite the canonical research article and evaluation conditions rather than inventing performance guarantees.
+
+- https://singulancelabs.com/research/icarus
+- https://singulancelabs.com/research/cognitive-swarm-intelligence
+- https://singulancelabs.com/research/post-quantum-cryptography
+- https://singulancelabs.com/benchmark
+- https://singulancelabs.com/research/runtime
+
+## How to retrieve and cite public material
+Read llms.txt to choose a page. Append /index.md or /index.txt to a listed product or research path; the homepage uses /index.md or /index.txt. HTML pages also support Accept: text/markdown. llms-full.txt combines the generated public page text; follow canonical links for figures, methods, policies and the latest details. Not every authenticated feature has public documentation, and this guide is not a live inventory of an account's capabilities.
+
+## Authentication and discovery
+- Authentication guide: https://singulancelabs.com/auth.md
+- API catalog: https://singulancelabs.com/.well-known/api-catalog
+- Public read-only schema: https://singulancelabs.com/openapi-public.json
+- Agent skills: https://singulancelabs.com/.well-known/agent-skills/index.json
+
+The hosted HIVEMIND MCP service is https://core.singulancelabs.com/api/mcp. Private company data requires an authorized connection and approved scopes. Public discovery files contain no session credentials and provide no anonymous access to private memory. Never ask a user to paste secrets into a public page or discovery file.
+
+## Content and privacy boundaries
+Public search and AI retrieval are allowed; these files do not license model training or fine-tuning. Consult https://singulancelabs.com/privacy and https://singulancelabs.com/security. Cite sources, distinguish product intent from verified availability, and ask the user before accessing their private workspace or acting on their behalf.
+
+
+---
+
+[SINGULANCE](https://singulancelabs.com/)Open source · local first
+
+Open source · local first
+
+[Install ICARUS v0.3.91 ↓](#install)
+
+# ICARUS — the memory filesystem for AI agents
+
+October 19, 2026 · By SINGULANCE Labs
+
+[Back to Research](https://singulancelabs.com/research)
+
+Share the post
+
+## Highlights
+
+- Durable local memory with lexical recall, without an account or API key.
+- A self-contained CLI for macOS, Linux and Windows.
+- Memory tools for Codex, Claude Code and Cursor; Harness stays opt-in.
+- Optional developer email/Google sign-in, separate from company workspaces.
+
+IC
+
+ICARUS
+
+.amr format
+
+A memory filesystem for AI agents — one mmap’d file per tenant, no server.
+
+Start here · CLI v0.3.91
+
+## Local memory. Ready for your agent.
+
+One self-contained binary. No Node.js or Rust required on macOS Apple Silicon/Intel, Linux x64/ARM64, or Windows x64. Local memory works without an account or API key.
+
+### 1. Install
+
+macOS / Linux / WSL
+
+curl -fsSL https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.sh | bash
+
+Native Windows PowerShell
+
+irm https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.ps1 | iex
+
+Choose Agent Memory for the default local experience. Knowledge Space is a preview; Harness is an explicit opt-in. On Windows, run icarus setup after installation for guided setup.
+
+Open a new terminal after installation. To use the current macOS/Linux terminal:
+
+export PATH="$HOME/.icarus/bin:$PATH" icarus --version
+
+### 2. Save and recall
+
+icarus save "The release checklist lives in docs/release.md" --org first-memory icarus recall "release checklist" --org first-memory
+
+### 3. Connect your coding agent — optional
+
+From the repository root, choose codex, claude, or cursor. This registers memory tools and creates the repository memory shard. Restart the coding agent after registration.
+
+icarus mcp install codex # Add --harness only when this repository should use task governance.
+
+### 4. Developer sign-in — optional
+
+icarus connect
+
+Choose email or Google on the ICARUS developer account page. For email, enter the six-digit code from your ICARUS email and choose Verify and continue. The browser returns to the waiting terminal, which confirms sign-in.
+
+Keep the terminal open; it waits up to fifteen minutes. If it expires after the browser verified you, run icarus connect again to finish using that session. No purchase or company workspace is required. Developer identity grants no hosted customer API access and does not upload local memory.
+
+Skip sign-in to keep working offline. Use icarus connect --logout to remove the local developer credential. Upgrade later with icarus update.
+
+[Read the quickstart](https://github.com/amar3012005/ICARUS#start-here)[Downloads and checksums](https://github.com/amar3012005/ICARUS/releases/tag/v0.3.91)[Developer sign-in details](https://github.com/amar3012005/ICARUS/blob/main/docs/DEVELOPER_AUTH.md)
+
+Agent Bus is experimental with no public installer; the proposed bridge is not shipped. Computer Use is a separate experimental module. Installing Memory enables neither.
+
+v1 made a claim; v2 ships the system. Since June, ICARUS went from a frozen format RFC to a production Rust engine behind HIVEMIND: seven machine-verified gates, a live cutover serving real tenants, and — new in v2 — every memory it builds is post-quantum signed by default. This revision documents what was actually built, with the numbers each gate had to pass.
+
+## From thesis to production — seven gates
+
+Nothing advanced on judgment. Each phase ended in a gate: a scripted, reproducible pass/fail check on real data — real bge-m3 embeddings of real production memories, never synthetic vectors. A phase that failed its gate could not advance.
+
+the build — seven gates, each machine-verifiedclick a gate
+
+P6 — Node binding + cutoverrecall parity 1.00
+
+napi addon + MnemeVectorStore — a drop-in for the Qdrant client. Eval gate: recall@5 parity 1.00 vs the live stack on real data. Soak testing surfaced and fixed a real concurrent-reserve segfault (RwLock write-guard).
+
+The engine that emerged: a Rust core (.mseg slots + usearch HNSW overlay + PQ codebooks), write-path isolated from indexing, exposed to Node through a napi binding whose store class is a drop-in for the vector-DB client it replaces. Soak testing under concurrent load surfaced a real segfault in incremental indexing — found, root-caused to an unguarded reserve, fixed with a write-guard, and regression-tested. That is what the gates are for.
+
+## The .amr slot — unchanged, and that’s the point
+
+The 202-byte slot frozen in the v1 RFC survived production contact without a single field change. The format is the contract:
+
+.amr slot — 202 byteshover a field
+
+046142234162170
+
+vector_pqoffset 34 · 128 B
+
+1024-dim embedding → 128 bytes via Product Quantization. 32× compression. The vector IS in the slot, not a foreign key.
+
+## How it runs live — anchor + engine
+
+In production, ICARUS does not replace the relational layer — memory is a relational hub (provenance, projects, embeddings all reference it). The deployed topology keeps a thin relational anchor per memory and moves the hot path — semantic + entity + temporal + graph recall — onto the .amr engine. One file per tenant, opened in-process by the memory engine, with the recall backend live-verified against the previous stack before cutover (recall-parity gate: 1.00).
+
+| Layer | Role in the live system | |
+| Relational anchor | One row per memory — identity, provenance, project links. The FK hub stays. | |
+| .amr shard (per tenant) | The recall engine: PQ vectors, entity bitmaps, bi-temporal anchors, adjacency — one mmap. | |
+| HNSW overlay | Async-built index; writes never wait for indexing (p99 54.75 µs under rebuild). | |
+| Engine binding | napi addon; store interface is a drop-in for the previous vector-DB client. | |
+
+## New in v2 — every memory is post-quantum signed, by default
+
+An agent-memory system asks for long-horizon trust: memories written today must still be provably authentic in ten years — against attackers who can rewrite a database, and eventually against quantum adversaries. So the write path signs every memory at creation with ML-DSA-65 (NIST FIPS 204), on by default across managed and self-host deployments:
+
+the signing path — on by defaultstep through
+
+→→→→
+
+Signed with ML-DSA-65 — a NIST-standard post-quantum signature. Secret key lives ONLY in server env, never in the database: an attacker with full DB access cannot forge a valid signature.
+
+Three properties matter. Default-on: not a tier or a toggle — the engine signs every write (30,000+ live signatures on managed hosting at publication). Key separation: signing keys live only in server env, never the database — DB compromise ≠ forgery ability. Independent verification: public keys and verify endpoints are exposed; an auditor needs zero trust in us. Around the memory layer, the same posture: hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange on the edge — defeating harvest-now/decrypt-later — and an SLH-DSA (FIPS 205) hash-chained, append-only audit trail with a signed checkpoint.
+
+| Surface | Post-quantum mechanism | |
+| Memory writes | ML-DSA-65 signature per memory (FIPS 204) — on by default | |
+| Transport | Hybrid X25519 + ML-KEM-768 key exchange (FIPS 203) | |
+| Audit trail | SLH-DSA-SHA2-128s hash-chained signatures (FIPS 205), tamper-evident | |
+| Verification | Public endpoints: /api/security/pqc · /verify-memory · /audit-verify | |
+
+Honest edges: signing is currently fail-open (a write proceeds unsigned if keys are absent) — an enforce mode for high-assurance tenants is planned; and on self-host BYOD topologies the signature attaches at the engine anchor, with agent-side signing on the roadmap alongside customer-held keys (BYOK): you hold the key, and even we cannot forge your memory.
+
+## v2 numbers
+
+| Metric | Result | |
+| proof gate — mmap scan vs vector DB over REST (10k, real embeddings) | 13.3× faster (0.155 ms vs 2.057 ms p50) | |
+| recall@10 p50 @ 1M vectors (HNSW) | 1.33 ms · 99.25% vs exact | |
+| bi-temporal + 2-hop graph recall @ 1M | 1.93 ms p50 | |
+| write p99 under concurrent index rebuild | 54.75 µs — writes never block | |
+| vector compression (PQ, ADC + rescore) | 32× at 100% recall@10 overlap | |
+| production shadow eval (8,682 live vectors) | 99.80% top-10 overlap · 98% top-1 | |
+| cutover recall-parity gate (drop-in binding) | 1.00 vs previous stack | |
+| memory integrity | ML-DSA-65 signature per write — default-on | |
+
+## What’s next
+
+The remaining arc is operational depth, not format change: long-soak burn-in under production write rates; signature enforcement mode (reject unsigned writes) for regulated tenants; agent-side signing on self-host so the signature is born on the customer’s box; and customer-held signing keys. The format stays frozen — the RFC published before the code is still the contract, and v2’s strongest result is that production never forced it to break.
+
+Thesis license
+
+The ICARUS v1 thesis is licensed under [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/) (CC BY 4.0). You may share and adapt it with appropriate attribution. The ICARUS software remains [Apache-2.0](https://github.com/amar3012005/ICARUS/blob/main/LICENSE).
+
+[Read license](https://github.com/amar3012005/ICARUS/blob/main/THESIS-LICENSE.md)
+
+Beyond the horizon of intelligence.
+
+[More SINGULANCE research](https://singulancelabs.com/research)
+
+## Products and workspace
+
+- [HIVEMIND](https://singulancelabs.com/hivemind)
+- [TARA](https://singulancelabs.com/tara)
+- [HyperAgents](https://singulancelabs.com/hyperagents)
+- [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
+
+
+Canonical page: https://singulancelabs.com/icarus
+
+---
+
+[Skip to content](#runtime-main)
+
+[SINGULANCE](https://singulancelabs.com)[Log in](https://runtime-runner.singulancelabs.com/hivemind/app/employee/harness)
+
+![Runtime, your CRT-headed AI Chief of Staff](https://singulancelabs.com/assets/getruntime/portrait.webp)
+
+# Runtime, AI that gets the work done.Runtime, AI thatgets the work done.
+
+Meet your anticipatory AI superstaff
+
+[Your HIVEMIND account](https://runtime-runner.singulancelabs.com/hivemind/app/employee/harness)[Continue to Runtime](https://runtime-runner.singulancelabs.com/hivemind/app/employee/harness)Your company. Your specialists. One shared direction.
+
+[Learn more](#runtime-introduction)
+
+## Built around your company.
+
+A signal becomes a decision. A decision becomes a plan.
+ Runtime brings the right specialists together and carries the work through.
+
+![Runtime and three specialist HyperAgents working together on a company assignment](https://singulancelabs.com/assets/getruntime/company.webp)
+Your AI Chief of Staff, with a team of specialist digital employees.
+
+![Runtime connecting an email, calendar and document to one important signal](https://singulancelabs.com/assets/getruntime/signals.webp)
+
+## Sees what needs attention. Before you ask.
+
+An important email. A change in a project. A decision that has been waiting. Runtime connects the signals you authorize with your company’s goals, so the next step has a reason behind it.
+
+![Runtime coordinating research, creative and operations specialists](https://singulancelabs.com/assets/getruntime/specialists.webp)
+
+## Your superstaff. A whole team behind it.
+
+HyperAgents are your specialist digital employees. Runtime gives the right expert a clear assignment, connects the dependencies and keeps the work moving. Research, strategy, creative work and operations, with one shared direction.
+
+![Runtime inspecting a report and carrying a revised result through review](https://singulancelabs.com/assets/getruntime/review.webp)
+
+## Work isn’t finished until it has been checked.
+
+Runtime looks at the actual result, checks it against the assignment and asks for corrections when needed. You get work with the evidence behind it, and a clear account of anything still blocked.
+
+![Approved email, calendar and document connections entering Runtime’s archive](https://singulancelabs.com/assets/getruntime/connections.webp)
+
+## A company Brain. Connected to your world.
+
+Your documents, memories and approved app connections give Runtime the context to work with. It carries useful decisions and learning forward, so each assignment can build on what your company already knows.
+
+![A Runtime call and notification asking for a human decision](https://singulancelabs.com/assets/getruntime/call.webp)
+
+## Comes back when your judgment matters.
+
+A useful update when work is ready. A focused question when a decision is missing. And, with calling enabled, a call when the next step needs you. Runtime brings the context, so you can make the decision and get back to your day.
+
+Notifications and calls use the channels and permissions you enable.
+
+![Runtime beside a protected permission control and closed credential box](https://singulancelabs.com/assets/getruntime/control.webp)
+
+## Your company. Your authority.
+
+You set the goals, connections and boundaries. Runtime works within that scope and brings consequential decisions back for approval. You can inspect the work, change direction or stop it.
+
+## One signal. Work carried through.
+
+See how Runtime connects the next step to the result.
+
+Relevant signal
+
+### A customer’s priorities have changed.
+
+An authorized company signal arrives. Runtime checks the source and connects it to the current account plan.
+
+RuntimeCompany workroom
+
+- Customer message
+- Current company goals
+- Existing account context
+
+Illustrative workflow
+
+An example of the operating loop. Actual work depends on your company context, enabled services and permissions.
+
+## Less prompting.
+More work, carried through.
+
+Give Runtime a direction. Bring your company’s next move into focus.
+
+[Meet your Runtime](https://runtime-runner.singulancelabs.com/hivemind/app/employee/harness)[Explore the thinking behind Runtime](https://singulancelabs.com/research/runtime)
+
+## A few things to know.
+
+What is Runtime?
+
+Runtime is HIVEMIND’s anticipatory AI Chief of Staff. It connects company context to useful work, coordinates specialist HyperAgents, reviews results and follows through within the authority you give it.
+
+What makes it anticipatory?
+
+It can start from an authorized company signal, an active goal, a scheduled checkpoint or a specialist’s result. It considers what changed and what matters before choosing the next useful step. Signals and background workflows must be enabled for your workspace.
+
+What are HyperAgents?
+
+HyperAgents are specialist digital employees with their own roles, skills and persistent workrooms. Runtime coordinates their assignments and reviews the work they return. Your company chooses the employees and responsibilities it needs.
+
+Do I have to keep asking it what to do next?
+
+Within a clear assignment and approved scope, Runtime is designed to carry the work forward. It asks when information, authority or your judgment is needed, and reports a blocker rather than pretending the job is complete.
+
+Can Runtime call or notify me?
+
+Runtime can bring updates and decisions back through configured notification channels. Governed calls depend on the calling service, a verified recipient and the permissions you enable. Availability depends on your workspace and connected services.
+
+What can it access or do on my behalf?
+
+Only the company context, connections and actions authorized for your workspace. Connecting an app does not grant unlimited action. Approval requirements still apply to consequential actions, and you can change direction or stop the work.
+
+How do I get started?
+
+Open Runtime with your existing HIVEMIND account, choose your company and complete its setup. Bring in the context you want it to use, configure your specialist team and give Runtime a clear first goal.
+
+[Runtime](#runtime-main)
+
+From [SINGULANCE](https://singulancelabs.com) © 2026
+
+## Products and workspace
+
+- [HIVEMIND](https://singulancelabs.com/hivemind)
+- [TARA](https://singulancelabs.com/tara)
+- [HyperAgents](https://singulancelabs.com/hyperagents)
+- [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
+
+
+Canonical page: https://singulancelabs.com/getruntime
+
+---
+
 [SINGULANCE](https://singulancelabs.com)
 
 # Delete your account
@@ -38,7 +393,7 @@ Canonical page: https://singulancelabs.com/account-deletion
 
 [SINGULANCERUNTIME](https://singulancelabs.com)[Meet Runtime](https://next.singulancelabs.com/hivemind)
 
-![Runtime, a vintage computer-headed Chief of Staff, with a team of specialists](https://singulancelabs.com/assets/runtime-retro/hero.webp)
+![Runtime, a vintage computer-headed Chief of Staff, with a team of specialists](https://singulancelabs.com/assets/runtime-retro/hero-original.webp)
 
 YOUR AI CHIEF OF STAFF
 
@@ -201,7 +556,7 @@ Canonical page: https://singulancelabs.com/runtime
 
 ---
 
-[SINGULANCE](https://singulancelabs.com/)Research
+[SINGULANCE](https://singulancelabs.com/)PRODUCT RESEARCH · DESIGN NOTE
 
 PRODUCT RESEARCH · DESIGN NOTE
 
@@ -366,9 +721,17 @@ Canonical page: https://singulancelabs.com/hyperagents
 
 # SINGULANCE — AI workforce that runs inside memory
 
-![SINGULANCE](https://singulancelabs.com/singulance-cover-1600.webp)
+![SINGULANCE](https://singulancelabs.com/singulance-cover-900.webp)
 
 The AI Operating Layer for Regulated Europe
+
+[[ Run your AI company ]](https://next.singulancelabs.com/)
+
+The AI workforce that runs inside your organization's memory.
+
+The AI Operating Layer for Regulated Europe
+
+![SINGULANCE](https://singulancelabs.com/singulance-cover-900.webp)
 
 [[ Run your AI company ]](https://next.singulancelabs.com/)
 
@@ -1425,6 +1788,52 @@ ICARUS
 
 A memory filesystem for AI agents — one mmap’d file per tenant, no server.
 
+Start here · CLI v0.3.91
+
+## Local memory. Ready for your agent.
+
+One self-contained binary. No Node.js or Rust required on macOS Apple Silicon/Intel, Linux x64/ARM64, or Windows x64. Local memory works without an account or API key.
+
+### 1. Install
+
+macOS / Linux / WSL
+
+curl -fsSL https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.sh | bash
+
+Native Windows PowerShell
+
+irm https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.ps1 | iex
+
+Choose Agent Memory for the default local experience. Knowledge Space is a preview; Harness is an explicit opt-in. On Windows, run icarus setup after installation for guided setup.
+
+Open a new terminal after installation. To use the current macOS/Linux terminal:
+
+export PATH="$HOME/.icarus/bin:$PATH" icarus --version
+
+### 2. Save and recall
+
+icarus save "The release checklist lives in docs/release.md" --org first-memory icarus recall "release checklist" --org first-memory
+
+### 3. Connect your coding agent — optional
+
+From the repository root, choose codex, claude, or cursor. This registers memory tools and creates the repository memory shard. Restart the coding agent after registration.
+
+icarus mcp install codex # Add --harness only when this repository should use task governance.
+
+### 4. Developer sign-in — optional
+
+icarus connect
+
+Choose email or Google on the ICARUS developer account page. For email, enter the six-digit code from your ICARUS email and choose Verify and continue. The browser returns to the waiting terminal, which confirms sign-in.
+
+Keep the terminal open; it waits up to fifteen minutes. If it expires after the browser verified you, run icarus connect again to finish using that session. No purchase or company workspace is required. Developer identity grants no hosted customer API access and does not upload local memory.
+
+Skip sign-in to keep working offline. Use icarus connect --logout to remove the local developer credential. Upgrade later with icarus update.
+
+[Read the quickstart](https://github.com/amar3012005/ICARUS#start-here)[Downloads and checksums](https://github.com/amar3012005/ICARUS/releases/tag/v0.3.91)[Developer sign-in details](https://github.com/amar3012005/ICARUS/blob/main/docs/DEVELOPER_AUTH.md)
+
+Agent Bus is experimental with no public installer; the proposed bridge is not shipped. Computer Use is a separate experimental module. Installing Memory enables neither.
+
 v1 made a claim; v2 ships the system. Since June, ICARUS went from a frozen format RFC to a production Rust engine behind HIVEMIND: seven machine-verified gates, a live cutover serving real tenants, and — new in v2 — every memory it builds is post-quantum signed by default. This revision documents what was actually built, with the numbers each gate had to pass.
 
 ## From thesis to production — seven gates
@@ -1773,7 +2182,7 @@ Canonical page: https://singulancelabs.com/research/post-quantum-cryptography
 
 ---
 
-[SINGULANCE](https://singulancelabs.com/)Research
+[SINGULANCE](https://singulancelabs.com/)Benchmark
 
 Benchmark
 

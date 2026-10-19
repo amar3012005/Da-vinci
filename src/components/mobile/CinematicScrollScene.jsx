@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { createFrameWindow } from './frame-window';
 gsap.registerPlugin(ScrollTrigger);
 
 /**
@@ -63,6 +64,17 @@ const CinematicScrollScene = ({
         || window.matchMedia('(max-width: 767px)').matches)
   ));
 
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    if (reduced) return undefined;
+    if (!('IntersectionObserver' in window)) { setNear(true); return undefined; }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) { setNear(true); observer.disconnect(); }
+    });
+    if (wrapRef.current) observer.observe(wrapRef.current);
+    return () => observer.disconnect();
+  }, [reduced]);
+
   const framePath = (i) => `/${frameDir}/f_${String(i + 1).padStart(3, '0')}.webp`;
   const hasVideo = Boolean(videoSrc);
 
@@ -81,13 +93,13 @@ const CinematicScrollScene = ({
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || reduced) return undefined;
+    if (typeof window === 'undefined' || reduced || !near) return undefined;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return undefined;
     const video = hasVideo ? document.createElement('video') : null;
-    const images = [];
-    let loaded = 0;
+    let frames;
     const state = { frame: 0 };
     // assigned by the frame-sequence branch below; no-op in video mode
     let requestFrame = () => {};
@@ -107,16 +119,8 @@ const CinematicScrollScene = ({
       }
       const idx = Math.round(state.frame);
       requestFrame(idx);
-      let img = images[idx];
-      // A fast scrub can outrun the staged loader. Rather than blank the
-      // canvas, fall back to the nearest already-decoded earlier frame — the
-      // scrub reads as slightly coarse for a moment instead of empty.
-      if (!img || !img.complete) {
-        for (let k = idx - 1; k >= 0; k--) {
-          if (images[k] && images[k].complete) { img = images[k]; break; }
-        }
-      }
-      if (!img || !img.complete) return;
+      const img = frames?.nearest(idx);
+      if (!img || !img.complete || !img.naturalWidth) return;
       const cw = window.innerWidth, ch = window.innerHeight;
       const ir = img.width / img.height, cr = cw / ch;
       let w, h, x, y;
@@ -144,33 +148,9 @@ const CinematicScrollScene = ({
       video.addEventListener('loadeddata', draw, { once: true });
       video.load();
     } else {
-      // Staged loading: these sequences are 15-25MB. Firing every request on
-      // mount saturates the connection and starves the hero/first paint —
-      // especially now that a scene sits directly under the cover slide.
-      // Load a head chunk so the scene can paint immediately, then stream the
-      // remainder on idle, in order, so the scrub is always ahead of the user.
-      const HEAD = Math.min(24, frameCount);
-      const makeOnLoad = (i) => () => { loaded++; if (loaded === 1 || Math.round(state.frame) === i) draw(); };
-      const load = (i) => {
-        if (images[i]) return;
-        const img = new Image();
-        img.src = framePath(i);
-        img.onload = makeOnLoad(i);
-        images[i] = img;
-      };
-      // demand-load whatever the scrub is actually asking for, plus a small
-      // look-ahead, so scrubbing ahead of the idle pump still resolves fast
-      requestFrame = (i) => { for (let k = i; k < Math.min(i + 6, frameCount); k++) load(k); };
-      for (let i = 0; i < HEAD; i++) load(i);
+      frames = createFrameWindow({ count: frameCount, srcFor: framePath, onLoad: () => draw() });
+      requestFrame = index => frames.request(index);
 
-      const idle = window.requestIdleCallback || ((fn) => window.setTimeout(fn, 200));
-      let next = HEAD;
-      const pump = () => {
-        const stop = Math.min(next + 12, frameCount);
-        for (; next < stop; next++) load(next);
-        if (next < frameCount) idle(pump);
-      };
-      if (frameCount > HEAD) idle(pump);
     }
 
     window.addEventListener('resize', resize);
@@ -265,12 +245,14 @@ const CinematicScrollScene = ({
 
     return () => {
       window.removeEventListener('resize', resize);
+      frames?.dispose();
+      if (video) { video.pause(); video.removeAttribute('src'); video.load(); }
       if (tl.scrollTrigger) tl.scrollTrigger.kill();
       tl.kill();
       if (!isLight) document.documentElement.classList.remove('cinematic-mode');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasVideo, videoSrc, isLight, heroTitle, reduced]);
+  }, [hasVideo, videoSrc, isLight, heroTitle, reduced, near]);
 
   if (reduced) {
     // mobile / reduced-motion: a tall poster header + the full narration stacked
@@ -319,6 +301,7 @@ const CinematicScrollScene = ({
   return (
     <section ref={wrapRef} className="relative w-full" style={{ height: `${heightVh}vh`, background: bg }}>
       <div ref={pinRef} className="relative h-screen w-full overflow-hidden">
+        {!hasVideo && <img src={framePath(0)} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />}
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" style={{ display: 'block' }} />
         {/* Film grain as an overlay, not baked into the frames: identical look
             to the SINGULANCE splash, costs zero bytes per frame, and masks the

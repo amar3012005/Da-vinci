@@ -1,4 +1,5 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import SceneVisibility, { useMotionInView } from './SceneVisibility';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import {
@@ -81,14 +82,14 @@ function CoverPlane({ pointer }) {
     [tex]
   );
 
-  // fill-width: the wordmark is baked horizontally across the poster, so always
-  // fill the full viewport width (never crop the sides) and let the height
-  // overflow / crop top+bottom. bleed 1.0; parallax shift kept tiny so no edge.
+  // Match the persistent DOM poster: cover-fit with a top-aligned crop, so
+  // revealing the textured canvas does not jump or expose empty bands.
   const scale = useMemo(() => {
     const img = tex.image;
     const imgAspect = img ? img.width / img.height : 1.6;
-    return [viewport.width, viewport.width / imgAspect, 1];
-  }, [tex, viewport.width]);
+    const width = Math.max(viewport.width, viewport.height * imgAspect);
+    return [width, width / imgAspect, 1];
+  }, [tex, viewport.width, viewport.height]);
 
   useFrame((_, delta) => {
     if (mat.current) {
@@ -104,7 +105,7 @@ function CoverPlane({ pointer }) {
   });
 
   return (
-    <mesh ref={mesh} scale={scale}>
+    <mesh ref={mesh} scale={scale} position={[0, (viewport.height - scale[1]) / 2, 0]}>
       <planeGeometry args={[1, 1]} />
       <shaderMaterial
         ref={mat}
@@ -124,30 +125,38 @@ function Rig() {
 
 export default function HeroScene() {
   const pointer = useRef({ x: 0, y: 0 });
+  const [host, active] = useMotionInView();
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const onReady = useCallback(() => setReady(true), []);
+  const onLost = useCallback(() => setFailed(true), []);
 
   const onPointerMove = (e) => {
     pointer.current.x = (e.clientX / window.innerWidth) * 2 - 1;
     pointer.current.y = -((e.clientY / window.innerHeight) * 2 - 1);
   };
 
+  if (failed) return null;
   return (
-    <div className="absolute inset-0" onPointerMove={onPointerMove}>
+    <div ref={host} data-hero-motion={ready ? "ready" : "loading"} className="absolute inset-0" style={{ opacity: ready ? 1 : 0, transition: "opacity 300ms ease" }} onPointerMove={onPointerMove}>
       <Canvas
-        dpr={[1, 2]}
+        frameloop={active ? "always" : "never"}
+        dpr={[1, 1.5]}
         camera={{ position: [0, 0, 5], fov: 45 }}
-        gl={{ antialias: true, alpha: false }}
-        style={{ background: '#05070f' }}
+        gl={{ antialias: true, alpha: true }}
+        fallback={null} style={{ background: "transparent" }}
       >
         <React.Suspense fallback={null}>
           <CoverPlane pointer={pointer} />
           <Rig />
-        </React.Suspense>
         <EffectComposer>
           <Bloom intensity={0.55} luminanceThreshold={0.55} luminanceSmoothing={0.25} mipmapBlur />
           <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={[0.0009, 0.0009]} />
           <Vignette eskil={false} offset={0.25} darkness={0.85} />
           <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.18} />
         </EffectComposer>
+          <SceneVisibility onReady={onReady} onLost={onLost} />
+        </React.Suspense>
       </Canvas>
     </div>
   );
