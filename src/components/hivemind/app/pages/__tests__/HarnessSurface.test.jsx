@@ -247,3 +247,17 @@ it('reveals the native Runtime root before session selection supplies a composer
  expect(nativeHarnessMounted(container)).toBe(true);
  expect(nativeHarnessMounted(container, { brain: true })).toBe(false);
 });
+
+it('keeps the Runtime settling root covered until the transcript and composer are ready', async () => {
+ const old = window.location.pathname;
+ window.history.replaceState({}, '', '/hivemind/app/employee/harness/session/saved');
+ const container = document.createElement('div');
+ container.innerHTML = '<div data-slot="root"><div data-agent-room data-phase="settling"><div data-composer-seat></div></div></div>';
+ try {
+   expect(nativeHarnessMounted(container)).toBe(false);
+   const ready = waitForNativeHarnessMount(container);
+   container.querySelector('[data-agent-room]').setAttribute('data-phase', 'active');
+   await ready;
+   expect(nativeHarnessMounted(container)).toBe(true);
+ } finally { window.history.replaceState({}, '', old); }
+});

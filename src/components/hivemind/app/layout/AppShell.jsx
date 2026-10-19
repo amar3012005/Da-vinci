@@ -1,3 +1,5 @@
+import { measureHarnessBoot } from '../shared/harness-boot-timing';
+import { scopedCompanyRead, clearCompanyRead } from '../shared/company-read-cache';
 import BrainGetStarted from './BrainGetStarted';
 import RuntimeGetStarted from './RuntimeGetStarted';
 import BrainFeatureWelcome from '../shared/BrainFeatureWelcome';
@@ -334,17 +336,18 @@ function AppShellContent() {
     if (!org?.id || needsOnboarding) return;
     let alive = true;
     setCompanyAdmission({ scope: org.id, status: 'checking' });
-    apiClient.hyperCompany().then(data => {
+    measureHarnessBoot('company-setup-read', () => scopedCompanyRead(`${user?.id}:${org.id}`, () => apiClient.hyperCompany())).then(data => {
       if (alive) setCompanyAdmission({ scope: org.id, status: companyAdmissionStatus(data), company: data.company });
     }).catch(() => {
       if (alive) setCompanyAdmission({ scope: org.id, status: 'error' });
     });
     return () => { alive = false; };
-  }, [org?.id, needsOnboarding, companyRetry]);
+  }, [user?.id, org?.id, needsOnboarding, companyRetry]);
   const completeCompany = useCallback(() => {
+    clearCompanyRead(`${user?.id}:${org?.id}`);
     setCompanyAdmission({ scope: org?.id, status: 'ready' });
     navigate('/hivemind/app/overview/new', { replace: true });
-  }, [navigate, org?.id]);
+  }, [navigate, user?.id, org?.id]);
   const [chatOpen, setChatOpen] = useState(false);
   // Load the optional chat panel only after first use, then retain its state.
   const [chatLoaded, setChatLoaded] = useState(false);
@@ -521,7 +524,7 @@ function AppShellContent() {
   const companyStatus = companyAdmission.scope === org?.id ? companyAdmission.status : 'checking';
   if (companyStatus !== 'ready') return <div data-hivemind-app-shell className="min-h-[var(--hm-app-viewport-height,100dvh)] bg-[#faf9f4] p-4 sm:p-8">
     {companyStatus === 'checking' ? <AsciiWorkspaceLoading label="Connecting…" />
-      : companyStatus === 'error' ? <div role="alert" className="mx-auto max-w-lg p-8"><p>We couldn’t check your company setup. Your progress is saved.</p><button type="button" onClick={() => setCompanyRetry(value => value + 1)} className="mt-4 text-[#117dff] underline">Try again</button></div>
+      : companyStatus === 'error' ? <div role="alert" className="mx-auto max-w-lg p-8"><p>We couldn’t check your company setup. Your progress is saved.</p><button type="button" onClick={() => (clearCompanyRead(`${user?.id}:${org?.id}`), setCompanyRetry(value => value + 1))} className="mt-4 text-[#117dff] underline">Try again</button></div>
       : <React.Suspense fallback={<p role="status">Opening company onboarding…</p>}><HyperOnboarding onComplete={completeCompany} /></React.Suspense>}
     {companyStatus !== 'required' && <button type="button" onClick={() => setAccountOpen(true)} className="fixed bottom-6 right-6 rounded-lg border bg-white px-4 py-2 text-sm">Account & Settings</button>}
     {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}

@@ -190,7 +190,7 @@ export const HARNESS_BOOT_STAGES = [
 /** Show the current real boot boundary without a logo or simulated progress. */
 export function LoadingSurface({ stage = 0, dreaming = false, reconnecting = false }) {
   return <div className="hm-chat-opening">
-    <AsciiWorkspaceLoading label={reconnecting ? 'Reconnecting…' : 'Connecting…'} />
+    <AsciiWorkspaceLoading label="Connecting…" />
     {reconnecting && <button type="button" onClick={() => window.location.reload()} className="rounded-md border border-black/10 px-3 py-2 text-[12px]">Try again</button>}
   </div>;
 }
@@ -199,11 +199,10 @@ export function LoadingSurface({ stage = 0, dreaming = false, reconnecting = fal
 export function nativeHarnessMounted(container, { dreaming = false, brain = false } = {}) {
   if (dreaming) return Boolean(container?.querySelector?.('[data-dreaming-ready="true"] [data-composer-seat]'));
   if (brain) return Boolean(container?.querySelector?.('[data-composer-seat][data-hivemind-composer-ready="true"]'));
-  // Match native DSH: the rendered root owns its session/connection loading
-  // states. Do not hide a successfully mounted application until a session
-  // has selected a composer (the Runtime landing route has no session yet).
-  return Boolean(container?.querySelector?.('[data-slot="root"]')
-    || container?.querySelector?.('[data-composer-seat]'));
+  if (/^\/hivemind\/app\/employee\/harness(?:\/|$)/.test(window.location.pathname)) {
+    return Boolean(container?.querySelector?.('[data-agent-room][data-phase="active"] [data-composer-seat], [data-agent-room][data-phase="hero"] [data-composer-seat]'));
+  }
+  return Boolean(container?.querySelector?.('[data-slot="root"]') || container?.querySelector?.('[data-composer-seat]'));
 }
 
 export function waitForNativeHarnessMount(container, signal, { brain = false, onSlow = () => {} } = {}) {
@@ -242,7 +241,7 @@ export function waitForNativeHarnessMount(container, signal, { brain = false, on
       signal?.removeEventListener('abort', onAbort);
     };
     signal?.addEventListener('abort', onAbort, { once: true });
-    observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-dreaming-ready', 'data-hivemind-composer-ready'] });
+    observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-dreaming-ready', 'data-hivemind-composer-ready', 'data-phase'] });
     // A synchronous native insertion can occur between the first check and
     // observer registration.
     if (mounted()) {
