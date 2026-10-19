@@ -14,9 +14,18 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
     if (identified) { setError(false); return undefined; }
     // The child's React bridge may install before or after window.load.
     // Repeat only the idempotent, scoped handshake; keep the document resident.
-    const handshake = window.setInterval(() => send({ kind: 'hello' }), 1000);
-    const timeout = window.setTimeout(() => { window.clearInterval(handshake); setError(true); }, 30000);
-    return () => { window.clearTimeout(timeout); window.clearInterval(handshake); };
+    let slow = false;
+    let handshake;
+    const hello = () => {
+      send({ kind: 'hello' });
+      handshake = window.setTimeout(hello, slow ? 5000 : 1000);
+    };
+    handshake = window.setTimeout(hello, 1000);
+    // A slow module download can finish after the recovery notice appears.
+    // Keep the scoped handshake alive at a lower cadence so that document can
+    // still identify itself; never reload or discard the pending conversation.
+    const timeout = window.setTimeout(() => { slow = true; setError(true); }, 30000);
+    return () => { window.clearTimeout(timeout); window.clearTimeout(handshake); };
   }, [identified, retry, mode, scope]);
   const send = data => frame.current?.contentWindow?.postMessage({ type: 'hivemind.native-pane', version: 1, scope, ...data }, PANE_ORIGINS[mode]);
   useEffect(() => {

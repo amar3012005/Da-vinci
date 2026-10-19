@@ -56,3 +56,28 @@ it('ignores the mounted closed panel and follows only its native expanded flag',
  panel.setAttribute('data-sidebar-right-open','true');expect(nativePreviewExpanded(doc)).toBe(true);
  panel.removeAttribute('data-sidebar-right-open');expect(nativePreviewExpanded(doc)).toBe(false);
 });
+
+
+it('a document finishing after the recovery deadline still completes the scoped handshake', async()=>{
+  global.IS_REACT_ACT_ENVIRONMENT=true;
+  jest.useFakeTimers();
+  mockLocation={pathname:'/hivemind/app/overview/session/brain-saved',search:'',hash:''};
+  const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
+  try {
+    await act(async()=>root.render(<PersistentHarnessPanes />));
+    const brain=host.querySelector('iframe'); const source=brain.getAttribute('src');
+    const post=jest.spyOn(brain.contentWindow,'postMessage');
+    await act(async()=>jest.advanceTimersByTime(31000));
+    expect(host.querySelector('[role="alert"]')).not.toBeNull();
+    post.mockClear();
+    await act(async()=>jest.advanceTimersByTime(10000));
+    expect(post).toHaveBeenCalledWith(expect.objectContaining({kind:'hello',scope:'user-a:org-a'}),'https://next.singulancelabs.com');
+    expect(post.mock.calls.length).toBeLessThanOrEqual(2);
+    await act(async()=>window.dispatchEvent(new MessageEvent('message',{origin:'https://next.singulancelabs.com',source:brain.contentWindow,data:{type:'hivemind.native-pane',version:1,scope:'foreign:org-a',kind:'identity'}})));
+    expect(host.querySelector('[role="alert"]')).not.toBeNull();
+    await act(async()=>window.dispatchEvent(new MessageEvent('message',{origin:'https://next.singulancelabs.com',source:brain.contentWindow,data:{type:'hivemind.native-pane',version:1,scope:'user-a:org-a',kind:'identity'}})));
+    expect(brain.style.visibility).toBe('visible');
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(brain.getAttribute('src')).toBe(source);
+  } finally { await act(async()=>root.unmount());host.remove();jest.useRealTimers(); }
+});

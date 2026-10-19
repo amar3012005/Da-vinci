@@ -84,3 +84,14 @@ test('private responses, authorization denials and missing assets are never stor
   }
   expect(sw.puts).toEqual([]);
 });
+
+
+test('versioned webpack entry and lazy JS/CSS chunks use the immutable HTTP cache', async () => {
+  const sw = worker('https://next.singulancelabs.com');
+  for (const url of ['/static/js/main.afcd8239.js', '/static/js/6834.3d543aa0.chunk.js', '/static/css/1462.637a19a2.chunk.css']) {
+    await sw.dispatch(url);
+    expect(sw.fetch.mock.calls[sw.fetch.mock.calls.length - 1][1].cache).toBe('default');
+  }
+  await sw.dispatch('/static/js/unversioned.chunk.js');
+  expect(sw.fetch.mock.calls[sw.fetch.mock.calls.length - 1][1].cache).toBe('reload');
+});

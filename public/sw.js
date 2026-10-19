@@ -7,7 +7,7 @@
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v12';
+const CACHE = 'hive-shell-v13';
 const RUNTIME_HOST = self.location.origin === 'https://runtime-runner.singulancelabs.com';
 const SHELL = RUNTIME_HOST ? [] : ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
 
@@ -46,7 +46,7 @@ self.addEventListener('fetch', (event) => {
     && /^\?\?@deepseek-ai\/[A-Za-z0-9_/-]+\.js(?:,@deepseek-ai\/[A-Za-z0-9_/-]+\.js)*&rev=(?:[a-f0-9]{12}|[a-f0-9]{16}-[0-9]+)$/.test(url.search);
   const nativeShell = url.pathname === '/assets/harness-shell.js'
     && /^\?rev=[a-f0-9]{12}$/.test(url.search);
-  const hashedAsset = /^\/(?:static\/(?:js|css)\/[^/]+\.[a-f0-9]{8,}\.(?:js|css)|assets\/[^/]+-[A-Za-z0-9_-]{8}\.(?:js|css|woff2?))$/.test(url.pathname);
+  const hashedAsset = /^\/(?:static\/(?:js|css)\/[^/]+\.[a-f0-9]{8,}(?:\.chunk)?\.(?:js|css)|assets\/[^/]+-[A-Za-z0-9_-]{8}\.(?:js|css|woff2?))$/.test(url.pathname);
   const immutableCode = nativeCombo || nativeShell || hashedAsset;
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/v1')
     || url.pathname.startsWith('/hivemind/dreamer/')
