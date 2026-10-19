@@ -20,11 +20,11 @@ export const brainFeatureArtwork = [
   },
   {
     "id": "meeting-notes",
-    "title": "AI Meeting Notes",
-    "image": "/images/feature-banners/meeting-notes.webp",
-    "alt": "Keep the conversation. Turn recordings into transcripts, summaries and actions.",
+    "title": "Meeting Intelligence",
+    "image": "/images/feature-banners/meeting-intelligence-v2.webp",
+    "alt": "Connect your team’s thinking to the company Brain. Turn conversations into decisions, commitments and shared understanding.",
     "href": "/hivemind/app/meeting-notes",
-    "label": "AI MEETING NOTES",
+    "label": "Meeting Intelligence",
     "zoom": 1
   },
   {
@@ -57,10 +57,19 @@ export const brainFeatureArtwork = [
   {
     "id": "dreaming",
     "title": "Dreaming",
-    "image": "/images/feature-banners/dreaming.webp",
-    "alt": "Give your Brain time to reflect. Explore connections and ideas from company memories.",
+    "image": "/images/feature-banners/dreaming-v2.webp",
+    "alt": "Wake up to connections you hadn’t seen. Your agents explore company knowledge overnight. Discover sourced insights in Flashbacks.",
     "href": "/hivemind/app/overview/dreaming",
     "label": "DREAMING",
+    "zoom": 1
+  },
+  {
+    "id": "chatgpt-connection",
+    "title": "Connect ChatGPT",
+    "image": "/images/feature-banners/chatgpt-connection-v1.webp",
+    "alt": "Bring your ChatGPT plan to HIVEMIND. Frontier models, real conversations and image creation.",
+    "href": "/hivemind/app/ai-models",
+    "label": "Connect your ChatGPT plan to HIVEMIND",
     "zoom": 1
   },
   {

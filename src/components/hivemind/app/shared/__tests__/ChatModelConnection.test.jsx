@@ -20,6 +20,7 @@ test('connects and selects a default inside the chat dialog',async()=>{
  expect(global.fetch).not.toHaveBeenCalled();
  fireEvent.click(screen.getByRole('button',{name:'Connect to your ChatGPT'}));
  await screen.findByRole('button',{name:'Connect now'});
+ expect(screen.getByRole('img',{name:'Bring your ChatGPT plan to HIVEMIND. Frontier models, real conversations and image creation.'}).getAttribute('src')).toBe('/images/feature-banners/chatgpt-connection-v1.webp');
  fireEvent.click(screen.getByRole('checkbox'));
  fireEvent.click(screen.getByRole('button',{name:'Connect now'}));
  const model=await screen.findByRole('combobox',{name:'Default ChatGPT model'});

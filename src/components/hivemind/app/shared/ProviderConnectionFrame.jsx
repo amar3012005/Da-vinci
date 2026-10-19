@@ -6,6 +6,7 @@ export default function ProviderConnectionFrame({provider,connected,compact=fals
  const [expanded,setExpanded]=useState(!compact);
  const chatgpt=provider==='ChatGPT';
  return <div className="hm-provider-frame">
+  {chatgpt && <img className="hm-provider-feature-artwork" src="/images/feature-banners/chatgpt-connection-v1.webp" alt="Bring your ChatGPT plan to HIVEMIND. Frontier models, real conversations and image creation." width="1672" height="941" loading="lazy"/>}
   <div className="hm-provider-banner">
    <div className="hm-provider-mark" aria-hidden="true">{chatgpt?<ChatgptMark/>:<img src="https://openrouter.ai/favicon.ico" alt="" width="30" height="30"/>}</div>
    <div className="hm-provider-copy"><h2>{chatgpt?'Bring your ChatGPT models to HIVEMIND':'Explore free models with OpenRouter'}</h2><p>{chatgpt?'Your account. Your available models.':'A live model catalog, with a free automatic route.'}</p></div>

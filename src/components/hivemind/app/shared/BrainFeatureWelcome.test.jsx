@@ -32,8 +32,8 @@ test('one card dismisses, then changes artwork and reopens for the next feature'
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
   expect(screen.getAllByRole('dialog')).toHaveLength(1);
   expect(screen.getByRole('dialog', { name: 'Meeting Intelligence' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Connect your team’s thinking to the company Brain.' })).toBeInTheDocument();
-  expect(screen.getByRole('img')).toHaveAccessibleName('Meeting conversations connect with company knowledge to surface decisions, commitments and next steps.');
+  expect(screen.getByRole('img')).toHaveAttribute('src', '/images/feature-banners/meeting-intelligence-v2.webp');
+  expect(screen.getByRole('img')).toHaveAccessibleName('Connect your team’s thinking to the company Brain. Turn conversations into decisions, commitments and shared understanding.');
   expect(document.body.style.overflow).toBe('hidden');
   fireEvent.click(screen.getByRole('button', { name: 'Explore Meeting Intelligence' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
