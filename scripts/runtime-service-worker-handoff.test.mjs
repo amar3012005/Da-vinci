@@ -51,3 +51,12 @@ test('Runtime never precaches its redirected root or fetches document navigation
   for(const path of ['/','/hivemind/login','/hivemind/app/employee/harness']) await worker.dispatch(path);
   assert.equal(worker.calls.length,0);
 });
+
+test('current native revision bundles use immutable browser cache without shared private storage',async()=>{
+ const response={status:200,type:'basic',headers:{get:name=>name==='content-type'?'text/javascript':'public, max-age=31536000, immutable'}};
+ const worker=serviceWorker(response,'https://runtime-runner.singulancelabs.com');
+ await worker.dispatch('/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=2e04b1b28f932209-0','same-origin');
+ assert.equal(worker.calls.length,1);
+ assert.equal(worker.calls[0][1].cache,'default');
+ assert.equal(worker.writes.length,0);
+});

@@ -43,7 +43,7 @@ self.addEventListener('fetch', (event) => {
 
   // Revisioned code is public build output; private routes and live plugin events stay live.
   const nativeCombo = url.pathname === '/plugins/'
-    && /^\?\?@deepseek-ai\/[A-Za-z0-9_/-]+\.js(?:,@deepseek-ai\/[A-Za-z0-9_/-]+\.js)*&rev=[a-f0-9]{12}$/.test(url.search);
+    && /^\?\?@deepseek-ai\/[A-Za-z0-9_/-]+\.js(?:,@deepseek-ai\/[A-Za-z0-9_/-]+\.js)*&rev=(?:[a-f0-9]{12}|[a-f0-9]{16}-[0-9]+)$/.test(url.search);
   const nativeShell = url.pathname === '/assets/harness-shell.js'
     && /^\?rev=[a-f0-9]{12}$/.test(url.search);
   const hashedAsset = /^\/(?:static\/(?:js|css)\/[^/]+\.[a-f0-9]{8,}\.(?:js|css)|assets\/[^/]+-[A-Za-z0-9_-]{8}\.(?:js|css|woff2?))$/.test(url.pathname);

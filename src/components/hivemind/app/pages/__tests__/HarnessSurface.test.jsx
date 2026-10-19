@@ -240,3 +240,10 @@ describe('native mount transport recovery', () => {
    container.firstChild.innerHTML = '<div>Failed to load plugins: example</div>';
    await expect(pending).rejects.toThrow('Failed to load plugins: example');
  });
+
+it('reveals the native Runtime root before session selection supplies a composer', () => {
+ const container = document.createElement('div');
+ container.innerHTML = '<div data-slot="root"><main>Loading session</main></div>';
+ expect(nativeHarnessMounted(container)).toBe(true);
+ expect(nativeHarnessMounted(container, { brain: true })).toBe(false);
+});
