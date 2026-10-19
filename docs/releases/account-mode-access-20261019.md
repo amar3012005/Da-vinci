@@ -16,6 +16,8 @@ Rollback: restore the preceding Worker version to restore prior UI. Flag rollbac
 
 ## Acceptance
 
-- [ ] Code: flag and route isolation, explicit denial, persistence, directory controls, named invitation grant.
+- [x] Code: flag and route isolation, explicit denial, persistence, directory controls, named invitation grant.
 - [ ] Deployed: Worker version, source SHA, Durable Object migration and previous version recorded.
 - [ ] Live verified: signed-in two allowed accounts, ordinary account Brain only, admin grant/revoke, invitation grant, no cross-account inheritance.
+
+Validation: 11 focused Node checks and the existing admin invitation contract pass. Broader routing suite: 26/29 pass; the same three failures reproduce with the untouched preceding Worker (Day-0 admission and two historical overview-entry expectations). They are existing failures, not claimed fixed by this rollout.
