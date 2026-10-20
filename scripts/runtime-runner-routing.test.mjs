@@ -7,10 +7,11 @@ const env = { RUNTIME_RUNNER_PUBLIC_ORIGIN: publicOrigin,
   RUNTIME_RUNNER_ORIGIN: 'https://runtime-runner-origin.singulancelabs.com',
   RUNNER_ORIGIN: 'https://harness-chat-origin.singulancelabs.com' };
 
-test('outer employee navigation stays on the current authority without credential forwarding', async () => {
+test('outer employee navigation redirects to Runtime preserving the session', async () => {
   const response = await worker.fetch(new Request('https://next.singulancelabs.com/hivemind/app/employee/harness/session/existing'), { ...env, ASSETS:{fetch:async()=>new Response('<html>persistent shell</html>',{headers:{'content-type':'text/html'}})} });
-  assert.equal(response.status,200); assert.equal(response.headers.get('location'),null);
-  assert.match(await response.text(), /persistent shell/);
+  assert.equal(response.status,307);
+  assert.equal(response.headers.get('location'), publicOrigin + '/hivemind/app/employee/harness/session/existing');
+  assert.equal(response.headers.get('cache-control'), 'private, no-store');
 });
 
 test('Runtime native transport selects only Runtime origin and preserves actual browser Origin', async () => {

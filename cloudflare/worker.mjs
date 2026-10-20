@@ -561,8 +561,15 @@ export default {
       destination.pathname = '/hivemind/app/employee/harness';
       return new Response(null, { status: 307, headers: { location: destination.toString(), 'cache-control': 'private, no-store' } });
     }
-    // The outer shell may display either mode on either app authority. Each
-    // native pane still loads modules, cookies and RPC from its owning runner.
+    // Canonical employee documents belong to Runtime. Keep native iframe and
+    // API transport routing separate from top-level workspace navigation.
+    if (url.hostname === 'next.singulancelabs.com' && ['GET', 'HEAD'].includes(request.method)
+      && !url.searchParams.has('native_pane')
+      && /^\/hivemind\/app\/(?:employee\/(?:harness|dots|create|apps)|employees)(?:\/|$)/u.test(pathname)) {
+      const destination = new URL(url);
+      destination.host = 'runtime-runner.singulancelabs.com';
+      return new Response(null, { status: 307, headers: { location: destination.toString(), 'cache-control': 'private, no-store' } });
+    }
     if (pathname.startsWith('/api/hivemind/model-connection/')) return proxyModelConnection(request, env);
     const openDotEntryPath = isOpenDotEntryPath(pathname);
     if (url.protocol === 'http:' && env.ENVIRONMENT !== 'development') {

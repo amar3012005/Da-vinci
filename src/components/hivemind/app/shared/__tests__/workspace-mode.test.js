@@ -19,11 +19,11 @@ test('background Dot unread requires an owned binding and real local read waterm
   expect(ownedOpenDotRoomStatuses([{ ...employees[0], dotId: 'foreign' }], roster)).toEqual({});
 });
 
-test('shared apps keep the next shell without changing Brain connectors', () => {
+test('shared apps use Runtime without changing Brain connectors', () => {
   const path = '/hivemind/app/employee/apps';
   expect(workspaceModeForPath(path)).toBe('hyperagents');
-  expect(workspaceModeDestination(path, 'https://runtime-runner.singulancelabs.com')).toBe(`https://next.singulancelabs.com${path}`);
-  expect(workspaceModeDestination(path, 'https://next.singulancelabs.com')).toBe(path);
+  expect(workspaceModeDestination(path, 'https://runtime-runner.singulancelabs.com')).toBe(path);
+  expect(workspaceModeDestination(path, 'https://next.singulancelabs.com')).toBe(`https://runtime-runner.singulancelabs.com${path}`);
   expect(workspaceModeForPath('/hivemind/app/connectors')).toBe('hivemind');
   expect(workspaceModeForPath('/hivemind/app/employee/apps-fake')).toBe('hivemind');
 });
@@ -42,4 +42,11 @@ test('reopening Apps preserves the original employee return route', () => {
  const url = new URL(path, 'https://runtime-runner.singulancelabs.com');
  expect(url.searchParams.get('return_to')).toBe(employee.pathname + employee.search);
  expect(employeeAppsPath({ pathname: url.pathname, search: url.search })).toBe(path);
+});
+
+test('mode switches preserve saved sessions and native local routes', () => {
+ const saved = '/hivemind/app/employee/harness/session/saved?view=chat#latest';
+ expect(workspaceModeDestination(saved, 'https://next.singulancelabs.com')).toBe('https://runtime-runner.singulancelabs.com' + saved);
+ expect(workspaceModeDestination(saved, 'http://localhost:3000')).toBe(saved);
+ expect(workspaceModeDestination('/hivemind/app/overview/new', 'https://runtime-runner.singulancelabs.com')).toBe('https://next.singulancelabs.com/hivemind/app/overview/new');
 });

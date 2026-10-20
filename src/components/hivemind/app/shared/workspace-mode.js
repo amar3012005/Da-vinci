@@ -5,12 +5,13 @@ export function workspaceModeForPath(pathname = '') {
   return 'hivemind';
 }
 
-/** The public workspace shell stays on next; native clients retain isolated iframe origins. */
+/** Navigate each workspace to its owning service; retain local/native app routing. */
 export function workspaceModeDestination(pathname, currentOrigin) {
   const workspaceOrigin = 'https://next.singulancelabs.com';
   const runtimeOrigin = 'https://runtime-runner.singulancelabs.com';
   if (![workspaceOrigin, runtimeOrigin].includes(currentOrigin)) return pathname;
-  return currentOrigin === workspaceOrigin ? pathname : `${workspaceOrigin}${pathname}`;
+  const targetOrigin = workspaceModeForPath(pathname.split(/[?#]/)[0]) === 'hyperagents' ? runtimeOrigin : workspaceOrigin;
+  return currentOrigin === targetOrigin ? pathname : `${targetOrigin}${pathname}`;
 }
 
 /** Reopening Apps preserves the original employee return destination. */
