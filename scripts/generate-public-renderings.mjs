@@ -23,7 +23,6 @@ const walk=n=>{
 };
 const pages=Object.fromEntries(Object.entries(rendered).map(([path,body])=>{
  let html=body.replace(/style="([^"]*)"/g,(all,style)=>`style="${style.replace(/(^|;)opacity:0(?=;|$)/g,'$1opacity:1').replace(/(^|;)visibility:hidden(?=;|$)/g,'$1visibility:visible')}"`);
- if(path==='/')html='<h1 class="sr-only">SINGULANCE — AI workforce that runs inside memory</h1>'+html;
  const markdown=walk(parseDocument(html)).replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim()+`\n\n## Products and workspace\n\n- [HIVEMIND](${SITE}/hivemind)\n- [TARA](${SITE}/tara)\n- [HyperAgents](${SITE}/hyperagents)\n- [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.\n`;
  return [path,{html,markdown}];
 }));

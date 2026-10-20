@@ -53,6 +53,40 @@ Public search and AI retrieval are allowed; these files do not license model tra
 
 ---
 
+[SINGULANCE](https://singulancelabs.com/)
+
+[Sign in](https://next.singulancelabs.com/hivemind/login)[Join early access ↗](https://singulancelabs.com/#early-access)
+
+A creative campaign for avatar creators
+
+Coming soon
+
+# Founding
+HyperAgents
+Collection.
+
+A dedicated home for the creative side of HyperAgents. Collection details and participation information will be shared here when they’re ready.
+
+[Explore SINGULANCE ↗](https://singulancelabs.com/)
+
+[SINGULANCE](https://singulancelabs.com/)
+
+Building proactive intelligence.
+
+© 2026 SINGULANCE
+
+## Products and workspace
+
+- [HIVEMIND](https://singulancelabs.com/hivemind)
+- [TARA](https://singulancelabs.com/tara)
+- [HyperAgents](https://singulancelabs.com/hyperagents)
+- [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
+
+
+Canonical page: https://singulancelabs.com/founding-hyperagents
+
+---
+
 [SINGULANCE](https://singulancelabs.com/)Open source · local first
 
 Open source · local first
@@ -719,227 +753,155 @@ Canonical page: https://singulancelabs.com/hyperagents
 
 ---
 
-# SINGULANCE — AI workforce that runs inside memory
+[Skip to content](#main)
 
-![SINGULANCE](https://singulancelabs.com/singulance-cover-900.webp)
+[SINGULANCE](https://singulancelabs.com/)
 
-The AI Operating Layer for Regulated Europe
+[Sign in](https://next.singulancelabs.com/hivemind/login)[Join early access ↗](https://singulancelabs.com/#early-access)
 
-[[ Run your AI company ]](https://next.singulancelabs.com/)
+Company understanding. Continued momentum.
 
-The AI workforce that runs inside your organization's memory.
+# Building proactive
+intelligence.
 
-The AI Operating Layer for Regulated Europe
+A company Brain that connects what your people know. An AI Chief of Staff that anticipates what needs attention and carries work forward.
 
-![SINGULANCE](https://singulancelabs.com/singulance-cover-900.webp)
+[Join early access ↗](#early-access)[▷ Watch the demo Coming soon](#demo)
 
-[[ Run your AI company ]](https://next.singulancelabs.com/)
+HIVEMIND understands your company. Runtime moves the work forward.
+ICARUS advances the research behind it.
 
-The AI workforce that runs inside your organization's memory.
+Explore what we’re building ↓
 
-## The New Era
+A closer look
 
-## The New Era
+## From a conversation
+to work carried forward.
 
-Sovereign by design
+Product demo · Coming soon
 
-Now running
+We’re preparing a short look at a meeting decision becoming company context, and that context informing the next piece of work.
 
-The work it already ships.
+The workflow below is illustrative, not a recording of live product behavior.
 
-## Latest updates.
+Three connected parts of SINGULANCE
 
-[42%
+## Understanding is only
+the beginning.
 
-68%
+01 / UNDERSTAND
 
-55%
-
-87%
-
-61%
-
-LongMemEval · recall accuracy
-
-BENCHMARK
-
-### HIVEMIND scores 87.2% on LongMemEval
-
-Published, reproducible recall benchmark — sub-50ms retrieval at scale, measured against the industry-standard long-context memory eval.
-
-Jun 26, 2026
-
-SINGULANCE Labs](https://singulancelabs.com/benchmark)[![ICARUS — a memory filesystem](https://singulancelabs.com/thesis-greekgod.webp)
-
-RESEARCH
-
-### ICARUS — a memory filesystem
-
-The .amr byte layout fuses vector, entity, bi-temporal and graph into one mmap. Equal recall to a live vector DB, 7.5× smaller, zero servers.
-
-Jun 24, 2026
-
-SINGULANCE Labs](https://singulancelabs.com/research/icarus)[![Post-Quantum Cryptography](https://singulancelabs.com/singulance-cover-900.webp)
-
-RESEARCH
-
-### Post-Quantum Cryptography
-
-Three quantum-resistant layers: hybrid PQC TLS, ML-DSA-65 signatures on every memory write, and an SLH-DSA tamper-evident audit chain. NIST-standard, harvest-now-decrypt-later closed.
-
-Jul 02, 2026
-
-SINGULANCE Labs](https://singulancelabs.com/research/post-quantum-cryptography)[![HIVEMIND](https://singulancelabs.com/sp-hivemind.webp)
-
-PRODUCT
+✳
 
 ### HIVEMIND
 
-Sovereign memory engine — sub-50ms recall across everything your organization knows.
+#### Your proactive company Brain
 
-Jun 22, 2026
+Connect documents, workspaces and meeting knowledge to understand decisions, commitments and what needs attention.
 
-SINGULANCE](https://next.singulancelabs.com/hivemind)[![TARA gets to work.](https://singulancelabs.com/sp-tara.webp)
+[Explore HIVEMIND ↗](https://singulancelabs.com/hivemind)
 
-PRODUCT
+02 / CARRY FORWARD
 
-### TARA gets to work.
+↗
 
-The enterprise voice agent that reasons in real time — calls, qualification, scheduling, support.
+### Runtime
 
-Jun 22, 2026
+#### Your anticipatory AI Chief of Staff
 
-SINGULANCE](https://next.singulancelabs.com/hivemind/app/tara)[![HYPERAGENTS](https://singulancelabs.com/sp-hyperagents.webp)
+Turn an agenda into specialist work, reviewed results and continued progress—with your judgment where needed.
 
-PRODUCT
+[Meet Runtime ↗](https://singulancelabs.com/runtime)
 
-### HYPERAGENTS
+03 / ADVANCE
 
-A swarm of digital employees that watch, decide, and act as one — grounded in memory.
+◎
 
-Jun 22, 2026
+### ICARUS
 
-SINGULANCE](https://next.singulancelabs.com/hivemind/app/employees)[![Cognitive Swarm Intelligence](https://singulancelabs.com/thesis-greekgod.webp)
+#### The research behind the intelligence
 
-COMPANY
+Explore our research and open-source work in memory and agent execution.
 
-### Cognitive Swarm Intelligence
+[Explore the research ↗](https://singulancelabs.com/research/icarus)
 
-The system remembers. The agents act. The architecture behind HIVEMIND, published.
+An illustrative workflow / Customer commitments
 
-Jun 20, 2026
+## A promise made.
+A shared understanding.
+A clear next step.
 
-SINGULANCE Labs](https://singulancelabs.com/research/cognitive-swarm-intelligence)[![Beyond the horizon of intelligence](https://singulancelabs.com/singulance-cover-900.webp)
+- 01 / Before
 
-COMPANY
+### Bring the context into the room.
 
-### Beyond the horizon of intelligence
+Connect the customer’s request with relevant documents and earlier decisions, so your team starts with shared context.
+- 02 / During
 
-The AI operating layer for regulated Europe. Run your institution as an AI company.
+### Make the commitment clear.
 
-Jun 24, 2026
+Capture what was decided, who committed to what, and which questions still need an answer. HIVEMIND develops the shared understanding.
+- 03 / After
 
-SINGULANCE](https://singulancelabs.com/#cta-section-footer)
+### Carry the work forward.
 
-The SINGULANCE Stack
+Runtime coordinates the specialist work and reviewed results, bringing your judgment in where it is needed.
 
-## Three minds. One sovereign system.
+Explore the work behind it
 
-Voice that reasons. Memory that never forgets. A swarm that acts. Each runs inside your walls — sovereign, GDPR-native, built for regulated Europe.
+## Read the research.
+Inspect the methods.
 
-[![TARA](https://singulancelabs.com/sp-tara.webp)
+Our published research and evaluations are a starting point for understanding the approach. Read results alongside their methods and limitations.
 
-Voice · Sentinel
+[Agent memoryICARUS research ↗](https://singulancelabs.com/research/icarus)[Continuity and human controlRuntime design principles ↗](https://singulancelabs.com/research/runtime)[Evaluation conditions and resultsMemory benchmarks ↗](https://singulancelabs.com/benchmark)
 
-The voice of your institution — an agent that reasons in real time, not a script that retrieves.
+A note from the founder
 
-Explore](https://next.singulancelabs.com/hivemind)[![HIVEMIND](https://singulancelabs.com/sp-hivemind.webp)
+## Less lost context.
+More work moving forward.
 
-Sovereign Memory
+We’re building SINGULANCE around a simple ambition: help companies connect what their people know with the work that needs to happen next. HIVEMIND develops the shared understanding; Runtime carries the resulting work forward.
 
-Sub-50ms recall across everything your organization knows. The mind that never forgets.
+Amar Sai Founder & CEO, SINGULANCE
 
-Explore](https://next.singulancelabs.com/hivemind)[![HYPERAGENTS](https://singulancelabs.com/sp-hyperagents.webp)
+[Talk to the founder ↗](https://cal.com/amar-sai-gadde-eluoct/30min)
 
-Agent Swarm
+![SINGULANCE cinematic landscape: a workspace looking out across a mountain valley](https://singulancelabs.com/horizon-frames/f_072.webp)
+Founder video · Coming soon
 
-Many minds that act as one — digital employees that watch, decide, and move on your behalf.
+A cinematic vision of a different way to work.
 
-Explore](https://next.singulancelabs.com/hivemind/app/employees)
+Vision film · Coming soon
 
-For every organization
+Vision film playback is coming soon. This artwork expresses our ambition, rather than a live product demonstration.
 
-## Run your company with an AI workforce.
+Build with us
 
-Your knowledge, decisions, and operations — remembered, reasoned over, and acted on inside your walls.
+## Help shape proactive
+intelligence.
 
-HIVEMIND
+Tell us where your company loses context or momentum. We’re inviting early users to explore HIVEMIND and Runtime.
 
-Sovereign memory of every document, decision, and customer context — recalled when work needs it, never sent outside.
+✳
 
-TARA
+Email addressName (optional)What would you like help with? (optional)Choose an areaCompany knowledgeMeeting follow-throughSpecialist executionResearch/development
 
-Fields calls, qualifies requests, and moves work forward — reasoning, not scripts.
+Requests are reviewed. Selected applicants hear back by email. This requests product access and does not subscribe you to marketing updates. See our [privacy policy](https://singulancelabs.com/privacy).
 
-HYPERAGENTS
+For avatar creators
 
-A swarm that researches, creates, reviews, and executes — grounded in your organization's history.
+## Founding HyperAgents Collection
 
-[Enter SINGULANCE](https://next.singulancelabs.com/hivemind)
+A separate creative campaign. Coming soon.
 
-![SINGULANCE — beyond the horizon of intelligence](https://singulancelabs.com/thesis-greekgod.webp)
+[Explore the collection ↗](https://singulancelabs.com/founding-hyperagents)
 
-## Beyond the horizon of intelligence
+[SINGULANCE](https://singulancelabs.com/)
 
-## Beyond the horizon of intelligence
+Building proactive intelligence.
 
-Contact
-
-## Talk to us
-
-Questions, partnership inquiries, or just want to say hello — we'd love to hear from you.
-
-[Email
-
-support@singulancelabs.com](mailto:support@singulancelabs.com)[LinkedIn
-
-SINGULANCE AI](https://www.linkedin.com/company/singulance-ai/?viewAsMember=true)
-
-[Write to us](mailto:support@singulancelabs.com)
-
-SINGULANCE / 2026
-
-## Explore SINGULANCE
-
-### Products
-
-- [HIVEMIND](https://next.singulancelabs.com/hivemind)
-- [Voice](https://next.singulancelabs.com/hivemind/app/tara)
-- [HyperAgents](https://next.singulancelabs.com/hivemind/app/employees)
-- [Pricing](https://next.singulancelabs.com/#pricing)
-
-### Research
-
-- [All research](https://singulancelabs.com/research)
-- [ICARUS](https://singulancelabs.com/research/icarus)
-- [Cognitive Swarm Intelligence](https://singulancelabs.com/research/cognitive-swarm-intelligence)
-- [Post-Quantum Cryptography](https://singulancelabs.com/research/post-quantum-cryptography)
-- [Memory benchmarks](https://singulancelabs.com/benchmark)
-
-### Company
-
-- [Contact](mailto:enterprise@singulancelabs.com)
-- [Talk to founder](https://cal.com/amar-sai-gadde-eluoct/30min)
-
-### Trust
-
-- [Security](https://singulancelabs.com/security)
-- [Privacy Policy](https://singulancelabs.com/privacy)
-- [Cookie Policy](https://singulancelabs.com/cookies)
-
-Get HIVEMIND
-
-[Your AI workspaceOpen HIVEMIND](https://next.singulancelabs.com/hivemind)
+© 2026 SINGULANCE
 
 ## Products and workspace
 

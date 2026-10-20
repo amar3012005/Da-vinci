@@ -9,7 +9,8 @@ Markdown links below contain server-rendered public page text from the same Reac
 - [Complete public page text](https://singulancelabs.com/llms-full.txt)
 
 ## Public reading list
-- [SINGULANCE — AI workforce that runs inside memory](https://singulancelabs.com/index.md): Discover HIVEMIND organizational memory, HyperAgents digital teammates and TARA voice agents. Explore SINGULANCE research and AI workforce tools.
+- [Building proactive intelligence.](https://singulancelabs.com/index.md): A company Brain that connects what your people know. An AI Chief of Staff that anticipates what needs attention and carries work forward. Join early access.
+- [Founding HyperAgents Collection](https://singulancelabs.com/founding-hyperagents/index.md): A separate creative campaign for avatar creators. Collection details and participation information are coming soon.
 - [HIVEMIND — your company brain](https://singulancelabs.com/hivemind/index.md): Explore HIVEMIND company memory, connected apps, evidence-backed answers and persistent AI teammates.
 - [TARA — voice with company context](https://singulancelabs.com/tara/index.md): Explore TARA, the voice experience in the HIVEMIND workspace.
 - [HyperAgents — your AI teammates](https://singulancelabs.com/hyperagents/index.md): Explore persistent AI teammate rooms, task results, artifacts and Runtime coordination in HIVEMIND.

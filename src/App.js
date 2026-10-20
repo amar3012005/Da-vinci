@@ -6,8 +6,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import UpdateBanner from './components/hivemind/UpdateBanner';
 import CookieConsent from './components/CookieConsent';
-import apiClient from './components/hivemind/app/shared/api-client';
 import { measureHarnessBoot } from './components/hivemind/app/shared/harness-boot-timing';
+const FoundingHyperagents = React.lazy(() => import('./components/FoundingHyperagents'));
 const MobileHomepage = React.lazy(() => import('./components/mobile/MobileHomepage'));
 
 // Hivemind
@@ -44,7 +44,6 @@ const HIVEMIND_PREVIEW_HOSTS = new Set(['next.preview.singulancelabs.com']);
 // Default false preserves the legacy davinciai multi-subdomain split (marketing host vs the
 // dedicated hivemind.davinciai.eu subdomain), so the Vercel deploy is unaffected.
 const PRODUCT_HOST = process.env.REACT_APP_PRODUCT_HOST === 'true';
-const HIVEMIND_PUBLIC_LANDING_URL = 'https://next.singulancelabs.com/';
 
 /**
  * Hard-redirect any /hivemind* hit on a non-HIVEMIND host (e.g. singulancelabs.com,
@@ -63,37 +62,12 @@ const HivemindExternalRedirect = () => {
 const MarketingHomepage = () => (
   <>
     <Seo canonical="https://singulancelabs.com/" />
-    <h1 className="sr-only">
-      SINGULANCE — AI workforce that runs inside memory. The AI operating layer for regulated Europe.
-    </h1>
     <React.Suspense fallback={<PublicPageLoading />}><MobileHomepage /></React.Suspense>
   </>
 );
 
-// New visitors retain the SINGULANCE marketing journey. A returning user is
-// recognized only by the server-authoritative session bootstrap and is then
-// taken to the public HIVEMIND landing page — never directly into the app.
-// This deliberately does not inspect browser storage or Google identity data.
-const ReturningUserMarketingHomepage = () => {
-  React.useEffect(() => {
-    let active = true;
-    const currentHost = window.location.hostname.toLowerCase();
-    if (currentHost !== 'singulancelabs.com' && currentHost !== 'www.singulancelabs.com') return undefined;
-
-    apiClient.controlPlane.get('/v1/bootstrap', { timeout: 3500 })
-      .then(({ data }) => {
-        if (active && data?.authenticated === true && data?.user?.id) {
-          window.location.replace(HIVEMIND_PUBLIC_LANDING_URL);
-        }
-      })
-      .catch(() => {
-        // Signed-out and temporarily offline visitors remain on marketing.
-      });
-    return () => { active = false; };
-  }, []);
-
-  return <MarketingHomepage />;
-};
+// The public company homepage stays visible; sign-in is an explicit action.
+const ReturningUserMarketingHomepage = MarketingHomepage;
 
 function App() {
   const isPublicProductHost = typeof window !== 'undefined' && ['singulancelabs.com', 'www.singulancelabs.com', 'next.singulancelabs.com'].includes(window.location.hostname);
@@ -165,6 +139,7 @@ function App() {
         <Route path="/hyperagents" element={<PublicProduct path="/hyperagents" />} />
 
         {/* Research pages */}
+        <Route path="/founding-hyperagents" element={<React.Suspense fallback={<PublicPageLoading />}><FoundingHyperagents /></React.Suspense>} />
         <Route path="/research" element={<React.Suspense fallback={<PublicPageLoading />}><ResearchIndex /></React.Suspense>} />
         <Route path="/account-deletion" element={<React.Suspense fallback={<PublicPageLoading />}><AccountDeletion /></React.Suspense>} />
         <Route path="/getruntime" element={<React.Suspense fallback={<PublicPageLoading />}><GetRuntime /></React.Suspense>} />

@@ -15,9 +15,10 @@ import PostQuantumResearch from '../src/components/research/PostQuantumResearch'
 import BenchmarkResearch from '../src/components/BenchmarkResearch';
 import PrivacySecurity from '../src/components/PrivacySecurity';
 import CookiePolicy from '../src/components/CookiePolicy';
+import FoundingHyperagents from '../src/components/FoundingHyperagents';
 import MobileHomepage from '../src/components/mobile/MobileHomepage';
 import HivemindRedirect from '../src/components/hivemind/HivemindRedirect';
-const pages = {'/icarus':<IcarusResearch productHome/>, '/getruntime':<GetRuntime/>, '/account-deletion':<AccountDeletion/>, '/runtime':<RuntimeProduct/>, '/research/runtime':<RuntimeResearch/>, '/tara':<PublicProduct path="/tara"/>, '/hyperagents':<PublicProduct path="/hyperagents"/>, '/':<MobileHomepage/>, '/hivemind':<HivemindRedirect/>, '/research':<ResearchIndex/>, '/research/icarus':<IcarusResearch/>, '/research/cognitive-swarm-intelligence':<CsiResearch/>, '/research/post-quantum-cryptography':<PostQuantumResearch/>, '/benchmark':<BenchmarkResearch/>, '/privacy':<PrivacySecurity mode="privacy"/>, '/security':<PrivacySecurity mode="security"/>, '/cookies':<CookiePolicy/>};
+const pages = {'/founding-hyperagents':<FoundingHyperagents/>, '/icarus':<IcarusResearch productHome/>, '/getruntime':<GetRuntime/>, '/account-deletion':<AccountDeletion/>, '/runtime':<RuntimeProduct/>, '/research/runtime':<RuntimeResearch/>, '/tara':<PublicProduct path="/tara"/>, '/hyperagents':<PublicProduct path="/hyperagents"/>, '/':<MobileHomepage/>, '/hivemind':<HivemindRedirect/>, '/research':<ResearchIndex/>, '/research/icarus':<IcarusResearch/>, '/research/cognitive-swarm-intelligence':<CsiResearch/>, '/research/post-quantum-cryptography':<PostQuantumResearch/>, '/benchmark':<BenchmarkResearch/>, '/privacy':<PrivacySecurity mode="privacy"/>, '/security':<PrivacySecurity mode="security"/>, '/cookies':<CookiePolicy/>};
 export async function renderPages(){
  const out={};
  for(const [path,page] of Object.entries(pages)) {
