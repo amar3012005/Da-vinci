@@ -1015,7 +1015,7 @@ The SINGULANCE Stack
 
 HIVEMIND connects company knowledge. Runtime is the proactive, always-on AI Chief of Staff that coordinates HyperAgents. ICARUS advances the research behind the system.
 
-[![HIVEMIND](https://singulancelabs.com/sp-hivemind.webp)
+[![HIVEMIND](https://singulancelabs.com/assets/product-stack/v1/hivemind-720.webp)
 
 Company understanding
 
@@ -1023,7 +1023,7 @@ Company understanding
 
 Connect documents, workspaces and meeting knowledge to understand decisions, commitments and what needs attention.
 
-Explore](https://singulancelabs.com/hivemind)[![Runtime](https://singulancelabs.com/assets/getruntime/company.webp)
+Explore](https://singulancelabs.com/hivemind)[![Runtime](https://singulancelabs.com/assets/product-stack/v1/runtime-720.webp)
 
 Anticipation and coordination
 
@@ -1031,7 +1031,7 @@ Anticipation and coordination
 
 Anticipate what needs attention, plan the next steps, delegate to specialist HyperAgents and review their work. Runtime brings you in when your judgment or permission is needed.
 
-Explore](https://singulancelabs.com/runtime)[![HyperAgents](https://singulancelabs.com/sp-hyperagents.webp)
+Explore](https://singulancelabs.com/runtime)[![HyperAgents](https://singulancelabs.com/assets/product-stack/v1/hyperagents-720.webp)
 
 Specialist execution
 
@@ -1039,7 +1039,7 @@ Specialist execution
 
 Specialists for research, operations, marketing and more, working with company context. Each has a role, a persistent workspace and deliverables; Runtime coordinates their work.
 
-Explore](https://singulancelabs.com/hyperagents)[![ICARUS](https://singulancelabs.com/thesis-greekgod.webp)
+Explore](https://singulancelabs.com/hyperagents)[![ICARUS](https://singulancelabs.com/assets/product-stack/v1/icarus-720.webp)
 
 Research and open source
 

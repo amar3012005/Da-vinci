@@ -72,7 +72,7 @@ const SubProducts = () => {
         {/* cards */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {PRODUCT_CATALOG.map((p, i) => (
-            <ProductCard key={p.name} {...p} eyebrow={p.role} desc={p.text} delay={i * 0.1} />
+            <ProductCard key={p.name} {...p} img={p.stackImg} avif={p.stackAvif} smallImg={p.stackSmall} smallAvif={p.stackSmallAvif} objectPosition="center top" eyebrow={p.role} desc={p.text} delay={i * 0.1} />
           ))}
         </div>
         <p className="mt-10 max-w-3xl text-sm leading-relaxed text-white/65">Prefer to talk? TARA brings voice conversations into HIVEMIND with the workspace context available to it. <a href="/tara" className="text-white underline underline-offset-4">Explore TARA voice</a>.</p>

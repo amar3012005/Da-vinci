@@ -7,7 +7,7 @@ import { ArrowUpRight } from 'lucide-react';
  * (perspective rotateX/Y driven by pointer), a glow that tracks the cursor, and
  * a copy/CTA layer that lifts on hover. One card per sub-product.
  */
-const ProductCard = ({ img, eyebrow, name, desc, href, delay = 0, objectPosition = 'center' }) => {
+const ProductCard = ({ img, avif, smallImg, smallAvif, eyebrow, name, desc, href, delay = 0, objectPosition = 'center' }) => {
   const ref = useRef(null);
   const [hover, setHover] = useState(false);
 
@@ -41,17 +41,20 @@ const ProductCard = ({ img, eyebrow, name, desc, href, delay = 0, objectPosition
       viewport={{ once: true, margin: '-80px' }}
       transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
       style={{ rotateX: rotX, rotateY: rotY, transformPerspective: 1000 }}
-      className="group relative block h-[520px] w-full min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#0a0d16] no-underline shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
+      className="group relative block aspect-[1/2] w-full min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#0a0d16] no-underline shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
     >
       {/* silhouette */}
-      <img
-        src={img}
-        alt={name}
-        loading="lazy"
-        decoding="async"
-        style={{ objectPosition }}
-        className="absolute inset-0 h-full w-full object-cover opacity-90 transition-transform duration-700 ease-out group-hover:scale-[1.05]"
-      />
+      <picture>
+        {avif && <source type="image/avif" srcSet={`${smallAvif} 480w, ${avif} 720w`} sizes="(min-width: 1024px) 280px, (min-width: 640px) 46vw, 90vw" />}
+        <img
+          src={img}
+          srcSet={smallImg ? `${smallImg} 480w, ${img} 720w` : undefined}
+          sizes="(min-width: 1024px) 280px, (min-width: 640px) 46vw, 90vw"
+          width={720} height={1440} alt={name} loading="lazy" decoding="async"
+          style={{ objectPosition }}
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]"
+        />
+      </picture>
 
       {/* cursor-tracking glow */}
       <motion.div
@@ -66,7 +69,7 @@ const ProductCard = ({ img, eyebrow, name, desc, href, delay = 0, objectPosition
       />
 
       {/* legibility gradient */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05070f] via-[#05070f]/60 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05070f] via-[#05070f]/10 to-transparent" />
 
       {/* copy */}
       <div className="absolute inset-x-0 bottom-0 p-6">
