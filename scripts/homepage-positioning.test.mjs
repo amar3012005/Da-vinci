@@ -15,3 +15,12 @@ test('the post-film story avoids old conflicting positioning and unconditional c
   assert.ok(html.includes('Product demo · Coming soon'));
   assert.ok(html.includes('Bring you in'));
 });
+
+test('fallback metadata and utility navigation include the same product roles',()=>{
+  const fallback=readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
+  assert.ok(!fallback.includes('regulated Europe'));
+  assert.ok(fallback.includes('coordinating specialist HyperAgents'));
+  const app=readFileSync(new URL('../src/App.js',import.meta.url),'utf8');
+  const utility=app.slice(app.indexOf('aria-label="Explore SINGULANCE products"'));
+  for(const path of ['hivemind','runtime','hyperagents','icarus']) assert.ok(utility.includes('https://singulancelabs.com/'+path));
+});

@@ -159,8 +159,10 @@ function App() {
       </Routes>
       {isPublicProductHost && ['/', '/hivemind'].includes(window.location.pathname) && <nav aria-label="Explore SINGULANCE products" style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:24,padding:'24px',background:'#05070f',color:'#dce8ff',font:'600 14px system-ui'}}>
         <a href="https://singulancelabs.com/hivemind" style={{color:'inherit'}}>HIVEMIND</a>
+        <a href="https://singulancelabs.com/runtime" style={{color:'inherit'}}>Runtime</a>
         <a href="https://singulancelabs.com/tara" style={{color:'inherit'}}>TARA</a>
-        <a href="https://singulancelabs.com/hyperagents" style={{color:'inherit'}}>HYPERAGENTS</a>
+        <a href="https://singulancelabs.com/hyperagents" style={{color:'inherit'}}>HyperAgents</a>
+        <a href="https://singulancelabs.com/icarus" style={{color:'inherit'}}>ICARUS</a>
       </nav>}
     </Router>
   );
