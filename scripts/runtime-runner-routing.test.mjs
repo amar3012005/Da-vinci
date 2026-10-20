@@ -33,10 +33,16 @@ test('Brain documents always redirect to next while correct native panes remain 
   const assets={fetch:async()=>new Response('<html>persistent shell</html>',{headers:{'content-type':'text/html'}})};
   for (const route of ['/hivemind/app/overview/new','/hivemind/app/overview/session/saved']) {
     const response=await worker.fetch(new Request(publicOrigin+route),{...env,ASSETS:assets});
-    assert.equal(response.status,302);assert.equal(response.headers.get('location'),'https://next.singulancelabs.com'+route);
+    assert.equal(response.status,307);assert.equal(response.headers.get('location'),'https://next.singulancelabs.com'+route);
   }
   const wrong=await worker.fetch(new Request(publicOrigin+'/hivemind/app/overview/session/saved?native_pane=1'),{...env,ASSETS:assets});
-  assert.equal(wrong.status,302);assert.equal(wrong.headers.get('location'),'https://next.singulancelabs.com/hivemind/app/overview/session/saved');
+  assert.equal(wrong.status,307);assert.equal(wrong.headers.get('location'),'https://next.singulancelabs.com/hivemind/app/overview/session/saved');
   const correct=await worker.fetch(new Request('https://next.singulancelabs.com/hivemind/app/overview/session/saved?native_pane=1'),{...env,ASSETS:assets});
   assert.equal(correct.status,200);assert.equal(correct.headers.get('content-security-policy'),'frame-ancestors https://next.singulancelabs.com https://runtime-runner.singulancelabs.com');
+});
+
+test('Runtime top-level documents terminate redirects with the shell', async () => {
+ const response = await worker.fetch(new Request(publicOrigin+'/hivemind/app/employee/harness'), {...env, ASSETS:{fetch:async()=>new Response('<html>shell</html>', {headers:{'content-type':'text/html'}})}});
+ assert.equal(response.status,200);
+ assert.equal(response.headers.get('location'),null);
 });

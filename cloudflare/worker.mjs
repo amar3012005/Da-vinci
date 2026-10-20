@@ -525,7 +525,7 @@ export default {
     const runtimeCover = await getRuntimePublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
     if (runtimeCover) return runtimeCover;
     const workspaceRedirect = workspaceDocumentRedirect(url, { embedded: request.headers.get('sec-fetch-dest') === 'iframe' });
-    if (workspaceRedirect && ['GET', 'HEAD'].includes(request.method)) return Response.redirect(workspaceRedirect, 302);
+    if (workspaceRedirect && ['GET', 'HEAD'].includes(request.method)) return new Response(null, { status: 307, headers: { location: workspaceRedirect, 'cache-control': 'private, no-store' } });
     if (url.searchParams.get('native_pane') === '1') {
       const runtimePane = /^\/hivemind\/app\/employee\/harness(?:\/(?:new|session\/[A-Za-z0-9_-]+))?\/?$/.test(pathname);
       const brainPane = /^\/hivemind\/app\/overview(?:\/(?:new|dreaming|session\/[A-Za-z0-9_-]+))?\/?$/.test(pathname);
@@ -559,15 +559,6 @@ export default {
       && /^\/hivemind\/app\/overview\/?$/u.test(pathname)) {
       const destination = new URL(url);
       destination.pathname = '/hivemind/app/employee/harness';
-      return new Response(null, { status: 307, headers: { location: destination.toString(), 'cache-control': 'private, no-store' } });
-    }
-    // Canonical employee documents belong to Runtime. Keep native iframe and
-    // API transport routing separate from top-level workspace navigation.
-    if (url.hostname === 'next.singulancelabs.com' && ['GET', 'HEAD'].includes(request.method)
-      && !url.searchParams.has('native_pane')
-      && /^\/hivemind\/app\/(?:employee\/(?:harness|dots|create|apps)|employees)(?:\/|$)/u.test(pathname)) {
-      const destination = new URL(url);
-      destination.host = 'runtime-runner.singulancelabs.com';
       return new Response(null, { status: 307, headers: { location: destination.toString(), 'cache-control': 'private, no-store' } });
     }
     if (pathname.startsWith('/api/hivemind/model-connection/')) return proxyModelConnection(request, env);

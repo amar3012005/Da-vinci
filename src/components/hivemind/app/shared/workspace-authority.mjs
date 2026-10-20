@@ -1,12 +1,18 @@
 export const MAIN_ORIGIN = 'https://next.singulancelabs.com';
 export const RUNTIME_ORIGIN = 'https://runtime-runner.singulancelabs.com';
 export function isEmployeePage(path) {
-  return /^\/hivemind\/app\/employee(?:\/|$)/.test(path);
+  return /^\/hivemind\/app\/(?:employee|employees)(?:\/|$)/.test(path);
 }
 // Only document navigation changes authority. Transport, assets and OAuth
 // callback endpoints retain their existing owners.
 export function workspaceDocumentRedirect(input, { embedded = false } = {}) {
   const url = new URL(input);
+  if (![MAIN_ORIGIN, RUNTIME_ORIGIN].includes(url.origin)) return null;
+  if (isEmployeePage(url.pathname)) {
+    if (url.origin === RUNTIME_ORIGIN || embedded || url.searchParams.get('native_pane') === '1') return null;
+    url.host = new URL(RUNTIME_ORIGIN).host;
+    return url.href;
+  }
   if (url.origin !== RUNTIME_ORIGIN) return null;
   if (url.pathname === '/hivemind/apps/connected') return null;
   if (isEmployeePage(url.pathname) && (embedded || url.searchParams.get('native_pane') === '1')) return null;
@@ -35,7 +41,6 @@ export function trustedRuntimeReturn(search) {
     const target = new URL(value);
     if (target.origin !== RUNTIME_ORIGIN || target.username || target.password || !isEmployeePage(target.pathname)) return null;
     target.searchParams.delete('native_pane');
-    target.host = new URL(MAIN_ORIGIN).host;
     target.searchParams.set('auth', 'callback');
     return target.href;
   } catch { return null; }
