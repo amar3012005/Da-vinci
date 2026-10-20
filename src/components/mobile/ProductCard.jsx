@@ -69,7 +69,7 @@ const ProductCard = ({ img, avif, smallImg, smallAvif, eyebrow, name, desc, href
       />
 
       {/* legibility gradient */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05070f] via-[#05070f]/10 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05070f] via-[#05070f]/60 to-transparent" />
 
       {/* copy */}
       <div className="absolute inset-x-0 bottom-0 p-6">
