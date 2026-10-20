@@ -8,7 +8,7 @@ export default function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
-  const authorityRedirect = workspaceDocumentRedirect(window.location.href);
+  const authorityRedirect = workspaceDocumentRedirect(window.location.href, { embedded: window.parent !== window });
   const loginRedirect = !loading && !isAuthenticated && window.location.origin === RUNTIME_ORIGIN
     ? runtimeLoginUrl(window.location.href) : null;
   useEffect(() => {

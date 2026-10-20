@@ -524,7 +524,7 @@ export default {
     if (icarusCover) return icarusCover;
     const runtimeCover = await getRuntimePublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
     if (runtimeCover) return runtimeCover;
-    const workspaceRedirect = workspaceDocumentRedirect(url);
+    const workspaceRedirect = workspaceDocumentRedirect(url, { embedded: request.headers.get('sec-fetch-dest') === 'iframe' });
     if (workspaceRedirect && ['GET', 'HEAD'].includes(request.method)) return Response.redirect(workspaceRedirect, 302);
     if (url.searchParams.get('native_pane') === '1') {
       const runtimePane = /^\/hivemind\/app\/employee\/harness(?:\/(?:new|session\/[A-Za-z0-9_-]+))?\/?$/.test(pathname);

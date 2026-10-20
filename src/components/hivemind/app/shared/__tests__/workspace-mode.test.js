@@ -19,11 +19,11 @@ test('background Dot unread requires an owned binding and real local read waterm
   expect(ownedOpenDotRoomStatuses([{ ...employees[0], dotId: 'foreign' }], roster)).toEqual({});
 });
 
-test('shared apps keep employee shell and Runtime host without changing Brain connectors', () => {
+test('shared apps keep the next shell without changing Brain connectors', () => {
   const path = '/hivemind/app/employee/apps';
   expect(workspaceModeForPath(path)).toBe('hyperagents');
-  expect(workspaceModeDestination(path, 'https://runtime-runner.singulancelabs.com')).toBe(path);
-  expect(workspaceModeDestination(path, 'https://next.singulancelabs.com')).toBe(`https://runtime-runner.singulancelabs.com${path}`);
+  expect(workspaceModeDestination(path, 'https://runtime-runner.singulancelabs.com')).toBe(`https://next.singulancelabs.com${path}`);
+  expect(workspaceModeDestination(path, 'https://next.singulancelabs.com')).toBe(path);
   expect(workspaceModeForPath('/hivemind/app/connectors')).toBe('hivemind');
   expect(workspaceModeForPath('/hivemind/app/employee/apps-fake')).toBe('hivemind');
 });

@@ -1,4 +1,3 @@
-import {isCompanyOnboardingPath} from './workspace-mode-policy.mjs';
 /** One route-derived mode for the shell, selector and sidebar. */
 export function workspaceModeForPath(pathname = '') {
   if (/^\/hivemind\/app\/tara(?:\/|$)/.test(pathname)) return 'tara';
@@ -6,14 +5,12 @@ export function workspaceModeForPath(pathname = '') {
   return 'hivemind';
 }
 
-/** Each workspace mode opens on its owning production frontend origin. */
+/** The public workspace shell stays on next; native clients retain isolated iframe origins. */
 export function workspaceModeDestination(pathname, currentOrigin) {
-  const brainOrigin = 'https://next.singulancelabs.com';
+  const workspaceOrigin = 'https://next.singulancelabs.com';
   const runtimeOrigin = 'https://runtime-runner.singulancelabs.com';
-  if (![brainOrigin, runtimeOrigin].includes(currentOrigin)) return pathname;
-  const mode = workspaceModeForPath(pathname);
-  const owner = mode === 'hyperagents' && !isCompanyOnboardingPath(pathname) ? runtimeOrigin : brainOrigin;
-  return owner === currentOrigin ? pathname : `${owner}${pathname}`;
+  if (![workspaceOrigin, runtimeOrigin].includes(currentOrigin)) return pathname;
+  return currentOrigin === workspaceOrigin ? pathname : `${workspaceOrigin}${pathname}`;
 }
 
 /** Reopening Apps preserves the original employee return destination. */

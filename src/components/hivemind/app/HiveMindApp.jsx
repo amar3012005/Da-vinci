@@ -132,7 +132,7 @@ function CanonicalCRMRoute() {
  */
 export default function HiveMindApp() {
   const authorityLocation = useLocation();
-  const authorityRedirect = workspaceDocumentRedirect(new URL(authorityLocation.pathname + authorityLocation.search + authorityLocation.hash, window.location.origin));
+  const authorityRedirect = workspaceDocumentRedirect(new URL(authorityLocation.pathname + authorityLocation.search + authorityLocation.hash, window.location.origin), { embedded: window.parent !== window });
   useEffect(() => { if (authorityRedirect) window.location.replace(authorityRedirect); }, [authorityRedirect]);
   if (authorityRedirect) return null;
   const isPlatformAdminHost = typeof window !== 'undefined'
