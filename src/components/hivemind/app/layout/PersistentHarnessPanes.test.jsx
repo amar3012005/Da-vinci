@@ -107,8 +107,9 @@ it('accepts a valid scoped route as identity proof when the initial identity mes
   await act(async()=>root.render(<PersistentHarnessPanes/>));
   const frame=host.querySelector('iframe');
   const emit=async(scope)=>act(async()=>window.dispatchEvent(new MessageEvent('message',{origin:'https://runtime-runner.singulancelabs.com',source:frame.contentWindow,data:{type:'hivemind.native-pane',version:1,scope,kind:'route',path:'/hivemind/app/employee/harness/session/saved'}})));
-  await emit('foreign:org-a');expect(frame.style.visibility).toBe('hidden');
-  await emit('user-a:org-a');expect(frame.style.visibility).toBe('visible');
+  await emit('foreign:org-a');expect(host.querySelector('[data-native-pane-loading]')).not.toBeNull();
+  expect(frame.style.visibility).toBe('visible');
+  await emit('user-a:org-a');expect(host.querySelector('[data-native-pane-loading]')).toBeNull();
  } finally {await act(async()=>root.unmount());host.remove();}
 });
 

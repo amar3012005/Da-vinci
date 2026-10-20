@@ -102,8 +102,8 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
     return () => { stopped=true; observer?.disconnect(); if (scheduled) cancelAnimationFrame(scheduled); element?.removeEventListener('load',attach); publish(false); };
   }, [mode, active, identified, route]);
   return <section hidden={!active} data-native-pane={mode} className="relative h-full min-h-0" style={{ display: active ? 'block' : 'none' }}>
-    {!identified && <div className="absolute inset-0 grid place-items-center bg-[#faf9f4]">{error ? <div role="alert" className="max-w-sm text-center text-sm"><p>This conversation hasn’t connected yet. Your saved work is unchanged.</p><button className="mt-3 underline" onClick={() => { setError(false); setRetry(value => value + 1); frame.current.src = paneSource(nativePath.current || entry, mode); }}>Try again</button></div> : <AsciiWorkspaceLoading />}</div>}
-    <iframe ref={frame} title={mode === 'brain' ? 'Brain conversation' : 'Runtime and HyperAgents conversation'} src={paneSource(entry, mode)} onLoad={() => send({ kind: 'hello' })} allow="microphone; autoplay; clipboard-write" referrerPolicy="strict-origin" className="h-full w-full border-0 bg-[#faf9f4]" style={{ visibility: identified ? 'visible' : 'hidden' }} />
+    {!identified && <div data-native-pane-loading className="absolute inset-0 z-10 grid place-items-center bg-[#faf9f4]">{error ? <div role="alert" className="max-w-sm text-center text-sm"><p>This conversation hasn’t connected yet. Your saved work is unchanged.</p><button className="mt-3 underline" onClick={() => { setError(false); setRetry(value => value + 1); frame.current.src = paneSource(nativePath.current || entry, mode); }}>Try again</button></div> : <AsciiWorkspaceLoading />}</div>}
+    <iframe ref={frame} title={mode === 'brain' ? 'Brain conversation' : 'Runtime and HyperAgents conversation'} src={paneSource(entry, mode)} onLoad={() => send({ kind: 'hello' })} allow="microphone; autoplay; clipboard-write" referrerPolicy="strict-origin" className="h-full w-full border-0 bg-[#faf9f4]" style={{ visibility: 'visible' }} />
   </section>;
 }
 
