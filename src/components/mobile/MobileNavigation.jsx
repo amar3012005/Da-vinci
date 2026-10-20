@@ -69,13 +69,10 @@ const MobileNavigation = () => {
   const c = t(isDark);
   const copy = getMobileCopy(locale);
   const navLinks = [
-    { label: 'Products', href: HIVEMIND_URL, menu: 'Products' },
-    { label: copy.nav.links.solutions, sectionId: 'solutions', menu: 'Solutions' },
-    { label: 'Developers', href: hivemindHref('#developers'), menu: 'Developers' },
-    { label: 'Pricing', href: hivemindHref('#pricing'), menu: 'Pricing' },
-    { label: 'Docs', href: hivemindHref('/docs'), menu: 'Docs' },
-    { label: copy.nav.links.research, href: '/research', menu: 'Research' },
-    { label: 'Benchmark', href: '/benchmark', menu: 'Research' },
+    { label: 'Products', sectionId: 'products', menu: 'Products' },
+    { label: 'Research', href: '/research', menu: 'Research' },
+    { label: 'Open source', href: 'https://github.com/amar3012005' },
+    { label: 'About', sectionId: 'about' },
   ];
   const mobileOnlyLinks = [...navLinks, { label: copy.nav.links.contact, sectionId: 'cta-section' }];
 
@@ -198,15 +195,15 @@ const MobileNavigation = () => {
               </button>
               <a
                 href={hivemindHref('/login')}
-                className={`text-[13px] font-medium ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} transition-colors no-underline px-3`}
+                className={`whitespace-nowrap text-[13px] font-medium ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} transition-colors no-underline px-3`}
               >
                 Sign in
               </a>
               <a
-                href={HIVEMIND_URL}
-                className={`flex items-center gap-1.5 px-5 py-2 ${c.accentBg} ${c.accentText} text-xs font-semibold rounded-full ${c.accentHover} transition-colors uppercase tracking-[0.1em] cursor-pointer border-none no-underline`}
+                href="#early-access"
+                className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-5 py-2 ${c.accentBg} ${c.accentText} text-xs font-semibold rounded-full ${c.accentHover} transition-colors uppercase tracking-[0.1em] cursor-pointer border-none no-underline`}
               >
-                HIVEMIND
+                Join early access
                 <ArrowRight size={12} />
               </a>
             </div>
@@ -323,11 +320,11 @@ const MobileNavigation = () => {
 
               <div className="flex flex-col gap-3 mt-8">
                 <a
-                  href={HIVEMIND_URL}
+                  href="#early-access"
                   onClick={() => setMobileOpen(false)}
                   className={`w-full py-3.5 rounded-full ${c.accentBg} ${c.accentText} ${c.accentHover} font-semibold text-xs uppercase tracking-[0.1em] no-underline flex items-center justify-center gap-2 transition-colors`}
                 >
-                  HIVEMIND
+                  Join early access
                   <ArrowRight size={14} />
                 </a>
               </div>

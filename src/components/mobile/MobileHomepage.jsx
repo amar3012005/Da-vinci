@@ -96,6 +96,7 @@ const PageContent = () => {
             <MobileNavigation />
             {!isMobile && <React.Suspense fallback={null}><CinematicMode /></React.Suspense>}
             <MobileHero />
+            <ProactiveHomepage embedded />
             {!isMobile && <React.Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
                 <HorizonScene />
                 {/* <FallScene field={field} /> */}
@@ -106,8 +107,6 @@ const PageContent = () => {
             </React.Suspense>}
             <ThesisSection />
             {!isMobile && <React.Suspense fallback={<div className="min-h-screen" aria-busy="true" />}><MobileAboutSection /></React.Suspense>}
-            {/* Keep the original experience intact; extend it before its footer. */}
-            <ProactiveHomepage embedded />
             <SingulanceFooter />
             {/* HIDDEN (re-add on singulancelabs.com): Talk-to-Tara voice widget + orb
             {isIndicDomain ? <TaraVoiceWidgetIndic /> : <TaraVoiceWidget />} */}

@@ -2,8 +2,6 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { COVER_LQIP } from './three/coverLqip';
-import HeroCtas from './HeroCtas';
-import { HIVEMIND_LANDING_URL } from './hivemindLinks';
 
 const HeroScene = lazy(() => import('./three/HeroScene'));
 const CinematicPlate = lazy(() => import('./three/CinematicPlate'));
@@ -93,13 +91,9 @@ const BannerLockup = () => (
       <span className="absolute -right-px -top-px h-3 w-3 border-r-2 border-t-2 border-white" />
       <span className="absolute -bottom-px -left-px h-3 w-3 border-b-2 border-l-2 border-white" />
       <span className="absolute -bottom-px -right-px h-3 w-3 border-b-2 border-r-2 border-white" />
-      <a
-        href={HIVEMIND_LANDING_URL}
-        aria-label="Run your AI company. Enter Hivemind."
-        className="flex h-full w-full cursor-pointer items-center justify-center font-mono text-[10px] font-semibold uppercase tracking-[0.26em] text-white no-underline transition-[letter-spacing,opacity] duration-300 hover:opacity-80 sm:text-xs sm:tracking-[0.34em] sm:hover:tracking-[0.38em]"
-      >
-        [ Run your AI company ]
-      </a>
+      <h1 className="text-[clamp(1.35rem,3vw,2.15rem)] font-medium leading-tight tracking-tight text-white">
+        Building proactive intelligence.
+      </h1>
     </div>
   </div>
 );
@@ -109,10 +103,16 @@ const HeroActionRail = ({ delay }) => (
     initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay, ease }}
     className="w-full max-w-6xl px-5 sm:px-8"
   >
-    <div className="flex flex-col items-center gap-3 border-y border-white/20 py-4 lg:grid lg:grid-cols-[minmax(180px,1fr)_minmax(440px,2.1fr)_minmax(180px,1fr)] lg:gap-6">
-      <HeroCtas delay={0} banner />
-      <p className="order-first whitespace-normal lg:whitespace-nowrap text-center text-sm lg:text-[clamp(0.85rem,1.05vw,1rem)] font-light leading-relaxed text-white/75 lg:order-2 lg:px-2">
-        The AI workforce that runs inside your organization&apos;s memory.
+    <div className="flex flex-col items-center gap-3">
+      <p className="mx-auto max-w-3xl text-center text-[13px] leading-relaxed text-white/90 sm:text-sm">
+        A company Brain that connects what your people know. An AI Chief of Staff that anticipates what needs attention and carries work forward.
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <a href="#early-access" className="inline-flex min-h-11 items-center justify-center rounded border border-[#227dff] bg-[#227dff] px-6 text-sm font-semibold text-white no-underline hover:bg-[#126ce8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">Join early access</a>
+        <a href="#demo" className="inline-flex min-h-11 items-center justify-center gap-3 rounded border border-white/50 bg-black/30 px-5 text-sm text-white no-underline hover:bg-black/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">Watch the demo <span className="text-[10px] text-white/70">Coming soon</span></a>
+      </div>
+      <p className="mx-auto max-w-3xl text-center text-[10px] leading-relaxed text-white/75 sm:text-[11px]">
+        HIVEMIND understands your company. Runtime moves the work forward. ICARUS advances the research behind it.
       </p>
     </div>
   </motion.div>
@@ -122,7 +122,7 @@ const HeroActionRail = ({ delay }) => (
 const DesktopHero = ({ immersive }) => (
   <section
     id="hero"
-    className="relative hidden h-[100svh] w-full overflow-hidden md:block"
+    className="relative hidden h-[100svh] min-h-[720px] w-full overflow-hidden md:block"
     style={{ background: '#05070f', backgroundImage: `url(${COVER_LQIP})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
   >
     {/* plate — fill full width, crop top/bottom (wordmark sides never cut) */}
@@ -151,12 +151,12 @@ const DesktopHero = ({ immersive }) => (
     >
       <motion.span initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 1, delay: 0.5, ease }} className="h-px w-12 origin-center bg-white/35" />
       <p className="px-6 text-center text-[11px] font-mono uppercase tracking-[0.42em] text-white/70">
-        The AI Operating Layer for Regulated Europe
+        Company understanding. Continued momentum.
       </p>
     </motion.div>
 
     {/* Framed operating banner: the clear public entry point. */}
-    <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-5 pb-[7vh] text-center">
+    <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-3 pb-[4vh] text-center">
       <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.55, ease }} className="w-full">
         <BannerLockup />
       </motion.div>
@@ -181,7 +181,7 @@ const MobileHeroBand = ({ water, onToggleMotion }) => (
       initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2, ease }}
       className="px-5 text-center text-[10px] font-medium uppercase tracking-[0.32em] text-white/70"
     >
-      The AI Operating Layer for Regulated Europe
+      Company understanding. Continued momentum.
     </motion.p>
 
     {/* Reserve the poster geometry before loading optional motion. */}
@@ -208,7 +208,7 @@ const MobileHeroBand = ({ water, onToggleMotion }) => (
 
     {/* scroll-down cue replaces the CTA */}
     <button
-      onClick={() => document.getElementById('solutions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+      onClick={() => document.getElementById('main')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
       aria-label="Scroll down"
       className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/5 text-white backdrop-blur-md"
     >

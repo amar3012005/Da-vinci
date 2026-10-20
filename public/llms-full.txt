@@ -755,19 +755,151 @@ Canonical page: https://singulancelabs.com/hyperagents
 
 ![SINGULANCE](https://singulancelabs.com/singulance-cover-900.webp)
 
-The AI Operating Layer for Regulated Europe
+Company understanding. Continued momentum.
 
-[[ Run your AI company ]](https://next.singulancelabs.com/)
+# Building proactive intelligence.
 
-The AI workforce that runs inside your organization's memory.
+A company Brain that connects what your people know. An AI Chief of Staff that anticipates what needs attention and carries work forward.
 
-The AI Operating Layer for Regulated Europe
+[Join early access](#early-access)[Watch the demo Coming soon](#demo)
+
+HIVEMIND understands your company. Runtime moves the work forward. ICARUS advances the research behind it.
+
+Company understanding. Continued momentum.
 
 ![SINGULANCE](https://singulancelabs.com/singulance-cover-900.webp)
 
-[[ Run your AI company ]](https://next.singulancelabs.com/)
+# Building proactive intelligence.
 
-The AI workforce that runs inside your organization's memory.
+A company Brain that connects what your people know. An AI Chief of Staff that anticipates what needs attention and carries work forward.
+
+[Join early access](#early-access)[Watch the demo Coming soon](#demo)
+
+HIVEMIND understands your company. Runtime moves the work forward. ICARUS advances the research behind it.
+
+A closer look
+
+## From a conversation
+to work carried forward.
+
+Product demo · Coming soon
+
+We’re preparing a short look at a meeting decision becoming company context, and that context informing the next piece of work.
+
+The workflow below is illustrative, not a recording of live product behavior.
+
+Three connected parts of SINGULANCE
+
+## Understanding is only
+the beginning.
+
+01 / UNDERSTAND
+
+✳
+
+### HIVEMIND
+
+#### Your proactive company Brain
+
+Connect documents, workspaces and meeting knowledge to understand decisions, commitments and what needs attention.
+
+[Explore HIVEMIND ↗](https://singulancelabs.com/hivemind)
+
+02 / CARRY FORWARD
+
+↗
+
+### Runtime
+
+#### Your anticipatory AI Chief of Staff
+
+Turn an agenda into specialist work, reviewed results and continued progress—with your judgment where needed.
+
+[Meet Runtime ↗](https://singulancelabs.com/runtime)
+
+03 / ADVANCE
+
+◎
+
+### ICARUS
+
+#### The research behind the intelligence
+
+Explore our research and open-source work in memory and agent execution.
+
+[Explore the research ↗](https://singulancelabs.com/research/icarus)
+
+An illustrative workflow / Customer commitments
+
+## A promise made.
+A shared understanding.
+A clear next step.
+
+- 01 / Before
+
+### Bring the context into the room.
+
+Connect the customer’s request with relevant documents and earlier decisions, so your team starts with shared context.
+- 02 / During
+
+### Make the commitment clear.
+
+Capture what was decided, who committed to what, and which questions still need an answer. HIVEMIND develops the shared understanding.
+- 03 / After
+
+### Carry the work forward.
+
+Runtime coordinates the specialist work and reviewed results, bringing your judgment in where it is needed.
+
+Explore the work behind it
+
+## Read the research.
+Inspect the methods.
+
+Our published research and evaluations are a starting point for understanding the approach. Read results alongside their methods and limitations.
+
+[Agent memoryICARUS research ↗](https://singulancelabs.com/research/icarus)[Continuity and human controlRuntime design principles ↗](https://singulancelabs.com/research/runtime)[Evaluation conditions and resultsMemory benchmarks ↗](https://singulancelabs.com/benchmark)
+
+A note from the founder
+
+## Less lost context.
+More work moving forward.
+
+We’re building SINGULANCE around a simple ambition: help companies connect what their people know with the work that needs to happen next. HIVEMIND develops the shared understanding; Runtime carries the resulting work forward.
+
+Amar Sai Founder & CEO, SINGULANCE
+
+[Talk to the founder ↗](https://cal.com/amar-sai-gadde-eluoct/30min)
+
+![SINGULANCE cinematic landscape: a workspace looking out across a mountain valley](https://singulancelabs.com/horizon-frames/f_072.webp)
+Founder video · Coming soon
+
+A cinematic vision of a different way to work.
+
+Vision film · Coming soon
+
+Vision film playback is coming soon. This artwork expresses our ambition, rather than a live product demonstration.
+
+Build with us
+
+## Help shape proactive
+intelligence.
+
+Tell us where your company loses context or momentum. We’re inviting early users to explore HIVEMIND and Runtime.
+
+✳
+
+Email addressName (optional)What would you like help with? (optional)Choose an areaCompany knowledgeMeeting follow-throughSpecialist executionResearch/development
+
+Requests are reviewed. Selected applicants hear back by email. This requests product access and does not subscribe you to marketing updates. See our [privacy policy](https://singulancelabs.com/privacy).
+
+For avatar creators
+
+## Founding HyperAgents Collection
+
+A separate creative campaign. Coming soon.
+
+[Explore the collection ↗](https://singulancelabs.com/founding-hyperagents)
 
 ## The New Era
 
@@ -940,144 +1072,6 @@ SINGULANCE AI](https://www.linkedin.com/company/singulance-ai/?viewAsMember=true
 [Write to us](mailto:support@singulancelabs.com)
 
 SINGULANCE / 2026
-
-Company understanding. Continued momentum.
-
-# Building proactive
-intelligence.
-
-A company Brain that connects what your people know. An AI Chief of Staff that anticipates what needs attention and carries work forward.
-
-[Join early access ↗](#early-access)[▷ Watch the demo Coming soon](#demo)
-
-HIVEMIND understands your company. Runtime moves the work forward.
-ICARUS advances the research behind it.
-
-Explore what we’re building ↓
-
-A closer look
-
-## From a conversation
-to work carried forward.
-
-Product demo · Coming soon
-
-We’re preparing a short look at a meeting decision becoming company context, and that context informing the next piece of work.
-
-The workflow below is illustrative, not a recording of live product behavior.
-
-Three connected parts of SINGULANCE
-
-## Understanding is only
-the beginning.
-
-01 / UNDERSTAND
-
-✳
-
-### HIVEMIND
-
-#### Your proactive company Brain
-
-Connect documents, workspaces and meeting knowledge to understand decisions, commitments and what needs attention.
-
-[Explore HIVEMIND ↗](https://singulancelabs.com/hivemind)
-
-02 / CARRY FORWARD
-
-↗
-
-### Runtime
-
-#### Your anticipatory AI Chief of Staff
-
-Turn an agenda into specialist work, reviewed results and continued progress—with your judgment where needed.
-
-[Meet Runtime ↗](https://singulancelabs.com/runtime)
-
-03 / ADVANCE
-
-◎
-
-### ICARUS
-
-#### The research behind the intelligence
-
-Explore our research and open-source work in memory and agent execution.
-
-[Explore the research ↗](https://singulancelabs.com/research/icarus)
-
-An illustrative workflow / Customer commitments
-
-## A promise made.
-A shared understanding.
-A clear next step.
-
-- 01 / Before
-
-### Bring the context into the room.
-
-Connect the customer’s request with relevant documents and earlier decisions, so your team starts with shared context.
-- 02 / During
-
-### Make the commitment clear.
-
-Capture what was decided, who committed to what, and which questions still need an answer. HIVEMIND develops the shared understanding.
-- 03 / After
-
-### Carry the work forward.
-
-Runtime coordinates the specialist work and reviewed results, bringing your judgment in where it is needed.
-
-Explore the work behind it
-
-## Read the research.
-Inspect the methods.
-
-Our published research and evaluations are a starting point for understanding the approach. Read results alongside their methods and limitations.
-
-[Agent memoryICARUS research ↗](https://singulancelabs.com/research/icarus)[Continuity and human controlRuntime design principles ↗](https://singulancelabs.com/research/runtime)[Evaluation conditions and resultsMemory benchmarks ↗](https://singulancelabs.com/benchmark)
-
-A note from the founder
-
-## Less lost context.
-More work moving forward.
-
-We’re building SINGULANCE around a simple ambition: help companies connect what their people know with the work that needs to happen next. HIVEMIND develops the shared understanding; Runtime carries the resulting work forward.
-
-Amar Sai Founder & CEO, SINGULANCE
-
-[Talk to the founder ↗](https://cal.com/amar-sai-gadde-eluoct/30min)
-
-![SINGULANCE cinematic landscape: a workspace looking out across a mountain valley](https://singulancelabs.com/horizon-frames/f_072.webp)
-Founder video · Coming soon
-
-A cinematic vision of a different way to work.
-
-Vision film · Coming soon
-
-Vision film playback is coming soon. This artwork expresses our ambition, rather than a live product demonstration.
-
-Build with us
-
-## Help shape proactive
-intelligence.
-
-Tell us where your company loses context or momentum. We’re inviting early users to explore HIVEMIND and Runtime.
-
-✳
-
-Email addressName (optional)What would you like help with? (optional)Choose an areaCompany knowledgeMeeting follow-throughSpecialist executionResearch/development
-
-Requests are reviewed. Selected applicants hear back by email. This requests product access and does not subscribe you to marketing updates. See our [privacy policy](https://singulancelabs.com/privacy).
-
-For avatar creators
-
-## Founding HyperAgents Collection
-
-A separate creative campaign. Coming soon.
-
-[Explore the collection ↗](https://singulancelabs.com/founding-hyperagents)
 
 ## Explore SINGULANCE
 

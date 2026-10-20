@@ -24,7 +24,10 @@ test('the same poster stays mounted when the optional scene replaces its lazy fa
   await act(async()=>{idle();});
   expect(screen.getByTestId('water-scene')).toBeTruthy();
   expect(desktop.getByAltText('SINGULANCE')).toBe(poster);
-  expect(desktop.getByRole('button',{name:'Talk to founder'})).toBeTruthy();
+  expect(desktop.getByRole('heading',{name:'Building proactive intelligence.'})).toBeTruthy();
+  expect(desktop.getByRole('link',{name:'Join early access'}).getAttribute('href')).toBe('#early-access');
+  expect(desktop.getByRole('link',{name:/Watch the demo/}).getAttribute('href')).toBe('#demo');
+  expect(desktop.queryByText(/Run your AI company/)).toBeNull();
 });
 
 test('WebGL or texture failure removes only motion and preserves poster and controls',()=>{
