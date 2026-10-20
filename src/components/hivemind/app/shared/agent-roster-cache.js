@@ -12,13 +12,13 @@ export function createAgentRosterCache(fetchProfiles, now = Date.now) {
   };
   return {
     peek: scope => scope ? entries.get(scope)?.profiles : undefined,
-    remember(scope, profiles) { if (scope) entryFor(scope).profiles = profiles; },
+    remember(scope, profiles) { if (scope) { const entry = entryFor(scope); entry.profiles = profiles; entry.fetchedAt = now(); } },
     async load(scope, { force = false } = {}) {
       if (!scope) return [];
       const entry = entryFor(scope);
       if (entry.pending) return entry.pending;
       if (!force && entry.profiles && now() - entry.fetchedAt < 30000) return entry.profiles;
-      entry.pending = Promise.resolve().then(fetchProfiles).then(profiles => {
+      entry.pending = Promise.resolve().then(() => fetchProfiles(scope)).then(profiles => {
         entry.profiles = profiles;
         entry.fetchedAt = now();
         return profiles;

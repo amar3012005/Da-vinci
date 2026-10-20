@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
+import { agentRoster } from '../shared/agent-roster';
 import { PANE_ORIGINS, PANE_EVENTS, PANE_REQUESTS, paneForPath, panePath, paneSource, validPaneMessage, rememberPaneRoute } from '../shared/native-pane-protocol';
 
 export function nativePreviewExpanded(doc) { return Boolean(doc.querySelector('[data-sidebar-right-panel][data-sidebar-right-open]')); }
@@ -35,6 +36,7 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
       const data = event.data;
       if (['identity', 'ready'].includes(data.kind)) {
         setIdentified(true);
+        if (mode === 'runtime') send({ kind: 'request', name: 'hivemind:request-agent-roster' });
         const requested = panePath(latest.current.route, mode);
         if (latest.current.active && requested && requested !== nativePath.current) send({ kind: 'navigate', path: requested });
       }
@@ -46,20 +48,29 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
         });
         start.nativePane = true; window.__HIVEMIND_START_AGENT__ = start;
       }
+      if (mode === 'runtime' && data.kind === 'roster' && Array.isArray(data.profiles)) {
+        const profiles = data.profiles.filter(p => p && typeof p.id === 'string' && p.id !== 'runtime' && typeof p.name === 'string');
+        agentRoster.remember(scope, profiles);
+        window.dispatchEvent(new CustomEvent('hivemind:runtime-roster', {detail:{scope, profiles}}));
+      }
       if (data.kind === 'result') {
         const call = pending.current.get(data.requestId);
         if (call) { window.clearTimeout(call.timer); pending.current.delete(data.requestId); call.resolve(data.ok === true); }
       }
       if (data.kind === 'route' && panePath(data.path, mode)) {
+        setIdentified(true);
         nativePath.current = panePath(data.path, mode); onRoute(mode, nativePath.current, latest.current.active);
       }
       if (data.kind === 'open-page' && latest.current.active && typeof data.path === 'string' && data.path.startsWith('/hivemind/app/') && !data.path.includes('\\')) onRoute(mode, data.path, true);
       if (data.kind === 'event' && PANE_EVENTS.includes(data.name) && (mode === 'runtime' || ['hivemind:close-sidebar', 'hivemind:open-sidebar'].includes(data.name)) && (latest.current.active || ['hivemind:runtime-appearance-saved', 'hivemind:agent-rooms', 'hivemind:agent-schedules', 'hivemind:runtime-get-started'].includes(data.name))) window.dispatchEvent(new CustomEvent(data.name, { detail: data.detail }));
     };
     const request = event => send({ kind: 'request', name: event.type });
+    const requestRoster = event => { if (mode === 'runtime' && event.detail?.scope === scope) send({kind:'request',name:'hivemind:request-agent-roster'}); };
+    window.addEventListener('hivemind:request-runtime-roster',requestRoster);
     window.addEventListener('message', receive);
     if (mode === 'runtime') for (const name of PANE_REQUESTS) window.addEventListener(name, request);
     return () => {
+      window.removeEventListener('hivemind:request-runtime-roster',requestRoster);
       window.removeEventListener('message', receive);
       for (const name of PANE_REQUESTS) window.removeEventListener(name, request);
       if (window.__HIVEMIND_START_AGENT__ === start) delete window.__HIVEMIND_START_AGENT__;

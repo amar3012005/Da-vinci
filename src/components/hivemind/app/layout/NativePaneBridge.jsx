@@ -11,7 +11,18 @@ export default function NativePaneBridge({ scope }) {
     try { parentOrigin = new URL(document.referrer).origin; } catch { return undefined; }
     if (!Object.values(PANE_ORIGINS).includes(parentOrigin)) return undefined;
     const send = data => window.parent.postMessage({ type: 'hivemind.native-pane', version: 1, scope, ...data }, parentOrigin);
-    let lastPath; let ready = false; let scheduled;
+    let lastPath; let ready = false; let scheduled; let rosterPending = false; let stopped = false;
+    const publishRoster = async () => {
+      if (initialNativePane !== 'runtime' || rosterPending) return;
+      rosterPending = true;
+      try {
+        const response = await fetch('/api/hivemind/employees', {credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(10000)});
+        if (!response.ok) return;
+        const value = await response.json();
+        if (!stopped && Array.isArray(value.profiles)) send({kind:'roster',profiles:value.profiles});
+      } catch { /* Native admission or a later ready message retries this read. */ }
+      finally { rosterPending = false; }
+    };
     const inspect = () => {
       scheduled = undefined;
       const path = panePath(window.location.pathname + window.location.search + window.location.hash, initialNativePane);
@@ -35,7 +46,8 @@ export default function NativePaneBridge({ scope }) {
       else if (data.kind === 'navigate') {
         const path = panePath(data.path, initialNativePane);
         if (path && path !== lastPath) { const url = new URL(path, window.location.origin); url.searchParams.set('native_pane', '1'); navigation.current(url.pathname + url.search + url.hash); window.dispatchEvent(new PopStateEvent('popstate')); }
-      } else if (data.kind === 'request' && PANE_REQUESTS.includes(data.name)) window.dispatchEvent(new Event(data.name));
+      } else if (data.kind === 'request' && data.name === 'hivemind:request-agent-roster') { await publishRoster(); }
+      else if (data.kind === 'request' && PANE_REQUESTS.includes(data.name)) window.dispatchEvent(new Event(data.name));
       else if (data.kind === 'start-agent' && initialNativePane === 'runtime' && typeof data.id === 'string' && data.id.length < 200) {
         try { const ok = typeof window.__HIVEMIND_START_AGENT__ === 'function' && await window.__HIVEMIND_START_AGENT__(data.id); send({ kind: 'result', requestId: data.requestId, ok: Boolean(ok) }); } catch { send({ kind: 'result', requestId: data.requestId, ok: false }); }
       }
@@ -51,7 +63,7 @@ export default function NativePaneBridge({ scope }) {
     window.addEventListener('message', receive); window.addEventListener('popstate', changed); document.addEventListener('click', link, true);
     for (const name of PANE_EVENTS) window.addEventListener(name, forward);
     send({ kind: 'identity', path: panePath(window.location.pathname + window.location.search, initialNativePane) }); inspect();
-    return () => { observer.disconnect(); cancelAnimationFrame(scheduled); window.removeEventListener('message', receive); window.removeEventListener('popstate', changed); document.removeEventListener('click', link, true); for (const name of PANE_EVENTS) window.removeEventListener(name, forward); };
+    return () => { stopped = true; observer.disconnect(); cancelAnimationFrame(scheduled); window.removeEventListener('message', receive); window.removeEventListener('popstate', changed); document.removeEventListener('click', link, true); for (const name of PANE_EVENTS) window.removeEventListener(name, forward); };
   }, [scope]);
   return null;
 }

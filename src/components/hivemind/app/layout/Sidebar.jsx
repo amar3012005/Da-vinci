@@ -283,11 +283,13 @@ export default function Sidebar({
       }
     };
     const refresh = () => { clearTimeout(retryTimer); attempts = 0; load(); };
+    const nativeRoster = event => { if (event.detail?.scope !== scope || !Array.isArray(event.detail.profiles)) return; clearTimeout(retryTimer); setTeam(event.detail.profiles); setTeamLoadError(false); };
+    window.addEventListener('hivemind:runtime-roster',nativeRoster);
     load();
     window.addEventListener('focus', refresh);
     window.addEventListener('online', refresh);
     window.addEventListener('hivemind:session-established', refresh);
-    return () => { controller.abort(); clearTimeout(retryTimer); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); window.removeEventListener('hivemind:session-established', refresh); };
+    return () => { controller.abort(); clearTimeout(retryTimer); window.removeEventListener('hivemind:runtime-roster',nativeRoster); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); window.removeEventListener('hivemind:session-established', refresh); };
   }, [scope, setTeam, teamRetry]);
 
   useEffect(() => {

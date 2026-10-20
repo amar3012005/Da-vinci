@@ -98,3 +98,33 @@ it('forwards Runtime appearance invalidation only from the exact scoped Runtime 
   expect(refresh).toHaveBeenCalledTimes(1);
  } finally {window.removeEventListener('hivemind:runtime-appearance-saved',refresh);await act(async()=>root.unmount());host.remove();}
 });
+
+it('accepts a valid scoped route as identity proof when the initial identity message was missed', async()=>{
+ global.IS_REACT_ACT_ENVIRONMENT=true;
+ mockLocation={pathname:'/hivemind/app/employee/harness',search:'',hash:''};
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
+ try {
+  await act(async()=>root.render(<PersistentHarnessPanes/>));
+  const frame=host.querySelector('iframe');
+  const emit=async(scope)=>act(async()=>window.dispatchEvent(new MessageEvent('message',{origin:'https://runtime-runner.singulancelabs.com',source:frame.contentWindow,data:{type:'hivemind.native-pane',version:1,scope,kind:'route',path:'/hivemind/app/employee/harness/session/saved'}})));
+  await emit('foreign:org-a');expect(frame.style.visibility).toBe('hidden');
+  await emit('user-a:org-a');expect(frame.style.visibility).toBe('visible');
+ } finally {await act(async()=>root.unmount());host.remove();}
+});
+
+it('publishes the Runtime roster only from the exact authenticated pane and scope', async()=>{
+ global.IS_REACT_ACT_ENVIRONMENT=true;
+ mockLocation={pathname:'/hivemind/app/employee/harness',search:'',hash:''};
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host);const roster=jest.fn();
+ window.addEventListener('hivemind:runtime-roster',roster);
+ try {
+  await act(async()=>root.render(<PersistentHarnessPanes/>));
+  const frame=host.querySelector('iframe');
+  const emit=async(origin,scope)=>act(async()=>window.dispatchEvent(new MessageEvent('message',{origin,source:frame.contentWindow,data:{type:'hivemind.native-pane',version:1,scope,kind:'roster',profiles:[{id:'runtime',name:'Runtime'},{id:'owned',name:'Owned specialist'}]}})));
+  await emit('https://runtime-runner.singulancelabs.com','foreign:org-a');
+  await emit('https://next.singulancelabs.com','user-a:org-a');expect(roster).not.toHaveBeenCalled();
+  await emit('https://runtime-runner.singulancelabs.com','user-a:org-a');
+  expect(roster).toHaveBeenCalledTimes(1);
+  expect(roster.mock.calls[0][0].detail).toEqual({scope:'user-a:org-a',profiles:[{id:'owned',name:'Owned specialist'}]});
+ } finally {window.removeEventListener('hivemind:runtime-roster',roster);await act(async()=>root.unmount());host.remove();}
+});
