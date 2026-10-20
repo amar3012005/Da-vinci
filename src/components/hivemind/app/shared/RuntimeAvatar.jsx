@@ -1,3 +1,4 @@
+import { motionForRoom } from './runtime-motion';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import api from './api-client';
 import { useAuth } from '../auth/AuthProvider';
@@ -27,7 +28,18 @@ export function RuntimeAppearanceProvider({ children }) {
   }, [scope]);
   return <RuntimeCharacter.Provider value={saved.scope === scope ? saved.character : 'orbit'}>{children}</RuntimeCharacter.Provider>;
 }
-export default function RuntimeAvatar({ size, ...props }) {
+export default function RuntimeAvatar({ size, room, ...props }) {
   const character = useContext(RuntimeCharacter);
-  return <img {...props} src={`/assets/runtime-characters/v2/stills/${character}-ready.webp`} alt={props.alt ?? 'Runtime'} width={size} height={size} style={{ objectFit: 'contain', flexShrink: 0, ...props.style }} />;
+  const [reduced, setReduced] = useState(true);
+  const [failed, setFailed] = useState('');
+  useEffect(() => {
+    const media=window.matchMedia?.('(prefers-reduced-motion: reduce)'); if (!media) return undefined;
+    const sync=()=>setReduced(media.matches); sync(); media.addEventListener('change',sync);
+    return ()=>media.removeEventListener('change',sync);
+  },[]);
+  const motion=motionForRoom(room); const state=motion==='unknown'?'ready':motion;
+  const animated=!reduced && motion!=='unknown';
+  const base=`/assets/runtime-characters/${character==='classic'?'v3':'v2'}`;
+  const source=`${base}/${animated?'animations':'stills'}/${character}-${state}.webp`;
+  return <img {...props} src={failed===source?`${base}/stills/${character}-${state}.webp`:source} onError={()=>setFailed(source)} data-runtime-motion={motion} data-runtime-animated={animated && failed!==source} decoding="async" alt={props.alt ?? 'Runtime'} width={size} height={size} style={{ objectFit: 'contain', flexShrink: 0, ...props.style }} />;
 }

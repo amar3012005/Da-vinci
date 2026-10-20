@@ -1,0 +1,117 @@
+{
+  "method": "Existing transparent Classic portrait with eight distinct 2D status motion loops; repeated frames coalesced losslessly",
+  "assets": [
+    {
+      "file": "stills/classic-blocked.webp",
+      "frames": 1,
+      "duration": 0,
+      "bytes": 9020,
+      "sha256": "ecfe3529761277338b577053ad417b7ac0b84f59e10e8902423a7cfc7d3d41f4"
+    },
+    {
+      "file": "stills/classic-done.webp",
+      "frames": 1,
+      "duration": 0,
+      "bytes": 9020,
+      "sha256": "ecfe3529761277338b577053ad417b7ac0b84f59e10e8902423a7cfc7d3d41f4"
+    },
+    {
+      "file": "stills/classic-listening.webp",
+      "frames": 1,
+      "duration": 0,
+      "bytes": 9168,
+      "sha256": "f07d217ddbfd1cea96d9715d04af0b7570254691630f48650e67084216330169"
+    },
+    {
+      "file": "stills/classic-needs-you.webp",
+      "frames": 1,
+      "duration": 0,
+      "bytes": 9020,
+      "sha256": "ecfe3529761277338b577053ad417b7ac0b84f59e10e8902423a7cfc7d3d41f4"
+    },
+    {
+      "file": "stills/classic-ready.webp",
+      "frames": 1,
+      "duration": 0,
+      "bytes": 9020,
+      "sha256": "ecfe3529761277338b577053ad417b7ac0b84f59e10e8902423a7cfc7d3d41f4"
+    },
+    {
+      "file": "stills/classic-sleeping.webp",
+      "frames": 1,
+      "duration": 0,
+      "bytes": 9020,
+      "sha256": "ecfe3529761277338b577053ad417b7ac0b84f59e10e8902423a7cfc7d3d41f4"
+    },
+    {
+      "file": "stills/classic-thinking.webp",
+      "frames": 1,
+      "duration": 0,
+      "bytes": 9020,
+      "sha256": "ecfe3529761277338b577053ad417b7ac0b84f59e10e8902423a7cfc7d3d41f4"
+    },
+    {
+      "file": "stills/classic-working.webp",
+      "frames": 1,
+      "duration": 0,
+      "bytes": 9020,
+      "sha256": "ecfe3529761277338b577053ad417b7ac0b84f59e10e8902423a7cfc7d3d41f4"
+    },
+    {
+      "file": "animations/classic-blocked.webp",
+      "frames": 80,
+      "duration": 4000,
+      "bytes": 625452,
+      "sha256": "7bd514c88cb19575b4e94ea9334663d287e8785a071560386fcb4b8a0b28d34b"
+    },
+    {
+      "file": "animations/classic-done.webp",
+      "frames": 32,
+      "duration": 4000,
+      "bytes": 250814,
+      "sha256": "1ec30bb96844622fbfa67381191c4fa4cf9d85a92570b508c51edd68590d6b41"
+    },
+    {
+      "file": "animations/classic-listening.webp",
+      "frames": 80,
+      "duration": 4000,
+      "bytes": 628822,
+      "sha256": "25df23b4a3f9f576befe35324e3ffd25827349333e25e67b2c43fa7ebf8f6674"
+    },
+    {
+      "file": "animations/classic-needs-you.webp",
+      "frames": 25,
+      "duration": 4000,
+      "bytes": 198026,
+      "sha256": "9782cbc9193946a627ff4fde202c9a6b535c32b4cae8a09759aa8b4ac87a412b"
+    },
+    {
+      "file": "animations/classic-ready.webp",
+      "frames": 80,
+      "duration": 4000,
+      "bytes": 623192,
+      "sha256": "28857316c03be00d7958e73bb1354c9e98c147a7f6e2ec143d640dbfa7fad1e6"
+    },
+    {
+      "file": "animations/classic-sleeping.webp",
+      "frames": 80,
+      "duration": 4000,
+      "bytes": 620472,
+      "sha256": "00135d237687420bfad7eff564a0d6bc6e4a191c8a5003d0d045ec04e54b0674"
+    },
+    {
+      "file": "animations/classic-thinking.webp",
+      "frames": 80,
+      "duration": 4000,
+      "bytes": 624960,
+      "sha256": "52211a7d1b8bd954fbeea8c9581faa1cbb9adbfe3b274eb99466085bc3bef82e"
+    },
+    {
+      "file": "animations/classic-working.webp",
+      "frames": 80,
+      "duration": 4000,
+      "bytes": 626680,
+      "sha256": "f22d9c872761ba8fb4f6f6a764097aafd7ca636502c1554e942fcdf8b975e15a"
+    }
+  ]
+}
