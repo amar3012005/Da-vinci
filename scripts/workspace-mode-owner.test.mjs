@@ -38,3 +38,10 @@ test('company and organization onboarding run before optional mode admission', (
  const selector=fs.readFileSync(new URL('../src/components/hivemind/app/layout/WorkspaceModeSwitcher.jsx',import.meta.url),'utf8');
  assert(selector.indexOf('if (!workspaceModesEnabled) return')<selector.indexOf('aria-label="Choose workspace mode"'));
 });
+
+test('all mode entry paths use native HyperAgents while Company HQ stays distinct', () => {
+ const shell=fs.readFileSync(new URL('../src/components/hivemind/app/layout/AppShell.jsx',import.meta.url),'utf8');
+ assert.match(shell,/hyperagents: '\/hivemind\/app\/employee\/harness'/);
+ const routes=fs.readFileSync(new URL('../src/components/hivemind/app/HiveMindApp.jsx',import.meta.url),'utf8');
+ assert.match(routes,/<Route path="employees" element=\{<Navigate to="\/hivemind\/app\/employee\/harness" replace \/>\} \/>/);
+});

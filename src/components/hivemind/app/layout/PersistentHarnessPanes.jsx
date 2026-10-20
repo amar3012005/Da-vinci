@@ -59,6 +59,7 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
       }
       if (data.kind === 'route' && panePath(data.path, mode)) {
         setIdentified(true);
+        if (mode === 'runtime') send({kind:'request',name:'hivemind:request-agent-roster'});
         nativePath.current = panePath(data.path, mode); onRoute(mode, nativePath.current, latest.current.active);
       }
       if (data.kind === 'open-page' && latest.current.active && typeof data.path === 'string' && data.path.startsWith('/hivemind/app/') && !data.path.includes('\\')) onRoute(mode, data.path, true);

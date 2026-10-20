@@ -421,7 +421,7 @@ function AppShellContent() {
     if (s === sectionForPath(location.pathname)) return;
     setActiveSection(s);
     try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }
-    const landing = { hivemind: '/hivemind/app/overview/new', hyperagents: '/hivemind/app/employees/mycompany', tara: '/hivemind/app/tara' };
+    const landing = { hivemind: '/hivemind/app/overview/new', hyperagents: '/hivemind/app/employee/harness', tara: '/hivemind/app/tara' };
     if (!landing[s]) return;
 
     // BRAIN embeds the native Harness, which owns an independent React root.
