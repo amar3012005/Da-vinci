@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import api from './api-client';
 import { useAuth } from '../auth/AuthProvider';
 const RuntimeCharacter = createContext('orbit');
-const characters = ['capsule', 'pebble', 'prism', 'orbit', 'spark', 'fold'];
+const characters = ['capsule', 'pebble', 'prism', 'orbit', 'spark', 'fold', 'classic'];
 export const RUNTIME_APPEARANCE_EVENT = 'hivemind:runtime-appearance-saved';
 export function RuntimeAppearanceProvider({ children }) {
   const { user, org } = useAuth();
@@ -29,5 +29,5 @@ export function RuntimeAppearanceProvider({ children }) {
 }
 export default function RuntimeAvatar({ size, ...props }) {
   const character = useContext(RuntimeCharacter);
-  return <img {...props} src={`/assets/runtime-characters/v1/stills/${character}-ready.webp`} alt={props.alt ?? 'Runtime'} width={size} height={size} style={{ objectFit: 'contain', flexShrink: 0, ...props.style }} />;
+  return <img {...props} src={`/assets/runtime-characters/v2/stills/${character}-ready.webp`} alt={props.alt ?? 'Runtime'} width={size} height={size} style={{ objectFit: 'contain', flexShrink: 0, ...props.style }} />;
 }

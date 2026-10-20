@@ -10,9 +10,9 @@ test('saved Runtime refreshes all avatar consumers from the authoritative endpoi
  api.getRuntimeAppearance.mockResolvedValue({ appearance: { character: 'orbit' } });
  render(<RuntimeAppearanceProvider><RuntimeAvatar size={40}/><RuntimeAvatar size={80}/></RuntimeAppearanceProvider>);
  await waitFor(() => expect(api.getRuntimeAppearance).toHaveBeenCalledTimes(1));
- api.getRuntimeAppearance.mockResolvedValue({ appearance: { character: 'spark' } });
+ api.getRuntimeAppearance.mockResolvedValue({ appearance: { character: 'classic' } });
  act(() => window.dispatchEvent(new Event(RUNTIME_APPEARANCE_EVENT)));
- await waitFor(() => screen.getAllByAltText('Runtime').forEach(image => expect(image.src).toContain('spark-ready.webp')));
+ await waitFor(() => screen.getAllByAltText('Runtime').forEach(image => expect(image.src).toContain('/runtime-characters/v2/stills/classic-ready.webp')));
 });
 test('account switch hides the previous identity and ignores an old in-flight response', async () => {
  let resolveOld; api.getRuntimeAppearance.mockReturnValueOnce(new Promise(resolve => { resolveOld = resolve; }));

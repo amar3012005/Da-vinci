@@ -1,0 +1,789 @@
+{
+  "total": 98,
+  "assets": [
+    {
+      "file": "stills/capsule-blocked.webp",
+      "bytes": 5038,
+      "sha256": "fd1b754e0be11db9ac7c1ce024f3c2dc4e80dc0b0d3411f61e28ec233a620551",
+      "transparentPixels": 11802,
+      "nearOpaquePixels": 12722,
+      "frames": 1
+    },
+    {
+      "file": "stills/capsule-done.webp",
+      "bytes": 4754,
+      "sha256": "5a2d722309d971b191e9c370b9c793e86fa00db53fd353121f13b4450bb37eeb",
+      "transparentPixels": 12330,
+      "nearOpaquePixels": 12262,
+      "frames": 1
+    },
+    {
+      "file": "stills/capsule-listening.webp",
+      "bytes": 5208,
+      "sha256": "922a29eb7a3e98205b7d1e5e3f75699f62c1d911e4debb0e6f6907cb24ab0bc0",
+      "transparentPixels": 11525,
+      "nearOpaquePixels": 12921,
+      "frames": 1
+    },
+    {
+      "file": "stills/capsule-needs-you.webp",
+      "bytes": 5138,
+      "sha256": "09d3941b78794ff3e4443b14647a81baf836c1894b488dc6211a4aa013849d7a",
+      "transparentPixels": 11827,
+      "nearOpaquePixels": 12651,
+      "frames": 1
+    },
+    {
+      "file": "stills/capsule-ready.webp",
+      "bytes": 4804,
+      "sha256": "96fa440c8b0f5435a86f514d49cb1b304f3e4d7c5c04d0fe028535ee37da63d2",
+      "transparentPixels": 12202,
+      "nearOpaquePixels": 12403,
+      "frames": 1
+    },
+    {
+      "file": "stills/capsule-sleeping.webp",
+      "bytes": 5134,
+      "sha256": "60cb6f5b1c177a6840d1a5ccad33e7e815e58f550eba3ff438206ba43aa7dcc4",
+      "transparentPixels": 11564,
+      "nearOpaquePixels": 12891,
+      "frames": 1
+    },
+    {
+      "file": "stills/capsule-thinking.webp",
+      "bytes": 5010,
+      "sha256": "9994f935a274923fa51c8485799b7066d45bb7aa4b48b4b524210f4d2f98e586",
+      "transparentPixels": 12422,
+      "nearOpaquePixels": 12138,
+      "frames": 1
+    },
+    {
+      "file": "stills/capsule-working.webp",
+      "bytes": 5242,
+      "sha256": "05c82fbb5008ed9cf65ec048e710eb817c7ac7b014dd7e99cad4cae45d466206",
+      "transparentPixels": 11584,
+      "nearOpaquePixels": 12892,
+      "frames": 1
+    },
+    {
+      "file": "stills/classic-ready.webp",
+      "bytes": 14002,
+      "sha256": "ef900b0a72a262b3f48bd46a46e2c48052abdbdf2556846762f543d86b6040a7",
+      "transparentPixels": 9868,
+      "nearOpaquePixels": 13195,
+      "frames": 1
+    },
+    {
+      "file": "stills/fold-blocked.webp",
+      "bytes": 5086,
+      "sha256": "10cde7a1bf64890aa3220d63912a9a8b105e686953d374305c0f0e8925220ed1",
+      "transparentPixels": 14670,
+      "nearOpaquePixels": 9740,
+      "frames": 1
+    },
+    {
+      "file": "stills/fold-done.webp",
+      "bytes": 5018,
+      "sha256": "84cbb263b626a04ff878efc6a233ea8053b0e86d125fec228bcf2786820bfc61",
+      "transparentPixels": 14898,
+      "nearOpaquePixels": 9542,
+      "frames": 1
+    },
+    {
+      "file": "stills/fold-listening.webp",
+      "bytes": 5184,
+      "sha256": "f85a59c4769e17fc56b2c4381c3bffb37a7750d1c121305b2fc1d4b430893ed4",
+      "transparentPixels": 14542,
+      "nearOpaquePixels": 9846,
+      "frames": 1
+    },
+    {
+      "file": "stills/fold-needs-you.webp",
+      "bytes": 5020,
+      "sha256": "196313e8e61cd58dc9cba75a0f57508618b775c7dac7cd33f08ae89a60a89a49",
+      "transparentPixels": 14822,
+      "nearOpaquePixels": 9596,
+      "frames": 1
+    },
+    {
+      "file": "stills/fold-ready.webp",
+      "bytes": 5004,
+      "sha256": "2dc9117a7316c1c6e0729cca6ed751d63a20bca0984a28f0c8c3f25bc504b7f1",
+      "transparentPixels": 14813,
+      "nearOpaquePixels": 9622,
+      "frames": 1
+    },
+    {
+      "file": "stills/fold-sleeping.webp",
+      "bytes": 5076,
+      "sha256": "abeb699c59b5da0692ecb0a4f77d16e41967d40c165eec6b13ed688b08e87dad",
+      "transparentPixels": 14634,
+      "nearOpaquePixels": 9748,
+      "frames": 1
+    },
+    {
+      "file": "stills/fold-thinking.webp",
+      "bytes": 4982,
+      "sha256": "451402edb90cb7d6491f2dee0b3daf1e73094bb2b39a04ac018095ba02c6906a",
+      "transparentPixels": 15132,
+      "nearOpaquePixels": 9283,
+      "frames": 1
+    },
+    {
+      "file": "stills/fold-working.webp",
+      "bytes": 5026,
+      "sha256": "ca5388508d8e3f41d029ac65f8ab2c0bb656d447e424384a9746363071eb736d",
+      "transparentPixels": 15100,
+      "nearOpaquePixels": 9317,
+      "frames": 1
+    },
+    {
+      "file": "stills/orbit-blocked.webp",
+      "bytes": 5782,
+      "sha256": "f9d36e825f8b8572c9e2b92fd1a836bb61db79676b2361387ae3c3b065fde162",
+      "transparentPixels": 11868,
+      "nearOpaquePixels": 11865,
+      "frames": 1
+    },
+    {
+      "file": "stills/orbit-done.webp",
+      "bytes": 5638,
+      "sha256": "e4bbbf49fe91a8b796d854e47fe1ee13c0ab22fb6f292af72a0afe67f5d66555",
+      "transparentPixels": 11849,
+      "nearOpaquePixels": 12187,
+      "frames": 1
+    },
+    {
+      "file": "stills/orbit-listening.webp",
+      "bytes": 5660,
+      "sha256": "b6f92d598fb7b317903e09525bfa5d51c8b0b6925a3be584fba1c08c3d1e276c",
+      "transparentPixels": 11832,
+      "nearOpaquePixels": 12134,
+      "frames": 1
+    },
+    {
+      "file": "stills/orbit-needs-you.webp",
+      "bytes": 5834,
+      "sha256": "9d7995d597093e297dc34afd362d1708c35bc074020662229431357c3bfa1e3c",
+      "transparentPixels": 11886,
+      "nearOpaquePixels": 11908,
+      "frames": 1
+    },
+    {
+      "file": "stills/orbit-ready.webp",
+      "bytes": 5746,
+      "sha256": "a51c3e116dc5c882a487d3c1584a5c4c85bce6f0cffdf8a912d904434392fe67",
+      "transparentPixels": 11865,
+      "nearOpaquePixels": 11997,
+      "frames": 1
+    },
+    {
+      "file": "stills/orbit-sleeping.webp",
+      "bytes": 5506,
+      "sha256": "294d3c00338da52da23cbe7d1093ed47dc912728a9a777791a14d7a71ad76858",
+      "transparentPixels": 11873,
+      "nearOpaquePixels": 12161,
+      "frames": 1
+    },
+    {
+      "file": "stills/orbit-thinking.webp",
+      "bytes": 5758,
+      "sha256": "b8cb62cdb0d33df4edac545e77ca0efab206d12d625ecd7debb99749064957d3",
+      "transparentPixels": 12017,
+      "nearOpaquePixels": 11964,
+      "frames": 1
+    },
+    {
+      "file": "stills/orbit-working.webp",
+      "bytes": 5864,
+      "sha256": "e4ee04dfb7670ad4c12852daaae3041a834189d6c0aa90ca6a0c6e6c9a6b0212",
+      "transparentPixels": 11892,
+      "nearOpaquePixels": 12041,
+      "frames": 1
+    },
+    {
+      "file": "stills/pebble-blocked.webp",
+      "bytes": 4632,
+      "sha256": "7689c666dfad6cb55674ce8443b2d921ee65cc6c64c2e81015a2ce9b485d5300",
+      "transparentPixels": 12201,
+      "nearOpaquePixels": 11226,
+      "frames": 1
+    },
+    {
+      "file": "stills/pebble-done.webp",
+      "bytes": 5010,
+      "sha256": "5030802df5a7b636e95907c6c041ef7a316e402aa2f608f681368ffa61a6df35",
+      "transparentPixels": 11332,
+      "nearOpaquePixels": 12281,
+      "frames": 1
+    },
+    {
+      "file": "stills/pebble-listening.webp",
+      "bytes": 4796,
+      "sha256": "7893708beaa53ae3a73ca6014b887b3cddf03baac5e1ac69949704e019729004",
+      "transparentPixels": 11954,
+      "nearOpaquePixels": 11588,
+      "frames": 1
+    },
+    {
+      "file": "stills/pebble-needs-you.webp",
+      "bytes": 4746,
+      "sha256": "6cf136bde38f4526eb095599af699331544ac01dae91a502dff99228539aa79f",
+      "transparentPixels": 11808,
+      "nearOpaquePixels": 11679,
+      "frames": 1
+    },
+    {
+      "file": "stills/pebble-ready.webp",
+      "bytes": 4600,
+      "sha256": "318f2be34f7e8091f45a4ba94022b10e5c047010e6f414d3b4dd49d32bab93c1",
+      "transparentPixels": 12544,
+      "nearOpaquePixels": 11480,
+      "frames": 1
+    },
+    {
+      "file": "stills/pebble-sleeping.webp",
+      "bytes": 4258,
+      "sha256": "33056f4530375b8c81229b4dc9441163bf8624132d79c51f23ea61119a148af3",
+      "transparentPixels": 13892,
+      "nearOpaquePixels": 10509,
+      "frames": 1
+    },
+    {
+      "file": "stills/pebble-thinking.webp",
+      "bytes": 4960,
+      "sha256": "ace5c9b92a0229cd8b0cbda66993f185f91c36f95060bfa77b3655189b28bbbf",
+      "transparentPixels": 11425,
+      "nearOpaquePixels": 12203,
+      "frames": 1
+    },
+    {
+      "file": "stills/pebble-working.webp",
+      "bytes": 4312,
+      "sha256": "90ac5bed5a67e05395440feec6e64ddcb0eec4d85e15c0af51a959004434fce7",
+      "transparentPixels": 13051,
+      "nearOpaquePixels": 11089,
+      "frames": 1
+    },
+    {
+      "file": "stills/prism-blocked.webp",
+      "bytes": 5546,
+      "sha256": "c20ac2fc863f1760f6c12daca9b1e03d05ddd2bcae0f8dbc062f9ff08960d899",
+      "transparentPixels": 12380,
+      "nearOpaquePixels": 11730,
+      "frames": 1
+    },
+    {
+      "file": "stills/prism-done.webp",
+      "bytes": 5492,
+      "sha256": "55b280d72e1a15505ad6679e4d9d5fac25621487950d68b8755b6ba8fc8ef575",
+      "transparentPixels": 12746,
+      "nearOpaquePixels": 11622,
+      "frames": 1
+    },
+    {
+      "file": "stills/prism-listening.webp",
+      "bytes": 5444,
+      "sha256": "e48043c82d93efcb632138f7724a37e0d5528f3f006c0f07092b117ec99fdc32",
+      "transparentPixels": 12880,
+      "nearOpaquePixels": 11064,
+      "frames": 1
+    },
+    {
+      "file": "stills/prism-needs-you.webp",
+      "bytes": 5482,
+      "sha256": "6a5ec8eaa046a5a3e7e541936e8ce52c0176b3e0a47e2cb1e840dea916eeb7cb",
+      "transparentPixels": 12604,
+      "nearOpaquePixels": 11761,
+      "frames": 1
+    },
+    {
+      "file": "stills/prism-ready.webp",
+      "bytes": 5528,
+      "sha256": "ae9805e50ff8a1bbb993a7d5a0f9bc1154cd6ba3bd58bd151236d5e9a14aec3c",
+      "transparentPixels": 12401,
+      "nearOpaquePixels": 11506,
+      "frames": 1
+    },
+    {
+      "file": "stills/prism-sleeping.webp",
+      "bytes": 5320,
+      "sha256": "bda6d470f9c967f20638030b7d300d3b58b90b94005fd128455057bf1ad18b1f",
+      "transparentPixels": 12401,
+      "nearOpaquePixels": 11982,
+      "frames": 1
+    },
+    {
+      "file": "stills/prism-thinking.webp",
+      "bytes": 5358,
+      "sha256": "1650fbbc1ba200d1010b3967851a34d14b1b071cb3ede9913ee842687057d3f0",
+      "transparentPixels": 12628,
+      "nearOpaquePixels": 11837,
+      "frames": 1
+    },
+    {
+      "file": "stills/prism-working.webp",
+      "bytes": 5580,
+      "sha256": "46b3bbc2f8b9187cd4664ecd5257b6a8f5b169d83d4b8e863305e24cf733dc88",
+      "transparentPixels": 12413,
+      "nearOpaquePixels": 11864,
+      "frames": 1
+    },
+    {
+      "file": "stills/spark-blocked.webp",
+      "bytes": 4818,
+      "sha256": "f5c240e96d5b0f90c850040cccd000b83ff68ef454e7195a26da0ba377697260",
+      "transparentPixels": 13343,
+      "nearOpaquePixels": 10135,
+      "frames": 1
+    },
+    {
+      "file": "stills/spark-done.webp",
+      "bytes": 4858,
+      "sha256": "51b7c1465c7a7a4f885630227f1b22dc5b262a6089580210058d299094ae0eb3",
+      "transparentPixels": 13811,
+      "nearOpaquePixels": 10444,
+      "frames": 1
+    },
+    {
+      "file": "stills/spark-listening.webp",
+      "bytes": 5082,
+      "sha256": "accd37fc85b2305ca03e2ad54a861e5fa709a89908cb0a0b6449fa3391fed316",
+      "transparentPixels": 12853,
+      "nearOpaquePixels": 10373,
+      "frames": 1
+    },
+    {
+      "file": "stills/spark-needs-you.webp",
+      "bytes": 4922,
+      "sha256": "92f576f33721bb9b0f395b79e9d046f6ec400293566066f7bf4556e4dd299b82",
+      "transparentPixels": 13849,
+      "nearOpaquePixels": 10091,
+      "frames": 1
+    },
+    {
+      "file": "stills/spark-ready.webp",
+      "bytes": 4320,
+      "sha256": "c7d8d9429248908082c0417b14d2c8f30e4778b9cd0e776fc886d493259ac6cd",
+      "transparentPixels": 16453,
+      "nearOpaquePixels": 7747,
+      "frames": 1
+    },
+    {
+      "file": "stills/spark-sleeping.webp",
+      "bytes": 4762,
+      "sha256": "aaf9f883fece936a5ca5c3013ec96fbacac284127220394a198897b176070495",
+      "transparentPixels": 14009,
+      "nearOpaquePixels": 9812,
+      "frames": 1
+    },
+    {
+      "file": "stills/spark-thinking.webp",
+      "bytes": 5074,
+      "sha256": "9f5324ee517cec36d205fc7f19bf0d3b7e83be2b52c91a1ab9207db2d8386aa2",
+      "transparentPixels": 13482,
+      "nearOpaquePixels": 10551,
+      "frames": 1
+    },
+    {
+      "file": "stills/spark-working.webp",
+      "bytes": 4980,
+      "sha256": "912b5476c69dc1308aaf97468cc1996acd1f30eca8bf43f50ff9dc356d6cf616",
+      "transparentPixels": 13080,
+      "nearOpaquePixels": 10915,
+      "frames": 1
+    },
+    {
+      "file": "animations/capsule-blocked.webp",
+      "bytes": 336548,
+      "sha256": "81b9bfb8976bf1619923f2015d84ed6769c19f515628fed68f3005b4c29163c2",
+      "transparentPixels": 11802,
+      "nearOpaquePixels": 12722,
+      "frames": 80
+    },
+    {
+      "file": "animations/capsule-done.webp",
+      "bytes": 129722,
+      "sha256": "b95bd766769b67d4d5d7039e14b65131a4b70c27063e383d5d450dcfa45ee2a5",
+      "transparentPixels": 12330,
+      "nearOpaquePixels": 12262,
+      "frames": 32
+    },
+    {
+      "file": "animations/capsule-listening.webp",
+      "bytes": 360210,
+      "sha256": "9b97dafe9889007dc5e7548c3707084ec2ada76472bf9f9d948b3068d2656e0d",
+      "transparentPixels": 11525,
+      "nearOpaquePixels": 12921,
+      "frames": 80
+    },
+    {
+      "file": "animations/capsule-needs-you.webp",
+      "bytes": 112252,
+      "sha256": "adc89a9c3a90271f35152a2a22d18e8d3da9d33d31cdd87841a0a1d83f48afd6",
+      "transparentPixels": 11827,
+      "nearOpaquePixels": 12651,
+      "frames": 25
+    },
+    {
+      "file": "animations/capsule-ready.webp",
+      "bytes": 326930,
+      "sha256": "499098f2f57e2144b4ad07bb76c267c6aa26a15e8dee7090358b309c3e837f05",
+      "transparentPixels": 12202,
+      "nearOpaquePixels": 12403,
+      "frames": 80
+    },
+    {
+      "file": "animations/capsule-sleeping.webp",
+      "bytes": 349770,
+      "sha256": "e2049ec969cf85f81a7482a62cf22e21205b6bf09e70ff47652acea567b391fb",
+      "transparentPixels": 11564,
+      "nearOpaquePixels": 12891,
+      "frames": 80
+    },
+    {
+      "file": "animations/capsule-thinking.webp",
+      "bytes": 340612,
+      "sha256": "b07217f267e87e49a888a51b74fa09000838e8531295d3755ee71a9a71a8e35e",
+      "transparentPixels": 12422,
+      "nearOpaquePixels": 12138,
+      "frames": 80
+    },
+    {
+      "file": "animations/capsule-working.webp",
+      "bytes": 350524,
+      "sha256": "df37614f095386d52b4544600621fc672dfacfe041d0cbf5260db65720438198",
+      "transparentPixels": 11584,
+      "nearOpaquePixels": 12892,
+      "frames": 80
+    },
+    {
+      "file": "animations/classic-ready.webp",
+      "bytes": 14002,
+      "sha256": "ef900b0a72a262b3f48bd46a46e2c48052abdbdf2556846762f543d86b6040a7",
+      "transparentPixels": 9868,
+      "nearOpaquePixels": 13195,
+      "frames": 1
+    },
+    {
+      "file": "animations/fold-blocked.webp",
+      "bytes": 345666,
+      "sha256": "f928eadd8c3f3da188cc5ec18d56a9d200c57e8b3dadb8db31dbc0aa8d8f11db",
+      "transparentPixels": 14670,
+      "nearOpaquePixels": 9740,
+      "frames": 80
+    },
+    {
+      "file": "animations/fold-done.webp",
+      "bytes": 136134,
+      "sha256": "413f3e040075b80b8127e528f042ef3ec0abf7eff841e16634750b45196fabbc",
+      "transparentPixels": 14898,
+      "nearOpaquePixels": 9542,
+      "frames": 32
+    },
+    {
+      "file": "animations/fold-listening.webp",
+      "bytes": 352044,
+      "sha256": "83560b61788dec9d2d4492aa1c3f27a3d9c6856130af07f7401eff1e318eea4a",
+      "transparentPixels": 14542,
+      "nearOpaquePixels": 9846,
+      "frames": 80
+    },
+    {
+      "file": "animations/fold-needs-you.webp",
+      "bytes": 106880,
+      "sha256": "974373f21895e2588f78613b22606a5ebbbcd0d6bbd29cee090e7d193943b3bf",
+      "transparentPixels": 14822,
+      "nearOpaquePixels": 9596,
+      "frames": 25
+    },
+    {
+      "file": "animations/fold-ready.webp",
+      "bytes": 342336,
+      "sha256": "639b0a40b317d9dae52282e332868b91755f7c6e615a3fb5065d19dde4f7939a",
+      "transparentPixels": 14813,
+      "nearOpaquePixels": 9622,
+      "frames": 80
+    },
+    {
+      "file": "animations/fold-sleeping.webp",
+      "bytes": 348368,
+      "sha256": "46d49bf33b1ea6166ffb57cfe64956ef42067884feba6ff1ededc5d46607ddb5",
+      "transparentPixels": 14634,
+      "nearOpaquePixels": 9748,
+      "frames": 80
+    },
+    {
+      "file": "animations/fold-thinking.webp",
+      "bytes": 339226,
+      "sha256": "ab4073f1da18bba472b62b12a7831ead3a631ebc38adf49a65d790e119270f9b",
+      "transparentPixels": 15132,
+      "nearOpaquePixels": 9283,
+      "frames": 80
+    },
+    {
+      "file": "animations/fold-working.webp",
+      "bytes": 343978,
+      "sha256": "17c78a35c3852387646274dff07e9e4a281a3d8c023888c6422af8e4cb3381cc",
+      "transparentPixels": 15100,
+      "nearOpaquePixels": 9317,
+      "frames": 80
+    },
+    {
+      "file": "animations/orbit-blocked.webp",
+      "bytes": 398490,
+      "sha256": "f8917c0d3661bd1733b4e9c87795245b01121f2888d2438d626edf91896abed8",
+      "transparentPixels": 11868,
+      "nearOpaquePixels": 11865,
+      "frames": 80
+    },
+    {
+      "file": "animations/orbit-done.webp",
+      "bytes": 156562,
+      "sha256": "aa2e510b00d88b6e9c34368453d04fe751891d157d7f98ac33c071b902ff9765",
+      "transparentPixels": 11849,
+      "nearOpaquePixels": 12187,
+      "frames": 32
+    },
+    {
+      "file": "animations/orbit-listening.webp",
+      "bytes": 397842,
+      "sha256": "b8e8d5f7b84a318fa1756e561dd66fc7e28520486574f69d39df5b7858763216",
+      "transparentPixels": 11832,
+      "nearOpaquePixels": 12134,
+      "frames": 80
+    },
+    {
+      "file": "animations/orbit-needs-you.webp",
+      "bytes": 127122,
+      "sha256": "2d24af4b05d407802f735a36314bc158a01e4e0baf91781207b2bcfa48664236",
+      "transparentPixels": 11886,
+      "nearOpaquePixels": 11908,
+      "frames": 25
+    },
+    {
+      "file": "animations/orbit-ready.webp",
+      "bytes": 395334,
+      "sha256": "1c4ff334effe857148728005b3c73dc92605a370e6faaa8825ba10796da8bc11",
+      "transparentPixels": 11865,
+      "nearOpaquePixels": 11997,
+      "frames": 80
+    },
+    {
+      "file": "animations/orbit-sleeping.webp",
+      "bytes": 380982,
+      "sha256": "62c6bad8f6f19fa634945f8e4ff86f3a70568ccdb564fd8232e06c04ac26d907",
+      "transparentPixels": 11873,
+      "nearOpaquePixels": 12161,
+      "frames": 80
+    },
+    {
+      "file": "animations/orbit-thinking.webp",
+      "bytes": 394280,
+      "sha256": "4e24a19214358b6b7dc79a7faa7e3a6d87b9a449e3d7a89b8ca6fac1df621a7e",
+      "transparentPixels": 12017,
+      "nearOpaquePixels": 11964,
+      "frames": 80
+    },
+    {
+      "file": "animations/orbit-working.webp",
+      "bytes": 408026,
+      "sha256": "78902dbaf79e88e6f0483776a95458f27f8c1cdbc7657f5e8d4573f3907aa85d",
+      "transparentPixels": 11892,
+      "nearOpaquePixels": 12041,
+      "frames": 80
+    },
+    {
+      "file": "animations/pebble-blocked.webp",
+      "bytes": 311564,
+      "sha256": "9603deb9202a5a62e07a76a684d36a4208bf3587e0b24b07066610d44894158b",
+      "transparentPixels": 12201,
+      "nearOpaquePixels": 11226,
+      "frames": 80
+    },
+    {
+      "file": "animations/pebble-done.webp",
+      "bytes": 134628,
+      "sha256": "8f85c203f90a2866cb009bec6bc26dad6cc04b94b77691b71f109e9a341097cf",
+      "transparentPixels": 11332,
+      "nearOpaquePixels": 12281,
+      "frames": 32
+    },
+    {
+      "file": "animations/pebble-listening.webp",
+      "bytes": 322754,
+      "sha256": "3eb18a817c8ba2658faeb9747ce440a81d5eaaca35622ac77a5f7c688eed5de8",
+      "transparentPixels": 11954,
+      "nearOpaquePixels": 11588,
+      "frames": 80
+    },
+    {
+      "file": "animations/pebble-needs-you.webp",
+      "bytes": 102948,
+      "sha256": "c07070b5044b1b537a73293f83ea2be4483e2d34b355a3641b25b3db6ddb0ce4",
+      "transparentPixels": 11808,
+      "nearOpaquePixels": 11679,
+      "frames": 25
+    },
+    {
+      "file": "animations/pebble-ready.webp",
+      "bytes": 309392,
+      "sha256": "09b98d4c3859aecf1a6beb8e9e467e4645d932f658bd1647411e3f7b38624a43",
+      "transparentPixels": 12544,
+      "nearOpaquePixels": 11480,
+      "frames": 80
+    },
+    {
+      "file": "animations/pebble-sleeping.webp",
+      "bytes": 284252,
+      "sha256": "f07bada220990d1cd4457bf61841c19467bf236f03b0a9b7f23911c244d57bb3",
+      "transparentPixels": 13892,
+      "nearOpaquePixels": 10509,
+      "frames": 80
+    },
+    {
+      "file": "animations/pebble-thinking.webp",
+      "bytes": 335290,
+      "sha256": "b6c7d37d2959a01ada829b97dbc89d8c14b4bf1f5c72d21cdfb93035bcc9f06e",
+      "transparentPixels": 11425,
+      "nearOpaquePixels": 12203,
+      "frames": 80
+    },
+    {
+      "file": "animations/pebble-working.webp",
+      "bytes": 294248,
+      "sha256": "6c5b2c9bdc1dd607cbfd1fbeb7d9cd43c3dc61e7304586ec8e3395955519b28f",
+      "transparentPixels": 13051,
+      "nearOpaquePixels": 11089,
+      "frames": 80
+    },
+    {
+      "file": "animations/prism-blocked.webp",
+      "bytes": 368828,
+      "sha256": "050ded60520149ce183dc04a21cb008832ba589e062b22b74dc9608f9de1029a",
+      "transparentPixels": 12380,
+      "nearOpaquePixels": 11730,
+      "frames": 80
+    },
+    {
+      "file": "animations/prism-done.webp",
+      "bytes": 149966,
+      "sha256": "2550ba64bc6eceaccedf3c111c944a9b5933233f1ce152eab3b2a0c650391867",
+      "transparentPixels": 12746,
+      "nearOpaquePixels": 11622,
+      "frames": 32
+    },
+    {
+      "file": "animations/prism-listening.webp",
+      "bytes": 369790,
+      "sha256": "a58d15033c3cc6fd8031b45d859786a271b9ec64b994c136bd1a0633a0fa0029",
+      "transparentPixels": 12880,
+      "nearOpaquePixels": 11064,
+      "frames": 80
+    },
+    {
+      "file": "animations/prism-needs-you.webp",
+      "bytes": 117988,
+      "sha256": "f2614ad17aceae836aab4da6e5a50733a1e65b94ae78124e34c9ec963a5c92a3",
+      "transparentPixels": 12604,
+      "nearOpaquePixels": 11761,
+      "frames": 25
+    },
+    {
+      "file": "animations/prism-ready.webp",
+      "bytes": 374008,
+      "sha256": "32e4c78113fad1937b7cabfeae8e22e782983c2e67f15a44c7e30655d1a5f031",
+      "transparentPixels": 12401,
+      "nearOpaquePixels": 11506,
+      "frames": 80
+    },
+    {
+      "file": "animations/prism-sleeping.webp",
+      "bytes": 364368,
+      "sha256": "2f9e44b3fd499c6762c2c32612b9923a44a019258d9809ebf0f0bd4fba3168ab",
+      "transparentPixels": 12401,
+      "nearOpaquePixels": 11982,
+      "frames": 80
+    },
+    {
+      "file": "animations/prism-thinking.webp",
+      "bytes": 365090,
+      "sha256": "86ad632cb585930ffc0ec588f30cffb041f87ee8009acd5d616a49224fb977d4",
+      "transparentPixels": 12628,
+      "nearOpaquePixels": 11837,
+      "frames": 80
+    },
+    {
+      "file": "animations/prism-working.webp",
+      "bytes": 377464,
+      "sha256": "c11df110e5accc2fb1589fee4ff48b1aac45cc03d439775c85124a5411dfbc8e",
+      "transparentPixels": 12413,
+      "nearOpaquePixels": 11864,
+      "frames": 80
+    },
+    {
+      "file": "animations/spark-blocked.webp",
+      "bytes": 330450,
+      "sha256": "dda66d39d5db04142c2f7ca7bcd39377322cc9b29a70eae686f4dbf23a395f87",
+      "transparentPixels": 13343,
+      "nearOpaquePixels": 10135,
+      "frames": 80
+    },
+    {
+      "file": "animations/spark-done.webp",
+      "bytes": 331524,
+      "sha256": "d7a7353cc59231102c649b20189476edeba6146294fe06de67963f27d2f5b16c",
+      "transparentPixels": 13811,
+      "nearOpaquePixels": 10444,
+      "frames": 80
+    },
+    {
+      "file": "animations/spark-listening.webp",
+      "bytes": 353886,
+      "sha256": "d06abe5ace47d0fb05bfd88a193d69b6daf369500f205c54b3aa79118491181f",
+      "transparentPixels": 12853,
+      "nearOpaquePixels": 10373,
+      "frames": 80
+    },
+    {
+      "file": "animations/spark-needs-you.webp",
+      "bytes": 106754,
+      "sha256": "7754a61fe29bf79bfbf395e5e37c5582a648f2cb785e1f0d5c16acadd90d15aa",
+      "transparentPixels": 13849,
+      "nearOpaquePixels": 10091,
+      "frames": 25
+    },
+    {
+      "file": "animations/spark-ready.webp",
+      "bytes": 302908,
+      "sha256": "92626c868d0fefbe8a3e87d9d65a14e288dc4f870d6b0989a6974b84da82976d",
+      "transparentPixels": 16453,
+      "nearOpaquePixels": 7747,
+      "frames": 80
+    },
+    {
+      "file": "animations/spark-sleeping.webp",
+      "bytes": 334150,
+      "sha256": "4d66841a09df2cb4d47890f3e9a18ad3a6726641e9a614eba9836e4ff2e2d33d",
+      "transparentPixels": 14009,
+      "nearOpaquePixels": 9812,
+      "frames": 80
+    },
+    {
+      "file": "animations/spark-thinking.webp",
+      "bytes": 346608,
+      "sha256": "ed737578549bb3992c5f9c4d7828f4d02fecf4cb8bcc97188fc4eed15677a547",
+      "transparentPixels": 13482,
+      "nearOpaquePixels": 10551,
+      "frames": 80
+    },
+    {
+      "file": "animations/spark-working.webp",
+      "bytes": 341940,
+      "sha256": "6baca683aae65baa700ca2e39ef390bcf6dcc1f69cd4704933b492591415c7a8",
+      "transparentPixels": 13080,
+      "nearOpaquePixels": 10915,
+      "frames": 80
+    }
+  ]
+}
