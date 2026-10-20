@@ -41,7 +41,7 @@ const ProductCard = ({ img, eyebrow, name, desc, href, delay = 0, objectPosition
       viewport={{ once: true, margin: '-80px' }}
       transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
       style={{ rotateX: rotX, rotateY: rotY, transformPerspective: 1000 }}
-      className="group relative block aspect-[2/3] overflow-hidden rounded-2xl border border-white/10 bg-[#0a0d16] no-underline shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
+      className="group relative block h-[520px] w-full min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#0a0d16] no-underline shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
     >
       {/* silhouette */}
       <img
@@ -66,13 +66,14 @@ const ProductCard = ({ img, eyebrow, name, desc, href, delay = 0, objectPosition
       />
 
       {/* legibility gradient */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05070f] via-[#05070f]/20 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05070f] via-[#05070f]/60 to-transparent" />
 
       {/* copy */}
       <div className="absolute inset-x-0 bottom-0 p-6">
-        <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-white/55">{eyebrow}</p>
+        <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/65">{eyebrow}</p>
+        <h3 className="mt-3 text-2xl font-semibold tracking-tight text-white">{name}</h3>
         <p
-          className="mt-2 max-w-[24ch] text-sm font-light leading-relaxed text-white/0 transition-all duration-500 group-hover:text-white/80"
+          className="mt-2 max-w-[24ch] text-sm font-light leading-relaxed text-white/75 transition-all duration-500 group-hover:text-white/90"
           style={{ transform: hover ? 'translateY(0)' : 'translateY(8px)' }}
         >
           {desc}

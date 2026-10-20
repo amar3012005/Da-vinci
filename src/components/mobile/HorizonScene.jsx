@@ -51,7 +51,7 @@ const HorizonScene = () => (
     // the end card stand alone.
     heroTitle={{
       text: 'The New Era',
-      sub: 'Sovereign by design',
+      sub: 'A vision for proactive intelligence',
       from: 0.09, to: 0.145, outFrom: 0.46, outTo: 0.55,
     }}
     staticFrame={160}

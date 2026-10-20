@@ -98,7 +98,7 @@ const PageContent = () => {
             <MobileHero />
             <ProactiveHomepage embedded />
             {!isMobile && <React.Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
-                <HorizonScene />
+                <div id="vision-film" aria-label="Cinematic vision, not a live product demonstration"><HorizonScene /></div>
                 {/* <FallScene field={field} /> */}
                 <SceneBridge />
                 <LatestUpdates />

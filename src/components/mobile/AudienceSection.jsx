@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, RefreshCw } from 'lucide-react';
-import { HIVEMIND_URL } from './hivemindLinks';
+import { PRODUCT_CATALOG } from './productCatalog';
 
 /**
  * AudienceSection — the adaptive narration. Content swaps based on the field the
@@ -11,68 +11,17 @@ import { HIVEMIND_URL } from './hivemindLinks';
  */
 const ease = [0.16, 1, 0.3, 1];
 
+const ROLE_LINES = PRODUCT_CATALOG.filter(product => product.name !== 'ICARUS').map(product => [product.name, product.text]);
 const STORIES = {
-  finance: {
-    label: 'For Finance',
-    headline: 'Run your finance function as an AI desk.',
-    lead: 'Every filing, model, and number — continuous, auditable, and compliant by design.',
-    lines: [
-      ['HIVEMIND', 'Remembers every filing, model assumption, and board decision — one sovereign source of truth.'],
-      ['TARA', 'Handles reporting Q&A and stakeholder calls in real time, grounded in the actual numbers.'],
-      ['HYPERAGENTS', 'Reconcile, forecast, stress-test and flag exposure — a desk that watches, decides, and moves.'],
-    ],
-  },
-  planning: {
-    label: 'For Planning',
-    headline: 'Run strategy with an AI war room.',
-    lead: 'Continuity across every cycle — decisions that remember why they were made.',
-    lines: [
-      ['HIVEMIND', 'Holds the full decision ledger — what was chosen, what was rejected, and why — across cycles.'],
-      ['TARA', 'Briefs and debriefs in natural language, surfacing the context behind each plan.'],
-      ['HYPERAGENTS', 'A swarm that debates options, pressure-tests assumptions, and converges on a defensible call.'],
-    ],
-  },
-  marketing: {
-    label: 'For Marketing',
-    headline: 'Run marketing as an AI studio.',
-    lead: 'Brand, campaigns, and audience memory that compounds instead of resetting.',
-    lines: [
-      ['HIVEMIND', 'Remembers brand voice, every campaign, and what actually converted — institutional taste, kept.'],
-      ['TARA', 'Becomes your brand’s voice on calls and the web — on-message, multilingual, 24/7.'],
-      ['HYPERAGENTS', 'Produce, test, and measure — a swarm that ships creative and kills what doesn’t pay back.'],
-    ],
-  },
-  public: {
-    label: 'For the Public Sector',
-    headline: 'Run your institution, sovereign.',
-    lead: 'GDPR-native AI that serves citizens without data ever leaving your jurisdiction.',
-    lines: [
-      ['HIVEMIND', 'Sovereign, EU-resident memory of policy, casework, and precedent — auditable end to end.'],
-      ['TARA', 'Answers citizen and caseworker queries in real time, in every language you serve.'],
-      ['HYPERAGENTS', 'A compliant swarm that handles intake, routing, and casework inside your own infrastructure.'],
-    ],
-  },
-  health: {
-    label: 'For Healthcare',
-    headline: 'Run care operations, sovereign.',
-    lead: 'Protocol-grounded AI that never sends patient context outside the institution.',
-    lines: [
-      ['HIVEMIND', 'Remembers protocols, pathways, and prior context — compliant, in-walls, sub-50ms.'],
-      ['TARA', 'Handles scheduling, triage intake, and follow-up calls with real-time reasoning.'],
-      ['HYPERAGENTS', 'A swarm that automates admin and coordination so clinicians stay with patients.'],
-    ],
-  },
+  finance: { label: 'For finance teams', headline: 'Connect financial context to the next piece of work.', lead: 'For example, bring together planning assumptions and previous decisions, then coordinate research and reporting work for review.' },
+  planning: { label: 'For planning teams', headline: 'Keep the reasoning connected to the plan.', lead: 'For example, connect earlier decisions to a new priority, then coordinate specialist research and track the questions that remain.' },
+  marketing: { label: 'For marketing teams', headline: 'Carry company context into campaign work.', lead: 'For example, connect brand guidance and campaign decisions, then coordinate research, drafts and reviewed next steps.' },
+  public: { label: 'For public-sector teams', headline: 'Keep shared context connected to the work.', lead: 'For example, connect authorized policy documents and previous decisions, then coordinate research and preparation for your team to review.' },
+  health: { label: 'For healthcare operations', headline: 'Bring operational context into coordination.', lead: 'For example, connect authorized operational documents and meeting commitments, then prepare administrative work for your team to review.' },
 };
-
 const DEFAULT = {
-  label: 'For every organization',
-  headline: 'Run your company with an AI workforce.',
-  lead: 'Your knowledge, decisions, and operations — remembered, reasoned over, and acted on inside your walls.',
-  lines: [
-    ['HIVEMIND', 'Sovereign memory of every document, decision, and customer context — recalled when work needs it, never sent outside.'],
-    ['TARA', 'Fields calls, qualifies requests, and moves work forward — reasoning, not scripts.'],
-    ['HYPERAGENTS', 'A swarm that researches, creates, reviews, and executes — grounded in your organization\'s history.'],
-  ],
+  label: 'For every organization', headline: 'Company understanding. Coordinated specialist work.',
+  lead: 'HIVEMIND develops the shared understanding. Runtime anticipates what needs attention and coordinates HyperAgents to carry the work forward.',
 };
 
 const AudienceSection = ({ field, onChange }) => {
@@ -104,7 +53,7 @@ const AudienceSection = ({ field, onChange }) => {
         </motion.div>
 
         <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10 md:grid-cols-3">
-          {s.lines.map(([name, desc], i) => (
+          {ROLE_LINES.map(([name, desc], i) => (
             <motion.div
               key={name}
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
@@ -117,8 +66,8 @@ const AudienceSection = ({ field, onChange }) => {
           ))}
         </div>
 
-        <a href={HIVEMIND_URL} className="group mt-12 inline-flex items-center gap-3 rounded-full border border-white/25 bg-white/10 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-white no-underline backdrop-blur-md transition-colors hover:bg-white/20">
-          Enter SINGULANCE <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+        <a href="#early-access" className="group mt-12 inline-flex items-center gap-3 rounded-full border border-white/25 bg-white/10 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-white no-underline backdrop-blur-md transition-colors hover:bg-white/20">
+          Join early access <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
         </a>
       </div>
     </section>

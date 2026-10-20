@@ -2,41 +2,16 @@ import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import ProductCard from './ProductCard';
 import { HeroMotionBoundary } from './MobileHero';
-import { HIVEMIND_URL, hivemindHref } from './hivemindLinks';
+import { PRODUCT_CATALOG } from './productCatalog';
 
 const NebulaBackdrop = lazy(() => import('./three/NebulaBackdrop'));
 
 /**
  * SINGULANCE sub-products — the stack.
- * R3F nebula backdrop (depth) behind three tall poster cards: TARA (voice),
- * HIVEMIND (memory), HYPERAGENTS (swarm). Replaces the legacy Solution sections.
+ * R3F nebula backdrop behind the same four roles as the main catalog.
+ * Voice remains a companion capability rather than a competing product role.
  */
 const ease = [0.16, 1, 0.3, 1];
-
-const PRODUCTS = [
-  {
-    img: '/sp-tara.webp',
-    eyebrow: 'Voice · Sentinel',
-    name: 'TARA',
-    desc: 'The voice of your institution — an agent that reasons in real time, not a script that retrieves.',
-    href: HIVEMIND_URL,
-  },
-  {
-    img: '/sp-hivemind.webp',
-    eyebrow: 'Sovereign Memory',
-    name: 'HIVEMIND',
-    desc: 'Sub-50ms recall across everything your organization knows. The mind that never forgets.',
-    href: HIVEMIND_URL,
-  },
-  {
-    img: '/sp-hyperagents.webp',
-    eyebrow: 'Agent Swarm',
-    name: 'HYPERAGENTS',
-    desc: 'Many minds that act as one — digital employees that watch, decide, and move on your behalf.',
-    href: hivemindHref('/app/employees'),
-    objectPosition: 'center bottom',
-  },
-];
 
 const useMotionOk = (host) => {
   const [ok, setOk] = useState(false);
@@ -87,20 +62,20 @@ const SubProducts = () => {
         >
           <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-white/55">The SINGULANCE Stack</p>
           <h2 className="mt-4 text-4xl font-semibold tracking-tight text-white md:text-5xl">
-            Three minds. One sovereign system.
+            One company Brain. A coordinated AI team.
           </h2>
           <p className="mt-4 text-base font-light leading-relaxed text-white/65">
-            Voice that reasons. Memory that never forgets. A swarm that acts. Each runs inside your walls —
-            sovereign, GDPR-native, built for regulated Europe.
+            HIVEMIND connects company knowledge. Runtime is the proactive, always-on AI Chief of Staff that coordinates HyperAgents. ICARUS advances the research behind the system.
           </p>
         </motion.div>
 
         {/* cards */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {PRODUCTS.map((p, i) => (
-            <ProductCard key={p.name} {...p} delay={i * 0.1} />
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {PRODUCT_CATALOG.map((p, i) => (
+            <ProductCard key={p.name} {...p} eyebrow={p.role} desc={p.text} delay={i * 0.1} />
           ))}
         </div>
+        <p className="mt-10 max-w-3xl text-sm leading-relaxed text-white/65">Prefer to talk? TARA brings voice conversations into HIVEMIND with the workspace context available to it. <a href="/tara" className="text-white underline underline-offset-4">Explore TARA voice</a>.</p>
       </div>
     </section>
   );

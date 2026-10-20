@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
+import { PRODUCT_ROLE_LINE } from './productCatalog';
 import { COVER_LQIP } from './three/coverLqip';
 
 const HeroScene = lazy(() => import('./three/HeroScene'));
@@ -112,7 +113,7 @@ const HeroActionRail = ({ delay }) => (
         <a href="#demo" className="inline-flex min-h-11 items-center justify-center gap-3 rounded border border-white/50 bg-black/30 px-5 text-sm text-white no-underline hover:bg-black/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">Watch the demo <span className="text-[10px] text-white/70">Coming soon</span></a>
       </div>
       <p className="mx-auto max-w-3xl text-center text-[10px] leading-relaxed text-white/75 sm:text-[11px]">
-        HIVEMIND understands your company. Runtime moves the work forward. ICARUS advances the research behind it.
+        {PRODUCT_ROLE_LINE}
       </p>
     </div>
   </motion.div>

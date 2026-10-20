@@ -5,15 +5,11 @@ import { Menu, X, Sun, Moon, ArrowRight, ChevronDown, ArrowUpRight, Brain, Netwo
 import { useTheme, t } from './ThemeContext';
 import { getMobileCopy } from './mobileCopy';
 import { HIVEMIND_URL, hivemindHref } from './hivemindLinks';
+import { PRODUCT_CATALOG } from './productCatalog';
 import SingulanceBrand from '../hivemind/app/shared/SingulanceBrand';
 
-const PRODUCT_MENU = [
-  { title: 'HIVEMIND', label: 'BRAIN', description: 'Your company memory, with complete recall.', href: HIVEMIND_URL, icon: Brain },
-  { title: 'HIVEMIND', label: 'OS', description: 'The operating system for your AI company.', href: hivemindHref('/app/employees/mycompany'), icon: Network },
-  { title: 'HIVEMIND', label: 'VOICE', description: 'A voice that knows your business.', href: hivemindHref('/app/tara'), icon: Mic2 },
-  { title: 'HIVEMIND', label: 'RUNTIME', description: 'Autonomous work, built for the real world.', href: hivemindHref('/app/employees'), icon: Bot, soon: true },
-  { title: 'HIVEMIND', label: 'ICARUS', description: 'A memory filesystem for AI agents.', href: '/research/icarus', icon: ShieldCheck },
-];
+const PRODUCT_ICONS = { HIVEMIND: Brain, Runtime: Bot, HyperAgents: Network, ICARUS: ShieldCheck };
+const PRODUCT_MENU = PRODUCT_CATALOG.map(product => ({ title: product.name, label: product.role, description: product.title, href: product.href, icon: PRODUCT_ICONS[product.name] }));
 
 const MENU_CONTENT = {
   Products: { eyebrow: 'THE SINGULANCE STACK', items: PRODUCT_MENU },

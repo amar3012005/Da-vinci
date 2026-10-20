@@ -31,8 +31,8 @@ const ACCENT = '#ff7a2f';
 
 const SceneBridge = ({
   lastFrameSrc = '/horizon-frames/f_164.webp',
-  eyebrow = 'Now running',
-  line = 'The work it already ships.',
+  eyebrow = 'From cinematic vision to company work',
+  line = 'A company Brain. A Chief of Staff. A team of specialists.',
 }) => {
   const wrapRef = useRef(null);
   const backdropRef = useRef(null);

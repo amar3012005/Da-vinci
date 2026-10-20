@@ -48,9 +48,10 @@ test('a failed product background preserves the product section', async()=>{
   };
   const log=jest.spyOn(console,'error').mockImplementation(()=>{});
   await act(async()=>{render(<SubProducts/>);});
-  expect(screen.getByRole('heading',{name:'Three minds. One sovereign system.'})).toBeTruthy();
-  expect(screen.getByText('TARA')).toBeTruthy();
+  expect(screen.getByRole('heading',{name:'One company Brain. A coordinated AI team.'})).toBeTruthy();
+  expect(screen.getByText('Runtime')).toBeTruthy();
   expect(screen.getByText('HIVEMIND')).toBeTruthy();
-  expect(screen.getByText('HYPERAGENTS')).toBeTruthy();
+  expect(screen.getByText('HyperAgents')).toBeTruthy();
+  expect(screen.getByText('ICARUS')).toBeTruthy();
   log.mockRestore();
 });
