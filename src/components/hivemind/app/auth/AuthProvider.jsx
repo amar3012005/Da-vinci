@@ -1,3 +1,4 @@
+import { classifyConnectionFailure } from './connection-failure';
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -21,6 +22,7 @@ const AuthContext = createContext(undefined);
 export function AuthProvider({ children }) {
   useEffect(() => bindNativeTouchFeedback({ document, storage: window.localStorage }), []);
   const [authState, setAuthState] = useState('loading');
+  const [connectionFailure, setConnectionFailure] = useState(null);
   const [user, setUser] = useState(null);
   const [org, setOrg] = useState(null);
   const [onboarding, setOnboarding] = useState(null);
@@ -69,14 +71,14 @@ export function AuthProvider({ children }) {
 
   const runBootstrap = useCallback(async () => {
     setAuthState('loading');
+    setConnectionFailure(null);
     if (isNativeApp()) { setUser(null); setOrg(null); setOnboarding(null); }
 
     try {
       // Hard timeout so a hung bootstrap never traps the user on the
       // "Loading HIVEMIND..." spinner forever. If the control-plane request
       // stalls (e.g. a poisoned browser connection, network wedge), we fall
-      // through to the catch below and land on signed_out → login, which is
-      // recoverable, instead of an infinite spinner.
+      // through to a retryable connection notice without treating it as sign-out.
       const data = await Promise.race([
         apiClient.bootstrap(),
         new Promise((_, reject) =>
@@ -120,10 +122,9 @@ export function AuthProvider({ children }) {
         } catch { /* analytics never blocks auth */ }
       }
     } catch (err) {
-      // A 401 (unauthenticated) or a client-side bootstrap timeout both
-      // resolve to signed_out → login, which is recoverable. Only a genuine
-      // network/server failure falls through to control_plane_unreachable.
-      if (err.response?.status === 401 || err.message === 'bootstrap_timeout') {
+      // Only an explicit authentication denial signs the user out. A timeout
+      // or unreachable service cannot establish whether a session is valid.
+      if (err.response?.status === 401) {
         setUser(null);
         setOrg(null);
         setOnboarding(null);
@@ -136,6 +137,7 @@ export function AuthProvider({ children }) {
         setOnboarding(null);
         setConnectivity(null);
         setClientSupport([]);
+        setConnectionFailure(classifyConnectionFailure(err));
         setAuthState('control_plane_unreachable');
       }
     } finally {
@@ -257,6 +259,7 @@ export function AuthProvider({ children }) {
     isAuthenticated: authState === 'signed_in',
     isSignedOut: authState === 'signed_out',
     isUnreachable: authState === 'control_plane_unreachable',
+    connectionFailure,
 
     // Bootstrap payload
     user,

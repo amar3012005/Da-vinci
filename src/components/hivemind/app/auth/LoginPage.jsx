@@ -1,3 +1,5 @@
+import ConnectionUnavailable from './ConnectionUnavailable';
+import { classifyConnectionFailure } from './connection-failure';
 import { trustedDeveloperReturn } from './developer-auth-return.mjs';
 import { trustedRuntimeReturn } from '../shared/workspace-authority.mjs';
 import HeroCtas from '../../../mobile/HeroCtas';
@@ -6,7 +8,7 @@ import { isNativeApp } from '../shared/native-app';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow, Mail } from 'lucide-react';
+import { Zap, Brain, Shield, Loader2, Building2, ArrowLeft, ArrowRight, Cloud, Server, Lock, Check, Crown, KeyRound, Mic2, Workflow, Mail } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 import { clearInvitationContext, loadInvitationContext, saveInvitationContext } from './invitation-session';
@@ -178,7 +180,7 @@ function trustedMcpOAuthReturnTo(search) {
 }
 
 export default function LoginPage() {
-  const { isAuthenticated, isUnreachable, loading, login, org, user, needsOnboarding, refresh } = useAuth();
+  const { isAuthenticated, isUnreachable, connectionFailure, loading, login, org, user, needsOnboarding, refresh } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const developerReturn = trustedDeveloperReturn(location.search, apiClient.controlPlane.defaults.baseURL);
@@ -299,7 +301,7 @@ export default function LoginPage() {
       if (!active) return;
       setEmailConfig(config);
       if (config.enabled && config.turnstile_site_key) prepareEmailSecurityScript();
-    }).catch(() => { if (active) setEmailConfigError(true); })
+    }).catch(error => { if (active) setEmailConfigError(classifyConnectionFailure(error)); })
       .finally(() => { if (active) setEmailConfigLoaded(true); });
     return () => { active = false; };
   }, [emailConfigAttempt]);
@@ -801,27 +803,8 @@ export default function LoginPage() {
                     {isDeveloperFlow ? 'Continue with email or Google. No purchase or company workspace is required. Your local memory works without signing in.' : 'One workspace that remembers everything — chat, agents, meetings, connectors.'}
                   </p>
 
-                  {/* State: control_plane_unreachable */}
-                  {isUnreachable && (
-                    <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-[8px] bg-red-50 border border-red-200">
-                      <WifiOff size={14} className="text-[#dc2626] mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-[#dc2626] text-xs font-semibold font-['Space_Grotesk']">Control plane unavailable</p>
-                        <p className="text-[#dc2626]/60 text-[11px] mt-0.5">Unable to reach the authentication service. Please try again in a moment.</p>
-                        <button type="button" onClick={() => refresh()} className="mt-2 text-xs font-semibold underline">Try again</button>
-                      </div>
-                      {enterpriseInvitation && (
-                        <div className="border border-[#117dff]/20 bg-[#117dff]/[0.05] rounded-[8px] px-3 py-2.5 text-[12px] text-[#255d9f]">
-                          <strong className="text-[#0a5fcc]">Enterprise invitation confirmed</strong>
-                          <span className="ml-1">{enterpriseInvitation.company_name} · {enterpriseInvitation.hosting_mode === 'self_host' ? 'Self-hosted infrastructure' : 'Managed infrastructure'}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {(isUnreachable || emailConfigError) && <ConnectionUnavailable className="mb-5" failure={connectionFailure || emailConfigError} onRetry={() => { setEmailConfigAttempt(value => value + 1); refresh(); }} />}
 
-                  {emailConfigError && <div role="alert" className="mb-3 text-sm text-red-700">
-                    Email sign-in could not load. <button type="button" className="underline" onClick={() => setEmailConfigAttempt((attempt) => attempt + 1)}>Retry email sign-in</button>
-                  </div>}
                   {emailEnabled && emailView === 'methods' && (
                     <button onClick={() => leaveEmailChallenge('email')} className="w-full h-12 mb-2.5 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]">
                       <Mail size={16} /> Continue with Email
