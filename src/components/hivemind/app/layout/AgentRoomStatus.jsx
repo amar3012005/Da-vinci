@@ -1,3 +1,4 @@
+import { aggregateMotion } from '../shared/runtime-motion';
 import React from 'react';
 import { CalendarClock, LoaderCircle, Bell, Phone, CircleAlert } from 'lucide-react';
 
@@ -10,6 +11,7 @@ export function aggregateAgentRooms(rooms, agentId) {
   const latest = (activity.length ? activity : matching).reduce((current, room) => room.updatedAt > current.updatedAt ? room : current);
   return {
     ...latest,
+    motion: aggregateMotion(activity.length ? activity : matching),
     stale: matching.every(room => room.stale === true),
     error: matching.some(room => room.error === true),
     loading: matching.some(room => room.loading === true),
