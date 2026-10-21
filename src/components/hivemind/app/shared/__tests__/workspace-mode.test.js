@@ -18,6 +18,11 @@ test('background Dot unread requires an owned binding and real local read waterm
   expect(ownedOpenDotRoomStatuses(employees, roster, { owned: 40 }).owned[0].unread).toBe(true);
   expect(ownedOpenDotRoomStatuses([{ ...employees[0], dotId: 'foreign' }], roster)).toEqual({});
 });
+test('an authenticated bound employee with no room is ready, not unavailable', () => {
+  const roster = [{ id: 'owned', policy_rules: { open_dot_employee: { version: 1, state: 'bound', dot_id: 'dot-owned' } } }];
+  expect(ownedOpenDotRoomStatuses([{ employeeId: 'owned', dotId: 'dot-owned', rooms: [], status: 'idle' }], roster).owned).toEqual([{ id: 'owned', updatedAt: 0, status: 'idle' }]);
+  expect(ownedOpenDotRoomStatuses([{ employeeId: 'owned', dotId: 'foreign', rooms: [], status: 'idle' }], roster)).toEqual({});
+});
 
 test('shared apps use Runtime without changing Brain connectors', () => {
   const path = '/hivemind/app/employee/apps';

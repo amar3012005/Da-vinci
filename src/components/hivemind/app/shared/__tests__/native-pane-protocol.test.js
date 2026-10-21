@@ -14,11 +14,27 @@ test('messages require exact iframe Window identity, runner origin and authentic
   for (const bad of [{...event,source:{}},{...event,origin:PANE_ORIGINS.runtime},{...event,data:{...data,scope:'user-b:org-a'}},{...event,data:{...data,scope:'user-a:org-b'}}]) expect(validPaneMessage(bad,frame,'brain','user-a:org-a')).toBe(false);
 });
 test('mode return paths are scoped and cannot be used as foreign URLs or another runner route', () => {
+  sessionStorage.clear(); localStorage.clear();
   rememberPaneRoute('brain','/hivemind/app/overview/session/saved','a:org');
   expect(recalledPaneRoute('brain','a:org')).toBe('/hivemind/app/overview/session/saved');
   expect(recalledPaneRoute('brain','b:org')).toBeNull();
   sessionStorage.setItem('hivemind.native-pane:a:org:brain','https://evil.example');
+  expect(recalledPaneRoute('brain','a:org')).toBe('/hivemind/app/overview/session/saved');
+  localStorage.setItem('hivemind.native-pane:a:org:brain','https://evil.example');
   expect(recalledPaneRoute('brain','a:org')).toBeNull();
+});
+
+test('Runtime route hints survive tabs while retaining only ten scoped opaque addresses', () => {
+  sessionStorage.clear(); localStorage.clear();
+  for (let i = 0; i < 12; i++) rememberPaneRoute('runtime', `/hivemind/app/employee/harness/session/session-${i}`, 'user-a:org-a');
+  sessionStorage.clear();
+  expect(recalledPaneRoute('runtime', 'user-a:org-a')).toBe('/hivemind/app/employee/harness/session/session-11');
+  expect(recalledPaneRoute('runtime', 'user-b:org-a')).toBeNull();
+  const recent = JSON.parse(localStorage.getItem('hivemind.native-pane-recents.v1:user-a:org-a:runtime'));
+  expect(recent).toHaveLength(10);
+  expect(recent[0]).toBe('/hivemind/app/employee/harness/session/session-11');
+  expect(recent).not.toContain('/hivemind/app/employee/harness/session/session-0');
+  expect(JSON.stringify(recent)).not.toContain('content');
 });
 
 it('narrows the legacy embed notification to the actual configured parent without granting an origin', () => {

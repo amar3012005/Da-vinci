@@ -17,7 +17,7 @@ export function createAgentRosterCache(fetchProfiles, now = Date.now, storage = 
       id: row.id, name: row.name, role_archetype: row.role_archetype,
       avatar_url: row.avatar_url, status: row.status,
       policy_rules: row.policy_rules?.open_dot_employee?.dot_id ? {
-        open_dot_employee: { dot_id: row.policy_rules.open_dot_employee.dot_id, state: row.policy_rules.open_dot_employee.state },
+        open_dot_employee: { version: row.policy_rules.open_dot_employee.version, dot_id: row.policy_rules.open_dot_employee.dot_id, state: row.policy_rules.open_dot_employee.state },
       } : {},
     }));
     try { storage.setItem(cacheKey(scope), JSON.stringify({ version: 1, at: now(), profiles: minimal })); } catch { /* Optional browser cache. */ }

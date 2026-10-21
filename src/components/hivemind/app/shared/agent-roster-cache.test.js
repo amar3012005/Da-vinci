@@ -35,11 +35,11 @@ test('does not cache a failed request and permits recovery', async () => {
 test('paints only scoped minimal roster from browser cache then revalidates', async () => {
   const storage = new Map();
   const store = { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) };
-  const first = createAgentRosterCache(async () => [{ id: 'one', name: 'Feynmann', role_archetype: 'Researcher', persona: 'private', policy_rules: { open_dot_employee: { dot_id: 'dot-one', state: 'bound' }, secret: 'private' } }], () => 1000, store);
+  const first = createAgentRosterCache(async () => [{ id: 'one', name: 'Feynmann', role_archetype: 'Researcher', persona: 'private', policy_rules: { open_dot_employee: { version: 1, dot_id: 'dot-one', state: 'bound' }, secret: 'private' } }], () => 1000, store);
   await first.load('user-a:org-a');
   const fetchProfiles = jest.fn(async () => [{ id: 'two', name: 'Current' }]);
   const second = createAgentRosterCache(fetchProfiles, () => 2000, store);
-  expect(second.peek('user-a:org-a')).toMatchObject([{ id: 'one', name: 'Feynmann', role_archetype: 'Researcher', policy_rules: { open_dot_employee: { dot_id: 'dot-one', state: 'bound' } } }]);
+  expect(second.peek('user-a:org-a')).toMatchObject([{ id: 'one', name: 'Feynmann', role_archetype: 'Researcher', policy_rules: { open_dot_employee: { version: 1, dot_id: 'dot-one', state: 'bound' } } }]);
   expect(second.peek('user-b:org-a')).toBeUndefined();
   expect(JSON.stringify([...storage.values()])).not.toContain('private');
   await second.load('user-a:org-a');

@@ -17,6 +17,7 @@ const SCOPED_PREFIXES = [
   'hm.overviewChat',
   'hivemind.hyperagent.roster.v1:',
   'hivemind.native-pane:',
+  'hivemind.native-pane-recents.v1:',
 ];
 
 export function getStorageUserId() {

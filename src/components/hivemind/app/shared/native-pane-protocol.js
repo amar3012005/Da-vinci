@@ -41,8 +41,22 @@ export function persistentShellEnabled() {
 
 export function rememberPaneRoute(mode, path, scope) {
   const clean = panePath(path, mode); if (!clean || !scope || scope === ':') return;
-  try { sessionStorage.setItem(`hivemind.native-pane:${scope}:${mode}`, clean); } catch { /* Optional navigation cache. */ }
+  const key = `hivemind.native-pane:${scope}:${mode}`;
+  try { sessionStorage.setItem(key, clean); } catch { /* Optional navigation cache. */ }
+  // Keep only opaque, scoped routes. Native Session Controller checks ownership
+  // before showing any conversation; browser storage never contains messages.
+  try {
+    localStorage.setItem(key, clean);
+    if (mode === 'runtime' && /\/session\//.test(clean)) {
+      const recentKey = `hivemind.native-pane-recents.v1:${scope}:${mode}`;
+      const saved = JSON.parse(localStorage.getItem(recentKey) || '[]');
+      const valid = Array.isArray(saved) ? saved.filter(value => panePath(value, mode) && value !== clean) : [];
+      localStorage.setItem(recentKey, JSON.stringify([clean, ...valid].slice(0, 10)));
+    }
+  } catch { /* Optional browser cache. */ }
 }
 export function recalledPaneRoute(mode, scope) {
-  try { return panePath(sessionStorage.getItem(`hivemind.native-pane:${scope}:${mode}`), mode); } catch { return null; }
+  if (!scope || scope === ':') return null;
+  const key = `hivemind.native-pane:${scope}:${mode}`;
+  try { return panePath(sessionStorage.getItem(key), mode) || panePath(localStorage.getItem(key), mode); } catch { return null; }
 }

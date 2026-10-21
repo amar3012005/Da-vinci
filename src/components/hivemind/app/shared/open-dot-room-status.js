@@ -21,11 +21,13 @@ export function ownedOpenDotRoomStatuses(employees, roster, readAt = {}) {
     const binding = (employee?.policy_rules ?? employee?.policyRules)?.open_dot_employee;
     if (!employee || binding?.version !== 1 || binding.state !== 'bound' || binding.dot_id !== entry.dotId) continue;
     const rooms = openDotRoomStatus({ type: 'hivemind.open-dot.room-status', version: 1, employeeId: entry.employeeId, rooms: entry.rooms }, entry.employeeId);
-    if (rooms !== null) statuses[entry.employeeId] = rooms.map(room => {
+    if (rooms !== null) statuses[entry.employeeId] = rooms.length === 0 && ['idle', 'paused'].includes(entry.status)
+      ? [{ id: entry.employeeId, updatedAt: 0, status: entry.status }]
+      : rooms.map(room => {
       const lastAssistantAt = entry.rooms.find(value => value.conversationId === room.sessionId)?.lastAssistantAt;
       const watermark = readAt[entry.employeeId];
       return { ...room, unread: Number.isFinite(lastAssistantAt) ? Number.isFinite(watermark) && lastAssistantAt > watermark : room.unread };
-    });
+      });
   }
   return statuses;
 }
