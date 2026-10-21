@@ -2,13 +2,13 @@ import { motionForRoom } from './runtime-motion';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import api from './api-client';
 import { useAuth } from '../auth/AuthProvider';
-const RuntimeCharacter = createContext('orbit');
+const RuntimeCharacter = createContext('classic');
 const characters = ['capsule', 'pebble', 'prism', 'orbit', 'spark', 'fold', 'classic'];
 export const RUNTIME_APPEARANCE_EVENT = 'hivemind:runtime-appearance-saved';
 export function RuntimeAppearanceProvider({ children }) {
   const { user, org } = useAuth();
   const scope = user?.id && org?.id ? `${user.id}:${org.id}` : '';
-  const [saved, setSaved] = useState({ scope: '', character: 'orbit' });
+  const [saved, setSaved] = useState({ scope: '', character: 'classic' });
   useEffect(() => {
     if (!scope) return undefined;
     let sequence = 0; let active = true;
@@ -26,7 +26,7 @@ export function RuntimeAppearanceProvider({ children }) {
     document.addEventListener('visibilitychange', visible);
     return () => { active = false; window.removeEventListener(RUNTIME_APPEARANCE_EVENT, refresh); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', visible); };
   }, [scope]);
-  return <RuntimeCharacter.Provider value={saved.scope === scope ? saved.character : 'orbit'}>{children}</RuntimeCharacter.Provider>;
+  return <RuntimeCharacter.Provider value={saved.scope === scope ? saved.character : 'classic'}>{children}</RuntimeCharacter.Provider>;
 }
 export default function RuntimeAvatar({ size, room, ...props }) {
   const character = useContext(RuntimeCharacter);

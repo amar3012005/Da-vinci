@@ -539,6 +539,7 @@ function AppShellContent() {
   </div>;
 
   if (!workspaceModesReady && requiresWorkspaceModeAccess(location.pathname)) return <AsciiWorkspaceLoading label="Connecting…" />;
+  if (workspaceModesReady && !workspaceModesEnabled && !workspaceModesError && requiresWorkspaceModeAccess(location.pathname)) return <Navigate to="/hivemind/app/overview/new" replace />;
   if (!workspaceModesEnabled && requiresWorkspaceModeAccess(location.pathname)) return (
     <section role="alert" className="grid min-h-screen place-content-center gap-4 p-6 text-center">
       <p>{workspaceModesError || 'Workspace access is not enabled for this account. Your saved conversations are unchanged.'}</p>

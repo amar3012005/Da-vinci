@@ -28,7 +28,7 @@ test('mobile callback helpers honor mobile viewport and explicit desktop mode', 
     expect(routing.defaultAuthReturnUrl('https://example.test'))
       .toBe('https://example.test/hivemind/app/overview?auth=callback');
     expect(routing.defaultAuthenticatedPath()).toBe('/hivemind/app/overview');
-    expect(routing.newWorkspaceLanding()).toBe('/hivemind/app/employees/mycompany');
+    expect(routing.newWorkspaceLanding()).toBe('/hivemind/app/overview/new');
   } finally {
     window.matchMedia = previousMatchMedia;
     window.history.replaceState({}, '', `/hivemind/login${previousSearch}`);
