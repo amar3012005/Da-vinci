@@ -60,6 +60,7 @@ export default function OnboardingFlow() {
   // TRUE either way: the spinner covers both auto-create and the redirect (no flash of the old
   // duplicate choice form). Only the error-retry path flips this off to show the details form.
   const [autoCreating, setAutoCreating] = useState(true);
+  const [referralFallback, setReferralFallback] = useState(null);
   const autoRan = useRef(false);
 
   useEffect(() => {
@@ -143,6 +144,11 @@ export default function OnboardingFlow() {
         }
         window.location.href = newWorkspaceLanding();
       } catch (err) {
+        if (saved.referral_token && err?.response?.data?.code === 'referral_offer_used') {
+          setReferralFallback({ saved, name, deployment: dep });
+          setAutoCreating(false);
+          return;
+        }
         // Keep retries on the login/create-account surface. The saved intent
         // remains in localStorage so the form can restore every entered field.
         const reason = err?.response?.status === 403 ? 'invalid_enterprise_code' : 'workspace_creation_failed';
@@ -150,6 +156,39 @@ export default function OnboardingFlow() {
       }
     })();
   }, [createOrg]);
+
+  const continueWithFreeWorkspace = async () => {
+    if (!referralFallback || creating) return;
+    const { saved, name, deployment: dep } = referralFallback;
+    setCreating(true);
+    setError(null);
+    try {
+      const admission = await apiClient.requestSignupAdmission({
+        accountType: saved.type,
+        referralToken: String(saved.referral_token || '').trim(),
+      });
+      const created = await createOrg({
+        name,
+        user_name: String(saved.name || '').trim(),
+        hivemind_name: String(saved.hivemind_name || '').trim(),
+        slug: saved.type === 'enterprise' ? deriveSlug(saved.hivemind_name || name) : undefined,
+        plan: 'free',
+        deployment: dep,
+        signup_ticket: admission.signup_ticket,
+        referralToken: String(saved.referral_token || '').trim(),
+        accept_referral_free_fallback: true,
+      });
+      try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
+      if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
+      window.location.href = newWorkspaceLanding();
+    } catch (err) {
+      setError(err?.response?.status === 403
+        ? 'This invitation is no longer available. Ask for a new link.'
+        : 'We could not create your workspace. Your invitation choice is saved; please try again.');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   useEffect(() => {
     const code = referralCode.trim();
@@ -207,6 +246,20 @@ export default function OnboardingFlow() {
     const endsAt = new Date(enterpriseActivation.ends_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
     return <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center px-4"><section className="w-full max-w-md border border-[#b9dbff] bg-white p-7 shadow-sm"><p className="text-xs font-mono uppercase tracking-[0.16em] text-[#117dff]">Enterprise activated</p><h1 className="mt-2 text-2xl font-semibold text-[#161616]">Your workspace is ready</h1><p className="mt-3 text-sm text-[#525252]">{enterpriseActivation.hosting_mode === 'self_host' ? 'Self-hosted infrastructure' : 'Managed infrastructure'}</p><p className="mt-1 text-sm text-[#525252]">Onboarding access until {endsAt}</p><p className="mt-4 text-sm font-medium text-[#117dff]">Unlimited pilot usage</p></section></div>;
   }
+
+  if (referralFallback) return (
+    <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center px-4">
+      <section className="w-full max-w-md rounded-3xl border border-[#e3e0db] bg-white p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold text-[#161616]">Your trial was already used</h1>
+        <p className="mt-3 text-sm text-[#525252]">This email has already used the trial in this invitation. You can still create a Free workspace without another trial.</p>
+        {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
+        <button type="button" disabled={creating} onClick={continueWithFreeWorkspace}
+          className="mt-6 rounded-xl bg-[#117dff] px-5 py-3 text-sm font-medium text-white disabled:opacity-50">
+          {creating ? 'Creating workspace…' : 'Continue with Free workspace'}
+        </button>
+      </section>
+    </div>
+  );
 
   // Auto-creating from the login-page choice — no second prompt.
   if (autoCreating) {
