@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { agentRoster } from '../shared/agent-roster';
-import { PANE_ORIGINS, PANE_EVENTS, PANE_REQUESTS, paneForPath, panePath, paneSource, validPaneMessage, rememberPaneRoute } from '../shared/native-pane-protocol';
+import { PANE_ORIGINS, PANE_EVENTS, PANE_REQUESTS, directRuntimeHost, paneForPath, panePath, paneSource, validPaneMessage, rememberPaneRoute } from '../shared/native-pane-protocol';
 
 export function nativePreviewExpanded(doc) { return Boolean(doc.querySelector('[data-sidebar-right-panel][data-sidebar-right-open]')); }
 
@@ -112,7 +112,10 @@ export default function PersistentHarnessPanes({ retainBrain = true }) {
   const location = useLocation(); const navigate = useNavigate(); const navigateRef = useRef(navigate); navigateRef.current = navigate; const { user, org } = useAuth();
   const scope = `${user?.id || ''}:${org?.id || ''}`;
   const candidate = paneForPath(location.pathname);
-  const active = retainBrain || candidate !== 'brain' ? candidate : null;
+  // The runner owns Runtime directly. Never create a duplicate native client
+  // in a same-origin iframe; its direct HarnessSurface retains the native seat.
+  const directRuntime = directRuntimeHost(candidate, window.location.origin);
+  const active = directRuntime ? null : retainBrain || candidate !== 'brain' ? candidate : null;
   const path = location.pathname + location.search + location.hash;
   const [visited, setVisited] = useState(() => active ? { [active]: path } : {});
   const lastRoutes = useRef({}); const activePath = useRef(path); activePath.current = path;

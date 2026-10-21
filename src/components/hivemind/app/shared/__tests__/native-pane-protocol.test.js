@@ -1,5 +1,10 @@
 import { normalizeHarnessInjections } from '../../pages/harness-transport';
-import { PANE_ORIGINS, paneForPath, panePath, paneSource, validPaneMessage, rememberPaneRoute, recalledPaneRoute } from '../native-pane-protocol';
+import { PANE_ORIGINS, directRuntimeHost, paneForPath, panePath, paneSource, validPaneMessage, rememberPaneRoute, recalledPaneRoute } from '../native-pane-protocol';
+test('canonical Runtime host opens its native client directly without a second iframe boot', () => {
+  expect(directRuntimeHost('runtime', PANE_ORIGINS.runtime)).toBe(true);
+  expect(directRuntimeHost('runtime', PANE_ORIGINS.brain)).toBe(false);
+  expect(directRuntimeHost('brain', PANE_ORIGINS.brain)).toBe(false);
+});
 test('native clients keep exact fixed runner authority and safe chat routes', () => {
   expect(paneForPath('/hivemind/app/overview/session/brain-id')).toBe('brain');
   expect(paneForPath('/hivemind/app/employee/harness/session/runtime-id')).toBe('runtime');

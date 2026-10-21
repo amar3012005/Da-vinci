@@ -4,7 +4,9 @@ import '@testing-library/jest-dom';
 let mockPath = '/hivemind/app/overview/session/saved';
 jest.mock('react-router-dom', () => ({ useLocation: () => ({ pathname: mockPath, search: '' }), Outlet: () => <div data-testid="native-seat">Existing native chat seat</div> }), { virtual: true });
 jest.mock('../shared/native-app', () => ({ isNativeApp: () => false }));
-jest.mock('../shared/native-pane-protocol', () => ({ persistentShellEnabled: () => true, paneForPath: path => path.includes('/employee/harness') ? 'runtime' : path.includes('/overview') ? 'brain' : null }));
+jest.mock('../shared/native-pane-protocol', () => ({ persistentShellEnabled: () => true,
+  directRuntimeHost: (mode, origin) => mode === 'runtime' && origin === 'https://runtime-runner.singulancelabs.com',
+  paneForPath: path => path.includes('/employee/harness') ? 'runtime' : path.includes('/overview') ? 'brain' : null }));
 jest.mock('./PersistentHarnessPanes', () => ({ __esModule: true, default: ({ retainBrain }) => <div data-testid="panes" data-retain-brain={String(retainBrain)}/> }));
 import AgentWorkspaceOutlet from './AgentWorkspaceOutlet';
 beforeEach(() => { mockPath = '/hivemind/app/overview/session/saved'; });

@@ -1,5 +1,5 @@
 import PersistentHarnessPanes from './PersistentHarnessPanes';
-import { paneForPath, persistentShellEnabled } from '../shared/native-pane-protocol';
+import { directRuntimeHost, paneForPath, persistentShellEnabled } from '../shared/native-pane-protocol';
 import { isNativeApp } from '../shared/native-app';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import React, { Suspense, useEffect, useLayoutEffect, useState } from 'react';
@@ -23,7 +23,11 @@ export default function AgentWorkspaceOutlet() {
   // a UI handshake in front of the working chat. Runtime keeps its own origin;
   // mobile keeps the existing embedded presentation.
   const mode = paneForPath(location.pathname);
-  const nativeChat = persistent && Boolean(mode) && !(desktop && mode === 'brain');
+  // Runtime is already on its canonical runner origin. A second same-origin
+  // iframe reboots auth, admission and the entire native client, adding a
+  // second workspace import before the real chat can become visible.
+  const directRuntime = directRuntimeHost(mode, window.location.origin);
+  const nativeChat = persistent && Boolean(mode) && !directRuntime && !(desktop && mode === 'brain');
   const dot = /^\/hivemind\/app\/employee\/dots(?:\/|$)/.test(location.pathname);
   const apps = location.pathname === '/hivemind/app/employee/apps';
   const [appsVisited, setAppsVisited] = useState(apps);
