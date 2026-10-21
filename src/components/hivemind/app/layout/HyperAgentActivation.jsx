@@ -13,15 +13,17 @@ export default function HyperAgentActivation() {
   useEffect(() => {
     if (!entering || !user?.id || !org?.id) { setMessage(''); return undefined; }
     let alive = true;
+    let retryTimer;
     setMessage('Preparing your team…');
     apiClient.activateHyperAgents().then(result => {
       if (!alive) return;
       setMessage(result.status === 'pending' ? 'Your company is ready. Team activation is still pending.' : '');
       if (result.status === 'ready') window.dispatchEvent(new Event('hm:employees-changed'));
+      else if (attempt < 3) retryTimer = window.setTimeout(() => setAttempt(value => value + 1), 2000 * (2 ** attempt));
     }).catch(() => {
       if (alive) setMessage('Your company setup is saved. Team activation could not finish.');
     });
-    return () => { alive = false; };
+    return () => { alive = false; window.clearTimeout(retryTimer); };
   }, [entering, user?.id, org?.id, attempt]);
   if (!message) return null;
   return <div role="status" className="px-4 py-2 text-xs text-[#525252] bg-white/90 border-b border-[#e3e0db]">

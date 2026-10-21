@@ -1,5 +1,8 @@
 import { fetchHarness } from './harness-fetch';
 import { createAgentRosterCache } from './agent-roster-cache';
+function optionalRosterStorage() {
+  try { return typeof window === 'undefined' ? null : window.localStorage; } catch { return null; }
+}
 export const agentRoster = createAgentRosterCache(async scope => {
   // The outer next shell has no Runtime cookie. Read the catalog through the
   // authenticated Runtime iframe; never send that cookie to the Brain runner.
@@ -21,4 +24,4 @@ export const agentRoster = createAgentRosterCache(async scope => {
     if (!Array.isArray(value.profiles)) throw new Error('invalid team response');
     return value.profiles.filter(agent => typeof agent.id === 'string' && agent.id !== 'runtime' && typeof agent.name === 'string');
   } finally { clearTimeout(deadline); }
-});
+}, Date.now, optionalRosterStorage());

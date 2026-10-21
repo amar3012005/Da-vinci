@@ -15,6 +15,8 @@ const USER_KEY = 'hivemind:user';
 const SCOPED_PREFIXES = [
   'hivemind:talk-to-hive:',
   'hm.overviewChat',
+  'hivemind.hyperagent.roster.v1:',
+  'hivemind.native-pane:',
 ];
 
 export function getStorageUserId() {

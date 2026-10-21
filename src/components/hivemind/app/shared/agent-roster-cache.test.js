@@ -32,3 +32,30 @@ test('does not cache a failed request and permits recovery', async () => {
   await expect(cache.load('user:org')).resolves.toEqual([]);
   expect(load).toHaveBeenCalledTimes(2);
 });
+test('paints only scoped minimal roster from browser cache then revalidates', async () => {
+  const storage = new Map();
+  const store = { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) };
+  const first = createAgentRosterCache(async () => [{ id: 'one', name: 'Feynmann', role_archetype: 'Researcher', persona: 'private', policy_rules: { open_dot_employee: { dot_id: 'dot-one', state: 'bound' }, secret: 'private' } }], () => 1000, store);
+  await first.load('user-a:org-a');
+  const fetchProfiles = jest.fn(async () => [{ id: 'two', name: 'Current' }]);
+  const second = createAgentRosterCache(fetchProfiles, () => 2000, store);
+  expect(second.peek('user-a:org-a')).toMatchObject([{ id: 'one', name: 'Feynmann', role_archetype: 'Researcher', policy_rules: { open_dot_employee: { dot_id: 'dot-one', state: 'bound' } } }]);
+  expect(second.peek('user-b:org-a')).toBeUndefined();
+  expect(JSON.stringify([...storage.values()])).not.toContain('private');
+  await second.load('user-a:org-a');
+  expect(fetchProfiles).toHaveBeenCalledTimes(1);
+  expect(second.peek('user-a:org-a')[0].id).toBe('two');
+  expect(createAgentRosterCache(fetchProfiles, () => 603001, store).peek('user-a:org-a')).toBeUndefined();
+});
+test('a ready event forces a new catalog read after an in-flight stale read', async () => {
+  let finish;
+  const fetchProfiles = jest.fn().mockImplementationOnce(() => new Promise(resolve => { finish = resolve; })).mockResolvedValue([{ id: 'new' }]);
+  const cache = createAgentRosterCache(fetchProfiles);
+  const first = cache.load('user:org');
+  await Promise.resolve();
+  const refreshed = cache.load('user:org', { force: true });
+  finish([{ id: 'old' }]);
+  await Promise.all([first, refreshed]);
+  expect(fetchProfiles).toHaveBeenCalledTimes(2);
+  expect(cache.peek('user:org')).toEqual([{ id: 'new' }]);
+});

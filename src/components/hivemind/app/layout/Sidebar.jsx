@@ -238,19 +238,25 @@ export default function Sidebar({
       try {
         const response = await fetch('/api/hivemind/employees/status', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
         responseStatus = response.status;
-        retryAllowed = ![401, 403, 404].includes(response.status);
+        // A fresh Runtime pane can finish its cookie exchange after this first
+        // read. Retry authorization a couple of times, then stop until the
+        // authenticated session event or a visible-page refresh arrives.
+        retryAllowed = ![401, 403, 404].includes(response.status)
+          || ([401, 403].includes(response.status) && failures < 2);
         if (!response.ok) throw new Error('Status unavailable');
         failures = 0;
         const result = await response.json();
         if (!controller.signal.aborted && result.version === 1) setDotRooms(ownedOpenDotRoomStatuses(result.employees, agentRoster.peek(scope) || [], dotReadAt.current));
       } catch { failures += 1; if (!controller.signal.aborted) setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous, responseStatus)); }
-      finally { loading = false; if (!controller.signal.aborted && retryAllowed) timer = setTimeout(load, Math.min(300000, 15000 * (2 ** Math.min(failures, 5)))); }
+      finally { loading = false; if (!controller.signal.aborted && retryAllowed) timer = setTimeout(load,
+        responseStatus === 401 || responseStatus === 403 ? (failures === 1 ? 250 : 1000) : Math.min(300000, 15000 * (2 ** Math.min(failures, 5)))); }
     };
     const visible = () => { clearTimeout(timer); if (!document.hidden) load(); };
     load();
     document.addEventListener('visibilitychange', visible);
     window.addEventListener('hivemind:session-established', visible);
-    return () => { controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', visible); window.removeEventListener('hivemind:session-established', visible); };
+    window.addEventListener('hm:employees-changed', visible);
+    return () => { controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', visible); window.removeEventListener('hivemind:session-established', visible); window.removeEventListener('hm:employees-changed', visible); };
   }, [scope]);
   const teamScope = useRef(null);
   const [teamLoadError, setTeamLoadError] = useState(false);
@@ -279,17 +285,18 @@ export default function Sidebar({
       } catch {
         if (controller.signal.aborted || teamScope.current !== scope) return;
         setTeamLoadError(true);
-        if (++attempts < 3) retryTimer = setTimeout(load, attempts * 1500);
+        if (++attempts < 3) retryTimer = setTimeout(load, attempts === 1 ? 250 : 1000);
       }
     };
-    const refresh = () => { clearTimeout(retryTimer); attempts = 0; load(); };
+    const refresh = () => { clearTimeout(retryTimer); attempts = 0; forceRefresh = true; load(); };
     const nativeRoster = event => { if (event.detail?.scope !== scope || !Array.isArray(event.detail.profiles)) return; clearTimeout(retryTimer); setTeam(event.detail.profiles); setTeamLoadError(false); };
     window.addEventListener('hivemind:runtime-roster',nativeRoster);
     load();
     window.addEventListener('focus', refresh);
     window.addEventListener('online', refresh);
     window.addEventListener('hivemind:session-established', refresh);
-    return () => { controller.abort(); clearTimeout(retryTimer); window.removeEventListener('hivemind:runtime-roster',nativeRoster); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); window.removeEventListener('hivemind:session-established', refresh); };
+    window.addEventListener('hm:employees-changed', refresh);
+    return () => { controller.abort(); clearTimeout(retryTimer); window.removeEventListener('hivemind:runtime-roster',nativeRoster); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); window.removeEventListener('hivemind:session-established', refresh); window.removeEventListener('hm:employees-changed', refresh); };
   }, [scope, setTeam, teamRetry]);
 
   useEffect(() => {
