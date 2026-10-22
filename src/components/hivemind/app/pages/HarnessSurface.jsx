@@ -376,9 +376,15 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
         window.__DSH_TRANSPORT__ = runtime.hooks;
         window.__DSH_FILE_UPLOAD__ = { fetch: runtime.fetch };
       }
-      const recentlyEstablished = sessionEstablished || consumeHarnessExchange(window.location.pathname);
+      let recentlyEstablished = sessionEstablished || consumeHarnessExchange(window.location.pathname);
       let bootResponse;
-      if (!brain) bootResponse = await measureHarnessBoot('boot-existing-session', () => fetchHarness(HARNESS_BOOT_PATH, {credentials:'include',cache:'no-store'}));
+      if (!brain) {
+        bootResponse = await measureHarnessBoot('boot-existing-session', () => fetchHarness(HARNESS_BOOT_PATH, {credentials:'include',cache:'no-store'}));
+        if (bootResponse.ok) {
+          const identity = (await bootResponse.clone().json()).principal;
+          if (identity?.userId !== user?.id || identity?.orgId !== org?.id) { bootResponse = new Response(null,{status:401}); recentlyEstablished = false; }
+        }
+      }
       if (brain || bootResponse.status === 401) {
         const admission = recentlyEstablished ? {mode:'harness'} : await establishHarnessSession({fresh:isFreshHarnessRoute()});
         if (admission.mode === 'legacy') { window.location.replace(HARNESS_OVERVIEW_PATH); return; }
