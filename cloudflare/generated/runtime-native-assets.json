@@ -1,6 +1,6 @@
 {
   "release": "48ecadfb681281bd9009a0d5f35e300ce47d3682",
-  "rev": "551bfa81c322",
+  "rev": "9792e183d66f",
   "entries": {
     "/plugins/??@deepseek-ai/dsh-client-modules/client.js&rev=5009a079309a": {
       "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/7d45b6c18dc383fa9440e5b10b4af5f19ac7f72fa226cc998997a1b2f54a29e7",
@@ -12,278 +12,278 @@
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=9d5d6fbd01c28866-0": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a7b6a4a8ce1ccf2babfd4090436a7377e155b9ce7f8fa7ce256ee4127f6e1cdd",
+    "/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=c95f4fee01d84e6f-0": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a110344ca1a7c9a48af1e481580c486a8f565fb6967326131015bd8a5e3bcb7b",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-session-log-export/client.js&rev=9d5d6fbd01c28866-1": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a4c45a71259be30a4103b93900acb98b5a9c4ff6c8469c1ff01294ea12a2de37",
+    "/plugins/??@deepseek-ai/dsh-session-log-export/client.js&rev=c95f4fee01d84e6f-1": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/ebdac1e1760831fc91edd77987bbd13745c35da006e8f45063a0e99365ac3e34",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-open-in-app/client.js&rev=9d5d6fbd01c28866-2": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/da6c1eeb0582580e233f080d994fe3913b93fac66f57fdda2033d1f2836ec7af",
+    "/plugins/??@deepseek-ai/dsh-client-ui-open-in-app/client.js&rev=c95f4fee01d84e6f-2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/35b993030acee1a12d74928e301593ea4cf7072d38741c38cbd9686d1bb3e828",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-hmr/client.js&rev=9d5d6fbd01c28866-3": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/dfa4a1eaac9856755292ecf63e5f5de7297888eb214e06b0df8cf204da83b48d",
+    "/plugins/??@deepseek-ai/dsh-client-hmr/client.js&rev=c95f4fee01d84e6f-3": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/155ef7afaf8af67d3165014a0b1060dae5c58ac75ac95e6d175f85c4c5f4b2b0",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-hivemind-connect/client.js&rev=9d5d6fbd01c28866-4": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/2c34e51fcf978fe4091e9a3ab4955bb478288a67aeaee662f984d19da6ff0bb2",
+    "/plugins/??@deepseek-ai/dsh-client-ui-hivemind-connect/client.js&rev=c95f4fee01d84e6f-4": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/3167ef159b4b18b72351c8383ef7e7d50fe15640a97ca8ef83bb47af672443ef",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-modules/client.js&rev=9d5d6fbd01c28866-5": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e5b3804f3d1cbebb0e62089bc2171547244f21c8f46b199a16315b379ec38500",
+    "/plugins/??@deepseek-ai/dsh-client-modules/client.js&rev=c95f4fee01d84e6f-5": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/642333f62e58e285f42b8de124350c734afb4f0bf2b82ae7c586b8e43857931d",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-file-upload/client.js&rev=9d5d6fbd01c28866-6": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/703436fd6b388323ec65d1d459a77d63e250b2ed224a99491dc1583cefc4ca44",
+    "/plugins/??@deepseek-ai/dsh-client-file-upload/client.js&rev=c95f4fee01d84e6f-6": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/8a8891d1633f27db6c3ea493ddf544b03f4fed54b12f7fc40d620dc4a7d730f7",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-api-remotes/client.js&rev=9d5d6fbd01c28866-7": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/0b896f30c462ec9ae7f7c9b8e4782570d4a86576602a52db756c9a33cd3bd878",
+    "/plugins/??@deepseek-ai/dsh-api-remotes/client.js&rev=c95f4fee01d84e6f-7": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/387b111530841cf25d328d620e6364bcc5cae44bf1e694b2bda4a5eb053680e2",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-cordis-client-runner/client.js&rev=9d5d6fbd01c28866-8": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/23e2aa1ce4a6e9ff7a9e1019927e2db994a2fb4dbab2c6ad263993cea54bbf61",
+    "/plugins/??@deepseek-ai/dsh-cordis-client-runner/client.js&rev=c95f4fee01d84e6f-8": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/ef4e6441e17e1cb9ca518089aeb8ada9067ad04a20e6a63f35522d3044e3dc65",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-theme/client.js&rev=9d5d6fbd01c28866-9": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/cac1cfe8d8242d16a178d7983ab1b72bbe9d6644e0b96591a6336e26a812d26d",
+    "/plugins/??@deepseek-ai/dsh-client-ui-theme/client.js&rev=c95f4fee01d84e6f-9": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f555103cf7888490ffef9eb32510d47b7a496bfec560c976797f2647160dd3bc",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-locale/client.js&rev=9d5d6fbd01c28866-10": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/77c5f62457ef8f7b31f8bb1b7675f91aa3a2597a80533a6350f5dddd472e8e35",
+    "/plugins/??@deepseek-ai/dsh-client-locale/client.js&rev=c95f4fee01d84e6f-10": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/d22dc0add6dd0f41f178b2cc6ed0a2c5f99b035ada566e7bf636fbd28c8f46f9",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-layout/client.js&rev=9d5d6fbd01c28866-11": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/6da5d1a5715330f9596854840298d8947f7df41590c20670aa6b10b549de0090",
+    "/plugins/??@deepseek-ai/dsh-client-ui-layout/client.js&rev=c95f4fee01d84e6f-11": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/d87762ab64e770cadfd8ec1eaba98a276d310bcfee304dbc290910eb512fd638",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-renderer/client.js&rev=9d5d6fbd01c28866-12": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/33ee7f14de1bc070a3bd22324e3a8086a821d0507a016fc0d15bfb06e9555e26",
+    "/plugins/??@deepseek-ai/dsh-client-ui-renderer/client.js&rev=c95f4fee01d84e6f-12": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/baa6f072b62388cebce575af71972ff635c00bc23e1d2361eb6250fde1d031eb",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-session/client.js&rev=9d5d6fbd01c28866-13": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/74e86f2117dcb14901844bf77aa3ab1a767648fe7f841335512eedf2c47da83c",
+    "/plugins/??@deepseek-ai/dsh-client-ui-session/client.js&rev=c95f4fee01d84e6f-13": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e45e7e09de9efef52900ff5776deee62841493d035feb68fd6f4a43bdcbd3097",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-resources/client.js&rev=9d5d6fbd01c28866-14": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/0732c4196c1b0944bcee5894ff3823a49676ac88acdd657dea7698c0bb4f5864",
+    "/plugins/??@deepseek-ai/dsh-client-resources/client.js&rev=c95f4fee01d84e6f-14": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/8943fa49e98d9a50f20da6f7a93ddab56a2cdb8f2c94fe50478c86392b9dae6f",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar/client.js&rev=9d5d6fbd01c28866-15": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f67836522fb46b244fcce6d47910cb3127a4dc0d4832548ef6db855c009bf2ee",
+    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar/client.js&rev=c95f4fee01d84e6f-15": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/79c2f29fbfa14d6076eeb3040772d4278dd7216b7fb256a208df5573ee794725",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar-right/client.js&rev=9d5d6fbd01c28866-16": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/008ceb740ea66266b11ce6a38bb4746d47b64d2973d3e59af3155114d9b1295e",
+    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar-right/client.js&rev=c95f4fee01d84e6f-16": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/1f2e04ca213cc6d8ca2ae9072dda7d14eaacbd56d2cdc9f4e8a0c2017f2ad2c4",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client.js&rev=9d5d6fbd01c28866-17": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/2c81b7d41ebb81535f8eed6e353eb28dba788cdbf8105dd1f3b3ee11f5dbab57",
+    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client.js&rev=c95f4fee01d84e6f-17": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/bf8dce861cd0185a4d6a291cf94828c4b891e8ebb29d8543acba8ea1bbf4c10d",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar-files/client.js&rev=9d5d6fbd01c28866-18": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/ef38c2a6a77ba4e7fb05de31df7b3cdf611ac503708be6eb7acdfa2218db28ad",
+    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar-files/client.js&rev=c95f4fee01d84e6f-18": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/970308313274e2562a40130cf9b0685d7e70a0b61a00e70e937692d60824ebe2",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-settings/client.js&rev=9d5d6fbd01c28866-19": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/1359744e055f615b5d40e738890348505b01aaa57723bbf684a9c7cef0b7fb4a",
+    "/plugins/??@deepseek-ai/dsh-client-ui-settings/client.js&rev=c95f4fee01d84e6f-19": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/8943231b8c3df1c82d60428525a322482ce4b26c04096ac243a103ff33574f0e",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=9d5d6fbd01c28866-20": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/351cbf2d5f2a64429999c09e1a9bd651d0b9baced112ade846caef2d0b48d2ce",
+    "/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=c95f4fee01d84e6f-20": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/ea3c1c39e854a180d673c01b587abaaf8a6149df906b1f79831bc053ea47f9ee",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-settings-models/client.js&rev=9d5d6fbd01c28866-21": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/841aac96a53fa1e41c9f8f9c11ee85a7be42bcccd0fdba85afa185cf27fde5ac",
+    "/plugins/??@deepseek-ai/dsh-client-ui-settings-models/client.js&rev=c95f4fee01d84e6f-21": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e532a309ca5f6fda6f7dd0b86b6c4feb20cf492ad7651b89ceedfa2f3c7e519f",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-settings-plugin-inventory/client.js&rev=9d5d6fbd01c28866-22": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e3f7b55c2c92c027a41315718332ebf4f731698e15da2adbce064809cd6d4788",
+    "/plugins/??@deepseek-ai/dsh-client-ui-settings-plugin-inventory/client.js&rev=c95f4fee01d84e6f-22": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/4769e196b2c1cc0f433e067b9470fdb3d98b8c68976d03e46950d11a54151f7a",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-conversation/client.js&rev=9d5d6fbd01c28866-23": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/55100c9bca7b1a63b9afa27c90d1d6c9c9321b9ac1404982f676712a2fdd8c53",
+    "/plugins/??@deepseek-ai/dsh-client-ui-conversation/client.js&rev=c95f4fee01d84e6f-23": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/10e58b49e4909292983a88e31c35ae3294107164d88e4d2e085909a5912181be",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-approval/client.js&rev=9d5d6fbd01c28866-24": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/fe9de2500c25b09d002f80b0ac95ef936fd719abe93be7ecd1eba6cb10466c5f",
+    "/plugins/??@deepseek-ai/dsh-client-ui-approval/client.js&rev=c95f4fee01d84e6f-24": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/8fc8ce73e1b325dc7bc7c623f9b9f99973e19f2cdb557269fbbe25b5d18faee3",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-chat/client.js&rev=9d5d6fbd01c28866-25": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a66c597221d818b11f13a6eacd9edf7f43113af52711e3849f7f99db9e25c48e",
+    "/plugins/??@deepseek-ai/dsh-client-ui-chat/client.js&rev=c95f4fee01d84e6f-25": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/8ede70e7fc73b942d4c4869c681c360d8f07104720c1e6eeeeccc55b36d112f7",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-brand-official/client.js&rev=9d5d6fbd01c28866-26": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/d6db6e7c99637c106387cf171535c6f224fbe0a47db9a2aab32c0551aa6f3bd9",
+    "/plugins/??@deepseek-ai/dsh-client-ui-brand-official/client.js&rev=c95f4fee01d84e6f-26": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/837d9782485f2fc4070f417ef8007080a139255797e389a483e970a22530f3a1",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-attachment/client.js&rev=9d5d6fbd01c28866-27": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/c801547a72f05c47e1b8fa312e3820a0b6341a41eeb1f6e2f684f4305a810675",
+    "/plugins/??@deepseek-ai/dsh-client-ui-attachment/client.js&rev=c95f4fee01d84e6f-27": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/91c4bf6d6744b8983d227b5b17cd01f0a142d20f73bfb0e32138abe4ce792bd1",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-tool/client.js&rev=9d5d6fbd01c28866-28": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f93a96382c43ce56a9fb9315ea773e7e2330d7e1efaf7d74b1c083c6c962525b",
+    "/plugins/??@deepseek-ai/dsh-client-ui-tool/client.js&rev=c95f4fee01d84e6f-28": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/1891b54cd7d8be8edd15f5683c916614fd35a25e7a5e0fe7d209c03bd064d425",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-cordis/client.js&rev=9d5d6fbd01c28866-29": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/48b24b848c7cfb8c5bee5324024d3fe3efc8ad51cbb80f5738108bca1ac78e02",
+    "/plugins/??@deepseek-ai/dsh-client-ui-cordis/client.js&rev=c95f4fee01d84e6f-29": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/ff8a505eff5605e970275ec85f410ad97d408c97c8a49e0490846b7d49d1a81d",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-workflow-run/client.js&rev=9d5d6fbd01c28866-30": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/5679dd74710dd54c3450aa7ca6d5624c80817def6e9d2e2aeb1705a222415d26",
+    "/plugins/??@deepseek-ai/dsh-client-ui-workflow-run/client.js&rev=c95f4fee01d84e6f-30": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/98e092c4b38b8376b799d5ad27c27df2e11ed85a04b4f6805b9e5ff90a0dd4ab",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-hivemind-operating-run/client.js&rev=9d5d6fbd01c28866-31": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e6b1279e7b8d2ddec8a9c7ac84a07629ba75ed3fcf911bd240df805bfd5f6b84",
+    "/plugins/??@deepseek-ai/dsh-client-ui-hivemind-operating-run/client.js&rev=c95f4fee01d84e6f-31": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/19b74e2d33a710453494fa8acdc3850f3814777720122ab32a249b119646cdb3",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-workspace/client.js&rev=9d5d6fbd01c28866-32": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e09820d06e2b1d526e7e14c2255d272c428987df33b27ae46038d09c168bd031",
+    "/plugins/??@deepseek-ai/dsh-client-ui-workspace/client.js&rev=c95f4fee01d84e6f-32": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/481c7993ed8e65ab4b03ed8cda8b9e64f5e3dcf7c077b6388b0fc9c18b4c48ad",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-input-trigger/client.js&rev=9d5d6fbd01c28866-33": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a23aae5f91ec18832749c70078f764c78898d02320c039e2c14bd691137bd10e",
+    "/plugins/??@deepseek-ai/dsh-client-ui-input-trigger/client.js&rev=c95f4fee01d84e6f-33": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/0b1f684a0b01105eb75219b50459c8ff798acd93a9e1027011c17317b604e8cf",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-commands/client.js&rev=9d5d6fbd01c28866-34": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e8157a878b53b355d36e1d3c1a97443fd3ae699acc317304bbcf4652a202779d",
+    "/plugins/??@deepseek-ai/dsh-client-ui-commands/client.js&rev=c95f4fee01d84e6f-34": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/b31c155e115dfafad4a40a694054394ff9c5b969b943b3604e4f9310c9fe1d64",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-skill/client.js&rev=9d5d6fbd01c28866-35": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f1f27cce63f74a57593e3b234d8eef1bcf28b69bb5022525c34fd9b615ee5223",
+    "/plugins/??@deepseek-ai/dsh-client-ui-skill/client.js&rev=c95f4fee01d84e6f-35": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/925da9d395b2f991a13a8daa48744ca30c119edb540354824fb2e9e1aeea6c6a",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-subagent/client.js&rev=9d5d6fbd01c28866-36": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/16bc88968cca3c14f8f2b91e5a8c7dd6bb5bf0c93f3ddbbb3b4c5237fdca87ce",
+    "/plugins/??@deepseek-ai/dsh-client-ui-subagent/client.js&rev=c95f4fee01d84e6f-36": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/97bdb7418dfac78609e10e2dd2117243b45ae000c6e2f0530f344b0c9d1142ad",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-reference/client.js&rev=9d5d6fbd01c28866-37": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a67093b94af65e0dad3db24e5e54eeb46edaf12b286f04d0db1136306806686f",
+    "/plugins/??@deepseek-ai/dsh-client-ui-reference/client.js&rev=c95f4fee01d84e6f-37": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/37da7de3204007606548b151a272322d3d911439105a46a2cef92e04f31c827b",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-schedule/client.js&rev=9d5d6fbd01c28866-38": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/de743f0afda7c1023bed9c0ee74eb2f6b5d1652bcd44f98b768e43e4a1771b79",
+    "/plugins/??@deepseek-ai/dsh-client-ui-schedule/client.js&rev=c95f4fee01d84e6f-38": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/91dc10be0399ddfccd035334b500cd7d1ba8dfc88025f55aff9c94f9bf0130c3",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-jobs/client.js&rev=9d5d6fbd01c28866-39": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/4566f43aaa3da1be00bf0ab4dea7593f9fb7ac3f0e0757559b56abc30fcccde5",
+    "/plugins/??@deepseek-ai/dsh-client-ui-jobs/client.js&rev=c95f4fee01d84e6f-39": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/09dc8dd66ee21102a50a27383a886a37ff6a83ea2cec7ac566b6435c6994146c",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-goal/client.js&rev=9d5d6fbd01c28866-40": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/b19d6d0046c8461455a45c07a62ad2b430b2fdae783630af5b1a9772c442b495",
+    "/plugins/??@deepseek-ai/dsh-client-ui-goal/client.js&rev=c95f4fee01d84e6f-40": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/8e632cc309b751d234e3fdccbaf1fe8280f9f3e1bb30d001d51cbc7efafd0a10",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-message-feedback/client.js&rev=9d5d6fbd01c28866-41": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/6999bea2a0adad0efb23e914a3cce7f8a8bed10e9b3dbc0e44626041b6752269",
+    "/plugins/??@deepseek-ai/dsh-client-ui-message-feedback/client.js&rev=c95f4fee01d84e6f-41": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/2072fd3d9012f58c76512408a5fd7f452894f4a5d3a300847b80dc8b44bb108e",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-model-selection/client.js&rev=9d5d6fbd01c28866-42": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/7f0b26c35120b2ea416c57dbfd9f06786b225077305c63831f96c13f8db012e2",
+    "/plugins/??@deepseek-ai/dsh-client-ui-model-selection/client.js&rev=c95f4fee01d84e6f-42": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/0a3c453abda2f087de65e6829865970e2d969e3d183130c79d694b6271857893",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-permission-presets/client.js&rev=9d5d6fbd01c28866-43": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/6a766be5951e1fd8e27973d694d1e11285c5cc01ce4a7e0ab5c9e29f23ccc48a",
+    "/plugins/??@deepseek-ai/dsh-client-ui-permission-presets/client.js&rev=c95f4fee01d84e6f-43": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/2d138c2afc9fed3fd6f23ccea58d1662cd16a8d25adfb7b4c94f1c9ecce7ed58",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-agent-preset/client.js&rev=9d5d6fbd01c28866-44": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/05568913343a67b9f1f1af79a679b993e5afa0aa50428213c88f026daf10fa82",
+    "/plugins/??@deepseek-ai/dsh-client-ui-agent-preset/client.js&rev=c95f4fee01d84e6f-44": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/08c35e896fdbbc8c9ee9854885c9dd38edc1222b6e419569bd284818ab498979",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-settings-plugins/client.js&rev=9d5d6fbd01c28866-45": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/3d45388b7530752cbeffc0e4450b1697be5095d1ecad06e7b68eb4280b3c38f6",
+    "/plugins/??@deepseek-ai/dsh-client-ui-settings-plugins/client.js&rev=c95f4fee01d84e6f-45": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/0bc44dc19733b5008925b0a8b0034b51417f76a9853846337c99ec7637d1ec31",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-plan/client.js&rev=9d5d6fbd01c28866-46": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/acdb0d3a483668abd6553aa8efab0e4279c3ca1461908030976c29b5da8bb774",
+    "/plugins/??@deepseek-ai/dsh-client-ui-plan/client.js&rev=c95f4fee01d84e6f-46": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/333e03b63a8dc98b11f5f3be843b7f7b4ca578f2040be4807480e4fa5aee26d8",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-user-questions/client.js&rev=9d5d6fbd01c28866-47": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/d74aefd9101434b2b423f7b757fc5701de6ccd8f97e855fdc3b1346341c32b49",
+    "/plugins/??@deepseek-ai/dsh-client-ui-user-questions/client.js&rev=c95f4fee01d84e6f-47": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/2cb56a4dd581135eba1ce7be72ec40edfeb3c493e9ce9d8df8725d276d3b3893",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-trajectory/client.js&rev=9d5d6fbd01c28866-48": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/13eca65e2f01bc6966bd0ed1474ee43beab2439f70b5ee1d27e76eb5c5b0b7b1",
+    "/plugins/??@deepseek-ai/dsh-client-ui-trajectory/client.js&rev=c95f4fee01d84e6f-48": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/dfdd0a2be4f1b6eb0aa01ac4ad776170d72d405754799e99bd89ae77c26f95df",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-experimental-client-ui-agent-team/client.js&rev=9d5d6fbd01c28866-49": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/d0c51d46eea17ea42ed8f328a2507c054fc40fffc4b003dd19af5e2d1bf90d3b",
+    "/plugins/??@deepseek-ai/dsh-experimental-client-ui-agent-team/client.js&rev=c95f4fee01d84e6f-49": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/b0aa258550e1e0f42d7fb2cf322515873a07402387a03871a41f99d099342560",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-ui-hivemind-hq/client.js&rev=9d5d6fbd01c28866-50": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/3d66d905338038caf1477b26d0e4e73646a9b9a72bc33b669745143c519ab7d1",
+    "/plugins/??@deepseek-ai/dsh-client-ui-hivemind-hq/client.js&rev=c95f4fee01d84e6f-50": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/66be009696e04f90d49455fa883c613e6adf469790ba702cad1379b773ee7262",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-typert-registry/client.js&rev=9d5d6fbd01c28866-51": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/abfa2a0d3b32eee9154d9dc74a1bd980a5bb1f60801a4b6cbc9d49085b78cd9d",
+    "/plugins/??@deepseek-ai/dsh-typert-registry/client.js&rev=c95f4fee01d84e6f-51": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a98ab78165cf94608e09b60cf8e4b7411645c38cce5e94526da1f23469f2aa47",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-client-connection/client.js&rev=9d5d6fbd01c28866-52": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/72fa0da0c46f0e5b6948e2522eab3a5040d3f2a3691b32fb0d6a657aef0a1e58",
+    "/plugins/??@deepseek-ai/dsh-client-connection/client.js&rev=c95f4fee01d84e6f-52": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/066ba3c9409ce307b9022f945fe045a922a33dee528e555aa6e64139624e82d3",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-api-workspace-controller/client.js&rev=9d5d6fbd01c28866-53": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f60ac0faa8a47472de63801171392be7a67fd835c507a17397b3689016df1744",
+    "/plugins/??@deepseek-ai/dsh-api-workspace-controller/client.js&rev=c95f4fee01d84e6f-53": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/8eeac15cdffd0a3aa5bf1efbb7bbd91c55c8277d7dcdeb7f7bf6636a9c9cfe4f",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
-    "/plugins/??@deepseek-ai/dsh-api-session-controller/client.js&rev=9d5d6fbd01c28866-54": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/bdf4597b2d6f25b9f4a1cf27da2c898bcebe62838316040fd55e76a04d5ab72a",
+    "/plugins/??@deepseek-ai/dsh-api-session-controller/client.js&rev=c95f4fee01d84e6f-54": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a75dcea96f349e2fdc2a2a04afa707722f64a171baab8f87f47e583517404a7f",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
@@ -297,8 +297,8 @@
       "type": "text/css",
       "immutable": true
     },
-    "/assets/harness-shell.js?rev=551bfa81c322": {
-      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/5da2cc7d6dad085f8f6dc5f2956b7765c05704104739eb68a2c9cd09bd066ecb",
+    "/assets/harness-shell.js?rev=9792e183d66f": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a73774b9970527309b3e0a018f34757a2237945fe84e402d4028af55990ccb14",
       "type": "text/javascript; charset=utf-8",
       "immutable": true
     },
