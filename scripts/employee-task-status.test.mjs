@@ -11,7 +11,7 @@ test('attaches known task states and ignores idle or unknown values', () => {
     { employeeId: 'momo', status: 'unknown', taskId: 't3', updatedAt: 2 },
   ]);
   assert.equal(next.turing[0].taskStatus, 'blocked');
-  assert.deepEqual(next.faraday, [{ id: 'faraday', updatedAt: 0, status: 'idle', taskStatus: 'submitted' }]);
+  assert.deepEqual(next.faraday, [{ id: 'faraday', updatedAt: 0, status: 'idle', taskStatus: 'review' }]);
   assert.equal(next.feynmann, undefined);
   assert.equal(next.momo, undefined);
   assert.equal(rooms.turing[0].taskStatus, undefined);
