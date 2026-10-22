@@ -1,3 +1,5 @@
+import { ensureRuntimeNativeAssets } from './ensure-runtime-native-assets.mjs';
+await ensureRuntimeNativeAssets();
 await import('./generate-public-renderings.mjs');
 await import('./generate-public-discovery.mjs');
 import { spawnSync } from 'node:child_process';
