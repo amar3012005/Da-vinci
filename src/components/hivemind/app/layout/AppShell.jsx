@@ -338,11 +338,18 @@ function AppShellContent() {
   useEffect(() => {
     if (!org?.id || needsOnboarding) return;
     let alive = true;
-    setCompanyAdmission({ scope: org.id, status: 'checking' });
+    // A company confirmed ready in this tab renders the workspace at once;
+    // the saved company record still decides once the read returns.
+    const confirmedKey = `hivemind.company-ready:${user?.id}:${org.id}`;
+    let confirmed = false;
+    try { confirmed = sessionStorage.getItem(confirmedKey) === '1'; } catch { /* Storage-blocked tabs wait for the saved record. */ }
+    setCompanyAdmission({ scope: org.id, status: confirmed ? 'ready' : 'checking' });
     measureHarnessBoot('company-setup-read', () => scopedCompanyRead(`${user?.id}:${org.id}`, () => apiClient.hyperCompany())).then(data => {
-      if (alive) setCompanyAdmission({ scope: org.id, status: companyAdmissionStatus(data), company: data.company });
+      const status = companyAdmissionStatus(data);
+      try { if (status === 'ready') sessionStorage.setItem(confirmedKey, '1'); else sessionStorage.removeItem(confirmedKey); } catch { /* Storage-blocked tabs keep the in-memory state. */ }
+      if (alive) setCompanyAdmission({ scope: org.id, status, company: data.company });
     }).catch(() => {
-      if (alive) setCompanyAdmission({ scope: org.id, status: 'error' });
+      if (alive && !confirmed) setCompanyAdmission({ scope: org.id, status: 'error' });
     });
     return () => { alive = false; };
   }, [user?.id, org?.id, needsOnboarding, companyRetry]);

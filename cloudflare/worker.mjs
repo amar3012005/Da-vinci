@@ -1,4 +1,4 @@
-import { runtimeNativeAsset } from './runtime-native-assets.mjs';
+import { edgeCachedNativeCode, runtimeNativeAsset } from './runtime-native-assets.mjs';
 import { handleComposioAccount } from './composio-account.mjs';
 export { ComposioAccount } from './composio-account.mjs';
 import { proxyConnectorTransport } from './connector-transport.mjs';
@@ -508,7 +508,7 @@ async function proxyRuntimeApps(request) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
     const composioAccountResponse = await handleComposioAccount(request, env);
@@ -724,7 +724,7 @@ export default {
     // not an authorization decision and must never select the SPA as fallback.
     // The native runner retains all authentication for its protected endpoints.
     if (pathname.startsWith('/plugins/')) {
-      const response = await harnessResponse(request, env);
+      const response = await edgeCachedNativeCode(request, ctx, () => harnessResponse(request, env));
       if (response.ok && (response.headers.get('content-type') || '').includes('text/html')) {
         await response.body?.cancel();
         return Response.json({ error: 'native_plugin_invalid_response' }, {
@@ -743,7 +743,7 @@ export default {
       || pathname === '/api/hivemind/boot'
       || isHarnessDocumentOrAsset(request, pathname)
       || ((hasHarnessAdmission(request) || hasHarnessSession(request)) && isHarnessRunnerRoute(pathname))) {
-      return noIndex(await harnessResponse(request, env));
+      return noIndex(await edgeCachedNativeCode(request, ctx, () => harnessResponse(request, env)));
     }
 
     if (pathname === PARTNER_REFERRALS_FLAG_PATH) {
