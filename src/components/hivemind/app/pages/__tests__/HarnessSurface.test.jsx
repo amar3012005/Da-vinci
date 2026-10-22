@@ -139,7 +139,7 @@ it('a shell import completing after route exit cannot mount over the outer React
   };
   createNativeHarnessLoader.mockReturnValue(loader);
   const previousFetch = global.fetch;
-  global.fetch = jest.fn(async () => ({ ok: true, json: async () => ({
+  global.fetch = jest.fn(async () => ({ ok: true, status:200, clone: () => ({json:async()=>({principal:{}})}), json: async () => ({
     styles: ['/test.css'], injections: [{ kind: 'global', name: '__DSH_BOOT__', value: { rev: 'cancel-test' } }],
   }) }));
   window.__HIVE_HARNESS_BOOT_REV__ = 'cancel-test';

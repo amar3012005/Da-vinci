@@ -44,11 +44,13 @@ function filesUnder(directory) {
 
 const buildFiles = filesUnder('build');
 let artifactBytes = 0;
+let nativeAssetBytes = 0;
 for (const path of buildFiles) {
   const bytes = statSync(path).size;
   const extension = extname(path).toLowerCase();
   const artifactPath = relative('build', path);
   artifactBytes += bytes;
+  if (artifactPath.startsWith("runtime-native/")) nativeAssetBytes += bytes;
 
   if (!allowedExtensions.has(extension)) {
     throw new Error(`Refusing Cloudflare artifact with unapproved file type: ${artifactPath}`);
@@ -58,7 +60,8 @@ for (const path of buildFiles) {
   }
 }
 
-if (artifactBytes > maxArtifactBytes) {
+if (nativeAssetBytes > 40 * 1024 * 1024) throw new Error("Native Runtime assets exceed their separate 40 MiB release budget");
+if (artifactBytes - nativeAssetBytes > maxArtifactBytes) {
   throw new Error(`Refusing ${(artifactBytes / 1024 / 1024).toFixed(1)} MiB Cloudflare artifact; budget is 164 MiB.`);
 }
 
