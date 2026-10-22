@@ -21,7 +21,8 @@
  .ha-employee-tile:hover .ha-profession,.ha-employee-tile:focus-visible .ha-profession { visibility:visible;opacity:1; }
  .ha-dot-marker { position:absolute;right:-2px;bottom:0;background:#faf9f4;color:#7b8087;padding:1px;box-sizing:content-box;border-radius:3px; }
  .ha-employee-name { font-size:14px;line-height:1.4;max-width:100%;overflow-wrap:anywhere;color:#2b3037; }
- .ha-live-status { position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px 5px;min-width:0;max-width:100%; }
+ .ha-live-status { position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px 5px;min-width:0;max-width:100%;min-height:18px; }
+/* The status row keeps its height before the first room read so cards never shift. */
  .ha-live-status>span { justify-content:center; }
  .ha-runtime-identity .ha-live-status,.ha-runtime-identity .ha-live-status>span { justify-content:flex-start; }
  .ha-live-status svg { flex-shrink:0; }

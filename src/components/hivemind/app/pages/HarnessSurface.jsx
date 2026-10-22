@@ -1,4 +1,4 @@
-import { readRuntimePresentation, saveRuntimePresentation, clearRuntimePresentation } from '../shared/runtime-presentation-cache';
+import { clearRuntimePresentation } from '../shared/runtime-presentation-cache';
 import { initialNativePane } from '../shared/native-pane-protocol';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } from '../shared/native-harness-seat';
@@ -293,22 +293,12 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
   const { user, org } = useAuth();
   const ownerScope = `${user?.id || ""}:${org?.id || ""}`;
   const mountRef = useRef(null);
-  const [cachedPresentation,setCachedPresentation] = useState(null);
-  const [nativePresentationReady,setNativePresentationReady] = useState(false);
-  const cacheSession = !brain && window.location.pathname.match(/\/employee\/harness\/session\/(session-[a-z0-9-]+)/)?.[1];
+  // The native conversation renders the latest turns directly. Earlier
+  // releases stored a text-only transcript copy; remove it for this owner.
   useEffect(() => {
-    if (brain || !user?.id || !org?.id) return undefined;
-    let active = true;
-    setCachedPresentation(null); setNativePresentationReady(false);
-    void readRuntimePresentation(ownerScope,cacheSession).then(value => { if (active) { setCachedPresentation(value); if (new URLSearchParams(window.location.search).get("hiveBootTiming")==="1") console.info("[hive-boot-timing]",JSON.stringify({phase:"cached-presentation",hit:Boolean(value),messages:value?.messages.length||0})); } });
-    const receive = event => { if (event.detail?.scope === ownerScope) { void saveRuntimePresentation(event.detail); if (event.detail.sessionId === cacheSession) setNativePresentationReady(true); } };
-    const clear = () => { setCachedPresentation(null); void clearRuntimePresentation(ownerScope); };
-    const reset = event => { if (event.key?.startsWith('runtime.reset.')) clear(); };
-    window.addEventListener('hivemind:runtime-presentation',receive);
-    window.addEventListener('hivemind:clear-runtime-cache',clear);
-    window.addEventListener('storage',reset);
-    return () => { active=false; window.removeEventListener('hivemind:runtime-presentation',receive); window.removeEventListener('hivemind:clear-runtime-cache',clear); window.removeEventListener('storage',reset); };
-  }, [brain,ownerScope,cacheSession,user?.id,org?.id]);
+    if (brain || !user?.id || !org?.id) return;
+    void clearRuntimePresentation(ownerScope);
+  }, [brain,ownerScope,user?.id,org?.id]);
   const [state, setState] = useState({ phase: 'loading', stage: 0, message: null });
 
   useEffect(() => {
@@ -361,7 +351,6 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
 
     const start = async () => {
       if (retained) {
-        setNativePresentationReady(true);
         window.__DSH_EMBED_REQUEST__ = request;
         if (window.__DSH_EMBED_INITIAL_MOUNT__) await window.__DSH_EMBED_INITIAL_MOUNT__;
         window.dispatchEvent(new PopStateEvent('popstate'));
@@ -556,8 +545,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
   }
 
   return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface data-brain-chat={brain ? '' : undefined}>
-    {(state.phase === 'loading' || state.phase === 'reconnecting') && !cachedPresentation && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} reconnecting={state.phase === 'reconnecting'} dreaming={window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`} /></div>}
-    {cachedPresentation && !nativePresentationReady && state.phase !== 'error' && <div className="absolute inset-0 z-10 overflow-y-auto bg-[#faf9f4] p-6" aria-label="Saved Runtime conversation"><p className="mb-6 text-xs text-[#737373]">Saved conversation · Connecting…</p>{cachedPresentation.messages.map(message => <p key={message.seq} className="mx-auto mb-5 max-w-3xl whitespace-pre-wrap text-sm"><strong>{message.role === 'user' ? 'You' : 'Runtime'}</strong><br/>{message.text}</p>)}</div>}
+    {(state.phase === 'loading' || state.phase === 'reconnecting') && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} reconnecting={state.phase === 'reconnecting'} dreaming={window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`} /></div>}
     <div ref={mountRef} className="h-full min-h-0" style={{ visibility: state.phase === 'ready' ? 'visible' : 'hidden' }} />
     {brain && <ChatModelConnection />}
     <QueryStarters mount={mountRef.current} ready={state.phase === 'ready'} />
