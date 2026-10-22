@@ -23,7 +23,7 @@ test('readiness is accepted only from the owned Dot frame and cancels the timeou
   const data = { type: 'hivemind.open-dot.ready', version: 1 };
   act(() => window.dispatchEvent(new MessageEvent('message', { origin: 'https://evil.example', source: frame.contentWindow, data })));
   expect(screen.getByRole('status')).toBeTruthy();
-  act(() => window.dispatchEvent(new MessageEvent('message', { origin: 'https://dots.singulancelabs.com', source: frame.contentWindow, data })));
+  act(() => window.dispatchEvent(new MessageEvent('message', { origin: 'https://runtime-runner.singulancelabs.com', source: frame.contentWindow, data })));
   expect(screen.queryByRole('status')).toBeNull();
   act(() => jest.advanceTimersByTime(30000));
   expect(screen.queryByRole('alert')).toBeNull();
@@ -37,5 +37,5 @@ test('readiness is accepted only from the owned Dot frame and cancels the timeou
   const target = {postMessage};
   Object.defineProperty(target,'location',{get(){throw new DOMException('Cross origin','SecurityError')}});
   postToDotFrame({contentWindow:target},{type:'probe'});
-  expect(postMessage).toHaveBeenCalledWith({type:'probe'},'https://dots.singulancelabs.com');
+  expect(postMessage).toHaveBeenCalledWith({type:'probe'},'https://runtime-runner.singulancelabs.com');
  });
