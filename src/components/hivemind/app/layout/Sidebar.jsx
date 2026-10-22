@@ -223,6 +223,7 @@ export default function Sidebar({
   const [scheduledEmployees, setScheduledEmployees] = useState([]);
   const rooms = [...nativeRooms, ...Object.values(dotRooms).flat(), ...Object.values(liveDotRooms).flat(), ...scheduledEmployees.map(id => ({ id, scheduled: true, scheduleOnly: true, updatedAt: 0 }))];
   const dotReadAt = useRef({});
+  const lastDotPush = useRef(0);
   useEffect(() => {
     setDotRooms({});
     const key = `hivemind.dot-read-at:${scope}`;
@@ -232,8 +233,12 @@ export default function Sidebar({
     let loading = false;
     let failures = 0;
     let retryAllowed = true;
+    let quiet = false;
     const load = async () => {
       if (!scope || document.hidden || controller.signal.aborted || loading) return;
+      // Live Open Dot room frames already carry these statuses; skip the read
+      // while they keep arriving and resume when they stop.
+      if (Date.now() - lastDotPush.current < 20000) { timer = setTimeout(load, 20000); return; }
       loading = true;
       let responseStatus;
       try {
@@ -247,10 +252,14 @@ export default function Sidebar({
         if (!response.ok) throw new Error('Status unavailable');
         failures = 0;
         const result = await response.json();
+        // A team with no active task or running room is read less often; any
+        // assignment, room activity or visibility change returns to 15 s.
+        quiet = Array.isArray(result.employees) && result.employees.every(entry => ['idle', 'paused', undefined].includes(entry?.status) && !(entry?.rooms ?? []).some(room => room?.running || room?.live))
+          && (!Array.isArray(result.taskStatus) || result.taskStatus.every(entry => entry?.status === 'idle' || entry?.status === 'accepted'));
         if (!controller.signal.aborted && result.version === 1) setDotRooms(withEmployeeTaskStatuses(ownedOpenDotRoomStatuses(result.employees, agentRoster.peek(scope) || [], dotReadAt.current), result.taskStatus));
       } catch { failures += 1; if (!controller.signal.aborted) setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous, responseStatus)); }
       finally { loading = false; if (!controller.signal.aborted && retryAllowed) timer = setTimeout(load,
-        responseStatus === 401 || responseStatus === 403 ? (failures === 1 ? 250 : 1000) : Math.min(300000, 15000 * (2 ** Math.min(failures, 5)))); }
+        responseStatus === 401 || responseStatus === 403 ? (failures === 1 ? 250 : 1000) : failures === 0 && quiet ? 45000 : Math.min(300000, 15000 * (2 ** Math.min(failures, 5)))); }
     };
     const visible = () => { clearTimeout(timer); if (!document.hidden) load(); };
     load();
@@ -317,6 +326,7 @@ export default function Sidebar({
     setRooms([]);
     setDotRooms({});
     const dotActivity = event => {
+      if (event.detail?.clear !== true) lastDotPush.current = Date.now();
       if (event.detail?.clear === true) { liveDotSnapshot.current = null; setLiveDotRooms({}); setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous)); return; }
       const employeeId = event.detail?.employeeId;
       if (typeof employeeId !== 'string' || !Array.isArray(event.detail?.rooms)) return;
