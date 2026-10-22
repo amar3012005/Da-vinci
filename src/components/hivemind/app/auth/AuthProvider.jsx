@@ -33,6 +33,14 @@ export function AuthProvider({ children }) {
     if (authState !== 'signed_in' || !user?.id) return undefined;
     const controller = new AbortController();
     let pending = false;
+    // The last verified display state for this account renders the workspace
+    // at once on reload; the request below still confirms it, and server
+    // authorization gates every protected request.
+    const accessKey = `hivemind.mode-access:${user.id}`;
+    try {
+      const remembered = sessionStorage.getItem(accessKey);
+      if (remembered === '1' || remembered === '0') setModeAccess(previous => previous.userId === user.id ? previous : { userId: user.id, enabled: remembered === '1', error: null });
+    } catch { /* Storage-blocked tabs wait for the access check. */ }
     const refreshAccess = async () => {
       if (pending || document.visibilityState === 'hidden') return;
       pending = true;
@@ -43,6 +51,7 @@ export function AuthProvider({ children }) {
         if (!response.ok) throw new Error('workspace_access_unavailable');
         const result = await response.json();
         if (typeof result.enabled !== 'boolean') throw new Error('workspace_access_unavailable');
+        try { sessionStorage.setItem(accessKey, result.enabled ? '1' : '0'); } catch { /* Display memory only. */ }
         if (!controller.signal.aborted) setModeAccess({ userId: user.id, enabled: result.enabled, error: null });
       } catch {
         // An unavailable check is not a revocation. Keep this account's last
@@ -55,7 +64,7 @@ export function AuthProvider({ children }) {
       finally { pending = false; }
     };
     void refreshAccess();
-    const interval = window.setInterval(refreshAccess, 15000);
+    const interval = window.setInterval(refreshAccess, 60000);
     window.addEventListener('focus', refreshAccess);
     document.addEventListener('visibilitychange', refreshAccess);
     return () => {
