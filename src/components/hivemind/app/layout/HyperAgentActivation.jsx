@@ -4,6 +4,8 @@ import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
 
 // Company pages never provision employees. Native workspace entry does.
+// Activation runs silently; only a pending or failed result needs the user,
+// and that notice floats over the workspace so the chat never shifts.
 export default function HyperAgentActivation() {
   const { pathname } = useLocation();
   const { user, org } = useAuth();
@@ -12,21 +14,24 @@ export default function HyperAgentActivation() {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!entering || !user?.id || !org?.id) { setMessage(''); return undefined; }
+    const readyKey = `hivemind.team-active:${user.id}:${org.id}`;
+    try { if (attempt === 0 && sessionStorage.getItem(readyKey) === '1') return undefined; } catch { /* Storage-blocked tabs activate on every entry. */ }
     let alive = true;
     let retryTimer;
-    setMessage('Preparing your team…');
     apiClient.activateHyperAgents().then(result => {
       if (!alive) return;
       setMessage(result.status === 'pending' ? 'Your company is ready. Team activation is still pending.' : '');
-      if (result.status === 'ready') window.dispatchEvent(new Event('hm:employees-changed'));
-      else if (attempt < 3) retryTimer = window.setTimeout(() => setAttempt(value => value + 1), 2000 * (2 ** attempt));
+      if (result.status === 'ready') {
+        try { sessionStorage.setItem(readyKey, '1'); } catch { /* The next entry activates again. */ }
+        window.dispatchEvent(new Event('hm:employees-changed'));
+      } else if (attempt < 3) retryTimer = window.setTimeout(() => setAttempt(value => value + 1), 2000 * (2 ** attempt));
     }).catch(() => {
       if (alive) setMessage('Your company setup is saved. Team activation could not finish.');
     });
     return () => { alive = false; window.clearTimeout(retryTimer); };
   }, [entering, user?.id, org?.id, attempt]);
   if (!message) return null;
-  return <div role="status" className="px-4 py-2 text-xs text-[#525252] bg-white/90 border-b border-[#e3e0db]">
-    {message} {message !== 'Preparing your team…' && <button className="ml-2 underline" onClick={() => setAttempt(n => n + 1)}>Retry</button>}
+  return <div role="status" className="pointer-events-auto absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-full border border-[#e3e0db] bg-white/95 px-4 py-1.5 text-xs text-[#525252] shadow-sm">
+    {message} <button type="button" className="ml-2 underline" onClick={() => setAttempt(n => n + 1)}>Retry</button>
   </div>;
 }

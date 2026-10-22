@@ -4,7 +4,9 @@ import { NavLink } from 'react-router-dom';
 const fmt = (value) => Number(value || 0).toLocaleString();
 
 export default function CreditBalance({ credits, compact = false, collapsed = false, inline = false, className = '' }) {
-  if (!credits) return null;
+  // The inline sidebar meter keeps its height before credits load so the
+  // account footer does not jump upward when they arrive.
+  if (!credits) return inline ? <span aria-hidden="true" className={`block h-[26px] ${className}`} /> : null;
   const unlimited = credits.unlimited || Number(credits.included) < 0;
   const remainingPct = unlimited ? 100 : Math.max(0, Number(credits.percent_remaining || 0));
   const color = remainingPct <= 5 ? '#dc2626' : remainingPct <= 20 ? '#d97706' : '#117dff';
@@ -35,7 +37,7 @@ export default function CreditBalance({ credits, compact = false, collapsed = fa
           />
         </div>
         <div className="mt-1 flex items-center justify-between gap-2 text-[9px] font-mono leading-none">
-          <span style={{ color: usedColor }}>{unlimited ? 'Unlimited' : `${usedPct}% used`}</span>
+          <span style={{ color: usedColor }}>{unlimited ? 'Unlimited' : usedPct === 0 && Number(credits.remaining) < Number(credits.included) ? '<1% used' : `${usedPct}% used`}</span>
           <span className="text-[#8b8b86]">{unlimited ? 'No monthly cap' : `${fmt(credits.remaining)}/${fmt(credits.included)} left`}</span>
         </div>
       </NavLink>

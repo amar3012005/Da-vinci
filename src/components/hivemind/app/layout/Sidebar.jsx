@@ -1,6 +1,6 @@
 import { readRuntimeRoute } from '../shared/runtime-presentation-cache';
 import RuntimeAvatar from '../shared/RuntimeAvatar';
-import { ownedOpenDotRoomStatuses, reconnectingOpenDotRoomStatuses } from '../shared/open-dot-room-status';
+import { ownedOpenDotRoomStatuses, withEmployeeTaskStatuses, reconnectingOpenDotRoomStatuses } from '../shared/open-dot-room-status';
 import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
 import { agentRoster } from '../shared/agent-roster';
 import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../shared/open-dot-employee-route';
@@ -247,7 +247,7 @@ export default function Sidebar({
         if (!response.ok) throw new Error('Status unavailable');
         failures = 0;
         const result = await response.json();
-        if (!controller.signal.aborted && result.version === 1) setDotRooms(ownedOpenDotRoomStatuses(result.employees, agentRoster.peek(scope) || [], dotReadAt.current));
+        if (!controller.signal.aborted && result.version === 1) setDotRooms(withEmployeeTaskStatuses(ownedOpenDotRoomStatuses(result.employees, agentRoster.peek(scope) || [], dotReadAt.current), result.taskStatus));
       } catch { failures += 1; if (!controller.signal.aborted) setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous, responseStatus)); }
       finally { loading = false; if (!controller.signal.aborted && retryAllowed) timer = setTimeout(load,
         responseStatus === 401 || responseStatus === 403 ? (failures === 1 ? 250 : 1000) : Math.min(300000, 15000 * (2 ** Math.min(failures, 5)))); }

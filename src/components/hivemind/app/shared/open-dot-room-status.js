@@ -37,3 +37,27 @@ export function reconnectingOpenDotRoomStatuses(previous, status) {
   if ([401, 403, 404].includes(status)) return {};
   return Object.fromEntries(Object.entries(previous).map(([id, rooms]) => [id, rooms.map(room => ({ ...room, stale: true }))]));
 }
+
+const TASK_STATUS_RANK = { failed: 6, blocked: 5, submitted: 4, working: 3, assigned: 2, accepted: 1 };
+
+/**
+ * Attach each employee's most urgent native task state to its room statuses.
+ * Unknown values and `idle` leave the rooms unchanged; an employee without a
+ * room snapshot gets one status row so the card can still show its task.
+ */
+export function withEmployeeTaskStatuses(statuses, taskStatus) {
+  if (!Array.isArray(taskStatus)) return statuses;
+  const next = { ...statuses };
+  for (const entry of taskStatus.slice(0, 64)) {
+    const status = entry?.status;
+    if (typeof entry?.employeeId !== 'string' || !TASK_STATUS_RANK[status]) continue;
+    const rooms = next[entry.employeeId] ?? [{ id: entry.employeeId, updatedAt: 0, status: 'idle' }];
+    next[entry.employeeId] = rooms.map(room => ({ ...room, taskStatus: status }));
+  }
+  return next;
+}
+
+/** Most urgent task state among one employee's rooms: failed, blocked, submitted, working, assigned, then accepted. */
+export function mostUrgentTaskStatus(rooms) {
+  return rooms.reduce((best, room) => (TASK_STATUS_RANK[room.taskStatus] ?? 0) > (TASK_STATUS_RANK[best] ?? 0) ? room.taskStatus : best, undefined);
+}

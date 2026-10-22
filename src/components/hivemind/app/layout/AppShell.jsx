@@ -569,7 +569,7 @@ function AppShellContent() {
         <div data-hivemind-app-shell data-native-chat-shell data-mobile-brain-user-name={mobileBrainUserName(user, brainChat && brainPhone)} data-mobile-brain-greeting={mobileBrainGreeting(user, brainChat && brainPhone, t)} className="font-[Inter,ui-sans-serif,system-ui,sans-serif]" style={{ '--hm-harness-center-offset': '0px' }}>
           <MobileShell noScroll bareHeader showBareLogo={false} nativeChatViewport activeNavPath="/hivemind/m/chat">
             <MobileBrainHeaderActions />
-            <main className="flex-1 min-h-0 min-w-0 overflow-hidden"><HyperAgentActivation /><AgentWorkspaceOutlet key={`${user?.id || ""}:${org?.id || ""}`} /></main>
+            <main className="relative flex-1 min-h-0 min-w-0 overflow-hidden"><HyperAgentActivation /><AgentWorkspaceOutlet key={`${user?.id || ""}:${org?.id || ""}`} /></main>
             {mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy />}
             <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />
             <GlobalUploadStrip />
