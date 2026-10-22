@@ -321,6 +321,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
     let recovering = false;
     let checkingSession = false;
     let livenessTimer;
+    let requestedShellUrl;
     const readinessAbort = new AbortController();
     const onSessionOpenError = (event) => {
       const detail = event.detail;
@@ -414,7 +415,8 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
       if (initialNativePane) { try { embeddedParentOrigin = new URL(document.referrer).origin; } catch { embeddedParentOrigin = null; } }
       const styles = Array.isArray(boot.styles) ? boot.styles : [];
       if (styles.length === 0) throw new Error('HIVEMIND could not load the conversation appearance.');
-      const shellUrl = harnessShellUrl(boot.injections);
+      const shellUrl = !brain && /^\/assets\/harness-shell\.js\?rev=[a-f0-9]{12}$/.test(boot.shellUrl || '') ? boot.shellUrl : harnessShellUrl(boot.injections);
+      requestedShellUrl = shellUrl;
       if (!runtime) preloadHarnessAssets(boot.injections, shellUrl);
       // Styles and ordered script execution are independent downloads. Wait
       // for both before mounting, avoiding flashes of unstyled conversation.
@@ -491,7 +493,22 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
       }
     };
 
-    start().catch((error) => {
+    start().catch(async (error) => {
+      // Browsers retain a failed import in their module map. Before a native
+      // app has mounted, one document retry is safe and creates a fresh map.
+      const retryKey = `hivemind.runtime.shell-retry:${ownerScope}:${requestedShellUrl}`;
+      if (!brain && !cancelled && requestedShellUrl && !window.__DSH_EMBED_APP__
+          && /Failed to fetch dynamically imported module|Importing a module script failed/.test(String(error))) {
+        try {
+          if (!sessionStorage.getItem(retryKey)) {
+            sessionStorage.setItem(retryKey,'1');
+            const response = await fetchHarness(requestedShellUrl,{credentials:'include',cache:'reload',signal:readinessAbort.signal});
+            const javascript = response.ok && /javascript/.test(response.headers.get('content-type') || '');
+            await response.body?.cancel();
+            if (javascript && !cancelled) { window.location.reload(); return; }
+          }
+        } catch { /* Keep the exact failure visible after the bounded retry. */ }
+      }
       if (!cancelled) setState({ phase: 'error', stage: 0, message: error instanceof Error ? error.message : 'Could not open HIVEMIND chat.' });
     });
 

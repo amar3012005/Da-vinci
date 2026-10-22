@@ -60,7 +60,7 @@ for (const path of buildFiles) {
   }
 }
 
-if (nativeAssetBytes > 40 * 1024 * 1024) throw new Error("Native Runtime assets exceed their separate 40 MiB release budget");
+if (nativeAssetBytes > 80 * 1024 * 1024) throw new Error("Native Runtime assets exceed their separate 80 MiB two-generation release budget");
 if (artifactBytes - nativeAssetBytes > maxArtifactBytes) {
   throw new Error(`Refusing ${(artifactBytes / 1024 / 1024).toFixed(1)} MiB Cloudflare artifact; budget is 164 MiB.`);
 }
