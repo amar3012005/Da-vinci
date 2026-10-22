@@ -224,6 +224,10 @@ export default function Sidebar({
   const rooms = [...nativeRooms, ...Object.values(dotRooms).flat(), ...Object.values(liveDotRooms).flat(), ...scheduledEmployees.map(id => ({ id, scheduled: true, scheduleOnly: true, updatedAt: 0 }))];
   const dotReadAt = useRef({});
   const lastDotPush = useRef(0);
+  // Last authoritative task state per employee from the status read. Live room
+  // frames carry rooms but not task state, so every room update re-applies it.
+  const taskStatusRef = useRef(new Map());
+  const withTaskStatus = rows => withEmployeeTaskStatuses(rows, [...taskStatusRef.current].map(([employeeId, status]) => ({ employeeId, status })));
   useEffect(() => {
     setDotRooms({});
     const key = `hivemind.dot-read-at:${scope}`;
@@ -256,7 +260,10 @@ export default function Sidebar({
         // assignment, room activity or visibility change returns to 15 s.
         quiet = Array.isArray(result.employees) && result.employees.every(entry => ['idle', 'paused', undefined].includes(entry?.status) && !(entry?.rooms ?? []).some(room => room?.running || room?.live))
           && (!Array.isArray(result.taskStatus) || result.taskStatus.every(entry => entry?.status === 'idle' || entry?.status === 'accepted'));
-        if (!controller.signal.aborted && result.version === 1) setDotRooms(withEmployeeTaskStatuses(ownedOpenDotRoomStatuses(result.employees, agentRoster.peek(scope) || [], dotReadAt.current), result.taskStatus));
+        if (Array.isArray(result.taskStatus)) {
+          taskStatusRef.current = new Map(result.taskStatus.filter(entry => typeof entry?.employeeId === 'string' && entry.status && entry.status !== 'idle').map(entry => [entry.employeeId, entry.status]));
+        }
+        if (!controller.signal.aborted && result.version === 1) setDotRooms(withTaskStatus(ownedOpenDotRoomStatuses(result.employees, agentRoster.peek(scope) || [], dotReadAt.current)));
       } catch { failures += 1; if (!controller.signal.aborted) setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous, responseStatus)); }
       finally { loading = false; if (!controller.signal.aborted && retryAllowed) timer = setTimeout(load,
         responseStatus === 401 || responseStatus === 403 ? (failures === 1 ? 250 : 1000) : failures === 0 && quiet ? 45000 : Math.min(300000, 15000 * (2 ** Math.min(failures, 5)))); }
@@ -333,7 +340,7 @@ export default function Sidebar({
       const entries = event.detail.employees ?? [{ employeeId, dotId: event.detail.dotId, rooms: event.detail.rooms }];
       if (Array.isArray(entries) && entries.length <= 64 && entries.some(entry => entry.rooms?.some(room => room.live === true))) {
         liveDotSnapshot.current = entries;
-        setLiveDotRooms(ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current));
+        setLiveDotRooms(withTaskStatus(ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current)));
         return;
       }
       const verified = ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current);
@@ -341,7 +348,7 @@ export default function Sidebar({
         if (Number.isFinite(entry.readAt) && entry.readAt >= 0 && Object.hasOwn(verified, entry.employeeId)) dotReadAt.current[entry.employeeId] = entry.readAt;
       }
       try { localStorage.setItem(`hivemind.dot-read-at:${scope}`, JSON.stringify(dotReadAt.current)); } catch { /* Optional local watermark. */ }
-      setDotRooms(previous => ({ ...previous, ...ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current) }));
+      setDotRooms(previous => withTaskStatus({ ...previous, ...ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current) }));
     };
     window.addEventListener('hivemind:open-dot-rooms', dotActivity);
     window.addEventListener('hivemind:agent-rooms', activity);
@@ -358,7 +365,7 @@ export default function Sidebar({
   }, [location.pathname, contextPath, team]);
 
   useEffect(() => {
-    if (liveDotSnapshot.current) setLiveDotRooms(ownedOpenDotRoomStatuses(liveDotSnapshot.current, team, dotReadAt.current));
+    if (liveDotSnapshot.current) setLiveDotRooms(withTaskStatus(ownedOpenDotRoomStatuses(liveDotSnapshot.current, team, dotReadAt.current)));
   }, [team]);
 
   const openAgent = async (event, agent) => {
