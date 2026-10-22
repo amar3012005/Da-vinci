@@ -6,7 +6,6 @@ import { Plus, Cable, Building2, FolderKanban, Monitor, FolderOpen, Settings, Lo
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
 import CreditBalance from '../shared/CreditBalance';
-import { groupTeamByTask } from '../shared/team-groups';
 import { openDotEmployeePath } from '../shared/open-dot-employee-route';
 import './desktop-hyperagents-navigation.css';
 
@@ -30,7 +29,6 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
   };
   const runtimeRoom = roomFor('runtime');
   const span = createEmployeeSpan(team.length, columns);
-  const grouped = groupTeamByTask(team, roomFor);
   return <div className={`desktop-hyperagents-navigation${collapsed ? ' is-collapsed' : ''}`} data-columns={columns}>
     <div className="ha-team-scroll">
       {!collapsed && <div className="ha-team-heading"><h2>Your team</h2><span>{team.length} {team.length === 1 ? 'employee' : 'employees'}</span></div>}
@@ -39,20 +37,7 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
         {!collapsed && <span className="ha-runtime-identity"><strong>Runtime</strong><small>AI Chief of Staff</small><LiveStatus room={runtimeRoom}/></span>}
         {collapsed && <LiveStatus room={runtimeRoom} collapsed/>}
       </button>
-      {grouped && !collapsed ? <div className="ha-team-groups" role="region" aria-label="Employees by task state">
-        {grouped.map(group => <section key={group.id} className="ha-team-group" aria-label={`${group.label}, ${group.members.length}`}>
-          <h3>{group.label}<span>{group.members.length}</span></h3>
-          {group.members.map(agent => {
-            const profession = employeeProfession(agent);
-            return <button key={agent.id} type="button" data-agent-room-link className={`ha-team-row${selectedAgent === agent.id ? ' is-selected' : ''}`} aria-label={`${agent.name}, ${profession}`} aria-busy={openingAgent === agent.id || undefined} onClick={event => onOpenAgent(event, agent)}>
-              <AgentAvatar agent={agent} size={32}/>
-              <span className="ha-team-row-identity"><strong>{agent.name}</strong><small>{profession}</small></span>
-              <LiveStatus room={roomFor(agent.id)} collapsed={false}/>
-            </button>;
-          })}
-        </section>)}
-        <button type="button" className="ha-team-row ha-team-create" onClick={onCreate} aria-label="Create employee"><Plus size={18}/><span>Create employee</span></button>
-      </div> : <div className="ha-employee-grid" role="region" style={{ gridTemplateColumns: `repeat(${collapsed ? 1 : columns}, minmax(0, 1fr))` }} aria-label="Employees">
+      <div className="ha-employee-grid" role="region" style={{ gridTemplateColumns: `repeat(${collapsed ? 1 : columns}, minmax(0, 1fr))` }} aria-label="Employees">
         {team.map(agent => {
           const profession = employeeProfession(agent);
           const room = roomFor(agent.id);
@@ -66,7 +51,7 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
           </button>;
         })}
         <button type="button" className={`ha-create-employee${span === columns ? ' full-row' : ''}`} style={{ gridColumn: `span ${collapsed ? 1 : span}` }} onClick={onCreate} aria-label="Create employee"><Plus size={23}/>{!collapsed && <span>Create employee</span>}</button>
-      </div>}
+      </div>
     </div>
     <nav className="ha-workspace-shortcuts" aria-label="Workspace tools">
       <NavLink to={employeeAppsPath(location)} title={collapsed ? 'Apps' : undefined}><Cable size={18}/>{!collapsed && <span>Apps</span>}</NavLink>
