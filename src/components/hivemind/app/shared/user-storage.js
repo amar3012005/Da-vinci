@@ -46,6 +46,7 @@ function purgeScopedKeys(storage) {
 }
 
 export function clearUserScopedStorage() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('hivemind:clear-runtime-cache'));
   purgeScopedKeys(window.localStorage);
   purgeScopedKeys(window.sessionStorage);
 }

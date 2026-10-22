@@ -1,3 +1,4 @@
+import { runtimeNativeAsset } from './runtime-native-assets.mjs';
 import { handleComposioAccount } from './composio-account.mjs';
 export { ComposioAccount } from './composio-account.mjs';
 import { proxyConnectorTransport } from './connector-transport.mjs';
@@ -700,6 +701,8 @@ export default {
       headers.set('x-hivemind-api-owner', new URL(request.url).hostname);
       return noIndex(new Response(response.body, { status: response.status, statusText: response.statusText, headers }));
     }
+    const nativeAsset = await runtimeNativeAsset(request,env);
+    if (nativeAsset) return nativeAsset;
     // Plugin graph events are a native stream, including before admission or
     // after a cookie expires. The runner retains ownership of authorization;
     // never substitute the public SPA document for an EventSource request.

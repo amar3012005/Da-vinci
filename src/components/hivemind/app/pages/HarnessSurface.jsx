@@ -1,3 +1,4 @@
+import { readRuntimePresentation, saveRuntimePresentation, clearRuntimePresentation } from '../shared/runtime-presentation-cache';
 import { initialNativePane } from '../shared/native-pane-protocol';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } from '../shared/native-harness-seat';
@@ -292,6 +293,21 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
   const { user, org } = useAuth();
   const ownerScope = `${user?.id || ""}:${org?.id || ""}`;
   const mountRef = useRef(null);
+  const [cachedPresentation,setCachedPresentation] = useState(null);
+  const cacheSession = !brain && window.location.pathname.match(/\/employee\/harness\/session\/(session-[a-z0-9-]+)/)?.[1];
+  useEffect(() => {
+    if (brain || !user?.id || !org?.id) return undefined;
+    let active = true;
+    setCachedPresentation(null);
+    void readRuntimePresentation(ownerScope,cacheSession).then(value => { if (active) setCachedPresentation(value); });
+    const receive = event => { if (event.detail?.scope === ownerScope) void saveRuntimePresentation(event.detail); };
+    const clear = () => { setCachedPresentation(null); void clearRuntimePresentation(ownerScope); };
+    const reset = event => { if (event.key?.startsWith('runtime.reset.')) clear(); };
+    window.addEventListener('hivemind:runtime-presentation',receive);
+    window.addEventListener('hivemind:clear-runtime-cache',clear);
+    window.addEventListener('storage',reset);
+    return () => { active=false; window.removeEventListener('hivemind:runtime-presentation',receive); window.removeEventListener('hivemind:clear-runtime-cache',clear); window.removeEventListener('storage',reset); };
+  }, [brain,ownerScope,cacheSession,user?.id,org?.id]);
   const [state, setState] = useState({ phase: 'loading', stage: 0, message: null });
 
   useEffect(() => {
@@ -311,7 +327,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
       setState({ phase: 'error', stage: 0, message: String(detail.message || 'The chat could not be opened.') });
     };
     window.addEventListener('hivemind:session-open-error', onSessionOpenError);
-    const request = { container: mount, cancelled: false };
+    const request = { container: mount, cancelled: false, ...(!brain ? {cacheScope:ownerScope} : {}) };
     const onSlowMount = () => {
       if (!cancelled) setState({ phase: 'reconnecting', stage: HARNESS_BOOT_STAGES.length - 1, message: null });
     };
@@ -361,23 +377,18 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
         window.__DSH_FILE_UPLOAD__ = { fetch: runtime.fetch };
       }
       const recentlyEstablished = sessionEstablished || consumeHarnessExchange(window.location.pathname);
-      const admission = recentlyEstablished ? { mode: 'harness' }
-        : await establishHarnessSession({ fresh: isFreshHarnessRoute() });
-      if (admission.mode === 'legacy') {
-        // Never render or boot the native client for a legacy user.  This
-        // replaces the former "not admitted" dead end with the established
-        // LangGraph/LangChain chat, retaining the feature flag as rollback.
-        window.location.replace(HARNESS_OVERVIEW_PATH);
-        return;
-      }
-      setLoadingStage(1);
-      let bootResponse = await measureHarnessBoot('boot-graph', () => fetchHarness(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' }));
-      // Dreaming just established this cookie. If it expires before boot,
-      // re-admit once; the runner remains the authentication authority.
-      if (recentlyEstablished && [401, 403].includes(bootResponse.status)) {
-        const renewed = await establishHarnessSession();
-        if (renewed.mode !== 'harness') { window.location.replace(HARNESS_OVERVIEW_PATH); return; }
-        bootResponse = await fetchHarness(HARNESS_BOOT_PATH, { credentials: 'include', cache: 'no-store' });
+      let bootResponse;
+      if (!brain) bootResponse = await measureHarnessBoot('boot-existing-session', () => fetchHarness(HARNESS_BOOT_PATH, {credentials:'include',cache:'no-store'}));
+      if (brain || bootResponse.status === 401) {
+        const admission = recentlyEstablished ? {mode:'harness'} : await establishHarnessSession({fresh:isFreshHarnessRoute()});
+        if (admission.mode === 'legacy') { window.location.replace(HARNESS_OVERVIEW_PATH); return; }
+        setLoadingStage(1);
+        bootResponse = await measureHarnessBoot('boot-graph', () => fetchHarness(HARNESS_BOOT_PATH, {credentials:'include',cache:'no-store'}));
+        if (recentlyEstablished && [401,403].includes(bootResponse.status)) {
+          const renewed = await establishHarnessSession();
+          if (renewed.mode !== 'harness') { window.location.replace(HARNESS_OVERVIEW_PATH); return; }
+          bootResponse = await fetchHarness(HARNESS_BOOT_PATH, {credentials:'include',cache:'no-store'});
+        }
       }
       if (!bootResponse.ok) throw new Error('HIVEMIND could not verify your session.');
       const boot = await measureHarnessBoot('boot-body', () => bootResponse.json());
@@ -520,7 +531,8 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
   }
 
   return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface data-brain-chat={brain ? '' : undefined}>
-    {(state.phase === 'loading' || state.phase === 'reconnecting') && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} reconnecting={state.phase === 'reconnecting'} dreaming={window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`} /></div>}
+    {(state.phase === 'loading' || state.phase === 'reconnecting') && !cachedPresentation && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} reconnecting={state.phase === 'reconnecting'} dreaming={window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`} /></div>}
+    {cachedPresentation && state.phase !== 'ready' && <div className="absolute inset-0 z-10 overflow-y-auto bg-[#faf9f4] p-6" aria-label="Saved Runtime conversation"><p className="mb-6 text-xs text-[#737373]">Saved conversation · Connecting…</p>{cachedPresentation.messages.map(message => <p key={message.seq} className="mx-auto mb-5 max-w-3xl whitespace-pre-wrap text-sm"><strong>{message.role === 'user' ? 'You' : 'Runtime'}</strong><br/>{message.text}</p>)}</div>}
     <div ref={mountRef} className="h-full min-h-0" style={{ visibility: state.phase === 'ready' ? 'visible' : 'hidden' }} />
     {brain && <ChatModelConnection />}
     <QueryStarters mount={mountRef.current} ready={state.phase === 'ready'} />

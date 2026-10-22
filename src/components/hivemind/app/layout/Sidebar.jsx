@@ -1,3 +1,4 @@
+import { readRuntimeRoute } from '../shared/runtime-presentation-cache';
 import RuntimeAvatar from '../shared/RuntimeAvatar';
 import { ownedOpenDotRoomStatuses, reconnectingOpenDotRoomStatuses } from '../shared/open-dot-room-status';
 import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
@@ -365,6 +366,8 @@ export default function Sidebar({
         throw error;
       }
     }
+    const cachedRuntime = agent.id === 'runtime' && window.location.hostname === 'runtime-runner.singulancelabs.com' && readRuntimeRoute(scope);
+    if (cachedRuntime) { setSelectedAgent(null); navigate(cachedRuntime); return true; }
     const openDotPath = openDotEmployeePath(agent);
     if (openDotPath) {
       selectionPending.current = null;

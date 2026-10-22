@@ -18,7 +18,7 @@ function LiveStatus({ room, collapsed }) {
   return <span className="ha-live-status">
     <AgentRoomStatus room={room} compact={collapsed}/>
     {room?.activeCall && !room.stale && !collapsed && <span className="ha-call-label">In call</span>}
-    {!room && !collapsed && <span className="ha-status-unknown">Status unavailable</span>}
+    {!room && !collapsed && <span className="ha-status-unknown">Connecting…</span>}
   </span>;
 }
 

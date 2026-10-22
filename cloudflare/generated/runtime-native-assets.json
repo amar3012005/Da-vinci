@@ -1,0 +1,726 @@
+{
+  "release": "48ecadfb681281bd9009a0d5f35e300ce47d3682",
+  "rev": "551bfa81c322",
+  "entries": {
+    "/plugins/??@deepseek-ai/dsh-client-modules/client.js&rev=5009a079309a": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/7d45b6c18dc383fa9440e5b10b4af5f19ac7f72fa226cc998997a1b2f54a29e7",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-api-gateway/client.js,@deepseek-ai/dsh-session-log-export/client.js,@deepseek-ai/dsh-client-ui-open-in-app/client.js,@deepseek-ai/dsh-client-hmr/client.js,@deepseek-ai/dsh-client-ui-hivemind-connect/client.js,@deepseek-ai/dsh-client-file-upload/client.js,@deepseek-ai/dsh-api-remotes/client.js,@deepseek-ai/dsh-cordis-client-runner/client.js,@deepseek-ai/dsh-client-ui-theme/client.js,@deepseek-ai/dsh-client-locale/client.js,@deepseek-ai/dsh-client-ui-layout/client.js,@deepseek-ai/dsh-client-ui-renderer/client.js,@deepseek-ai/dsh-client-ui-session/client.js,@deepseek-ai/dsh-client-resources/client.js,@deepseek-ai/dsh-client-ui-sidebar/client.js,@deepseek-ai/dsh-client-ui-sidebar-right/client.js,@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client.js,@deepseek-ai/dsh-client-ui-sidebar-files/client.js,@deepseek-ai/dsh-client-ui-settings/client.js,@deepseek-ai/dsh-client-ui-settings-general/client.js,@deepseek-ai/dsh-client-ui-settings-models/client.js,@deepseek-ai/dsh-client-ui-settings-plugin-inventory/client.js,@deepseek-ai/dsh-client-ui-conversation/client.js,@deepseek-ai/dsh-client-ui-approval/client.js,@deepseek-ai/dsh-client-ui-chat/client.js,@deepseek-ai/dsh-client-ui-brand-official/client.js,@deepseek-ai/dsh-client-ui-attachment/client.js,@deepseek-ai/dsh-client-ui-tool/client.js,@deepseek-ai/dsh-client-ui-cordis/client.js,@deepseek-ai/dsh-client-ui-workflow-run/client.js,@deepseek-ai/dsh-client-ui-hivemind-operating-run/client.js,@deepseek-ai/dsh-client-ui-workspace/client.js,@deepseek-ai/dsh-client-ui-input-trigger/client.js,@deepseek-ai/dsh-client-ui-commands/client.js,@deepseek-ai/dsh-client-ui-skill/client.js,@deepseek-ai/dsh-client-ui-subagent/client.js,@deepseek-ai/dsh-client-ui-reference/client.js,@deepseek-ai/dsh-client-ui-schedule/client.js,@deepseek-ai/dsh-client-ui-jobs/client.js,@deepseek-ai/dsh-client-ui-goal/client.js,@deepseek-ai/dsh-client-ui-message-feedback/client.js,@deepseek-ai/dsh-client-ui-model-selection/client.js,@deepseek-ai/dsh-client-ui-permission-presets/client.js,@deepseek-ai/dsh-client-ui-agent-preset/client.js,@deepseek-ai/dsh-client-ui-settings-plugins/client.js,@deepseek-ai/dsh-client-ui-plan/client.js,@deepseek-ai/dsh-client-ui-user-questions/client.js,@deepseek-ai/dsh-client-ui-trajectory/client.js,@deepseek-ai/dsh-experimental-client-ui-agent-team/client.js,@deepseek-ai/dsh-client-ui-hivemind-hq/client.js,@deepseek-ai/dsh-typert-registry/client.js,@deepseek-ai/dsh-client-connection/client.js,@deepseek-ai/dsh-api-workspace-controller/client.js,@deepseek-ai/dsh-api-session-controller/client.js&rev=888245cd0e95": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e4fa692c2d8da40fe756d11217c7096391fe058fb1648c4d54d59595196d79bf",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=9d5d6fbd01c28866-0": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a7b6a4a8ce1ccf2babfd4090436a7377e155b9ce7f8fa7ce256ee4127f6e1cdd",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-session-log-export/client.js&rev=9d5d6fbd01c28866-1": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a4c45a71259be30a4103b93900acb98b5a9c4ff6c8469c1ff01294ea12a2de37",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-open-in-app/client.js&rev=9d5d6fbd01c28866-2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/da6c1eeb0582580e233f080d994fe3913b93fac66f57fdda2033d1f2836ec7af",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-hmr/client.js&rev=9d5d6fbd01c28866-3": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/dfa4a1eaac9856755292ecf63e5f5de7297888eb214e06b0df8cf204da83b48d",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-hivemind-connect/client.js&rev=9d5d6fbd01c28866-4": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/2c34e51fcf978fe4091e9a3ab4955bb478288a67aeaee662f984d19da6ff0bb2",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-modules/client.js&rev=9d5d6fbd01c28866-5": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e5b3804f3d1cbebb0e62089bc2171547244f21c8f46b199a16315b379ec38500",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-file-upload/client.js&rev=9d5d6fbd01c28866-6": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/703436fd6b388323ec65d1d459a77d63e250b2ed224a99491dc1583cefc4ca44",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-api-remotes/client.js&rev=9d5d6fbd01c28866-7": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/0b896f30c462ec9ae7f7c9b8e4782570d4a86576602a52db756c9a33cd3bd878",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-cordis-client-runner/client.js&rev=9d5d6fbd01c28866-8": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/23e2aa1ce4a6e9ff7a9e1019927e2db994a2fb4dbab2c6ad263993cea54bbf61",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-theme/client.js&rev=9d5d6fbd01c28866-9": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/cac1cfe8d8242d16a178d7983ab1b72bbe9d6644e0b96591a6336e26a812d26d",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-locale/client.js&rev=9d5d6fbd01c28866-10": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/77c5f62457ef8f7b31f8bb1b7675f91aa3a2597a80533a6350f5dddd472e8e35",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-layout/client.js&rev=9d5d6fbd01c28866-11": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/6da5d1a5715330f9596854840298d8947f7df41590c20670aa6b10b549de0090",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-renderer/client.js&rev=9d5d6fbd01c28866-12": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/33ee7f14de1bc070a3bd22324e3a8086a821d0507a016fc0d15bfb06e9555e26",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-session/client.js&rev=9d5d6fbd01c28866-13": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/74e86f2117dcb14901844bf77aa3ab1a767648fe7f841335512eedf2c47da83c",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-resources/client.js&rev=9d5d6fbd01c28866-14": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/0732c4196c1b0944bcee5894ff3823a49676ac88acdd657dea7698c0bb4f5864",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar/client.js&rev=9d5d6fbd01c28866-15": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f67836522fb46b244fcce6d47910cb3127a4dc0d4832548ef6db855c009bf2ee",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar-right/client.js&rev=9d5d6fbd01c28866-16": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/008ceb740ea66266b11ce6a38bb4746d47b64d2973d3e59af3155114d9b1295e",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client.js&rev=9d5d6fbd01c28866-17": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/2c81b7d41ebb81535f8eed6e353eb28dba788cdbf8105dd1f3b3ee11f5dbab57",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-sidebar-files/client.js&rev=9d5d6fbd01c28866-18": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/ef38c2a6a77ba4e7fb05de31df7b3cdf611ac503708be6eb7acdfa2218db28ad",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-settings/client.js&rev=9d5d6fbd01c28866-19": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/1359744e055f615b5d40e738890348505b01aaa57723bbf684a9c7cef0b7fb4a",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=9d5d6fbd01c28866-20": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/351cbf2d5f2a64429999c09e1a9bd651d0b9baced112ade846caef2d0b48d2ce",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-settings-models/client.js&rev=9d5d6fbd01c28866-21": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/841aac96a53fa1e41c9f8f9c11ee85a7be42bcccd0fdba85afa185cf27fde5ac",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-settings-plugin-inventory/client.js&rev=9d5d6fbd01c28866-22": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e3f7b55c2c92c027a41315718332ebf4f731698e15da2adbce064809cd6d4788",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-conversation/client.js&rev=9d5d6fbd01c28866-23": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/55100c9bca7b1a63b9afa27c90d1d6c9c9321b9ac1404982f676712a2fdd8c53",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-approval/client.js&rev=9d5d6fbd01c28866-24": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/fe9de2500c25b09d002f80b0ac95ef936fd719abe93be7ecd1eba6cb10466c5f",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-chat/client.js&rev=9d5d6fbd01c28866-25": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a66c597221d818b11f13a6eacd9edf7f43113af52711e3849f7f99db9e25c48e",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-brand-official/client.js&rev=9d5d6fbd01c28866-26": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/d6db6e7c99637c106387cf171535c6f224fbe0a47db9a2aab32c0551aa6f3bd9",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-attachment/client.js&rev=9d5d6fbd01c28866-27": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/c801547a72f05c47e1b8fa312e3820a0b6341a41eeb1f6e2f684f4305a810675",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-tool/client.js&rev=9d5d6fbd01c28866-28": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f93a96382c43ce56a9fb9315ea773e7e2330d7e1efaf7d74b1c083c6c962525b",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-cordis/client.js&rev=9d5d6fbd01c28866-29": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/48b24b848c7cfb8c5bee5324024d3fe3efc8ad51cbb80f5738108bca1ac78e02",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-workflow-run/client.js&rev=9d5d6fbd01c28866-30": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/5679dd74710dd54c3450aa7ca6d5624c80817def6e9d2e2aeb1705a222415d26",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-hivemind-operating-run/client.js&rev=9d5d6fbd01c28866-31": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e6b1279e7b8d2ddec8a9c7ac84a07629ba75ed3fcf911bd240df805bfd5f6b84",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-workspace/client.js&rev=9d5d6fbd01c28866-32": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e09820d06e2b1d526e7e14c2255d272c428987df33b27ae46038d09c168bd031",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-input-trigger/client.js&rev=9d5d6fbd01c28866-33": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a23aae5f91ec18832749c70078f764c78898d02320c039e2c14bd691137bd10e",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-commands/client.js&rev=9d5d6fbd01c28866-34": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e8157a878b53b355d36e1d3c1a97443fd3ae699acc317304bbcf4652a202779d",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-skill/client.js&rev=9d5d6fbd01c28866-35": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f1f27cce63f74a57593e3b234d8eef1bcf28b69bb5022525c34fd9b615ee5223",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-subagent/client.js&rev=9d5d6fbd01c28866-36": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/16bc88968cca3c14f8f2b91e5a8c7dd6bb5bf0c93f3ddbbb3b4c5237fdca87ce",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-reference/client.js&rev=9d5d6fbd01c28866-37": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a67093b94af65e0dad3db24e5e54eeb46edaf12b286f04d0db1136306806686f",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-schedule/client.js&rev=9d5d6fbd01c28866-38": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/de743f0afda7c1023bed9c0ee74eb2f6b5d1652bcd44f98b768e43e4a1771b79",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-jobs/client.js&rev=9d5d6fbd01c28866-39": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/4566f43aaa3da1be00bf0ab4dea7593f9fb7ac3f0e0757559b56abc30fcccde5",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-goal/client.js&rev=9d5d6fbd01c28866-40": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/b19d6d0046c8461455a45c07a62ad2b430b2fdae783630af5b1a9772c442b495",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-message-feedback/client.js&rev=9d5d6fbd01c28866-41": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/6999bea2a0adad0efb23e914a3cce7f8a8bed10e9b3dbc0e44626041b6752269",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-model-selection/client.js&rev=9d5d6fbd01c28866-42": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/7f0b26c35120b2ea416c57dbfd9f06786b225077305c63831f96c13f8db012e2",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-permission-presets/client.js&rev=9d5d6fbd01c28866-43": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/6a766be5951e1fd8e27973d694d1e11285c5cc01ce4a7e0ab5c9e29f23ccc48a",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-agent-preset/client.js&rev=9d5d6fbd01c28866-44": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/05568913343a67b9f1f1af79a679b993e5afa0aa50428213c88f026daf10fa82",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-settings-plugins/client.js&rev=9d5d6fbd01c28866-45": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/3d45388b7530752cbeffc0e4450b1697be5095d1ecad06e7b68eb4280b3c38f6",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-plan/client.js&rev=9d5d6fbd01c28866-46": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/acdb0d3a483668abd6553aa8efab0e4279c3ca1461908030976c29b5da8bb774",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-user-questions/client.js&rev=9d5d6fbd01c28866-47": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/d74aefd9101434b2b423f7b757fc5701de6ccd8f97e855fdc3b1346341c32b49",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-trajectory/client.js&rev=9d5d6fbd01c28866-48": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/13eca65e2f01bc6966bd0ed1474ee43beab2439f70b5ee1d27e76eb5c5b0b7b1",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-experimental-client-ui-agent-team/client.js&rev=9d5d6fbd01c28866-49": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/d0c51d46eea17ea42ed8f328a2507c054fc40fffc4b003dd19af5e2d1bf90d3b",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-ui-hivemind-hq/client.js&rev=9d5d6fbd01c28866-50": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/3d66d905338038caf1477b26d0e4e73646a9b9a72bc33b669745143c519ab7d1",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-typert-registry/client.js&rev=9d5d6fbd01c28866-51": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/abfa2a0d3b32eee9154d9dc74a1bd980a5bb1f60801a4b6cbc9d49085b78cd9d",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-client-connection/client.js&rev=9d5d6fbd01c28866-52": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/72fa0da0c46f0e5b6948e2522eab3a5040d3f2a3691b32fb0d6a657aef0a1e58",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-api-workspace-controller/client.js&rev=9d5d6fbd01c28866-53": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f60ac0faa8a47472de63801171392be7a67fd835c507a17397b3689016df1744",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/plugins/??@deepseek-ai/dsh-api-session-controller/client.js&rev=9d5d6fbd01c28866-54": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/bdf4597b2d6f25b9f4a1cf27da2c898bcebe62838316040fd55e76a04d5ab72a",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/assets/vendor-BNsW4eBh.css": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/13e583e38a4b6a98d8e16e9c3c3f2700dead0d6d39f02921a34f737066403fc7",
+      "type": "text/css",
+      "immutable": true
+    },
+    "/assets/index-CVdeCjX5.css": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/30f9cc0edab3da556a8b26d344c46365e24c613bba50b5add5c05230d1c051b8",
+      "type": "text/css",
+      "immutable": true
+    },
+    "/assets/harness-shell.js?rev=551bfa81c322": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/5da2cc7d6dad085f8f6dc5f2956b7765c05704104739eb68a2c9cd09bd066ecb",
+      "type": "text/javascript; charset=utf-8",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_AMS-Regular-BQhdFMY1.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/18a906f8e42b995dffc6f572e39443cbe02294b93338b60a68231a1faa360478",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_AMS-Regular-DMm9YOAa.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/da764c00816e4128ecd72fa84b8fb1cf87d25004801fbd556861a844e19a23fa",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_AMS-Regular-DRggAlZN.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/223fd4dcff97eaed9c22072996c2ef09909b16e693655ef09bd586ddad44e8e5",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Caligraphic-Bold-ATXxdsX0.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/ef05fa81d64fd1ac57b9d6c12a3f058e01cba2d7cd744b23d8ffd5703887f073",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Caligraphic-Bold-BEiXGLvX.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/79811e0832d642dcee39c5e0202ee95ffa9f344ec093b9b9d46d6f3e6efb7cc8",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Caligraphic-Bold-Dq_IR9rO.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/3598e6f38ebb93945c6bb6337faa03c6e944a5ff2466e6d12f6af0af05f5f9ae",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Caligraphic-Regular-CTRA-rTL.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/ae5c7003b416c8bdeda9c891aa299a8643405020a1581647f7ca543f0e301a02",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Caligraphic-Regular-Di6jR-x-.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e5dce938254841ac3fe7dd0bb99d6ec7249b7a8a8659f7941b0a27edbdc44fd6",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Caligraphic-Regular-wX97UBjC.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/29eb1f06c780da7fe7e7f3914f87e0c1dabd6431fc98d98c10834d6a3a85ff92",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Fraktur-Bold-BdnERNNW.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/7cb983129c8a08743abe2ab39521d1b47cc94fbf73c63f74337900546f13744e",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Fraktur-Bold-BsDP51OF.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f80ab0c60e73908e1c4cb63a736fcaac91d02f9d5115b5566342524e841041c8",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Fraktur-Bold-CL6g_b3V.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/cf5ad225565952469c6028e5be94fe1b620a2f5087494638c8ee1ef101f4c5d3",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Fraktur-Regular-CB_wures.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/bd556d04ff0f6cab8923737f58e890cab6ba59103f0e45b647a247824ddcc32f",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Fraktur-Regular-CTYiF6lA.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/174bccc844cda3e06e70a22095a080888ea210dbf04a27652781c704146e9b61",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Fraktur-Regular-Dxdc4cR9.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/85d5fa6361a5337e69584c2f565f0baf58ab4e47634a03d09d9734b92848754a",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-Bold-Cx986IdX.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a9b89623962f54385c7ae18bc0b6000203bb37fc6a2f57163072c133f2773ef9",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-Bold-Jm3AIy58.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/1e7356751fe88916993720cd8015f5393c348ccb5860303c9ecc94af2d2c521e",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-Bold-waoOVXN0.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/41723417c0ed7ef745884f1170d085f797b27b04c138aba59144066f06706de5",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-BoldItalic-DxDJ3AOS.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/2377f8f8909c419d2a2ff22994d8e4b6f75c0bc8ab4acd555a0c10cb4e40dde4",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-BoldItalic-DzxPMmG6.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/3911fed9185f9ba936163230bf9fd3a048b24471c5833fdc1064bf2f078b45b2",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-BoldItalic-SpSLRI95.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a524b618e604ce14e600de3972aa15a89eab73530f0c555a62eed71216e69e95",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-Italic-3WenGoN9.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/0fa25c9e993322bee97f381270aad52ff2d1d7a3a158771ea90082f48f880711",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-Italic-BMLOBm91.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/ae314f3e22ef702a3f1af3a5671662076978114aca20d327ec60ce10fd91f1cc",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-Italic-NWA7e6Wa.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/9b3c7fbb2b86d7521d33a49ce2c3b6d33abc8e23e0ff82c2d6c749ef9f2013b3",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-Regular-B22Nviop.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/0ee7c1f54cd19192f4e7988ace9f2ce608641c70e45997f9d5a91237806ae78e",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-Regular-Dr94JaBh.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/b70c46c48e8623547b78e6ac52a67e191b74a3c6a407447593a12d06c0f0505f",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Main-Regular-ypZvNtVU.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/12f0143dd7018b8e0395c75f045b89abf962694bba416113094da35761d7a0d5",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Math-BoldItalic-B3XSjfu4.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/cfbb6da22b84885bf0f4dfd341c5c8565de646201ffe099b5686e28fb8098747",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Math-BoldItalic-CZnvNsCZ.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/2ac781f34d29cc2205739efc47aff3152bc2be099efcc53e3674b01da70129e6",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Math-BoldItalic-iY-2wyZ7.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/39adea6d8e5b9b3e2cfc51cf9abdf3a580f6bfebabe58541283ec5750bfc45f6",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Math-Italic-DA0__PXp.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/170286a218493c23e2c38ceaca95ebbaf3e9ec5f833f90f8b9237cabe7b0d310",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Math-Italic-flOr_0UB.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/32b82fb09f620e5e9b68f366a3706ebb1538d4a2cf08c043a083b361a1092341",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Math-Italic-t53AETM-.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/12c34ab872d003f580e98f214b851025dd669fd49053073890e67074e9c6724f",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_SansSerif-Bold-CFMepnvq.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/154b6ea16cc45900ee097689b34a45470458ef173108a5f17acdf7c9a901ba56",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_SansSerif-Bold-D1sUS0GD.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/38aace55621068ae0f8782315fe361fb23f676f1e87a3298a13dfb3584059f3c",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_SansSerif-Bold-DbIhKOiC.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/0581e352ece338176994567e00bc2ac2d0be034b47d70491214ce232e71fafb6",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_SansSerif-Italic-C3H0VqGB.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/065555bb605df7084c7266a0c525ae085889e4eea08943d4a1e3a5a39e676b3e",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_SansSerif-Italic-DN2j7dab.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/ec774232ffcaafd3124d61fd656544983eb9c5a4d20a102b448ba02b0088f477",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_SansSerif-Italic-YYjJ1zSn.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/80859cce6cfdac051a38b2cb5aefe0ba2fc87a721b425117f2fd609bfa1cddb3",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_SansSerif-Regular-BNo7hRIc.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/999c602309794e41322e8afa558baf28ed9d8c0030f88d87fb1456872354e134",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_SansSerif-Regular-CS6fqUqJ.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/b2bf21e532cda19f242a0e2e2852ba049eb2c7b66ee7c04aa2f9daa57a335577",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_SansSerif-Regular-DDBCnlJ7.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/b7a6c9e53a6c16263d4ff91f448407db0d68d74266c325ba85eccd3959fdedcd",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Script-Regular-C5JkGWo-.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/dff9f3c54bd92ad0276e77868338c26656cfa911bde0b9d836e1583bc6014e23",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Script-Regular-D3wIWfF6.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/9985a667292a2570b699717a07300166cdb0e095d00c3358020841a6538ed454",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Script-Regular-D5yQViql.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/6dbfa2eadfc6cd39cbca7253737d44339ccc74b1485bd675426dcfbbb931cb21",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Size1-Regular-C195tn64.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/bb6c7b3db3d7057e7af3459e5374111d8a1476920ed053c5f3ae5d283f86a248",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Size1-Regular-Dbsnue_I.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/122f9f1dfaf94147deebf1de7e26fd1d1272d333abbf47ae538c62d64499b3ae",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Size1-Regular-mCD8mA8B.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/025ad94a0cf024785ec061147723d23a765b71c1b0227f1eeb0983c941c479cb",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Size2-Regular-B7gKUWhC.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/b2e72f59af16a83b005ad6c85f1a29014b2c54d2864b29ffc1e2e50e49ea2450",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Size2-Regular-Dy4dx90m.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/8b9ee2d0d409f0cd8b976998fc2c268f633b72e1d3542b80df105527f4a00cba",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Size2-Regular-oD1tc_U0.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/8f1c8bf717d4731ba9997faa58a1779ab97e04a5dca3829db9e2e11497198e2f",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Size3-Regular-CTq5MqoE.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/d505fac8d4eca30dacde103bebe08caa21eaa6571cc62db72e2f1bdcabaf5274",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Size3-Regular-DgpXs0kz.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/de31030c087e4f19854169f2aacc1281609da6cf118b3b796eec5fad96b68e73",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Size4-Regular-BF-4gkZK.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/28dcdf22a1a3b50c5e181887c394ee0f01ee5fecc785596e2d12d00117b6bcb2",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Size4-Regular-DWFBv043.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/661144cd7acefe5efdc20aa338b90cef69bd04898c8df1d233ce286fabeafe5b",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Size4-Regular-Dl5lxZxV.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f326433914204eec799f91decf42d518c3d1792e7dc729394e9809ea8d0285a3",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Typewriter-Regular-C0xS9mPB.woff": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e56221b04a741bece7051fd25ee9c7e6631500ade5b1bcdd38b3d6ad74ef8f17",
+      "type": "font/woff",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Typewriter-Regular-CO6r4hn1.woff2": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/91d235e9dc728f49e9d790418d8578d933f2e8545ba683d14fcb33369fd87ae4",
+      "type": "font/woff2",
+      "immutable": true
+    },
+    "/assets/fonts/KaTeX_Typewriter-Regular-D3Ib7_Hf.ttf": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/9532d79267ae32eebbf8df393e535f1967723dd6073176d919cd709fc8c6adae",
+      "type": "font/ttf",
+      "immutable": true
+    },
+    "/assets/langs/c-BIGW1oBm.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/db3d664f782f1d630f95dcf9d25584731259481a6272afebeeabf6d9df341d68",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/cpp-DIPi6g--.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/b919b2734ce51f985fafa3dfdb9fd198505cdf9b9c132fdc23bd4ae5f273530e",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/csharp-DSvCPggb.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/d778affc4ab5ad7740bf706c76957fe6bf0b84b7fad1e27c5e9438de4f4e266b",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/css-CLj8gQPS.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/5c7c5e86e97e8751af99db47f3fa20a1c434a5cc15abfff702ae5b59204e5da8",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/go-C27-OAKa.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/4d8343c9ebd05a9647d49866c3fb7e3224178d52de478c335ccda623a067686a",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/html-CfGypltT.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/f0ae902149b513ad87116052c683c8aa5a277eff404102be4b9f5ecc31efe5d4",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/ini-BEwlwnbL.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/fc83872ed4fc8a71970b0c1e3538ef0ee2c8f18d02fede0851254db5c7f77350",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/java-CylS5w8V.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/c133cbf0cdc3ceaf4b3ce1ae2e3ce15383b0496dbf37d6945a1571325d0519f3",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/kotlin-BdnUsdx6.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/5a7edd46a164c5f6aa82db7f2c46be290010a87ca0c36470a790b8fbb2c334e2",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/less-B1dDrJ26.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/eff086c7ac46be58f3f914d384a129114225aa249e57114bd17a53ab70ec27c3",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/lua-BaeVxFsk.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/21e0ae6bd2e379d50d1b39a2c392a798a022ba61466f996c889d36e8b28bb7e8",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/markdown-Cvjx9yec.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/7cf5b6e7fcdaff3f0127cf44f023c4725cced1764627f9896e68220f7a11889d",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/mdx-Cmh6b_Ma.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/e1d47756dbcf47e851cc67370042ce25c11173ca215a224d338058041aa67537",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/php-DJl5gRdb.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/9f6db9aae9a46e8c3d33cfda6c8c535905e049d2068d5179f357b0aa9630d32f",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/python-B6aJPvgy.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/eb3863cdb9c37ca68c70131d9ee04dffaed9dac365cab53df1489be540ad110d",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/ruby-5eNB0pDK.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/64944572e7d5ebc528223bcdb98707823372206467d35ef79766a5083dcd895d",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/rust-B1yitclQ.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/1223d3ccaea330c184da69d4424c5ed070b996daca6f01adec50d4540a5edf18",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/scss-D5BDwBP9.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/4f75984c9526e3c5a2dccd6ec6449428b4bd172ad1e853ed1fe512ef342eb701",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/sql-CRqJ_cUM.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/517933ed6cb84e3d11465b55b86aa0a690bb7f3627e7ddc01da3b317822221a9",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/swift-D82vCrfD.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/9d19fbf41c6a4a19603032d610feb51dbd4a794a8ba377a85990cd62d048528a",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/toml-vGWfd6FD.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/39d3aeb374fce7c5e1685a79e6870a1e7028a5f1c83fa8ed0e9e3151f93d841f",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/xml-sdJ4AIDG.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/991b0eab7e6714cc91fa3d9bf661fb94bde44ab5d2d297ff7a296ad2b50bb1e5",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/langs/yaml-Buea-lGh.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/3fda14c047c104190a9448a10ed309f959061769075daf9b4f1ee97158351d44",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/resources-DHnykINJ.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/1bcfcbcf0ff87859045b3f89f216092489b0fc29b49623fb2b4ea3bd52a88a89",
+      "type": "application/javascript",
+      "immutable": true
+    },
+    "/assets/vendor-CCJJTK99.js": {
+      "path": "/runtime-native/48ecadfb681281bd9009a0d5f35e300ce47d3682/a758daf7b9eabc7a9d426184ec3aff556432736b63cda78b098f63502d11f8a2",
+      "type": "application/javascript",
+      "immutable": true
+    }
+  }
+}
