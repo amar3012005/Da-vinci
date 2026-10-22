@@ -24,3 +24,13 @@ export function artifactUrl(item, download = false) {
   if (download) params.set('download', '1');
   return `${LIBRARY_PATH}/${encodeURIComponent(item.artifactId)}?${params}`;
 }
+
+/** Share link for one artifact on the authenticated HIVEMIND origin; the id stays inside the link. */
+export function artifactShareUrl(item, origin = '') {
+  return `${origin}${LIBRARY_PATH}/${encodeURIComponent(item.artifactId)}`;
+}
+
+/** Task reference shown beside an artifact; the task id itself is never displayed. */
+export function taskLabel(item) {
+  return item?.taskId ? 'Linked to a task' : null;
+}

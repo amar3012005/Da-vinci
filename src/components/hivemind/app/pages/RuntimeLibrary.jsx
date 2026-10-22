@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, ExternalLink, FileCode2, FileImage, FileText, Folder, Search } from 'lucide-react';
-import { artifactUrl, folderLabel, libraryUrl } from '../shared/runtime-library';
+import { Download, ExternalLink, FileCode2, FileImage, FileText, Folder, Link2, Search } from 'lucide-react';
+import { artifactShareUrl, artifactUrl, folderLabel, libraryUrl, taskLabel } from '../shared/runtime-library';
 
 function TypeIcon({ mediaType }) {
   const type = String(mediaType || '');
@@ -50,6 +50,13 @@ export default function RuntimeLibrary() {
 
   useEffect(() => { void load(null); }, [load]);
 
+  const copyLink = async item => {
+    try {
+      await navigator.clipboard.writeText(artifactShareUrl(item, window.location.origin));
+    } catch {
+      // Clipboard access can be denied; the row's open link still works.
+    }
+  };
   const chooseFolder = value => {
     const nextParams = new URLSearchParams(params);
     if (value) nextParams.set('folder', value); else nextParams.delete('folder');
@@ -95,10 +102,11 @@ export default function RuntimeLibrary() {
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-[#f1efe9] text-[#5f6368]"><TypeIcon mediaType={item.mediaType} /></span>
             <a href={artifactUrl(item)} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium hover:underline">{item.title || 'Untitled file'}</span>
-              <span className="block truncate text-xs text-[#7a7f86]">{[item.producerName, folderLabel(item.folder), item.latestVersion > 1 ? `Version ${item.latestVersion}` : null, formatUpdated(item.updatedAt)].filter(Boolean).join(' · ')}</span>
+              <span className="block truncate text-xs text-[#7a7f86]">{[item.producerName, folderLabel(item.folder), taskLabel(item), item.latestVersion > 1 ? `Version ${item.latestVersion}` : null, formatUpdated(item.updatedAt)].filter(Boolean).join(' · ')}</span>
             </a>
             <a href={artifactUrl(item)} target="_blank" rel="noopener noreferrer" aria-label={`Open ${item.title || 'file'}`} className="rounded-md p-1.5 text-[#5f6368] hover:bg-[#efede6]"><ExternalLink size={16} /></a>
             <a href={artifactUrl(item, true)} aria-label={`Download ${item.title || 'file'}`} className="rounded-md p-1.5 text-[#5f6368] hover:bg-[#efede6]"><Download size={16} /></a>
+            <button type="button" aria-label={`Copy link to ${item.title || 'file'}`} onClick={() => copyLink(item)} className="rounded-md p-1.5 text-[#5f6368] hover:bg-[#efede6]"><Link2 size={16} /></button>
           </li>)}
         </ul>}
         {next && <div className="py-4 text-center"><button type="button" onClick={() => void load(next)} className="rounded-md border border-[#e3e0db] bg-white px-3 py-1.5 text-sm hover:bg-[#f3f1ec]">Load more</button></div>}
