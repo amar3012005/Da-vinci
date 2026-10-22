@@ -1,3 +1,4 @@
+import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot } from './runtime-open-dot.mjs';
 import { edgeCachedNativeCode, runtimeNativeAsset } from './runtime-native-assets.mjs';
 import { handleComposioAccount } from './composio-account.mjs';
 export { ComposioAccount } from './composio-account.mjs';
@@ -521,6 +522,13 @@ export default {
     if (accountAccessResponse) return accountAccessResponse;
     const accountRouteGate = await gateWorkspaceDocument(request, env);
     if (accountRouteGate) return accountRouteGate;
+    if (isRuntimeOpenDotRequest(url) && ['GET','HEAD'].includes(request.method)
+      && !pathname.startsWith('/api/') && !pathname.startsWith('/images/')) {
+      const employeeGate = await gateWorkspaceDocument(new Request(new URL(OPEN_DOT_ENTRY_PATH,url),request),env);
+      if (employeeGate) return employeeGate;
+    }
+    const openDotResponse = await proxyRuntimeOpenDot(request);
+    if (openDotResponse) return openDotResponse;
     const icarusCover = await icarusPublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
     if (icarusCover) return icarusCover;
     const runtimeCover = await getRuntimePublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });

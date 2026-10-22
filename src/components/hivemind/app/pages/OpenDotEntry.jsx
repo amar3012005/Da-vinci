@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { buildOpenDotEmbedTarget } from '../shared/open-dot-embed-target';
 
-const DOT_ORIGIN = 'https://dots.singulancelabs.com';
+const DOT_ORIGIN = 'https://runtime-runner.singulancelabs.com';
 const READY_TIMEOUT_MS = 30000;
 
 export function postToDotFrame(frame, message) {
@@ -13,7 +13,10 @@ export function postToDotFrame(frame, message) {
   if (!target) return;
   // The initial about:blank document and same-origin login redirects are not
   // the Dot application. Never send its handshake into those documents.
-  try { if (target.location.origin !== DOT_ORIGIN) return; }
+  try {
+    if (target.location.origin !== DOT_ORIGIN || typeof target.location.pathname !== 'string'
+      || !/^\/(?:employees\/|dots\/|apps(?:\/|$)|$)/.test(target.location.pathname)) return;
+  }
   catch { /* Cross-origin window: the exact targetOrigin below enforces delivery. */ }
   target.postMessage(message, DOT_ORIGIN);
 }

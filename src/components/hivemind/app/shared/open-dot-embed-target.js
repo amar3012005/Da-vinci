@@ -1,4 +1,4 @@
-const DOT_ORIGIN = 'https://dots.singulancelabs.com';
+const DOT_ORIGIN = 'https://runtime-runner.singulancelabs.com';
 const EMPLOYEE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DOT_ID = /^dot_[a-zA-Z0-9_-]+$/;
 const CONVERSATION_ID = /^conv_[a-zA-Z0-9_-]+$/;
