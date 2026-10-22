@@ -224,6 +224,18 @@ export default function Sidebar({
   const rooms = [...nativeRooms, ...Object.values(dotRooms).flat(), ...Object.values(liveDotRooms).flat(), ...scheduledEmployees.map(id => ({ id, scheduled: true, scheduleOnly: true, updatedAt: 0 }))];
   const dotReadAt = useRef({});
   const lastDotPush = useRef(0);
+  // Shared team feed for the Runtime composer strip: one list of each
+  // specialist's grouped task state, sourced from the same room statuses.
+  useEffect(() => {
+    if (!team?.length) return;
+    const employees = team.filter(agent => agent?.id && agent.id !== 'runtime').flatMap(agent => {
+      const room = aggregateAgentRooms(rooms, agent.id);
+      const group = room?.taskGroup ?? room?.taskStatus;
+      if (!group) return [];
+      return [{ employeeId: agent.id, name: agent.name, role: agent.role || agent.job_title || agent.role_archetype || '', group, taskId: room?.taskId ?? null, updatedAt: room?.updatedAt ?? 0 }];
+    });
+    window.dispatchEvent(new CustomEvent('hivemind:team-status', { detail: { employees } }));
+  }, [team, rooms]);
   useEffect(() => {
     setDotRooms({});
     const key = `hivemind.dot-read-at:${scope}`;
