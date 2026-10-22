@@ -6,6 +6,8 @@ import apiClient from '../shared/api-client';
 import WorkspacePopupSurface from '../shared/WorkspacePopupSurface';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 
+const NOTIFICATION_POLL_MS = 60000;
+
 export function GmailMark({ size = 18 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" aria-label="Gmail" role="img">
     <path fill="#4285f4" d="M3 6.4 12 13l9-6.6V19a2 2 0 0 1-2 2h-2V10.2L12 14 7 10.2V21H5a2 2 0 0 1-2-2Z" />
@@ -132,7 +134,15 @@ export default function WorkspaceNotifications() {
     } catch { /* session/bootstrap can still be settling */ }
   }, [unseenLifecycle]);
 
-  useEffect(() => { load(); const interval = window.setInterval(load, 5000); return () => window.clearInterval(interval); }, [load]);
+  // Lifecycle notices and announcements change rarely: poll while visible and
+  // catch up immediately when the tab returns, instead of every 5 s per tab.
+  useEffect(() => {
+    const visibleLoad = () => { if (!document.hidden) load(); };
+    load();
+    const interval = window.setInterval(visibleLoad, NOTIFICATION_POLL_MS);
+    document.addEventListener('visibilitychange', visibleLoad);
+    return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', visibleLoad); };
+  }, [load]);
   useEffect(() => {
     if (!toast || lifecycleDay(toast) !== 0) { setLifecycleContext(null); return undefined; }
     let active = true;

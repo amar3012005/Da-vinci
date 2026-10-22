@@ -13,3 +13,37 @@ export async function runtimeNativeAsset(request,env) {
   if(!asset.ok||asset.headers.get('content-type')?.includes('text/html'))return new Response('Native asset not published',{status:503,headers:{'cache-control':'no-store'}});
   return new Response(asset.body,{status:asset.status,headers:{'content-type':entry.type,'cache-control':entry.immutable?'public, max-age=31536000, immutable':'public, max-age=3600','x-content-type-options':'nosniff','x-runtime-static-release':manifest.release}});
 }
+
+const REVISION_QUERY=/(?:^|[?&])rev=[a-f0-9]{12}(?:&|$)/;
+
+/** True for release-pinned public native code: plugin combos and top-level shell bundles carrying a 12-hex `rev`. */
+export function isRevisionedNativeCode(url) {
+  if(url.hostname!=='runtime-runner.singulancelabs.com'||!REVISION_QUERY.test(url.search))return false;
+  return (url.pathname.startsWith('/plugins/')&&url.pathname!=='/plugins/events')||/^\/assets\/[^/]+\.(?:js|css)$/.test(url.pathname);
+}
+
+/**
+ * Serve release-pinned native code from the Cloudflare edge cache, filling it from the runner on a miss.
+ * Only an immutable, cookie-free, non-HTML 200 is stored; every other request and response passes through unchanged.
+ * @param {Request} request - incoming browser request.
+ * @param {{waitUntil?: (promise: Promise<unknown>) => void} | undefined} ctx - Worker execution context.
+ * @param {() => Promise<Response>} load - runner fetch used on a miss.
+ * @returns {Promise<Response>} cached or freshly loaded response.
+ */
+export async function edgeCachedNativeCode(request,ctx,load) {
+  const url=new URL(request.url);
+  if(request.method!=='GET'||!isRevisionedNativeCode(url))return load();
+  const key=new Request(url.toString(),{method:'GET'});
+  const cache=globalThis.caches?.default;
+  const hit=await cache?.match(key);
+  if(hit)return hit;
+  const response=await load();
+  const cacheControl=response.headers.get('cache-control')||'';
+  const storable=response.status===200&&/\bimmutable\b/.test(cacheControl)&&!/\b(?:private|no-store)\b/.test(cacheControl)
+    &&!(response.headers.get('content-type')||'').includes('text/html')&&!response.headers.has('set-cookie');
+  if(cache&&storable){
+    const put=cache.put(key,response.clone());
+    if(ctx?.waitUntil)ctx.waitUntil(put);else await put;
+  }
+  return response;
+}
