@@ -38,3 +38,14 @@ test('groups the team by task state and keeps the grid without task data', async
   ]);
   assert.equal(groupTeamByTask(team, () => undefined), null);
 });
+
+test('maps the final contract: group first, detailed waiting states without a group', () => {
+  const next = withEmployeeTaskStatuses({}, [
+    { employeeId: 'a', status: 'waiting_on_user', group: 'waiting', taskId: 't', updatedAt: 1 },
+    { employeeId: 'b', status: 'waiting_on_runtime', group: 'working', taskId: 't', updatedAt: 1 },
+    { employeeId: 'c', status: 'waiting_on_user', taskId: 't', updatedAt: 1 },
+    { employeeId: 'd', status: 'waiting_on_runtime', taskId: 't', updatedAt: 1 },
+    { employeeId: 'e', status: 'submitted', group: 'review', taskId: 't', updatedAt: 1 },
+  ]);
+  assert.deepEqual(['a', 'b', 'c', 'd', 'e'].map(id => next[id][0].taskStatus), ['waiting', 'working', 'waiting', 'working', 'review']);
+});
