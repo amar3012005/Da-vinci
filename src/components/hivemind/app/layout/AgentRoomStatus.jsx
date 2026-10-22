@@ -1,4 +1,5 @@
 import { aggregateMotion } from '../shared/runtime-motion';
+import { mostUrgentTaskStatus } from '../shared/open-dot-room-status';
 import React from 'react';
 import { CalendarClock, LoaderCircle, Bell, Phone, CircleAlert } from 'lucide-react';
 
@@ -21,8 +22,12 @@ export function aggregateAgentRooms(rooms, agentId) {
     actionRequired: activity.some(room => room.actionRequired === true || room.status === 'waiting'),
     waitingForAnswer: activity.some(room => room.waitingForAnswer === true),
     scheduled: matching.some(room => room.scheduled === true),
+    taskStatus: mostUrgentTaskStatus(matching),
   };
 }
+
+const TASK_STATUS_LABEL = { assigned: 'Assigned', working: 'Working', blocked: 'Blocked', submitted: 'Submitted', accepted: 'Accepted', failed: 'Failed' };
+const TASK_STATUS_TONE = { assigned: 'text-[#525252]', working: 'text-[#117dff]', blocked: 'text-amber-700', submitted: 'text-violet-700', accepted: 'text-green-700', failed: 'text-red-700' };
 
 /** Display only states published by the authenticated native room bridge. */
 export default function AgentRoomStatus({ room, collapsed = false, compact = false }) {
@@ -42,7 +47,8 @@ export default function AgentRoomStatus({ room, collapsed = false, compact = fal
   const actionRequired = room.actionRequired === true || room.waitingForAnswer === true || room.status === 'waiting';
   const scheduled = room.scheduled === true;
   const attentionLabel = (room.waitingForAnswer || room.status === 'waiting') ? 'Waiting for you' : 'Action required';
-  if (!failed && !loading && !activeCall && !working && !unread && !actionRequired && !scheduled && !paused && !idle) return null;
+  const taskStatus = TASK_STATUS_LABEL[room.taskStatus] ? room.taskStatus : undefined;
+  if (!failed && !loading && !activeCall && !working && !unread && !actionRequired && !scheduled && !paused && !idle && !taskStatus) return null;
   return (
     <span className={(collapsed || compact) ? 'absolute right-1 top-1 z-20 flex items-center gap-1' : 'relative z-10 mt-1 flex min-w-0 flex-wrap items-center gap-1.5'}>
       {failed && <CircleAlert size={14} className="text-red-700" role="img" aria-label="Work failed" />}
@@ -50,9 +56,10 @@ export default function AgentRoomStatus({ room, collapsed = false, compact = fal
       {activeCall && <Phone size={14} className="text-green-700" role="img" aria-label="In call" />}
       {working && <LoaderCircle size={14} className="text-[#737373] animate-spin motion-reduce:animate-none" role="img" aria-label={workLabel} />}
       {working && !(collapsed || compact) && <span className="text-[10px] text-[#737373]" role="status">{workLabel}</span>}
-      {!working && !actionRequired && !failed && (paused || idle) && <span className={(collapsed || compact) ? 'sr-only' : 'text-[10px] text-[#737373]'} role="status">{paused ? 'Paused' : 'Ready'}</span>}
+      {taskStatus && !working && <span className={(collapsed || compact) ? 'sr-only' : `text-[10px] font-medium ${TASK_STATUS_TONE[taskStatus]}`} role="status" title={`Task ${TASK_STATUS_LABEL[taskStatus].toLowerCase()}`}>{TASK_STATUS_LABEL[taskStatus]}</span>}
+      {!taskStatus && !working && !actionRequired && !failed && (paused || idle) && <span className={(collapsed || compact) ? 'sr-only' : 'text-[10px] text-[#737373]'} role="status">{paused ? 'Paused' : 'Ready'}</span>}
       {unread && <span className="h-1.5 w-1.5 rounded-full bg-green-500" role="img" aria-label="Unread update" />}
-      {scheduled && <CalendarClock size={14} className="text-[#737373]" role="img" aria-label="Work scheduled" />}
+      {scheduled && !taskStatus && <CalendarClock size={14} className="text-[#737373]" role="img" aria-label="Work scheduled" />}
       {actionRequired && <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700" role="status">
         <Bell size={13} className="animate-pulse motion-reduce:animate-none" aria-hidden="true" />
         {(collapsed || compact) ? <span className="sr-only">{attentionLabel}</span> : attentionLabel}
