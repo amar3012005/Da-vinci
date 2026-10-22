@@ -27,3 +27,14 @@ test('chooses the most urgent state across rooms', () => {
   assert.equal(mostUrgentTaskStatus([{ taskStatus: 'accepted' }, { taskStatus: 'failed' }]), 'failed');
   assert.equal(mostUrgentTaskStatus([{}]), undefined);
 });
+
+test('groups the team by task state and keeps the grid without task data', async () => {
+  const { groupTeamByTask } = await import('../src/components/hivemind/app/shared/team-groups.js');
+  const team = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }];
+  const rooms = { a: { taskStatus: 'working' }, b: { taskStatus: 'blocked' }, c: { taskGroup: 'review' } };
+  const groups = groupTeamByTask(team, id => rooms[id]);
+  assert.deepEqual(groups.map(group => [group.label, group.members.map(member => member.id)]), [
+    ['Working', ['a']], ['Waiting on you', ['b']], ['Needs review', ['c']], ['Idle', ['d']],
+  ]);
+  assert.equal(groupTeamByTask(team, () => undefined), null);
+});

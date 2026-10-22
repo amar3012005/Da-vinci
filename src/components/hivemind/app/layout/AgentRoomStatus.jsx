@@ -26,8 +26,8 @@ export function aggregateAgentRooms(rooms, agentId) {
   };
 }
 
-const TASK_STATUS_LABEL = { assigned: 'Assigned', working: 'Working', blocked: 'Blocked', submitted: 'Submitted', accepted: 'Accepted', failed: 'Failed' };
-const TASK_STATUS_TONE = { assigned: 'text-[#525252]', working: 'text-[#117dff]', blocked: 'text-amber-700', submitted: 'text-violet-700', accepted: 'text-green-700', failed: 'text-red-700' };
+const TASK_STATUS_LABEL = { assigned: 'Assigned', working: 'Working', blocked: 'Blocked', waiting: 'Waiting on you', submitted: 'Submitted', review: 'Needs review', accepted: 'Accepted', resolved: 'Resolved', failed: 'Failed' };
+const TASK_STATUS_TONE = { assigned: 'text-[#525252]', working: 'text-[#117dff]', blocked: 'text-amber-700', waiting: 'text-amber-700', submitted: 'text-violet-700', review: 'text-violet-700', accepted: 'text-green-700', resolved: 'text-green-700', failed: 'text-red-700' };
 
 /** Display only states published by the authenticated native room bridge. */
 export default function AgentRoomStatus({ room, collapsed = false, compact = false }) {
