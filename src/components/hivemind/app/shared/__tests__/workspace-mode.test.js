@@ -31,6 +31,8 @@ test('shared apps use Runtime without changing Brain connectors', () => {
   expect(workspaceModeDestination(path, 'https://next.singulancelabs.com')).toBe(`https://runtime-runner.singulancelabs.com${path}`);
   expect(workspaceModeForPath('/hivemind/app/connectors')).toBe('hivemind');
   expect(workspaceModeForPath('/hivemind/app/employee/apps-fake')).toBe('hivemind');
+  expect(workspaceModeForPath('/hivemind/app/employee/library')).toBe('hyperagents');
+  expect(workspaceModeDestination('/hivemind/app/employee/library', 'https://next.singulancelabs.com')).toBe('https://runtime-runner.singulancelabs.com/hivemind/app/employee/library');
 });
 
 test('transport failures retain scoped evidence as stale and auth failures clear it', () => {
