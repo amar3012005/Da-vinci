@@ -40,11 +40,14 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
         const requested = panePath(latest.current.route, mode);
         if (latest.current.active && requested && requested !== nativePath.current) send({ kind: 'navigate', path: requested });
       }
-      if (data.kind === 'ready' && mode === 'runtime') {
+      // An identified Runtime document can take the request; its bridge waits
+      // for Runtime's start hook and Runtime waits for its own connection.
+      // The answer settles the call, or teardown answers false. A fixed
+      // deadline here turned a slow connection into "Could not open this agent".
+      if (mode === 'runtime' && !start && ['identity', 'ready', 'route'].includes(data.kind)) {
         start = id => new Promise(resolve => {
           const requestId = window.crypto.randomUUID();
-          const timer = window.setTimeout(() => { pending.current.delete(requestId); resolve(false); }, 15000);
-          pending.current.set(requestId, { resolve, timer }); send({ kind: 'start-agent', id, requestId });
+          pending.current.set(requestId, { resolve }); send({ kind: 'start-agent', id, requestId });
         });
         start.nativePane = true; window.__HIVEMIND_START_AGENT__ = start;
       }
@@ -55,7 +58,7 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
       }
       if (data.kind === 'result') {
         const call = pending.current.get(data.requestId);
-        if (call) { window.clearTimeout(call.timer); pending.current.delete(data.requestId); call.resolve(data.ok === true); }
+        if (call) { pending.current.delete(data.requestId); call.resolve(data.ok === true); }
       }
       if (data.kind === 'route' && panePath(data.path, mode)) {
         setIdentified(true);
@@ -75,7 +78,7 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
       window.removeEventListener('message', receive);
       for (const name of PANE_REQUESTS) window.removeEventListener(name, request);
       if (window.__HIVEMIND_START_AGENT__ === start) delete window.__HIVEMIND_START_AGENT__;
-      for (const call of pending.current.values()) { window.clearTimeout(call.timer); call.resolve(false); } pending.current.clear();
+      for (const call of pending.current.values()) call.resolve(false); pending.current.clear();
     };
   }, [mode, scope, onRoute]);
   useEffect(() => {
@@ -102,7 +105,7 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
     return () => { stopped=true; observer?.disconnect(); if (scheduled) cancelAnimationFrame(scheduled); element?.removeEventListener('load',attach); publish(false); };
   }, [mode, active, identified, route]);
   return <section hidden={!active} data-native-pane={mode} className="relative h-full min-h-0" style={{ display: active ? 'block' : 'none' }}>
-    {!identified && <div data-native-pane-loading className="absolute inset-0 z-10 grid place-items-center bg-[#faf9f4]">{error ? <div role="alert" className="max-w-sm text-center text-sm"><p>This conversation hasn’t connected yet. Your saved work is unchanged.</p><button className="mt-3 underline" onClick={() => { setError(false); setRetry(value => value + 1); frame.current.src = paneSource(nativePath.current || entry, mode); }}>Try again</button></div> : <AsciiWorkspaceLoading />}</div>}
+    {!identified && <div data-native-pane-loading className="absolute inset-0 z-10 grid place-items-center bg-[#faf9f4]">{error ? <div role="alert" className="max-w-sm text-center text-sm"><p>This conversation hasn’t connected yet. Your saved work is unchanged.</p><button className="mt-3 underline" onClick={() => { for (const call of pending.current.values()) call.resolve(false); pending.current.clear(); setError(false); setRetry(value => value + 1); frame.current.src = paneSource(nativePath.current || entry, mode); }}>Try again</button></div> : <AsciiWorkspaceLoading />}</div>}
     <iframe ref={frame} title={mode === 'brain' ? 'Brain conversation' : 'Runtime and HyperAgents conversation'} src={paneSource(entry, mode)} onLoad={() => send({ kind: 'hello' })} allow="microphone; autoplay; clipboard-write" referrerPolicy="strict-origin" className="h-full w-full border-0 bg-[#faf9f4]" style={{ visibility: 'visible' }} />
   </section>;
 }
