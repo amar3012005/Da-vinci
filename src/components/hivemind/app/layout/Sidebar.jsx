@@ -163,7 +163,10 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
 
 /** Runtime's accepted review decisions for the cached Runtime room; unavailable reads keep Open Dot's view. */
 async function runtimeReviewDecisions(scope, signal) {
-  const route = window.location.hostname === 'runtime-runner.singulancelabs.com' && readRuntimeRoute(scope);
+  if (window.location.hostname !== 'runtime-runner.singulancelabs.com') return undefined;
+  // The open Runtime room names its root directly; otherwise use the room cached when it was last opened.
+  const current = window.location.pathname.match(/^\/hivemind\/app\/employee\/harness\/session\/(session-[a-z0-9-]+)/i);
+  const route = current ? current[1] : readRuntimeRoute(scope);
   const sessionId = route && route.split('/').pop();
   if (!sessionId) return undefined;
   try {
