@@ -239,7 +239,6 @@ function AppLogo({ app, size = 36 }) {
   if (failed || !app.logo) return jsx("span", { "aria-hidden": true, className: "grid shrink-0 place-items-center rounded-md bg-black/5 font-semibold", style: { width: size, height: size }, children: app.name.slice(0, 1) });
   const logo = app.logo === "https://imagekit.io/static/imagekit-logo.svg" ? "https://logos.composio.dev/api/imagekit" : app.logo;
   return (
-    // eslint-disable-next-line @next/next/no-img-element
     /* @__PURE__ */ jsx("img", { src: logo, onError: () => setFailed(true), alt: "", width: size, height: size, loading: "lazy", className: "shrink-0 rounded-md object-contain", style: { width: size, height: size } })
   );
 }
