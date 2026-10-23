@@ -861,7 +861,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
             <button
               onClick={onConnect}
               disabled={connecting}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-50 transition-all"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-md text-[12px] font-medium bg-[#117dff] text-white shadow-sm shadow-[#117dff]/20 hover:bg-[#0066e0] disabled:opacity-50 transition-all"
             >
               {connecting ? <RefreshCw size={12} className="animate-spin" /> : <Plus size={12} />}
               {connecting ? t('connectors.connecting', 'Connecting...') : t('connectors.connect', 'Connect')}
@@ -870,7 +870,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
           {connector.status === 'available' && isSetupOnly && (
             <button
               onClick={() => setExpanded(!expanded)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] transition-all"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-md text-[12px] font-medium bg-[#117dff] text-white shadow-sm shadow-[#117dff]/20 hover:bg-[#0066e0] transition-all"
             >
               {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               {expanded ? t('connectors.hideSetup', 'Hide Setup') : t('connectors.setup', 'Setup')}
@@ -2450,7 +2450,7 @@ function BrowserIntelligenceCard() {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
-      className="bg-white border border-[#e3e0db] rounded-2xl overflow-hidden mb-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+      className={`rounded-2xl overflow-hidden mb-4 border transition-all duration-200 ${opened ? 'border-emerald-300/60 bg-emerald-50/60 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_4px_18px_rgba(22,163,74,0.08)]' : 'bg-white border-[#e3e0db] shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:border-[#d4d0ca]'}`}
     >
       <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-5">
         {/* Left — icon + copy */}
@@ -2483,7 +2483,7 @@ function BrowserIntelligenceCard() {
         <div className="flex flex-col items-stretch gap-2 sm:items-end flex-shrink-0">
           <button
             onClick={handleInstall}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#117dff] hover:bg-[#0066e0] text-white text-[13px] font-semibold rounded-xl transition-all shadow-[0_2px_10px_rgba(17,125,255,0.3)]"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-[#117dff]/30 bg-white hover:bg-[#117dff]/[0.06] text-[#117dff] text-[12px] font-mono font-medium uppercase tracking-wider rounded-xl transition-all"
           >
             {opened ? (
               <>
