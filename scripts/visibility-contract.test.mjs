@@ -13,7 +13,7 @@ for(const path of paths)test(`public HTML, metadata and discovery agree for ${pa
  const root=parseDocument(render.html);const headings=nodes(root,n=>n.name==='h1');
  assert.equal(headings.length,1);assert.equal(text(headings[0]),page.heading);
  assert.equal(canonicalFor(path),path==='/amar-sai-gadde'?'https://amar.singulancelabs.com/':'https://singulancelabs.com'+path);
- for(const f of ['sitemap.xml','llms.txt','llms-full.txt'])assert.ok((await readFile(new URL('../public/'+f,import.meta.url),'utf8')).includes(f==='sitemap.xml'?canonicalFor(path):'https://singulancelabs.com'+path));
+ for(const f of ['sitemap.xml','llms.txt','llms-full.txt'])assert.ok((await readFile(new URL('../public/'+f,import.meta.url),'utf8')).includes(f==='llms.txt'?'https://singulancelabs.com'+path:canonicalFor(path)));
  assert.doesNotMatch(render.html,/session-[a-z0-9-]{20,}|Bearer [A-Za-z0-9]{16}|\/Users\//);
 });
 test('definition and every structured FAQ answer are visible in the rendered page',()=>{
