@@ -398,7 +398,9 @@ class HiveMindApiClient {
    * }
    */
   async bootstrap() {
-    const { data } = await this.controlPlane.get('/v1/bootstrap');
+    const runtimeBrowser = !isNativeApp() && typeof window !== 'undefined' && window.location.hostname === 'runtime-runner.singulancelabs.com';
+    const { data } = await this.controlPlane.get(runtimeBrowser ? '/__hivemind/bootstrap' : '/v1/bootstrap',
+      runtimeBrowser ? { baseURL: window.location.origin, timeout: 20000 } : undefined);
     // Set core API base from bootstrap connectivity
     if (data.connectivity?.core_api_base_url) {
       this.setCoreBaseUrl(data.connectivity.core_api_base_url);
