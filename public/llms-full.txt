@@ -42,7 +42,7 @@ Read llms.txt to choose a page. Append /index.md or /index.txt to a listed produ
 ## Company and definition
 - Proactive intelligence: https://singulancelabs.com/proactive-intelligence
 - SINGULANCE company identity: https://singulancelabs.com/about
-- Amar Sai Gadde, founder of SINGULANCE: https://singulancelabs.com/amar-sai-gadde
+- Amar Sai Gadde, founder of SINGULANCE: https://amar.singulancelabs.com/
 
 ## Authentication and discovery
 - Authentication guide: https://singulancelabs.com/auth.md
@@ -170,7 +170,7 @@ Explore Runtime and the research behind the idea. Product access is reviewed dur
 
 [Explore SINGULANCE Runtime](https://runtime.singulancelabs.com/)
 
-[SINGULANCE](https://singulancelabs.com/about)[What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence)[Amar Sai Gadde](https://singulancelabs.com/amar-sai-gadde)[Research](https://singulancelabs.com/research)[Privacy](https://singulancelabs.com/privacy)[Security](https://singulancelabs.com/security)
+[SINGULANCE](https://singulancelabs.com/about)[What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence)[Amar Sai Gadde](https://amar.singulancelabs.com/)[Research](https://singulancelabs.com/research)[Privacy](https://singulancelabs.com/privacy)[Security](https://singulancelabs.com/security)
 
 ## Products and workspace
 
@@ -206,7 +206,7 @@ SINGULANCE brings together company knowledge, persistent agent work and human de
 
 Our official public website is [singulancelabs.com](https://singulancelabs.com). The name is spelled SINGULANCE. References on this site identify this company, rather than similarly named businesses such as Singular or the separate domain singulance.com.
 
-Founded by [Amar Sai Gadde](https://singulancelabs.com/amar-sai-gadde). Explore our [research and methods](https://singulancelabs.com/research), [security information](https://singulancelabs.com/security) and [privacy policy](https://singulancelabs.com/privacy).
+Founded by [Amar Sai Gadde](https://amar.singulancelabs.com/). Explore our [research and methods](https://singulancelabs.com/research), [security information](https://singulancelabs.com/security) and [privacy policy](https://singulancelabs.com/privacy).
 
 ## One direction. Four connected parts.
 
@@ -248,7 +248,7 @@ Explore Runtime and the research behind the idea. Product access is reviewed dur
 
 [Explore SINGULANCE Runtime](https://runtime.singulancelabs.com/)
 
-[SINGULANCE](https://singulancelabs.com/about)[What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence)[Amar Sai Gadde](https://singulancelabs.com/amar-sai-gadde)[Research](https://singulancelabs.com/research)[Privacy](https://singulancelabs.com/privacy)[Security](https://singulancelabs.com/security)
+[SINGULANCE](https://singulancelabs.com/about)[What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence)[Amar Sai Gadde](https://amar.singulancelabs.com/)[Research](https://singulancelabs.com/research)[Privacy](https://singulancelabs.com/privacy)[Security](https://singulancelabs.com/security)
 
 ## Products and workspace
 
@@ -274,7 +274,7 @@ Amar Sai Gadde is the founder of SINGULANCE, working on proactive AI and agent m
 
 [Contact SINGULANCE](mailto:enterprise@singulancelabs.com)[About the company](https://singulancelabs.com/about)
 
-![SINGULANCE company mark](https://singulancelabs.com/singulance-mark-192.png)
+![SINGULANCE company mark](https://singulancelabs.com/assets/brand/singulance-orbit.png)
 
 Building around a question: how can AI carry useful work forward with context and human control?
 
@@ -383,7 +383,7 @@ Explore Runtime and the research behind the idea. Product access is reviewed dur
 
 [Explore SINGULANCE Runtime](https://runtime.singulancelabs.com/)
 
-[SINGULANCE](https://singulancelabs.com/about)[What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence)[Amar Sai Gadde](https://singulancelabs.com/amar-sai-gadde)[Research](https://singulancelabs.com/research)[Privacy](https://singulancelabs.com/privacy)[Security](https://singulancelabs.com/security)
+[SINGULANCE](https://singulancelabs.com/about)[What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence)[Amar Sai Gadde](https://amar.singulancelabs.com/)[Research](https://singulancelabs.com/research)[Privacy](https://singulancelabs.com/privacy)[Security](https://singulancelabs.com/security)
 
 ## Products and workspace
 
@@ -393,7 +393,7 @@ Explore Runtime and the research behind the idea. Product access is reviewed dur
 - [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
 
 
-Canonical page: https://singulancelabs.com/amar-sai-gadde
+Canonical page: https://amar.singulancelabs.com/
 
 ---
 
@@ -596,7 +596,7 @@ Beyond the horizon of intelligence.
 - [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
 
 
-Canonical page: https://singulancelabs.com/icarus
+Canonical page: https://icarus.singulancelabs.com/
 
 ---
 
@@ -729,7 +729,7 @@ From [SINGULANCE](https://singulancelabs.com) © 2026
 - [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
 
 
-Canonical page: https://singulancelabs.com/getruntime
+Canonical page: https://getruntime.singulancelabs.com/
 
 ---
 
@@ -930,7 +930,7 @@ RUNTIME[© 2026 SINGULANCE](https://singulancelabs.com)INTELLIGENCE WITH CONTINU
 - [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
 
 
-Canonical page: https://singulancelabs.com/runtime
+Canonical page: https://runtime.singulancelabs.com/
 
 ---
 

@@ -107,7 +107,7 @@ function App() {
       <UpdateBanner />
       <CookieConsent />
       <Routes>
-        <Route path="/" element={window.location.hostname === "icarus.singulancelabs.com" ? <React.Suspense fallback={<PublicPageLoading />}><IcarusResearch productHome /></React.Suspense> : window.location.hostname === "runtime.singulancelabs.com" ? <React.Suspense fallback={<PublicPageLoading />}><RuntimeProduct /></React.Suspense> : PRODUCT_HOST ? <ReturningUserMarketingHomepage /> : (isHivemindHost ? <React.Suspense fallback={<PublicPageLoading />}><HivemindRedirect /></React.Suspense> : <ReturningUserMarketingHomepage />)} />
+        <Route path="/" element={window.location.hostname === "amar.singulancelabs.com" ? <React.Suspense fallback={<PublicPageLoading />}><VisibilityPages pagePath="/amar-sai-gadde" /></React.Suspense> : window.location.hostname === "icarus.singulancelabs.com" ? <React.Suspense fallback={<PublicPageLoading />}><IcarusResearch productHome /></React.Suspense> : window.location.hostname === "runtime.singulancelabs.com" ? <React.Suspense fallback={<PublicPageLoading />}><RuntimeProduct /></React.Suspense> : PRODUCT_HOST ? <ReturningUserMarketingHomepage /> : (isHivemindHost ? <React.Suspense fallback={<PublicPageLoading />}><HivemindRedirect /></React.Suspense> : <ReturningUserMarketingHomepage />)} />
 
         {/* HIVEMIND — only served on the HIVEMIND subdomain; every /hivemind* hit
             on the marketing domain hard-redirects to HIVEMIND_SITE_HOST. */}

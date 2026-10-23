@@ -42,7 +42,7 @@ Read llms.txt to choose a page. Append /index.md or /index.txt to a listed produ
 ## Company and definition
 - Proactive intelligence: https://singulancelabs.com/proactive-intelligence
 - SINGULANCE company identity: https://singulancelabs.com/about
-- Amar Sai Gadde, founder of SINGULANCE: https://singulancelabs.com/amar-sai-gadde
+- Amar Sai Gadde, founder of SINGULANCE: https://amar.singulancelabs.com/
 
 ## Authentication and discovery
 - Authentication guide: https://singulancelabs.com/auth.md
