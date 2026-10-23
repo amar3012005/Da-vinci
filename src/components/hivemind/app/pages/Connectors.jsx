@@ -710,7 +710,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
           ? 'bg-white border-[#eae7e1] opacity-60'
           : isActive
             ? 'border-emerald-300/60 bg-emerald-50/60 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_4px_18px_rgba(22,163,74,0.08)] hover:border-emerald-400/70'
-            : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca]'
+            : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca] hover:shadow-[0_6px_18px_rgba(0,0,0,0.06)]'
       }`}
     >
       {/* Top-right corner indicator: scope chip + blinking green dot
