@@ -662,6 +662,8 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
   const [scopeSaving, setScopeSaving] = useState(false);
   const Icon = connector.icon;
   const isActive = connector.status === 'connected' || connector.status === 'syncing';
+  // ChatGPT and Claude are the pinned AI-assistant cards: larger tile and radius.
+  const isFeaturedAssistant = connector.id === 'claude-web' || connector.id === 'chatgpt';
   const brandLogo = BRAND_LOGOS[connector.id];
   const isComingSoon = connector.status === 'coming_soon';
   const hasConfig = config && connector.configKey;
@@ -705,12 +707,12 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
       id={`connector-${connector.id}`}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`group relative rounded-xl border transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
+      className={`group relative ${isFeaturedAssistant ? 'rounded-2xl' : 'rounded-xl'} border transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
         isComingSoon
           ? 'bg-white border-[#eae7e1] opacity-60'
           : isActive
             ? 'border-emerald-300/60 bg-emerald-50/60 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_4px_18px_rgba(22,163,74,0.08)] hover:border-emerald-400/70'
-            : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca]'
+            : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca] hover:shadow-[0_6px_18px_rgba(0,0,0,0.06)]'
       }`}
     >
       {/* Top-right corner indicator: scope chip + blinking green dot
@@ -754,7 +756,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
         {/* Top Row: Icon + Name (status moved to absolute corner above) */}
         <div className="flex items-start gap-3">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border"
+            className={`${isFeaturedAssistant ? 'w-12 h-12 rounded-2xl' : 'w-10 h-10 rounded-xl'} flex items-center justify-center flex-shrink-0 border`}
             style={{
               backgroundColor: `${connector.color}10`,
               borderColor: `${connector.color}20`,
