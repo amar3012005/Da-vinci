@@ -31,3 +31,10 @@ test('existing product pages lead back to the canonical definition',()=>{
  for(const path of ['/','/hivemind','/hyperagents','/runtime','/getruntime','/icarus'])assert.ok(RENDERED[path].html.includes('https://singulancelabs.com/proactive-intelligence')||RENDERED[path].html.includes('href="/proactive-intelligence"'),path);
  assert.match(PUBLIC_PAGES['/runtime'].title,/SINGULANCE Runtime/);
 });
+test('founder background retains study status and excludes sensitive source details',()=>{
+ const visible=text(parseDocument(RENDERED['/amar-sai-gadde'].html));
+ for(const fact of ['Engineering Physics studies','IIT Mandi','Leibniz Universität Hannover','2025–26','working-student role','B&B Markenagentur GmbH','Foodles','Autonomous aerial robotics'])assert.ok(visible.includes(fact),fact);
+ assert.doesNotMatch(visible,/passport|iban|recovery.code|client.secret|salary|date of birth|@gmail\.com|@students\.|Master of|Ph\.D|graduated/i);
+ const person=schemaFor('/amar-sai-gadde')['@graph'].find(n=>n['@type']==='Person');
+ assert.equal(person.hasCredential,undefined);assert.equal(person.alumniOf,undefined);
+});

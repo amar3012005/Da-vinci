@@ -11,7 +11,7 @@ Markdown links below contain server-rendered public page text from the same Reac
 ## Public reading list
 - [What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence/index.md): Proactive intelligence is AI that notices what needs attention, connects it to your goals, plans the next useful step, and carries approved work forward with human oversight and a record of its actions.
 - [SINGULANCE builds proactive intelligence.](https://singulancelabs.com/about/index.md): SINGULANCE is building proactive intelligence: company memory, an AI Chief of Staff and specialist AI teammates that help carry work forward.
-- [Amar Sai Gadde](https://singulancelabs.com/amar-sai-gadde/index.md): Amar Sai Gadde is the founder of SINGULANCE, building proactive intelligence through company memory, persistent AI coordination and specialist agents.
+- [Amar Sai Gadde](https://singulancelabs.com/amar-sai-gadde/index.md): Amar Sai Gadde is the founder of SINGULANCE, working on proactive AI and agent memory. His background spans Engineering Physics at IIT Mandi, an exchange at Leibniz Universität Hannover, robotics and embedded AI.
 - [Building proactive intelligence.](https://singulancelabs.com/index.md): A company Brain that connects what your people know. An AI Chief of Staff that anticipates what needs attention and carries work forward. Join early access.
 - [Founding HyperAgents Collection](https://singulancelabs.com/founding-hyperagents/index.md): A separate creative campaign for avatar creators. Collection details and participation information are coming soon.
 - [HIVEMIND — your company brain](https://singulancelabs.com/hivemind/index.md): Explore HIVEMIND company memory, connected apps, evidence-backed answers and persistent AI teammates.

@@ -27,7 +27,7 @@ This is a definition and product direction, not a claim that every workflow is p
 
 Company one-liner: **SINGULANCE is building proactive intelligence: company memory, an AI Chief of Staff and specialist AI teammates that help carry work forward.**
 
-Founder bio: **Amar Sai Gadde is the founder of SINGULANCE, building proactive intelligence through company memory, persistent AI coordination and specialist agents.**
+Founder bio: **Amar Sai Gadde is the founder of SINGULANCE, working on proactive AI and agent memory. His background spans Engineering Physics at IIT Mandi, an exchange at Leibniz Universität Hannover, robotics and embedded AI.**
 
 ## Acceptance checklist
 
@@ -37,7 +37,7 @@ Founder bio: **Amar Sai Gadde is the founder of SINGULANCE, building proactive i
 - [x] Link existing products and homepage footer to the canonical definition.
 - [x] Organization / Person / DefinedTerm / matching FAQ structured data; existing canonical and breadcrumb owners reused.
 - [x] Generate search-visible HTML, sitemap, Markdown and AI-readable text.
-- [x] Focused contracts: 6 new tests and 13 existing discovery/public-host tests pass.
+- [x] Focused contracts: 7 new tests and 13 existing discovery/public-host tests pass.
 - [x] Full Cloudflare build completed, retaining previous hashed assets.
 - [x] Built frontend route checked in browser; interactive quiet-noise state changed correctly.
 - [x] 375 px content-viewport layout checked (iframe preview; not a physical-device test).
@@ -67,3 +67,7 @@ Screenshots: `definition-desktop.png`, `definition-375.png`. Local built preview
 - Google crawling/indexing: https://developers.google.com/search/help/crawling-index-faq
 - Bing ownership: https://www.bing.com/webmasters/help/add-and-verify-site-12184f8b
 - Bing sitemap: https://www2.bing.com/webmasters/help/sitemaps-3b5cf6ed
+
+## Professional biography expansion
+
+The founder draft now includes Engineering Physics studies at IIT Mandi, a 2025–26 LUH physics exchange, an AI-solutions working-student role, earlier robotics/AI/campus projects and technical leadership. Reviewed against founder-provided CV/academic/employment documents and publicly indexed LinkedIn material. Private documents, personal contact details, financial/immigration information and credentials are excluded from the repository. Study status is not presented as a completed degree. Full employment dates and the current complete LinkedIn chronology remain unverified; no dates were invented. Publication approval remains pending.

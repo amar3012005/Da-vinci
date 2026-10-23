@@ -270,7 +270,7 @@ Founder of SINGULANCE
 
 # Amar Sai Gadde
 
-Amar Sai Gadde is the founder of SINGULANCE, building proactive intelligence through company memory, persistent AI coordination and specialist agents.
+Amar Sai Gadde is the founder of SINGULANCE, working on proactive AI and agent memory. His background spans Engineering Physics at IIT Mandi, an exchange at Leibniz Universität Hannover, robotics and embedded AI.
 
 [Contact SINGULANCE](mailto:enterprise@singulancelabs.com)[About the company](https://singulancelabs.com/about)
 
@@ -278,15 +278,74 @@ Amar Sai Gadde is the founder of SINGULANCE, building proactive intelligence thr
 
 Building around a question: how can AI carry useful work forward with context and human control?
 
-## Building SINGULANCE
+## Founder, builder and systems thinker.
 
-Amar Sai Gadde is working on a company Brain, an AI Chief of Staff and specialist teammates that share useful context. The focus is continuity: what an agent knows, what it is allowed to do, what it has actually completed and what should happen next.
+Amar is building SINGULANCE around a practical question: how can AI retain useful context, recognise what needs attention and carry work forward with human control?
 
-SINGULANCE’s research includes [ICARUS agent memory](https://singulancelabs.com/research/icarus) and [Runtime’s operating principles](https://singulancelabs.com/research/runtime). Product direction and published evaluations should be read alongside their methods and limitations.
+His current work brings together [HIVEMIND company understanding](https://singulancelabs.com/hivemind), [Runtime’s Chief of Staff coordination](https://singulancelabs.com/runtime), specialist [HyperAgents](https://singulancelabs.com/hyperagents) and [ICARUS agent memory](https://singulancelabs.com/research/icarus). The focus is continuity: what an agent knows, what it is allowed to do, what it has completed and what should happen next.
 
-## Follow the work
+His professional background combines physics studies with hands-on work in autonomous systems, embedded AI, machine learning and full-stack software.
 
-Explore [SINGULANCE Runtime](https://singulancelabs.com/runtime) for the product direction and [SINGULANCE Research](https://singulancelabs.com/research) for the published methods. The [company page](https://singulancelabs.com/about) connects the products and their roles.
+## Professional experience
+
+### AI solutions development
+
+A working-student role at B&B Markenagentur GmbH in Hannover, focused on developing AI solutions.
+
+## Education and international experience
+
+### Indian Institute of Technology Mandi
+
+Engineering Physics studies at IIT Mandi, on a B.Tech programme with a 2023–2027 timeline. His technical work spans physics, AI, robotics and software systems.
+
+### Leibniz Universität Hannover
+
+Academic exchange in the Faculty of Mathematics and Physics during 2025–26, through the university partnership programme with IIT Mandi.
+
+## A background in building.
+
+Before and alongside SINGULANCE, Amar has worked across campus products, robotics and applied AI. These projects describe his technical background; they are separate from SINGULANCE’s current product offering.
+
+### Autonomous aerial robotics
+
+Worked on the Inter IIT Tech Meet 2024 Aerial Robotics Challenge, using PX4, MAVLink, ROS2 and Gazebo for autonomous navigation, mission planning and simulation.
+
+### Foodles
+
+Founded a campus food-ordering project at IIT Mandi, combining full-stack development, vendor integration and user outreach.
+
+### HAWK
+
+Worked on an edge-AI wildlife-threat detection project, using on-device computer vision and embedded hardware.
+
+### CrowdFlowAI
+
+Built a hackathon project exploring computer-vision-based people-flow monitoring and heatmap analytics.
+
+### EEG2Text
+
+Explored an EEG-to-text learning pipeline, including signal preprocessing, feature extraction and recurrent models.
+
+### ENIGMA
+
+Built an earlier context-aware AI assistant for scheduling and modular tasks. His earlier project portfolio also includes ENIGMA OS, an operating-system concept in development.
+
+## Technical leadership
+
+- Technical Co-Coordinator of the Robotronics Club: technical initiatives, mentoring, workshops and training sessions.
+- Core contributor to a Mars rover project team, working on software subsystems and web development.
+- Project Head for Project X, coordinating interdisciplinary prototypes across automation, AI and embedded systems.
+
+## Areas of work
+
+- Agent memory and contextual AI
+- Robotics and autonomous navigation
+- Embedded AI and hardware–software integration
+- Computer vision and natural language processing
+- Full-stack development with React and Node.js
+- Technical team coordination and product development
+
+Explore [SINGULANCE Research](https://singulancelabs.com/research) for published methods and their limitations, or [Amar’s LinkedIn profile](https://www.linkedin.com/in/amar-sai-3067aa1aa/) for his public professional activity.
 
 For company enquiries, contact [enterprise@singulancelabs.com](mailto:enterprise@singulancelabs.com).
 
