@@ -1460,7 +1460,7 @@ SINGULANCE / 2026
 
 - [About SINGULANCE](https://singulancelabs.com/about)
 - [Proactive intelligence](https://singulancelabs.com/proactive-intelligence)
-- [Amar Sai Gadde](https://singulancelabs.com/amar-sai-gadde)
+- [Amar Sai Gadde](https://amar.singulancelabs.com/)
 - [Contact](mailto:enterprise@singulancelabs.com)
 - [Talk to founder](https://cal.com/amar-sai-gadde-eluoct/30min)
 
