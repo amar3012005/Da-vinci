@@ -22,6 +22,7 @@ const BenchmarkResearch = React.lazy(() => import('./components/BenchmarkResearc
 const AccountDeletion = React.lazy(() => import('./components/AccountDeletion'));
 const GetRuntime = React.lazy(() => import('./components/GetRuntime'));
 const RuntimeProduct = React.lazy(() => import('./components/RuntimeProduct'));
+const VisibilityPages = React.lazy(() => import('./components/VisibilityPages'));
 const RuntimeResearch = React.lazy(() => import('./components/RuntimeResearch'));
 const IcarusResearch = React.lazy(() => import('./components/IcarusResearch'));
 const CsiResearch = React.lazy(() => import('./components/CsiResearch'));
@@ -138,6 +139,7 @@ function App() {
         <Route path="/tara" element={<PublicProduct path="/tara" />} />
         <Route path="/hyperagents" element={<PublicProduct path="/hyperagents" />} />
 
+        {['/proactive-intelligence', '/about', '/amar-sai-gadde'].map(path => <Route key={path} path={path} element={<React.Suspense fallback={<PublicPageLoading />}><VisibilityPages pagePath={path}/></React.Suspense>}/>)}
         {/* Research pages */}
         <Route path="/founding-hyperagents" element={<React.Suspense fallback={<PublicPageLoading />}><FoundingHyperagents /></React.Suspense>} />
         <Route path="/research" element={<React.Suspense fallback={<PublicPageLoading />}><ResearchIndex /></React.Suspense>} />

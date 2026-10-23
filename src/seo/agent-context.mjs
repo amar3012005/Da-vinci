@@ -39,6 +39,11 @@ ICARUS is an agent memory filesystem. Cognitive Swarm Intelligence concerns shar
 ## How to retrieve and cite public material
 Read llms.txt to choose a page. Append /index.md or /index.txt to a listed product or research path; the homepage uses /index.md or /index.txt. HTML pages also support Accept: text/markdown. llms-full.txt combines the generated public page text; follow canonical links for figures, methods, policies and the latest details. Not every authenticated feature has public documentation, and this guide is not a live inventory of an account's capabilities.
 
+## Company and definition
+- Proactive intelligence: https://singulancelabs.com/proactive-intelligence
+- SINGULANCE company identity: https://singulancelabs.com/about
+- Amar Sai Gadde, founder of SINGULANCE: https://singulancelabs.com/amar-sai-gadde
+
 ## Authentication and discovery
 - Authentication guide: https://singulancelabs.com/auth.md
 - API catalog: https://singulancelabs.com/.well-known/api-catalog

@@ -12,7 +12,7 @@ import { openCookiePreferences } from '../../privacy/consent';
 const COLS = [
   { title: 'Products', links: [['HIVEMIND', HIVEMIND_URL], ['Voice', hivemindHref('/app/tara')], ['Runtime', '/runtime'], ['HyperAgents', '/hyperagents'], ['ICARUS', '/icarus'], ['Pricing', 'https://next.singulancelabs.com/#pricing']] },
   { title: 'Research', links: [['All research', '/research'], ['ICARUS', '/research/icarus'], ['Cognitive Swarm Intelligence', '/research/cognitive-swarm-intelligence'], ['Post-Quantum Cryptography', '/research/post-quantum-cryptography'], ['Memory benchmarks', '/benchmark']] },
-  { title: 'Company', links: [['Contact', 'mailto:enterprise@singulancelabs.com'], ['Talk to founder', 'https://cal.com/amar-sai-gadde-eluoct/30min']] },
+  { title: 'Company', links: [['About SINGULANCE', '/about'], ['Proactive intelligence', '/proactive-intelligence'], ['Amar Sai Gadde', '/amar-sai-gadde'], ['Contact', 'mailto:enterprise@singulancelabs.com'], ['Talk to founder', 'https://cal.com/amar-sai-gadde-eluoct/30min']] },
   { title: 'Trust', links: [['Security', '/security'], ['Privacy Policy', '/privacy'], ['Cookie Policy', '/cookies']] },
 ];
 

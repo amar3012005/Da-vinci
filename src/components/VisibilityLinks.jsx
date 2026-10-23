@@ -1,0 +1,3 @@
+import React from 'react';
+/** Public links only. Never mounts in authenticated agent rooms. */
+export default function VisibilityLinks(){return <nav aria-label="Understand SINGULANCE" style={{display:'flex',justifyContent:'center',flexWrap:'wrap',gap:'14px 26px',padding:'30px 24px',fontSize:14,lineHeight:1.6}}>{[['https://singulancelabs.com/proactive-intelligence','What is proactive intelligence?'],['https://singulancelabs.com/about','About SINGULANCE'],['https://singulancelabs.com/amar-sai-gadde','Amar Sai Gadde, founder']].map(([href,text])=><a key={href} href={href} style={{color:'inherit',textDecoration:'underline',textUnderlineOffset:4}}>{text}</a>)}</nav>}

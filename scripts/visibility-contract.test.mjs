@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {readFile} from 'node:fs/promises';
+import {parseDocument} from 'htmlparser2';
+import RENDERED from '../cloudflare/generated/public-renderings.json' with {type:'json'};
+import {PUBLIC_PAGES,canonicalFor,schemaFor} from '../src/seo/public-pages.mjs';
+import {DEFINITION,FAQS} from '../src/seo/visibility-content.mjs';
+const paths=['/proactive-intelligence','/about','/amar-sai-gadde'];
+const nodes=(n,pred)=>[...(pred(n)?[n]:[]),...(n.children||[]).flatMap(c=>nodes(c,pred))];
+const text=n=>n.type==='text'?n.data:(n.children||[]).map(text).join('');
+for(const path of paths)test(`public HTML, metadata and discovery agree for ${path}`,async()=>{
+ const page=PUBLIC_PAGES[path],render=RENDERED[path];assert.ok(render?.html);
+ const root=parseDocument(render.html);const headings=nodes(root,n=>n.name==='h1');
+ assert.equal(headings.length,1);assert.equal(text(headings[0]),page.heading);
+ assert.equal(canonicalFor(path),'https://singulancelabs.com'+path);
+ for(const f of ['sitemap.xml','llms.txt','llms-full.txt'])assert.ok((await readFile(new URL('../public/'+f,import.meta.url),'utf8')).includes('https://singulancelabs.com'+path));
+ assert.doesNotMatch(render.html,/session-[a-z0-9-]{20,}|Bearer [A-Za-z0-9]{16}|\/Users\//);
+});
+test('definition and every structured FAQ answer are visible in the rendered page',()=>{
+ const root=parseDocument(RENDERED['/proactive-intelligence'].html),visible=text(root);assert.ok(visible.includes(DEFINITION));
+ const faq=schemaFor('/proactive-intelligence')['@graph'].find(n=>n['@type']==='FAQPage');
+ assert.equal(faq.mainEntity.length,FAQS.length);
+ for(const q of faq.mainEntity){assert.ok(visible.includes(q.name));assert.ok(visible.includes(q.acceptedAnswer.text));}
+});
+test('founder and company use stable linked identities without invented credentials',()=>{
+ const graph=schemaFor('/about')['@graph'];const org=graph.find(n=>n['@type']==='Organization'),person=graph.find(n=>n['@type']==='Person');
+ assert.equal(org.founder['@id'],person['@id']);assert.equal(person.name,'Amar Sai Gadde');assert.equal(person.worksFor['@id'],org['@id']);
+ assert.equal(person.alumniOf,undefined);assert.equal(org.award,undefined);assert.equal(org.aggregateRating,undefined);
+});
+test('existing product pages lead back to the canonical definition',()=>{
+ for(const path of ['/','/hivemind','/hyperagents','/runtime','/getruntime','/icarus'])assert.ok(RENDERED[path].html.includes('https://singulancelabs.com/proactive-intelligence')||RENDERED[path].html.includes('href="/proactive-intelligence"'),path);
+ assert.match(PUBLIC_PAGES['/runtime'].title,/SINGULANCE Runtime/);
+});
