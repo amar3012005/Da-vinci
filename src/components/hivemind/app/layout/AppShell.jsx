@@ -42,8 +42,6 @@ import { WelcomeSlides, ActivationGate } from '../shared/WelcomeFlow';
 import { requiresWorkspaceModeAccess, isCompanyOnboardingPath } from '../shared/workspace-mode-policy.mjs';
 import { companyAdmissionStatus } from '../shared/company-admission';
 import AccountSettingsDialog from '../shared/AccountSettingsDialog';
-const HyperAgentsWelcome = React.lazy(() => import('../shared/HyperAgentsWelcome'));
-const HyperOnboarding = React.lazy(() => import('../hyperagents/HyperOnboarding'));
 import PlanLimitModal from '../components/PlanLimitModal';
 import RunwayEstimatorModal from '../components/RunwayEstimatorModal';
 import { PLAN_LIMIT_CODE, PLAN_LIMIT_EVENT } from '../shared/planLimit';
@@ -56,6 +54,8 @@ import { RETURNING_USER_LANDING } from '../shared/routes';
 import { newWorkspaceLanding } from '../auth/mobile-routing';
 import { isNativeApp } from '../shared/native-app';
 import { buildOpenDotEmbedTarget } from '../shared/open-dot-embed-target';
+const HyperAgentsWelcome = React.lazy(() => import('../shared/HyperAgentsWelcome'));
+const HyperOnboarding = React.lazy(() => import('../hyperagents/HyperOnboarding'));
 const ChatPanel = React.lazy(() => import('../pages/Chat').then(module => ({ default: module.ChatPanel })));
 
 /**
