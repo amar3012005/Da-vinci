@@ -5,7 +5,7 @@ import { DEFINITION, COMPANY_LINE, FOUNDER_BIO, ENTITIES, FAQS, EXAMPLES, FOUNDE
 import './VisibilityPages.css';
 const DefinitionLink = () => <a href="https://singulancelabs.com/proactive-intelligence">What is proactive intelligence?</a>;
 export function EntityDirectory() {
-  return <section className="vi-directory" aria-labelledby="vi-products"><h2 id="vi-products">One direction. Four connected parts.</h2><div>{ENTITIES.map(p => <article key={p.name}><p>{p.role}</p><h3><a href={`https://singulancelabs.com${p.href}`}>{p.name}</a></h3><p>{p.text}</p></article>)}</div></section>;
+  return <section className="vi-directory" aria-labelledby="vi-products"><h2 id="vi-products">One direction. Four connected parts.</h2><div>{ENTITIES.map(p => <article key={p.name}><p>{p.role}</p><h3><a href={canonicalFor(p.href)}>{p.name}</a></h3><p>{p.text}</p></article>)}</div></section>;
 }
 function SignalExample() {
   const [selected,setSelected] = useState(0); const example=EXAMPLES[selected];

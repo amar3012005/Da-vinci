@@ -122,7 +122,7 @@ The company Brain. Connect authorized knowledge, retain useful context and explo
 
 Anticipation and coordination
 
-### [SINGULANCE Runtime](https://singulancelabs.com/runtime)
+### [SINGULANCE Runtime](https://runtime.singulancelabs.com/)
 
 The AI Chief of Staff. Relate signals to priorities, coordinate specialists, review results and bring decisions back to you.
 
@@ -134,7 +134,7 @@ AI teammates with defined roles and persistent workspaces. Runtime coordinates a
 
 Agent memory
 
-### [ICARUS](https://singulancelabs.com/icarus)
+### [ICARUS](https://icarus.singulancelabs.com/)
 
 The memory filesystem for AI agents. Explore the installation guide and the research behind durable agent context.
 
@@ -218,7 +218,7 @@ The company Brain. Connect authorized knowledge, retain useful context and explo
 
 Anticipation and coordination
 
-### [SINGULANCE Runtime](https://singulancelabs.com/runtime)
+### [SINGULANCE Runtime](https://runtime.singulancelabs.com/)
 
 The AI Chief of Staff. Relate signals to priorities, coordinate specialists, review results and bring decisions back to you.
 
@@ -230,7 +230,7 @@ AI teammates with defined roles and persistent workspaces. Runtime coordinates a
 
 Agent memory
 
-### [ICARUS](https://singulancelabs.com/icarus)
+### [ICARUS](https://icarus.singulancelabs.com/)
 
 The memory filesystem for AI agents. Explore the installation guide and the research behind durable agent context.
 
@@ -361,7 +361,7 @@ The company Brain. Connect authorized knowledge, retain useful context and explo
 
 Anticipation and coordination
 
-### [SINGULANCE Runtime](https://singulancelabs.com/runtime)
+### [SINGULANCE Runtime](https://runtime.singulancelabs.com/)
 
 The AI Chief of Staff. Relate signals to priorities, coordinate specialists, review results and bring decisions back to you.
 
@@ -373,7 +373,7 @@ AI teammates with defined roles and persistent workspaces. Runtime coordinates a
 
 Agent memory
 
-### [ICARUS](https://singulancelabs.com/icarus)
+### [ICARUS](https://icarus.singulancelabs.com/)
 
 The memory filesystem for AI agents. Explore the installation guide and the research behind durable agent context.
 
@@ -435,7 +435,7 @@ Canonical page: https://singulancelabs.com/founding-hyperagents
 
 Open source · local first
 
-[Install ICARUS v0.3.91 ↓](#install)
+[Install ICARUS v0.3.98 ↓](#install)
 
 # ICARUS — the memory filesystem for AI agents
 
@@ -460,7 +460,7 @@ ICARUS
 
 A memory filesystem for AI agents — one mmap’d file per tenant, no server.
 
-Start here · CLI v0.3.91
+Start here · CLI v0.3.98
 
 ## Local memory. Ready for your agent.
 
@@ -502,7 +502,7 @@ Keep the terminal open; it waits up to fifteen minutes. If it expires after the 
 
 Skip sign-in to keep working offline. Use icarus connect --logout to remove the local developer credential. Upgrade later with icarus update.
 
-[Read the quickstart](https://github.com/amar3012005/ICARUS#start-here)[Downloads and checksums](https://github.com/amar3012005/ICARUS/releases/tag/v0.3.91)[Developer sign-in details](https://github.com/amar3012005/ICARUS/blob/main/docs/DEVELOPER_AUTH.md)
+[Read the quickstart](https://github.com/amar3012005/ICARUS#start-here)[Downloads and checksums](https://github.com/amar3012005/ICARUS/releases/tag/v0.3.98)[Developer sign-in details](https://github.com/amar3012005/ICARUS/blob/main/docs/DEVELOPER_AUTH.md)
 
 Agent Bus is experimental with no public installer; the proposed bridge is not shipped. Computer Use is a separate experimental module. Installing Memory enables neither.
 
@@ -2321,7 +2321,7 @@ ICARUS
 
 A memory filesystem for AI agents — one mmap’d file per tenant, no server.
 
-Start here · CLI v0.3.91
+Start here · CLI v0.3.98
 
 ## Local memory. Ready for your agent.
 
@@ -2363,7 +2363,7 @@ Keep the terminal open; it waits up to fifteen minutes. If it expires after the 
 
 Skip sign-in to keep working offline. Use icarus connect --logout to remove the local developer credential. Upgrade later with icarus update.
 
-[Read the quickstart](https://github.com/amar3012005/ICARUS#start-here)[Downloads and checksums](https://github.com/amar3012005/ICARUS/releases/tag/v0.3.91)[Developer sign-in details](https://github.com/amar3012005/ICARUS/blob/main/docs/DEVELOPER_AUTH.md)
+[Read the quickstart](https://github.com/amar3012005/ICARUS#start-here)[Downloads and checksums](https://github.com/amar3012005/ICARUS/releases/tag/v0.3.98)[Developer sign-in details](https://github.com/amar3012005/ICARUS/blob/main/docs/DEVELOPER_AUTH.md)
 
 Agent Bus is experimental with no public installer; the proposed bridge is not shipped. Computer Use is a separate experimental module. Installing Memory enables neither.
 
