@@ -6,6 +6,7 @@ export { ComposioAccount } from './composio-account.mjs';
 import { proxyConnectorTransport } from './connector-transport.mjs';
 import { handleModeAccess, gateWorkspaceDocument, proxyPlatformAdmin } from './account-mode-access.mjs';
 export { AccountModeAccess } from './account-mode-access.mjs';
+import { runtimePublic } from './runtime-public.mjs';
 import { amarPublic } from './amar-public.mjs';
 import { getRuntimePublic } from './getruntime-public.mjs';
 import { icarusPublic } from './icarus-public.mjs';
@@ -533,6 +534,8 @@ export default {
     }
     const openDotResponse = await proxyRuntimeOpenDot(request);
     if (openDotResponse) return openDotResponse;
+    const runtimeProductCover = await runtimePublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
+    if (runtimeProductCover) return runtimeProductCover;
     const founderCover = await amarPublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
     if (founderCover) return founderCover;
     if (['singulancelabs.com','www.singulancelabs.com'].includes(url.hostname) && /^\/amar-sai-gadde(?:\/|$)/.test(url.pathname) && ['GET','HEAD'].includes(request.method)) return Response.redirect('https://amar.singulancelabs.com/' + (/index\.(md|txt)$/.test(url.pathname) ? 'index.md' : ''), 308);
@@ -582,25 +585,6 @@ export default {
     if (url.protocol === 'http:' && env.ENVIRONMENT !== 'development') {
       url.protocol = 'https:';
       return Response.redirect(url.href, 308);
-    }
-    // Dedicated public product host never enters authenticated app or gateway routing.
-    if (hostname(request) === 'runtime.singulancelabs.com') {
-      if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', {status:405, headers:{allow:'GET, HEAD'}});
-      if (pathname === '/runtime') return Response.redirect(new URL('/', request.url), 308);
-      if (pathname === '/') {
-        if (prefersMarkdown(request.headers.get('accept'))) return markdownResponse(request, '/runtime');
-        const documentRequest = new Request(new URL('/', request.url), request);
-        documentRequest.headers.delete('if-none-match');
-        documentRequest.headers.delete('if-modified-since');
-        return publicSeoResponse(await env.ASSETS.fetch(documentRequest), '/runtime');
-      }
-      if (pathname === '/robots.txt') return new Response('User-agent: *\nAllow: /\n', {headers:{'content-type':'text/plain'}});
-      if (/^\/(?:static|assets)\//u.test(pathname) || ['/favicon.ico','/logo.svg','/singulance-mark.svg','/singulance-mark-192.png','/manifest.json'].includes(pathname)) {
-        const asset = await env.ASSETS.fetch(request);
-        if ((asset.headers.get('content-type') || '').includes('text/html')) return new Response('Not found', {status:404});
-        return asset;
-      }
-      return new Response('Not found', {status:404, headers:{'x-robots-tag':'noindex','cache-control':'no-store'}});
     }
     const publicHost = PUBLIC_MARKETING_HOSTS.has(hostname(request));
     if (publicHost && hostname(request) !== 'singulancelabs.com') {

@@ -65,7 +65,7 @@ const InstallCommand = ({ children }) => <pre className="my-4 overflow-x-auto ro
 
 const IcarusQuickstart = () => (
   <section id="install" className="mb-16 scroll-mt-6 border-y py-10" style={{ borderColor: BORDER }} aria-label="Install and sign in to ICARUS">
-    <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#77746d]">Start here · CLI v0.3.91</div>
+    <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#77746d]">Start here · CLI v0.3.98</div>
     <H2>Local memory. Ready for your agent.</H2>
     <P>One self-contained binary. No Node.js or Rust required on macOS Apple Silicon/Intel, Linux x64/ARM64, or Windows x64. Local memory works without an account or API key.</P>
     <h3 className="mt-6 font-semibold">1. Install</h3>
@@ -88,7 +88,7 @@ const IcarusQuickstart = () => (
     <P>Skip sign-in to keep working offline. Use <code>icarus connect --logout</code> to remove the local developer credential. Upgrade later with <code>icarus update</code>.</P>
     <p className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[13px] font-medium">
       <a className="text-[#cc3f20] underline underline-offset-4" href="https://github.com/amar3012005/ICARUS#start-here">Read the quickstart</a>
-      <a className="text-[#cc3f20] underline underline-offset-4" href="https://github.com/amar3012005/ICARUS/releases/tag/v0.3.91">Downloads and checksums</a>
+      <a className="text-[#cc3f20] underline underline-offset-4" href="https://github.com/amar3012005/ICARUS/releases/tag/v0.3.98">Downloads and checksums</a>
       <a className="text-[#cc3f20] underline underline-offset-4" href="https://github.com/amar3012005/ICARUS/blob/main/docs/DEVELOPER_AUTH.md">Developer sign-in details</a>
     </p>
     <P>Agent Bus is experimental with no public installer; the proposed bridge is not shipped. Computer Use is a separate experimental module. Installing Memory enables neither.</P>
@@ -431,8 +431,8 @@ const IcarusResearch = ({ productHome = false }) => {
       author="SINGULANCE Labs"
       heroImg={HERO_IMG}
       heroScene={motionOk ? <Suspense fallback={null}><IcarusHeroScene /></Suspense> : null}
-      heroAccessory={productHome ? <div className="space-y-4"><a href="#install" className="inline-block rounded-full bg-white px-5 py-2 text-[14px] font-medium text-[#101522]">Install ICARUS v0.3.91 ↓</a><AgentOnboardingPill /></div> : <AgentOnboardingPill />}
-      seo={productHome ? { pagePath: "/icarus", title: "ICARUS — Memory Filesystem for AI Agents", description: "Install ICARUS v0.3.91 for local agent memory. Optional email and Google developer sign-in. No account or company workspace needed for local memory.", canonical: "https://icarus.singulancelabs.com/" } : meta.seo}
+      heroAccessory={productHome ? <div className="space-y-4"><a href="#install" className="inline-block rounded-full bg-white px-5 py-2 text-[14px] font-medium text-[#101522]">Install ICARUS v0.3.98 ↓</a><AgentOnboardingPill /></div> : <AgentOnboardingPill />}
+      seo={productHome ? { pagePath: "/icarus", title: "ICARUS — Memory Filesystem for AI Agents", description: "Install ICARUS v0.3.98 for local agent memory. Optional email and Google developer sign-in. No account or company workspace needed for local memory.", canonical: "https://icarus.singulancelabs.com/" } : meta.seo}
       product={{ name: 'ICARUS', tag: '.amr format', desc: 'A memory filesystem for AI agents — one mmap’d file per tenant, no server.' }}
       highlights={productHome ? ["Durable local memory with lexical recall, without an account or API key.", "A self-contained CLI for macOS, Linux and Windows.", "Memory tools for Codex, Claude Code and Cursor; Harness stays opt-in.", "Optional developer email/Google sign-in, separate from company workspaces."] : meta.highlights}
     >

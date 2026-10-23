@@ -13,7 +13,7 @@ for(const path of paths)test(`public HTML, metadata and discovery agree for ${pa
  const root=parseDocument(render.html);const headings=nodes(root,n=>n.name==='h1');
  assert.equal(headings.length,1);assert.equal(text(headings[0]),page.heading);
  assert.equal(canonicalFor(path),path==='/amar-sai-gadde'?'https://amar.singulancelabs.com/':'https://singulancelabs.com'+path);
- for(const f of ['sitemap.xml','llms.txt','llms-full.txt'])assert.ok((await readFile(new URL('../public/'+f,import.meta.url),'utf8')).includes(f==='llms.txt'?'https://singulancelabs.com'+path:canonicalFor(path)));
+ for(const f of ['sitemap.xml','llms.txt','llms-full.txt'])assert.ok((await readFile(new URL('../public/'+f,import.meta.url),'utf8')).includes(canonicalFor(path).replace(/\/$/,'')));
  assert.doesNotMatch(render.html,/session-[a-z0-9-]{20,}|Bearer [A-Za-z0-9]{16}|\/Users\//);
 });
 test('definition and every structured FAQ answer are visible in the rendered page',()=>{
@@ -37,4 +37,13 @@ test('founder background retains study status and excludes sensitive source deta
  assert.doesNotMatch(visible,/passport|iban|recovery.code|client.secret|salary|date of birth|@gmail\.com|@students\.|Master of|Ph\.D|graduated/i);
  const person=schemaFor('/amar-sai-gadde')['@graph'].find(n=>n['@type']==='Person');
  assert.equal(person.hasCredential,undefined);assert.equal(person.alumniOf,undefined);
+});
+
+test('product identity links to the company without fabricated pricing or review claims',()=>{
+ for(const path of ['/hivemind','/runtime','/getruntime','/hyperagents','/tara','/icarus']){
+  const graph=schemaFor(path)['@graph'];const app=graph.find(n=>n['@type']==='SoftwareApplication');const page=graph.find(n=>n['@type']==='WebPage');
+  assert.equal(page.mainEntity['@id'],app['@id']);assert.equal(app.publisher['@id'],'https://singulancelabs.com/#organization');
+  assert.equal(app.offers,undefined);assert.equal(app.aggregateRating,undefined);
+ }
+ assert.equal(schemaFor('/getruntime')['@graph'].find(n=>n['@type']==='SoftwareApplication')['@id'],schemaFor('/runtime')['@graph'].find(n=>n['@type']==='SoftwareApplication')['@id']);
 });
