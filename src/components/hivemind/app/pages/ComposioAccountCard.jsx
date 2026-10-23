@@ -9,7 +9,7 @@ export default function ComposioAccountCard() {
   const act=async action=>{setBusy(true);setError('');try{const response=await fetch(BASE+action,{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({consent:action==='start'})});const value=await response.json();if(!response.ok)throw new Error(value.error);if(action==='start'){const next=new URL(value.url);if(next.origin!=='https://connect.composio.dev')throw new Error('Invalid authorization address');window.location.assign(next.href);}else{await load();setError(value.message||'');}}catch{setError('The account connection could not be completed. Please try again.');}finally{setBusy(false);}};
   const connected=status?.connected && !status?.expired;
   const connect=()=>{if(window.confirm('Connect your Composio account and securely save its authorization for this user and workspace?'))act('start');};
-  return <section className="hm-composio-banner" aria-label="Composio account connection">
+  return <section className={`hm-composio-banner${connected?' hm-composio-banner--connected':''}`} aria-label="Composio account connection">
     <div className="hm-composio-banner-main">
       <div className="hm-composio-apps" aria-hidden="true">
         {[['Gmail',BRAND_LOGOS.gmail],['Calendar','https://api.iconify.design/logos/google-calendar.svg'],['Slack',BRAND_LOGOS.slack],['Notion',BRAND_LOGOS.notion],['GitHub',BRAND_LOGOS.github]].map(([name,src])=><span key={name}><img src={src} alt="" width="26" height="26" /></span>)}
