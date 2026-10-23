@@ -49,8 +49,17 @@ export default function NativePaneBridge({ scope }) {
       } else if (data.kind === 'request' && data.name === 'hivemind:request-agent-roster') { await publishRoster(); }
       else if (data.kind === 'request' && PANE_REQUESTS.includes(data.name)) window.dispatchEvent(new Event(data.name));
       else if (data.kind === 'start-agent' && initialNativePane === 'runtime' && typeof data.id === 'string' && data.id.length < 200) {
-        try { const ok = typeof window.__HIVEMIND_START_AGENT__ === 'function' && await window.__HIVEMIND_START_AGENT__(data.id); send({ kind: 'result', requestId: data.requestId, ok: Boolean(ok) }); } catch { send({ kind: 'result', requestId: data.requestId, ok: false }); }
+        try { const start = await runtimeStartHook(); const ok = start !== undefined && await start(data.id); send({ kind: 'result', requestId: data.requestId, ok: Boolean(ok) }); } catch { send({ kind: 'result', requestId: data.requestId, ok: false }); }
       }
+    };
+    // Runtime publishes its start hook when its client plugins start; a request
+    // that arrives first waits for it for as long as this document lives.
+    const runtimeStartHook = async () => {
+      while (!stopped) {
+        if (typeof window.__HIVEMIND_START_AGENT__ === 'function') return window.__HIVEMIND_START_AGENT__;
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      return undefined;
     };
     const forward = event => send({ kind: 'event', name: event.type, detail: event.detail });
     const link = event => {

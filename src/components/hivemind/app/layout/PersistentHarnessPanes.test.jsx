@@ -129,3 +129,29 @@ it('publishes the Runtime roster only from the exact authenticated pane and scop
   expect(roster.mock.calls[0][0].detail).toEqual({scope:'user-a:org-a',profiles:[{id:'owned',name:'Owned specialist'}]});
  } finally {window.removeEventListener('hivemind:runtime-roster',roster);await act(async()=>root.unmount());host.remove();}
 });
+
+it('opens an agent through an identified Runtime pane without a fixed deadline', async()=>{
+ global.IS_REACT_ACT_ENVIRONMENT=true;
+ jest.useFakeTimers();
+ const crypto=window.crypto;Object.defineProperty(window,'crypto',{configurable:true,value:{...crypto,randomUUID:()=>'request-1'}});
+ mockLocation={pathname:'/hivemind/app/employee/harness',search:'',hash:''};
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
+ try {
+  await act(async()=>root.render(<PersistentHarnessPanes/>));
+  const frame=host.querySelector('iframe');const posted=[];
+  jest.spyOn(frame.contentWindow,'postMessage').mockImplementation(message=>posted.push(message));
+  const emit=async(data)=>act(async()=>window.dispatchEvent(new MessageEvent('message',{origin:'https://runtime-runner.singulancelabs.com',source:frame.contentWindow,data:{type:'hivemind.native-pane',version:1,scope:'user-a:org-a',...data}})));
+  // Identity alone publishes the hook; the composer seat may still be connecting.
+  await emit({kind:'identity',path:'/hivemind/app/employee/harness'});
+  const start=window.__HIVEMIND_START_AGENT__;
+  expect(start?.nativePane).toBe(true);
+  let result;const opening=start('faraday').then(value=>{result=value;});
+  const request=posted.find(message=>message.kind==='start-agent');
+  expect(request).toMatchObject({kind:'start-agent',id:'faraday'});
+  await act(async()=>{jest.advanceTimersByTime(60000);});
+  expect(result).toBeUndefined();
+  await emit({kind:'result',requestId:request.requestId,ok:true});
+  await opening;expect(result).toBe(true);
+ } finally {await act(async()=>root.unmount());host.remove();jest.useRealTimers();Object.defineProperty(window,'crypto',{configurable:true,value:crypto});}
+ expect(window.__HIVEMIND_START_AGENT__).toBeUndefined();
+});
