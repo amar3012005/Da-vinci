@@ -63,3 +63,18 @@ export function withEmployeeTaskStatuses(statuses, taskStatus) {
 export function mostUrgentTaskStatus(rooms) {
   return rooms.reduce((best, room) => (TASK_STATUS_RANK[room.taskStatus] ?? 0) > (TASK_STATUS_RANK[best] ?? 0) ? room.taskStatus : best, undefined);
 }
+
+/**
+ * Runtime owns review decisions. Open Dot only sees a completed job, so it reports that task as
+ * submitted until Runtime's accepted decision for the same task replaces it.
+ * @param {Array<{employeeId: string, status: string, group?: string, taskId?: string | null}>} taskStatus - Open Dot task statuses.
+ * @param {Array<{employeeId?: string, status?: string, taskId?: string}> | undefined} runtimeEmployees - Runtime teamStatus employees.
+ * @returns The task statuses with accepted Runtime decisions applied.
+ */
+export function withRuntimeReviewDecisions(taskStatus, runtimeEmployees) {
+  if (!Array.isArray(runtimeEmployees)) return taskStatus;
+  const accepted = new Map(runtimeEmployees.filter(entry => typeof entry?.employeeId === 'string' && typeof entry.taskId === 'string'
+    && entry.status === 'accepted').map(entry => [entry.employeeId, entry.taskId]));
+  return taskStatus.map(entry => entry?.status === 'submitted' && entry.taskId && accepted.get(entry.employeeId) === entry.taskId
+    ? { ...entry, status: 'accepted', group: 'resolved' } : entry);
+}

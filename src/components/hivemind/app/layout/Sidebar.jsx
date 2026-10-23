@@ -1,6 +1,6 @@
 import { readRuntimeRoute } from '../shared/runtime-presentation-cache';
 import RuntimeAvatar from '../shared/RuntimeAvatar';
-import { ownedOpenDotRoomStatuses, withEmployeeTaskStatuses, reconnectingOpenDotRoomStatuses } from '../shared/open-dot-room-status';
+import { ownedOpenDotRoomStatuses, withEmployeeTaskStatuses, reconnectingOpenDotRoomStatuses, withRuntimeReviewDecisions } from '../shared/open-dot-room-status';
 import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
 import { agentRoster } from '../shared/agent-roster';
 import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../shared/open-dot-employee-route';
@@ -161,6 +161,17 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
   ];
 }
 
+/** Runtime's accepted review decisions for the cached Runtime room; unavailable reads keep Open Dot's view. */
+async function runtimeReviewDecisions(scope, signal) {
+  const route = window.location.hostname === 'runtime-runner.singulancelabs.com' && readRuntimeRoute(scope);
+  const sessionId = route && route.split('/').pop();
+  if (!sessionId) return undefined;
+  try {
+    const response = await fetch(`/api/hivemindHq/teamStatus?sessionId=${encodeURIComponent(sessionId)}`, { credentials: 'same-origin', cache: 'no-store', signal });
+    return response.ok ? (await response.json())?.employees : undefined;
+  } catch { return undefined; }
+}
+
 export default function Sidebar({
   activeSection = 'hivemind',
   collapsed = false,
@@ -261,6 +272,7 @@ export default function Sidebar({
         quiet = Array.isArray(result.employees) && result.employees.every(entry => ['idle', 'paused', undefined].includes(entry?.status) && !(entry?.rooms ?? []).some(room => room?.running || room?.live))
           && (!Array.isArray(result.taskStatus) || result.taskStatus.every(entry => entry?.status === 'idle' || entry?.status === 'accepted'));
         if (Array.isArray(result.taskStatus)) {
+          result.taskStatus = withRuntimeReviewDecisions(result.taskStatus, await runtimeReviewDecisions(scope, controller.signal));
           taskStatusRef.current = new Map(result.taskStatus.filter(entry => typeof entry?.employeeId === 'string' && entry.status && entry.status !== 'idle').map(entry => [entry.employeeId, entry.status]));
         }
         if (!controller.signal.aborted && result.version === 1) setDotRooms(withTaskStatus(ownedOpenDotRoomStatuses(result.employees, agentRoster.peek(scope) || [], dotReadAt.current)));
