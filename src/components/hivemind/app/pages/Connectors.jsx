@@ -16,6 +16,7 @@ import {
   Globe,
   WifiOff,
   RefreshCw,
+  Link2,
   ChevronDown,
   ChevronRight,
   Mail,
@@ -707,7 +708,9 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
       className={`group relative rounded-xl border transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
         isComingSoon
           ? 'bg-white border-[#eae7e1] opacity-60'
-          : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca]'
+          : isActive
+            ? 'border-emerald-300/60 bg-emerald-50/60 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_4px_18px_rgba(22,163,74,0.08)] hover:border-emerald-400/70'
+            : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca]'
       }`}
     >
       {/* Top-right corner indicator: scope chip + blinking green dot
@@ -883,9 +886,21 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               </button>
               {(connector.oauthProvider || connector.nangoProvider) && (
                 <button
+                  onClick={onConnect}
+                  disabled={connecting}
+                  aria-label={t('connectors.reconnect', 'Reconnect')}
+                  title={t('connectors.reconnect', 'Reconnect')}
+                  className="p-1.5 rounded-lg text-[#16a34a] hover:bg-emerald-100/80 disabled:opacity-50 transition-all"
+                >
+                  <Link2 size={13} />
+                </button>
+              )}
+              {(connector.oauthProvider || connector.nangoProvider) && (
+                <button
                   onClick={onResync}
+                  aria-label={t('connectors.syncNow', 'Sync now')}
                   title={t('connectors.syncNow', 'Sync now')}
-                  className="p-1.5 rounded-lg text-[#737373] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-all"
+                  className="p-1.5 rounded-lg text-[#16a34a] hover:bg-emerald-100/80 transition-all"
                 >
                   <RefreshCw size={13} />
                 </button>
