@@ -1,3 +1,4 @@
+import VisibilityLinks from './VisibilityLinks';
 import React, { useState } from 'react';
 import { ArrowRight, Plus, Minus, FileText, Network, Users, ClipboardCheck, Check, ArrowUpRight } from 'lucide-react';
 import Seo from './Seo';
@@ -66,5 +67,5 @@ export default function RuntimeProduct() {
       <section className="rr-finale"><h2>Before you ask.<br/>Already connected.</h2><div><p>Shape the ambition. Runtime connects the work.</p><div className="rr-actions"><a href={appUrl} className="rr-button rr-white">Meet Runtime <ArrowUpRight size={16}/></a><a href="https://singulancelabs.com/research/runtime" className="rr-button rr-outline">Read the thinking</a></div></div></section>
       <footer className="rr-footer"><span className="rr-footer-word" aria-hidden="true">RUNTIME</span><a href="https://singulancelabs.com">© {new Date().getFullYear()} SINGULANCE</a><nav aria-label="Footer"><a href="#intelligence">The idea</a><a href="#team">Your team</a><a href="https://singulancelabs.com/privacy">Privacy</a></nav><span>INTELLIGENCE WITH CONTINUITY.</span></footer>
     </div>
-  </main>;
+  <VisibilityLinks/></main>;
 }

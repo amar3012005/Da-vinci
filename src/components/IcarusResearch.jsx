@@ -1,3 +1,4 @@
+import VisibilityLinks from './VisibilityLinks';
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import NewsArticleLayout, { H2, P, Table, FullBleed } from './research/NewsArticleLayout';
@@ -441,6 +442,7 @@ const IcarusResearch = ({ productHome = false }) => {
         {version === 'v1' ? <V1Body motionOk={motionOk} /> : <V2Body motionOk={motionOk} />}
       </div>
       <ThesisLicenseNotice />
+      <VisibilityLinks/>
       <style>{`@keyframes icarusFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }`}</style>
     </NewsArticleLayout>
   );

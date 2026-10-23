@@ -1,4 +1,5 @@
 import React from 'react';
+import VisibilityPages from '../src/components/VisibilityPages';
 import AccountDeletion from '../src/components/AccountDeletion';
 import GetRuntime from '../src/components/GetRuntime';
 import RuntimeProduct from '../src/components/RuntimeProduct';
@@ -18,7 +19,7 @@ import CookiePolicy from '../src/components/CookiePolicy';
 import FoundingHyperagents from '../src/components/FoundingHyperagents';
 import MobileHomepage from '../src/components/mobile/MobileHomepage';
 import HivemindRedirect from '../src/components/hivemind/HivemindRedirect';
-const pages = {'/founding-hyperagents':<FoundingHyperagents/>, '/icarus':<IcarusResearch productHome/>, '/getruntime':<GetRuntime/>, '/account-deletion':<AccountDeletion/>, '/runtime':<RuntimeProduct/>, '/research/runtime':<RuntimeResearch/>, '/tara':<PublicProduct path="/tara"/>, '/hyperagents':<PublicProduct path="/hyperagents"/>, '/':<MobileHomepage/>, '/hivemind':<HivemindRedirect/>, '/research':<ResearchIndex/>, '/research/icarus':<IcarusResearch/>, '/research/cognitive-swarm-intelligence':<CsiResearch/>, '/research/post-quantum-cryptography':<PostQuantumResearch/>, '/benchmark':<BenchmarkResearch/>, '/privacy':<PrivacySecurity mode="privacy"/>, '/security':<PrivacySecurity mode="security"/>, '/cookies':<CookiePolicy/>};
+const pages = { ...Object.fromEntries(['/proactive-intelligence','/about','/amar-sai-gadde'].map(path=>[path,<VisibilityPages pagePath={path}/>])), '/founding-hyperagents':<FoundingHyperagents/>, '/icarus':<IcarusResearch productHome/>, '/getruntime':<GetRuntime/>, '/account-deletion':<AccountDeletion/>, '/runtime':<RuntimeProduct/>, '/research/runtime':<RuntimeResearch/>, '/tara':<PublicProduct path="/tara"/>, '/hyperagents':<PublicProduct path="/hyperagents"/>, '/':<MobileHomepage/>, '/hivemind':<HivemindRedirect/>, '/research':<ResearchIndex/>, '/research/icarus':<IcarusResearch/>, '/research/cognitive-swarm-intelligence':<CsiResearch/>, '/research/post-quantum-cryptography':<PostQuantumResearch/>, '/benchmark':<BenchmarkResearch/>, '/privacy':<PrivacySecurity mode="privacy"/>, '/security':<PrivacySecurity mode="security"/>, '/cookies':<CookiePolicy/>};
 export async function renderPages(){
  const out={};
  for(const [path,page] of Object.entries(pages)) {

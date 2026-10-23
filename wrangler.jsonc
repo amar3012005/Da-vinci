@@ -49,6 +49,10 @@
       "custom_domain": true
     },
     {
+      "pattern": "amar.singulancelabs.com",
+      "custom_domain": true
+    },
+    {
       "pattern": "icarus.singulancelabs.com",
       "custom_domain": true
     },

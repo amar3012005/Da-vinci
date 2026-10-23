@@ -39,6 +39,11 @@ ICARUS is an agent memory filesystem. Cognitive Swarm Intelligence concerns shar
 ## How to retrieve and cite public material
 Read llms.txt to choose a page. Append /index.md or /index.txt to a listed product or research path; the homepage uses /index.md or /index.txt. HTML pages also support Accept: text/markdown. llms-full.txt combines the generated public page text; follow canonical links for figures, methods, policies and the latest details. Not every authenticated feature has public documentation, and this guide is not a live inventory of an account's capabilities.
 
+## Company and definition
+- Proactive intelligence: https://singulancelabs.com/proactive-intelligence
+- SINGULANCE company identity: https://singulancelabs.com/about
+- Amar Sai Gadde, founder of SINGULANCE: https://amar.singulancelabs.com/
+
 ## Authentication and discovery
 - Authentication guide: https://singulancelabs.com/auth.md
 - API catalog: https://singulancelabs.com/.well-known/api-catalog
@@ -50,6 +55,345 @@ The hosted HIVEMIND MCP service is https://core.singulancelabs.com/api/mcp. Priv
 ## Content and privacy boundaries
 Public search and AI retrieval are allowed; these files do not license model training or fine-tuning. Consult https://singulancelabs.com/privacy and https://singulancelabs.com/security. Cite sources, distinguish product intent from verified availability, and ask the user before accessing their private workspace or acting on their behalf.
 
+
+---
+
+[Skip to content](#vi-main)
+
+[SINGULANCE](https://singulancelabs.com/)
+
+The idea behind SINGULANCE
+
+# What is proactive intelligence?
+
+Proactive intelligence is AI that notices what needs attention, connects it to your goals, plans the next useful step, and carries approved work forward with human oversight and a record of its actions.
+
+[Explore the operating cycle](#vi-cycle)[Meet the Chief of Staff](https://getruntime.singulancelabs.com/)
+
+![Runtime, SINGULANCE’s computer-headed AI Chief of Staff](https://singulancelabs.com/assets/getruntime/portrait.webp)
+
+Company understanding. Continued momentum.
+
+## From noticing to carrying work forward.
+
+Not every new message needs an alert. Not every useful finding needs a new task. Proactive intelligence connects a change to existing goals and chooses an appropriate response: advance, delegate, ask, wait or quietly dismiss it.
+
+At SINGULANCE, this is the operating direction for Runtime and its specialist team. Early-access availability and verified behavior depend on the workflow and account configuration.
+
+## The operating cycle
+
+- ### Recover
+
+Bring the latest direction, relevant memory, current work and original signal together.
+- ### Assess
+
+Decide what changed and whether it matters to an existing agenda or a justified opportunity.
+- ### Choose
+
+Advance, delegate, ask for a necessary decision, wait on a dependency or dismiss noise.
+- ### Act and verify
+
+Execute within authority and inspect actual results. Reconcile an uncertain action before retrying.
+- ### Communicate and continue
+
+Bring back meaningful outcomes or blockers, preserve the next step and resume when conditions change.
+
+## A useful next step has context.
+
+Explore an illustrative assessment. This is an explanation of the operating design, not a live product demonstration.
+
+SignalA customer moves the review to Friday.
+
+Relevant contextThe delivery agenda already has a draft and an assigned owner.
+
+DecisionAdvance the existing work
+
+Next stepReview the draft, identify what needs updating and coordinate the owner. Ask for approval if a new external commitment is needed.
+
+ContinuityKeep the reviewed result, responsible owner and next dependency together.
+
+## One direction. Four connected parts.
+
+Company understanding
+
+### [HIVEMIND](https://singulancelabs.com/hivemind)
+
+The company Brain. Connect authorized knowledge, retain useful context and explore answers with their evidence.
+
+Anticipation and coordination
+
+### [SINGULANCE Runtime](https://singulancelabs.com/runtime)
+
+The AI Chief of Staff. Relate signals to priorities, coordinate specialists, review results and bring decisions back to you.
+
+Specialist work
+
+### [HyperAgents](https://singulancelabs.com/hyperagents)
+
+AI teammates with defined roles and persistent workspaces. Runtime coordinates assignments and reviews their results.
+
+Agent memory
+
+### [ICARUS](https://singulancelabs.com/icarus)
+
+The memory filesystem for AI agents. Explore the installation guide and the research behind durable agent context.
+
+## Questions, answered.
+
+What is proactive intelligence?
+
+Proactive intelligence is AI that notices what needs attention, connects it to your goals, plans the next useful step, and carries approved work forward with human oversight and a record of its actions.
+
+How is it different from a chatbot?
+
+A chatbot usually responds to a request. Proactive intelligence also assesses relevant changes against existing goals, chooses a justified next step and maintains continuity. It should ask for essential decisions and respect the authority already granted.
+
+Is it the same as an automated workflow?
+
+A workflow follows a defined sequence. Proactive intelligence adds contextual judgment about whether a change matters and which next step is useful. Defined workflows and deterministic approval checks can still carry out parts of that work.
+
+Does proactive mean acting without permission?
+
+No. Initiative does not grant authority. A signal can request assessment without authorizing an external action. Work remains subject to the permissions, approvals and connections enabled for the company.
+
+What does SINGULANCE build?
+
+SINGULANCE is building proactive intelligence: company memory, an AI Chief of Staff and specialist AI teammates that help carry work forward. HIVEMIND provides company context, Runtime coordinates work, HyperAgents perform specialist assignments, and ICARUS explores agent memory.
+
+Is every capability available to every account?
+
+No. SINGULANCE is in early access. Availability depends on account access, configured connections and permissions. The operating cycle on this page describes the design direction, not a guarantee that every scenario is production-verified.
+
+## Understand the company. Carry the work forward.
+
+Explore Runtime and the research behind the idea. Product access is reviewed during early access.
+
+[Explore SINGULANCE Runtime](https://runtime.singulancelabs.com/)
+
+[SINGULANCE](https://singulancelabs.com/about)[What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence)[Amar Sai Gadde](https://amar.singulancelabs.com/)[Research](https://singulancelabs.com/research)[Privacy](https://singulancelabs.com/privacy)[Security](https://singulancelabs.com/security)
+
+## Products and workspace
+
+- [HIVEMIND](https://singulancelabs.com/hivemind)
+- [TARA](https://singulancelabs.com/tara)
+- [HyperAgents](https://singulancelabs.com/hyperagents)
+- [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
+
+
+Canonical page: https://singulancelabs.com/proactive-intelligence
+
+---
+
+[Skip to content](#vi-main)
+
+[SINGULANCE](https://singulancelabs.com/)
+
+Company
+
+# SINGULANCE builds proactive intelligence.
+
+SINGULANCE is building proactive intelligence: company memory, an AI Chief of Staff and specialist AI teammates that help carry work forward.
+
+[Understand the idea](https://singulancelabs.com/proactive-intelligence)[Meet the Chief of Staff](https://getruntime.singulancelabs.com/)
+
+![Runtime, SINGULANCE’s computer-headed AI Chief of Staff](https://singulancelabs.com/assets/getruntime/portrait.webp)
+
+Company understanding. Continued momentum.
+
+## What is SINGULANCE?
+
+SINGULANCE brings together company knowledge, persistent agent work and human decisions. The aim is to make useful progress across a continuing agenda, with context and evidence carried from one step to the next.
+
+Our official public website is [singulancelabs.com](https://singulancelabs.com). The name is spelled SINGULANCE. References on this site identify this company, rather than similarly named businesses such as Singular or the separate domain singulance.com.
+
+Founded by [Amar Sai Gadde](https://amar.singulancelabs.com/). Explore our [research and methods](https://singulancelabs.com/research), [security information](https://singulancelabs.com/security) and [privacy policy](https://singulancelabs.com/privacy).
+
+## One direction. Four connected parts.
+
+Company understanding
+
+### [HIVEMIND](https://singulancelabs.com/hivemind)
+
+The company Brain. Connect authorized knowledge, retain useful context and explore answers with their evidence.
+
+Anticipation and coordination
+
+### [SINGULANCE Runtime](https://singulancelabs.com/runtime)
+
+The AI Chief of Staff. Relate signals to priorities, coordinate specialists, review results and bring decisions back to you.
+
+Specialist work
+
+### [HyperAgents](https://singulancelabs.com/hyperagents)
+
+AI teammates with defined roles and persistent workspaces. Runtime coordinates assignments and reviews their results.
+
+Agent memory
+
+### [ICARUS](https://singulancelabs.com/icarus)
+
+The memory filesystem for AI agents. Explore the installation guide and the research behind durable agent context.
+
+## Built with room for judgment.
+
+For teams evaluating AI in sensitive workflows, the practical questions matter: which data is connected, who can authorize an action, what evidence supports an outcome, and what happens when something is uncertain?
+
+Evaluate those questions against your own requirements. This page makes no certification or regulatory-compliance claim.
+
+[What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence)
+
+## Understand the company. Carry the work forward.
+
+Explore Runtime and the research behind the idea. Product access is reviewed during early access.
+
+[Explore SINGULANCE Runtime](https://runtime.singulancelabs.com/)
+
+[SINGULANCE](https://singulancelabs.com/about)[What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence)[Amar Sai Gadde](https://amar.singulancelabs.com/)[Research](https://singulancelabs.com/research)[Privacy](https://singulancelabs.com/privacy)[Security](https://singulancelabs.com/security)
+
+## Products and workspace
+
+- [HIVEMIND](https://singulancelabs.com/hivemind)
+- [TARA](https://singulancelabs.com/tara)
+- [HyperAgents](https://singulancelabs.com/hyperagents)
+- [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
+
+
+Canonical page: https://singulancelabs.com/about
+
+---
+
+[Skip to content](#vi-main)
+
+[SINGULANCE](https://singulancelabs.com/)
+
+Founder of SINGULANCE
+
+# Amar Sai Gadde
+
+Amar Sai Gadde is the founder of SINGULANCE, working on proactive AI and agent memory. His background spans Engineering Physics at IIT Mandi, an exchange at Leibniz Universität Hannover, robotics and embedded AI.
+
+[Contact SINGULANCE](mailto:enterprise@singulancelabs.com)[About the company](https://singulancelabs.com/about)
+
+![SINGULANCE company mark](https://singulancelabs.com/assets/brand/singulance-orbit.png)
+
+Building around a question: how can AI carry useful work forward with context and human control?
+
+## Founder, builder and systems thinker.
+
+Amar is building SINGULANCE around a practical question: how can AI retain useful context, recognise what needs attention and carry work forward with human control?
+
+His current work brings together [HIVEMIND company understanding](https://singulancelabs.com/hivemind), [Runtime’s Chief of Staff coordination](https://singulancelabs.com/runtime), specialist [HyperAgents](https://singulancelabs.com/hyperagents) and [ICARUS agent memory](https://singulancelabs.com/research/icarus). The focus is continuity: what an agent knows, what it is allowed to do, what it has completed and what should happen next.
+
+His professional background combines physics studies with hands-on work in autonomous systems, embedded AI, machine learning and full-stack software.
+
+## Professional experience
+
+### AI solutions development
+
+A working-student role at B&B Markenagentur GmbH in Hannover, focused on developing AI solutions.
+
+## Education and international experience
+
+### Indian Institute of Technology Mandi
+
+Engineering Physics studies at IIT Mandi, on a B.Tech programme with a 2023–2027 timeline. His technical work spans physics, AI, robotics and software systems.
+
+### Leibniz Universität Hannover
+
+Academic exchange in the Faculty of Mathematics and Physics during 2025–26, through the university partnership programme with IIT Mandi.
+
+## A background in building.
+
+Before and alongside SINGULANCE, Amar has worked across campus products, robotics and applied AI. These projects describe his technical background; they are separate from SINGULANCE’s current product offering.
+
+### Autonomous aerial robotics
+
+Worked on the Inter IIT Tech Meet 2024 Aerial Robotics Challenge, using PX4, MAVLink, ROS2 and Gazebo for autonomous navigation, mission planning and simulation.
+
+### Foodles
+
+Founded a campus food-ordering project at IIT Mandi, combining full-stack development, vendor integration and user outreach.
+
+### HAWK
+
+Worked on an edge-AI wildlife-threat detection project, using on-device computer vision and embedded hardware.
+
+### CrowdFlowAI
+
+Built a hackathon project exploring computer-vision-based people-flow monitoring and heatmap analytics.
+
+### EEG2Text
+
+Explored an EEG-to-text learning pipeline, including signal preprocessing, feature extraction and recurrent models.
+
+### ENIGMA
+
+Built an earlier context-aware AI assistant for scheduling and modular tasks. His earlier project portfolio also includes ENIGMA OS, an operating-system concept in development.
+
+## Technical leadership
+
+- Technical Co-Coordinator of the Robotronics Club: technical initiatives, mentoring, workshops and training sessions.
+- Core contributor to a Mars rover project team, working on software subsystems and web development.
+- Project Head for Project X, coordinating interdisciplinary prototypes across automation, AI and embedded systems.
+
+## Areas of work
+
+- Agent memory and contextual AI
+- Robotics and autonomous navigation
+- Embedded AI and hardware–software integration
+- Computer vision and natural language processing
+- Full-stack development with React and Node.js
+- Technical team coordination and product development
+
+Explore [SINGULANCE Research](https://singulancelabs.com/research) for published methods and their limitations, or [Amar’s LinkedIn profile](https://www.linkedin.com/in/amar-sai-3067aa1aa/) for his public professional activity.
+
+For company enquiries, contact [enterprise@singulancelabs.com](mailto:enterprise@singulancelabs.com).
+
+[What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence)
+
+## One direction. Four connected parts.
+
+Company understanding
+
+### [HIVEMIND](https://singulancelabs.com/hivemind)
+
+The company Brain. Connect authorized knowledge, retain useful context and explore answers with their evidence.
+
+Anticipation and coordination
+
+### [SINGULANCE Runtime](https://singulancelabs.com/runtime)
+
+The AI Chief of Staff. Relate signals to priorities, coordinate specialists, review results and bring decisions back to you.
+
+Specialist work
+
+### [HyperAgents](https://singulancelabs.com/hyperagents)
+
+AI teammates with defined roles and persistent workspaces. Runtime coordinates assignments and reviews their results.
+
+Agent memory
+
+### [ICARUS](https://singulancelabs.com/icarus)
+
+The memory filesystem for AI agents. Explore the installation guide and the research behind durable agent context.
+
+## Understand the company. Carry the work forward.
+
+Explore Runtime and the research behind the idea. Product access is reviewed during early access.
+
+[Explore SINGULANCE Runtime](https://runtime.singulancelabs.com/)
+
+[SINGULANCE](https://singulancelabs.com/about)[What is proactive intelligence?](https://singulancelabs.com/proactive-intelligence)[Amar Sai Gadde](https://amar.singulancelabs.com/)[Research](https://singulancelabs.com/research)[Privacy](https://singulancelabs.com/privacy)[Security](https://singulancelabs.com/security)
+
+## Products and workspace
+
+- [HIVEMIND](https://singulancelabs.com/hivemind)
+- [TARA](https://singulancelabs.com/tara)
+- [HyperAgents](https://singulancelabs.com/hyperagents)
+- [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
+
+
+Canonical page: https://amar.singulancelabs.com/
 
 ---
 
@@ -252,7 +596,7 @@ Beyond the horizon of intelligence.
 - [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
 
 
-Canonical page: https://singulancelabs.com/icarus
+Canonical page: https://icarus.singulancelabs.com/
 
 ---
 
@@ -385,7 +729,7 @@ From [SINGULANCE](https://singulancelabs.com) © 2026
 - [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
 
 
-Canonical page: https://singulancelabs.com/getruntime
+Canonical page: https://getruntime.singulancelabs.com/
 
 ---
 
@@ -586,7 +930,7 @@ RUNTIME[© 2026 SINGULANCE](https://singulancelabs.com)INTELLIGENCE WITH CONTINU
 - [Open your workspace](https://next.singulancelabs.com/hivemind/login) — company conversations, traces and artifacts require sign-in and authorization.
 
 
-Canonical page: https://singulancelabs.com/runtime
+Canonical page: https://runtime.singulancelabs.com/
 
 ---
 
@@ -1114,6 +1458,9 @@ SINGULANCE / 2026
 
 ### Company
 
+- [About SINGULANCE](https://singulancelabs.com/about)
+- [Proactive intelligence](https://singulancelabs.com/proactive-intelligence)
+- [Amar Sai Gadde](https://singulancelabs.com/amar-sai-gadde)
 - [Contact](mailto:enterprise@singulancelabs.com)
 - [Talk to founder](https://cal.com/amar-sai-gadde-eluoct/30min)
 

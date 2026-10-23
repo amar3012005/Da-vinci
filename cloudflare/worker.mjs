@@ -6,6 +6,7 @@ export { ComposioAccount } from './composio-account.mjs';
 import { proxyConnectorTransport } from './connector-transport.mjs';
 import { handleModeAccess, gateWorkspaceDocument, proxyPlatformAdmin } from './account-mode-access.mjs';
 export { AccountModeAccess } from './account-mode-access.mjs';
+import { amarPublic } from './amar-public.mjs';
 import { getRuntimePublic } from './getruntime-public.mjs';
 import { icarusPublic } from './icarus-public.mjs';
 import { workspaceDocumentRedirect } from '../src/components/hivemind/app/shared/workspace-authority.mjs';
@@ -532,6 +533,9 @@ export default {
     }
     const openDotResponse = await proxyRuntimeOpenDot(request);
     if (openDotResponse) return openDotResponse;
+    const founderCover = await amarPublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
+    if (founderCover) return founderCover;
+    if (['singulancelabs.com','www.singulancelabs.com'].includes(url.hostname) && /^\/amar-sai-gadde(?:\/|$)/.test(url.pathname) && ['GET','HEAD'].includes(request.method)) return Response.redirect('https://amar.singulancelabs.com/' + (/index\.(md|txt)$/.test(url.pathname) ? 'index.md' : ''), 308);
     const icarusCover = await icarusPublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
     if (icarusCover) return icarusCover;
     const runtimeCover = await getRuntimePublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
