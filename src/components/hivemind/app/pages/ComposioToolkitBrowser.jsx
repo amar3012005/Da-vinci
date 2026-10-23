@@ -47,6 +47,23 @@ function isSelfServeConnectable(toolkit) {
 
 const REQUEST_ACCESS_EMAIL = 'connectors@singulancelabs.com';
 
+// Composio "Instant Apps": work straight away with no sign-in (same list as
+// the OpenDots Apps directory).
+const INSTANT_TOOLKITS = ['serpapi', 'firecrawl', 'tavily', 'exa', 'elevenlabs', 'peopledatalabs'];
+
+function CategoryRow({ label, count, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[12.5px] transition-colors ${active ? 'bg-[#f3f1ec] text-[#0a0a0a]' : 'text-[#525252] hover:bg-[#faf9f4] hover:text-[#0a0a0a]'}`}
+    >
+      <span className="flex-1 truncate">{label}</span>
+      <span className="font-mono text-[11px] text-[#a3a3a3]">{count.toLocaleString()}</span>
+    </button>
+  );
+}
+
 // Slack connects through HIVEMIND's own native OAuth (real Slack app,
 // real bot token) rather than Composio's connect flow — Composio's
 // connected_accounts API masks the real bot token, which breaks @mention
@@ -250,6 +267,9 @@ export default function ComposioToolkitBrowser() {
   });
 
   const [query, setQuery] = useState(() => returnParams?.toolkit || '');
+  const [tab, setTab] = useState('all');
+  const [sort, setSort] = useState('popular');
+  const [category, setCategory] = useState(null);
   const [toolkits, setToolkits] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [totalItems, setTotalItems] = useState(0);
@@ -371,15 +391,32 @@ export default function ComposioToolkitBrowser() {
     }
   }, []);
 
-  // Connected apps (real per-org state from the server, or the optimistic
-  // just-connected flip) float to the top of whatever's currently loaded —
-  // a stable sort so the rest of the order (Composio's own relevance/search
-  // ranking) doesn't shuffle every re-render.
-  const sortedToolkits = [...toolkits].sort((a, b) => {
-    const aConnected = a.connected || connectedSlugs[a.slug] === 'connected';
-    const bConnected = b.connected || connectedSlugs[b.slug] === 'connected';
-    return (bConnected ? 1 : 0) - (aConnected ? 1 : 0);
+  const isConnected = (t) => Boolean(t.connected || connectedSlugs[t.slug] === 'connected');
+  const isInstant = (t) => INSTANT_TOOLKITS.includes(t.slug);
+
+  // Tab + category narrow the loaded pool; the connected-first order stays
+  // stable so Composio's own relevance ranking isn't reshuffled on re-render.
+  const pool = toolkits.filter((t) => {
+    if (tab === 'connected' && !isConnected(t)) return false;
+    if (tab === 'instant' && !isInstant(t)) return false;
+    return true;
   });
+  const categoryCounts = new Map();
+  for (const t of pool) for (const c of t.categories || []) categoryCounts.set(c, (categoryCounts.get(c) || 0) + 1);
+  const categoryList = [...categoryCounts.entries()].sort((a, b) => b[1] - a[1]);
+  const filtered = category ? pool.filter((t) => (t.categories || []).includes(category)) : pool;
+  const sortedToolkits = [...filtered].sort((a, b) => {
+    if (sort === 'tools') return (b.toolsCount || 0) - (a.toolsCount || 0);
+    if (sort === 'az') return (a.name || '').localeCompare(b.name || '');
+    return (isConnected(b) ? 1 : 0) - (isConnected(a) ? 1 : 0);
+  });
+  const connectedCount = toolkits.filter(isConnected).length;
+  const instantCount = toolkits.filter(isInstant).length;
+  const TABS = [
+    ['all', 'All', toolkits.length],
+    ['connected', 'Connected', connectedCount],
+    ['instant', 'Instant', instantCount],
+  ];
 
   return (
     <div>
@@ -389,31 +426,84 @@ export default function ComposioToolkitBrowser() {
         </h2>
       </div>
 
-      <div className="relative mb-3">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search toolkits — Perplexity, SerpApi, Airtable, Firecrawl..."
-          className="w-full pl-9 pr-3 py-2 rounded-md border border-[#e3e0db] bg-white text-[13px] text-[#0a0a0a] placeholder-[#c4c1bb] outline-none focus:border-[#117dff]/40"
-        />
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <div className="flex h-9 items-stretch rounded-md bg-[#f3f1ec] p-0.5">
+          {TABS.map(([id, label, count]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              aria-pressed={tab === id}
+              className={`flex items-center gap-2 rounded-[5px] px-3 text-[13px] transition-colors ${tab === id ? 'bg-white shadow-sm text-[#0a0a0a]' : 'text-[#737373] hover:text-[#0a0a0a]'}`}
+            >
+              {label}
+              <span className="rounded px-1.5 font-mono text-[10px] leading-4 bg-black/[0.05] text-[#737373]">{count.toLocaleString()}</span>
+            </button>
+          ))}
+        </div>
+        <div className="relative flex-1 min-w-[200px] sm:max-w-[340px] sm:ml-auto">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search toolkits — Perplexity, SerpApi, Airtable, Firecrawl..."
+            className="w-full pl-9 pr-3 py-2 rounded-md border border-[#e3e0db] bg-white text-[13px] text-[#0a0a0a] placeholder-[#c4c1bb] outline-none focus:border-[#117dff]/40"
+          />
+        </div>
       </div>
 
       {error && <p className="mb-3 text-[12px] text-red-600">{error}</p>}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {sortedToolkits.map((toolkit) => (
-          <ToolkitCard
-            key={toolkit.slug}
-            toolkit={toolkit}
-            onConnect={handleConnect}
-            onDisconnect={handleDisconnect}
-            onOpenDetail={setDetailToolkit}
-            connecting={connectingSlug === toolkit.slug}
-            disconnecting={disconnectingSlug === toolkit.slug}
-            connectResult={connectedSlugs[toolkit.slug]}
-          />
-        ))}
+      <div className="grid gap-6 lg:grid-cols-[1fr_260px] items-start">
+        <div className="min-w-0">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {sortedToolkits.map((toolkit) => (
+              <ToolkitCard
+                key={toolkit.slug}
+                toolkit={toolkit}
+                onConnect={handleConnect}
+                onDisconnect={handleDisconnect}
+                onOpenDetail={setDetailToolkit}
+                connecting={connectingSlug === toolkit.slug}
+                disconnecting={disconnectingSlug === toolkit.slug}
+                connectResult={connectedSlugs[toolkit.slug]}
+              />
+            ))}
+          </div>
+          {!loading && sortedToolkits.length === 0 && (
+            <p className="py-10 text-center text-[12.5px] text-[#a3a3a3]">No toolkits match.</p>
+          )}
+        </div>
+
+        <aside className="space-y-4 lg:sticky lg:top-6">
+          <section className="rounded-md border border-[#e3e0db] bg-white overflow-hidden">
+            <div className="border-b border-[#e3e0db] px-4 py-3 text-[13px] font-medium text-[#0a0a0a]">Filter &amp; Sort</div>
+            <div className="p-3 space-y-2">
+              <label className="flex h-10 items-center justify-between rounded-md bg-[#faf9f4] px-3 text-[12.5px]">
+                <span className="text-[#737373]">Sort</span>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  className="appearance-none bg-transparent pr-2 text-right text-[#0a0a0a] outline-none"
+                >
+                  <option value="popular">Connected first</option>
+                  <option value="tools">Most tools</option>
+                  <option value="az">A–Z</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section className="rounded-md border border-[#e3e0db] bg-white overflow-hidden">
+            <div className="border-b border-[#e3e0db] px-4 py-3 text-[13px] font-medium text-[#0a0a0a]">Categories</div>
+            <div className="max-h-[420px] overflow-y-auto p-2 space-y-px">
+              <CategoryRow label="All" count={pool.length} active={!category} onClick={() => setCategory(null)} />
+              {categoryList.map(([c, n]) => (
+                <CategoryRow key={c} label={c} count={n} active={category === c} onClick={() => setCategory(c)} />
+              ))}
+            </div>
+          </section>
+        </aside>
       </div>
 
       {detailToolkit && (
