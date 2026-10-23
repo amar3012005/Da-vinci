@@ -56,3 +56,13 @@ test('shows one accessible retry screen instead of staying blank after a repeate
   browserWindow.document.querySelector('button').click();
   expect(browserWindow.location.reload).toHaveBeenCalledTimes(1);
 });
+
+test('duplicate errors during the same reload do not cover the page with a recovery panel', () => {
+ const browserWindow = fakeWindow();
+ browserWindow.document = document.implementation.createHTMLDocument('Recovery');
+ installChunkLoadRecovery(browserWindow, () => 100_000);
+ browserWindow.listeners.error({reason:new Error('ChunkLoadError')});
+ browserWindow.listeners.unhandledrejection({reason:new Error('ChunkLoadError')});
+ expect(browserWindow.location.reload).toHaveBeenCalledTimes(1);
+ expect(browserWindow.document.querySelector('[role="alert"]')).toBeNull();
+});

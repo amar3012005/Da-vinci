@@ -35,7 +35,10 @@ function showRecovery(browserWindow) {
 }
 
 export function installChunkLoadRecovery(browserWindow = window, now = () => Date.now()) {
+  let reloadRequested = false;
   const recover = (event) => {
+    // Multiple script/rejection events from one failed download are one recovery.
+    if (reloadRequested) return;
     if (!isChunkLoadFailure(event)) return;
 
     const timestamp = now();
@@ -48,6 +51,7 @@ export function installChunkLoadRecovery(browserWindow = window, now = () => Dat
       browserWindow.__hmChunkReloadAttempted = true;
     }
 
+    reloadRequested = true;
     browserWindow.location.reload();
   };
 

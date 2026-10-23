@@ -1,3 +1,4 @@
+import { proxyRuntimeBootstrap } from './runtime-bootstrap.mjs';
 import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot } from './runtime-open-dot.mjs';
 import { edgeCachedNativeCode, runtimeNativeAsset } from './runtime-native-assets.mjs';
 import { handleComposioAccount } from './composio-account.mjs';
@@ -512,6 +513,8 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const bootstrapResponse = await proxyRuntimeBootstrap(request);
+    if (bootstrapResponse) return bootstrapResponse;
     const composioAccountResponse = await handleComposioAccount(request, env);
     if (composioAccountResponse) return composioAccountResponse;
     const connectorResponse = await proxyConnectorTransport(request);
