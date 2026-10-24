@@ -1,0 +1,4 @@
+/* Loading placeholder shared by Company HQ and the Library; still under reduced motion. */
+.hm-skeleton { background:linear-gradient(90deg, #efede7 0%, #f6f4ef 45%, #efede7 90%); background-size:200% 100%; animation:hm-skeleton-shimmer 1.4s ease-in-out infinite; }
+@keyframes hm-skeleton-shimmer { 0% { background-position:100% 0; } 100% { background-position:-100% 0; } }
+@media (prefers-reduced-motion:reduce) { .hm-skeleton { animation:none; } }

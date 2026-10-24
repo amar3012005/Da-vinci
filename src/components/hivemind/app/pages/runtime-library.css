@@ -1,0 +1,23 @@
+/* Library gallery: column count follows the available width, not the viewport,
+   so the grid stays balanced beside the HyperAgents sidebar. */
+.hm-library-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(156px, 1fr)); gap:12px; }
+@media (min-width:640px) { .hm-library-grid { grid-template-columns:repeat(auto-fill, minmax(188px, 1fr)); gap:16px; } }
+/* Off-screen rows skip layout and paint until scrolled near. */
+.hm-library-item { content-visibility:auto; contain-intrinsic-size:auto 248px; }
+li.hm-library-item:not(.group) { contain-intrinsic-size:auto 60px; }
+.hm-library-chips { scrollbar-width:none; }
+.hm-library-chips::-webkit-scrollbar { display:none; }
+/* Card actions appear on hover or keyboard focus; touch screens always show them. */
+.hm-library-card-actions { opacity:0; transition:opacity .12s ease; }
+.hm-library-item:hover .hm-library-card-actions, .hm-library-item:focus-within .hm-library-card-actions { opacity:1; }
+/* Touch screens show the actions on the meta row, clear of the thumbnail. */
+@media (hover:none) {
+  .hm-library-card-actions { opacity:1; top:auto; bottom:4px; right:4px; background:transparent; box-shadow:none; }
+  .hm-library-meta { padding-right:80px; }
+}
+.hm-library-spin { animation:hm-library-spin 1s linear infinite; }
+@keyframes hm-library-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) {
+  .hm-library-spin { animation:none; }
+  .hm-library-card-actions { transition:none; }
+}
