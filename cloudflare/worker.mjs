@@ -2,6 +2,8 @@ import { proxyRuntimeBootstrap } from './runtime-bootstrap.mjs';
 import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot } from './runtime-open-dot.mjs';
 import { edgeCachedNativeCode, runtimeNativeAsset } from './runtime-native-assets.mjs';
 import { handleComposioAccount } from './composio-account.mjs';
+import { withLocaleCacheHeaders } from './locale-cache.mjs';
+import { isStaticBuildAsset, matchBuildAsset, storeBuildAsset } from './build-asset-cache.mjs';
 export { ComposioAccount } from './composio-account.mjs';
 import { proxyConnectorTransport } from './connector-transport.mjs';
 import { handleModeAccess, gateWorkspaceDocument, proxyPlatformAdmin } from './account-mode-access.mjs';
@@ -489,13 +491,19 @@ async function mobileLandingFlagResponse(request, env) {
 
 // Fixed-origin Apps transport. The browser stays on Runtime; Dot authenticates
 // the original company session. No arbitrary upstream or tenant headers.
-async function proxyRuntimeApps(request) {
+async function proxyRuntimeApps(request, ctx) {
   const url = new URL(request.url);
   const api = url.pathname.startsWith('/api/');
   const reply = (error, status) => Response.json({error}, {status, headers:{'cache-control':'private, no-store'}});
   const origin = request.headers.get('origin');
   if (origin && origin !== url.origin) return reply('origin_denied',403);
   if (!['GET','HEAD'].includes(request.method) && !(url.pathname === '/api/hivemind/apps' && request.method === 'POST')) return reply('method_not_allowed',405);
+  // Public, content-hashed build assets are served from the edge cache before any session check.
+  const staticBuild = isStaticBuildAsset(request);
+  if (staticBuild) {
+    const cached = await matchBuildAsset(request, caches.default);
+    if (cached) return cached;
+  }
   const cookie = (request.headers.get('cookie') || '').split(';').map(v=>v.trim()).find(v=>v.startsWith('hm_cp_session='));
   if (!cookie) return reply('authentication_required',401);
   const headers = new Headers({cookie, accept:request.headers.get('accept') || '*/*'});
@@ -508,6 +516,7 @@ async function proxyRuntimeApps(request) {
     const output=new Headers(response.headers); output.delete('set-cookie');
     output.set('cache-control',api || url.pathname === '/apps' ? 'private, no-store' : 'private, max-age=31536000, immutable');
     if(response.status>=300 && response.status<400) return reply('apps_redirect_denied',502);
+    if (staticBuild) return storeBuildAsset(request, response, ctx, caches.default);
     return new Response(response.body,{status:response.status,headers:output});
   } catch { return reply('apps_temporarily_unavailable',502); }
 }
@@ -568,7 +577,7 @@ export default {
       if (pathname === '/apps' && ['GET','HEAD'].includes(request.method)) {
         url.pathname='/hivemind/app/employee/apps'; return Response.redirect(url.href,302);
       }
-      if (pathname.startsWith('/_next/') || pathname.startsWith('/shared-hyperagent-shell/') || ['/api/hivemind/apps','/api/hivemind/workspace-shell','/api/events'].includes(pathname) || /^\/api\/apps\/[a-zA-Z0-9_-]+$/.test(pathname)) return proxyRuntimeApps(request);
+      if (pathname.startsWith('/_next/') || pathname.startsWith('/shared-hyperagent-shell/') || ['/api/hivemind/apps','/api/hivemind/workspace-shell','/api/events'].includes(pathname) || /^\/api\/apps\/[a-zA-Z0-9_-]+$/.test(pathname)) return proxyRuntimeApps(request, ctx);
     }
     if (['/api/hivemind/employees/status', '/api/hivemind/employees/create'].includes(pathname)) {
       return proxyEmployeeRegistry(request);
@@ -837,7 +846,7 @@ export default {
     const assetRequest = appDocument
       ? new Request(new URL('/', request.url), request)
       : request;
-    let response = await env.ASSETS.fetch(assetRequest);
+    let response = withLocaleCacheHeaders(await env.ASSETS.fetch(assetRequest), pathname);
     if (isDavinciPublicAsset(pathname) && isHtml(response)) {
       return new Response('Asset not found', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
     }

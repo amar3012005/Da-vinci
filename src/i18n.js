@@ -166,6 +166,17 @@ const runtimeAutoTranslate = {
   },
 };
 
+/**
+ * Namespaces needed before the first paint of a route. `common` always loads;
+ * app routes add `dashboard`. Other namespaces (for example `landing`) load
+ * when a component calls `useTranslation(ns)`.
+ * @param {string} pathname - URL pathname of the current document.
+ * @returns {string[]} namespaces to load for the route, excluding the always-loaded `common`.
+ */
+export function namespacesForPath(pathname) {
+  return /^\/hivemind\/(?:app|m)(?:\/|$)/u.test(pathname || '') ? ['dashboard'] : [];
+}
+
 i18n
   .use(HttpBackend)
   .use(LanguageDetector)
@@ -177,7 +188,7 @@ i18n
     supportedLngs: SUPPORTED_LANGUAGES.map((l) => l.code),
     nonExplicitSupportedLngs: true,
     load: 'languageOnly',
-    ns: ['common', 'dashboard', 'landing'],
+    ns: ['common'],
     defaultNS: 'common',
     backend: {
       loadPath: process.env.REACT_APP_SHARED_SHELL_LOCALES || '/locales/{{lng}}/{{ns}}.json',
@@ -202,5 +213,9 @@ function applyDirection(lng) {
 }
 i18n.on('languageChanged', applyDirection);
 applyDirection(i18n.language);
+if (typeof window !== 'undefined') {
+  const routeNamespaces = namespacesForPath(window.location.pathname);
+  if (routeNamespaces.length) i18n.loadNamespaces(routeNamespaces);
+}
 
 export default i18n;

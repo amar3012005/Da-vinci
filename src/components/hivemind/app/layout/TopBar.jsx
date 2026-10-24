@@ -8,6 +8,7 @@ import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import apiClient from '../shared/api-client';
+import { readBootCache, writeBootCache } from '../shared/boot-cache';
 
 const pageTitles = {
   '/hivemind/app/overview/dreaming': 'Dreaming',
@@ -158,21 +159,28 @@ const PAGE_PREFIXES = [
 export default function TopBar({ activeSection = 'hivemind', onSectionChange, mobileTeamToggle = null, floatingMobile = false }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { org } = useAuth();
+  const { org, user } = useAuth();
   const healthy = useHealthStatus();
-  const [organizationEmployees, setOrganizationEmployees] = useState([]);
+  // Paint the last roster for this tenant at once; the read below replaces it.
+  const [organizationEmployees, setOrganizationEmployees] = useState(() => {
+    const cached = readBootCache(org?.id, user?.id, 'employees')?.value;
+    return Array.isArray(cached) ? cached : [];
+  });
 
   useEffect(() => {
     let cancelled = false;
     apiClient.listEmployees()
       .then((payload) => {
-        if (!cancelled) setOrganizationEmployees(normalizeEmployees(payload));
+        if (cancelled) return;
+        const roster = normalizeEmployees(payload);
+        setOrganizationEmployees(roster);
+        writeBootCache(org?.id, user?.id, 'employees', roster);
       })
       .catch(() => {
         // The switcher remains usable with deterministic Humation fallbacks.
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [org?.id, user?.id]);
 
   const pagePath = pageTitles[location.pathname]
     ? location.pathname

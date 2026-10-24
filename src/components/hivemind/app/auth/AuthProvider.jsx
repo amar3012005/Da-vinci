@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import apiClient from '../shared/api-client';
 import posthog, { isPostHogEnabled } from '../../../../analytics/posthog';
 import { setStorageUser, clearUserScopedStorage } from '../shared/user-storage';
+import { clearBootCache, rememberTenant } from '../shared/boot-cache';
 import { defaultAuthReturnUrl } from './mobile-routing';
 import { isNativeApp } from '../shared/native-app';
 import { bindNativeTouchFeedback } from '../shared/native-haptics';
@@ -76,10 +77,14 @@ export function AuthProvider({ children }) {
 
   const bootstrapAttempted = useRef(false);
   const activeTenantRef = useRef(null);
+  const authStateRef = useRef('loading');
+  useEffect(() => { authStateRef.current = authState; }, [authState]);
   const location = useLocation();
 
   const runBootstrap = useCallback(async () => {
-    setAuthState('loading');
+    // A background refresh keeps a signed-in tree mounted; resetting to
+    // 'loading' would unmount the workspace and remount its iframe and panes.
+    if (authStateRef.current !== 'signed_in') setAuthState('loading');
     setConnectionFailure(null);
     if (isNativeApp()) { setUser(null); setOrg(null); setOnboarding(null); }
 
@@ -98,6 +103,7 @@ export function AuthProvider({ children }) {
       setClientSupport(data.client_support || []);
 
       if (data.authenticated === false || !data.user) {
+        clearBootCache();
         if (activeTenantRef.current) window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
         activeTenantRef.current = null;
         setUser(null);
@@ -115,6 +121,7 @@ export function AuthProvider({ children }) {
         const nextTenant = `${data.organization?.id || ''}:${data.user?.id || ''}`;
         if (activeTenantRef.current && activeTenantRef.current !== nextTenant) window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
         activeTenantRef.current = nextTenant;
+        rememberTenant(data.organization?.id, data.user?.id);
         if (data.organization?.id) {
           try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         }
