@@ -13,6 +13,7 @@ import { icarusPublic } from './icarus-public.mjs';
 import { workspaceDocumentRedirect } from '../src/components/hivemind/app/shared/workspace-authority.mjs';
 import { proxyModelConnection } from './model-connection.mjs';
 import { proxyRuntimeRecovery } from './runtime-recovery.mjs';
+import { runnerRequestHeaders } from './runner-headers.mjs';
 import runtimeAppsCatalog from '../src/components/hivemind/app/pages/runtime-apps/apps.json' with { type: 'json' };
 import runtimeAppsStyles from '../src/components/hivemind/app/pages/runtime-apps/styles.js';
 import { agentDiscoveryResponse, isAgentDiscovery, markdownResponse, prefersMarkdown } from './agent-readiness.mjs';
@@ -230,14 +231,14 @@ async function proxyHarnessRunner(request, env) {
     env = { ...env, HARNESS_CHAT: undefined, RUNNER_ORIGIN: env.RUNTIME_RUNNER_ORIGIN };
   }
   if (env.HARNESS_CHAT && typeof env.HARNESS_CHAT.fetch === 'function') {
-    return env.HARNESS_CHAT.fetch(request);
+    return env.HARNESS_CHAT.fetch(new Request(request, { headers: runnerRequestHeaders(request), ...(request.body ? { duplex: 'half' } : {}) }));
   }
   if (!env.RUNNER_ORIGIN) {
     return Response.json({ error: 'runner_unavailable' }, { status: 503, headers: { 'cache-control': 'no-store' } });
   }
   const incoming = new URL(request.url);
   const target = new URL(`${incoming.pathname}${incoming.search}`, env.RUNNER_ORIGIN);
-  const headers = new Headers(request.headers);
+  const headers = runnerRequestHeaders(request);
   headers.set('x-forwarded-host', incoming.host);
   headers.set('x-forwarded-proto', incoming.protocol.slice(0, -1));
   // The runner verifies the public authority supplied by its configured proxy.
@@ -246,7 +247,7 @@ async function proxyHarnessRunner(request, env) {
   return fetch(new Request(target, {
     method: request.method,
     headers,
-    body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+    ...(request.method === 'GET' || request.method === 'HEAD' ? {} : { body: request.body, duplex: 'half' }),
     credentials: 'include',
     redirect: 'manual',
   }));
