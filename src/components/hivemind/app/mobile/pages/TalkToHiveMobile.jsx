@@ -71,6 +71,7 @@ import { useTeamContext } from '../../shared/team-context';
 import { MeetingNotesPromo, useQuickRecorder } from '../../shared/QuickRecorderProvider';
 import PwaInstall from '../../shared/PwaInstall';
 import { useAuth } from '../../auth/AuthProvider';
+import { isTrustedReportMessage } from '../../shared/research-save-bridge.mjs';
 import {
   buildToolkitSuggestions,
   composeToolkitPrompt,
@@ -388,10 +389,10 @@ export default function TalkToHiveMobile() {
   useEffect(() => {
     const handler = async (e) => {
       const d = e.data || {};
-      if (d.type !== 'hm-save-research' || !d.jobId) return;
+      if (d.type !== 'hm-save-research' || !d.jobId || !isTrustedReportMessage(e, window.location.origin)) return;
       const job = jobsByIdRef.current[d.jobId];
       const result = job && Array.isArray(job.results) ? job.results[0] : null;
-      const reply = (msg) => { try { e.source?.postMessage({ type: 'hm-save-result', jobId: d.jobId, scopeLabel: d.scopeLabel, ...msg }, '*'); } catch { /* tab closed */ } };
+      const reply = (msg) => { try { e.source?.postMessage({ type: 'hm-save-result', jobId: d.jobId, scopeLabel: d.scopeLabel, ...msg }, window.location.origin); } catch { /* tab closed */ } };
       if (!job || !result) { reply({ ok: false, error: 'report not found' }); return; }
       try {
         await apiClient.saveResearchAsMemory({
