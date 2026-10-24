@@ -61,3 +61,17 @@ test('Runtime retains its owner and arbitrary Brain origins are rejected', async
   assert.equal((await proxyModelConnection(new Request('https://next.singulancelabs.com/api/hivemind/model-connection/status',{headers}),{RUNNER_ORIGIN:'https://attacker.example'})).status,503);
  } finally {globalThis.fetch=previous;}
 });
+test('Runtime Dark mode switch is forwarded as same-origin JSON; OpenRouter has no Dark mode action', async () => {
+ const previous=globalThis.fetch;let forwarded;
+ globalThis.fetch=async(url,options)=>{forwarded={url:new URL(url),method:options.method,body:new TextDecoder().decode(options.body)};return Response.json({dark_mode:{eligible:true,enabled:true}});};
+ try {
+  const origin='https://runtime-runner.singulancelabs.com';
+  const response=await proxyModelConnection(new Request(origin+'/api/hivemind/model-connection/dark-mode',{method:'POST',headers:{origin,cookie:'hm_cp_session=member','content-type':'application/json'},body:JSON.stringify({enabled:true})}),{});
+  assert.equal(response.status,200);
+  assert.equal(forwarded.url.href,'https://runtime-runner-origin.singulancelabs.com/api/hivemind/model-connection/dark-mode');
+  assert.equal(forwarded.method,'POST');assert.equal(forwarded.body,'{"enabled":true}');
+  assert.equal((await proxyModelConnection(new Request(origin+'/api/hivemind/model-connection/dark-mode',{method:'POST',headers:{origin:'https://attacker.example',cookie:'hm_cp_session=member','content-type':'application/json'},body:'{}'}),{})).status,403);
+  assert.equal((await proxyModelConnection(new Request(origin+'/api/hivemind/model-connection/dark-mode',{headers:{cookie:'hm_cp_session=member'}}),{})).status,405);
+  assert.equal((await proxyModelConnection(new Request(origin+'/api/hivemind/model-connection/openrouter/dark-mode',{method:'POST',headers:{origin,cookie:'hm_cp_session=member','content-type':'application/json'},body:'{}'}),{})).status,404);
+ } finally {globalThis.fetch=previous;}
+});
