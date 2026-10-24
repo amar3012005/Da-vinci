@@ -48,6 +48,14 @@ test('runner headers keep the allowlist and drop spoofed tenant and forwarding h
   assert.equal(runnerRequestHeaders(new Request(origin, { headers: spoofed })).get('x-forwarded-for'), null);
 });
 
+test('runner headers keep a service call tenant only beside a bearer credential', () => {
+  const service = { 'x-hivemind-tenant-id': '00000000-0000-4000-8000-000000000000', 'x-hivemind-trigger-id': 'trigger-1', 'x-hivemind-occurrence-id': 'occ-1' };
+  const withBearer = runnerRequestHeaders(new Request(`${origin}/hivemind/dreamer/trigger`, { method: 'POST', headers: { ...service, authorization: 'Bearer dispatch-token' }, body: '{}' }));
+  for (const [name, value] of Object.entries(service)) assert.equal(withBearer.get(name), value, name);
+  const fromBrowser = runnerRequestHeaders(new Request(`${origin}/hivemind/dreamer/trigger`, { method: 'POST', headers: { ...service, cookie: 'dsh-auth-main=v' }, body: '{}' }));
+  for (const name of Object.keys(service)) assert.equal(fromBrowser.get(name), null, name);
+});
+
 test('runner proxy forwards only allowlisted headers on both transports', async () => {
   const request = () => new Request(`${origin}/api/commands/list`, {
     method: 'POST', headers: { ...spoofed, cookie: 'dsh-auth-main=v; hm_harness_admitted=1', origin, 'content-type': 'application/json' }, body: '{}',

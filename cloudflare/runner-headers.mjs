@@ -16,6 +16,9 @@ const RUNNER_REQUEST_HEADERS = [
   'cf-connecting-ip',
 ];
 
+/** Tenant and occurrence headers of bearer-authenticated service calls to the runner. */
+const SERVICE_CALL_HEADERS = ['x-hivemind-tenant-id', 'x-hivemind-trigger-id', 'x-hivemind-occurrence-id'];
+
 /**
  * Builds runner request headers from the forwarding allowlist.
  * `x-forwarded-for` is derived from Cloudflare's `cf-connecting-ip`, never copied from the client;
@@ -28,6 +31,14 @@ export function runnerRequestHeaders(request) {
   for (const name of RUNNER_REQUEST_HEADERS) {
     const value = request.headers.get(name);
     if (value !== null) headers.set(name, value);
+  }
+  // Service calls (for example the dreamer trigger) name their tenant and occurrence in headers. The runner trusts them only
+  // together with its dispatch bearer, so forward them only beside a Bearer credential; browser requests never carry them.
+  if (/^Bearer\s+\S/u.test(request.headers.get('authorization') ?? '')) {
+    for (const name of SERVICE_CALL_HEADERS) {
+      const value = request.headers.get(name);
+      if (value !== null) headers.set(name, value);
+    }
   }
   const clientIp = request.headers.get('cf-connecting-ip');
   if (clientIp) headers.set('x-forwarded-for', clientIp);
