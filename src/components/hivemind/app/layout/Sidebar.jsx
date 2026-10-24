@@ -176,6 +176,7 @@ async function runtimeReviewDecisions(scope, signal) {
   } catch { return undefined; }
 }
 
+const TEAM_RETRY_DELAYS_MS = [250, 1000, 2000, 4000, 8000, 15000, 30000];
 export default function Sidebar({
   activeSection = 'hivemind',
   collapsed = false,
@@ -317,8 +318,11 @@ export default function Sidebar({
         setTeamLoadError(false);
       } catch {
         if (controller.signal.aborted || teamScope.current !== scope) return;
-        setTeamLoadError(true);
-        if (++attempts < 3) retryTimer = setTimeout(load, attempts === 1 ? 250 : 1000);
+        // A Runtime or HyperAgent restart takes up to a minute: keep retrying across it and only
+        // report the failure once brief blips are ruled out.
+        attempts += 1;
+        if (attempts >= 3) setTeamLoadError(true);
+        if (attempts <= TEAM_RETRY_DELAYS_MS.length) retryTimer = setTimeout(load, TEAM_RETRY_DELAYS_MS[attempts - 1]);
       }
     };
     const refresh = () => { clearTimeout(retryTimer); attempts = 0; forceRefresh = true; load(); };
