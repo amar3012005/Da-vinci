@@ -53,3 +53,16 @@ test('renders nothing where the Runtime dial endpoint does not exist', async () 
   await waitFor(() => expect(fetcher).toHaveBeenCalled());
   expect(container).toBeEmptyDOMElement();
 });
+
+test('Escape cancels the confirmation without saving or reaching the drawer behind it', async () => {
+  const fetcher = setup();
+  const drawerKey = jest.fn();
+  document.addEventListener('keydown', drawerKey);
+  await screen.findByText('2/4 · Prepare');
+  move(1);
+  fireEvent.keyDown(await screen.findByRole('dialog'), { key: 'Escape' });
+  document.removeEventListener('keydown', drawerKey);
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(drawerKey).not.toHaveBeenCalled();
+  expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
+});

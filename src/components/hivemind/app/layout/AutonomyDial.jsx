@@ -110,7 +110,8 @@ export default function AutonomyDial({ collapsed = false, fetcher = (...args) =>
     </div>
     {notice && <p className="ha-autonomy-notice" role="status">{notice}</p>}
     {pending !== null && createPortal(<div className="ha-autonomy-overlay" role="presentation" onClick={() => { if (!saving) setPending(null); }}>
-      <div className="ha-autonomy-confirm" role="dialog" aria-modal="true" aria-labelledby="ha-autonomy-confirm-title" onClick={event => event.stopPropagation()}>
+      <div className="ha-autonomy-confirm" role="dialog" aria-modal="true" aria-labelledby="ha-autonomy-confirm-title" onClick={event => event.stopPropagation()}
+        onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); if (!saving) setPending(null); } }}>
         <h3 id="ha-autonomy-confirm-title">Change autonomy?</h3>
         <p className="ha-autonomy-change"><span>{previous}</span><span aria-hidden="true">→</span><strong>{AUTONOMY_LEVELS[pending].name}</strong></p>
         <p className="ha-autonomy-confirm-hint">{AUTONOMY_LEVELS[pending].hint}</p>

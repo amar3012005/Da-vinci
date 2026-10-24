@@ -15,7 +15,7 @@ export default function EmployeeMobileNavigation({ activeSection, onClose }) {
   }, []);
   useEffect(() => {
     const previous = document.activeElement;
-    const focusable = () => [...(root.current.querySelector('[data-mobile-roster-profile]') || root.current).querySelectorAll('button, a[href], input, select, [tabindex="0"]')].filter(node => !node.disabled && !node.closest('[hidden]') && !(phone && node.closest('.mobile-roster-legacy')));
+    const focusable = () => [...(document.querySelector('.ha-autonomy-confirm') || root.current.querySelector('[data-mobile-roster-profile]') || root.current).querySelectorAll('button, a[href], input, select, [tabindex="0"]')].filter(node => !node.disabled && !node.closest('[hidden]') && !(phone && node.closest('.mobile-roster-legacy')));
     focusable()[0]?.focus();
     const key = event => {
       if (event.key === 'Escape') { event.preventDefault(); onClose(); }

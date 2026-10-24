@@ -48,7 +48,41 @@
  .ha-workspace-shortcuts svg { flex-shrink:0;color:#747970; }
  .ha-workspace-shortcuts>a:hover,.ha-workspace-shortcuts>button:hover,.ha-artifacts-action>button:hover { background:#e8edf3; }
  .ha-artifact-cell { min-width:0; }
-/* The one tenant autonomy dial: a tqdm-style bar, constant on every HyperAgents page. */
+ .ha-artifacts-unavailable { display:none; }
+ .ha-artifacts-action:empty + .ha-artifacts-unavailable { display:flex;align-items:center;gap:8px;min-height:37px;width:100%;padding:7px 9px;border-radius:7px;background:#f1f0eb;color:#8b9097;font-size:12px; }
+ .ha-account-area { flex-shrink:0;margin:0 20px;padding:11px 0 10px;border-top:1px solid #e7e4dd; }
+ .ha-account-settings { display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0 12px; }
+ .ha-account-settings>span:first-child { font-size:19px;color:#747970; }
+ .ha-account-identity { display:flex;align-items:center;gap:11px; }
+ .ha-account-initial { display:grid;place-items:center;flex-shrink:0;width:30px;height:30px;background:#e3ecf9;border-radius:50%;color:#3977c5;font-size:12px; }
+ .ha-account-identity>div { flex:1;min-width:0; }
+ .ha-account-identity strong { display:block;font-size:11px;font-weight:500;overflow-wrap:anywhere; }
+ .ha-account-identity small { display:block;font-size:10px;color:#7c828b; }
+ .ha-sign-out { display:flex;align-items:center;gap:8px;margin-top:8px;color:#7c828b;font-size:12px; }
+ .desktop-hyperagents-navigation button:focus-visible,.desktop-hyperagents-navigation a:focus-visible { outline:2px solid #3484ff;outline-offset:3px; }
+ .ha-resize-grip { position:absolute;z-index:50;right:-5px;top:0;bottom:0;width:10px;cursor:ew-resize;touch-action:none;display:flex;align-items:center;justify-content:center; }
+ .ha-resize-grip>span { height:46px;width:3px;background:#c2c7cd;border-radius:3px; }
+ .ha-resize-grip:focus-visible { outline:2px solid #3484ff;outline-offset:0; }
+ .desktop-hyperagents-navigation[data-columns="1"] .ha-runtime-card { gap:9px;padding:10px;min-height:94px; }
+ .desktop-hyperagents-navigation[data-columns="1"] .ha-runtime-card>img { width:44px;height:56px; }
+ .desktop-hyperagents-navigation[data-columns="1"] .ha-runtime-identity>strong { font-size:18px; }
+ .desktop-hyperagents-navigation[data-columns="1"] .ha-runtime-identity>small { font-size:11px; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-team-scroll { padding:10px 7px; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-runtime-card { justify-content:center;padding:4px;margin-bottom:10px;min-height:46px; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-runtime-card>img { width:38px;height:38px; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-employee-tile { min-height:54px;padding:8px 2px; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-avatar-wrap { width:34px;height:34px;margin:0; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-live-status { position:absolute;inset:0;pointer-events:none; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-live-status>span { right:0;top:0;max-width:48px;flex-wrap:wrap;background:#faf9f4cc;border-radius:3px; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-create-employee { min-height:34px;padding:5px; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts { grid-template-columns:1fr;padding:10px 12px; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts>a,.desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts>button { justify-content:center;padding:7px; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-artifacts-unavailable { justify-content:center;padding:7px; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-sign-out { justify-content:center;width:100%; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-account-area { margin:0 10px;text-align:center; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-account-settings { justify-content:center;width:100%; }
+}
+/* The one tenant autonomy dial: a tqdm-style bar, constant on every HyperAgents page and drawer, so it lives outside the desktop-only block. */
 .ha-autonomy-seat { flex-shrink:0;border-top:1px solid #e7e4dd;padding:12px 20px 0;color:#2b2f2a; }
 .ha-autonomy-seat:empty { display:none; }
 .ha-autonomy-seat:not(:empty) + .ha-workspace-shortcuts { border-top:0; }
@@ -84,38 +118,13 @@
 .ha-autonomy-actions button { min-height:34px;padding:0 14px;border-radius:8px;border:1px solid #e0ddd5;background:#fff;font-size:13px; }
 .ha-autonomy-actions button.is-primary { border-color:#1f2420;background:#1f2420;color:#fff; }
 .ha-autonomy-actions button:disabled { opacity:.6; }
-@media (prefers-reduced-motion: reduce) { .ha-autonomy-cells i { transition:none; } }
- .ha-artifacts-unavailable { display:none; }
- .ha-artifacts-action:empty + .ha-artifacts-unavailable { display:flex;align-items:center;gap:8px;min-height:37px;width:100%;padding:7px 9px;border-radius:7px;background:#f1f0eb;color:#8b9097;font-size:12px; }
- .ha-account-area { flex-shrink:0;margin:0 20px;padding:11px 0 10px;border-top:1px solid #e7e4dd; }
- .ha-account-settings { display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0 12px; }
- .ha-account-settings>span:first-child { font-size:19px;color:#747970; }
- .ha-account-identity { display:flex;align-items:center;gap:11px; }
- .ha-account-initial { display:grid;place-items:center;flex-shrink:0;width:30px;height:30px;background:#e3ecf9;border-radius:50%;color:#3977c5;font-size:12px; }
- .ha-account-identity>div { flex:1;min-width:0; }
- .ha-account-identity strong { display:block;font-size:11px;font-weight:500;overflow-wrap:anywhere; }
- .ha-account-identity small { display:block;font-size:10px;color:#7c828b; }
- .ha-sign-out { display:flex;align-items:center;gap:8px;margin-top:8px;color:#7c828b;font-size:12px; }
- .desktop-hyperagents-navigation button:focus-visible,.desktop-hyperagents-navigation a:focus-visible { outline:2px solid #3484ff;outline-offset:3px; }
- .ha-resize-grip { position:absolute;z-index:50;right:-5px;top:0;bottom:0;width:10px;cursor:ew-resize;touch-action:none;display:flex;align-items:center;justify-content:center; }
- .ha-resize-grip>span { height:46px;width:3px;background:#c2c7cd;border-radius:3px; }
- .ha-resize-grip:focus-visible { outline:2px solid #3484ff;outline-offset:0; }
- .desktop-hyperagents-navigation[data-columns="1"] .ha-runtime-card { gap:9px;padding:10px;min-height:94px; }
- .desktop-hyperagents-navigation[data-columns="1"] .ha-runtime-card>img { width:44px;height:56px; }
- .desktop-hyperagents-navigation[data-columns="1"] .ha-runtime-identity>strong { font-size:18px; }
- .desktop-hyperagents-navigation[data-columns="1"] .ha-runtime-identity>small { font-size:11px; }
- .desktop-hyperagents-navigation.is-collapsed .ha-team-scroll { padding:10px 7px; }
- .desktop-hyperagents-navigation.is-collapsed .ha-runtime-card { justify-content:center;padding:4px;margin-bottom:10px;min-height:46px; }
- .desktop-hyperagents-navigation.is-collapsed .ha-runtime-card>img { width:38px;height:38px; }
- .desktop-hyperagents-navigation.is-collapsed .ha-employee-tile { min-height:54px;padding:8px 2px; }
- .desktop-hyperagents-navigation.is-collapsed .ha-avatar-wrap { width:34px;height:34px;margin:0; }
- .desktop-hyperagents-navigation.is-collapsed .ha-live-status { position:absolute;inset:0;pointer-events:none; }
- .desktop-hyperagents-navigation.is-collapsed .ha-live-status>span { right:0;top:0;max-width:48px;flex-wrap:wrap;background:#faf9f4cc;border-radius:3px; }
- .desktop-hyperagents-navigation.is-collapsed .ha-create-employee { min-height:34px;padding:5px; }
- .desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts { grid-template-columns:1fr;padding:10px 12px; }
- .desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts>a,.desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts>button { justify-content:center;padding:7px; }
- .desktop-hyperagents-navigation.is-collapsed .ha-artifacts-unavailable { justify-content:center;padding:7px; }
- .desktop-hyperagents-navigation.is-collapsed .ha-sign-out { justify-content:center;width:100%; }
- .desktop-hyperagents-navigation.is-collapsed .ha-account-area { margin:0 10px;text-align:center; }
- .desktop-hyperagents-navigation.is-collapsed .ha-account-settings { justify-content:center;width:100%; }
+/* The same dial in the mobile and narrow team drawers, above their shortcuts. */
+.ha-autonomy-seat.is-drawer { border-top:0;padding:0; }
+nav .ha-autonomy-seat.is-drawer { padding:4px 10px 12px; }
+.ha-autonomy-overlay { padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px)); }
+@media (pointer: coarse) {
+  .ha-autonomy-bar, .ha-autonomy-range { height:44px; }
+  .ha-autonomy-cells { inset:16px 0; }
+  .ha-autonomy-actions button { min-height:44px;min-width:88px; }
 }
+@media (prefers-reduced-motion: reduce) { .ha-autonomy-cells i { transition:none; } }
