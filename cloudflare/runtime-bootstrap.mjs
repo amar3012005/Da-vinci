@@ -1,4 +1,5 @@
 // Runtime-only, read-only bootstrap. Control remains the authentication owner.
+import { hedgedFetch } from './hedged-fetch.mjs';
 export async function proxyRuntimeBootstrap(request) {
   const url = new URL(request.url);
   if (url.hostname !== 'runtime-runner.singulancelabs.com' || url.pathname !== '/__hivemind/bootstrap') return null;
@@ -10,7 +11,7 @@ export async function proxyRuntimeBootstrap(request) {
   const cookie = (request.headers.get('cookie') || '').split(';').map(v => v.trim()).find(v => v.startsWith('hm_cp_session='));
   if (cookie) headers.set('cookie', cookie);
   try {
-    const response = await fetch('https://api.singulancelabs.com/v1/bootstrap', {
+    const response = await hedgedFetch('https://api.singulancelabs.com/v1/bootstrap', {
       headers, redirect:'manual', cache:'no-store', signal:AbortSignal.any([request.signal, AbortSignal.timeout(15000)])
     });
     if (response.status >= 300 && response.status < 400) { await response.body?.cancel(); return reply('bootstrap_redirect_denied', 502); }
