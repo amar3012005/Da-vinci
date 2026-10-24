@@ -44,9 +44,34 @@ export async function evaluateModeAccess(env, email, userId = '') {
 function cookies(request, name) {
   return (request.headers.get('cookie') || '').split(';').map(v => v.trim()).find(v => v.startsWith(`${name}=`));
 }
+// Accepted identities are reused per isolate for SESSION_CACHE_MS, keyed by a SHA-256 of the
+// session cookie; rejections and outages are never cached, and concurrent lookups share one fetch.
+const SESSION_CACHE_MS = 20000;
+const SESSION_CACHE_LIMIT = 2000;
+const sessions = new Map();
+const pendingSessions = new Map();
+/** Drops cached identities; tests only. */
+export function clearSessionCache() { sessions.clear(); pendingSessions.clear(); }
 async function sessionUser(request) {
   const cookie = cookies(request, 'hm_cp_session');
   if (!cookie) return null;
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(cookie));
+  const key = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('');
+  const cached = sessions.get(key);
+  if (cached && cached.expires > Date.now()) return cached.user;
+  sessions.delete(key);
+  if (pendingSessions.has(key)) return pendingSessions.get(key);
+  const lookup = fetchSessionUser(cookie).then(user => {
+    if (user) {
+      if (sessions.size >= SESSION_CACHE_LIMIT) sessions.delete(sessions.keys().next().value);
+      sessions.set(key, { user, expires: Date.now() + SESSION_CACHE_MS });
+    }
+    return user;
+  }).finally(() => pendingSessions.delete(key));
+  pendingSessions.set(key, lookup);
+  return lookup;
+}
+async function fetchSessionUser(cookie) {
   const response = await fetch('https://api.singulancelabs.com/auth/session', {
     headers: { cookie, accept: 'application/json' }, redirect: 'manual', signal: AbortSignal.timeout(8000),
   });
