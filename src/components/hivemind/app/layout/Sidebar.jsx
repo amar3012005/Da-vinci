@@ -13,6 +13,7 @@ import BrainModeIcon from './BrainModeIcon';
 import DesktopBrainNavigation from './DesktopBrainNavigation';
 import DesktopHyperAgentsNavigation, { HYPERAGENT_WIDTHS, columnsForWidth } from './DesktopHyperAgentsNavigation';
 import AutonomyDial from './AutonomyDial';
+import AnatomyModeToggle from './AnatomyModeToggle';
 import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
 import {
@@ -557,6 +558,7 @@ export default function Sidebar({
           </div>
           {advancedOpen && <div className="mobile-unified-advanced-links" aria-label="Advanced features">{[{to:'/hivemind/app/mcp',label:'MCPs'},{to:'/hivemind/app/keys',label:'API keys'},{to:'/hivemind/m/projects',label:'Projects'},{to:'/hivemind/app/evaluation',label:'Evaluation'}].map(item => <NavLink key={item.to} to={item.to}>{item.label}<ChevronRight size={14}/></NavLink>)}</div>}
         </section>
+        <AnatomyModeToggle />
         <div className="mobile-roster-account">
           <button type="button" className="mobile-roster-account-identity" onClick={() => setRosterProfileOpen(true)}>
             {profileImage && !profileImageFailed ? <img src={profileImage} alt="" referrerPolicy="no-referrer" onError={() => setProfileImageFailed(true)}/> : <User size={24}/>}
