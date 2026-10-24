@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
+import { escapeHtml, renderSafeLink } from '../shared/markdown-sanitize.mjs';
 import { useApiQuery } from '../shared/hooks';
 import WebResultModal from '../components/WebResultModal';
 
@@ -57,13 +58,13 @@ function isFeatureLocked(err) {
 // block + inline transforms. Good enough for Tavily research output.
 function mdToHtml(md) {
   if (!md) return '';
-  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const esc = escapeHtml;
   const inline = (s) => esc(s)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    .replace(/(^|[\s(])(https?:\/\/[^\s)]+)(?=[\s).,]|$)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, label, url) => renderSafeLink(label, url, 'target="_blank" rel="noopener"'))
+    .replace(/(^|[\s(])(https?:\/\/[^\s)]+)(?=[\s).,]|$)/g, (_, lead, url) => lead + renderSafeLink(url, url, 'target="_blank" rel="noopener"'));
   const lines = String(md).replace(/\r\n/g, '\n').split('\n');
   const out = [];
   let inUl = false, inOl = false, inCode = false, para = [];

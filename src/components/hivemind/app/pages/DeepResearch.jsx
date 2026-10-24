@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { emitKnowledgeChanged } from '../shared/knowledge-ingest-contract';
+import { escapeHtml, renderSafeLink } from '../shared/markdown-sanitize.mjs';
 import DeepResearchGraph2D from './DeepResearchGraph2D';
 
 /* ─── Cartesia Light Theme Constants ───────────────────────────────── */
@@ -87,10 +88,7 @@ function quotaTextColor(used, limit) {
 
 function renderMarkdown(text) {
   if (!text) return '';
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  const escaped = escapeHtml(text);
   return escaped
     .replace(/^### (.+)$/gm, '<h3 class="text-base font-semibold text-[#0a0a0a]/90 mt-4 mb-2">$1</h3>')
     .replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold text-[#0a0a0a]/90 mt-6 mb-2">$1</h2>')
@@ -101,7 +99,7 @@ function renderMarkdown(text) {
     .replace(/^\* (.+)$/gm, '<li class="ml-4 list-disc text-[#525252]/80">$1</li>')
     .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-[#525252]/80">$1</li>')
     .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal text-[#525252]/80">$1</li>')
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[#117dff] hover:text-[#0a6ddb] underline underline-offset-2">$1</a>')
+    .replace(/\[(.+?)\]\((.+?)\)/g, (_, label, url) => renderSafeLink(label, url, 'target="_blank" rel="noopener noreferrer" class="text-[#117dff] hover:text-[#0a6ddb] underline underline-offset-2"'))
     .replace(/^---$/gm, '<hr class="border-[#e3e0db] my-4" />')
     .replace(/\n\n/g, '</p><p class="text-[#525252]/80 leading-relaxed mb-2">')
     .replace(/\n/g, '<br/>');
