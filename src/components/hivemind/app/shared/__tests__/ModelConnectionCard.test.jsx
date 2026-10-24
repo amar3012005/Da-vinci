@@ -40,3 +40,18 @@ test('renders native method options and sends the selected option ID',async()=>{
  await waitFor(()=>expect(global.fetch.mock.calls.some(([url,options])=>url.endsWith('/answer')&&JSON.parse(options.body).answer==='native-device-id')).toBe(true));
  await act(async()=>{deliver({done:true});});
 });
+test('offers the Dark mode switch only when the server reports the account eligible and saves the choice',async()=>{
+ let dark={eligible:true,enabled:false};
+ global.fetch=jest.fn(async(url,options)=>{if(url.endsWith('/dark-mode'))dark={eligible:true,enabled:JSON.parse(options.body).enabled};return{ok:true,json:async()=>({available:true,connected:false,dark_mode:dark})};});
+ const view=render(<ModelConnectionCard/>);
+ const toggle=await screen.findByRole('switch',{name:'Dark mode'});
+ expect(toggle.checked).toBe(false);
+ fireEvent.click(toggle);
+ await waitFor(()=>expect(screen.getByRole('switch',{name:'Dark mode'}).checked).toBe(true));
+ expect(global.fetch.mock.calls.some(([url,options])=>url.endsWith('/dark-mode')&&options.body==='{"enabled":true}')).toBe(true);
+ view.unmount();
+ global.fetch=jest.fn(async()=>({ok:true,json:async()=>({available:true,connected:false,dark_mode:{eligible:false,enabled:false}})}));
+ render(<ModelConnectionCard/>);
+ await screen.findByRole('button',{name:'Connect ChatGPT'});
+ expect(screen.queryByRole('switch',{name:'Dark mode'})).toBeNull();
+});

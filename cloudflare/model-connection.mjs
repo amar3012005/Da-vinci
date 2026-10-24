@@ -5,7 +5,7 @@ export async function proxyModelConnection(request, env) {
   const action = url.pathname.split('/').at(-1);
   const openrouter = url.pathname.startsWith('/api/hivemind/model-connection/openrouter/');
   if (openrouter && !['status', 'start', 'callback', 'select', 'disconnect'].includes(action)) return reply('not_found', 404);
-  if (!['status', 'models', 'start', 'answer', 'cancel', 'select', 'disconnect', ...(openrouter ? ['callback'] : [])].includes(action)) return reply('not_found', 404);
+  if (!['status', 'models', 'start', 'answer', 'cancel', 'select', 'disconnect', ...(openrouter ? ['callback'] : ['dark-mode'])].includes(action)) return reply('not_found', 404);
   const oauthCallback = openrouter && action === 'callback' && request.method === 'GET';
   const method = oauthCallback ? 'GET' : ['status', 'models'].includes(action) ? 'GET' : 'POST';
   if (request.method !== method) return reply('method_not_allowed', 405);
