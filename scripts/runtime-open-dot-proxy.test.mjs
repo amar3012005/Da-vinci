@@ -5,8 +5,8 @@ const origin='https://runtime-runner.singulancelabs.com';
 const path='/dots/dot_fixture';
 const cookie='hm_cp_session=company';
 test('only the Runtime origin owns native OpenDot routes; Brain and Harness are unchanged',()=>{
- for(const path of ['/dots/dot_fixture','/employees/976c0a88-8c22-4ea9-9638-d3296db486da','/api/conversations/conv_fixture','/api/dots/dot_fixture/files','/api/hivemind/voice/events','/?embed=hivemind','/apps?embed=hivemind']) assert.equal(isRuntimeOpenDotRequest(new URL(origin+path)),true,path);
- for(const url of ['https://next.singulancelabs.com/dots/dot_fixture',origin+'/api/remote',origin+'/plugins/events',origin+'/api/hivemind/employees',origin+'/',origin+'/hivemind/app/employee/harness/session/saved',origin+'/api/internal/hivemind/runtime/dispatch']) assert.equal(isRuntimeOpenDotRequest(new URL(url)),false,url);
+ for(const path of ['/dots/dot_fixture','/employees/976c0a88-8c22-4ea9-9638-d3296db486da','/api/conversations/conv_fixture','/api/cards/msg_a95d9b18-64ce-4dad-9d5a-42ee0445c9c2','/api/dots/dot_fixture/files','/api/hivemind/voice/events','/?embed=hivemind','/apps?embed=hivemind']) assert.equal(isRuntimeOpenDotRequest(new URL(origin+path)),true,path);
+ for(const url of ['https://next.singulancelabs.com/dots/dot_fixture',origin+'/api/remote',origin+'/api/cards/../settings',origin+'/api/cards',origin+'/plugins/events',origin+'/api/hivemind/employees',origin+'/',origin+'/hivemind/app/employee/harness/session/saved',origin+'/api/internal/hivemind/runtime/dispatch']) assert.equal(isRuntimeOpenDotRequest(new URL(url)),false,url);
 });
 test('authentication and same-origin write checks run before forwarding',async()=>{
  const noFetch=()=>{throw Error('unexpected upstream')};
