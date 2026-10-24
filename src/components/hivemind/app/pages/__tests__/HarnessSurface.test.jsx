@@ -281,3 +281,22 @@ describe('Runtime admission ownership', () => {
     await expect(establishHarnessSession()).resolves.toEqual({ mode: 'legacy' });
   });
 });
+
+it('reserves the composer band on the harness mount before the native composer renders', async () => {
+  const { createRoot } = require('react-dom/client');
+  const { act } = require('react');
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  const previousFetch = global.fetch;
+  global.fetch = jest.fn(() => new Promise(() => {}));
+  try {
+    await act(async () => { root.render(<HarnessSurface sessionEstablished />); });
+    expect(host.querySelector('[data-hivemind-harness-surface] > .hm-harness-composer-reserve')).not.toBeNull();
+    expect(host.querySelector('[data-composer-seat]')).toBeNull();
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+    global.fetch = previousFetch;
+  }
+});
