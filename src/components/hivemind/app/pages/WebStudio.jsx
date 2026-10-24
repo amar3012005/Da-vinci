@@ -13,6 +13,7 @@ import apiClient from '../shared/api-client';
 import { escapeHtml, renderSafeLink } from '../shared/markdown-sanitize.mjs';
 import { useApiQuery } from '../shared/hooks';
 import WebResultModal from '../components/WebResultModal';
+import { isTrustedReportMessage, registerReportWindow } from '../shared/research-save-bridge.mjs';
 
 /* ─── Helpers ──────────────────────────────────────────────────────── */
 
@@ -254,16 +255,17 @@ function buildResearchReportHtml(job, scopeOptions = []) {
 <script>
   (function(){
     var JOB=${J(job.id)};
+    var ORIGIN=${J(window.location.origin)};
     var btn=document.getElementById('hm-save'),sel=document.getElementById('hm-scope'),toast=document.getElementById('hm-toast');
     function setToast(m,ok){toast.textContent=m;toast.style.color=ok?'#2e7d4f':'#c0392b';}
     btn.addEventListener('click',function(){
       if(!window.opener){setToast('Open from HIVEMIND to enable saving',false);return;}
       btn.disabled=true;btn.textContent='Saving…';setToast('',true);
       var o=sel.options[sel.selectedIndex];
-      window.opener.postMessage({type:'hm-save-research',jobId:JOB,scope:o.dataset.scope||'personal',projectId:o.dataset.project||null,scopeLabel:o.text},'*');
+      window.opener.postMessage({type:'hm-save-research',jobId:JOB,scope:o.dataset.scope||'personal',projectId:o.dataset.project||null,scopeLabel:o.text},ORIGIN);
     });
     window.addEventListener('message',function(e){
-      var d=e.data||{};if(d.type!=='hm-save-result'||d.jobId!==JOB)return;
+      if(e.origin!==ORIGIN||e.source!==window.opener)return;var d=e.data||{};if(d.type!=='hm-save-result'||d.jobId!==JOB)return;
       if(d.ok){btn.textContent='✓ Saved';setToast((d.memories||0)+' memory saved · '+(d.scopeLabel||''),true);}
       else{btn.disabled=false;btn.textContent='Save to HIVEMIND';setToast('Save failed: '+(d.error||'error'),false);}
     });
@@ -276,6 +278,7 @@ function buildResearchReportHtml(job, scopeOptions = []) {
 export function openResearchReportTab(job, scopeOptions) {
   const w = window.open('', '_blank');
   if (!w) return false; // popup blocked
+  registerReportWindow(w);
   w.document.open(); w.document.write(buildResearchReportHtml(job, scopeOptions)); w.document.close();
   return true;
 }
@@ -566,10 +569,10 @@ export default function WebStudio() {
   useEffect(() => {
     const handler = async (e) => {
       const d = e.data || {};
-      if (d.type !== 'hm-save-research' || !d.jobId) return;
+      if (d.type !== 'hm-save-research' || !d.jobId || !isTrustedReportMessage(e, window.location.origin)) return;
       const job = jobList.find(j => j.id === d.jobId);
       const result = job && Array.isArray(job.results) ? job.results[0] : null;
-      const reply = (msg) => { try { e.source?.postMessage({ type: 'hm-save-result', jobId: d.jobId, scopeLabel: d.scopeLabel, ...msg }, '*'); } catch { /* tab closed */ } };
+      const reply = (msg) => { try { e.source?.postMessage({ type: 'hm-save-result', jobId: d.jobId, scopeLabel: d.scopeLabel, ...msg }, window.location.origin); } catch { /* tab closed */ } };
       if (!job || !result) { reply({ ok: false, error: 'report not found' }); return; }
       try {
         // Atomic save_memory path (canonical) — NOT KB evidence/segments.

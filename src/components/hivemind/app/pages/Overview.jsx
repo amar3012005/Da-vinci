@@ -50,6 +50,7 @@ import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './W
 import HarnessChatSurface from './HarnessChatSurface';
 import HarnessSurface, { LoadingSurface } from './HarnessSurface';
 import DreamingPage from './DreamingPage';
+import { isTrustedReportMessage } from '../shared/research-save-bridge.mjs';
 
 const LAST_HARNESS_SESSION_KEY = 'hm.lastHarnessSession';
 const HARNESS_SESSION_ROUTE = /^\/hivemind\/app\/overview\/session\/[^/]+$/u;
@@ -889,10 +890,10 @@ function OverviewChat({ inputRef }) {
   useEffect(() => {
     const handler = async (e) => {
       const d = e.data || {};
-      if (d.type !== 'hm-save-research' || !d.jobId) return;
+      if (d.type !== 'hm-save-research' || !d.jobId || !isTrustedReportMessage(e, window.location.origin)) return;
       const job = jobsByIdRef.current[d.jobId];
       const result = job && Array.isArray(job.results) ? job.results[0] : null;
-      const reply = (msg) => { try { e.source?.postMessage({ type: 'hm-save-result', jobId: d.jobId, scopeLabel: d.scopeLabel, ...msg }, '*'); } catch { /* tab closed */ } };
+      const reply = (msg) => { try { e.source?.postMessage({ type: 'hm-save-result', jobId: d.jobId, scopeLabel: d.scopeLabel, ...msg }, window.location.origin); } catch { /* tab closed */ } };
       if (!job || !result) { reply({ ok: false, error: 'report not found' }); return; }
       try {
         await apiClient.saveResearchAsMemory({
