@@ -53,6 +53,7 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
         <button type="button" className={`ha-create-employee${span === columns ? ' full-row' : ''}`} style={{ gridColumn: `span ${collapsed ? 1 : span}` }} onClick={onCreate} aria-label="Create employee"><Plus size={23}/>{!collapsed && <span>Create employee</span>}</button>
       </div>
     </div>
+    <div className="ha-autonomy-seat" data-hivemind-autonomy-seat data-collapsed={collapsed || undefined}/>
     <nav className="ha-workspace-shortcuts" aria-label="Workspace tools">
       <NavLink to={employeeAppsPath(location)} title={collapsed ? 'Apps' : undefined}><Cable size={18}/>{!collapsed && <span>Apps</span>}</NavLink>
       <div className="ha-artifact-cell"><div className="ha-artifacts-action" data-hivemind-artifacts-seat data-collapsed={collapsed || undefined}/><button type="button" className="ha-artifacts-unavailable" disabled title="Artifacts become available when the Runtime workspace connects"><FolderOpen size={18}/>{!collapsed && <span>Artifacts</span>}</button></div>

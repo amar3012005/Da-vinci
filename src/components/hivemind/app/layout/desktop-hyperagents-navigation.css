@@ -48,6 +48,11 @@
  .ha-workspace-shortcuts svg { flex-shrink:0;color:#747970; }
  .ha-workspace-shortcuts>a:hover,.ha-workspace-shortcuts>button:hover,.ha-artifacts-action>button:hover { background:#e8edf3; }
  .ha-artifact-cell { min-width:0; }
+/* Runtime portals the one tenant autonomy dial here; it stays hidden until Runtime connects. */
+.ha-autonomy-seat { flex-shrink:0;border-top:1px solid #e7e4dd;padding:12px 20px 0;color:#2b2f2a; }
+.ha-autonomy-seat:empty { display:none; }
+.ha-autonomy-seat:not(:empty) + .ha-workspace-shortcuts { border-top:0; }
+.desktop-hyperagents-navigation.is-collapsed .ha-autonomy-seat { display:none; }
  .ha-artifacts-unavailable { display:none; }
  .ha-artifacts-action:empty + .ha-artifacts-unavailable { display:flex;align-items:center;gap:8px;min-height:37px;width:100%;padding:7px 9px;border-radius:7px;background:#f1f0eb;color:#8b9097;font-size:12px; }
  .ha-account-area { flex-shrink:0;margin:0 20px;padding:11px 0 10px;border-top:1px solid #e7e4dd; }
