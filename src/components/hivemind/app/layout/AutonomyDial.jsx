@@ -27,7 +27,10 @@ function AgentIcon() {
  * Renders nothing where the Runtime dial endpoint does not exist, and a compact level badge when collapsed.
  * @param {{ collapsed?: boolean, fetcher?: typeof fetch }} props
  */
-export default function AutonomyDial({ collapsed = false, fetcher = (...args) => fetch(...args) }) {
+/** Stable across renders, so a re-rendering parent never restarts or cancels the dial's read. */
+const defaultFetcher = (...args) => fetch(...args);
+
+export default function AutonomyDial({ collapsed = false, fetcher = defaultFetcher }) {
   const [state, setState] = useState(undefined);
   const [draft, setDraft] = useState(null);
   const [pending, setPending] = useState(null);

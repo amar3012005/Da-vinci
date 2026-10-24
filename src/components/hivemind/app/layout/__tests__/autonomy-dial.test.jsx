@@ -65,4 +65,14 @@ test('Escape cancels the confirmation without saving or reaching the drawer behi
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(drawerKey).not.toHaveBeenCalled();
   expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
+
+test('a re-rendering parent neither refetches nor cancels the dial read', async () => {
+  const original = global.fetch;
+  global.fetch = jest.fn(() => json({ ok: true, sessionId: 'session-root', value: state }));
+  try {
+    const { rerender } = render(<AutonomyDial/>);
+    for (let i = 0; i < 5; i++) rerender(<AutonomyDial/>);
+    await screen.findByText('2/4 · Prepare');
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  } finally { global.fetch = original; }
 });
