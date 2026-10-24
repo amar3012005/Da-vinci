@@ -13,8 +13,8 @@ export const AUTONOMY_LEVELS = [
   { name: 'Observe', hint: 'Runtime and HyperAgents read signals and keep the company picture current. They tell you what changed and take no action.' },
   { name: 'Suggest', hint: 'Runtime and HyperAgents propose next steps and drafts. Every action needs your yes.' },
   { name: 'Prepare', hint: 'Runtime and HyperAgents take initiative on reversible internal work: research, drafts, files, plans and tasks. They ask before anything leaves the company or can’t be undone.' },
-  { name: 'Act in lanes', hint: 'Acts inside lanes you pre-approve, with limits on amount, recipients and sender. Everything else still asks.' },
-  { name: 'Autonomous', hint: 'No human in the loop. Anything outside hard limits is stopped and reported.' },
+  { name: 'Act in lanes', hint: 'Runtime and HyperAgents act in your connected apps and tools without asking. Anything that can’t be undone, such as sending, deleting or paying, still asks first.' },
+  { name: 'Autonomous', hint: 'No approvals: Runtime and HyperAgents act fully on their own, including actions that can’t be undone. Your own never-allow rules still apply.' },
 ];
 
 function HumanIcon() {
