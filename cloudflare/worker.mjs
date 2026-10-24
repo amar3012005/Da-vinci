@@ -14,6 +14,7 @@ import { getRuntimePublic } from './getruntime-public.mjs';
 import { icarusPublic } from './icarus-public.mjs';
 import { workspaceDocumentRedirect } from '../src/components/hivemind/app/shared/workspace-authority.mjs';
 import { proxyModelConnection } from './model-connection.mjs';
+import { proxyCustomProviders } from './custom-providers.mjs';
 import { proxyRuntimeRecovery } from './runtime-recovery.mjs';
 import { runnerRequestHeaders } from './runner-headers.mjs';
 import runtimeAppsCatalog from '../src/components/hivemind/app/pages/runtime-apps/apps.json' with { type: 'json' };
@@ -591,6 +592,7 @@ export default {
       return new Response(null, { status: 307, headers: { location: destination.toString(), 'cache-control': 'private, no-store' } });
     }
     if (pathname.startsWith('/api/hivemind/model-connection/')) return proxyModelConnection(request, env);
+    if (pathname === '/api/hivemind/custom-providers' || pathname.startsWith('/api/hivemind/custom-providers/')) return proxyCustomProviders(request, env);
     const openDotEntryPath = isOpenDotEntryPath(pathname);
     if (url.protocol === 'http:' && env.ENVIRONMENT !== 'development') {
       url.protocol = 'https:';
