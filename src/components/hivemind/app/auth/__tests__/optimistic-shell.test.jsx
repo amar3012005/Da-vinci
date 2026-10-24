@@ -1,10 +1,13 @@
 import React from 'react';
+import fs from 'fs';
+import path from 'path';
 import '@testing-library/jest-dom';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../AuthProvider';
 import ProtectedRoute from '../ProtectedRoute';
 import OptimisticAppShell from '../../layout/OptimisticAppShell';
+import { HYPERAGENT_WIDTHS } from '../../layout/hyperagent-widths';
 import apiClient from '../../shared/api-client';
 import { readBootCache, readLastTenant, rememberTenant, writeBootCache } from '../../shared/boot-cache';
 
@@ -78,6 +81,7 @@ beforeEach(() => {
 describe('optimistic shell before bootstrap', () => {
   test('paints cached display data and makes no API call until bootstrap confirms', async () => {
     seedHint();
+    global.__testPath = '/hivemind/app/employee/harness';
     const pending = deferred();
     apiClient.bootstrap.mockReturnValue(pending.promise);
 
@@ -171,6 +175,79 @@ describe('optimistic shell before bootstrap', () => {
 
     expect(screen.queryByText('Loading workspace')).not.toBeInTheDocument();
     expect(screen.queryByText('SHELL CHILD')).not.toBeInTheDocument();
+  });
+});
+
+describe('optimistic frame geometry and scope', () => {
+  test('the team route frame uses the settled team sidebar width and three roster columns', async () => {
+    seedHint();
+    global.__testPath = '/hivemind/app/employee/harness';
+    apiClient.bootstrap.mockReturnValue(new Promise(() => {}));
+
+    const { container } = renderShell();
+
+    const aside = container.querySelector('aside');
+    expect(aside.style.width).toBe(`${HYPERAGENT_WIDTHS[3]}px`);
+    expect(container.querySelector('[data-optimistic-shell] > div.min-w-0').style.marginLeft).toBe(`${HYPERAGENT_WIDTHS[3]}px`);
+    expect(container.querySelector('.ha-employee-grid').style.gridTemplateColumns).toBe('repeat(3, minmax(0, 1fr))');
+    expect(screen.getByText('1 employee')).toBeInTheDocument();
+    expect(screen.getByText('Priya')).toBeInTheDocument();
+    expect(screen.getByText('Runtime')).toBeInTheDocument();
+  });
+
+  test('the Brain route frame has no team roster, so cached employees are not drawn there', () => {
+    seedHint();
+    global.__testPath = '/hivemind/app/overview';
+    apiClient.bootstrap.mockReturnValue(new Promise(() => {}));
+
+    const { container } = renderShell();
+
+    expect(container.querySelector('aside').style.width).toBe('300px');
+    expect(screen.queryByText('Priya')).not.toBeInTheDocument();
+    expect(screen.queryByText('Your team')).not.toBeInTheDocument();
+  });
+
+  test('the restoring frame exposes no controls and no links while bootstrap is in flight', () => {
+    seedHint();
+    global.__testPath = '/hivemind/app/employee/harness';
+    apiClient.bootstrap.mockReturnValue(new Promise(() => {}));
+
+    const { container } = renderShell();
+
+    expect(container.querySelectorAll('button, a, input, select, textarea, [tabindex], [href], [role="button"]')).toHaveLength(0);
+    expect(container.querySelector('aside').getAttribute('aria-hidden')).toBe('true');
+  });
+
+  test('a roster stored for another tenant is never drawn in the frame', () => {
+    rememberTenant('org-a', 'user-a', STORE, { displayName: 'Ada', orgName: 'Acme' });
+    writeBootCache('org-b', 'user-b', 'employees', [{ id: 'x', name: 'Other Tenant Agent' }], STORE);
+    global.__testPath = '/hivemind/app/employee/harness';
+    apiClient.bootstrap.mockReturnValue(new Promise(() => {}));
+
+    const { container } = renderShell();
+
+    expect(screen.queryByText('Other Tenant Agent')).not.toBeInTheDocument();
+    expect(container.querySelector('.ha-employee-name')).toBeNull();
+  });
+
+  test('without a cached roster the team frame holds three placeholder tiles and no names', () => {
+    rememberTenant('org-a', 'user-a', STORE, { displayName: 'Ada', orgName: 'Acme' });
+    global.__testPath = '/hivemind/app/employee/harness';
+    apiClient.bootstrap.mockReturnValue(new Promise(() => {}));
+
+    const { container } = renderShell();
+
+    expect(container.querySelectorAll('.ha-employee-tile.is-placeholder')).toHaveLength(3);
+    expect(container.querySelector('[data-runtime-avatar-pending]')).toBeInTheDocument();
+    expect(container.querySelector('.ha-employee-name')).toBeNull();
+  });
+
+  test('the frame keeps the settled header and reserved sizes from the stylesheet', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', '..', 'layout', 'OptimisticAppShell.css'), 'utf8');
+    expect(css).toMatch(/\.optimistic-shell-header\s*\{\s*height:\s*56px;?\s*\}/);
+    expect(css).toMatch(/\.optimistic-shell-composer\s*\{[^}]*min-height:\s*96px/);
+    const nav = fs.readFileSync(path.join(__dirname, '..', '..', 'layout', 'desktop-hyperagents-navigation.css'), 'utf8');
+    expect(nav).toMatch(/\.ha-employee-tile \{[^}]*min-height:145px/);
   });
 });
 
