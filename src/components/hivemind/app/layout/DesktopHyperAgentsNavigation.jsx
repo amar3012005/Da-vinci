@@ -51,6 +51,8 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
             <LiveStatus room={room} collapsed={collapsed}/>
           </button>;
         })}
+        {/* Empty roster: placeholder tiles hold the grid height until the roster read settles. */}
+        {!team.length && !collapsed && [0, 1, 2].map(index => <div key={`placeholder-${index}`} aria-hidden="true" className="ha-employee-tile is-placeholder"><span className="ha-avatar-wrap" style={{ width: 72, height: 72 }}/><span className="ha-placeholder-name"/></div>)}
         <button type="button" className={`ha-create-employee${span === columns ? ' full-row' : ''}`} style={{ gridColumn: `span ${collapsed ? 1 : span}` }} onClick={onCreate} aria-label="Create employee"><Plus size={23}/>{!collapsed && <span>Create employee</span>}</button>
       </div>
     </div>

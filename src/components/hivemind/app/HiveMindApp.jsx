@@ -10,6 +10,7 @@ import InvitationLanding from './auth/InvitationLanding';
 import RuntimeApprovalPage from './auth/RuntimeApprovalPage';
 import CliVerified from './auth/CliVerified';
 import AppShell from './layout/AppShell';
+import OptimisticAppShell from './layout/OptimisticAppShell';
 import { QuickRecorderProvider } from './shared/QuickRecorderProvider';
 import { TeamProvider } from './shared/team-context';
 const TaraConfig = React.lazy(() => import('./pages/TaraConfig'));
@@ -250,7 +251,7 @@ export default function HiveMindApp() {
         <Route
           path="app"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute optimisticFallback={<OptimisticAppShell />}>
               <AppShell />
             </ProtectedRoute>
           }

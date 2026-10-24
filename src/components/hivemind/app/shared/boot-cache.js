@@ -78,28 +78,50 @@ export function writeBootCache(orgId, userId, resource, value, store = defaultSt
   }
 }
 
-/**
- * Record the tenant that last rendered, so the next reload can read its cache before bootstrap returns.
- * @param {string} orgId - organization id of the tenant.
- * @param {string} userId - user id of the account.
- * @param {Storage|null} [store] - storage to write; defaults to localStorage.
- * @returns {void}
- */
-export function rememberTenant(orgId, userId, store = defaultStorage()) {
-  if (!orgId || !userId || !store) return;
-  try { store.setItem(LAST_TENANT_KEY, JSON.stringify({ orgId, userId })); } catch { /* Blocked storage: no optimistic read on reload. */ }
+// Display-only labels for the optimistic shell. Lengths are capped; no email, token or cookie is accepted.
+const HINT_NAME_LIMIT = 120;
+const HINT_ORG_LIMIT = 160;
+
+function hintText(value, limit) {
+  return typeof value === 'string' ? value.trim().slice(0, limit) : '';
 }
 
 /**
- * Tenant recorded by the last rendered session.
+ * Record the last signed-in shell hint: tenant ids plus display labels. The next
+ * load paints the cached shell from this hint while bootstrap confirms the identity.
+ * @param {string} orgId - organization id of the tenant.
+ * @param {string} userId - user id of the account.
+ * @param {Storage|null} [store] - storage to write; defaults to localStorage.
+ * @param {{ displayName?: string, orgName?: string }} [names] - display labels only.
+ * @returns {void}
+ */
+export function rememberTenant(orgId, userId, store = defaultStorage(), names = {}) {
+  if (!orgId || !userId || !store) return;
+  const hint = {
+    orgId,
+    userId,
+    displayName: hintText(names.displayName, HINT_NAME_LIMIT),
+    orgName: hintText(names.orgName, HINT_ORG_LIMIT),
+  };
+  try { store.setItem(LAST_TENANT_KEY, JSON.stringify(hint)); } catch { /* Blocked storage: no optimistic shell on reload. */ }
+}
+
+/**
+ * Shell hint recorded by the last confirmed session.
  * @param {Storage|null} [store] - storage to read; defaults to localStorage.
- * @returns {{ orgId: string, userId: string } | null} tenant ids, or null.
+ * @returns {{ orgId: string, userId: string, displayName: string, orgName: string } | null} hint, or null.
  */
 export function readLastTenant(store = defaultStorage()) {
   if (!store) return null;
   try {
     const tenant = JSON.parse(store.getItem(LAST_TENANT_KEY) || 'null');
-    return tenant?.orgId && tenant?.userId ? { orgId: tenant.orgId, userId: tenant.userId } : null;
+    if (!tenant?.orgId || !tenant?.userId) return null;
+    return {
+      orgId: tenant.orgId,
+      userId: tenant.userId,
+      displayName: hintText(tenant.displayName, HINT_NAME_LIMIT),
+      orgName: hintText(tenant.orgName, HINT_ORG_LIMIT),
+    };
   } catch {
     return null;
   }

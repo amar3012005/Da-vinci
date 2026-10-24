@@ -9,6 +9,12 @@
  .ha-runtime-card { display:flex;align-items:center;gap:14px;width:100%;padding:12px;margin-bottom:16px;border-radius:10px;text-align:left;min-height:108px;position:relative; }
  .ha-runtime-card:hover,.ha-runtime-card.is-selected { background:#f0eee7; }
  .ha-runtime-card>img { width:82px;height:82px;object-fit:contain;mix-blend-mode:multiply;flex-shrink:0; }
+/* Reserves the Runtime avatar box until the saved character is known (RuntimeAvatar renders this span while pending). */
+.ha-runtime-card>[data-runtime-avatar-pending] { display:inline-block;width:82px;height:82px;flex-shrink:0; }
+/* Loading placeholders keep the employee tile size until the roster arrives. Same box as a settled tile. */
+.ha-employee-tile.is-placeholder { pointer-events:none;cursor:default; }
+.ha-employee-tile.is-placeholder .ha-avatar-wrap { border-radius:9999px;background:#ecebe6; }
+.ha-employee-tile.is-placeholder .ha-placeholder-name { display:block;width:64px;height:12px;margin-top:6px;border-radius:6px;background:#ecebe6; }
  .ha-runtime-identity { min-width:0;flex:1; }
  .ha-runtime-identity>strong { display:block;font-size:23px;line-height:1.2;letter-spacing:-.6px;font-weight:600;color:#20252a; }
  .ha-runtime-identity>small { display:block;font-size:12px;color:#73777d;margin:3px 0 7px; }
