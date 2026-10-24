@@ -33,8 +33,7 @@ const groups = [
     title: 'Company',
     links: [
       ['About', '/about'],
-      ['Careers', '/careers'],
-      ['Partners', '/partners'],
+      ['Partner enquiries', 'mailto:support@singulancelabs.com?subject=Partnership%20enquiry'],
       ['Contact', 'mailto:support@singulancelabs.com'],
     ],
   },
@@ -42,9 +41,7 @@ const groups = [
 
 const legal = [
   ['Privacy', '/privacy'],
-  ['Terms', '/terms'],
   ['Cookies', '/cookies'],
-  ['Legal notice', '/legal'],
 ];
 
 const FooterLink = ({ href, children }) => (

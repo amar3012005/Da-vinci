@@ -47,3 +47,24 @@ test('product identity links to the company without fabricated pricing or review
  }
  assert.equal(schemaFor('/getruntime')['@graph'].find(n=>n['@type']==='SoftwareApplication')['@id'],schemaFor('/runtime')['@graph'].find(n=>n['@type']==='SoftwareApplication')['@id']);
 });
+
+test('public pages keep one homepage H1 and resolve audited internal links',()=>{
+ const links=(path)=>nodes(parseDocument(RENDERED[path].html),n=>n.name==='a').map(n=>n.attribs?.href);
+ const home=parseDocument(RENDERED['/'].html);
+ assert.equal(nodes(home,n=>n.name==='h1').length,1);
+ assert.equal(nodes(home,n=>n.attribs?.role==='heading'&&n.attribs?.['aria-level']==='1').length,1);
+ assert.equal((RENDERED['/'].markdown.match(/^# Building proactive intelligence\.$/gm)||[]).length,1);
+
+ const founderLinks=links('/amar-sai-gadde');
+ for(const path of ['/about','/hivemind','/hyperagents','/research/icarus'])
+  assert.ok(founderLinks.includes(`https://singulancelabs.com${path}`),path);
+ assert.ok(founderLinks.includes('https://runtime.singulancelabs.com/'));
+
+ const footerLinks=links('/hivemind');
+ for(const path of ['/careers','/partners','/legal','/terms']) assert.ok(!footerLinks.includes(path),path);
+ assert.ok(footerLinks.includes('mailto:support@singulancelabs.com?subject=Partnership%20enquiry'));
+
+ const researchLinks=links('/icarus').filter(href=>href?.includes('/research'));
+ assert.ok(researchLinks.length>=2);
+ assert.ok(researchLinks.every(href=>href==='https://singulancelabs.com/research'));
+});

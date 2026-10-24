@@ -7,11 +7,16 @@ process.env.NODE_ENV='production';
 const require=createRequire(import.meta.url);
 await build({entryPoints:['scripts/public-render-entry.jsx'],bundle:true,platform:'node',format:'cjs',outfile:'scripts/.public-render.cjs',packages:'bundle',external:['react','react-dom/server','react-helmet-async','react-router-dom'],loader:{'.js':'jsx','.css':'empty','.svg':'dataurl','.png':'dataurl','.jpg':'dataurl','.webp':'dataurl'},define:{'process.env.NODE_ENV':'"production"'},logLevel:'warning'});
 const rendered=await require('./.public-render.cjs').renderPages();
-const walk=n=>{
+const walk=(n,seenPrimaryHeadings=new Set())=>{
  if(n.type==='text')return n.data.replace(/\s+/g,' ');
  if(['script','style','svg','button','nav'].includes(n.name))return '';
- const text=(n.children||[]).map(walk).join('');
- if(/^h[1-6]$/.test(n.name||''))return '\n\n'+'#'.repeat(Number(n.name[1]))+' '+text.trim()+'\n\n';
+ const text=(n.children||[]).map(child=>walk(child,seenPrimaryHeadings)).join('');
+ if(/^h[1-6]$/.test(n.name||'')||n.attribs?.role==='heading'){
+  const level=/^h[1-6]$/.test(n.name||'')?Number(n.name[1]):Number(n.attribs?.['aria-level']||2);
+  if(level===1&&seenPrimaryHeadings.has(text.trim()))return '';
+  if(level===1)seenPrimaryHeadings.add(text.trim());
+  return '\n\n'+'#'.repeat(Math.min(6,Math.max(1,level)))+' '+text.trim()+'\n\n';
+ }
  if(n.name==='a') {const href=n.attribs?.href;return href&&text.trim()?`[${text.trim()}](${href.startsWith('/')?SITE+href:href})`:text;}
  if(n.name==='img')return n.attribs?.alt?`\n![${n.attribs.alt}](${n.attribs.src?.startsWith('/')?SITE+n.attribs.src:n.attribs.src})\n`:'';
  if(n.name==='li')return '\n- '+text.trim();

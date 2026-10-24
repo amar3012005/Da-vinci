@@ -282,7 +282,7 @@ Building around a question: how can AI carry useful work forward with context an
 
 Amar is building SINGULANCE around a practical question: how can AI retain useful context, recognise what needs attention and carry work forward with human control?
 
-His current work brings together [HIVEMIND company understanding](https://singulancelabs.com/hivemind), [Runtime’s Chief of Staff coordination](https://singulancelabs.com/runtime), specialist [HyperAgents](https://singulancelabs.com/hyperagents) and [ICARUS agent memory](https://singulancelabs.com/research/icarus). The focus is continuity: what an agent knows, what it is allowed to do, what it has completed and what should happen next.
+His current work brings together [HIVEMIND company understanding](https://singulancelabs.com/hivemind), [Runtime’s Chief of Staff coordination](https://runtime.singulancelabs.com/), specialist [HyperAgents](https://singulancelabs.com/hyperagents) and [ICARUS agent memory](https://singulancelabs.com/research/icarus). The focus is continuity: what an agent knows, what it is allowed to do, what it has completed and what should happen next.
 
 His professional background combines physics studies with hands-on work in autonomous systems, embedded AI, machine learning and full-stack software.
 
@@ -1112,8 +1112,6 @@ HIVEMIND understands your company. Runtime anticipates and coordinates. HyperAge
 Company understanding. Continued momentum.
 
 ![SINGULANCE](https://singulancelabs.com/singulance-cover-900.webp)
-
-# Building proactive intelligence.
 
 A company Brain that connects what your people know. An AI Chief of Staff that anticipates what needs attention and carries work forward.
 
@@ -2088,7 +2086,7 @@ Built in Europe · EU-hosted · Self-hostable · BYOK
 
 © 2026 SINGULANCE Labs. All rights reserved.
 
-[Privacy](https://singulancelabs.com/privacy)[Terms](https://singulancelabs.com/terms)[Cookies](https://singulancelabs.com/cookies)[Legal notice](https://singulancelabs.com/legal)
+[Privacy](https://singulancelabs.com/privacy)[Cookies](https://singulancelabs.com/cookies)
 
 ## Products and workspace
 
@@ -2697,7 +2695,7 @@ Guarantees. Transport secrecy is quantum-resistant (hybrid) — recorded traffic
 
 Current limits. PQC here covers key exchange + signatures (integrity/authenticity). At-rest payload encryption is separate (standard DB/disk encryption; not PQC-KEM-wrapped). Signing is best-effort: with keys absent, writes proceed unsigned by design (availability over hard-fail).
 
-Roadmap. Enforce-signing mode (reject unsigned writes) for high-assurance tenants · per-tenant signing keys  · post-quantum envelope encryption for memory payloads at rest.
+Roadmap. Enforce-signing mode (reject unsigned writes) for high-assurance tenants · per-tenant signing keys · post-quantum envelope encryption for memory payloads at rest.
 
 Beyond the horizon of intelligence.
 
