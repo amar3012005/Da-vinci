@@ -53,3 +53,14 @@ test('renders nothing where the Runtime dial endpoint does not exist', async () 
   await waitFor(() => expect(fetcher).toHaveBeenCalled());
   expect(container).toBeEmptyDOMElement();
 });
+
+test('a re-rendering parent neither refetches nor cancels the dial read', async () => {
+  const original = global.fetch;
+  global.fetch = jest.fn(() => json({ ok: true, sessionId: 'session-root', value: state }));
+  try {
+    const { rerender } = render(<AutonomyDial/>);
+    for (let i = 0; i < 5; i++) rerender(<AutonomyDial/>);
+    await screen.findByText('2/4 · Prepare');
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  } finally { global.fetch = original; }
+});
