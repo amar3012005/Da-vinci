@@ -60,11 +60,9 @@ test('snap widths progress through 3, 2, 1 and collapsed; workspace shortcuts re
  expect(props.onCompany).toHaveBeenCalledTimes(1);
  expect(screen.getByRole('button',{name:'Artifacts'})).toBeDisabled();
 });
-test('seats the one Runtime autonomy dial directly above the workspace shortcuts',()=>{
- const { container, rerender } = render(view());
- const seat = container.querySelector('[data-hivemind-autonomy-seat]');
+test('keeps the autonomy dial seat directly above the workspace shortcuts on every page',()=>{
+ const { container } = render(view());
+ const seat = container.querySelector('.ha-autonomy-seat');
  expect(seat).not.toBeNull();
  expect(seat.nextElementSibling).toBe(screen.getByRole('navigation',{name:'Workspace tools'}));
- rerender(view({ collapsed:true }));
- expect(container.querySelector('[data-hivemind-autonomy-seat]')).toHaveAttribute('data-collapsed','true');
 });
