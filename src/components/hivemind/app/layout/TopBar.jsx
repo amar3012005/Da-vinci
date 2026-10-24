@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
 import { UserPlus, Building2, Menu, ChevronLeft } from 'lucide-react';
 import RuntimeAvatar from '../shared/RuntimeAvatar';
+import './liquid-glass.css';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import LangSwitcher from './LangSwitcher';
@@ -157,8 +158,6 @@ const PAGE_PREFIXES = [
   ['/hivemind/app/team/projects', '/hivemind/app/team/projects'],
 ];
 
-const LIQUID_GLASS = { border: '1px solid rgb(255 255 255 / 0.7)', background: 'rgb(255 255 255 / 0.62)', boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.9), 0 6px 20px -10px rgb(0 0 0 / 0.28)', WebkitBackdropFilter: 'blur(18px) saturate(180%)', backdropFilter: 'blur(18px) saturate(180%)' };
-
 export default function TopBar({ activeSection = 'hivemind', onSectionChange, mobileTeamToggle = null, floatingMobile = false }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -200,8 +199,8 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
 
   // Runtime phone room: liquid-glass back control and identity pill, matching the HyperAgent room bar.
   if (floatingMobile) return <div data-mobile-agent-overlay-controls className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start px-3" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}>
-    <button type="button" aria-label="Open your team" aria-haspopup="dialog" onClick={mobileTeamToggle} className="pointer-events-auto grid h-12 w-12 place-items-center rounded-full text-[#292929] active:scale-95" style={LIQUID_GLASS}><ChevronLeft size={22} strokeWidth={2} /></button>
-    <div className="pointer-events-auto absolute left-1/2 flex h-12 max-w-[calc(100%-200px)] -translate-x-1/2 items-center gap-2 rounded-full pl-2 pr-4 text-[#292929]" style={LIQUID_GLASS}>
+    <button type="button" aria-label="Open your team" aria-haspopup="dialog" onClick={mobileTeamToggle} className="liquid-glass pointer-events-auto grid h-12 w-12 place-items-center rounded-full text-[#292929]"><ChevronLeft size={22} strokeWidth={2} /></button>
+    <div className="pointer-events-auto absolute left-1/2 flex h-12 max-w-[calc(100%-200px)] -translate-x-1/2 items-center gap-2 rounded-full pl-2 pr-4 text-[#292929] liquid-glass">
       <RuntimeAvatar alt="" size={32} />
       <span className="truncate text-[16px] font-semibold tracking-tight">Runtime</span>
     </div>
