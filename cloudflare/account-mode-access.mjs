@@ -1,3 +1,4 @@
+import { hedgedFetch } from './hedged-fetch.mjs';
 import {requiresWorkspaceModeAccess} from '../src/components/hivemind/app/shared/workspace-mode-policy.mjs';
 /** Account grants are strongly consistent; only this Worker's verified admin path writes them. */
 export class AccountModeAccess {
@@ -72,7 +73,7 @@ async function sessionUser(request) {
   return lookup;
 }
 async function fetchSessionUser(cookie) {
-  const response = await fetch('https://api.singulancelabs.com/auth/session', {
+  const response = await hedgedFetch('https://api.singulancelabs.com/auth/session', {
     headers: { cookie, accept: 'application/json' }, redirect: 'manual', signal: AbortSignal.timeout(8000),
   });
   if (response.status === 401 || response.status === 403) return null;
