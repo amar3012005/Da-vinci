@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import apiClient from '../shared/api-client';
 import posthog, { isPostHogEnabled } from '../../../../analytics/posthog';
 import { setStorageUser, clearUserScopedStorage } from '../shared/user-storage';
-import { clearBootCache, rememberTenant } from '../shared/boot-cache';
+import { clearBootCache, readLastTenant, rememberTenant } from '../shared/boot-cache';
 import { defaultAuthReturnUrl } from './mobile-routing';
 import { isNativeApp } from '../shared/native-app';
 import { bindNativeTouchFeedback } from '../shared/native-haptics';
@@ -30,6 +30,9 @@ export function AuthProvider({ children }) {
   const [connectivity, setConnectivity] = useState(null);
   const [clientSupport, setClientSupport] = useState([]);
   const [modeAccess, setModeAccess] = useState({ userId: null, enabled: false });
+  // Shell hint saved by the last confirmed session. It is display-only and is exposed as
+  // `optimisticShell` while bootstrap is in flight; no identity reaches `user` or `org` until bootstrap confirms.
+  const [optimisticHint] = useState(() => readLastTenant());
   useEffect(() => {
     if (authState !== 'signed_in' || !user?.id) return undefined;
     const controller = new AbortController();
@@ -114,6 +117,9 @@ export function AuthProvider({ children }) {
         // Per-account storage identity — on an account SWITCH this purges the
         // previous user's chat caches so they never leak across logins.
         try { setStorageUser(data.user); } catch { /* storage blocked */ }
+        // A saved hint for another identity (account or organization switch) drops its cached display data.
+        const storedHint = readLastTenant();
+        if (storedHint && (storedHint.orgId !== data.organization?.id || storedHint.userId !== data.user?.id)) clearBootCache();
         setUser(data.user || null);
         setOrg(data.organization || null);
         setOnboarding(data.onboarding || null);
@@ -121,7 +127,7 @@ export function AuthProvider({ children }) {
         const nextTenant = `${data.organization?.id || ''}:${data.user?.id || ''}`;
         if (activeTenantRef.current && activeTenantRef.current !== nextTenant) window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
         activeTenantRef.current = nextTenant;
-        rememberTenant(data.organization?.id, data.user?.id);
+        rememberTenant(data.organization?.id, data.user?.id, undefined, { displayName: data.user?.display_name || data.user?.name, orgName: data.organization?.name });
         if (data.organization?.id) {
           try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         }
@@ -141,6 +147,8 @@ export function AuthProvider({ children }) {
       // Only an explicit authentication denial signs the user out. A timeout
       // or unreachable service cannot establish whether a session is valid.
       if (err.response?.status === 401) {
+        // A rejected session ends the stale shell hint and cached display data.
+        clearBootCache();
         setUser(null);
         setOrg(null);
         setOnboarding(null);
@@ -271,6 +279,8 @@ export function AuthProvider({ children }) {
   const value = {
     // Four states
     authState,
+    // Cached shell hint for the optimistic first paint. Set only while bootstrap is in flight.
+    optimisticShell: authState === 'loading' && !isNativeApp() ? optimisticHint : null,
     loading: authState === 'loading',
     isAuthenticated: authState === 'signed_in',
     isSignedOut: authState === 'signed_out',

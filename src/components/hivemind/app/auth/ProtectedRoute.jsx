@@ -5,8 +5,10 @@ import { RUNTIME_ORIGIN, runtimeLoginUrl, workspaceDocumentRedirect } from '../s
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 
-export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading, isUnreachable, connectionFailure, refresh } = useAuth();
+// `optimisticFallback` paints while bootstrap is in flight and only when a saved shell hint exists.
+// Children, and every data read they make, mount only after bootstrap confirms the session.
+export default function ProtectedRoute({ children, optimisticFallback = null }) {
+  const { isAuthenticated, loading, isUnreachable, connectionFailure, refresh, optimisticShell } = useAuth();
   const location = useLocation();
 
   const authorityRedirect = workspaceDocumentRedirect(window.location.href, { embedded: window.parent !== window });
@@ -16,6 +18,8 @@ export default function ProtectedRoute({ children }) {
     if (authorityRedirect || loginRedirect) window.location.replace(authorityRedirect || loginRedirect);
   }, [authorityRedirect, loginRedirect]);
   if (authorityRedirect || loginRedirect) return null;
+
+  if (loading && optimisticFallback && optimisticShell) return optimisticFallback;
 
   if (loading) {
     return <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center"><AsciiWorkspaceLoading /></div>;
