@@ -12,6 +12,9 @@ import RuntimeArtifactPopup from './RuntimeArtifactPopup';
 import { renderArtifactMarkdown } from './artifact-markdown';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
+import { mergeRuntimeTaskProjection } from './company-hq-model';
+
+export { mergeRuntimeTaskProjection };
 
 const EXECUTION_TYPES = new Set(['skill_loaded', 'tool_started', 'tool_result', 'schedule_created', 'verification']);
 const EXECUTION_META = {
@@ -352,24 +355,6 @@ export function projectLifecycleQueueStatus(snapshot = {}) {
   }
   if (['NEEDS_INTERVENTION', 'TERMINATED'].includes(snapshot.status)) return 'NEEDS_ATTENTION';
   return 'RUNNING';
-}
-export function mergeRuntimeTaskProjection(tasks = [], opportunities = []) {
-  const canonical = Array.isArray(tasks) ? tasks : [];
-  const proposed = Array.isArray(opportunities) ? opportunities : [];
-  const opportunityById = new Map(proposed.map((item) => [String(item.id || item.todo_id || ''), item]));
-  const merged = canonical.map((task) => {
-    const opportunity = opportunityById.get(String(task.id || ''));
-    return opportunity ? { ...opportunity, ...task } : task;
-  });
-  const seen = new Set(merged.map((item) => String(item.id || item.todo_id || '')));
-  for (const opportunity of proposed) {
-    const id = String(opportunity.id || opportunity.todo_id || '');
-    if (id && !seen.has(id)) {
-      merged.push(opportunity);
-      seen.add(id);
-    }
-  }
-  return merged;
 }
 function queueBlockerSummary(reason) {
   if (!reason) return '';

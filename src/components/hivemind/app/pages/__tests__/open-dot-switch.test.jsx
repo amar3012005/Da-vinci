@@ -10,7 +10,7 @@ const origin = 'https://runtime-runner.singulancelabs.com';
 
 test('switches the native router without replacing or reloading the employee document', () => {
   const view = render(<OpenDotEntry initialRoute={route(first)} route={route(first)} />);
-  const frame = screen.getByTitle('Open Dot workspace');
+  const frame = screen.getByTitle('HyperAgent workspace');
   const post = jest.spyOn(frame.contentWindow, 'postMessage');
   const ready = id => act(() => window.dispatchEvent(new MessageEvent('message', {
     origin, source: frame.contentWindow, data: { type: 'hivemind.open-dot.ready', version: 1, employeeId: id },
@@ -18,7 +18,7 @@ test('switches the native router without replacing or reloading the employee doc
   ready(first);
   expect(screen.queryByRole('status')).toBeNull();
   view.rerender(<OpenDotEntry initialRoute={route(first)} route={route(second)} />);
-  expect(screen.getByTitle('Open Dot workspace')).toBe(frame);
+  expect(screen.getByTitle('HyperAgent workspace')).toBe(frame);
   expect(frame.getAttribute('src')).toContain(`/employees/${first}`);
   expect(post).toHaveBeenCalledWith(expect.objectContaining({ employeeId: second, type: 'hivemind.open-dot.navigate' }), origin);
   expect(screen.getByRole('status')).toBeTruthy();

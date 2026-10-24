@@ -45,7 +45,7 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
           return <button key={agent.id} type="button" data-agent-room-link className={`ha-employee-tile${selectedAgent === agent.id ? ' is-selected' : ''}`} aria-label={`${agent.name}, ${profession}`} aria-busy={openingAgent === agent.id || undefined} onClick={event => onOpenAgent(event, agent)} title={collapsed ? `${agent.name} · ${profession}` : undefined}>
             <span className="ha-avatar-wrap"><AgentAvatar agent={agent} size={collapsed ? 34 : 72}/>
               {!collapsed && <span className="ha-profession" role="tooltip">{profession}</span>}
-              {openDotEmployeePath(agent) && <Monitor size={12} className="ha-dot-marker" role="img" aria-label="Open Dot workspace"/>}
+              {openDotEmployeePath(agent) && <Monitor size={12} className="ha-dot-marker" role="img" aria-label="Computer workspace"/>}
             </span>
             {!collapsed && <span className="ha-employee-name">{agent.name}</span>}
             <LiveStatus room={room} collapsed={collapsed}/>
