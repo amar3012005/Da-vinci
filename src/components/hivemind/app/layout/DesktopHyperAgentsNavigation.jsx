@@ -10,7 +10,7 @@ import CreditBalance from '../shared/CreditBalance';
 import { openDotEmployeePath } from '../shared/open-dot-employee-route';
 import './desktop-hyperagents-navigation.css';
 
-export const HYPERAGENT_WIDTHS = { 1: 216, 2: 330, 3: 452 };
+export { HYPERAGENT_WIDTHS } from './hyperagent-widths';
 export const columnsForWidth = width => width < 145 ? 0 : width < 278 ? 1 : width < 391 ? 2 : 3;
 export const createEmployeeSpan = (count, columns) => columns - (count % columns);
 export const employeeProfession = agent => String(agent.role || agent.job_title || agent.role_archetype || agent.roleArchetype || 'Team member').replace(/_/g, ' ');

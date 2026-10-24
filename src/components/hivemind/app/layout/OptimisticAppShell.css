@@ -2,3 +2,5 @@
 .optimistic-shell-main { min-height: 100dvh; }
 .optimistic-shell-header { height: 56px; }
 .optimistic-shell-composer { min-height: 96px; border-radius: 16px; border: 1px solid #e3e0db; background: #ffffff; }
+/* Neutral block for identity text while the frame is restoring. Same box as the revealed text it replaces. */
+.optimistic-skeleton { display: inline-block; flex-shrink: 0; border-radius: 6px; background: #ecebe6; }

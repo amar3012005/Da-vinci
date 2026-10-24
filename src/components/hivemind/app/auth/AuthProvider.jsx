@@ -33,6 +33,9 @@ export function AuthProvider({ children }) {
   // Shell hint saved by the last confirmed session. It is display-only and is exposed as
   // `optimisticShell` while bootstrap is in flight; no identity reaches `user` or `org` until bootstrap confirms.
   const [optimisticHint] = useState(() => readLastTenant());
+  // Set only when bootstrap confirms the same organization and user as the saved hint. Cached identity
+  // may then render before the workspace gates finish; it is never set from the hint alone.
+  const [restoredHint, setRestoredHint] = useState(null);
   useEffect(() => {
     if (authState !== 'signed_in' || !user?.id) return undefined;
     const controller = new AbortController();
@@ -119,7 +122,9 @@ export function AuthProvider({ children }) {
         try { setStorageUser(data.user); } catch { /* storage blocked */ }
         // A saved hint for another identity (account or organization switch) drops its cached display data.
         const storedHint = readLastTenant();
-        if (storedHint && (storedHint.orgId !== data.organization?.id || storedHint.userId !== data.user?.id)) clearBootCache();
+        const identityMatches = Boolean(storedHint && storedHint.orgId === data.organization?.id && storedHint.userId === data.user?.id);
+        if (storedHint && !identityMatches) clearBootCache();
+        setRestoredHint(identityMatches ? storedHint : null);
         setUser(data.user || null);
         setOrg(data.organization || null);
         setOnboarding(data.onboarding || null);
@@ -281,6 +286,8 @@ export function AuthProvider({ children }) {
     authState,
     // Cached shell hint for the optimistic first paint. Set only while bootstrap is in flight.
     optimisticShell: authState === 'loading' && !isNativeApp() ? optimisticHint : null,
+    // Cached identity confirmed by bootstrap for the same organization and user. Null otherwise.
+    restoredShell: authState === 'signed_in' && !isNativeApp() ? restoredHint : null,
     loading: authState === 'loading',
     isAuthenticated: authState === 'signed_in',
     isSignedOut: authState === 'signed_out',
