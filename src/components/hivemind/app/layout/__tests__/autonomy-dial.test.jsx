@@ -11,7 +11,7 @@ function setup(post = json({ ok: true, value: { ok: true, value: { ...state, rev
   render(<AutonomyDial fetcher={fetcher}/>);
   return fetcher;
 }
-const slider = () => screen.getByRole('slider', { name: 'Autonomy level for Runtime and every Dot' });
+const slider = () => screen.getByRole('slider', { name: 'Autonomy level for Runtime and HyperAgents' });
 const move = value => { fireEvent.change(slider(), { target: { value: String(value) } }); fireEvent.pointerUp(slider(), { target: { value: String(value) } }); };
 
 test('shows the saved level as a progress bar and saves a change only after confirming previous → new', async () => {
@@ -54,6 +54,19 @@ test('renders nothing where the Runtime dial endpoint does not exist', async () 
   expect(container).toBeEmptyDOMElement();
 });
 
+test('Escape cancels the confirmation without saving or reaching the drawer behind it', async () => {
+  const fetcher = setup();
+  const drawerKey = jest.fn();
+  document.addEventListener('keydown', drawerKey);
+  await screen.findByText('2/4 · Prepare');
+  move(1);
+  fireEvent.keyDown(await screen.findByRole('dialog'), { key: 'Escape' });
+  document.removeEventListener('keydown', drawerKey);
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(drawerKey).not.toHaveBeenCalled();
+  expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
+});
+
 test('a re-rendering parent neither refetches nor cancels the dial read', async () => {
   const original = global.fetch;
   global.fetch = jest.fn(() => json({ ok: true, sessionId: 'session-root', value: state }));
@@ -63,4 +76,23 @@ test('a re-rendering parent neither refetches nor cancels the dial read', async 
     await screen.findByText('2/4 · Prepare');
     expect(global.fetch).toHaveBeenCalledTimes(1);
   } finally { global.fetch = original; }
+});
+
+test('clicking a checkpoint opens the previous → new dialog and Save sets that level', async () => {
+  const fetcher = setup();
+  await screen.findByText('2/4 · Prepare');
+  fireEvent.click(screen.getByRole('button', { name: 'Suggest' }));
+  expect(await screen.findByRole('dialog')).toHaveTextContent('Prepare→Suggest');
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
+  expect(fetcher).toHaveBeenLastCalledWith(AUTONOMY_ENDPOINT, expect.objectContaining({ body: JSON.stringify({ level: 1, expectedRevision: 3 }) }));
+  expect(await screen.findByText('1/4 · Suggest')).toBeInTheDocument();
+});
+
+test('a locked checkpoint explains the lock instead of opening the dialog, and no copy says Dot', async () => {
+  setup();
+  await screen.findByText('2/4 · Prepare');
+  fireEvent.click(screen.getByRole('button', { name: 'Auto' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(screen.getByRole('status')).toHaveTextContent('Higher levels unlock');
+  expect(document.body.textContent).not.toMatch(/\bDots?\b/);
 });

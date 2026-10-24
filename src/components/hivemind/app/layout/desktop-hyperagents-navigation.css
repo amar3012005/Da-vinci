@@ -48,43 +48,6 @@
  .ha-workspace-shortcuts svg { flex-shrink:0;color:#747970; }
  .ha-workspace-shortcuts>a:hover,.ha-workspace-shortcuts>button:hover,.ha-artifacts-action>button:hover { background:#e8edf3; }
  .ha-artifact-cell { min-width:0; }
-/* The one tenant autonomy dial: a tqdm-style bar, constant on every HyperAgents page. */
-.ha-autonomy-seat { flex-shrink:0;border-top:1px solid #e7e4dd;padding:12px 20px 0;color:#2b2f2a; }
-.ha-autonomy-seat:empty { display:none; }
-.ha-autonomy-seat:not(:empty) + .ha-workspace-shortcuts { border-top:0; }
-.desktop-hyperagents-navigation.is-collapsed .ha-autonomy-seat { padding:10px 12px 0; }
-.ha-autonomy-dial { display:flex;flex-direction:column;gap:6px;min-width:0; }
-.ha-autonomy-head { display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:12px; }
-.ha-autonomy-title { font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.ha-autonomy-count { flex:none;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#747970; }
-.ha-autonomy-row { display:flex;align-items:center;gap:6px; }
-.ha-autonomy-end { display:inline-flex;flex:none;color:#747970; }
-.ha-autonomy-bar { position:relative;flex:1;min-width:0;height:16px;display:flex;align-items:center; }
-.ha-autonomy-cells { position:absolute;inset:3px 0;display:grid;grid-template-columns:repeat(20,1fr);gap:2px;pointer-events:none; }
-.ha-autonomy-cells i { border-radius:1.5px;background:#e4e1d9;transition:background-color .12s ease; }
-.ha-autonomy-cells i[data-filled] { background:#1f2420; }
-.ha-autonomy-dial[data-unset] .ha-autonomy-cells i[data-filled] { background:#9da19a; }
-.ha-autonomy-cells i[data-locked]:not([data-filled]) { background:repeating-linear-gradient(135deg,transparent 0 2px,#d6d2c8 2px 3.5px); }
-.ha-autonomy-dial[data-unavailable] { opacity:.55; }
-.ha-autonomy-range { position:relative;z-index:1;width:100%;height:16px;margin:0;opacity:0;cursor:grab; }
-.ha-autonomy-range:active { cursor:grabbing; }
-.ha-autonomy-range:disabled { cursor:default; }
-.ha-autonomy-bar:focus-within .ha-autonomy-cells { outline:2px solid #9bb7d6;outline-offset:2px;border-radius:3px; }
-.ha-autonomy-notice { margin:0;font-size:11px;line-height:1.35;color:#747970; }
-.ha-autonomy-dial.is-collapsed { align-items:center; }
-.ha-autonomy-badge { display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:22px;border-radius:6px;background:#f1f0eb;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#2b2f2a; }
-.ha-autonomy-overlay { position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgb(15 15 15 / 28%); }
-.ha-autonomy-confirm { width:min(420px,100%);border-radius:14px;background:#fff;box-shadow:0 18px 48px rgb(0 0 0 / 22%);padding:20px;color:#1f2420; }
-.ha-autonomy-confirm h3 { margin:0 0 12px;font-size:16px;font-weight:600; }
-.ha-autonomy-change { display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:15px; }
-.ha-autonomy-change span:first-child { color:#747970; }
-.ha-autonomy-confirm-hint, .ha-autonomy-confirm-note { margin:0 0 8px;font-size:13px;line-height:1.45;color:#4b504a; }
-.ha-autonomy-confirm-note { color:#747970; }
-.ha-autonomy-actions { display:flex;justify-content:flex-end;gap:8px;margin-top:14px; }
-.ha-autonomy-actions button { min-height:34px;padding:0 14px;border-radius:8px;border:1px solid #e0ddd5;background:#fff;font-size:13px; }
-.ha-autonomy-actions button.is-primary { border-color:#1f2420;background:#1f2420;color:#fff; }
-.ha-autonomy-actions button:disabled { opacity:.6; }
-@media (prefers-reduced-motion: reduce) { .ha-autonomy-cells i { transition:none; } }
  .ha-artifacts-unavailable { display:none; }
  .ha-artifacts-action:empty + .ha-artifacts-unavailable { display:flex;align-items:center;gap:8px;min-height:37px;width:100%;padding:7px 9px;border-radius:7px;background:#f1f0eb;color:#8b9097;font-size:12px; }
  .ha-account-area { flex-shrink:0;margin:0 20px;padding:11px 0 10px;border-top:1px solid #e7e4dd; }
@@ -119,3 +82,59 @@
  .desktop-hyperagents-navigation.is-collapsed .ha-account-area { margin:0 10px;text-align:center; }
  .desktop-hyperagents-navigation.is-collapsed .ha-account-settings { justify-content:center;width:100%; }
 }
+/* The one tenant autonomy dial: a tqdm-style bar, constant on every HyperAgents page and drawer, so it lives outside the desktop-only block. */
+.ha-autonomy-seat { flex-shrink:0;border-top:1px solid #e7e4dd;padding:12px 20px 0;color:#2b2f2a; }
+.ha-autonomy-seat:empty { display:none; }
+.ha-autonomy-seat:not(:empty) + .ha-workspace-shortcuts { border-top:0; }
+.desktop-hyperagents-navigation.is-collapsed .ha-autonomy-seat { padding:10px 12px 0; }
+.ha-autonomy-dial { display:flex;flex-direction:column;gap:6px;min-width:0; }
+.ha-autonomy-head { display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:12px; }
+.ha-autonomy-title { font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.ha-autonomy-count { flex:none;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#747970; }
+.ha-autonomy-row { display:flex;align-items:center;gap:6px; }
+.ha-autonomy-end { display:inline-flex;flex:none;color:#747970; }
+.ha-autonomy-bar { position:relative;flex:1;min-width:0;height:16px;display:flex;align-items:center; }
+.ha-autonomy-cells { position:absolute;inset:3px 0;display:grid;grid-template-columns:repeat(20,1fr);gap:2px;pointer-events:none; }
+.ha-autonomy-cells i { border-radius:1.5px;background:#e4e1d9;transition:background-color .12s ease; }
+.ha-autonomy-cells i[data-filled] { background:#1f2420; }
+.ha-autonomy-dial[data-unset] .ha-autonomy-cells i[data-filled] { background:#9da19a; }
+.ha-autonomy-cells i[data-locked]:not([data-filled]) { background:repeating-linear-gradient(135deg,transparent 0 2px,#d6d2c8 2px 3.5px); }
+.ha-autonomy-dial[data-unavailable] { opacity:.55; }
+.ha-autonomy-range { position:relative;z-index:1;width:100%;height:16px;margin:0;opacity:0;cursor:grab; }
+.ha-autonomy-range:active { cursor:grabbing; }
+.ha-autonomy-range:disabled { cursor:default; }
+.ha-autonomy-bar:focus-within .ha-autonomy-cells { outline:2px solid #9bb7d6;outline-offset:2px;border-radius:3px; }
+.ha-autonomy-notice { margin:0;font-size:11px;line-height:1.35;color:#747970; }
+.ha-autonomy-checkpoints { display:flex;justify-content:space-between;gap:2px;padding:0 15px; }
+.ha-autonomy-checkpoint { display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;padding:2px 0;border:0;background:none;font-size:10px;line-height:1.1;color:#747970;cursor:pointer; }
+.ha-autonomy-checkpoint-mark { width:9px;height:9px;border-radius:50%;border:1.5px solid #9da19a;background:#fff; }
+.ha-autonomy-checkpoint:hover .ha-autonomy-checkpoint-mark { border-color:#1f2420; }
+.ha-autonomy-checkpoint[data-current] { color:#1f2420;font-weight:600; }
+.ha-autonomy-checkpoint[data-current] .ha-autonomy-checkpoint-mark { border-color:#1f2420;background:#1f2420; }
+.ha-autonomy-checkpoint[data-locked] { color:#b3b6ae; }
+.ha-autonomy-checkpoint[data-locked] .ha-autonomy-checkpoint-mark { border-style:dashed;border-color:#c9cbc4; }
+.ha-autonomy-checkpoint:disabled { cursor:default; }
+.ha-autonomy-checkpoint:focus-visible { outline:2px solid #9bb7d6;outline-offset:1px;border-radius:4px; }
+.ha-autonomy-dial.is-collapsed { align-items:center; }
+.ha-autonomy-badge { display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:22px;border-radius:6px;background:#f1f0eb;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#2b2f2a; }
+.ha-autonomy-overlay { position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgb(15 15 15 / 28%); }
+.ha-autonomy-confirm { width:min(420px,100%);border-radius:14px;background:#fff;box-shadow:0 18px 48px rgb(0 0 0 / 22%);padding:20px;color:#1f2420; }
+.ha-autonomy-confirm h3 { margin:0 0 12px;font-size:16px;font-weight:600; }
+.ha-autonomy-change { display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:15px; }
+.ha-autonomy-change span:first-child { color:#747970; }
+.ha-autonomy-confirm-hint, .ha-autonomy-confirm-note { margin:0 0 8px;font-size:13px;line-height:1.45;color:#4b504a; }
+.ha-autonomy-confirm-note { color:#747970; }
+.ha-autonomy-actions { display:flex;justify-content:flex-end;gap:8px;margin-top:14px; }
+.ha-autonomy-actions button { min-height:34px;padding:0 14px;border-radius:8px;border:1px solid #e0ddd5;background:#fff;font-size:13px; }
+.ha-autonomy-actions button.is-primary { border-color:#1f2420;background:#1f2420;color:#fff; }
+.ha-autonomy-actions button:disabled { opacity:.6; }
+/* The same dial in the mobile and narrow team drawers, above their shortcuts. */
+.ha-autonomy-seat.is-drawer { border-top:0;padding:0; }
+nav .ha-autonomy-seat.is-drawer { padding:4px 10px 12px; }
+.ha-autonomy-overlay { padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px)); }
+@media (pointer: coarse) {
+  .ha-autonomy-bar, .ha-autonomy-range { height:44px; }
+  .ha-autonomy-cells { inset:16px 0; }
+  .ha-autonomy-actions button { min-height:44px;min-width:88px; }
+}
+@media (prefers-reduced-motion: reduce) { .ha-autonomy-cells i { transition:none; } }

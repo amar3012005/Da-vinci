@@ -12,6 +12,7 @@ import WorkspaceModeSwitcher from './WorkspaceModeSwitcher';
 import BrainModeIcon from './BrainModeIcon';
 import DesktopBrainNavigation from './DesktopBrainNavigation';
 import DesktopHyperAgentsNavigation, { HYPERAGENT_WIDTHS, columnsForWidth } from './DesktopHyperAgentsNavigation';
+import AutonomyDial from './AutonomyDial';
 import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
 import {
@@ -518,6 +519,7 @@ export default function Sidebar({
         <div className="mobile-unified-user-name">{user?.display_name || user?.name || user?.email?.split('@')[0] || 'Your account'}</div>
         <div className="mobile-roster-org"><Building2 size={18}/><strong>{org?.name || org?.slug || 'Workspace'}</strong></div>
         <CreditBalance credits={usage?.credits} inline className="mobile-unified-plan" />
+        <div className="ha-autonomy-seat is-drawer" data-drawer-autonomy-seat><AutonomyDial/></div>
         <div className="mobile-roster-team">
           <div className="mobile-unified-heading"><h2>Your team</h2><div className="mobile-roster-shortcuts">
             <button type="button" onClick={() => setCompanyOpen(true)}><Building2 size={18}/><span>Company</span></button>
@@ -584,6 +586,7 @@ export default function Sidebar({
       {!desktopHyperAgents && <nav className={`${desktopBrain ? 'desktop-brain-legacy ' : ''}mobile-roster-legacy flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4`}>
         {navSections.map((section, si) => (
           <div key={si}>
+            {teamMode && mobileDrawer && !mobileRoster && si === 1 && <div className="ha-autonomy-seat is-drawer" data-drawer-autonomy-seat><AutonomyDial/></div>}
             {section.label && !collapsed && (
               <div className="px-2.5 mb-1.5">
                 <span className="text-[#737373] text-[11px] font-semibold uppercase tracking-[0.08em]">
