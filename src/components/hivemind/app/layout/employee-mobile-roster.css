@@ -161,3 +161,22 @@
 }
 
 .mobile-roster-grid [data-agent-room-link] { position:relative; }
+
+/* Company Anatomy mode switch, above Account in the phone roster. */
+.mobile-roster-anatomy { flex-shrink: 0; margin-top: auto; padding-top: 12px; }
+.mobile-roster-anatomy + .mobile-roster-account { margin-top: 8px; }
+.mobile-roster-anatomy > button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 14px;
+  border: 1px solid #e3e0db; border-radius: 20px; background: rgba(255,255,255,.55); text-align: left; color: #292929;
+  transition: transform 220ms cubic-bezier(.2,.9,.25,1.15), background-color 160ms ease; -webkit-tap-highlight-color: transparent; }
+.mobile-roster-anatomy > button:active { transform: scale(.98); }
+.mobile-roster-anatomy > button:disabled { opacity: .6; }
+.mobile-roster-anatomy span { display: flex; flex: 1; min-width: 0; flex-direction: column; }
+.mobile-roster-anatomy strong { font-size: 15px; font-weight: 600; }
+.mobile-roster-anatomy small { font-size: 12px; color: #737373; }
+.mobile-roster-anatomy i { position: relative; flex: 0 0 auto; width: 46px; height: 28px; border-radius: 999px; background: #d9d6d0; transition: background-color 200ms ease; }
+.mobile-roster-anatomy i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18); transition: transform 260ms cubic-bezier(.2,.9,.25,1.15); }
+.mobile-roster-anatomy i[data-on] { background: #34c759; }
+.mobile-roster-anatomy i[data-on]::after { transform: translateX(18px); }
+.mobile-roster-anatomy p { margin: 6px 4px 0; font-size: 12px; color: #737373; }
+@media (prefers-reduced-motion: reduce) { .mobile-roster-anatomy > button, .mobile-roster-anatomy i, .mobile-roster-anatomy i::after { transition: none; } }
