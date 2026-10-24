@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, Check, ChevronRight, Mail, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { whenIdle } from '../shared/idle';
 import WorkspacePopupSurface from '../shared/WorkspacePopupSurface';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 
@@ -125,23 +126,29 @@ export default function WorkspaceNotifications() {
       if (lifecycleToast) setToast(lifecycleToast);
       initialized.current = true;
       if (!lifecycleToast && !announcementId.current) {
-        const nextAnnouncement = await apiClient.nextWorkspaceAnnouncement().catch(() => null);
-        if (nextAnnouncement?.announcement) {
-          announcementId.current = nextAnnouncement.announcement.id;
-          setAnnouncement(nextAnnouncement.announcement);
-        }
+        // Announcements never block the notification list; they load after the list has painted.
+        whenIdle(async () => {
+          const nextAnnouncement = await apiClient.nextWorkspaceAnnouncement().catch(() => null);
+          if (nextAnnouncement?.announcement && !announcementId.current) {
+            announcementId.current = nextAnnouncement.announcement.id;
+            setAnnouncement(nextAnnouncement.announcement);
+          }
+        });
       }
     } catch { /* session/bootstrap can still be settling */ }
   }, [unseenLifecycle]);
 
-  // Lifecycle notices and announcements change rarely: poll while visible and
-  // catch up immediately when the tab returns, instead of every 5 s per tab.
+  // Lifecycle notices and announcements change rarely: the first read waits for
+  // idle time, then poll while visible and catch up when the tab returns.
   useEffect(() => {
     const visibleLoad = () => { if (!document.hidden) load(); };
-    load();
-    const interval = window.setInterval(visibleLoad, NOTIFICATION_POLL_MS);
+    let interval;
+    const cancelFirstLoad = whenIdle(() => {
+      load();
+      interval = window.setInterval(visibleLoad, NOTIFICATION_POLL_MS);
+    });
     document.addEventListener('visibilitychange', visibleLoad);
-    return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', visibleLoad); };
+    return () => { cancelFirstLoad(); window.clearInterval(interval); document.removeEventListener('visibilitychange', visibleLoad); };
   }, [load]);
   useEffect(() => {
     if (!toast || lifecycleDay(toast) !== 0) { setLifecycleContext(null); return undefined; }

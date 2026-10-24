@@ -8,6 +8,8 @@
 //   • different user (or logout) → purge every user-scoped key first
 // Pages derive their storage keys via userScopedKey(base).
 
+import { clearBootCache } from './boot-cache';
+
 const USER_KEY = 'hivemind:user';
 
 // Prefixes owned by user-scoped features. Anything matching is purged on
@@ -49,6 +51,11 @@ export function clearUserScopedStorage() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('hivemind:clear-runtime-cache'));
   purgeScopedKeys(window.localStorage);
   purgeScopedKeys(window.sessionStorage);
+  clearBootCache(safeLocalStorage());
+}
+
+function safeLocalStorage() {
+  try { return window.localStorage; } catch { return null; }
 }
 
 // Record the signed-in user. Returns true when the account CHANGED (caller

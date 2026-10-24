@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import apiClient from './api-client';
+import { useAuth } from '../auth/AuthProvider';
+import { readBootCache, writeBootCache } from './boot-cache';
 
 // Persisted selection — survives reloads
 const STORAGE_TEAM = 'hivemind_active_team_id';
@@ -37,9 +39,16 @@ const TeamContext = createContext({
   refresh: () => {},
 });
 
+function cachedList(orgId, userId, resource, key) {
+  const value = readBootCache(orgId, userId, resource)?.value;
+  return Array.isArray(value?.[key]) ? value[key] : [];
+}
+
 export function TeamProvider({ children }) {
-  const [teams, setTeams] = useState([]);
-  const [projects, setProjects] = useState([]);
+  const { user, org } = useAuth();
+  // The per-tenant cache renders the last roster on reload; the refresh below replaces it.
+  const [teams, setTeams] = useState(() => cachedList(org?.id, user?.id, 'teams', 'teams'));
+  const [projects, setProjects] = useState(() => cachedList(org?.id, user?.id, 'projects', 'projects'));
   const [activeTeamId, _setActiveTeamId] = useState(() => readStorage(STORAGE_TEAM));
   const [activeProjectId, _setActiveProjectId] = useState(() => readStorage(STORAGE_PROJECT));
   const [loading, setLoading] = useState(false);
@@ -82,6 +91,8 @@ export function TeamProvider({ children }) {
       const p = projectsResp.projects || [];
       setTeams(t);
       setProjects(p);
+      writeBootCache(org?.id, user?.id, 'teams', { teams: t });
+      writeBootCache(org?.id, user?.id, 'projects', { projects: p });
 
       // Auto-select default team if none selected
       if (!activeTeamId && t.length > 0) {
@@ -96,7 +107,7 @@ export function TeamProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [activeTeamId, setActiveTeamId]);
+  }, [activeTeamId, setActiveTeamId, org?.id, user?.id]);
 
   useEffect(() => {
     refresh();

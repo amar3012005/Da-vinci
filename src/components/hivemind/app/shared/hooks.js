@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import apiClient from './api-client';
 import { nextHealthObservation } from './connectivity';
+import { whenIdle } from './idle';
 
 /**
  * Generic data fetching hook
@@ -94,9 +95,10 @@ export function useHealthStatus(interval = 30000) {
         if (next.healthy === false) setHealthy(false);
       }
     };
-    check();
-    const id = setInterval(check, interval);
-    return () => clearInterval(id);
+    // The first probe waits for idle time so it never competes with boot reads.
+    let id;
+    const cancel = whenIdle(() => { check(); id = setInterval(check, interval); });
+    return () => { cancel(); clearInterval(id); };
   }, [interval]);
 
   return healthy;

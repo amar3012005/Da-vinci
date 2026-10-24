@@ -111,21 +111,26 @@ export default function HarnessChatSurface({ legacy }) {
 
   useEffect(() => { bootstrap(); }, [bootstrap]);
 
+  const loading = connecting || mode === null;
+  // One overlay element stays mounted for every phase. It fades by opacity only,
+  // so the indicator never moves or resizes as the admission state changes.
   return (
-    <div className="flex h-full flex-1 min-h-0 flex-col bg-[#faf9f4]">
+    <div className="relative flex h-full flex-1 min-h-0 flex-col bg-[#faf9f4]">
       {notice && (
-        <div className="mx-auto mb-2 flex w-full max-w-3xl items-center justify-between gap-3 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2">
+        <div className="relative z-20 mx-auto mb-2 flex w-full max-w-3xl items-center justify-between gap-3 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2">
           <p className="flex items-center gap-2 text-[11px] text-amber-700"><AlertTriangle size={13} />{notice}</p>
           <button type="button" onClick={() => bootstrap()} className="text-[11px] font-medium text-amber-700 hover:text-[#0a0a0a]">
             {t('overview.harness.retry', 'Retry')}
           </button>
         </div>
       )}
-      {connecting || mode === null ? (
-        <div className="flex min-h-[360px] flex-1 items-center justify-center bg-[#faf9f4]">
-          <AsciiWorkspaceLoading label={notice ? 'Connection unavailable' : 'Connecting…'} />
-        </div>
-      ) : mode === 'legacy' ? legacy : null}
+      <div
+        aria-hidden={loading ? undefined : true}
+        className={`pointer-events-none absolute inset-0 z-10 grid place-items-center bg-[#faf9f4] transition-opacity duration-200 ${loading ? 'opacity-100' : 'opacity-0'}`}
+      >
+        <AsciiWorkspaceLoading label={notice ? 'Connection unavailable' : 'Connecting…'} />
+      </div>
+      {mode === 'legacy' ? legacy : null}
     </div>
   );
 }
