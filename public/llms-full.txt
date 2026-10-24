@@ -2108,6 +2108,8 @@ SINGULANCE Labs
 
 The work behind the sovereign workforce — memory you can prove, and a swarm that acts as one.
 
+[Use the open-source ICARUS tools, free](#developers)
+
 Featured research01
 
 RUNTIMEPROACTIVE INTELLIGENCEPRODUCT DESIGN
@@ -2281,6 +2283,75 @@ Three quantum-resistant layers — hybrid PQC TLS on the edge, ML-DSA-65 signatu
 ### Cognitive Swarm Intelligence](https://singulancelabs.com/research/cognitive-swarm-intelligence)[SECURITYPOST-QUANTUMFIPS 203/204/205
 
 ### Post-Quantum Cryptography](https://singulancelabs.com/research/post-quantum-cryptography)
+
+Open source · SINGULANCE developer account
+
+## One account.
+Every ICARUS tool.
+
+The research above ships as open tools you run yourself. A free SINGULANCE developer account ties them to one identity, so your agents, terminals and machines know who they work for.
+
+- 01
+
+Install ICARUS
+
+One binary for macOS, Linux and Windows. Local memory works straight away.
+- 02
+
+Run icarus connect
+
+Your browser opens. Create the account or sign in with email or Google.
+- 03
+
+Use every tool
+
+The same developer identity covers Memory, Harness, Agent Bus and Computer Use.
+
+SINGULANCE developer account
+
+Free, for every developer.
+
+- Email or Google
+- No card and no company workspace
+- Local memory never needs it
+
+### ICARUS Memory
+
+Stable
+
+The .amr memory filesystem for agents. Save and recall locally, with no account, server or API key.
+
+curl -fsSL https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.sh | bash icarus save "Release notes live in docs/release.md" --org demo icarus recall "release notes" --org demo
+
+[Read the docs](https://singulancelabs.com/research/icarus)[Source](https://github.com/amar3012005/ICARUS)
+
+### ICARUS Harness
+
+Opt-in
+
+The deterministic layer around a coding agent: task contracts, context packs, verification receipts and a seal gate for high-risk work.
+
+icarus harness init --agent claude icarus doctor
+
+[Read the docs](https://github.com/amar3012005/ICARUS/blob/main/docs/HARNESS_QUICKSTART.md)[Source](https://github.com/amar3012005/ICARUS/tree/main/crate/icarus-harness)
+
+### ICARUS Agent Bus
+
+Early access
+
+A durable mailbox between any two coding agents, laptop or cloud. Jobs, progress and receipts arrive by push, and nothing is lost while one sleeps.
+
+Source opens with the public release
+
+### ICARUS Computer Use
+
+Experimental
+
+Computer control for agents that follows a plan the caller supplies, evaluated separately from the memory core.
+
+[Read the docs](https://github.com/amar3012005/HIVEMIND-Computer-use#readme)[Source](https://github.com/amar3012005/HIVEMIND-Computer-use)
+
+ICARUS is licensed under Apache-2.0. Hosted HIVEMIND capabilities need their own permissions; a developer account never grants them on its own.
 
 ## Products and workspace
 
