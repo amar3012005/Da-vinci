@@ -105,6 +105,16 @@
 .ha-autonomy-range:disabled { cursor:default; }
 .ha-autonomy-bar:focus-within .ha-autonomy-cells { outline:2px solid #9bb7d6;outline-offset:2px;border-radius:3px; }
 .ha-autonomy-notice { margin:0;font-size:11px;line-height:1.35;color:#747970; }
+.ha-autonomy-checkpoints { display:flex;justify-content:space-between;gap:2px;padding:0 15px; }
+.ha-autonomy-checkpoint { display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;padding:2px 0;border:0;background:none;font-size:10px;line-height:1.1;color:#747970;cursor:pointer; }
+.ha-autonomy-checkpoint-mark { width:9px;height:9px;border-radius:50%;border:1.5px solid #9da19a;background:#fff; }
+.ha-autonomy-checkpoint:hover .ha-autonomy-checkpoint-mark { border-color:#1f2420; }
+.ha-autonomy-checkpoint[data-current] { color:#1f2420;font-weight:600; }
+.ha-autonomy-checkpoint[data-current] .ha-autonomy-checkpoint-mark { border-color:#1f2420;background:#1f2420; }
+.ha-autonomy-checkpoint[data-locked] { color:#b3b6ae; }
+.ha-autonomy-checkpoint[data-locked] .ha-autonomy-checkpoint-mark { border-style:dashed;border-color:#c9cbc4; }
+.ha-autonomy-checkpoint:disabled { cursor:default; }
+.ha-autonomy-checkpoint:focus-visible { outline:2px solid #9bb7d6;outline-offset:1px;border-radius:4px; }
 .ha-autonomy-dial.is-collapsed { align-items:center; }
 .ha-autonomy-badge { display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:22px;border-radius:6px;background:#f1f0eb;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#2b2f2a; }
 .ha-autonomy-overlay { position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgb(15 15 15 / 28%); }

@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-/** One autonomy dial for Runtime and every Dot; it lives in the HyperAgents sidebar on every page. */
+/** One autonomy dial for Runtime and HyperAgents; it lives in the HyperAgents sidebar on every page. */
 export const AUTONOMY_ENDPOINT = '/api/hivemindHq/autonomyLevel';
 const MAX = 4;
 const CELLS = 20;
+/** Short checkpoint labels under the bar, one per level. */
+const CHECKPOINTS = ['Observe', 'Suggest', 'Prepare', 'Lanes', 'Auto'];
 /** Shown before a level was ever chosen; the previous approval rules behave closest to Prepare. */
 const UNSET_DISPLAY = 2;
 export const AUTONOMY_LEVELS = [
-  { name: 'Observe', hint: 'Runtime and every Dot read signals and keep the company picture current. They tell you what changed and take no action.' },
-  { name: 'Suggest', hint: 'Runtime and every Dot propose next steps and drafts. Every action needs your yes.' },
-  { name: 'Prepare', hint: 'Runtime and every Dot take initiative on reversible internal work: research, drafts, files, plans and tasks. They ask before anything leaves the company or can’t be undone.' },
+  { name: 'Observe', hint: 'Runtime and HyperAgents read signals and keep the company picture current. They tell you what changed and take no action.' },
+  { name: 'Suggest', hint: 'Runtime and HyperAgents propose next steps and drafts. Every action needs your yes.' },
+  { name: 'Prepare', hint: 'Runtime and HyperAgents take initiative on reversible internal work: research, drafts, files, plans and tasks. They ask before anything leaves the company or can’t be undone.' },
   { name: 'Act in lanes', hint: 'Acts inside lanes you pre-approve, with limits on amount, recipients and sender. Everything else still asks.' },
   { name: 'Autonomous', hint: 'No human in the loop. Anything outside hard limits is stopped and reported.' },
 ];
@@ -94,7 +96,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
   }
   return <div className="ha-autonomy-dial" data-unset={(available && state.level === undefined) || undefined} data-unavailable={!available || undefined} data-hivemind-autonomy-dial>
     <div className="ha-autonomy-head">
-      <span className="ha-autonomy-title">Autonomy · Runtime and every Dot</span>
+      <span className="ha-autonomy-title">Autonomy · Runtime and HyperAgents</span>
       <span className="ha-autonomy-count">{available ? `${Math.round(shown)}/${MAX} · ${level.name}` : 'Unavailable'}</span>
     </div>
     <div className="ha-autonomy-row">
@@ -103,13 +105,21 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
         <span className="ha-autonomy-cells" aria-hidden="true">{Array.from({ length: CELLS }, (_, index) =>
           <i key={index} data-filled={index < filled || undefined} data-locked={index >= lockedFrom || undefined}/>)}</span>
         <input type="range" className="ha-autonomy-range" min={0} max={MAX} step={1} value={shown}
-          disabled={!available || saving || pending !== null} aria-label="Autonomy level for Runtime and every Dot" aria-valuetext={level.name}
+          disabled={!available || saving || pending !== null} aria-label="Autonomy level for Runtime and HyperAgents" aria-valuetext={level.name}
           onChange={event => { setNotice(null); setDraft(Number(event.target.value)); }}
           onPointerUp={event => release(event.currentTarget.value)}
           onKeyUp={event => { if (draft !== null) release(event.currentTarget.value); }}
           onBlur={event => { if (draft !== null) release(event.currentTarget.value); }}/>
       </div>
       <span className="ha-autonomy-end" title="Fully autonomous"><AgentIcon/></span>
+    </div>
+    <div className="ha-autonomy-checkpoints" role="group" aria-label="Autonomy checkpoints">
+      {CHECKPOINTS.map((label, index) => <button key={label} type="button" className="ha-autonomy-checkpoint"
+        data-current={index === Math.round(saved) || undefined} data-locked={(available && index > state.maxSelectable) || undefined}
+        disabled={!available || saving || pending !== null} aria-pressed={index === Math.round(saved)}
+        title={AUTONOMY_LEVELS[index].name} onClick={() => release(index)}>
+        <span className="ha-autonomy-checkpoint-mark" aria-hidden="true"/>{label}
+      </button>)}
     </div>
     {notice && <p className="ha-autonomy-notice" role="status">{notice}</p>}
     {pending !== null && createPortal(<div className="ha-autonomy-overlay" role="presentation" onClick={() => { if (!saving) setPending(null); }}>
@@ -118,7 +128,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
         <h3 id="ha-autonomy-confirm-title">Change autonomy?</h3>
         <p className="ha-autonomy-change"><span>{previous}</span><span aria-hidden="true">→</span><strong>{AUTONOMY_LEVELS[pending].name}</strong></p>
         <p className="ha-autonomy-confirm-hint">{AUTONOMY_LEVELS[pending].hint}</p>
-        <p className="ha-autonomy-confirm-note">This applies to Runtime and every Dot until you change it again.</p>
+        <p className="ha-autonomy-confirm-note">This applies to Runtime and all HyperAgents until you change it again.</p>
         <div className="ha-autonomy-actions">
           <button type="button" onClick={() => setPending(null)} disabled={saving}>Cancel</button>
           <button type="button" className="is-primary" onClick={() => { void save(); }} disabled={saving} autoFocus>{saving ? 'Saving…' : 'Save'}</button>
