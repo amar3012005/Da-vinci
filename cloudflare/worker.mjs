@@ -844,7 +844,14 @@ export default {
       const headers = new Headers(response.headers);
       headers.set('cache-control', 'private, no-store');
       headers.set('cdn-cache-control', 'no-store');
-      if (url.searchParams.get('native_pane') === '1') headers.set('content-security-policy', "frame-ancestors https://next.singulancelabs.com https://runtime-runner.singulancelabs.com");
+      // Only the native pane is embeddable across the two app origins; every other
+      // app document refuses foreign frames.
+      if (url.searchParams.get('native_pane') === '1') {
+        headers.set('content-security-policy', "frame-ancestors https://next.singulancelabs.com https://runtime-runner.singulancelabs.com");
+      } else {
+        headers.set('content-security-policy', "frame-ancestors 'self'");
+        headers.set('x-frame-options', 'SAMEORIGIN');
+      }
       response = new Response(response.body, { status: response.status, headers });
     }
 
