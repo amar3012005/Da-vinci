@@ -1,4 +1,5 @@
 import { readRuntimeRoute } from '../shared/runtime-presentation-cache';
+import { RUNTIME_WORKSPACE } from '../shared/runtime-workspace';
 import RuntimeAvatar from '../shared/RuntimeAvatar';
 import { ownedOpenDotRoomStatuses, withEmployeeTaskStatuses, reconnectingOpenDotRoomStatuses, withRuntimeReviewDecisions } from '../shared/open-dot-room-status';
 import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
@@ -404,6 +405,8 @@ export default function Sidebar({
         throw error;
       }
     }
+    // Brain's host has no Runtime starter; Runtime's room lives on the Runtime host.
+    if (agent.id === 'runtime' && window.location.hostname === 'next.singulancelabs.com') { window.location.assign(RUNTIME_WORKSPACE); return true; }
     const cachedRuntime = agent.id === 'runtime' && window.location.hostname === 'runtime-runner.singulancelabs.com' && readRuntimeRoute(scope);
     if (cachedRuntime) { setSelectedAgent(null); navigate(cachedRuntime); return true; }
     const openDotPath = openDotEmployeePath(agent);
