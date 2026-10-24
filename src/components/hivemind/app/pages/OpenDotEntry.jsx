@@ -47,6 +47,10 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
     const probe = window.setInterval(connect, 1000);
     const onMessage = event => {
       if (event.origin !== DOT_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
+      if (event.data?.type === 'hivemind.open-dot.back' && event.data.version === 1 && active) {
+        window.dispatchEvent(new CustomEvent('hivemind:open-dot-team'));
+        return;
+      }
       if (event.data?.type === 'hivemind.open-dot.preview' && event.data.version === 1 && active) {
         window.dispatchEvent(new CustomEvent('hivemind:preview-visibility', {detail:{open:event.data.open === true}}));
         return;
