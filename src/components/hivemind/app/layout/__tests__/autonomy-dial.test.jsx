@@ -96,3 +96,12 @@ test('a locked checkpoint explains the lock instead of opening the dialog, and n
   expect(screen.getByRole('status')).toHaveTextContent('Higher levels unlock');
   expect(document.body.textContent).not.toMatch(/\bDots?\b/);
 });
+
+test('Lanes and Auto open the save dialog once Runtime allows every level', async () => {
+  const fetcher = jest.fn(() => json({ ok: true, sessionId: 'session-root', value: { ...state, maxSelectable: 4 } }));
+  render(<AutonomyDial fetcher={fetcher}/>);
+  await screen.findByText('2/4 · Prepare');
+  fireEvent.click(screen.getByRole('button', { name: 'Auto' }));
+  expect(await screen.findByRole('dialog')).toHaveTextContent('Prepare→Autonomous');
+  expect(screen.getByRole('dialog')).toHaveTextContent('No approvals');
+});
