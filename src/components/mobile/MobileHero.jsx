@@ -85,16 +85,22 @@ const Viewfinder = () => (
 
 const scrollNext = () => window.scrollBy({ top: window.innerHeight, behavior: 'smooth' });
 
-const BannerLockup = () => (
+const BannerLockup = ({ semanticHeading = false }) => (
   <div className="mx-auto w-full max-w-6xl px-5 text-center sm:px-8">
     <div className="relative mx-auto flex h-14 items-center justify-center border border-white/60 bg-black/20 px-5 shadow-[0_10px_40px_rgba(0,0,0,0.22)] backdrop-blur-[2px] transition-[transform,border-color,background-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-black/35 hover:shadow-[0_16px_46px_rgba(0,0,0,0.34)] sm:h-16">
       <span className="absolute -left-px -top-px h-3 w-3 border-l-2 border-t-2 border-white" />
       <span className="absolute -right-px -top-px h-3 w-3 border-r-2 border-t-2 border-white" />
       <span className="absolute -bottom-px -left-px h-3 w-3 border-b-2 border-l-2 border-white" />
       <span className="absolute -bottom-px -right-px h-3 w-3 border-b-2 border-r-2 border-white" />
-      <h1 className="text-[clamp(1.35rem,3vw,2.15rem)] font-medium leading-tight tracking-tight text-white">
-        Building proactive intelligence.
-      </h1>
+      {semanticHeading ? (
+        <h1 className="text-[clamp(1.35rem,3vw,2.15rem)] font-medium leading-tight tracking-tight text-white">
+          Building proactive intelligence.
+        </h1>
+      ) : (
+        <div role="heading" aria-level="1" className="text-[clamp(1.35rem,3vw,2.15rem)] font-medium leading-tight tracking-tight text-white">
+          Building proactive intelligence.
+        </div>
+      )}
     </div>
   </div>
 );
@@ -159,7 +165,7 @@ const DesktopHero = ({ immersive }) => (
     {/* Framed operating banner: the clear public entry point. */}
     <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-3 pb-[4vh] text-center">
       <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.55, ease }} className="w-full">
-        <BannerLockup />
+        <BannerLockup semanticHeading />
       </motion.div>
       <HeroActionRail delay={0.78} />
       <motion.button

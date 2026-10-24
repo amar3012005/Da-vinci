@@ -65,7 +65,7 @@ const NewsArticleLayout = ({
 
         {/* bottom controls */}
         <div className="relative z-10 flex items-center justify-between px-6 pb-6 md:px-10">
-          <a href="/research" className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-2 text-[12px] font-medium text-white backdrop-blur-md transition-colors hover:bg-black/50">
+          <a href="https://singulancelabs.com/research" className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-2 text-[12px] font-medium text-white backdrop-blur-md transition-colors hover:bg-black/50">
             <ArrowLeft size={14} /> Back to Research
           </a>
           <div className="flex items-center gap-2">
@@ -114,7 +114,7 @@ const NewsArticleLayout = ({
       <section className="px-6 py-16 md:py-20" style={{ background: EMBER }}>
         <div className="mx-auto flex max-w-[1000px] flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <p className="font-['Space_Grotesk'] text-2xl font-semibold text-white md:text-3xl">Beyond the horizon of intelligence.</p>
-          <a href="/research" className="inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-[14px] font-semibold text-white no-underline">More SINGULANCE research</a>
+          <a href="https://singulancelabs.com/research" className="inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-[14px] font-semibold text-white no-underline">More SINGULANCE research</a>
         </div>
       </section>
     </div>
