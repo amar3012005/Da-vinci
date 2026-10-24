@@ -381,6 +381,14 @@ function AppShellContent() {
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
+  // A HyperAgent room on a phone draws its own room bar; its back button opens the existing team drawer.
+  const dotRoomPhone = brainPhone && /^\/hivemind\/app\/employee\/dots\/[^/]/u.test(location.pathname);
+  useEffect(() => {
+    if (!dotRoomPhone) return undefined;
+    const openTeam = () => setMobileTeamOpen(true);
+    window.addEventListener('hivemind:open-dot-team', openTeam);
+    return () => window.removeEventListener('hivemind:open-dot-team', openTeam);
+  }, [dotRoomPhone]);
   useEffect(() => { setMobileBrainAddOpen(false); }, [location.pathname]);
   useEffect(() => {
     if (!nativeChatRoom || !brainPhone) return undefined;
@@ -405,9 +413,9 @@ function AppShellContent() {
   const desktopTeamNavigation = !employeeCompact && workspaceModeForPath(location.pathname) === 'hyperagents';
   const desktopTeamWidth = sidebarCollapsed ? 68 : HYPERAGENT_WIDTHS[desktopRosterColumns];
   useEffect(() => {
-    if (!(nativeChatRoom && employeeCompact) && !(chatOpen && compactViewport)) return undefined;
+    if (!(nativeChatRoom && employeeCompact) && !(chatOpen && compactViewport) && !dotRoomPhone) return undefined;
     return bindNativeChatViewport(window, document.documentElement.style);
-  }, [nativeChatRoom, employeeCompact, chatOpen, compactViewport]);
+  }, [nativeChatRoom, employeeCompact, chatOpen, compactViewport, dotRoomPhone]);
   useEffect(() => {
     if (!nativeChatRoom) return undefined;
     const openApps = () => {
@@ -607,14 +615,14 @@ function AppShellContent() {
             '--hm-harness-center-offset': `${-((overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? 0 : desktopTeamNavigation ? desktopTeamWidth / 2 : sidebarCollapsed ? 34 : 150)}px`,
           }}
         >
-          {!companyEntry && !crmFullscreen && <TopBar floatingMobile={employeeRoom && brainPhone} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
-          {nativeChatRoom && overlayNavigation && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
+          {!companyEntry && !crmFullscreen && !dotRoomPhone && <TopBar floatingMobile={employeeRoom && brainPhone} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
+          {((nativeChatRoom && overlayNavigation) || dotRoomPhone) && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
           <div className={!initialNativePane && !hyperFullscreen && !crmFullscreen && !graphFullscreen && (workspaceModeForPath(location.pathname) === 'hyperagents' || onOverview) ? 'hm-runtime-workspace' : 'contents'}>
           {workspaceModeForPath(location.pathname) === 'hyperagents' && !/^\/hivemind\/app\/employee\/library(?:\/|$)/.test(location.pathname) && !initialNativePane && !hyperFullscreen && !crmFullscreen && <RuntimeGetStarted key={`${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
           {workspaceModeForPath(location.pathname) === 'hivemind' && !initialNativePane && !graphFullscreen && !crmFullscreen && <BrainGetStarted key={`brain:${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
-          <main data-native-chat-main={nativeChatRoom || undefined} className={companyEntry ? 'min-h-screen p-4 sm:p-8' : graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview || onOpenDotWorkspace ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 min-w-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
+          <main data-native-chat-main={nativeChatRoom || undefined} data-dot-room-phone={dotRoomPhone || undefined} className={companyEntry ? 'min-h-screen p-4 sm:p-8' : dotRoomPhone ? 'box-border h-[var(--hm-app-viewport-height,100dvh)] min-h-0 min-w-0 overflow-hidden pt-[env(safe-area-inset-top,0px)]' : graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview || onOpenDotWorkspace ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 min-w-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <BrainFeatureWelcome key={`features-${user?.id || ""}:${org?.id || ""}`} />
             <HyperAgentActivation /><AgentWorkspaceOutlet key={`${user?.id || ""}:${org?.id || ""}`} />
           </main>
