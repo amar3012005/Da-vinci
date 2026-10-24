@@ -1393,7 +1393,7 @@ class HiveMindApiClient {
 
   async createRegisteredOpenDotEmployee(payload) {
     // Native bearer stays in the OS plugin; it must never be copied to another host.
-    if (isNativeApp()) throw new Error('Computer employee creation needs an authenticated Open Dot session. Open this form in your browser.');
+    if (isNativeApp()) throw new Error('Computer employee creation needs an authenticated HyperAgents session. Open this form in your browser.');
     const { data } = await axios.post('/api/hivemind/employees/create', payload, {
       withCredentials: true, timeout: 25000, headers: { 'Content-Type': 'application/json' },
     });

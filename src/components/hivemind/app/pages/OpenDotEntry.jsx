@@ -96,7 +96,7 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
         key={frameKey}
         ref={iframeRef}
         onLoad={() => setLoadedFrameKey(frameKey)}
-        title={apps ? 'Apps' : 'Open Dot workspace'}
+        title={apps ? 'Apps' : 'HyperAgent workspace'}
         src={initialTarget.current}
         allow="microphone; autoplay"
         className="h-full min-h-0 w-full flex-1 border-0"
