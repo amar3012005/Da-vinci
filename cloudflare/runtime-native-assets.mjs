@@ -24,7 +24,9 @@ export function isRevisionedNativeCode(url) {
 
 /**
  * Serve release-pinned native code from the Cloudflare edge cache, filling it from the runner on a miss.
- * Only an immutable, cookie-free, non-HTML 200 is stored; every other request and response passes through unchanged.
+ * Only a non-HTML 200 marked `immutable`, not `private` or `no-store`, without `set-cookie`, and varying on at most
+ * `Accept-Encoding` is stored. When the request carries `cookie` or `authorization`, the response must also be
+ * explicitly `public`. Every other request and response passes through unchanged.
  * @param {Request} request - incoming browser request.
  * @param {{waitUntil?: (promise: Promise<unknown>) => void} | undefined} ctx - Worker execution context.
  * @param {() => Promise<Response>} load - runner fetch used on a miss.
@@ -38,8 +40,12 @@ export async function edgeCachedNativeCode(request,ctx,load) {
   const hit=await cache?.match(key);
   if(hit)return hit;
   const response=await load();
-  const cacheControl=response.headers.get('cache-control')||'';
-  const storable=response.status===200&&/\bimmutable\b/.test(cacheControl)&&!/\b(?:private|no-store)\b/.test(cacheControl)
+  const cacheControl=(response.headers.get('cache-control')||'').toLowerCase();
+  const credentialed=request.headers.has('cookie')||request.headers.has('authorization');
+  const vary=(response.headers.get('vary')||'').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean);
+  const storable=response.status===200&&/\bimmutable\b/.test(cacheControl)&&!/\b(?:private|no-store|no-cache)\b/.test(cacheControl)
+    &&(!credentialed||/\bpublic\b/.test(cacheControl))
+    &&vary.every(v=>v==='accept-encoding')
     &&!(response.headers.get('content-type')||'').includes('text/html')&&!response.headers.has('set-cookie');
   if(cache&&storable){
     const put=cache.put(key,response.clone());

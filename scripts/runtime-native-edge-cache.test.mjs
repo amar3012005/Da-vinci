@@ -45,3 +45,31 @@ test('never stores private, cookie-bearing, HTML or failed responses', async () 
     assert.equal(cache.store.size, 0);
   }
 });
+
+test('stores a credentialed request only when the response is explicitly public and immutable', async () => {
+  const credentialed = [
+    new Request(combo, { headers: { cookie: 'dsh-auth-a=1' } }),
+    new Request(combo, { headers: { authorization: 'Bearer test' } }),
+  ];
+  for (const request of credentialed) {
+    const cache = memoryCache();
+    globalThis.caches = { default: cache };
+    await edgeCachedNativeCode(request, undefined, async () => new Response('x', { headers: { 'cache-control': 'max-age=31536000, immutable', 'content-type': 'text/javascript' } }));
+    assert.equal(cache.store.size, 0);
+    await edgeCachedNativeCode(request.clone(), undefined, async () => new Response('x', { headers: { 'cache-control': 'public, max-age=31536000, immutable', 'content-type': 'text/javascript' } }));
+    assert.equal(cache.store.size, 1);
+  }
+});
+
+test('never stores a response that varies on anything but Accept-Encoding', async () => {
+  for (const vary of ['cookie', '*', 'Accept-Encoding, Cookie', 'authorization']) {
+    const cache = memoryCache();
+    globalThis.caches = { default: cache };
+    await edgeCachedNativeCode(new Request(combo), undefined, async () => new Response('x', { headers: { 'cache-control': 'public, max-age=31536000, immutable', 'content-type': 'text/javascript', vary } }));
+    assert.equal(cache.store.size, 0, vary);
+  }
+  const cache = memoryCache();
+  globalThis.caches = { default: cache };
+  await edgeCachedNativeCode(new Request(combo), undefined, async () => new Response('x', { headers: { 'cache-control': 'public, max-age=31536000, immutable', 'content-type': 'text/javascript', vary: 'Accept-Encoding' } }));
+  assert.equal(cache.store.size, 1);
+});
