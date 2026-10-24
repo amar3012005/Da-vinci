@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import CompanyDashboard from '../../hyperagents/CompanyDashboard';
 import apiClient from '../api-client';
-jest.mock('react-router-dom', () => ({ useNavigate: () => jest.fn() }));
+jest.mock('react-router-dom', () => ({ useNavigate: () => jest.fn() }), { virtual: true });
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (_, fallback) => fallback }) }));
 jest.mock('../api-client', () => ({ hyperCompany: jest.fn() }));
 jest.mock('../../hyperagents/HyperOnboarding', () => () => <div>NEW COMPANY SETUP</div>);

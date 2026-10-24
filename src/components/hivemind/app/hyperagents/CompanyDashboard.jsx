@@ -1,29 +1,39 @@
 import { useNavigate } from 'react-router-dom';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Building2, Target, Users, FileText, Globe, ArrowUpRight,
+  Building2, Target, FileText, Globe, ArrowUpRight,
   Sparkles, LayoutGrid, MessageSquare, RefreshCw, Search,
-  MapPin, Mail, Phone, Pencil, X, Power, Check,
+  MapPin, Mail, Phone, Pencil, X, Power, Check, BookOpen,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
-import HyperOnboarding from './HyperOnboarding';
 import WebsitePreview from './WebsitePreview';
 import AgentAvatar from './AgentAvatar';
 import { LANE_META } from './rooms/shared';
 import WorkspacePopupSurface from '../shared/WorkspacePopupSurface';
+import { aggregateAgentRooms } from '../layout/AgentRoomStatus';
+import { pageCache } from '../shared/resource-cache';
+import { libraryUrl, readLibraryFirstPage } from '../shared/runtime-library';
+import { assignmentsByTeammate, recentDeliverables, runtimeAgendas, runtimeStatusSummary, upcomingWakes } from './company-hq-model';
+import { DeliverablesCard, EmptyNote, FOCUS, HqCard, HqSkeleton, RuntimeCard, StatusChip, TeamCard, WakesCard } from './CompanyHqSections';
+import '../shared/skeleton.css';
+import './company-hq.css';
+
+// Onboarding is only needed before a company exists; the Company HQ reader never loads it.
+const HyperOnboarding = React.lazy(() => import('./HyperOnboarding'));
 
 /**
- * CompanyDashboard — the HyperAgents HERO page (Polsia-style operating view).
+ * CompanyDashboard — Company HQ: the company overview, Runtime's status and
+ * agendas, assignments by teammate, the calendar of next wakes, recent
+ * deliverables, and company knowledge, in one responsive card grid.
  *
- * Three-column dashboard fed by GET /v1/hyper/company (the state the
- * onboarding orchestrator persisted on the HQ room):
- *   col 1 — Company: name, tagline, mission, positioning, website, team
- *   col 2 — Tasks: the planned to-dos; CLICKING a task opens (or creates)
- *           its workroom via POST /v1/hyper/tasks/open → parent drops into
- *           the room thread (chat)
- *   col 3 — Documents (memories filed) + research highlights + agents
+ * Reads GET /v1/hyper/company (company profile, planned tasks, deliverables),
+ * GET /v1/hq/runtime and GET /v1/hq/work (Runtime state, agendas, schedules)
+ * and the Library's first page. Every read goes through the shared page cache,
+ * so reopening HQ paints the last result immediately and revalidates.
+ * Live Runtime and teammate states come from the sidebar's room statuses
+ * (`team`, `rooms`) when the caller has them.
  */
 
 // Same class of drift found and fixed in the sibling HqRuntimeConsole.jsx:
@@ -156,14 +166,6 @@ function EmployeeProfileModal({ member, onClose, onShowRoster }) {
   );
 }
 
-function SectionTitle({ children }) {
-  return (
-    <div className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] border-b border-[#0a0a0a] pb-1.5 mb-3">
-      {children}
-    </div>
-  );
-}
-
 const RUNTIME_FOCUSES = [
   { id: 'seo', label: 'SEO', detail: 'Grow qualified search visibility.' },
   { id: 'social_campaigns', label: 'Social media campaigns', detail: 'Plan, publish, and learn from connected channels.' },
@@ -174,12 +176,44 @@ const RUNTIME_FOCUSES = [
   { id: 'fundraising', label: 'Fundraising', detail: 'Prepare evidence, narrative, and investor work.' },
 ];
 
-export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime, showRuntimeInvite = true, runtimeInviteVersion = 'v1', showTasks = true, allowOnboarding = true }) {
+
+const COMPANY_KEY = 'hyper:company';
+const RUNTIME_KEY = 'hq:runtime';
+const WORK_KEY = 'hq:work';
+const LIBRARY_KEY = libraryUrl({});
+/** A cached read younger than this paints without a revalidation request. */
+const COMPANY_FRESH_MS = 10000;
+const SIDE_FRESH_MS = 30000;
+
+
+function Fact({ icon: Icon, label, children }) {
+  return <div className="min-w-0 rounded-xl bg-[#f7f6f2] px-3.5 py-3">
+    <dt className="flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#8b8b86]"><Icon size={12} aria-hidden="true" />{label}</dt>
+    <dd className="mt-1 text-[13px] leading-5 text-[#262b31]">{children}</dd>
+  </div>;
+}
+
+/**
+ * @param {object} props
+ * @param {(room: object) => void} [props.onOpenRoom] - opens a company room; planned work is clickable only with it.
+ * @param {() => void} [props.onShowRoster] - shows the full roster.
+ * @param {(result: object) => void} [props.onOpenRuntime] - called after the Runtime invitation launches Runtime.
+ * @param {boolean} [props.showRuntimeInvite] - offers the Runtime invitation once per version.
+ * @param {string} [props.runtimeInviteVersion] - invitation version stored per company.
+ * @param {boolean} [props.showTasks] - false renders planned company work read-only (the HQ reader).
+ * @param {boolean} [props.allowOnboarding] - false never starts onboarding from this surface.
+ * @param {Array<object>} [props.team] - native roster; preferred over company employees for assignments.
+ * @param {Array<object>} [props.rooms] - live room statuses from the sidebar, aggregated per agent id.
+ * @param {(event: Event, agent: object) => void} [props.onOpenTeammate] - opens a teammate's room.
+ * @param {() => void} [props.onDismiss] - closes the hosting reader before navigating away.
+ */
+export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime, showRuntimeInvite = true, runtimeInviteVersion = 'v1', showTasks = true, allowOnboarding = true, team, rooms, onOpenTeammate, onDismiss }) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const [entryError, setEntryError] = useState('');
-  const [state, setState] = useState(null); // {company, employees, hq_room_id}
-  const [loading, setLoading] = useState(true);
+  const cachedCompany = pageCache.read(COMPANY_KEY)?.value;
+  const [state, setState] = useState(cachedCompany || null); // {company, employees, hq_room_id}
+  const [loading, setLoading] = useState(!cachedCompany);
   const [loadError, setLoadError] = useState(false);
   const [openingTask, setOpeningTask] = useState(null);
   const [confirmRerun, setConfirmRerun] = useState(false);
@@ -193,6 +227,12 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   const [runtimeLaunching, setRuntimeLaunching] = useState(false);
   const [runtimeError, setRuntimeError] = useState('');
   const [selectedWebArtifact, setSelectedWebArtifact] = useState(null);
+  // undefined = still loading, null = unavailable for this workspace.
+  const [hq, setHq] = useState(() => ({
+    runtime: pageCache.read(RUNTIME_KEY)?.value, work: pageCache.read(WORK_KEY)?.value, library: pageCache.read(LIBRARY_KEY)?.value,
+  }));
+  const [sideRevision, setSideRevision] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   const runtimeCompanyReady = Boolean(state?.onboarded && state?.company?.company);
   const runtimeInviteStorageKey = `hm_runtime_invite:${runtimeInviteVersion}:${state?.hq_room_id || state?.company?.company || 'company'}`;
 
@@ -202,6 +242,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
     setRuntimeError('');
     try {
       await apiClient.resetHyperOnboarding();
+      pageCache.clear();
       try {
         window.localStorage.removeItem('hm_hyper_onboarded');
         Object.keys(window.localStorage)
@@ -218,16 +259,53 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
     }
   };
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async ({ ifStale = false } = {}) => {
+    const cached = pageCache.read(COMPANY_KEY);
+    if (ifStale && cached && Date.now() - cached.at < COMPANY_FRESH_MS) return;
+    if (!cached) setLoading(true);
     setLoadError(false);
     try {
-      const d = await apiClient.hyperCompany();
+      const d = await pageCache.load(COMPANY_KEY, () => apiClient.hyperCompany());
       setState(d);
-    } catch { setLoadError(true); }
-    finally { setLoading(false); }
+    } catch {
+      // A cached company stays on screen during a failed revalidation.
+      if (!pageCache.read(COMPANY_KEY)) setLoadError(true);
+    } finally { setLoading(false); }
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load({ ifStale: true }); }, [load]);
+  const refresh = () => { load(); setSideRevision((value) => value + 1); };
+
+  // Runtime state, agendas, schedules and the newest Library files load after
+  // the company paints and never block it; a failed read leaves its card empty.
+  useEffect(() => {
+    if (!runtimeCompanyReady) return undefined;
+    let active = true;
+    const read = (key, field, fetcher) => {
+      const cached = pageCache.read(key);
+      if (!sideRevision && cached && Date.now() - cached.at < SIDE_FRESH_MS) return;
+      pageCache.load(key, fetcher)
+        .then((value) => { if (active) setHq((current) => ({ ...current, [field]: value })); })
+        .catch(() => { if (active) setHq((current) => ({ ...current, [field]: current[field] ?? null })); });
+    };
+    read(RUNTIME_KEY, 'runtime', () => apiClient.getHqRuntime());
+    read(WORK_KEY, 'work', () => apiClient.getHqWork());
+    read(LIBRARY_KEY, 'library', () => readLibraryFirstPage(LIBRARY_KEY));
+    const projection = (event) => {
+      if (!active) return;
+      setHq((current) => ({
+        ...current,
+        ...(event.detail?.runtime !== undefined ? { runtime: { ...(current.runtime || {}), runtime: event.detail.runtime } } : {}),
+        ...(event.detail?.work ? { work: event.detail.work } : {}),
+      }));
+    };
+    window.addEventListener('hq-runtime-projection', projection);
+    return () => { active = false; window.removeEventListener('hq-runtime-projection', projection); };
+  }, [runtimeCompanyReady, sideRevision]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     if (!showRuntimeInvite || !runtimeCompanyReady) return undefined;
     try { if (window.localStorage.getItem(runtimeInviteStorageKey) === 'seen') return undefined; } catch { /* continue */ }
@@ -245,6 +323,15 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
     return () => window.clearInterval(timer);
   }, [state?.company?.screenshot_pending, load]);
 
+  const employees = state?.employees;
+  const roomFor = useCallback((id) => (Array.isArray(rooms) && rooms.length ? aggregateAgentRooms(rooms, id) : undefined), [rooms]);
+  const agendas = useMemo(() => runtimeAgendas(hq.work || {}), [hq.work]);
+  const members = useMemo(() => assignmentsByTeammate({ team, employees, roomFor, agendas }), [team, employees, roomFor, agendas]);
+  const wakeGroups = useMemo(() => upcomingWakes(hq.work?.schedules, now), [hq.work, now]);
+  const deliverableRows = useMemo(() => recentDeliverables({ deliverables: state?.company?.deliverables, libraryItems: hq.library?.items }), [state?.company?.deliverables, hq.library]);
+  const runtimeRoom = roomFor('runtime');
+  const runtimeStatus = runtimeStatusSummary({ room: runtimeRoom, runtime: hq.runtime?.runtime });
+
   const openTask = async (task) => {
     if (openingTask) return;
     setOpeningTask(task.id);
@@ -258,34 +345,30 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
     finally { setOpeningTask(null); }
   };
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-[12px] text-[#a3a3a3] font-mono">
-        {t('hyperDash.loading', 'Loading company…')}
-      </div>
-    );
-  }
+  if (loading) return <HqSkeleton />;
   if (loadError) {
     return <div role="alert" className="flex-1 p-6 text-sm">
       <p>We couldn’t load your company. Your setup hasn’t been reset.</p>
-      <button type="button" onClick={load} className="mt-3 text-[#117dff] underline">Try again</button>
+      <button type="button" onClick={() => load()} className={`mt-3 min-h-[40px] text-[#117dff] underline ${FOCUS}`}>Try again</button>
     </div>;
   }
   if (!state?.onboarded || !state?.company) {
-    if (!allowOnboarding) return <p className="p-6 text-sm">Company information is not available yet.</p>;
+    if (!allowOnboarding) return <div className="flex-1 grid place-items-center p-6"><EmptyNote>Company information is not available yet.</EmptyNote></div>;
     // No company state (fresh org, or the HQ room carrying it was deleted) →
     // "Your Company" IS the onboarding page. Render the full genesis flow
     // inline instead of a dead placeholder.
     return (
-      <div className="flex-1 min-h-0 overflow-y-auto bg-[#faf9f4] px-6 py-4">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-[#faf9f4] px-4 py-4 sm:px-6">
         <div className="max-w-[1280px] mx-auto">
           {entryError ? <p role="alert">{entryError}</p> : null}
-          <HyperOnboarding
-            // Company details are already saved by onboarding. New users land in
-            // Brain chat; the Runtime room is no longer opened automatically.
-            onComplete={() => navigate('/hivemind/app/overview/new')}
-            onSkip={() => load()}
-          />
+          <Suspense fallback={<HqSkeleton />}>
+            <HyperOnboarding
+              // Company details are already saved by onboarding. New users land in
+              // Brain chat; the Runtime room is no longer opened automatically.
+              onComplete={() => navigate('/hivemind/app/overview/new')}
+              onSkip={() => load()}
+            />
+          </Suspense>
         </div>
       </div>
     );
@@ -293,7 +376,10 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
 
   const c = state.company;
   const p = c.profile || {};
-  const employees = state.employees || [];
+  const tasks = c.tasks || [];
+  const interactiveTasks = showTasks && Boolean(onOpenRoom);
+  const sideLoading = hq.work === undefined || hq.runtime === undefined;
+  const libraryAvailable = Boolean(hq.library && !hq.library.unavailable);
   const openContactEditor = () => {
     setContactDraft({
       emails: (p.contact_details?.emails || []).join('\n'),
@@ -312,6 +398,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
         social_profiles: contactDraft.social_profiles.filter((item) => item.platform && item.url),
       });
       setState((current) => current ? { ...current, company: response.company } : current);
+      pageCache.clear();
       setEditingContacts(false);
     } finally { setSavingContacts(false); }
   };
@@ -357,6 +444,34 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
       setRuntimeError(extractErrorMessage(error, 'Runtime could not be started.'));
     } finally { setRuntimeLaunching(false); }
   };
+  const openLibrary = libraryAvailable ? () => { onDismiss?.(); navigate('/hivemind/app/employee/library'); } : undefined;
+  const linkClass = `inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2 hover:bg-[#f0eee7] hover:text-[#1f2328] ${FOCUS}`;
+  const webArtifacts = Array.isArray(c.web_artifacts) ? c.web_artifacts : [];
+  const research = (c.research || []).slice(0, 6);
+
+  const plannedWork = <ul className="space-y-1.5">
+    {tasks.map((task) => {
+      const taskActive = task.status === 'active' || Boolean(task.room_id);
+      const taskDone = task.status === 'done';
+      const inner = <>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-medium leading-5 text-[#262b31]">{task.title}</span>
+          {task.detail ? <span className="mt-0.5 line-clamp-1 block text-[12px] leading-[18px] text-[#6f747b]">{task.detail}</span> : null}
+          <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${TAG_STYLES[task.tag] || TAG_STYLES.RESEARCH}`}>{task.room_name || task.room_tag || task.tag}</span>
+            {taskDone ? <StatusChip tone="done">Done</StatusChip> : taskActive ? <StatusChip tone="active">In room</StatusChip> : null}
+          </span>
+        </span>
+        {interactiveTasks ? <span className="mt-0.5 shrink-0">{openingTask === task.id ? <Spinner /> : taskActive ? <MessageSquare size={15} className="text-[#2f74e0]" aria-hidden="true" /> : <ArrowUpRight size={15} className="text-[#a3a3a3] group-hover:text-[#1f2328]" aria-hidden="true" />}</span> : null}
+      </>;
+      const title = `${task.title}${task.detail ? `\n\n${task.detail}` : ''}${task.deliverable ? `\n\nOutput: ${task.deliverable}` : ''}`;
+      return <li key={task.id}>
+        {interactiveTasks
+          ? <button type="button" data-company-task="true" title={title} onClick={() => openTask(task)} className={`group flex min-h-[56px] w-full items-start gap-3 rounded-xl border border-[#eeece6] px-3 py-2.5 text-left hover:border-[#cfcac0] ${FOCUS}`}>{inner}</button>
+          : <div data-company-task="true" title={title} className="flex min-h-[56px] items-start gap-3 rounded-xl border border-[#eeece6] px-3 py-2.5">{inner}</div>}
+      </li>;
+    })}
+  </ul>;
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#faf9f4]">
@@ -374,11 +489,11 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
             >
               <div className="flex h-[min(640px,calc(100dvh-120px))] min-h-0 flex-col bg-[#fbfaf7]">
                 <div className="border-b border-[#deddd7] px-6 py-5 sm:px-8">
-                  <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.12em] text-[#248564]"><Globe size={12} /> Verified web artifact</div>
-                  <h2 className="mt-3 text-[24px] font-semibold tracking-[-0.035em] text-[#111]">{selectedWebArtifact.title || selectedWebArtifact.url}</h2>
-                  <p className="mt-1 truncate text-[11px] text-[#347df4]">{selectedWebArtifact.url}</p>
+                  <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.08em] text-[#248564]"><Globe size={12} /> Verified web source</div>
+                  <h2 className="mt-3 text-[22px] font-semibold tracking-[-0.03em] text-[#111] sm:text-[24px]">{selectedWebArtifact.title || selectedWebArtifact.url}</h2>
+                  <p className="mt-1 truncate text-[12px] text-[#347df4]">{selectedWebArtifact.url}</p>
                 </div>
-                <iframe title={selectedWebArtifact.title || 'Web artifact preview'} src={apiClient.hyperCompanyWebArtifactPreviewUrl(selectedWebArtifact.id)} className="min-h-0 flex-1 border-0 bg-white" sandbox="allow-same-origin allow-popups" />
+                <iframe title={selectedWebArtifact.title || 'Web source preview'} src={apiClient.hyperCompanyWebArtifactPreviewUrl(selectedWebArtifact.id)} className="min-h-0 flex-1 border-0 bg-white" sandbox="allow-same-origin allow-popups" />
               </div>
             </WorkspacePopupSurface>
           </div>
@@ -391,51 +506,139 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
               <WorkspacePopupSurface label="hivemind — page guide" title="This is where Runtime operates your company." description="Runtime reads company memory, chooses bounded work, delegates to operating rooms, and wakes again when evidence changes." visual={<div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-full bg-[#111] text-white"><Power size={18} /></span><span><strong className="block text-[14px] text-[#181918]">HIVEMIND Runtime</strong><span className="mt-0.5 block text-[11px] text-[#777]">You remain in control; approval gates stay active.</span></span></div>} onClose={closeRuntimeInvite} secondaryAction={{ label: 'Not now', onClick: closeRuntimeInvite }} primaryAction={{ label: 'Choose priorities', onClick: () => setRuntimeInvite('focus') }} />
             ) : (
               <WorkspacePopupSurface label="hivemind — Runtime setup" title="What do you want Runtime to operate?" description="Choose one or more priorities. Runtime orders the work from current company evidence." onClose={closeRuntimeInvite} secondaryAction={{ label: 'Back', onClick: () => setRuntimeInvite('intro') }} primaryAction={{ label: runtimeLaunching ? 'Waking…' : 'Wake Runtime', onClick: wakeRuntime }}>
-                <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{RUNTIME_FOCUSES.map((item) => { const selected = runtimeFocuses.includes(item.id); return <button key={item.id} type="button" onClick={() => toggleRuntimeFocus(item.id)} className={`min-h-[92px] rounded-md border p-3 text-left transition-colors ${selected ? 'border-[#347df4] bg-[#eef4ff]' : 'border-[#deddd7] bg-white hover:border-[#9db7df]'}`}><span className="flex items-center justify-between gap-2 text-[12px] font-semibold text-[#111]">{item.label}{selected ? <Check size={14} className="text-[#347df4]" /> : null}</span><span className="mt-2 block text-[10.5px] leading-4 text-[#667085]">{item.detail}</span></button>; })}</div>{runtimeError ? <p className="mt-3 text-[11px] text-[#c2410c]">{runtimeError}</p> : null}
+                <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{RUNTIME_FOCUSES.map((item) => { const selected = runtimeFocuses.includes(item.id); return <button key={item.id} type="button" onClick={() => toggleRuntimeFocus(item.id)} aria-pressed={selected} className={`min-h-[92px] rounded-md border p-3 text-left transition-colors ${selected ? 'border-[#347df4] bg-[#eef4ff]' : 'border-[#deddd7] bg-white hover:border-[#9db7df]'} ${FOCUS}`}><span className="flex items-center justify-between gap-2 text-[12px] font-semibold text-[#111]">{item.label}{selected ? <Check size={14} className="text-[#347df4]" /> : null}</span><span className="mt-2 block text-[11px] leading-4 text-[#667085]">{item.detail}</span></button>; })}</div>{runtimeError ? <p className="mt-3 text-[11px] text-[#c2410c]">{runtimeError}</p> : null}
               </WorkspacePopupSurface>
             )}
           </motion.div>
         </div>
       ) : null}
-      {/* Header — Polsia's name bar */}
-      <div className="px-6 pt-5 pb-4 border-b border-[#e3e0db] flex items-start justify-between bg-[#faf9f4] z-10 shrink-0">
-        <div className="min-w-0">
-          <h1 className="text-[26px] leading-tight font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{c.company}</h1>
-          <div className="flex items-center gap-2 mt-1 text-[11.5px] text-[#525252]">
-            <span className="flex items-center gap-1 text-[#16a34a]"><span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" /> {t('hyperDash.shipped', 'Operating')}</span>
-            {c.website ? (
-              <a href={c.website} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-[#0a0a0a] font-mono">
-                <Globe size={11} /> {c.website.replace(/^https?:\/\//, '')}
-              </a>
-            ) : null}
-            {(p.social_profiles || []).map((social) => {
-              const brand = socialBrand(social.platform);
-              return (
-                <a key={social.url} href={social.url} target="_blank" rel="noreferrer" title={brand.label} className="inline-flex items-center gap-1 hover:text-[#0a0a0a] font-mono">
-                  <img src={`https://api.iconify.design/${brand.icon}.svg`} alt={brand.label} className="h-3.5 w-3.5 object-contain" />
-                  <span>{socialUsername(social.url) || brand.label}</span>
-                </a>
-              );
-            })}
-            {(p.contact_details?.emails || []).slice(0, 1).map((email) => (
-              <a key={email} href={`mailto:${email}`} className="hidden xl:inline-flex items-center gap-1 hover:text-[#0a0a0a] font-mono"><Mail size={11} /> {email}</a>
-            ))}
-            {(p.contact_details?.phones || []).slice(0, 1).map((phone) => (
-              <a key={phone} href={`tel:${phone}`} className="inline-flex items-center gap-1 hover:text-[#0a0a0a] font-mono"><Phone size={11} /> {phone}</a>
-            ))}
-            <button onClick={openContactEditor} title="Edit company contacts and social profiles" className="inline-flex h-5 w-5 items-center justify-center text-[#737373] hover:text-[#0a0a0a]"><Pencil size={12} /></button>
+
+      <div className="hm-hq-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        <header className="px-4 pt-5 pb-3 sm:px-6 border-b border-[#e3e0db] flex items-start justify-between bg-[#faf9f4] flex-wrap gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.08em] text-[#8b8b86]"><Building2 size={13} aria-hidden="true" /> Company HQ</div>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <h1 className="min-w-0 break-words text-[24px] font-semibold leading-tight tracking-[-0.02em] text-[#1a1d21] sm:text-[28px] font-['Space_Grotesk']">{c.company}</h1>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e7f3ea] px-2.5 py-1 text-[11.5px] font-medium text-[#24683b]"><span className="h-1.5 w-1.5 rounded-full bg-[#22a35a]" aria-hidden="true" /> {t('hyperDash.shipped', 'Operating')}</span>
+            </div>
+            <div className="-ml-2 mt-1.5 flex flex-wrap items-center gap-x-0.5 text-[12.5px] text-[#5f646b]">
+              {c.website ? <a href={c.website} target="_blank" rel="noreferrer" className={linkClass}><Globe size={13} aria-hidden="true" /> {c.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a> : null}
+              {(p.social_profiles || []).map((social) => {
+                const brand = socialBrand(social.platform);
+                return (
+                  <a key={social.url} href={social.url} target="_blank" rel="noreferrer" title={brand.label} className={linkClass}>
+                    <img src={`https://api.iconify.design/${brand.icon}.svg`} alt={brand.label} width="14" height="14" loading="lazy" className="h-3.5 w-3.5 object-contain" />
+                    <span>{socialUsername(social.url) || brand.label}</span>
+                  </a>
+                );
+              })}
+              {(p.contact_details?.emails || []).slice(0, 1).map((email) => (
+                <a key={email} href={`mailto:${email}`} className={`hidden xl:inline-flex ${linkClass.replace('inline-flex ', '')}`}><Mail size={13} aria-hidden="true" /> {email}</a>
+              ))}
+              {(p.contact_details?.phones || []).slice(0, 1).map((phone) => (
+                <a key={phone} href={`tel:${phone}`} className={linkClass}><Phone size={13} aria-hidden="true" /> {phone}</a>
+              ))}
+              <button type="button" onClick={openContactEditor} title="Edit company contacts and social profiles" aria-label="Edit company contacts and social profiles" className={`grid h-10 w-10 place-items-center rounded-lg text-[#737373] hover:bg-[#f0eee7] hover:text-[#0a0a0a] ${FOCUS}`}><Pencil size={14} /></button>
+            </div>
           </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {onShowRoster ? <button type="button" onClick={onShowRoster} className={`inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#e3e0db] bg-white px-3 text-[12.5px] font-medium text-[#3d4249] hover:border-[#c9c5bc] hover:text-[#0a0a0a] ${FOCUS}`}>
+              <LayoutGrid size={14} aria-hidden="true" /> {t('hyperDash.agents', 'Agents')}
+            </button> : null}
+            <button type="button" onClick={refresh} aria-label={t('hyperDash.refresh', 'Refresh')} className={`inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#e3e0db] bg-white px-3 text-[12.5px] font-medium text-[#3d4249] hover:border-[#c9c5bc] hover:text-[#0a0a0a] ${FOCUS}`}>
+              <RefreshCw size={14} aria-hidden="true" /> <span className="hidden sm:inline">{t('hyperDash.refresh', 'Refresh')}</span>
+            </button>
+          </div>
+        </header>
+
+        <div className="hm-hq-grid px-4 py-4 sm:px-6 sm:py-5">
+          <HqCard area="overview" title="Company overview" icon={Building2}>
+            <div className="hm-hq-overview-body">
+              <div className="min-w-0">
+                {p.tagline ? <p className="text-[17px] font-semibold leading-[26px] text-[#1f2328]">{p.tagline}</p> : null}
+                {p.what_it_does ? <p className="mt-2 text-[13.5px] leading-[22px] text-[#4f545a]">{p.what_it_does}</p> : null}
+                <dl className="hm-hq-facts mt-4">
+                  {c.mission ? <Fact icon={Target} label={t('hyperDash.mission', 'Mission')}>{c.mission}</Fact> : null}
+                  {p.icp ? <Fact icon={Search} label="Customers">{p.icp}</Fact> : null}
+                  {p.positioning ? <Fact icon={Sparkles} label="Positioning">{p.positioning}</Fact> : null}
+                  {p.location ? <Fact icon={MapPin} label="Location">{p.location}</Fact> : null}
+                </dl>
+              </div>
+              {c.website ? <div className="min-w-0">
+                <WebsitePreview
+                  image={c.screenshot}
+                  source={c.website_visual_source}
+                  website={c.website}
+                  company={c.company}
+                  tagline={p.tagline}
+                  loading={Boolean(c.screenshot_pending)}
+                  compact
+                  className="w-full shadow-[0_10px_30px_rgba(10,10,10,0.05)]"
+                />
+              </div> : null}
+            </div>
+          </HqCard>
+
+          <RuntimeCard status={runtimeStatus} room={runtimeRoom} agendas={agendas} loading={hq.work === undefined} />
+
+          <TeamCard members={members} onOpenTeammate={onOpenTeammate} onViewProfile={team?.length ? undefined : setViewingProfile} plannedCount={tasks.length} plannedWork={plannedWork} />
+
+          <WakesCard groups={wakeGroups} scheduledMembers={members.filter((member) => member.state === 'scheduled')} loading={sideLoading} now={now} />
+
+          <DeliverablesCard rows={deliverableRows} loading={hq.library === undefined && !(c.deliverables || []).length} now={now} onOpenRoom={onOpenRoom} onOpenLibrary={openLibrary} />
+
+          {/* Durable company memory, onboarding web sources and research. */}
+          <HqCard area="files" title={t('hyperDash.knowledge', 'Company knowledge')} icon={BookOpen} count={(c.documents || []).length + webArtifacts.length || undefined}>
+            {!(c.documents || []).length && !webArtifacts.length && !research.length ? <EmptyNote>Documents filed to company memory appear here.</EmptyNote> : null}
+            {(c.documents || []).length ? <ul className="space-y-0.5">
+              {(c.documents || []).map((documentTitle) => (
+                <li key={documentTitle} className="flex min-h-[32px] items-center gap-2 text-[13px] text-[#3f3d39]">
+                  <FileText size={14} className="shrink-0 text-[#a3a3a3]" aria-hidden="true" /> <span className="min-w-0 truncate">{documentTitle}</span>
+                </li>
+              ))}
+            </ul> : null}
+            {webArtifacts.length ? <ul className="mt-2 space-y-1.5">
+              {webArtifacts.map((artifact) => (
+                <li key={artifact.id} className="flex items-stretch gap-1">
+                  <button type="button" onClick={() => setSelectedWebArtifact(artifact)}
+                    className={`flex min-h-[48px] min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-[#eeece6] bg-white px-3 py-2 text-left text-[13px] text-[#3f3d39] hover:border-[#9fb4cf] ${FOCUS}`}>
+                    <Globe size={14} className="shrink-0 text-[#2f74e0]" aria-hidden="true" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{artifact.title || artifact.url}</span>
+                      <span className="block truncate text-[11.5px] text-[#8b8b86]">{(artifact.content_chars || 0).toLocaleString()} characters · {artifact.provider || 'web crawl'}</span>
+                    </span>
+                  </button>
+                  <a href={apiClient.hyperCompanyWebArtifactPreviewUrl(artifact.id)} target="_blank" rel="noreferrer" aria-label={`Open ${artifact.title || 'web source'} in a new tab`} title="Open in a new tab"
+                    className={`grid w-10 shrink-0 place-items-center rounded-xl text-[#8b8b86] hover:bg-[#f0eee7] hover:text-[#1f2328] ${FOCUS}`}><ArrowUpRight size={15} /></a>
+                </li>
+              ))}
+            </ul> : null}
+            {research.length ? <>
+              <h3 className="mb-1 mt-4 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#8b8b86]">{t('hyperDash.research', 'Market research')}</h3>
+              <ul className="space-y-0.5">
+                {research.map((researchItem, index) => (
+                  <li key={`${researchItem.url || 'research'}-${index}`}>
+                    <a href={researchItem.url} target="_blank" rel="noreferrer" className={`group block rounded-lg px-1 py-1.5 hover:bg-[#f7f6f2] ${FOCUS}`}>
+                      <span className="block text-[13px] font-medium leading-5 text-[#262b31] group-hover:underline">{researchItem.title || researchItem.url}</span>
+                      {researchItem.snippet ? <span className="mt-0.5 line-clamp-2 block text-[12px] leading-[18px] text-[#7a7f86]">{researchItem.snippet}</span> : null}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </> : null}
+            {(c.documents || []).length || webArtifacts.length ? <p className="mt-3 text-[11.5px] leading-[18px] text-[#8b8b86]">{t('hyperDash.filedTo', 'Filed to HIVEMIND memory — open a web source to see the exact page your team can recall.')}</p> : null}
+          </HqCard>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={onShowRoster}
-            className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#525252] hover:text-[#0a0a0a] border border-[#e3e0db] rounded-lg px-3 py-1.5 bg-white hover:bg-[#faf9f4] transition-colors">
-            <LayoutGrid size={12} /> {t('hyperDash.agents', 'Agents')}
-          </button>
-          <button onClick={load}
-            className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#525252] hover:text-[#0a0a0a] border border-[#e3e0db] rounded-lg px-3 py-1.5 bg-white hover:bg-[#faf9f4] transition-colors">
-            <RefreshCw size={12} /> {t('hyperDash.refresh', 'Refresh')}
-          </button>
-        </div>
+
+        <footer className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-4 gap-y-2 px-4 pb-6 text-[12px] text-[#7a7f86] sm:px-6">
+          {onOpenRoom ? <button type="button"
+            onClick={() => state.hq_room_id && onOpenRoom?.({ id: c.room_id || state.hq_room_id, name: c.room_name })}
+            className={`inline-flex min-h-[40px] items-center gap-2 rounded-lg border border-[#e3e0db] bg-white px-3 text-[12.5px] font-medium text-[#1f2328] hover:border-[#c9c5bc] ${FOCUS}`}>
+            <Sparkles size={14} className="text-violet-500" aria-hidden="true" /> {c.room_name || `${c.company} — HQ`} <ArrowUpRight size={14} className="text-[#a3a3a3]" aria-hidden="true" />
+          </button> : null}
+          <span className="inline-flex items-center gap-1.5"><Building2 size={13} aria-hidden="true" /> {t('hyperDash.onboardedAt', 'Onboarded')} {c.onboarded_at ? new Date(c.onboarded_at).toLocaleDateString() : ''}</span>
+          {allowOnboarding ? <button type="button" onClick={() => setConfirmRerun(true)} className={`min-h-[40px] rounded-lg px-1 text-[#2559a8] hover:underline ${FOCUS}`}>{t('hyperDash.rerun', 'Re-run onboarding')}</button> : null}
+        </footer>
       </div>
 
       {editingContacts && contactDraft ? (
@@ -443,206 +646,17 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
           <div className="w-full max-w-[620px] rounded-lg border border-[#d9dee5] bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#ece9e3] px-5 py-4">
               <div><h2 className="text-[16px] font-semibold text-[#0a0a0a]">Company contact details</h2><p className="mt-1 text-[11.5px] text-[#737373]">These corrections become the context your rooms use.</p></div>
-              <button onClick={() => setEditingContacts(false)} className="h-8 w-8 grid place-items-center text-[#737373] hover:text-[#0a0a0a]" title="Close"><X size={16} /></button>
+              <button type="button" onClick={() => setEditingContacts(false)} className={`h-10 w-10 grid place-items-center rounded-lg text-[#737373] hover:text-[#0a0a0a] ${FOCUS}`} title="Close" aria-label="Close"><X size={16} /></button>
             </div>
             <div className="space-y-4 p-5">
               <label className="block text-[11px] font-semibold text-[#525252]">Emails<textarea value={contactDraft.emails} onChange={(event) => setContactDraft({ ...contactDraft, emails: event.target.value })} className="mt-1.5 min-h-16 w-full resize-y rounded-md border border-[#d9dee5] p-2 text-[12px] font-mono text-[#0a0a0a] outline-none focus:border-[#117dff]" placeholder="hello@company.com" /></label>
               <label className="block text-[11px] font-semibold text-[#525252]">Phone numbers<textarea value={contactDraft.phones} onChange={(event) => setContactDraft({ ...contactDraft, phones: event.target.value })} className="mt-1.5 min-h-16 w-full resize-y rounded-md border border-[#d9dee5] p-2 text-[12px] font-mono text-[#0a0a0a] outline-none focus:border-[#117dff]" placeholder="+49 ..." /></label>
-              <div><span className="text-[11px] font-semibold text-[#525252]">Social profiles</span><div className="mt-1.5 space-y-2">{contactDraft.social_profiles.map((social, index) => <div key={`${social.platform}-${index}`} className="grid grid-cols-[120px_1fr] gap-2"><input value={social.platform} onChange={(event) => { const next = [...contactDraft.social_profiles]; next[index] = { ...social, platform: event.target.value }; setContactDraft({ ...contactDraft, social_profiles: next }); }} className="rounded-md border border-[#d9dee5] px-2 py-1.5 text-[12px]" placeholder="platform" /><input value={social.url} onChange={(event) => { const next = [...contactDraft.social_profiles]; next[index] = { ...social, url: event.target.value }; setContactDraft({ ...contactDraft, social_profiles: next }); }} className="rounded-md border border-[#d9dee5] px-2 py-1.5 text-[12px] font-mono" placeholder="https://..." /></div>)}</div><button onClick={() => setContactDraft({ ...contactDraft, social_profiles: [...contactDraft.social_profiles, { platform: '', url: '' }] })} className="mt-2 text-[11px] font-semibold text-[#117dff]">Add social profile</button></div>
+              <div><span className="text-[11px] font-semibold text-[#525252]">Social profiles</span><div className="mt-1.5 space-y-2">{contactDraft.social_profiles.map((social, index) => <div key={`${social.platform}-${index}`} className="grid grid-cols-[120px_1fr] gap-2"><input aria-label="Platform" value={social.platform} onChange={(event) => { const next = [...contactDraft.social_profiles]; next[index] = { ...social, platform: event.target.value }; setContactDraft({ ...contactDraft, social_profiles: next }); }} className="rounded-md border border-[#d9dee5] px-2 py-1.5 text-[12px]" placeholder="platform" /><input aria-label="Profile URL" value={social.url} onChange={(event) => { const next = [...contactDraft.social_profiles]; next[index] = { ...social, url: event.target.value }; setContactDraft({ ...contactDraft, social_profiles: next }); }} className="rounded-md border border-[#d9dee5] px-2 py-1.5 text-[12px] font-mono" placeholder="https://..." /></div>)}</div><button type="button" onClick={() => setContactDraft({ ...contactDraft, social_profiles: [...contactDraft.social_profiles, { platform: '', url: '' }] })} className="mt-2 min-h-[40px] text-[11px] font-semibold text-[#117dff]">Add social profile</button></div>
             </div>
-            <div className="flex justify-end gap-2 border-t border-[#ece9e3] px-5 py-3"><button onClick={() => setEditingContacts(false)} className="px-3 py-2 text-[12px] font-semibold text-[#525252]">Cancel</button><button onClick={saveContacts} disabled={savingContacts} className="rounded-md bg-[#0a0a0a] px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-50">{savingContacts ? 'Saving...' : 'Save details'}</button></div>
+            <div className="flex justify-end gap-2 border-t border-[#ece9e3] px-5 py-3"><button type="button" onClick={() => setEditingContacts(false)} className="min-h-[40px] px-3 py-2 text-[12px] font-semibold text-[#525252]">Cancel</button><button type="button" onClick={saveContacts} disabled={savingContacts} className="min-h-[40px] rounded-md bg-[#0a0a0a] px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-50">{savingContacts ? 'Saving...' : 'Save details'}</button></div>
           </div>
         </div>
       ) : null}
-
-      <div className={`flex-1 min-h-0 overflow-y-auto lg:overflow-hidden px-6 py-4 grid grid-cols-1 ${showTasks ? 'lg:grid-cols-[minmax(250px,0.92fr)_minmax(340px,1.08fr)_minmax(280px,0.98fr)]' : 'lg:grid-cols-2'} gap-6`}>
-        {/* Company context stays complete; the website remains anchored bottom-left. */}
-        <section className="min-h-0 flex flex-col">
-          <div className="min-h-0 overflow-y-auto pr-2 pb-4">
-            <SectionTitle>{t('hyperDash.company', 'Company')}</SectionTitle>
-            {p.tagline ? <p className="text-[13px] leading-5 text-[#0a0a0a] font-semibold">{p.tagline}</p> : null}
-            {p.what_it_does ? <p className="text-[12.5px] text-[#525252] mt-2 leading-5">{p.what_it_does}</p> : null}
-
-            <div className="mt-5 space-y-4">
-              {p.location ? <div><span className="text-[#a3a3a3] font-mono text-[10px] uppercase inline-flex items-center gap-1"><MapPin size={10} /> Company location</span><p className="text-[12px] leading-5 text-[#3f3d39] mt-1">{p.location}</p></div> : null}
-              {p.icp ? <div><span className="text-[#a3a3a3] font-mono text-[10px] uppercase">ICP</span><p className="text-[12px] leading-5 text-[#3f3d39] mt-1">{p.icp}</p></div> : null}
-              {p.positioning ? <div><span className="text-[#a3a3a3] font-mono text-[10px] uppercase">Positioning</span><p className="text-[12px] leading-5 text-[#3f3d39] mt-1">{p.positioning}</p></div> : null}
-            </div>
-
-            <div className="mt-5">
-              <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#a3a3a3] uppercase mb-2"><Target size={11} /> {t('hyperDash.mission', 'Mission')}</div>
-              <p className="text-[12.5px] text-[#0a0a0a] leading-5">{c.mission}</p>
-            </div>
-
-            <div className="mt-5">
-              <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#a3a3a3] uppercase mb-2"><Users size={11} /> {t('hyperDash.team', 'Team')}</div>
-              <div className="space-y-1.5">
-                {employees.slice(0, 6).map((member) => {
-                  const lane = laneFor(member);
-                  const meta = LANE_META[lane] || LANE_META.Communicator;
-                  return (
-                    <div key={member.id} className="flex items-center gap-2 text-[12px] min-w-0 group">
-                      <AgentAvatar agent={{ ...member, lane }} size={26} />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[#0a0a0a] font-medium truncate">{member.name}</div>
-                        <div className="flex items-center gap-1 text-[10px] font-mono truncate" style={{ color: meta.color }}>
-                          <meta.icon size={9} /> {member.roleArchetype || lane}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setViewingProfile(member)}
-                        className="shrink-0 text-[10px] font-semibold text-[#a3a3a3] group-hover:text-[#117dff] px-2 py-1 rounded-full border border-transparent group-hover:border-[#117dff]/30 transition-colors"
-                      >
-                        {t('hyperDash.viewProfile', 'View profile')}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {c.website ? (
-            <div className="shrink-0 pt-3 border-t border-[#ece9e3] bg-[#faf9f4]">
-              <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#a3a3a3] uppercase mb-2"><Globe size={11} /> {t('hyperDash.website', 'Website')}</div>
-              <WebsitePreview
-                image={c.screenshot}
-                source={c.website_visual_source}
-                website={c.website}
-                company={c.company}
-                tagline={p.tagline}
-                loading={Boolean(c.screenshot_pending)}
-                compact
-                className="mx-auto w-full max-w-[720px] shadow-[0_10px_30px_rgba(10,10,10,0.05)]"
-              />
-            </div>
-          ) : null}
-        </section>
-
-        {/* One substantive task per expertise room; cards route directly into that room. */}
-        {showTasks && <section className="min-h-0 flex flex-col">
-          <div className="shrink-0"><SectionTitle>{t('hyperDash.tasks', 'Tasks')}</SectionTitle></div>
-          <div className="min-h-0 overflow-y-auto pr-2 space-y-2.5">
-            {(c.tasks || []).map((task) => {
-              const taskActive = task.status === 'active' || Boolean(task.room_id);
-              const taskDone = task.status === 'done';
-              return (
-                <motion.button
-                  key={task.id}
-                  data-company-task="true"
-                  title={`${task.title}${task.detail ? `\n\n${task.detail}` : ''}${task.deliverable ? `\n\nOutput: ${task.deliverable}` : ''}`}
-                  whileTap={{ scale: 0.995 }}
-                  onClick={() => openTask(task)}
-                  className={`w-full min-h-[118px] text-left border rounded-lg px-4 py-3 transition-colors group ${taskActive ? 'bg-[#faf9f4] border-[#d8d3cc]' : 'bg-white border-[#e3e0db] hover:border-[#0a0a0a]'}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-[13px] leading-5 font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{task.title}</h3>
-                      {task.detail ? <p className="mt-1 text-[11.5px] leading-[17px] text-[#625d57] line-clamp-2">{task.detail}</p> : null}
-                      {task.deliverable ? <p className="mt-1.5 text-[10.5px] leading-4 text-[#77716a] truncate"><span className="font-semibold text-[#3f3d39]">Output:</span> {task.deliverable}</p> : null}
-                    </div>
-                    <span className="shrink-0 mt-0.5">
-                      {openingTask === task.id
-                        ? <Spinner />
-                        : taskActive
-                          ? <MessageSquare size={14} className="text-[#117dff]" />
-                          : <ArrowUpRight size={14} className="text-[#a3a3a3] group-hover:text-[#0a0a0a]" />}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                    <span className={`text-[9px] font-mono uppercase px-2 py-1 rounded ${TAG_STYLES[task.tag] || TAG_STYLES.RESEARCH}`}>{task.room_name || task.room_tag || task.tag}</span>
-                    {taskDone ? <span className="text-[9px] font-mono uppercase px-2 py-1 rounded bg-[#16a34a] text-white">Done</span> : null}
-                    {!taskDone && taskActive ? <span className="text-[9px] font-mono uppercase px-2 py-1 rounded bg-[#117dff]/10 text-[#117dff]">In room</span> : null}
-                  </div>
-                </motion.button>
-              );
-            })}
-            {(c.tasks || []).length === 0 ? (
-              <p className="text-[11.5px] text-[#a3a3a3]">{t('hyperDash.noTasks', 'No planned tasks — re-run onboarding or create a room manually.')}</p>
-            ) : null}
-          </div>
-        </section>}
-
-        {/* Durable company memory, completed room outputs, evidence, and HQ. */}
-        <section className="min-h-0 flex flex-col pr-2">
-          <div className="shrink-0">
-            <SectionTitle>{t('hyperDash.documents', 'Documents')}</SectionTitle>
-            <div className="space-y-2">
-            {(c.documents || []).map((documentTitle) => (
-              <div key={documentTitle} className="flex items-center gap-2 text-[12px] text-[#3f3d39]">
-                <FileText size={12} className="text-[#a3a3a3] shrink-0" /> {documentTitle}
-              </div>
-            ))}
-            {(Array.isArray(c.web_artifacts) ? c.web_artifacts : []).map((artifact) => (
-              <button key={artifact.id} type="button" onClick={() => setSelectedWebArtifact(artifact)}
-                className="flex items-start gap-2 rounded-md border border-[#e3e0db] bg-white px-2.5 py-2 text-[12px] text-[#3f3d39] hover:border-[#117dff] hover:text-[#117dff] group">
-                <Globe size={12} className="text-[#117dff] shrink-0 mt-0.5" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{artifact.title || artifact.url}</span>
-                  <span className="block truncate text-[9.5px] font-mono text-[#a3a3a3]">{artifact.content_chars || 0} chars · {artifact.provider || 'web crawl'}</span>
-                </span>
-                <ArrowUpRight size={11} className="shrink-0 opacity-50 group-hover:opacity-100" />
-              </button>
-            ))}
-            </div>
-            <p className="text-[10.5px] text-[#a3a3a3] mt-2 font-mono leading-4">{t('hyperDash.filedTo', 'Filed to HIVEMIND memory — open web artifacts show the exact crawl agents can recall.')}</p>
-          </div>
-
-          {(c.deliverables || []).length > 0 ? (
-            <div className="mt-5 shrink-0">
-              <SectionTitle>{t('hyperDash.deliverables', 'Deliverables')}</SectionTitle>
-              <div className="space-y-2">
-                {(c.deliverables || []).map((deliverable) => (
-                  <button key={deliverable.room_id}
-                    onClick={() => onOpenRoom?.({ id: deliverable.room_id, name: deliverable.title })}
-                    className="w-full flex items-center gap-2 text-[12px] text-[#0a0a0a] hover:text-[#117dff] text-left group">
-                    <MessageSquare size={12} className="text-[#16a34a] shrink-0" />
-                    <span className="group-hover:underline min-w-0 flex-1">{deliverable.title}</span>
-                    <span className="text-[9.5px] font-mono text-[#a3a3a3] shrink-0">{deliverable.sealed_at ? new Date(deliverable.sealed_at).toLocaleDateString() : ''}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-            {(c.research || []).length > 0 ? (
-            <div className="mt-5 min-h-0 flex-1 flex flex-col">
-              <div className="shrink-0"><SectionTitle>{t('hyperDash.research', 'Market research')}</SectionTitle></div>
-              <div className="min-h-0 overflow-y-auto pr-2 space-y-3">
-                {(c.research || []).slice(0, 8).map((researchItem, index) => (
-                  <a key={`${researchItem.url || 'research'}-${index}`} href={researchItem.url} target="_blank" rel="noreferrer" className="block group">
-                    <div className="flex items-start gap-2">
-                      <Search size={11} className="text-[#a3a3a3] mt-1 shrink-0" />
-                      <div className="min-w-0">
-                        <span className="text-[12px] text-[#0a0a0a] font-medium group-hover:underline leading-4">{researchItem.title || researchItem.url}</span>
-                        {researchItem.snippet ? <p className="text-[11px] text-[#a3a3a3] leading-[17px] mt-0.5 line-clamp-3">{researchItem.snippet}</p> : null}
-                      </div>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </div>
-            ) : null}
-
-          {onOpenRoom && <div className="mt-5 shrink-0">
-            <SectionTitle>{t('hyperDash.hq', 'HQ')}</SectionTitle>
-            <button
-              onClick={() => state.hq_room_id && onOpenRoom?.({ id: c.room_id || state.hq_room_id, name: c.room_name })}
-              className="w-full flex items-center justify-between border border-[#e3e0db] hover:border-[#0a0a0a] rounded-lg px-4 py-3 bg-white transition-colors group"
-            >
-              <span className="flex items-center gap-2 text-[12.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
-                <Sparkles size={13} className="text-violet-500" /> {c.room_name || `${c.company} — HQ`}
-              </span>
-              <ArrowUpRight size={13} className="text-[#a3a3a3] group-hover:text-[#0a0a0a]" />
-            </button>
-          </div>}
-
-          <div className="mt-4 shrink-0 flex flex-col items-start gap-1 text-[10.5px] font-mono pb-2">
-            <span className="inline-flex items-center gap-2 text-[#a3a3a3]"><Building2 size={11} /> {t('hyperDash.onboardedAt', 'Onboarded')} {c.onboarded_at ? new Date(c.onboarded_at).toLocaleDateString() : ''}</span>
-            {allowOnboarding && <button onClick={() => setConfirmRerun(true)} className="text-[#117dff] hover:underline">{t('hyperDash.rerun', 'Re-run onboarding')}</button>}
-          </div>
-        </section>
-      </div>
 
       {viewingProfile && (
         <EmployeeProfileModal
@@ -654,7 +668,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
 
       {confirmRerun && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !resetting && setConfirmRerun(false)}>
-          <div className="bg-white border border-[#e3e0db] rounded-2xl max-w-[440px] w-full p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white border border-[#e3e0db] rounded-2xl max-w-[440px] w-full p-6" role="dialog" aria-modal="true" aria-label={t('hyperDash.rerunTitle', 'Start fresh?')} onClick={(e) => e.stopPropagation()}>
             <h3 className="text-[17px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('hyperDash.rerunTitle', 'Start fresh?')}</h3>
             <p className="text-[13px] text-[#525252] mt-2 leading-relaxed">
               {t('hyperDash.rerunBody', 'Re-running onboarding clears your current company profile, mission, tasks, research and homepage capture, and lets you set it up from scratch.')}
@@ -663,12 +677,12 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
               {t('hyperDash.rerunRooms', 'Your existing rooms stay — including any task rooms. Delete each one manually from the rooms rail if you want a clean slate.')}
             </p>
             <div className="flex items-center justify-end gap-2 mt-5">
-              <button onClick={() => setConfirmRerun(false)} disabled={resetting}
-                className="text-[12.5px] font-semibold text-[#525252] hover:text-[#0a0a0a] px-3.5 py-2 rounded-lg">
+              <button type="button" onClick={() => setConfirmRerun(false)} disabled={resetting}
+                className="min-h-[40px] text-[12.5px] font-semibold text-[#525252] hover:text-[#0a0a0a] px-3.5 py-2 rounded-lg">
                 {t('hyperDash.cancel', 'Cancel')}
               </button>
-              <button onClick={doRerun} disabled={resetting}
-                className="flex items-center gap-2 text-[12.5px] font-semibold text-white bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 px-3.5 py-2 rounded-lg">
+              <button type="button" onClick={doRerun} disabled={resetting}
+                className="min-h-[40px] flex items-center gap-2 text-[12.5px] font-semibold text-white bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 px-3.5 py-2 rounded-lg">
                 {resetting ? <Spinner size="w-3.5 h-3.5" colorClass="border-white" /> : null}
                 {t('hyperDash.rerunConfirm', 'Clear & start fresh')}
               </button>

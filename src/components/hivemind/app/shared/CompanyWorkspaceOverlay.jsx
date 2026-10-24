@@ -5,8 +5,12 @@ import { bindNativeChatViewport } from '../layout/mobile-chat-viewport';
 import './mobile-popup.css';
 import WorkspacePopupSurface from './WorkspacePopupSurface';
 
-/** Keep the current room mounted beneath a large company-context reader. */
-export default function CompanyWorkspaceOverlay({ onClose, portalContainer }) {
+/**
+ * Keep the current room mounted beneath the Company HQ reader.
+ * `team` and `rooms` are the sidebar's live roster and room statuses; choosing
+ * a teammate closes the reader and opens that teammate's room.
+ */
+export default function CompanyWorkspaceOverlay({ onClose, portalContainer, team, rooms, onOpenTeammate }) {
   const container = useRef(null);
   useEffect(() => {
     const releaseViewport = bindNativeChatViewport(window, container.current.parentElement.style, '--hm-popup-height');
@@ -28,8 +32,9 @@ export default function CompanyWorkspaceOverlay({ onClose, portalContainer }) {
   }, [onClose]);
   return createPortal(<div data-outer-reader-overlay className="fixed inset-0 z-[110] grid place-items-center bg-black/35 p-3 sm:p-6 backdrop-blur-[2px]" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
     <div data-outer-reader-window ref={container} className="w-full max-w-[1440px] max-h-[calc(100dvh-48px)] overflow-y-auto">
-      <WorkspacePopupSurface variant="reader" label="hivemind — company workspace" ariaLabel="Company workspace" onClose={onClose}>
-        <div data-company-reader-content className="flex h-[min(82dvh,960px)] min-h-[320px] flex-col"><CompanyDashboard showTasks={false} showRuntimeInvite={false} allowOnboarding={false} /></div>
+      <WorkspacePopupSurface variant="reader" label="hivemind — company HQ" ariaLabel="Company HQ" onClose={onClose}>
+        <div data-company-reader-content className="flex h-[min(82dvh,960px)] min-h-[320px] flex-col"><CompanyDashboard showTasks={false} showRuntimeInvite={false} allowOnboarding={false} team={team} rooms={rooms} onDismiss={onClose}
+          onOpenTeammate={onOpenTeammate ? (event, agent) => { onClose(); onOpenTeammate(event, agent); } : undefined} /></div>
       </WorkspacePopupSurface>
     </div>
   </div>, portalContainer || document.body);

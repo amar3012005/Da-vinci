@@ -1,0 +1,58 @@
+/* Company HQ grid. Columns follow the width of the HQ surface itself (reader
+   popup, page beside the sidebar, or phone), not the viewport:
+   one column below 700px, two to 1100px, three above. */
+.hm-hq-scroll { container:hm-hq / inline-size; }
+.hm-hq-grid {
+  display:grid; gap:16px; max-width:1440px; margin:0 auto;
+  grid-template-columns:minmax(0, 1fr);
+  grid-template-areas:"overview" "runtime" "team" "wakes" "deliverables" "files";
+  align-items:start;
+}
+.hm-hq-overview { grid-area:overview; }
+.hm-hq-runtime { grid-area:runtime; }
+.hm-hq-team { grid-area:team; }
+.hm-hq-wakes { grid-area:wakes; }
+.hm-hq-deliverables { grid-area:deliverables; }
+.hm-hq-files { grid-area:files; }
+.hm-hq-overview-body { display:grid; gap:16px; grid-template-columns:minmax(0, 1fr); }
+.hm-hq-facts { display:grid; gap:8px; grid-template-columns:minmax(0, 1fr); }
+.hm-hq-team-grid { display:grid; gap:2px; grid-template-columns:minmax(0, 1fr); }
+.hm-hq-deliverables-grid { display:grid; gap:8px; grid-template-columns:minmax(0, 1fr); }
+
+@container hm-hq (min-width:560px) {
+  .hm-hq-facts { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .hm-hq-deliverables-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+@container hm-hq (min-width:700px) {
+  .hm-hq-grid {
+    gap:20px; align-items:stretch;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    grid-template-areas:"overview overview" "runtime wakes" "team team" "deliverables files";
+  }
+  .hm-hq-overview-body { grid-template-columns:minmax(0, 1.35fr) minmax(0, 1fr); align-items:start; }
+  .hm-hq-team-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); column-gap:12px; }
+  .hm-hq-deliverables-grid { grid-template-columns:minmax(0, 1fr); }
+}
+@container hm-hq (min-width:1100px) {
+  .hm-hq-grid {
+    grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.92fr);
+    grid-template-areas:"overview overview runtime" "team team wakes" "deliverables deliverables files";
+  }
+  .hm-hq-deliverables-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+@container hm-hq (min-width:1360px) {
+  .hm-hq-deliverables-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+}
+
+/* Browsers without container queries use the viewport instead. */
+@supports not (container-type:inline-size) {
+  @media (min-width:768px) {
+    .hm-hq-grid { gap:20px; align-items:stretch; grid-template-columns:repeat(2, minmax(0, 1fr)); grid-template-areas:"overview overview" "runtime wakes" "team team" "deliverables files"; }
+    .hm-hq-overview-body { grid-template-columns:minmax(0, 1.35fr) minmax(0, 1fr); }
+    .hm-hq-facts, .hm-hq-team-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  }
+  @media (min-width:1280px) {
+    .hm-hq-grid { grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.92fr); grid-template-areas:"overview overview runtime" "team team wakes" "deliverables deliverables files"; }
+    .hm-hq-deliverables-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  }
+}
