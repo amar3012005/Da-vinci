@@ -1,4 +1,4 @@
-import { fetchHarness } from './harness-fetch';
+import { fetchWithRuntimeAdmission } from './runtime-admission';
 import { createAgentRosterCache } from './agent-roster-cache';
 function optionalRosterStorage() {
   try { return typeof window === 'undefined' ? null : window.localStorage; } catch { return null; }
@@ -18,7 +18,7 @@ export const agentRoster = createAgentRosterCache(async scope => {
   const controller = new AbortController();
   const deadline = setTimeout(() => controller.abort(), 15000);
   try {
-    const response = await fetchHarness((window.location.hostname === 'dots.singulancelabs.com' || window.location.pathname === '/apps') ? '/api/hivemind/workspace-shell?resource=roster' : '/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal });
+    const response = await fetchWithRuntimeAdmission((window.location.hostname === 'dots.singulancelabs.com' || window.location.pathname === '/apps') ? '/api/hivemind/workspace-shell?resource=roster' : '/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal });
     if (!response.ok) throw new Error('team unavailable');
     const value = await response.json();
     if (!Array.isArray(value.profiles)) throw new Error('invalid team response');

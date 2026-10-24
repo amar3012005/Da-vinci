@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { fetchWithRuntimeAdmission } from '../shared/runtime-admission';
+
 /** One autonomy dial for Runtime and HyperAgents; it lives in the HyperAgents sidebar on every page. */
 export const AUTONOMY_ENDPOINT = '/api/hivemindHq/autonomyLevel';
 const MAX = 4;
@@ -30,7 +32,7 @@ function AgentIcon() {
  * @param {{ collapsed?: boolean, fetcher?: typeof fetch }} props
  */
 /** Stable across renders, so a re-rendering parent never restarts or cancels the dial's read. */
-const defaultFetcher = (...args) => fetch(...args);
+const defaultFetcher = (...args) => fetchWithRuntimeAdmission(...args);
 
 export default function AutonomyDial({ collapsed = false, fetcher = defaultFetcher }) {
   const [state, setState] = useState(undefined);
