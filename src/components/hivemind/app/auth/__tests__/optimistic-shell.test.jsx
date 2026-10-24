@@ -69,7 +69,12 @@ function seedHint(org = ORG_A, user = USER_A) {
   writeBootCache(org.id, user.id, 'runtime-appearance', { character: 'orbit' }, STORE);
 }
 
+afterEach(() => {
+  delete process.env.REACT_APP_OPTIMISTIC_IDENTITY;
+});
+
 beforeEach(() => {
+  delete process.env.REACT_APP_OPTIMISTIC_IDENTITY;
   STORE.clear();
   global.__testPath = '/hivemind/app/overview';
   jest.clearAllMocks();
@@ -87,8 +92,8 @@ describe('optimistic shell before bootstrap', () => {
 
     renderShell();
 
-    expect(screen.getByText('Acme')).toBeInTheDocument();
-    expect(screen.getByText('Priya')).toBeInTheDocument();
+    expect(screen.queryByText('Acme')).not.toBeInTheDocument();
+    expect(screen.queryByText('Priya')).not.toBeInTheDocument();
     expect(screen.queryByText('SHELL CHILD')).not.toBeInTheDocument();
     expect(apiClient.bootstrap).toHaveBeenCalledTimes(1);
     Object.entries(apiClient).filter(([name]) => name !== 'bootstrap').forEach(([name, fn]) => {
@@ -180,6 +185,7 @@ describe('optimistic shell before bootstrap', () => {
 
 describe('optimistic frame geometry and scope', () => {
   test('the team route frame uses the settled team sidebar width and three roster columns', async () => {
+    process.env.REACT_APP_OPTIMISTIC_IDENTITY = 'true';
     seedHint();
     global.__testPath = '/hivemind/app/employee/harness';
     apiClient.bootstrap.mockReturnValue(new Promise(() => {}));
@@ -248,6 +254,119 @@ describe('optimistic frame geometry and scope', () => {
     expect(css).toMatch(/\.optimistic-shell-composer\s*\{[^}]*min-height:\s*96px/);
     const nav = fs.readFileSync(path.join(__dirname, '..', '..', 'layout', 'desktop-hyperagents-navigation.css'), 'utf8');
     expect(nav).toMatch(/\.ha-employee-tile \{[^}]*min-height:145px/);
+  });
+});
+
+// Stands in for AppShell's company-check gate: the frame is the only content, so its reveal rule is what shows.
+function renderGate() {
+  return render(
+    <AuthProvider>
+      <Routes>
+        <Route path="/hivemind/app/*" element={<ProtectedRoute optimisticFallback={<OptimisticAppShell />}><OptimisticAppShell fallback={<div>GATE FALLBACK</div>} /></ProtectedRoute>} />
+      </Routes>
+    </AuthProvider>,
+  );
+}
+
+describe('identity stays hidden until bootstrap confirms it', () => {
+  test('default restoring DOM holds no organization name, member name, or avatar source', () => {
+    seedHint();
+    global.__testPath = '/hivemind/app/employee/harness';
+    apiClient.bootstrap.mockReturnValue(new Promise(() => {}));
+
+    const { container } = renderShell();
+
+    const html = container.innerHTML;
+    expect(html).not.toContain('Acme');
+    expect(html).not.toContain('Priya');
+    expect(html).not.toContain('runtime-characters');
+    expect(html).not.toContain('orbit');
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelectorAll('.optimistic-skeleton').length).toBeGreaterThan(0);
+  });
+
+  test('default restoring frame keeps the settled box sizes of the revealed frame', () => {
+    seedHint();
+    global.__testPath = '/hivemind/app/employee/harness';
+    apiClient.bootstrap.mockReturnValue(new Promise(() => {}));
+
+    const hidden = renderShell().container;
+    const hiddenBoxes = {
+      aside: hidden.querySelector('aside').style.width,
+      content: hidden.querySelector('[data-optimistic-shell] > div.min-w-0').style.marginLeft,
+      grid: hidden.querySelector('.ha-employee-grid').style.gridTemplateColumns,
+      avatarSlot: hidden.querySelector('[data-runtime-avatar-pending]').style.width,
+      headerHeightClass: hidden.querySelector('.optimistic-shell-header').className,
+      titleSkeleton: hidden.querySelector('h1 .optimistic-skeleton').style.width,
+    };
+    expect(hiddenBoxes).toEqual({
+      aside: `${HYPERAGENT_WIDTHS[3]}px`,
+      content: `${HYPERAGENT_WIDTHS[3]}px`,
+      grid: 'repeat(3, minmax(0, 1fr))',
+      avatarSlot: '82px',
+      headerHeightClass: 'optimistic-shell-header grid grid-cols-[minmax(0,1fr)_auto] items-center px-6',
+      titleSkeleton: '180px',
+    });
+  });
+
+  test('the cached identity appears right after a matching bootstrap, with no further request', async () => {
+    seedHint();
+    global.__testPath = '/hivemind/app/employee/harness';
+    apiClient.bootstrap.mockResolvedValue(signedIn());
+
+    renderGate();
+
+    expect(await screen.findByText('Priya')).toBeInTheDocument();
+    expect(screen.getByText('Acme')).toBeInTheDocument();
+    expect(screen.queryByText('GATE FALLBACK')).not.toBeInTheDocument();
+    expect(apiClient.listEmployees).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('a mismatched bootstrap never reveals the previous identity in the gate', async () => {
+    seedHint();
+    global.__testPath = '/hivemind/app/employee/harness';
+    apiClient.bootstrap.mockResolvedValue(signedIn({ id: 'org-b', name: 'Other Co' }));
+
+    const { container } = renderGate();
+
+    expect(await screen.findByText('GATE FALLBACK')).toBeInTheDocument();
+    expect(container.innerHTML).not.toContain('Priya');
+    expect(container.innerHTML).not.toContain('Acme');
+  });
+
+  test('the opt-in build flag shows the cached identity while bootstrap is pending', () => {
+    process.env.REACT_APP_OPTIMISTIC_IDENTITY = 'true';
+    seedHint();
+    global.__testPath = '/hivemind/app/employee/harness';
+    apiClient.bootstrap.mockReturnValue(new Promise(() => {}));
+
+    const { container } = renderShell();
+
+    expect(screen.getByText('Acme')).toBeInTheDocument();
+    expect(screen.getByText('Priya')).toBeInTheDocument();
+    expect(container.querySelector('img').getAttribute('src')).toContain('orbit-ready.webp');
+    expect(container.querySelector('aside').style.width).toBe(`${HYPERAGENT_WIDTHS[3]}px`);
+  });
+});
+
+describe('REACT_APP_OPTIMISTIC_IDENTITY validation', () => {
+  const { parseOptimisticIdentityFlag } = require('../../shared/optimistic-identity');
+
+  test('unset, empty and false keep identity hidden', () => {
+    expect(parseOptimisticIdentityFlag(undefined)).toBe(false);
+    expect(parseOptimisticIdentityFlag('')).toBe(false);
+    expect(parseOptimisticIdentityFlag('false')).toBe(false);
+  });
+
+  test('only the exact value true enables it', () => {
+    expect(parseOptimisticIdentityFlag('true')).toBe(true);
+  });
+
+  test('any other value fails loudly instead of choosing a mode', () => {
+    expect(() => parseOptimisticIdentityFlag('TRUE')).toThrow(/REACT_APP_OPTIMISTIC_IDENTITY/);
+    expect(() => parseOptimisticIdentityFlag('1')).toThrow(/REACT_APP_OPTIMISTIC_IDENTITY/);
+    expect(() => parseOptimisticIdentityFlag('yes')).toThrow(/REACT_APP_OPTIMISTIC_IDENTITY/);
   });
 });
 
