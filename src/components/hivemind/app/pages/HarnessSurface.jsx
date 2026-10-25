@@ -1,6 +1,7 @@
 import { clearRuntimePresentation } from '../shared/runtime-presentation-cache';
 import { initialNativePane } from '../shared/native-pane-protocol';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
+import { PhoneRoomFrame, phoneChatRoom } from '../layout/PhoneRoomFrame';
 import { parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } from '../shared/native-harness-seat';
 import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../shared/api-client';
@@ -190,6 +191,11 @@ export const HARNESS_BOOT_STAGES = [
 
 /** Show the current real boot boundary without a logo or simulated progress. */
 export function LoadingSurface({ stage = 0, dreaming = false, reconnecting = false }) {
+  const phoneRoom = dreaming ? null : phoneChatRoom(window.location.pathname);
+  // Phone chat rooms keep the room frame from the first paint instead of a blank loader.
+  if (phoneRoom) return <PhoneRoomFrame room={phoneRoom}>
+    {reconnecting && <button type="button" onClick={() => window.location.reload()} className="optimistic-phone-room-retry rounded-md border border-black/10 px-3 py-2 text-[12px]">Try again</button>}
+  </PhoneRoomFrame>;
   return <div className="hm-chat-opening">
     <AsciiWorkspaceLoading label="Connecting…" />
     {reconnecting && <button type="button" onClick={() => window.location.reload()} className="rounded-md border border-black/10 px-3 py-2 text-[12px]">Try again</button>}
