@@ -74,8 +74,9 @@ export default function MobileShell({ children, rightAction = null, title = null
   // SINGULANCE onboarding splash — plays once per device, and again right
   // after a QR scan (?from=dashboard). Decided synchronously on first render so
   // it covers the very first paint; the query param is stripped on finish.
+  // Only a page load shows it: in-app navigation (from the team drawer) opens the page directly.
   const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined' || location.key !== 'default') return false;
     try {
       const fromQR = new URLSearchParams(window.location.search).has('from');
       const seen = window.localStorage.getItem(SPLASH_FLAG) === '1';

@@ -14,6 +14,21 @@ export function workspaceModeDestination(pathname, currentOrigin) {
   return currentOrigin === targetOrigin ? pathname : `${targetOrigin}${pathname}`;
 }
 
+/**
+ * Runtime-owned destination of an in-app link followed on the Brain host. Runtime pages (rooms, Library, CRM) cannot
+ * open on next.singulancelabs.com, so a client-side route there must become a page load on the Runtime host.
+ * @param {string} href - The link's resolved href.
+ * @param {string} currentOrigin - The page's origin.
+ * @returns {string | null} The Runtime URL to load, or null when the link may route in place.
+ */
+export function runtimeHostLink(href, currentOrigin) {
+  let url;
+  try { url = new URL(href, currentOrigin); } catch { return null; }
+  if (url.origin !== currentOrigin) return null;
+  const destination = workspaceModeDestination(url.pathname, currentOrigin);
+  return workspaceModeForPath(url.pathname) === 'hyperagents' && destination !== url.pathname ? destination + url.search + url.hash : null;
+}
+
 /** Reopening Apps preserves the original employee return destination. */
 export function employeeAppsPath(location) {
   const apps = '/hivemind/app/employee/apps';
