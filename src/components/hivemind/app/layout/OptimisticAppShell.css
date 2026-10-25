@@ -14,3 +14,4 @@
 .optimistic-phone-room-action { width: 36px; height: 36px; flex-shrink: 0; border-radius: 9999px; background: #ecebe6; }
 .optimistic-phone-room-action.is-send { background: #d9d7d1; }
 .optimistic-phone-room-input { height: 12px; flex: 1; max-width: 140px; border-radius: 6px; background: #ecebe6; }
+.optimistic-phone-room-retry { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; }

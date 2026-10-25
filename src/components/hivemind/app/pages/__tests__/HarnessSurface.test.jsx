@@ -64,6 +64,25 @@ describe('HarnessSurface module cache', () => {
     expect(harnessBootRevision([])).toBeNull();
   });
 
+  it('covers a phone Runtime room with the room frame, not a blank loader', () => {
+    const previousMatch = window.matchMedia;
+    window.matchMedia = jest.fn(query => ({ matches: query.includes('max-width'), addEventListener: jest.fn(), removeEventListener: jest.fn() }));
+    window.history.pushState({}, '', '/hivemind/app/employee/harness');
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+    const { createRoot } = require('react-dom/client');
+    const { act } = require('react');
+    const reactRoot = createRoot(root);
+    act(() => reactRoot.render(<LoadingSurface stage={2} />));
+    expect(root.querySelector('[data-optimistic-phone-room="runtime"]')).not.toBeNull();
+    expect(root.querySelector('.optimistic-phone-room-composer')).not.toBeNull();
+    expect(root.textContent).not.toContain('Connecting…');
+    act(() => reactRoot.unmount());
+    root.remove();
+    window.history.pushState({}, '', '/');
+    window.matchMedia = previousMatch;
+  });
+
   it('keeps one diffusion label across native boot milestones', () => {
     const root = document.createElement('div');
     document.body.appendChild(root);
