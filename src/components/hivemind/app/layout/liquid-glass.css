@@ -5,6 +5,7 @@
   /* Zero specificity: an element's own absolute or fixed placement (the centred room pill) wins over this default. */
   :where(.liquid-glass) { position: relative; }
   .liquid-glass {
+    corner-shape: round;
     isolation: isolate;
     border: 0;
     background: rgb(255 255 255 / 0.56);

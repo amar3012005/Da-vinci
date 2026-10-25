@@ -198,7 +198,8 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
   const harnessCanvas = pagePath === '/hivemind/app/overview' || pagePath === '/hivemind/app/employee/harness';
 
   // Runtime and Brain phone rooms: liquid-glass back control and identity pill, matching the HyperAgent room bar.
-  if (floatingMobile) return <div data-mobile-agent-overlay-controls className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start px-3" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}>
+  // The OpenDot room bar (DotView.module.css): a 52px row max(8px, safe area) from the top, 12px from the sides.
+  if (floatingMobile) return <div data-mobile-agent-overlay-controls className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center px-3" style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 0px))', height: 'calc(max(8px, env(safe-area-inset-top, 0px)) + 52px)', boxSizing: 'border-box' }}>
     <button type="button" aria-label="Open your team" aria-haspopup="dialog" onClick={mobileTeamToggle} className="liquid-glass pointer-events-auto grid h-12 w-12 place-items-center rounded-full text-[#292929]"><ChevronLeft size={22} strokeWidth={2} /></button>
     {/* Runtime's own identity pill (ui-hivemind-connect) is centred here and opens its Environment sheet, so only Brain gets one from the shell. */}
     {roomIdentity === 'brain' && <div className="pointer-events-auto absolute left-1/2 flex h-12 max-w-[calc(100%-144px)] -translate-x-1/2 items-center gap-2 rounded-full pl-2 pr-4 text-[#292929] liquid-glass">
