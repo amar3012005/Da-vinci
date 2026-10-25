@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
 import { UserPlus, Building2, Menu, ChevronLeft } from 'lucide-react';
 import RuntimeAvatar from '../shared/RuntimeAvatar';
+import BrainModeIcon from './BrainModeIcon';
 import './liquid-glass.css';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
@@ -158,7 +159,7 @@ const PAGE_PREFIXES = [
   ['/hivemind/app/team/projects', '/hivemind/app/team/projects'],
 ];
 
-export default function TopBar({ activeSection = 'hivemind', onSectionChange, mobileTeamToggle = null, floatingMobile = false }) {
+export default function TopBar({ activeSection = 'hivemind', onSectionChange, mobileTeamToggle = null, floatingMobile = false, roomIdentity = 'runtime' }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { org, user } = useAuth();
@@ -197,12 +198,14 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
   const tDesc = description ? t(`topbar.descriptions.${routeSlug}`, { defaultValue: description }) : '';
   const harnessCanvas = pagePath === '/hivemind/app/overview' || pagePath === '/hivemind/app/employee/harness';
 
-  // Runtime phone room: liquid-glass back control and identity pill, matching the HyperAgent room bar.
+  // Runtime and Brain phone rooms: liquid-glass back control and identity pill, matching the HyperAgent room bar.
   if (floatingMobile) return <div data-mobile-agent-overlay-controls className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start px-3" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}>
     <button type="button" aria-label="Open your team" aria-haspopup="dialog" onClick={mobileTeamToggle} className="liquid-glass pointer-events-auto grid h-12 w-12 place-items-center rounded-full text-[#292929]"><ChevronLeft size={22} strokeWidth={2} /></button>
     <div className="pointer-events-auto absolute left-1/2 flex h-12 max-w-[calc(100%-200px)] -translate-x-1/2 items-center gap-2 rounded-full pl-2 pr-4 text-[#292929] liquid-glass">
-      <RuntimeAvatar alt="" size={32} />
-      <span className="truncate text-[16px] font-semibold tracking-tight">Runtime</span>
+      {roomIdentity === 'brain'
+        ? <span className="grid h-8 w-8 shrink-0 place-items-center"><BrainModeIcon size={28} /></span>
+        : <RuntimeAvatar alt="" size={32} />}
+      <span className="truncate text-[16px] font-semibold tracking-tight">{roomIdentity === 'brain' ? t('topbar.companyBrain', { defaultValue: 'Company Brain' }) : 'Runtime'}</span>
     </div>
   </div>;
 

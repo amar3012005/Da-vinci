@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { Cable, Check, Loader2, Plug, Search, Wrench, X, Zap } from 'lucide-react';
 import apiClient from '../../shared/api-client';
 import MobileShell from '../MobileShell';
+import { glassHeader } from '../MobileGlassHeader';
 import '../mobile-tools.css';
 
 const NATIVE_SLACK_TOOLKIT = 'slack';
@@ -28,9 +29,9 @@ function isSelfServeConnectable(toolkit) {
 function LogoMark({ toolkit, connected }) {
   const [failed, setFailed] = useState(false);
   return (
-    <span className={`grid h-10 w-10 flex-shrink-0 place-items-center rounded-[14px] border overflow-hidden ${connected ? 'border-emerald-200 bg-emerald-50' : 'border-[#ece9e2] bg-white'}`}>
+    <span className={`mg-icon-tile ${connected ? 'ring-2 ring-emerald-300/70' : ''}`}>
       {toolkit.logo && !failed ? (
-        <img src={toolkit.logo} alt={toolkit.name} loading="lazy" onError={() => setFailed(true)} className="h-[22px] w-[22px] object-contain" />
+        <img src={toolkit.logo} alt={toolkit.name} loading="lazy" onError={() => setFailed(true)} className="h-[24px] w-[24px] object-contain" />
       ) : (
         <Cable size={16} className={connected ? 'text-emerald-600' : 'text-[#117dff]'} />
       )}
@@ -227,57 +228,57 @@ export default function MobileConnectors() {
   }), [filtered, connectedSlugs]);
 
   const connectedCount = toolkits.filter((tk) => tk.connected || connectedSlugs[tk.slug] === 'connected').length;
-  const liveCount = <span className="text-[11px] text-[#a8a49c] whitespace-nowrap pr-1">{connectedCount} live</span>;
+  const liveCount = <span className="whitespace-nowrap">{connectedCount} live</span>;
 
   return (
-    <MobileShell title="Connectors" rightAction={liveCount}>
-      <div data-mobile-tools>
-      <div className="px-4 pt-2 pb-1">
-        <h1 className="text-[21px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Connectors</h1>
-        <p className="mt-1 text-[12px] leading-relaxed text-[#737373]">Connect your apps to let HIVEMIND preserve context and also perform automations.</p>
+    <MobileShell title="Connectors" renderHeader={glassHeader({ icon: <Cable size={17} strokeWidth={1.9} />, title: 'Connectors', right: liveCount })}>
+      <div data-mobile-tools data-mobile-glass>
+      <div className="mg-hero">
+        <h1 className="mg-title">Connectors</h1>
+        <p className="mg-subtitle">Connect your apps so HIVEMIND keeps their context and can work in them for you.</p>
       </div>
 
-      <details className="mx-3 my-3 rounded-xl border border-[#e3e0db] bg-white">
-        <summary className="px-4 py-3 text-sm font-medium cursor-pointer">Connect ChatGPT, Claude or another AI client</summary>
+      <details className="mg-card overflow-hidden">
+        <summary className="flex min-h-[52px] cursor-pointer list-none items-center gap-3 px-4 text-[15px] font-semibold"><span className="mg-icon-tile !h-9 !w-9 !rounded-[12px]"><Zap size={16} /></span>Connect ChatGPT, Claude or another AI client</summary>
         <McpClientSetup selectable />
       </details>
 
-      <div className="px-3 pt-2 pb-2">
-        <label className="flex items-center gap-2 h-11 px-3 rounded-[18px] bg-white border border-[#ece9e2] focus-within:border-[#9fc7ff]">
-          <Search size={16} className="text-[#a3a3a3]" />
+      <div className="mt-4">
+        <label className="mg-search">
+          <Search size={17} className="text-[#a3a3a3]" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search connectors — Gmail, Slack, Airtable..."
             aria-label="Search connectors" autoCapitalize="none" autoCorrect="off"
-            className="flex-1 bg-transparent outline-none text-[14px] placeholder:text-[#b9b5ae]"
+            className="placeholder:text-[#b9b5ae]"
           />
         </label>
       </div>
 
-      <div className="px-3 pb-6">
-        <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="mg-section">
+        <div className="mg-seg mb-4" role="group" aria-label="Connector categories">
           {categories.map((c) => (
             <button
               key={c}
+              type="button"
+              aria-pressed={category === c}
               onClick={() => setCategory(c)}
-              className={`px-3 py-1.5 rounded-xl border text-[11.5px] font-semibold whitespace-nowrap capitalize ${
-                category === c ? 'bg-white border-[#d8d2c6] text-[#0a0a0a] shadow-sm' : 'bg-transparent text-[#6f6b63] border-transparent'
-              }`}
+              className="capitalize"
             >
               {c === 'all' ? 'All' : c}
             </button>
           ))}
         </div>
 
-        <div className="mb-2 text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+        <p className="mg-section-title">
           {totalItems ? `${totalItems.toLocaleString()} apps available` : ' '}
-        </div>
+        </p>
 
-        {error && <div role="alert" className="mb-2 p-3 rounded-[16px] bg-red-50 border border-red-100 text-[13px] text-red-700">{error}</div>}
-        {loading && toolkits.length === 0 && <div role="status" className="py-12 text-center text-[13px] text-[#737373]">Loading connectors...</div>}
+        {error && <div role="alert" className="mb-2 p-3 rounded-[18px] bg-red-50 border border-red-100 text-[13px] text-red-700">{error}</div>}
+        {loading && toolkits.length === 0 && <div role="status" className="py-12 text-center text-[14px] text-[#737373]">Loading connectors…</div>}
 
-        <div className="space-y-1.5">
+        <div>
           {sorted.map((toolkit, index) => {
             const connected = connectedSlugs[toolkit.slug] === 'disconnected' ? false : (toolkit.connected || connectedSlugs[toolkit.slug] === 'connected');
             const isNativeSlack = toolkit.slug === NATIVE_SLACK_TOOLKIT;
@@ -291,17 +292,15 @@ export default function MobileConnectors() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(index * 0.012, 0.16) }}
-                className="w-full rounded-[18px] border border-[#e3e0db] bg-white p-2.5 text-left shadow-[0_10px_22px_rgba(26,24,20,0.035)]"
+                className="mg-card w-full text-left"
               >
-                <div className="flex items-center gap-2.5">
-                  <button type="button" aria-label={`Details for ${toolkit.name}`} onClick={() => setDetailToolkit(toolkit)} className="min-w-0 flex-1 flex items-center gap-2.5 text-left"><LogoMark toolkit={toolkit} connected={connected} />
+                <div className="mg-row">
+                  <button type="button" aria-label={`Details for ${toolkit.name}`} onClick={() => setDetailToolkit(toolkit)} className="mg-press min-w-0 flex-1 flex items-center gap-3 text-left"><LogoMark toolkit={toolkit} connected={connected} />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[13px] font-bold leading-tight line-clamp-1">{toolkit.name}</span>
-                      <span className="flex items-center gap-1 text-[9.5px] font-mono text-[#a3a3a3] flex-shrink-0">
-                        <Wrench size={10} /> {toolkit.toolsCount}
-                        {toolkit.triggersCount > 0 && <><Zap size={10} className="ml-1" />{toolkit.triggersCount}</>}
-                      </span>
+                    <div className="mg-row-title line-clamp-1">{toolkit.name}</div>
+                    <div className="mg-row-meta mt-0.5 flex items-center gap-1">
+                      <Wrench size={11} /> {toolkit.toolsCount} tools
+                      {toolkit.triggersCount > 0 && <><span aria-hidden="true">·</span><Zap size={11} />{toolkit.triggersCount} triggers</>}
                     </div>
                   </div>
                   </button>
@@ -309,22 +308,22 @@ export default function MobileConnectors() {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDisconnect(toolkit); }}
                       disabled={disconnecting}
-                      className="ml-1 inline-flex min-h-[44px] items-center gap-1 rounded-lg border border-[#e3e0db] bg-white px-2.5 text-[10.5px] font-bold text-[#6f6b63] active:scale-[0.97] disabled:opacity-50 flex-shrink-0"
+                      className="mg-pill flex-shrink-0 !px-3.5 text-[13px]"
                     >
-                      {disconnecting ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} className="text-emerald-500" />} Connected
+                      {disconnecting ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} className="text-emerald-500" />} Connected
                     </button>
                   ) : redundant ? (
-                    <span className="ml-1 text-[10px] text-[#a3a3a3] flex-shrink-0">Via Slack</span>
+                    <span className="mg-chip flex-shrink-0">Via Slack</span>
                   ) : available ? (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleConnect(toolkit); }}
                       disabled={connecting}
-                      className="ml-1 inline-flex min-h-[44px] items-center gap-1 rounded-lg bg-[#1a1a17] px-2.5 text-[10.5px] font-bold text-white active:scale-[0.97] disabled:opacity-50 flex-shrink-0"
+                      className="mg-pill-primary flex-shrink-0 !min-h-[40px] !px-4 text-[14px]"
                     >
-                      {connecting ? <Loader2 size={12} className="animate-spin" /> : <Plug size={12} />} Connect
+                      {connecting ? <Loader2 size={13} className="animate-spin" /> : <Plug size={13} />} Connect
                     </button>
                   ) : (
-                    <span className="ml-1 text-[10px] text-[#a3a3a3] flex-shrink-0">Request access</span>
+                    <span className="mg-chip flex-shrink-0">Request access</span>
                   )}
                 </div>
               </motion.div>
@@ -334,7 +333,7 @@ export default function MobileConnectors() {
 
         {cursor && !loading && (
           <div className="flex justify-center mt-4">
-            <button onClick={() => load(query, cursor)} className="px-4 py-2 rounded-xl border border-[#e3e0db] bg-white text-[12.5px] font-semibold text-[#525252]">
+            <button type="button" onClick={() => load(query, cursor)} className="mg-pill">
               Load more
             </button>
           </div>
