@@ -8,7 +8,7 @@ import { useAuth } from './AuthProvider';
 // `optimisticFallback` paints while bootstrap is in flight and only when a saved shell hint exists.
 // Children, and every data read they make, mount only after bootstrap confirms the session.
 export default function ProtectedRoute({ children, optimisticFallback = null }) {
-  const { isAuthenticated, loading, isUnreachable, connectionFailure, refresh, optimisticShell } = useAuth();
+  const { isAuthenticated, loading, isUnreachable, connectionFailure, refresh } = useAuth();
   const location = useLocation();
 
   const authorityRedirect = workspaceDocumentRedirect(window.location.href, { embedded: window.parent !== window });
@@ -19,7 +19,8 @@ export default function ProtectedRoute({ children, optimisticFallback = null }) 
   }, [authorityRedirect, loginRedirect]);
   if (authorityRedirect || loginRedirect) return null;
 
-  if (loading && optimisticFallback && optimisticShell) return optimisticFallback;
+  // The restoring frame decides for itself: cached identity on desktop, the room frame on phone chat rooms, else its loader.
+  if (loading && optimisticFallback) return optimisticFallback;
 
   if (loading) {
     return <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center"><AsciiWorkspaceLoading /></div>;
