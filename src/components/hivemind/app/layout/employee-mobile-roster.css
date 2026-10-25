@@ -181,11 +181,11 @@
 .mobile-roster-anatomy p { margin: 6px 4px 0; font-size: 12px; color: #737373; }
 @media (prefers-reduced-motion: reduce) { .mobile-roster-anatomy > button, .mobile-roster-anatomy i, .mobile-roster-anatomy i::after { transition: none; } }
 
-/* Company autonomy dial, at the bottom with Anatomy mode, above Account. */
+/* Company autonomy dial, at the bottom with Anatomy mode, above Account. Its bar keeps the shared touch
+   height: the coarse-pointer cell inset (16px) needs the 44px bar, or the cells collapse to nothing. */
 .ha-autonomy-seat.mobile-roster-autonomy { flex-shrink: 0; margin-top: auto; padding: 12px 14px 10px; border: 1px solid #e3e0db; border-radius: 20px;
   background: rgba(255,255,255,.55); }
 .ha-autonomy-seat.mobile-roster-autonomy:empty { display: none; }
 .ha-autonomy-seat.mobile-roster-autonomy:not(:empty) + .mobile-roster-anatomy { margin-top: 8px; padding-top: 0; }
 .mobile-roster-autonomy .ha-autonomy-head { font-size: 13px; }
-.mobile-roster-autonomy .ha-autonomy-bar, .mobile-roster-autonomy .ha-autonomy-range { height: 28px; }
 .mobile-roster-autonomy .ha-autonomy-checkpoint { min-height: 32px; font-size: 11px; }

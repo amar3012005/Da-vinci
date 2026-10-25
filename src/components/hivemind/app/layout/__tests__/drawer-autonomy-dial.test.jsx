@@ -60,3 +60,8 @@ test('the dial and its confirm dialog are styled outside the desktop-only media 
     expect(insideDesktop).not.toContain(rule);
   }
 });
+
+test('the phone roster keeps the shared touch bar height, so the coarse-pointer cells stay visible', () => {
+  const css = require('fs').readFileSync(require('path').resolve(__dirname, '../employee-mobile-roster.css'), 'utf8');
+  expect(css).not.toMatch(/\.mobile-roster-autonomy[^{]*\.ha-autonomy-(?:bar|range)[^{]*\{[^}]*height/);
+});
