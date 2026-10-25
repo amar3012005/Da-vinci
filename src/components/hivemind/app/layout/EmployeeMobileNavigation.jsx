@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
+import { runtimeHostLink } from '../shared/workspace-mode';
 import './employee-mobile-roster.css';
 
 /** Same authenticated team projection, presented as a dismissible touch drawer. */
@@ -30,7 +31,13 @@ export default function EmployeeMobileNavigation({ activeSection, onClose }) {
   }, [onClose, phone]);
   return <div ref={root} role="dialog" aria-modal="true" aria-label="Your team" className="fixed inset-0 z-[70]" data-mobile-employee-navigation style={{ bottom: 'auto', height: 'var(--hm-app-viewport-height, 100dvh)' }}>
     <button type="button" aria-label="Close your team" onClick={onClose} className="absolute inset-0 bg-black/30" />
-    <div className="employee-mobile-roster-frame absolute inset-y-0 left-0 w-[min(300px,85vw)] overflow-hidden bg-[#faf9f4]" onClick={event => {
+    <div className="employee-mobile-roster-frame absolute inset-y-0 left-0 w-[min(300px,85vw)] overflow-hidden bg-[#faf9f4]" onClickCapture={event => {
+      const link = event.target.closest('a[href]');
+      const destination = link && runtimeHostLink(link.href, window.location.origin);
+      if (!destination) return;
+      event.preventDefault(); event.stopPropagation(); onClose();
+      window.location.assign(destination);
+    }} onClick={event => {
       if (event.target.closest('a[href], button[data-agent-room-link]')) onClose();
     }}>
       <Sidebar activeSection={activeSection} collapsed={false} mobileDrawer mobileRoster={phone} />

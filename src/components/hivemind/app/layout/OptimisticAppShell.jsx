@@ -7,10 +7,14 @@ import { readBootCache } from '../shared/boot-cache';
 import { optimisticIdentityEnabled } from '../shared/optimistic-identity';
 import { workspaceModeForPath } from '../shared/workspace-mode';
 import { HYPERAGENT_WIDTHS } from './hyperagent-widths';
+import { ChevronLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import BrainModeIcon from './BrainModeIcon';
+import './liquid-glass.css';
 import './desktop-hyperagents-navigation.css';
 import './OptimisticAppShell.css';
 
-// Restoring frame for the desktop shell. Each frame matches the settled shell for its route, so the swap does not move content.
+// Restoring frame for the desktop shell, and for the Runtime and Brain chat rooms on phones. Each frame matches the settled shell for its route, so the swap does not move content.
 // Identity (organization name, roster names, Runtime avatar) is revealed only when bootstrap has confirmed the same
 // organization and user, or when the build sets REACT_APP_OPTIMISTIC_IDENTITY=true. Otherwise neutral skeleton blocks
 // fill the same boxes. The frame makes no API call. Widths below the settled desktop breakpoint use `fallback`.
@@ -24,6 +28,38 @@ const RUNTIME_AVATAR_SIZE = 82;
 const CACHED_TILE_LIMIT = 12;
 const TITLE_SKELETON = { width: 180, height: 16 };
 const COUNT_SKELETON = { width: 64, height: 12 };
+
+const PHONE_QUERY = '(max-width: 600px)';
+const RUNTIME_ROOM = /^\/hivemind\/app\/employee\/harness(?:\/|$)/u;
+const BRAIN_ROOM = /^\/hivemind\/app(?:\/overview(?:\/(?:new|session\/[^/]+))?)?\/?$/u;
+
+function phoneViewport() {
+  return typeof window.matchMedia === 'function' && window.matchMedia(PHONE_QUERY).matches && !window.matchMedia(DESKTOP_QUERY).matches;
+}
+
+// Phone frame for the Runtime and Brain chat rooms: the glass back button, the room's identity pill and the composer
+// seat appear at once, in the positions of the settled room, while the company check and the chat client load.
+function PhoneRoomFrame({ room }) {
+  const { t } = useTranslation();
+  return (
+    <div data-hivemind-app-shell data-optimistic-shell data-optimistic-phone-room={room} aria-busy="true" className="optimistic-phone-room">
+      <span role="status" className="sr-only">Loading workspace</span>
+      <div className="optimistic-phone-room-bar" aria-hidden="true">
+        <span className="liquid-glass optimistic-phone-room-back"><ChevronLeft size={22} strokeWidth={2} /></span>
+        <span className="liquid-glass optimistic-phone-room-identity">
+          {room === 'brain'
+            ? <><span className="optimistic-phone-room-mark"><BrainModeIcon size={28} /></span><span>{t('topbar.companyBrain', { defaultValue: 'Company Brain' })}</span></>
+            : <><span className="optimistic-phone-room-mark optimistic-skeleton" /><span>Runtime</span></>}
+        </span>
+      </div>
+      <div className="optimistic-phone-room-composer liquid-glass" aria-hidden="true">
+        <span className="optimistic-phone-room-action" />
+        <span className="optimistic-phone-room-input" />
+        <span className="optimistic-phone-room-action is-send" />
+      </div>
+    </div>
+  );
+}
 
 function desktopViewport() {
   return typeof window.matchMedia === 'function' ? window.matchMedia(DESKTOP_QUERY).matches : true;
@@ -79,13 +115,15 @@ function TeamFrame({ hint, reveal }) {
 /**
  * Restoring frame for the desktop shell.
  * @param {object} props
- * @param {React.ReactNode} [props.fallback] - rendered on phone and tablet widths, without a saved hint, and in native apps.
+ * @param {React.ReactNode} [props.fallback] - rendered on tablet widths, on phone routes other than the Runtime and Brain chat rooms, without a saved hint, and in native apps.
  * @returns {JSX.Element}
  */
 export default function OptimisticAppShell({ fallback = null }) {
   const { optimisticShell, restoredShell } = useAuth();
   const { pathname } = useLocation();
   const hint = restoredShell || optimisticShell;
+  const phoneRoom = phoneViewport() ? (RUNTIME_ROOM.test(pathname) ? 'runtime' : BRAIN_ROOM.test(pathname) ? 'brain' : null) : null;
+  if (phoneRoom) return <PhoneRoomFrame room={phoneRoom} />;
   if (!hint || isNativeApp() || !desktopViewport()) {
     return fallback || <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center"><AsciiWorkspaceLoading /></div>;
   }

@@ -76,3 +76,9 @@ html[data-dsh-mode='hivemind-chat'] [data-native-chat-shell] > section:has([data
   height: 100% !important;
   max-height: 100%;
 }
+/* The same correction for the Runtime room, whose conversation section sits deeper inside the chat main. Without it the
+   section keeps the 56px TopBar subtraction on phones, where the glass room bar floats, and the composer stops 56px above the floor. */
+html[data-dsh-mode='hivemind-chat'] [data-native-chat-main] section:has([data-conversation-scroll]) {
+  height: 100% !important;
+  max-height: 100%;
+}

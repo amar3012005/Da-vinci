@@ -1,4 +1,4 @@
-import { workspaceModeForPath, workspaceModeDestination, employeeAppsPath } from '../workspace-mode';
+import { workspaceModeForPath, workspaceModeDestination, employeeAppsPath, runtimeHostLink } from '../workspace-mode';
 import { openDotRoomStatus, ownedOpenDotRoomStatuses, reconnectingOpenDotRoomStatuses } from '../open-dot-room-status';
 test('Brain and employee workspaces use one truthful mode', () => {
   for (const route of ['/hivemind/app/overview/new', '/hivemind/app/knowledge', '/hivemind/app/employee/dots-fake']) expect(workspaceModeForPath(route)).toBe('hivemind');
@@ -56,4 +56,15 @@ test('mode switches preserve saved sessions and native local routes', () => {
  expect(workspaceModeDestination(saved, 'https://next.singulancelabs.com')).toBe('https://runtime-runner.singulancelabs.com' + saved);
  expect(workspaceModeDestination(saved, 'http://localhost:3000')).toBe(saved);
  expect(workspaceModeDestination('/hivemind/app/overview/new', 'https://runtime-runner.singulancelabs.com')).toBe('https://next.singulancelabs.com/hivemind/app/overview/new');
+});
+
+test('drawer links to Runtime pages leave the Brain host; everything else routes in place', () => {
+  const next = 'https://next.singulancelabs.com';
+  const runtime = 'https://runtime-runner.singulancelabs.com';
+  expect(runtimeHostLink(`${next}/hivemind/app/crm`, next)).toBe(`${runtime}/hivemind/app/crm`);
+  expect(runtimeHostLink(`${next}/hivemind/app/employee/dots/d1?x=1`, next)).toBe(`${runtime}/hivemind/app/employee/dots/d1?x=1`);
+  expect(runtimeHostLink(`${next}/hivemind/m/memories`, next)).toBeNull();
+  expect(runtimeHostLink(`${runtime}/hivemind/app/crm`, runtime)).toBeNull();
+  expect(runtimeHostLink(`${runtime}/hivemind/m/connectors`, runtime)).toBeNull();
+  expect(runtimeHostLink('http://localhost:3000/hivemind/app/crm', 'http://localhost:3000')).toBeNull();
 });
