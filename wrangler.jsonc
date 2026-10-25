@@ -25,7 +25,8 @@
     "LANDING_MOBILE_V2": "true",
     "RUNNER_ORIGIN": "https://harness-chat-origin.singulancelabs.com",
     "RUNTIME_RUNNER_PUBLIC_ORIGIN": "https://runtime-runner.singulancelabs.com",
-    "RUNTIME_RUNNER_ORIGIN": "https://runtime-runner-origin.singulancelabs.com"
+    "RUNTIME_RUNNER_ORIGIN": "https://runtime-runner-origin.singulancelabs.com",
+    "DEV_COMMUNITY_ADMINS": "support@singulancelabs.com"
   },
   "routes": [
     {
@@ -59,6 +60,10 @@
     {
       "pattern": "runtime-runner.singulancelabs.com",
       "custom_domain": true
+    },
+    {
+      "pattern": "dev.singulancelabs.com",
+      "custom_domain": true
     }
   ],
   "durable_objects": {
@@ -67,7 +72,8 @@
       {
         "name": "ACCOUNT_MODE_ACCESS",
         "class_name": "AccountModeAccess"
-      }
+      },
+      { "name": "DEV_COMMUNITY", "class_name": "DevCommunity" }
     ]
   },
   "migrations": [
@@ -77,6 +83,7 @@
         "AccountModeAccess"
       ]
     },
-    { "tag": "composio-account-v1", "new_sqlite_classes": ["ComposioAccount"] }
+    { "tag": "composio-account-v1", "new_sqlite_classes": ["ComposioAccount"] },
+    { "tag": "dev-community-v1", "new_sqlite_classes": ["DevCommunity"] }
   ]
 }

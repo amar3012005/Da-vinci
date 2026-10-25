@@ -27,6 +27,7 @@ const RuntimeResearch = React.lazy(() => import('./components/RuntimeResearch'))
 const IcarusResearch = React.lazy(() => import('./components/IcarusResearch'));
 const CsiResearch = React.lazy(() => import('./components/CsiResearch'));
 const PostQuantumResearch = React.lazy(() => import('./components/research/PostQuantumResearch'));
+const DevCommunity = React.lazy(() => import('./components/dev/DevCommunity'));
 const PrivacySecurity = React.lazy(() => import('./components/PrivacySecurity'));
 const CookiePolicy = React.lazy(() => import('./components/CookiePolicy'));
 
@@ -100,6 +101,7 @@ function App() {
     );
   }
 
+  if (window.location.hostname === 'dev.singulancelabs.com') return <Router><CookieConsent/><React.Suspense fallback={<PublicPageLoading/>}><DevCommunity/></React.Suspense></Router>;
   if (window.location.hostname === 'getruntime.singulancelabs.com') return <Router><CookieConsent/><React.Suspense fallback={<PublicPageLoading/>}><GetRuntime/></React.Suspense></Router>;
 
   return (

@@ -8,6 +8,8 @@ export { ComposioAccount } from './composio-account.mjs';
 import { proxyConnectorTransport } from './connector-transport.mjs';
 import { handleModeAccess, gateWorkspaceDocument, proxyPlatformAdmin } from './account-mode-access.mjs';
 export { AccountModeAccess } from './account-mode-access.mjs';
+import { devCommunity } from './dev-community.mjs';
+export { DevCommunity } from './dev-community.mjs';
 import { runtimePublic } from './runtime-public.mjs';
 import { amarPublic } from './amar-public.mjs';
 import { getRuntimePublic } from './getruntime-public.mjs';
@@ -526,6 +528,8 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const devCommunityResponse = await devCommunity(request, env);
+    if (devCommunityResponse) return devCommunityResponse;
     const bootstrapResponse = await proxyRuntimeBootstrap(request);
     if (bootstrapResponse) return bootstrapResponse;
     const composioAccountResponse = await handleComposioAccount(request, env);

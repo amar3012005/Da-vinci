@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, ChevronRight, Copy, Github, UserRound } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronRight, Github, UserRound } from 'lucide-react';
 import Seo from './Seo';
+import CopyBlock from './icarus/CopyBlock';
+import { ACCOUNT_STEPS, EMBER, ICARUS_INSTALL, PRODUCTS } from './icarus/products';
 
 /**
  * ResearchIndex — the single SINGULANCE Research page, in the Mistral /models
@@ -46,83 +48,6 @@ const ITEMS = [
     art: 'linear-gradient(135deg, #117dff 0%, #0a2a5e 55%, #05070f 100%)',
   },
 ];
-
-const EMBER = '#FF5229';
-const GITHUB = 'https://github.com/amar3012005';
-const ICARUS_INSTALL = 'curl -fsSL https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.sh | bash';
-// The Agent Bus source is still private; flip this when the repository is published.
-const AGENT_BUS_PUBLIC = false;
-
-/** The open-source ICARUS family, all under one SINGULANCE developer account. */
-const PRODUCTS = [
-  {
-    name: 'Memory',
-    status: 'Stable',
-    line: 'The .amr memory filesystem for agents. Save and recall locally, with no account, server or API key.',
-    command: `${ICARUS_INSTALL}\nicarus save "Release notes live in docs/release.md" --org demo\nicarus recall "release notes" --org demo`,
-    docs: '/research/icarus',
-    repo: `${GITHUB}/ICARUS`,
-  },
-  {
-    name: 'Harness',
-    status: 'Opt-in',
-    line: 'The deterministic layer around a coding agent: task contracts, context packs, verification receipts and a seal gate for high-risk work.',
-    command: 'icarus harness init --agent claude\nicarus doctor',
-    docs: `${GITHUB}/ICARUS/blob/main/docs/HARNESS_QUICKSTART.md`,
-    repo: `${GITHUB}/ICARUS/tree/main/crate/icarus-harness`,
-  },
-  {
-    name: 'Agent Bus',
-    status: AGENT_BUS_PUBLIC ? 'New' : 'Early access',
-    line: 'A durable mailbox between any two coding agents, laptop or cloud. Jobs, progress and receipts arrive by push, and nothing is lost while one sleeps.',
-    command: AGENT_BUS_PUBLIC
-      ? 'curl -fsSL https://raw.githubusercontent.com/amar3012005/SINGULANCE-agent-bus/main/install.sh | bash\nicarus-bus setup'
-      : null,
-    docs: AGENT_BUS_PUBLIC ? `${GITHUB}/SINGULANCE-agent-bus#readme` : null,
-    repo: AGENT_BUS_PUBLIC ? `${GITHUB}/SINGULANCE-agent-bus` : null,
-  },
-  {
-    name: 'Computer Use',
-    status: 'Experimental',
-    line: 'Computer control for agents that follows a plan the caller supplies, evaluated separately from the memory core.',
-    command: null,
-    docs: `${GITHUB}/HIVEMIND-Computer-use#readme`,
-    repo: `${GITHUB}/HIVEMIND-Computer-use`,
-  },
-];
-
-const ACCOUNT_STEPS = [
-  { n: '01', title: 'Install ICARUS', body: 'One binary for macOS, Linux and Windows. Local memory works straight away.' },
-  { n: '02', title: 'Run icarus connect', body: 'Your browser opens. Create the account or sign in with email or Google.' },
-  { n: '03', title: 'Use every tool', body: 'The same developer identity covers Memory, Harness, Agent Bus and Computer Use.' },
-];
-
-const CopyBlock = ({ text, label }) => {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  };
-  return (
-    <div className="relative">
-      <pre className="overflow-x-auto rounded-lg bg-[#101522] p-4 pr-12 text-[12px] leading-6 text-[#e3e8f1]"><code>{text}</code></pre>
-      <button
-        type="button"
-        onClick={copy}
-        aria-label={`Copy ${label}`}
-        className={`absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-md border transition-colors ${copied ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300' : 'border-white/15 bg-white/5 text-white/70 hover:text-white'}`}
-      >
-        {copied ? <Check size={13} /> : <Copy size={13} />}
-      </button>
-      <span className="sr-only" aria-live="polite">{copied ? `${label} copied.` : ''}</span>
-    </div>
-  );
-};
 
 /** Reads the existing SINGULANCE session through the shared api client; signed out on any failure. */
 const useDeveloperSession = () => {
