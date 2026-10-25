@@ -13,6 +13,8 @@
  * second fetch.
  */
 
+import { SECRET_FIELD } from './boot-cache';
+
 export const CACHE_KEY_PREFIX = 'hm';
 export const CACHE_CHANNEL = 'hm-cache';
 export const DEFAULT_MAX_AGE_MS = 10 * 60_000;
@@ -37,6 +39,16 @@ export function cacheScopePrefix(tenant, user) {
   const parts = [CACHE_KEY_PREFIX, encodeURIComponent(String(tenant))];
   if (user) parts.push(encodeURIComponent(String(user)));
   return `${parts.join(':')}:`;
+}
+
+/**
+ * Copy of a value with every object field whose name matches the boot-cache secret pattern removed, at any depth.
+ * @param {unknown} value - JSON-serializable display data.
+ * @returns {unknown} sanitized copy; undefined when the input is undefined.
+ */
+export function stripSecretFields(value) {
+  if (value === undefined) return undefined;
+  return JSON.parse(JSON.stringify(value, (key, field) => (key && SECRET_FIELD.test(key) ? undefined : field)));
 }
 
 /**
@@ -112,7 +124,7 @@ export function createBrowserCache({
   let generation = 0;
 
   const write = async (key, value) => {
-    await store.set(key, { value, at: now() });
+    await store.set(key, { value: stripSecretFields(value), at: now() });
     try { channel?.postMessage({ type: 'set', key }); } catch { /* A closed channel only loses cross-tab sync. */ }
   };
 

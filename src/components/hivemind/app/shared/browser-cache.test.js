@@ -96,3 +96,24 @@ test('writes are broadcast, and subscribers are told which key changed', async (
   peer.onmessage({ data: { type: 'set', key: k } });
   expect(seen).toEqual([k]);
 });
+
+test('secret-like fields are removed from a stored company payload at every depth', async () => {
+  const store = createMemoryStore();
+  const cache = createBrowserCache({ store });
+  const k = key('org-1', 'user-1', 'company');
+  await cache.load(k, async () => ({
+    onboarded: true,
+    session_api_key: 'sk-live-123',
+    company: {
+      name: 'Acme',
+      access_token: 'tok',
+      profile: { location_source: 'user_claim', location: 'Berlin', client_secret: 's', nested: [{ password: 'p', label: 'ok' }] },
+    },
+  }));
+  const stored = (await store.get(k)).value;
+  expect(stored).toEqual({
+    onboarded: true,
+    company: { name: 'Acme', profile: { location_source: 'user_claim', location: 'Berlin', nested: [{ label: 'ok' }] } },
+  });
+  expect(JSON.stringify(stored)).not.toMatch(/sk-live|tok"|client_secret|password/);
+});

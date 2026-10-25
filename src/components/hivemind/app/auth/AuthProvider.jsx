@@ -11,6 +11,16 @@ import { bindNativeTouchFeedback } from '../shared/native-haptics';
 import { bindNativeAuthCallbacks, nativeAuth } from '../shared/native-auth';
 
 const AuthContext = createContext(undefined);
+const ACCESS_CHECK_THROTTLE_MS = 15000;
+
+// One workspace-access read. Shared by the early read started at mount and the read run after bootstrap.
+async function fetchModeAccess(signal) {
+  const response = await fetch('/__hivemind/account-mode-access', {
+    credentials: 'include', cache: 'no-store', signal: AbortSignal.any([signal, AbortSignal.timeout(10000)]),
+  });
+  if (!response.ok) throw new Error('workspace_access_unavailable');
+  return response.json();
+}
 
 /**
  * Four auth states — not one generic "unavailable":
@@ -48,15 +58,18 @@ export function AuthProvider({ children }) {
       const remembered = sessionStorage.getItem(accessKey);
       if (remembered === '1' || remembered === '0') setModeAccess(previous => previous.userId === user.id ? previous : { userId: user.id, enabled: remembered === '1', error: null });
     } catch { /* Storage-blocked tabs wait for the access check. */ }
-    const refreshAccess = async () => {
+    const refreshAccess = async (reason) => {
       if (pending || document.visibilityState === 'hidden') return;
+      // Focus and visibility events fire right after a load; one check per window is enough.
+      if (reason !== 'interval' && Date.now() - lastAccessCheck.current < ACCESS_CHECK_THROTTLE_MS) return;
       pending = true;
       try {
-        const response = await fetch('/__hivemind/account-mode-access', {
-          credentials: 'include', cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
-        });
-        if (!response.ok) throw new Error('workspace_access_unavailable');
-        const result = await response.json();
+        const early = earlyAccess.current;
+        earlyAccess.current = null;
+        const result = early && early.userId === user.id
+          ? await early.promise
+          : await fetchModeAccess(controller.signal);
+        lastAccessCheck.current = Date.now();
         if (typeof result.enabled !== 'boolean') throw new Error('workspace_access_unavailable');
         try { sessionStorage.setItem(accessKey, result.enabled ? '1' : '0'); } catch { /* Display memory only. */ }
         if (!controller.signal.aborted) setModeAccess({ userId: user.id, enabled: result.enabled, error: null });
@@ -70,16 +83,31 @@ export function AuthProvider({ children }) {
       }
       finally { pending = false; }
     };
-    void refreshAccess();
-    const interval = window.setInterval(refreshAccess, 60000);
-    window.addEventListener('focus', refreshAccess);
-    document.addEventListener('visibilitychange', refreshAccess);
+    const onFocus = () => refreshAccess('focus');
+    const onVisibility = () => refreshAccess('visibility');
+    void refreshAccess('mount');
+    const interval = window.setInterval(() => refreshAccess('interval'), 60000);
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       controller.abort(); window.clearInterval(interval);
-      window.removeEventListener('focus', refreshAccess);
-      document.removeEventListener('visibilitychange', refreshAccess);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [authState, user?.id]);
+
+  const lastAccessCheck = useRef(0);
+  const earlyAccess = useRef(null);
+  // Start the workspace-access read at mount for the saved identity, in parallel with bootstrap. The refresh
+  // effect consumes it only when bootstrap confirms the same user, so the result never applies to another account.
+  useEffect(() => {
+    if (isNativeApp() || !optimisticHint?.userId) return undefined;
+    const controller = new AbortController();
+    const promise = fetchModeAccess(controller.signal);
+    promise.catch(() => { /* Consumed or dropped by the refresh effect, which reports its own failure. */ });
+    earlyAccess.current = { userId: optimisticHint.userId, promise };
+    return () => controller.abort();
+  }, [optimisticHint]);
 
   const bootstrapAttempted = useRef(false);
   const activeTenantRef = useRef(null);
