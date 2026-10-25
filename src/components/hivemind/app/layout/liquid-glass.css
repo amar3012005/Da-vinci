@@ -2,8 +2,9 @@
    backdrop blur and saturation, a specular top sheen, a light-catching gradient rim,
    and a soft lift shadow. Falls back to opaque surfaces when transparency is reduced. */
 @media (max-width: 600px) {
+  /* Zero specificity: an element's own absolute or fixed placement (the centred room pill) wins over this default. */
+  :where(.liquid-glass) { position: relative; }
   .liquid-glass {
-    position: relative;
     isolation: isolate;
     border: 0;
     background: rgb(255 255 255 / 0.56);

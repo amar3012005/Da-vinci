@@ -201,7 +201,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
   if (floatingMobile) return <div data-mobile-agent-overlay-controls className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start px-3" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}>
     <button type="button" aria-label="Open your team" aria-haspopup="dialog" onClick={mobileTeamToggle} className="liquid-glass pointer-events-auto grid h-12 w-12 place-items-center rounded-full text-[#292929]"><ChevronLeft size={22} strokeWidth={2} /></button>
     {/* Runtime's own identity pill (ui-hivemind-connect) is centred here and opens its Environment sheet, so only Brain gets one from the shell. */}
-    {roomIdentity === 'brain' && <div className="pointer-events-auto absolute left-1/2 flex h-12 max-w-[calc(100%-200px)] -translate-x-1/2 items-center gap-2 rounded-full pl-2 pr-4 text-[#292929] liquid-glass">
+    {roomIdentity === 'brain' && <div className="pointer-events-auto absolute left-1/2 flex h-12 max-w-[calc(100%-144px)] -translate-x-1/2 items-center gap-2 rounded-full pl-2 pr-4 text-[#292929] liquid-glass">
       <span className="grid h-8 w-8 shrink-0 place-items-center"><BrainModeIcon size={28} /></span>
       <span className="truncate text-[16px] font-semibold tracking-tight">{t('topbar.companyBrain', { defaultValue: 'Company Brain' })}</span>
     </div>}
