@@ -249,7 +249,7 @@ export default function MobileConnectors() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search connectors — Gmail, Slack, Airtable..."
+            placeholder="Search apps"
             aria-label="Search connectors" autoCapitalize="none" autoCorrect="off"
             className="placeholder:text-[#b9b5ae]"
           />

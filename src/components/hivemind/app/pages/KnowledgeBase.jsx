@@ -1092,6 +1092,8 @@ export default function KnowledgeBase() {
   const [justUploadedDocs, setJustUploadedDocs] = useState(() => loadPendingFromSession());
   const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
   const [smartExtract, setSmartExtract] = useState(false);
+  // Phones show the short tag hint; the full example list does not fit one field.
+  const [phoneTags] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 600px)').matches === true);
   const [detecting, setDetecting] = useState(false);
   const [detectionResult, setDetectionResult] = useState(null);
   const [enterpriseModalOpen, setEnterpriseModalOpen] = useState(false);
@@ -2206,7 +2208,7 @@ export default function KnowledgeBase() {
             value={customTags}
             onChange={(e) => setCustomTags(e.target.value)}
             data-kb-tags
-            placeholder={t('knowledgebase.tagsFullPlaceholder', 'Optional tags (comma-separated): project-docs, research, notes...')}
+            placeholder={phoneTags ? t('knowledgebase.tagsPlaceholder', 'Optional tags (comma-separated)') : t('knowledgebase.tagsFullPlaceholder', 'Optional tags (comma-separated): project-docs, research, notes...')}
             className="flex-1 text-xs font-mono px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[#0a0a0a] placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]"
           />
           <button

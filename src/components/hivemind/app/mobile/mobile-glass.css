@@ -29,6 +29,7 @@
     -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
     animation: mg-rise 420ms var(--mg-spring) both; }
   [data-mobile-glass] .mg-card + .mg-card { margin-top: 10px; }
+  [data-mobile-glass] :is(.grid, [data-meeting-stats]) > .mg-card + .mg-card { margin-top: 0; }
   [data-mobile-glass] .mg-section { margin-top: 22px; }
   [data-mobile-glass] .mg-section-title { margin: 0 4px 10px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mg-faint); }
 
