@@ -2,8 +2,7 @@
 export const EMBER = '#FF5229';
 export const GITHUB = 'https://github.com/amar3012005';
 export const ICARUS_INSTALL = 'curl -fsSL https://raw.githubusercontent.com/amar3012005/ICARUS/main/install.sh | bash';
-// The Agent Bus source is still private; flip this when the repository is published.
-export const AGENT_BUS_PUBLIC = false;
+export const AGENT_BUS_PUBLIC = true;
 
 /** The open-source ICARUS family, all under one SINGULANCE developer account. */
 export const PRODUCTS = [
@@ -28,10 +27,10 @@ export const PRODUCTS = [
     status: AGENT_BUS_PUBLIC ? 'New' : 'Early access',
     line: 'A durable mailbox between any two coding agents, laptop or cloud. Jobs, progress and receipts arrive by push, and nothing is lost while one sleeps.',
     command: AGENT_BUS_PUBLIC
-      ? 'curl -fsSL https://raw.githubusercontent.com/amar3012005/SINGULANCE-agent-bus/main/install.sh | bash\nicarus-bus setup'
+      ? 'curl -fsSL https://raw.githubusercontent.com/amar3012005/ICARUS-agent-bus/main/install.sh | bash\nicarus-bus setup'
       : null,
-    docs: AGENT_BUS_PUBLIC ? `${GITHUB}/SINGULANCE-agent-bus#readme` : null,
-    repo: AGENT_BUS_PUBLIC ? `${GITHUB}/SINGULANCE-agent-bus` : null,
+    docs: AGENT_BUS_PUBLIC ? `${GITHUB}/ICARUS-agent-bus#readme` : null,
+    repo: AGENT_BUS_PUBLIC ? `${GITHUB}/ICARUS-agent-bus` : null,
   },
   {
     name: 'Computer Use',
