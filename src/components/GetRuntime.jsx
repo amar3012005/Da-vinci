@@ -3,8 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { ArrowDown, ArrowUpRight, Check, ChevronDown, Bell, FileCheck2, Mail, Network, Users, Sparkles } from 'lucide-react';
 import './GetRuntime.css';
+import { RUNTIME_WORKSPACE } from './hivemind/app/shared/runtime-workspace';
 
-export const RUNTIME_WORKSPACE = 'https://runtime-runner.singulancelabs.com/hivemind/app/employee/harness';
+export { RUNTIME_WORKSPACE };
 const art = name => `/assets/getruntime/${name}.webp`;
 const outcomes = [
   ['gets the work done.', FileCheck2],
