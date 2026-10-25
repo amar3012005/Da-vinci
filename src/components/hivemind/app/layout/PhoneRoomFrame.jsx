@@ -1,7 +1,8 @@
-import React from 'react';
-import { ChevronLeft } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ChevronLeft, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import BrainModeIcon from './BrainModeIcon';
+import { getDraft, markOnce, queueDraft, setDraft, subscribeAttached, subscribeDraft, subscribePendingEntries } from '../shared/pending-composer';
 import './liquid-glass.css';
 import './OptimisticAppShell.css';
 
@@ -9,6 +10,55 @@ const PHONE_QUERY = '(max-width: 600px)';
 const DESKTOP_QUERY = '(min-width: 901px)';
 const RUNTIME_ROOM = /^\/hivemind\/app\/employee\/harness(?:\/|$)/u;
 const BRAIN_ROOM = /^\/hivemind\/app(?:\/overview(?:\/(?:new|session\/[^/]+))?)?\/?$/u;
+
+// Composer seat for the frame. It collects the draft only: typing is enabled at once, and sending is enabled
+// once a native room client attaches (see pending-composer.js). Until then no message is queued or shown as pending.
+function PhoneRoomComposer() {
+  const { t } = useTranslation();
+  const [draft, setDraftState] = useState(getDraft);
+  const [entries, setEntries] = useState([]);
+  const [attached, setAttached] = useState(false);
+  useEffect(() => subscribeDraft(setDraftState), []);
+  useEffect(() => subscribePendingEntries(setEntries), []);
+  useEffect(() => subscribeAttached(setAttached), []);
+  useEffect(() => { markOnce('hm:composer-visible'); }, []);
+  const pending = attached ? entries.filter((entry) => entry.state !== 'sent') : [];
+  const submit = (event) => {
+    event.preventDefault();
+    queueDraft();
+  };
+  return (
+    <>
+      {pending.length > 0 && (
+        <ul className="optimistic-phone-room-pending" aria-live="polite">
+          {pending.map((entry) => (
+            <li key={entry.id} data-state={entry.state}>
+              {entry.payload?.text}
+              <span className="optimistic-phone-room-pending-state">
+                {entry.state === 'failed' ? t('chat.sendFailed', 'Not sent') : t('chat.waitingToSend', 'Waiting to send')}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form className="optimistic-phone-room-composer liquid-glass" onSubmit={submit}>
+        <textarea
+          aria-label={t('chat.messageLabel', 'Message')}
+          rows={1}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => { if (attached && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); queueDraft(); } }}
+          placeholder={t('chat.messagePlaceholder', 'Message')}
+          className="optimistic-phone-room-input"
+          style={{ flex: 1, minWidth: 0, resize: 'none', background: 'transparent', border: 0, outline: 'none', font: 'inherit', color: 'inherit' }}
+        />
+        <button type="submit" className="optimistic-phone-room-action is-send" disabled={!attached || !draft.trim()} aria-label={t('chat.send', 'Send')}>
+          <Send size={16} strokeWidth={2} />
+        </button>
+      </form>
+    </>
+  );
+}
 
 function phoneViewport() {
   return typeof window.matchMedia === 'function' && window.matchMedia(PHONE_QUERY).matches && !window.matchMedia(DESKTOP_QUERY).matches;
@@ -30,11 +80,7 @@ export function PhoneRoomFrame({ room, children = null }) {
             : <><span className="optimistic-phone-room-mark optimistic-skeleton" /><span>Runtime</span></>}
         </span>
       </div>
-      <div className="optimistic-phone-room-composer liquid-glass" aria-hidden="true">
-        <span className="optimistic-phone-room-action" />
-        <span className="optimistic-phone-room-input" />
-        <span className="optimistic-phone-room-action is-send" />
-      </div>
+      <PhoneRoomComposer />
       {children}
     </div>
   );

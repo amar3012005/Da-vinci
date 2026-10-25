@@ -52,7 +52,7 @@ export function readBootCache(orgId, userId, resource, store = defaultStorage())
 
 // Field names that can carry credentials. They are dropped from every entry, so a
 // broad API payload cannot persist a secret even if a caller passes it through.
-const SECRET_FIELD = /token|secret|passw|api[_-]?key|apikey|credential|cookie|authoriz|(?:^|[_-])key(?:$|[_-])/iu;
+export const SECRET_FIELD = /token|secret|passw|api[_-]?key|apikey|credential|cookie|authoriz|(?:^|[_-])key(?:$|[_-])/iu;
 
 function withoutSecretFields(key, value) {
   return SECRET_FIELD.test(key) ? undefined : value;

@@ -45,6 +45,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="SINGULANCE" />
 
+  <!-- Core API origin: open the connection while the app bundle loads, so the first authenticated read skips DNS and TLS. -->
+  <link rel="preconnect" href="https://api.singulancelabs.com" crossorigin>
+  <link rel="dns-prefetch" href="https://api.singulancelabs.com">
+
   <!-- Fonts — reduced to 3 families for performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

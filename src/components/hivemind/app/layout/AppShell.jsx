@@ -1,6 +1,7 @@
 import { RuntimeAppearanceProvider } from '../shared/RuntimeAvatar';
 import { measureHarnessBoot } from '../shared/harness-boot-timing';
 import { scopedCompanyRead, clearCompanyRead } from '../shared/company-read-cache';
+import { cacheKey, getSharedBrowserCache } from '../shared/browser-cache';
 import BrainGetStarted from './BrainGetStarted';
 import RuntimeGetStarted from './RuntimeGetStarted';
 import BrainFeatureWelcome from '../shared/BrainFeatureWelcome';
@@ -345,7 +346,16 @@ function AppShellContent() {
     let confirmed = false;
     try { confirmed = sessionStorage.getItem(confirmedKey) === '1'; } catch { /* Storage-blocked tabs wait for the saved record. */ }
     setCompanyAdmission({ scope: org.id, status: confirmed ? 'ready' : 'checking' });
-    measureHarnessBoot('company-setup-read', () => scopedCompanyRead(`${user?.id}:${org.id}`, () => apiClient.hyperCompany())).then(data => {
+    // The browser-wide cache paints a company last confirmed ready (any tab, any earlier session) while the read revalidates.
+    // It only fills a 'checking' state, so a fresh answer that lands first is never overwritten.
+    const browserCache = getSharedBrowserCache();
+    const companyCacheKey = cacheKey({ tenant: org.id, user: user?.id, kind: 'company' });
+    browserCache.read(companyCacheKey).then(hit => {
+      if (!alive || !hit || companyAdmissionStatus(hit.value) !== 'ready') return;
+      setCompanyAdmission(previous => previous.scope === org.id && previous.status === 'checking'
+        ? { scope: org.id, status: 'ready', company: hit.value.company } : previous);
+    }).catch(() => { /* A miss or blocked store renders from the network read below. */ });
+    measureHarnessBoot('company-setup-read', () => scopedCompanyRead(`${user?.id}:${org.id}`, () => browserCache.load(companyCacheKey, () => apiClient.hyperCompany()))).then(data => {
       const status = companyAdmissionStatus(data);
       try { if (status === 'ready') sessionStorage.setItem(confirmedKey, '1'); else sessionStorage.removeItem(confirmedKey); } catch { /* Storage-blocked tabs keep the in-memory state. */ }
       if (alive) setCompanyAdmission({ scope: org.id, status, company: data.company });
