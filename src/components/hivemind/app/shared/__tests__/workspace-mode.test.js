@@ -58,10 +58,11 @@ test('mode switches preserve saved sessions and native local routes', () => {
  expect(workspaceModeDestination('/hivemind/app/overview/new', 'https://runtime-runner.singulancelabs.com')).toBe('https://next.singulancelabs.com/hivemind/app/overview/new');
 });
 
-test('drawer links to Runtime pages leave the Brain host; everything else routes in place', () => {
+test('drawer links to Runtime-owned employee pages leave the Brain host; everything else routes in place', () => {
   const next = 'https://next.singulancelabs.com';
   const runtime = 'https://runtime-runner.singulancelabs.com';
-  expect(runtimeHostLink(`${next}/hivemind/app/crm`, next)).toBe(`${runtime}/hivemind/app/crm`);
+  // CRM documents belong to the Brain host (workspace-authority), so the link routes in place.
+  expect(runtimeHostLink(`${next}/hivemind/app/crm`, next)).toBeNull();
   expect(runtimeHostLink(`${next}/hivemind/app/employee/dots/d1?x=1`, next)).toBe(`${runtime}/hivemind/app/employee/dots/d1?x=1`);
   expect(runtimeHostLink(`${next}/hivemind/m/memories`, next)).toBeNull();
   expect(runtimeHostLink(`${runtime}/hivemind/app/crm`, runtime)).toBeNull();
