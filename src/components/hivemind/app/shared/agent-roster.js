@@ -18,7 +18,9 @@ export const agentRoster = createAgentRosterCache(async scope => {
   const controller = new AbortController();
   const deadline = setTimeout(() => controller.abort(), 15000);
   try {
-    const response = await fetchWithRuntimeAdmission((window.location.hostname === 'dots.singulancelabs.com' || window.location.pathname === '/apps') ? '/api/hivemind/workspace-shell?resource=roster' : '/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal });
+    // Brain's host has no Runtime employee API; it reads the same company roster OpenDot serves.
+    const companyRoster = ['dots.singulancelabs.com', 'next.singulancelabs.com'].includes(window.location.hostname) || window.location.pathname === '/apps';
+    const response = await fetchWithRuntimeAdmission(companyRoster ? '/api/hivemind/workspace-shell?resource=roster' : '/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal });
     if (!response.ok) throw new Error('team unavailable');
     const value = await response.json();
     if (!Array.isArray(value.profiles)) throw new Error('invalid team response');
