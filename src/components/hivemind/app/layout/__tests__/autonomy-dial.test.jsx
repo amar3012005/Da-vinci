@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom';
 import AutonomyDial, { AUTONOMY_ENDPOINT } from '../AutonomyDial';
 
+afterEach(() => window.localStorage.clear());
+
 const json = (value, status = 200) => Promise.resolve({ ok: status < 300, status, json: () => Promise.resolve(value) });
 const state = { revision: 3, level: 2, changedAt: 1, maxSelectable: 2 };
 
@@ -47,11 +49,21 @@ test('a locked level springs back without a dialog', async () => {
   expect(screen.getByText('2/4 · Prepare')).toBeInTheDocument();
 });
 
-test('renders nothing where the Runtime dial endpoint does not exist', async () => {
+test('stays visible where the autonomy API does not exist, showing the cached level and opening Runtime to change it', async () => {
+  window.localStorage.setItem('hivemind.autonomy.v1:unknown', JSON.stringify({ level: 3, revision: 5, maxSelectable: 4 }));
   const fetcher = jest.fn(() => json({}, 404));
-  const { container } = render(<AutonomyDial fetcher={fetcher}/>);
+  render(<AutonomyDial fetcher={fetcher}/>);
   await waitFor(() => expect(fetcher).toHaveBeenCalled());
-  expect(container).toBeEmptyDOMElement();
+  expect(screen.getByText('3/4 · Act in lanes')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Change the level in the Runtime room' })).toHaveAttribute('href', expect.stringContaining('runtime-runner.singulancelabs.com'));
+  window.localStorage.clear();
+});
+
+test('remembers the confirmed level for an instant paint next time', async () => {
+  setup();
+  await screen.findByText('2/4 · Prepare');
+  expect(JSON.parse(window.localStorage.getItem('hivemind.autonomy.v1:unknown'))).toEqual({ level: 2, revision: 3, maxSelectable: 2 });
+  window.localStorage.clear();
 });
 
 test('Escape cancels the confirmation without saving or reaching the drawer behind it', async () => {

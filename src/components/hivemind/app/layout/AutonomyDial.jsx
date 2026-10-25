@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { fetchWithRuntimeAdmission } from '../shared/runtime-admission';
+import { RUNTIME_WORKSPACE } from '../shared/runtime-workspace';
 
 /** One autonomy dial for Runtime and HyperAgents; it lives in the HyperAgents sidebar on every page. */
 export const AUTONOMY_ENDPOINT = '/api/hivemindHq/autonomyLevel';
@@ -34,8 +35,22 @@ function AgentIcon() {
 /** Stable across renders, so a re-rendering parent never restarts or cancels the dial's read. */
 const defaultFetcher = (...args) => fetchWithRuntimeAdmission(...args);
 
-export default function AutonomyDial({ collapsed = false, fetcher = defaultFetcher }) {
-  const [state, setState] = useState(undefined);
+/* The company's last confirmed level on this device: the dial draws at once on every page, and on
+   Brain's host (which has no autonomy API) it stays visible read-only, opening Runtime to change it. */
+const cacheKey = orgId => `hivemind.autonomy.v1:${orgId || 'unknown'}`;
+function readCachedAutonomy(orgId) {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(cacheKey(orgId)) || 'null');
+    return saved && Number.isInteger(saved.revision) && Number.isInteger(saved.maxSelectable) ? saved : undefined;
+  } catch { return undefined; }
+}
+function writeCachedAutonomy(orgId, value) {
+  try { window.localStorage.setItem(cacheKey(orgId), JSON.stringify({ level: value.level, revision: value.revision, maxSelectable: value.maxSelectable })); } catch { /* Optional cache: only the instant first paint is lost. */ }
+}
+
+export default function AutonomyDial({ collapsed = false, fetcher = defaultFetcher, orgId }) {
+  const [state, setState] = useState(() => readCachedAutonomy(orgId));
+  const [remote, setRemote] = useState(false);
   const [draft, setDraft] = useState(null);
   const [pending, setPending] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -46,12 +61,14 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
     try {
       const response = await fetcher(AUTONOMY_ENDPOINT, { credentials: 'same-origin', cache: 'no-store' });
       if (current !== generation.current) return;
-      if (response.status === 404) { setState(null); return; }
+      if (response.status === 404) { setRemote(true); setState(previous => previous ?? readCachedAutonomy(orgId) ?? { revision: 0, maxSelectable: MAX }); return; }
       const body = await response.json();
       if (!response.ok || !body?.ok) { setState(previous => previous ?? false); return; }
+      setRemote(false);
       setState(body.value);
+      writeCachedAutonomy(orgId, body.value);
     } catch { if (current === generation.current) setState(previous => previous ?? false); }
-  }, [fetcher]);
+  }, [fetcher, orgId]);
   useEffect(() => {
     void load();
     const refresh = () => { if (document.visibilityState !== 'hidden') void load(); };
@@ -71,6 +88,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
     const wanted = Number(value);
     setDraft(null);
     if (!available) return;
+    if (remote) { window.location.assign(RUNTIME_WORKSPACE); return; }
     if (wanted > state.maxSelectable) { setNotice('Higher levels unlock after the restart and isolation safety tests pass.'); return; }
     if (wanted === state.level) return;
     setNotice(null);
@@ -83,7 +101,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
       const response = await fetcher(AUTONOMY_ENDPOINT, { method: 'POST', credentials: 'same-origin', cache: 'no-store',
         headers: { 'content-type': 'application/json' }, body: JSON.stringify({ level: pending, expectedRevision: state.revision }) });
       const body = await response.json().catch(() => null);
-      if (response.ok && body?.value?.ok) { setState(body.value.value); setPending(null); setNotice(null); }
+      if (response.ok && body?.value?.ok) { setState(body.value.value); writeCachedAutonomy(orgId, body.value.value); setPending(null); setNotice(null); }
       else if (response.ok && body?.value?.ok === false) { setState(body.value.current); setPending(null); setNotice('The level changed elsewhere. The current level is loaded.'); }
       else setNotice(body?.error === 'cross_site_request' ? 'Open HIVEMIND again to change the level.' : 'The level could not be saved. Try again.');
     } catch { setNotice('The level could not be saved. Try again.'); }
@@ -124,6 +142,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
       </button>)}
     </div>
     {notice && <p className="ha-autonomy-notice" role="status">{notice}</p>}
+    {remote && <a className="ha-autonomy-notice" href={RUNTIME_WORKSPACE}>Change the level in the Runtime room</a>}
     {pending !== null && createPortal(<div className="ha-autonomy-overlay" role="presentation" onClick={() => { if (!saving) setPending(null); }}>
       <div className="ha-autonomy-confirm" role="dialog" aria-modal="true" aria-labelledby="ha-autonomy-confirm-title" onClick={event => event.stopPropagation()}
         onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); if (!saving) setPending(null); } }}>

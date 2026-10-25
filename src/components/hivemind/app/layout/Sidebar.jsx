@@ -1,5 +1,5 @@
 import { readRuntimeRoute } from '../shared/runtime-presentation-cache';
-import { RUNTIME_WORKSPACE } from '../shared/runtime-workspace';
+import { RUNTIME_WORKSPACE, openBrainChat } from '../shared/runtime-workspace';
 import RuntimeAvatar from '../shared/RuntimeAvatar';
 import { ownedOpenDotRoomStatuses, withEmployeeTaskStatuses, reconnectingOpenDotRoomStatuses, withRuntimeReviewDecisions } from '../shared/open-dot-room-status';
 import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
@@ -52,6 +52,7 @@ import {
   PhoneCall,
   Database,
   Monitor,
+  MessageCircle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
@@ -136,6 +137,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
     {
       label: tt('groups.yourBrain', 'Your Brain'),
       items: [
+        { to: '/hivemind/app/overview/new', icon: MessageCircle, label: tt('brainChat', 'Chat'), brainChat: true },
         { to: '/hivemind/app/connectors', icon: Cable,    label: tt('connectors',  'Connectors') },
         { to: '/hivemind/app/memories',   icon: Brain,    label: tt('memories',    'Memories') },
         { to: '/hivemind/app/meeting-notes', icon: Mic,   label: tt('meetingNotes', 'AI Meeting Notes') },
@@ -556,12 +558,13 @@ export default function Sidebar({
         <section className="mobile-unified-brain" aria-label="Your Brain">
           <div className="mobile-unified-heading"><h2 className="mobile-unified-brain-title"><BrainModeIcon size={25}/>Your Brain</h2><button type="button" className="mobile-unified-advanced" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(value => !value)}><Sliders size={17}/>Advanced</button></div>
           <div className="mobile-unified-brain-grid">
+            <button type="button" data-brain-chat-link onClick={() => openBrainChat(navigate)}><MessageCircle size={19}/><span>Chat</span><ChevronRight size={14}/></button>
             {[{to:'/hivemind/m/memories',label:'Memories',icon:Brain},{to:'/hivemind/m/uploads',label:'Uploads',icon:BookOpen},{to:'/hivemind/m/connectors',label:'Connectors',icon:Cable},{to:'/hivemind/m/meeting-notes',label:'AI meeting notes',icon:Mic},{to:'/hivemind/m/graph',label:'Memory graph',icon:Network}].map(({to,label,icon:Icon}) => <NavLink key={to} to={to}><Icon size={19}/><span>{label}</span><ChevronRight size={14}/></NavLink>)}
           </div>
           {advancedOpen && <div className="mobile-unified-advanced-links" aria-label="Advanced features">{[{to:'/hivemind/app/mcp',label:'MCPs'},{to:'/hivemind/app/keys',label:'API keys'},{to:'/hivemind/m/projects',label:'Projects'},{to:'/hivemind/app/evaluation',label:'Evaluation'}].map(item => <NavLink key={item.to} to={item.to}>{item.label}<ChevronRight size={14}/></NavLink>)}</div>}
         </section>
         {/* Company-wide controls sit together at the bottom, above Account. */}
-        <div className="ha-autonomy-seat is-drawer mobile-roster-autonomy" data-drawer-autonomy-seat><AutonomyDial/></div>
+        <div className="ha-autonomy-seat is-drawer mobile-roster-autonomy" data-drawer-autonomy-seat><AutonomyDial orgId={org?.id}/></div>
         <AnatomyModeToggle />
         <div className="mobile-roster-account">
           <button type="button" className="mobile-roster-account-identity" onClick={() => setRosterProfileOpen(true)}>
@@ -586,7 +589,7 @@ export default function Sidebar({
       {(teamMode || mobileRoster) && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">Could not refresh our team. <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>Retry</button></p>}
       {teamError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{teamError}</p>}
       {desktopBrain && <DesktopBrainNavigation sections={navSections} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} />}
-      {desktopHyperAgents && <DesktopHyperAgentsNavigation team={team} rooms={rooms} selectedAgent={selectedAgent} openingAgent={openingAgent} onOpenAgent={openAgent} onCreate={() => setCreateEmployeeOpen(true)} onCompany={() => setCompanyOpen(true)} columns={rosterColumns} collapsed={collapsed} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout}/>}
+      {desktopHyperAgents && <DesktopHyperAgentsNavigation team={team} rooms={rooms} selectedAgent={selectedAgent} openingAgent={openingAgent} onOpenAgent={openAgent} onCreate={() => setCreateEmployeeOpen(true)} onCompany={() => setCompanyOpen(true)} columns={rosterColumns} collapsed={collapsed} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} orgId={org?.id}/>}
       {desktopHyperAgents && <div className="ha-resize-grip" role="separator" aria-label="Resize team sidebar" aria-orientation="vertical" aria-valuemin={68} aria-valuemax={452} aria-valuenow={collapsed ? 68 : HYPERAGENT_WIDTHS[rosterColumns]} aria-valuetext={collapsed ? 'Collapsed' : `${rosterColumns} columns`} tabIndex={0}
         onKeyDown={event => { const current = collapsed ? 0 : rosterColumns; if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeRoster(Math.max(0, Math.min(3, current + (event.key === 'ArrowLeft' ? -1 : 1)))); } }}
         onPointerDown={event => { resizeGesture.current = true; event.currentTarget.setPointerCapture(event.pointerId); }}
@@ -596,7 +599,7 @@ export default function Sidebar({
       {!desktopHyperAgents && <nav className={`${desktopBrain ? 'desktop-brain-legacy ' : ''}mobile-roster-legacy flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4`}>
         {navSections.map((section, si) => (
           <div key={si}>
-            {teamMode && mobileDrawer && !mobileRoster && si === 1 && <div className="ha-autonomy-seat is-drawer" data-drawer-autonomy-seat><AutonomyDial/></div>}
+            {teamMode && mobileDrawer && !mobileRoster && si === 1 && <div className="ha-autonomy-seat is-drawer" data-drawer-autonomy-seat><AutonomyDial orgId={org?.id}/></div>}
             {section.label && !collapsed && (
               <div className="px-2.5 mb-1.5">
                 <span className="text-[#737373] text-[11px] font-semibold uppercase tracking-[0.08em]">
@@ -610,11 +613,11 @@ export default function Sidebar({
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const pathOnly = item.to.split('?')[0];
-                const isActive = item.createEmployee ? createEmployeeOpen : item.agent ? selectedAgent === item.agent.id : item.runtime ? location.pathname.startsWith('/hivemind/app/employee/harness') && !selectedAgent :
+                const isActive = item.brainChat ? /^\/hivemind\/app\/overview(?:\/(?:new|session\/[^/]+))?\/?$/.test(location.pathname) : item.createEmployee ? createEmployeeOpen : item.agent ? selectedAgent === item.agent.id : item.runtime ? location.pathname.startsWith('/hivemind/app/employee/harness') && !selectedAgent :
                   location.pathname === pathOnly ||
                   (location.pathname.startsWith(`${pathOnly}/`)
                     && !(pathOnly === '/hivemind/app/overview' && location.pathname === '/hivemind/app/overview/dreaming'));
-                const ItemLink = item.agent || item.runtime || item.companyWorkspace || item.createEmployee ? 'button' : NavLink;
+                const ItemLink = item.agent || item.runtime || item.companyWorkspace || item.createEmployee || item.brainChat ? 'button' : NavLink;
                 const agentId = item.agent?.id || 'runtime';
                 const room = { ...aggregateAgentRooms(rooms, agentId), loading: openingAgent === agentId };
                 const hasChildren = item.children && item.children.length > 0;
@@ -637,10 +640,10 @@ export default function Sidebar({
                     ) : (
                       <ItemLink
                         data-agent-room-link={item.agent || item.runtime ? true : undefined}
-                        type={item.agent || item.runtime || item.companyWorkspace || item.createEmployee ? "button" : undefined}
-                        to={item.agent || item.runtime || item.companyWorkspace || item.createEmployee ? undefined : item.to}
+                        type={item.agent || item.runtime || item.companyWorkspace || item.createEmployee || item.brainChat ? "button" : undefined}
+                        to={item.agent || item.runtime || item.companyWorkspace || item.createEmployee || item.brainChat ? undefined : item.to}
                         data-tour-id={item.to}
-                        onClick={item.createEmployee ? () => setCreateEmployeeOpen(true) : item.agent ? event => openAgent(event, item.agent) : item.runtime ? event => openAgent(event, { id: 'runtime' }) : item.companyWorkspace ? () => setCompanyOpen(true) : undefined}
+                        onClick={item.brainChat ? () => openBrainChat(navigate) : item.createEmployee ? () => setCreateEmployeeOpen(true) : item.agent ? event => openAgent(event, item.agent) : item.runtime ? event => openAgent(event, { id: 'runtime' }) : item.companyWorkspace ? () => setCompanyOpen(true) : undefined}
                         aria-busy={openingAgent === (item.agent?.id || (item.runtime ? 'runtime' : undefined)) ? true : undefined}
                         className={`relative w-full text-left flex items-center ${collapsed ? 'justify-center gap-2.5 px-2.5 py-2' : item.runtime ? 'gap-3 px-2.5 py-3 mb-2 min-h-[96px]' : 'gap-2.5 px-2.5 py-2'} rounded-lg text-[15px] transition-all duration-150 group`}
                         title={collapsed ? item.label : undefined}
