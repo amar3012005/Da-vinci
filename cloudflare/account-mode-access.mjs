@@ -53,7 +53,7 @@ const sessions = new Map();
 const pendingSessions = new Map();
 /** Drops cached identities; tests only. */
 export function clearSessionCache() { sessions.clear(); pendingSessions.clear(); }
-async function sessionUser(request) {
+export async function sessionUser(request) {
   const cookie = cookies(request, 'hm_cp_session');
   if (!cookie) return null;
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(cookie));
