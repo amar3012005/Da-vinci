@@ -2131,20 +2131,21 @@ export default function KnowledgeBase() {
   return (
     <div className="min-h-full">
       <ArtworkWelcome artwork={uploadEverythingArtwork} title="Upload Everything" closeLabel="Close uploads introduction" actionLabel="Upload files" onAction={() => fileInputRef.current?.click()}/>
-      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <motion.div data-kb-hero initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">{t('knowledgebase.title', 'Upload Everything')}</h1>
-          <p className="text-[#525252] text-sm font-['Space_Grotesk']">
+          <h1 data-kb-title className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">{t('knowledgebase.title', 'Upload Everything')}</h1>
+          <p data-kb-subtitle className="text-[#525252] text-sm font-['Space_Grotesk']">
             {t('knowledgebase.subtitle', 'Bring your files into your company’s memory')}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div data-kb-stats className="flex items-center gap-3">
           <UsageTracker resource="kbPages" />
-          <div className="flex items-center gap-2 text-[#a3a3a3] text-xs font-mono">
+          <div data-kb-doc-count className="flex items-center gap-2 text-[#a3a3a3] text-xs font-mono">
             <BookOpen size={14} />
             {documents.length} document{documents.length !== 1 ? 's' : ''}
           </div>
           <button
+            data-kb-map
             onClick={() => setPageIndexModalOpen(true)}
             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#117dff] text-white text-xs font-semibold font-['Space_Grotesk'] hover:bg-[#0d5fcc] transition-colors"
             title={t('knowledgebase.memoryMapTitle', 'View memory hierarchy map')}
@@ -2175,6 +2176,7 @@ export default function KnowledgeBase() {
           }}
         />
         <div
+          data-kb-drop
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -2197,17 +2199,20 @@ export default function KnowledgeBase() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 mt-3">
+        <div data-kb-options className="flex items-center gap-2 mt-3">
           <Tag size={12} className="text-[#a3a3a3]" />
           <input
             type="text"
             value={customTags}
             onChange={(e) => setCustomTags(e.target.value)}
+            data-kb-tags
             placeholder={t('knowledgebase.tagsFullPlaceholder', 'Optional tags (comma-separated): project-docs, research, notes...')}
             className="flex-1 text-xs font-mono px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[#0a0a0a] placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]"
           />
           <button
             type="button"
+            data-kb-smart
+            aria-pressed={smartExtract}
             onClick={() => setSmartExtract((v) => !v)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold font-['Space_Grotesk'] transition-all shrink-0 ${
               smartExtract
@@ -2244,19 +2249,20 @@ export default function KnowledgeBase() {
             e.target.value = '';
           }}
         />
-        <h3 className="text-[#0a0a0a] text-[13px] font-bold font-['Space_Grotesk'] mb-0.5">
+        <h3 data-kb-imports-title className="text-[#0a0a0a] text-[13px] font-bold font-['Space_Grotesk'] mb-0.5">
           {t('knowledgebase.fileBasedImports', 'File-based imports')}
         </h3>
         <p className="text-[#a3a3a3] text-[11px] font-['Space_Grotesk'] mb-3">
           {t('knowledgebase.fileBasedImportsSubtitle', 'PDF · Word · Excel · Slides · Text · HTML · Images · Audio — converted to memories')}
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+        <div data-kb-imports className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
           {IMPORT_TYPES.map((type) => {
             const Icon = type.icon;
             return (
               <button
                 key={type.key}
                 type="button"
+                data-kb-import
                 onClick={() => openTypedImport(type.accept)}
                 className="group text-left rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2.5 transition-all hover:border-[#117dff]/40 hover:bg-[#faf9f4] focus:outline-none focus:border-[#117dff]/60"
               >

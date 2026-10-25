@@ -382,6 +382,8 @@ function AppShellContent() {
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
+  // Runtime and Brain chats on a phone share the HyperAgent glass room bar over the conversation.
+  const glassRoomPhone = nativeChatRoom && brainPhone;
   // A HyperAgent room on a phone draws its own room bar; its back button opens the existing team drawer.
   const dotRoomPhone = brainPhone && /^\/hivemind\/app\/employee\/dots\/[^/]/u.test(location.pathname);
   useEffect(() => {
@@ -599,7 +601,7 @@ function AppShellContent() {
   return (
     <QuickRecorderProvider>
     <TeamProvider>
-      <div data-hivemind-app-shell data-mobile-agent-overlay={(employeeRoom && brainPhone) || undefined} data-native-chat-shell={nativeChatRoom || undefined} data-native-compact-chat={(nativeChatRoom && employeeCompact) || undefined} className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
+      <div data-hivemind-app-shell data-mobile-agent-overlay={glassRoomPhone || undefined} data-native-chat-shell={nativeChatRoom || undefined} data-native-compact-chat={(nativeChatRoom && employeeCompact) || undefined} className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
         {!overlayNavigation && !graphFullscreen && !hyperFullscreen && !crmFullscreen && (
           <Sidebar
             activeSection={activeSection}
@@ -618,7 +620,7 @@ function AppShellContent() {
             '--hm-harness-center-offset': `${-((overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? 0 : desktopTeamNavigation ? desktopTeamWidth / 2 : sidebarCollapsed ? 34 : 150)}px`,
           }}
         >
-          {!companyEntry && !crmFullscreen && !dotRoomPhone && <TopBar floatingMobile={employeeRoom && brainPhone} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
+          {!companyEntry && !crmFullscreen && !dotRoomPhone && <TopBar floatingMobile={glassRoomPhone} roomIdentity={brainChat ? 'brain' : 'runtime'} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
           {((nativeChatRoom && overlayNavigation) || dotRoomPhone) && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}

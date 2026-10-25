@@ -17,6 +17,7 @@ import {
   Clock,
   HelpCircle,
   History,
+  MessageCircle,
   Lightbulb,
   ListChecks,
   Loader2,
@@ -31,6 +32,7 @@ import {
 import apiClient from '../../shared/api-client';
 import { useQuickRecorder } from '../../shared/QuickRecorderProvider';
 import MobileShell from '../MobileShell';
+import { glassHeader } from '../MobileGlassHeader';
 import MeetingIntelligencePanel from '../../components/MeetingIntelligencePanel';
 import MeetingNotesIcon from '../../shared/MeetingNotesIcon';
 import EntityText from '../../shared/EntityText';
@@ -52,10 +54,10 @@ function fmtAt(iso) {
 // screen instead of desktop's grid-cols-2-on-mobile.
 function StatCard({ icon: Icon, value, label, color = '#0a0a0a' }) {
   return (
-    <div data-meeting-stat className="bg-white border border-[#e3e0db] rounded-[9px] px-1.5 py-2 flex flex-col items-center text-center min-w-0">
-      <Icon size={12} style={{ color }} />
-      <div className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] tabular-nums leading-none mt-1">{value}</div>
-      <small className="leading-tight text-[#737373] uppercase tracking-tight mt-1">{label}</small>
+    <div data-meeting-stat className="mg-card flex items-center gap-3 !rounded-[18px] min-w-0">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full" style={{ background: `${color}14`, color }}><Icon size={16} /></span>
+      <span className="min-w-0"><span className="block text-[19px] font-semibold tracking-tight tabular-nums leading-none text-[#1d1d1b]">{value}</span>
+      <small className="mt-1 block truncate leading-tight text-[#8b8780]">{label}</small></span>
     </div>
   );
 }
@@ -71,12 +73,12 @@ function MeetingCard({ m, onOpen, onDelete }) {
   const [atDay, ...atRest] = atLabel.split(' ');
   return (
     <motion.article data-meeting-card whileTap={{ scale: 0.98 }}
-      className="w-full text-left bg-white border border-[#e3e0db] rounded-[12px] p-3 active:border-[#0a0a0a] transition-all relative">
-      <button type="button" aria-label={`Open ${m.title || 'meeting'}`} onClick={() => onOpen(m)} className="absolute inset-0 w-full rounded-[12px]" />
+      className="mg-card w-full text-left p-4 relative">
+      <button type="button" aria-label={`Open ${m.title || 'meeting'}`} onClick={() => onOpen(m)} className="absolute inset-0 w-full rounded-[22px]" />
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="w-7 h-7 rounded-[8px] bg-blue-50 border border-blue-100 grid place-items-center flex-shrink-0"><MeetingNotesIcon size={14} className="text-[#117dff]" /></span>
-          <span className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate">{m.title || 'Meeting'}</span>
+          <span className="mg-icon-tile !h-9 !w-9 !rounded-[12px]"><MeetingNotesIcon size={16} className="text-[#117dff]" /></span>
+          <span className="mg-row-title truncate">{m.title || 'Meeting'}</span>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <button type="button" onClick={(e) => onDelete(m, e)} className="relative z-10 pointer-events-auto text-[#737373] min-w-[44px] min-h-[44px] rounded" aria-label="Delete meeting">
@@ -335,21 +337,20 @@ export default function MobileMeetingNotes() {
   const primaryLabel = qrec.active ? 'Open current meeting' : 'Start meeting';
 
   return (
-    <MobileShell title="AI Meeting Notes" rightAction={(() => {
+    <MobileShell title="AI Meeting Notes" renderHeader={glassHeader({ icon: <MeetingNotesIcon size={17} />, title: 'AI meeting notes', right: (() => {
       const target = new URLSearchParams(window.location.search).get('native_chat_return');
       return /^\/hivemind\/app\/(?:overview|employee\/harness)(?:\/(?:new|session\/[^/]+))?\/?$/u.test(target || '')
-        ? <a href={target} className="min-h-[44px] inline-flex items-center text-[13px] text-[#117dff]">Back to chat</a> : null;
-    })()}>
-      <div data-mobile-tools>
-      <div className="px-4 pt-2 pb-10">
-        <div className="flex items-center gap-1.5 text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1">
-          <MeetingNotesIcon size={12} /> HIVEMIND
+        ? <a href={target} className="liquid-glass grid h-12 w-12 place-items-center rounded-full" aria-label="Back to chat"><MessageCircle size={18} /></a> : null;
+    })() })}>
+      <div data-mobile-tools data-mobile-glass>
+      <div className="pb-6">
+        <div className="mg-hero">
+          <h1 className="mg-title">AI meeting notes</h1>
+          <p className="mg-subtitle">Record, transcribe and keep the decisions, saved straight into your company memory.</p>
         </div>
-        <h1 className="text-[21px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">AI Meeting Notes</h1>
-        <p className="mt-1 text-[12px] leading-relaxed text-[#737373]">Record, transcribe and extract insights — saved straight into your memory.</p>
 
         {/* stat row — all five in one row, shrunk to fit */}
-        <div data-meeting-stats className="mt-4 grid grid-cols-2 gap-2">
+        <div data-meeting-stats className="grid grid-cols-2 gap-2.5">
           <StatCard icon={MeetingNotesIcon} value={stats.total} label="Meetings" color="#117dff" />
           <StatCard icon={CalendarDays} value={stats.thisWeek} label="This week" color="#0A66C2" />
           <StatCard icon={ListChecks} value={stats.actions} label="Action items" color="#10b981" />
@@ -358,27 +359,26 @@ export default function MobileMeetingNotes() {
         </div>
 
         {/* tabs */}
-        <nav className="mt-4 border-b border-[#e3e0db] flex items-center gap-0.5">
+        <nav className="mg-seg mt-5" aria-label="Meeting notes sections">
           {[['record', 'Record', Mic], ['past', 'Past meetings', History], ['obligations', 'Obligations', CheckCircle2]].map(([key, label, Icon]) => (
             <button
               key={key}
+              type="button"
+              aria-pressed={tab === key}
               onClick={() => { setTab(key); }}
-              className={`flex items-center gap-1.5 px-2.5 py-2 text-[11.5px] font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
-                tab === key ? 'border-[#0a0a0a] text-[#0a0a0a]' : 'border-transparent text-[#737373]'
-              }`}
             >
-              <Icon size={13} /> {label}{key === 'past' && meetings.length ? <span className="ml-0.5 text-[#a3a3a3]">{meetings.length}</span> : null}
+              <Icon size={14} /> {label}{key === 'past' && meetings.length ? <span className="ml-0.5 text-[#a3a3a3]">{meetings.length}</span> : null}
             </button>
           ))}
         </nav>
 
         {tab === 'record' && (
-          <section className="mt-4 bg-white border border-[#e3e0db] rounded-[10px] p-4">
-            <div className="w-9 h-9 rounded-[8px] bg-blue-50 border border-blue-100 grid place-items-center">
-              <Mic size={17} className="text-[#117dff]" />
+          <section className="mg-card mt-4 p-5">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-[#117dff]/10">
+              <Mic size={20} className="text-[#117dff]" />
             </div>
-            <h2 className="mt-3 text-[16px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Capture the meeting, keep the decisions</h2>
-            <p className="mt-1.5 text-[12px] leading-relaxed text-[#737373]">
+            <h2 className="mt-4 text-[19px] font-semibold tracking-tight text-[#1d1d1b]">Capture the meeting, keep the decisions</h2>
+            <p className="mt-2 text-[14.5px] leading-relaxed text-[#6f6b63]">
               Add the people and context once. The recorder preserves transcript checkpoints, builds the report, and saves searchable meeting memories.
             </p>
             {qrec.status === 'interrupted' && (
@@ -394,9 +394,9 @@ export default function MobileMeetingNotes() {
             <button
               onClick={() => qrec.openConfig()}
               disabled={!qrec.supported}
-              className="mt-4 inline-flex items-center gap-2 h-11 px-4 rounded-full bg-[#117dff] text-white text-[13.5px] font-semibold active:scale-[0.98] disabled:opacity-40"
+              className="mg-pill-primary mt-5 w-full"
             >
-              <Mic size={15} /> {primaryLabel}
+              <Mic size={16} /> {primaryLabel}
             </button>
           </section>
         )}
@@ -406,10 +406,10 @@ export default function MobileMeetingNotes() {
             {loading && <div className="py-6 text-[12.5px] text-[#8b857d]">Loading meetings…</div>}
             {error && <div className="py-3 text-[12.5px] text-red-700">{error}</div>}
             {!loading && !error && meetings.length === 0 && (
-              <div className="bg-white border border-[#e3e0db] rounded-[10px] p-8 text-center">
-                <History size={20} className="text-[#cbd5e1] mx-auto mb-2" />
-                <p className="text-[12.5px] text-[#737373]">No saved meetings yet.</p>
-                <button onClick={() => setTab('record')} className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px]"><Mic size={13} /> Record your first meeting</button>
+              <div className="mg-card p-8 text-center">
+                <History size={22} className="text-[#cbd5e1] mx-auto mb-3" />
+                <p className="text-[14.5px] text-[#6f6b63]">No saved meetings yet.</p>
+                <button type="button" onClick={() => setTab('record')} className="mg-pill-primary mt-4"><Mic size={15} /> Record your first meeting</button>
               </div>
             )}
             <div className="grid grid-cols-1 gap-2.5">
@@ -427,14 +427,14 @@ export default function MobileMeetingNotes() {
               <span className="text-[#a3a3a3]">{obligations.counts?.done || 0} done</span>
             </div>
             {(!obligations.obligations || obligations.obligations.length === 0) ? (
-              <div className="bg-white border border-[#e3e0db] rounded-[10px] p-8 text-center">
-                <CheckCircle2 size={20} className="text-[#cbd5e1] mx-auto mb-2" />
-                <p className="text-[12.5px] text-[#737373]">No commitments captured across meetings yet.</p>
+              <div className="mg-card p-8 text-center">
+                <CheckCircle2 size={22} className="text-[#cbd5e1] mx-auto mb-3" />
+                <p className="text-[14.5px] text-[#6f6b63]">No commitments captured across meetings yet.</p>
               </div>
             ) : (
               <div className="space-y-1.5">
                 {obligations.obligations.map((o, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2.5 rounded-[10px] border border-[#e3e0db] bg-white">
+                  <div key={i} className="mg-card mg-row !min-h-[56px] !gap-2.5">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${o.status === 'overdue' ? 'bg-[#dc2626]' : o.status === 'done' ? 'bg-[#16a34a]' : 'bg-[#117dff]'}`} title={o.status} />
                     <span className="flex-1 text-[12.5px] text-[#0a0a0a] leading-snug min-w-0"><EntityText text={o.task} entities={orgEntities} /></span>
                     {o.owner && <span className="text-[10px] px-1.5 py-0.5 rounded-[4px] bg-[#faf9f4] border border-[#e3e0db] text-[#525252] shrink-0">{o.owner}</span>}
