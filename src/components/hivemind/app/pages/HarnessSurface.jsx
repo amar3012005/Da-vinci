@@ -6,6 +6,7 @@ import { parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } 
 import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
+import { handOffComposerDraft } from '../shared/pending-composer';
 import './HarnessSurface.css';
 import './BrainChat.css';
 import QueryStarters from './QueryStarters';
@@ -306,6 +307,11 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
     void clearRuntimePresentation(ownerScope);
   }, [brain,ownerScope,user?.id,org?.id]);
   const [state, setState] = useState({ phase: 'loading', stage: 0, message: null });
+  // Hand the phone frame's unsent draft to the native client once it is ready (see pending-composer.js for the message format).
+  useEffect(() => {
+    if (state.phase !== 'ready' || !user?.id || !org?.id) return;
+    handOffComposerDraft({ tenant: org.id, user: user.id, roomId: brain ? 'brain' : 'runtime' });
+  }, [state.phase, user?.id, org?.id, brain]);
 
   useEffect(() => {
     const host = mountRef.current;

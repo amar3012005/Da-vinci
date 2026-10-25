@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ChevronLeft, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import BrainModeIcon from './BrainModeIcon';
-import { getDraft, markOnce, queueDraft, setDraft, subscribeDraft, subscribePendingEntries } from '../shared/pending-composer';
+import { getDraft, markOnce, queueDraft, setDraft, subscribeAttached, subscribeDraft, subscribePendingEntries } from '../shared/pending-composer';
 import './liquid-glass.css';
 import './OptimisticAppShell.css';
 
@@ -11,16 +11,18 @@ const DESKTOP_QUERY = '(min-width: 901px)';
 const RUNTIME_ROOM = /^\/hivemind\/app\/employee\/harness(?:\/|$)/u;
 const BRAIN_ROOM = /^\/hivemind\/app(?:\/overview(?:\/(?:new|session\/[^/]+))?)?\/?$/u;
 
-// Composer seat for the frame. Typing is enabled at once; the draft is held in shell memory across remounts.
-// A send is queued and shown as pending until the room client attaches (see pending-composer.js).
+// Composer seat for the frame. It collects the draft only: typing is enabled at once, and sending is enabled
+// once a native room client attaches (see pending-composer.js). Until then no message is queued or shown as pending.
 function PhoneRoomComposer() {
   const { t } = useTranslation();
   const [draft, setDraftState] = useState(getDraft);
   const [entries, setEntries] = useState([]);
+  const [attached, setAttached] = useState(false);
   useEffect(() => subscribeDraft(setDraftState), []);
   useEffect(() => subscribePendingEntries(setEntries), []);
+  useEffect(() => subscribeAttached(setAttached), []);
   useEffect(() => { markOnce('hm:composer-visible'); }, []);
-  const pending = entries.filter((entry) => entry.state !== 'sent');
+  const pending = attached ? entries.filter((entry) => entry.state !== 'sent') : [];
   const submit = (event) => {
     event.preventDefault();
     queueDraft();
@@ -45,12 +47,12 @@ function PhoneRoomComposer() {
           rows={1}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); queueDraft(); } }}
+          onKeyDown={(event) => { if (attached && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); queueDraft(); } }}
           placeholder={t('chat.messagePlaceholder', 'Message')}
           className="optimistic-phone-room-input"
           style={{ flex: 1, minWidth: 0, resize: 'none', background: 'transparent', border: 0, outline: 'none', font: 'inherit', color: 'inherit' }}
         />
-        <button type="submit" className="optimistic-phone-room-action is-send" disabled={!draft.trim()} aria-label={t('chat.send', 'Send')}>
+        <button type="submit" className="optimistic-phone-room-action is-send" disabled={!attached || !draft.trim()} aria-label={t('chat.send', 'Send')}>
           <Send size={16} strokeWidth={2} />
         </button>
       </form>
