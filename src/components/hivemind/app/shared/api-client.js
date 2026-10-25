@@ -80,6 +80,26 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Same-origin custom model provider API; errors surface as axios errors carrying `response.status` and `response.data.error`. */
+  async listCustomProviders(signal) {
+    const { data } = await axios.get('/api/hivemind/custom-providers', { withCredentials: true, signal, timeout: 20000 });
+    return data;
+  }
+  async saveCustomProvider(payload) {
+    const { data } = await axios.put('/api/hivemind/custom-providers', payload, { withCredentials: true, timeout: 20000 });
+    return data;
+  }
+  async deleteCustomProvider(id) {
+    const { data } = await axios.delete(`/api/hivemind/custom-providers/${encodeURIComponent(id)}`, { withCredentials: true, timeout: 20000 });
+    return data;
+  }
+  /** Tests a stored provider when `id` is given, otherwise a draft `{baseUrl, protocol, apiKey}` that is not stored. */
+  async testCustomProvider(draft, id) {
+    const url = id ? `/api/hivemind/custom-providers/${encodeURIComponent(id)}/test` : '/api/hivemind/custom-providers/test';
+    const { data } = await axios.post(url, id ? {} : draft, { withCredentials: true, timeout: 25000 });
+    return data;
+  }
+
   constructor() {
     this._platformAdminEnvironment = selectedPlatformAdminEnvironment();
     const platformAdminBases = this._platformAdminEnvironment
