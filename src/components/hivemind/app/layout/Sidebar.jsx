@@ -527,7 +527,6 @@ export default function Sidebar({
         <div className="mobile-unified-user-name">{user?.display_name || user?.name || user?.email?.split('@')[0] || 'Your account'}</div>
         <div className="mobile-roster-org"><Building2 size={18}/><strong>{org?.name || org?.slug || 'Workspace'}</strong></div>
         <CreditBalance credits={usage?.credits} inline className="mobile-unified-plan" />
-        <div className="ha-autonomy-seat is-drawer" data-drawer-autonomy-seat><AutonomyDial/></div>
         <div className="mobile-roster-team">
           <div className="mobile-unified-heading"><h2>Your team</h2><div className="mobile-roster-shortcuts">
             <button type="button" onClick={() => setCompanyOpen(true)}><Building2 size={18}/><span>Company</span></button>
@@ -561,6 +560,8 @@ export default function Sidebar({
           </div>
           {advancedOpen && <div className="mobile-unified-advanced-links" aria-label="Advanced features">{[{to:'/hivemind/app/mcp',label:'MCPs'},{to:'/hivemind/app/keys',label:'API keys'},{to:'/hivemind/m/projects',label:'Projects'},{to:'/hivemind/app/evaluation',label:'Evaluation'}].map(item => <NavLink key={item.to} to={item.to}>{item.label}<ChevronRight size={14}/></NavLink>)}</div>}
         </section>
+        {/* Company-wide controls sit together at the bottom, above Account. */}
+        <div className="ha-autonomy-seat is-drawer mobile-roster-autonomy" data-drawer-autonomy-seat><AutonomyDial/></div>
         <AnatomyModeToggle />
         <div className="mobile-roster-account">
           <button type="button" className="mobile-roster-account-identity" onClick={() => setRosterProfileOpen(true)}>

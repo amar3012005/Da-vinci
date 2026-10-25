@@ -9,7 +9,11 @@ jest.mock('react-router-dom', () => ({
   useLocation: () => ({ pathname: '/hivemind/app/employees', search: '' }),
   useNavigate: () => jest.fn(),
 }), { virtual: true });
+jest.mock('@humation/react', () => ({ __esModule: true, default: () => null, HumationAvatar: () => null }), { virtual: true });
+jest.mock('../../hyperagents/AgentAvatar', () => ({ __esModule: true, default: () => <span/> }));
+jest.mock('../../shared/RuntimeAvatar', () => ({ __esModule: true, default: () => <span/>, RuntimeAppearanceProvider: ({ children }) => children }));
 jest.mock('../AutonomyDial', () => ({ __esModule: true, default: () => <div data-testid="autonomy-dial"/> }));
+jest.mock('../AnatomyModeToggle', () => ({ __esModule: true, default: () => <div data-testid="anatomy-mode"/> }));
 jest.mock('../../auth/AuthProvider', () => ({ useAuth: () => ({ logout: jest.fn(), org: { name: 'Acme' }, user: { display_name: 'Amar' } }) }));
 jest.mock('../../shared/api-client', () => ({ __esModule: true, default: { getWebAdminMetrics: () => Promise.reject(new Error('no')) } }));
 jest.mock('../../shared/useUsage', () => ({ useUsage: () => ({ usage: null }) }));
@@ -25,13 +29,15 @@ beforeAll(() => {
 const renderDrawer = props => render(<Sidebar collapsed={false} mobileDrawer {...props}/>);
 const before = (first, second) => expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-test('the phone drawer seats the one autonomy dial above its Company and Artifacts shortcuts', () => {
+test('the phone roster seats the one autonomy dial at the bottom, with Anatomy mode above Account', () => {
   const { container } = renderDrawer({ mobileRoster: true });
   const dials = screen.getAllByTestId('autonomy-dial');
   expect(dials).toHaveLength(1);
   const intro = container.querySelector('.mobile-roster-intro');
   expect(intro).toContainElement(dials[0]);
-  before(dials[0], intro.querySelector('.mobile-roster-shortcuts'));
+  before(intro.querySelector('.mobile-unified-brain'), dials[0]);
+  before(dials[0], screen.getByTestId('anatomy-mode'));
+  before(screen.getByTestId('anatomy-mode'), intro.querySelector('.mobile-roster-account'));
 });
 
 test('the narrow drawer seats the one autonomy dial directly above its Apps shortcut', () => {
