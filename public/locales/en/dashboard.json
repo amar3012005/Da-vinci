@@ -1875,5 +1875,8 @@
     "title": "Workspace Admin",
     "viewAll": "View all",
     "yourOrg": "Your organization"
+  },
+  "getStarted": {
+    "summary": "Getting Started, {{count}} of {{total}}"
   }
 }

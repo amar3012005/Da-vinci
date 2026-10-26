@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Check, Minus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import './RuntimeGetStarted.css';
 
@@ -15,8 +16,11 @@ const STEPS = [
 const keyFor = scope => `hivemind.brain-get-started:v1:${scope}`;
 function read(scope) { try { return JSON.parse(localStorage.getItem(keyFor(scope)) || '{}'); } catch { return {}; } }
 
-export default function BrainGetStarted({ scope }) {
+/** `variant="chip"` renders the compact top-bar chip on phone chat routes; the default is the floating card. */
+export default function BrainGetStarted({ scope, variant = 'float' }) {
   const navigate = useNavigate(); const location = useLocation();
+  const { t } = useTranslation('dashboard');
+  const chip = variant === 'chip';
   const [progress, setProgress] = useState(() => read(scope));
   const [expanded, setExpanded] = useState(false);
   useEffect(() => {
@@ -56,9 +60,9 @@ export default function BrainGetStarted({ scope }) {
   }, [scope, location.pathname]);
   if (!/^\/hivemind\/app\/overview(?:\/|$)/.test(location.pathname)) return null;
   const count = STEPS.filter(([key]) => progress[key] === true).length;
-  return <aside className="hm-runtime-start" aria-label="Getting started with Brain">
+  return <aside className={chip ? 'hm-runtime-start hm-runtime-start--chip' : 'hm-runtime-start'} aria-label="Getting started with Brain">
     <details className="hm-runtime-start-card" open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}>
-      <summary><span className="hm-runtime-start-ring" style={{ '--hm-start-progress': `${count / 6 * 100}%` }} aria-hidden="true" /><span className="hm-runtime-start-title">Getting Started</span><span className="hm-runtime-start-count">{count} of 6 <Minus size={16} aria-hidden="true" /></span>
+      <summary aria-label={chip ? t('getStarted.summary', { count, total: STEPS.length, defaultValue: `Getting Started, ${count} of ${STEPS.length}` }) : undefined}><span className="hm-runtime-start-ring" style={{ '--hm-start-progress': `${count / 6 * 100}%` }} aria-hidden="true" />{chip && <span className="hm-runtime-start-short" aria-hidden="true">{count}/{STEPS.length}</span>}<span className="hm-runtime-start-title">Getting Started</span><span className="hm-runtime-start-count">{count} of 6 <Minus size={16} aria-hidden="true" /></span>
         <span className="hm-runtime-start-progress" role="progressbar" aria-label="Brain getting started progress" aria-valuemin={0} aria-valuemax={6} aria-valuenow={count}><span style={{ width: `${count / 6 * 100}%` }} /></span>
       </summary>
       <ol>{STEPS.map(([key, label, path]) => <li key={key} data-complete={progress[key] === true}><button type="button" onClick={() => navigate(path)}><span className="hm-runtime-start-check" role="checkbox" aria-readonly="true" aria-checked={progress[key] === true} aria-label={label}>{progress[key] === true && <Check size={12} strokeWidth={3} aria-hidden="true" />}</span><span>{label}</span></button></li>)}</ol>
