@@ -638,7 +638,7 @@ function AppShellContent() {
           {workspaceModeForPath(location.pathname) === 'hyperagents' && !/^\/hivemind\/app\/employee\/library(?:\/|$)/.test(location.pathname) && !initialNativePane && !hyperFullscreen && !crmFullscreen && <RuntimeGetStarted key={`${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
           {workspaceModeForPath(location.pathname) === 'hivemind' && !initialNativePane && !graphFullscreen && !crmFullscreen && <BrainGetStarted key={`brain:${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
           <main data-native-chat-main={nativeChatRoom || undefined} data-dot-room-phone={dotRoomPhone || undefined} className={companyEntry ? 'min-h-screen p-4 sm:p-8' : dotRoomPhone ? 'box-border h-[var(--hm-app-viewport-height,100dvh)] min-h-0 min-w-0 overflow-hidden pt-[env(safe-area-inset-top,0px)]' : graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview || onOpenDotWorkspace ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 min-w-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
-            <BrainFeatureWelcome key={`features-${user?.id || ""}:${org?.id || ""}`} />
+            <BrainFeatureWelcome key={`features-${user?.id || ""}:${org?.id || ""}`} tenant={org?.id} userId={user?.id} />
             <HyperAgentActivation /><AgentWorkspaceOutlet key={`${user?.id || ""}:${org?.id || ""}`} />
           </main>
           </div>

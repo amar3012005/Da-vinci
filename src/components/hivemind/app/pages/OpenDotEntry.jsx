@@ -1,9 +1,10 @@
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { openDotEmployeeIdFromPath } from '../shared/open-dot-employee-route';
 import { openDotRoomStatus } from '../shared/open-dot-room-status';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { buildOpenDotEmbedTarget } from '../shared/open-dot-embed-target';
+import { registerOpenDotFrame } from '../shared/open-dot-frames';
 
 const DOT_ORIGIN = 'https://runtime-runner.singulancelabs.com';
 const READY_TIMEOUT_MS = 30000;
@@ -28,6 +29,13 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
   const src = useMemo(() => buildOpenDotEmbedTarget(suffix, search), [suffix, search]);
   const initialTarget = useRef(initialRoute ? buildOpenDotEmbedTarget(initialRoute.pathname.slice('/hivemind/app/employee/dots'.length), initialRoute.search) : src);
   const iframeRef = useRef(null);
+  const frameRegistration = useRef(null);
+  // Registers each mounted iframe for sign-out; the disposer runs when React replaces or unmounts it.
+  const attachFrame = useCallback(node => {
+    iframeRef.current = node;
+    frameRegistration.current?.();
+    frameRegistration.current = node ? registerOpenDotFrame(node) : null;
+  }, []);
   const [loaded, setLoaded] = useState(false);
   const [loadedFrameKey, setLoadedFrameKey] = useState(null);
   const [readyEmployee, setReadyEmployee] = useState(null);
@@ -98,7 +106,7 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
       )}
       <iframe
         key={frameKey}
-        ref={iframeRef}
+        ref={attachFrame}
         onLoad={() => setLoadedFrameKey(frameKey)}
         title={apps ? 'Apps' : 'HyperAgent workspace'}
         src={initialTarget.current}
