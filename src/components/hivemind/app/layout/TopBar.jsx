@@ -158,7 +158,7 @@ const PAGE_PREFIXES = [
   ['/hivemind/app/team/projects', '/hivemind/app/team/projects'],
 ];
 
-export default function TopBar({ activeSection = 'hivemind', onSectionChange, mobileTeamToggle = null, floatingMobile = false, roomIdentity = 'runtime' }) {
+export default function TopBar({ activeSection = 'hivemind', onSectionChange, mobileTeamToggle = null, floatingMobile = false, roomIdentity = 'runtime', startSlot = null }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { org, user } = useAuth();
@@ -206,6 +206,8 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
       <span className="grid h-8 w-8 shrink-0 place-items-center"><BrainModeIcon size={28} /></span>
       <span className="truncate text-[16px] font-semibold tracking-tight">{t('topbar.companyBrain', { defaultValue: 'Company Brain' })}</span>
     </div>}
+    {/* Getting Started chip on the right, clear of the centred room pill. */}
+    {startSlot && <div className="pointer-events-auto ml-auto flex items-center">{startSlot}</div>}
   </div>;
 
   return (

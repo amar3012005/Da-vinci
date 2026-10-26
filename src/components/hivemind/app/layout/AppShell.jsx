@@ -4,6 +4,7 @@ import { scopedCompanyRead, clearCompanyRead } from '../shared/company-read-cach
 import { cacheKey, getSharedBrowserCache } from '../shared/browser-cache';
 import BrainGetStarted from './BrainGetStarted';
 import RuntimeGetStarted from './RuntimeGetStarted';
+import { isNativeChatRoute, startPlacement } from './get-started-placement';
 import BrainFeatureWelcome from '../shared/BrainFeatureWelcome';
 import NativePaneBridge from './NativePaneBridge';
 import { initialNativePane, persistentShellEnabled } from '../shared/native-pane-protocol';
@@ -383,7 +384,7 @@ function AppShellContent() {
     isNativeApp() && window.matchMedia('(max-width: 600px)').matches
   ));
   const employeeRoom = location.pathname.startsWith('/hivemind/app/employee/harness');
-  const nativeChatRoom = employeeRoom || /^\/hivemind\/app(?:\/overview(?:\/(?:new|session\/[^/]+))?)?\/?$/u.test(location.pathname);
+  const nativeChatRoom = isNativeChatRoute(location.pathname);
   const brainChat = /^\/hivemind\/app\/overview(?:\/(?:new|session\/[^/]+))?\/?$/.test(location.pathname);
   const [brainPhone, setBrainPhone] = useState(() => window.matchMedia('(max-width: 600px)').matches);
   useEffect(() => {
@@ -608,6 +609,12 @@ function AppShellContent() {
     </QuickRecorderProvider>
   );
 
+  // Phone chat docks the Getting Started chip in the top bar, so the bottom overlay never covers a composer.
+  const startInTopBar = startPlacement({ pathname: location.pathname, phone: brainPhone }) === 'top-bar' && !companyEntry && !graphFullscreen && !hyperFullscreen && !crmFullscreen;
+  const topBarStart = !startInTopBar ? null : brainChat
+    ? <BrainGetStarted key={`brain:${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} variant="chip" />
+    : <RuntimeGetStarted key={`${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} variant="chip" />;
+
   return (
     <QuickRecorderProvider>
     <TeamProvider>
@@ -630,13 +637,13 @@ function AppShellContent() {
             '--hm-harness-center-offset': `${-((overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? 0 : desktopTeamNavigation ? desktopTeamWidth / 2 : sidebarCollapsed ? 34 : 150)}px`,
           }}
         >
-          {!companyEntry && !crmFullscreen && !dotRoomPhone && <TopBar floatingMobile={glassRoomPhone} roomIdentity={brainChat ? 'brain' : 'runtime'} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
+          {!companyEntry && !crmFullscreen && !dotRoomPhone && <TopBar floatingMobile={glassRoomPhone} roomIdentity={brainChat ? 'brain' : 'runtime'} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} startSlot={topBarStart} />}
           {((nativeChatRoom && overlayNavigation) || dotRoomPhone) && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
           <div className={!initialNativePane && !hyperFullscreen && !crmFullscreen && !graphFullscreen && (workspaceModeForPath(location.pathname) === 'hyperagents' || onOverview) ? 'hm-runtime-workspace' : 'contents'}>
-          {workspaceModeForPath(location.pathname) === 'hyperagents' && !/^\/hivemind\/app\/employee\/library(?:\/|$)/.test(location.pathname) && !initialNativePane && !hyperFullscreen && !crmFullscreen && <RuntimeGetStarted key={`${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
-          {workspaceModeForPath(location.pathname) === 'hivemind' && !initialNativePane && !graphFullscreen && !crmFullscreen && <BrainGetStarted key={`brain:${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
+          {workspaceModeForPath(location.pathname) === 'hyperagents' && !/^\/hivemind\/app\/employee\/library(?:\/|$)/.test(location.pathname) && !initialNativePane && !hyperFullscreen && !crmFullscreen && !startInTopBar && <RuntimeGetStarted key={`${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
+          {workspaceModeForPath(location.pathname) === 'hivemind' && !initialNativePane && !graphFullscreen && !crmFullscreen && !startInTopBar && <BrainGetStarted key={`brain:${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
           <main data-native-chat-main={nativeChatRoom || undefined} data-dot-room-phone={dotRoomPhone || undefined} className={companyEntry ? 'min-h-screen p-4 sm:p-8' : dotRoomPhone ? 'box-border h-[var(--hm-app-viewport-height,100dvh)] min-h-0 min-w-0 overflow-hidden pt-[env(safe-area-inset-top,0px)]' : graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview || onOpenDotWorkspace ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 min-w-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <BrainFeatureWelcome key={`features-${user?.id || ""}:${org?.id || ""}`} tenant={org?.id} userId={user?.id} />
             <HyperAgentActivation /><AgentWorkspaceOutlet key={`${user?.id || ""}:${org?.id || ""}`} />
