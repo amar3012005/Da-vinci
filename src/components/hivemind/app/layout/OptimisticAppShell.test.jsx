@@ -68,3 +68,12 @@ test('the Brain phone frame names Brain in the composer', () => {
   render();
   expect(host.querySelector('.optimistic-phone-room-composer textarea').getAttribute('placeholder')).toBe('chat.messageBrain');
 });
+
+test('every loading stage before a phone chat room shows the room frame, other routes keep their loader', () => {
+  const { RoomLoading } = require('./PhoneRoomFrame');
+  act(() => root.render(<RoomLoading pathname="/hivemind/app/employee/harness/session/session-1" fallback={<p data-fallback>Connecting…</p>} />));
+  expect(host.querySelector('[data-optimistic-phone-room="runtime"] .optimistic-phone-room-trailing')).not.toBeNull();
+  expect(host.querySelector('[data-fallback]')).toBeNull();
+  act(() => root.render(<RoomLoading pathname="/hivemind/app/connectors" fallback={<p data-fallback>Connecting…</p>} />));
+  expect(host.querySelector('[data-fallback]')).not.toBeNull();
+});

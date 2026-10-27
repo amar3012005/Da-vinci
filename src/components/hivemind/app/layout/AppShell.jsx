@@ -9,6 +9,7 @@ import BrainFeatureWelcome from '../shared/BrainFeatureWelcome';
 import NativePaneBridge from './NativePaneBridge';
 import { initialNativePane, persistentShellEnabled } from '../shared/native-pane-protocol';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
+import { RoomLoading } from './PhoneRoomFrame';
 import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
 import { discardParkedNativeHarnessSeat } from '../shared/native-harness-seat';
 import { NativeAiConsentGate } from '../mobile/MobileSafetyPanel';
@@ -562,7 +563,7 @@ function AppShellContent() {
   // Desktop, and the Runtime and Brain chat rooms on phones, keep the restoring frame on screen during the company check, so the room appears without a spinner gap.
   if (companyStatus === 'checking' && !modelAccountSettings && (window.matchMedia('(min-width: 901px)').matches || (brainPhone && nativeChatRoom))) return <OptimisticAppShell fallback={<AsciiWorkspaceLoading label="Connecting…" />} />;
   if (companyStatus !== 'ready' && !modelAccountSettings) return <div data-hivemind-app-shell className="min-h-[var(--hm-app-viewport-height,100dvh)] bg-[#faf9f4] p-4 sm:p-8">
-    {companyStatus === 'checking' ? <AsciiWorkspaceLoading label="Connecting…" />
+    {companyStatus === 'checking' ? <RoomLoading pathname={location.pathname} fallback={<AsciiWorkspaceLoading label="Connecting…" />} />
       : companyStatus === 'error' ? <div role="alert" className="mx-auto max-w-lg p-8"><p>We couldn’t check your company setup. Your progress is saved.</p><button type="button" onClick={() => (clearCompanyRead(`${user?.id}:${org?.id}`), setCompanyRetry(value => value + 1))} className="mt-4 text-[#117dff] underline">Try again</button></div>
       : <React.Suspense fallback={<p role="status">Opening company onboarding…</p>}><HyperOnboarding onComplete={completeCompany} /></React.Suspense>}
     {companyStatus !== 'required' && <button type="button" onClick={() => setAccountOpen(true)} className="fixed bottom-6 right-6 rounded-lg border bg-white px-4 py-2 text-sm">Account & Settings</button>}

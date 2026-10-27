@@ -1,5 +1,6 @@
 import ConnectionUnavailable from './ConnectionUnavailable';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
+import { RoomLoading } from '../layout/PhoneRoomFrame';
 import React, { useEffect } from 'react';
 import { RUNTIME_ORIGIN, runtimeLoginUrl, workspaceDocumentRedirect } from '../shared/workspace-authority.mjs';
 import { Navigate, useLocation } from 'react-router-dom';
@@ -23,7 +24,7 @@ export default function ProtectedRoute({ children, optimisticFallback = null }) 
   if (loading && optimisticFallback) return optimisticFallback;
 
   if (loading) {
-    return <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center"><AsciiWorkspaceLoading /></div>;
+    return <RoomLoading pathname={window.location.pathname} fallback={<div className="min-h-screen bg-[#faf9f4] flex items-center justify-center"><AsciiWorkspaceLoading /></div>} />;
   }
 
   if (isUnreachable) return <div className="min-h-screen flex items-center justify-center bg-[#faf9f4] p-6"><ConnectionUnavailable failure={connectionFailure} onRetry={refresh} /></div>;

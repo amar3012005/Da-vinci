@@ -1,4 +1,5 @@
 import AsciiWorkspaceLoading from './components/AsciiWorkspaceLoading';
+import { RoomLoading } from './layout/PhoneRoomFrame';
 import React, { useEffect } from 'react';
 import { workspaceDocumentRedirect } from './shared/workspace-authority.mjs';
 import { importPage } from './shared/import-page';
@@ -108,11 +109,11 @@ function PageSuspense({ children }) {
   return (
     <PageErrorBoundary routeKey={routeKey}>
       <React.Suspense
-        fallback={
+        fallback={<RoomLoading pathname={routeKey} fallback={
           <div className="flex items-center justify-center h-64">
             <AsciiWorkspaceLoading />
           </div>
-        }
+        } />}
       >
         {children}
       </React.Suspense>
