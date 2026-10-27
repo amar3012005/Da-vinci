@@ -1,7 +1,8 @@
 /* Brain chat only (Overview route). Scoped by [data-brain-chat] so Runtime,
    HyperAgent and Dreaming surfaces keep their composer controls. The native
    sidebar is intentionally not targeted. Hidden controls remain in the DOM,
-   so the native keyboard and send behaviour is unchanged. */
+   so the native keyboard and send behaviour is unchanged. The composer itself
+   matches the Runtime room; only Brain-specific chrome is overridden here. */
 [data-brain-chat] [data-composer-seat] [class*="_pickerButton"],
 [data-brain-chat] [data-composer-seat] [aria-label^="Model:"] {
   display: none !important;
@@ -30,65 +31,13 @@
   color: #0a0a0a;
 }
 
-/* Circular voice control: the speaker glyph is replaced by a quiet waveform.
-   The button is a fixed square box with a 50% radius in every state (idle and
-   in-call), so it is always a perfect circle. Motion stops when reduced. */
-[data-brain-chat] [data-composer-seat] [aria-label^="Talk to"] {
-  position: relative;
-  box-sizing: border-box;
-  flex: 0 0 36px;
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px;
-  min-height: 36px;
-  aspect-ratio: 1 / 1;
-  padding: 0 !important;
-  border-radius: 50% !important;
-  overflow: hidden;
-}
-[data-brain-chat] [data-composer-seat] [aria-label^="Talk to"] svg {
-  display: none;
-}
-[data-brain-chat] [data-composer-seat] [aria-label^="Talk to"]::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 18px;
-  height: 16px;
-  background:
-    linear-gradient(#fff, #fff) 0 50% / 3px 6px no-repeat,
-    linear-gradient(#fff, #fff) 5px 50% / 3px 14px no-repeat,
-    linear-gradient(#fff, #fff) 10px 50% / 3px 9px no-repeat,
-    linear-gradient(#fff, #fff) 15px 50% / 3px 12px no-repeat;
-  animation: brainVoiceWave 1.3s ease-in-out infinite;
-}
-@keyframes brainVoiceWave {
-  0%, 100% { background-size: 3px 6px, 3px 14px, 3px 9px, 3px 12px; }
-  50% { background-size: 3px 13px, 3px 7px, 3px 14px, 3px 6px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-brain-chat] [data-composer-seat] [aria-label^="Talk to"]::before {
-    animation: none;
-  }
-}
-
-/* Brain chat: the main column uses the mobile beige (#faf9f4); the composer
-   card stays white on top of it. The native sidebar panel is not targeted. */
+/* Brain chat: the main column uses the mobile beige (#faf9f4), as Runtime does. */
 [data-brain-chat] [class*="_frame"],
 [data-brain-chat] [class*="eqEnzG_root"] {
   background-color: #faf9f4 !important;
 }
-[data-brain-chat] [class*="mk7YQa_card"] {
-  background-color: #ffffff !important;
-}
 
-/* Brain hero layout: sit the title, composer and suggestions lower on the page
-   and align the suggestions to the composer's own width and left edge. */
-[data-brain-chat] [class*="eqEnzG_composerSeat"]:has([class*="composerHero"]) {
-  transform: translateY(clamp(24px, 9vh, 110px));
-}
-/* Width and left edge are set inline from the composer's measured box. */
+/* Welcome suggestions: the starter list keeps the composer's width and left edge. */
 [data-brain-chat] .hm-query-starters {
   max-width: none;
   margin-top: 20px;
@@ -115,64 +64,21 @@ body:has([data-brain-chat]) header.sticky {
   border-bottom-color: transparent !important;
 }
 
-/* Composer controls: every control in the row is centred, and the primary
-   circles (send, stop, voice) share one 36px perfect-circle size. */
-[data-brain-chat] [data-composer-seat] [class*="mk7YQa_card"] button,
-[data-brain-chat] [data-composer-seat] [class*="mk7YQa_card"] summary {
-  align-self: center;
-}
-[data-brain-chat] [data-composer-seat] [class*="mk7YQa_trailing"] {
-  align-items: center;
-  gap: 8px;
-}
-[data-brain-chat] [data-composer-seat] [aria-label="Send message"],
-[data-brain-chat] [data-composer-seat] [aria-label="Stop generating"] {
-  box-sizing: border-box;
-  flex: 0 0 36px;
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px;
-  min-height: 36px;
-  aspect-ratio: 1 / 1;
-  padding: 0 !important;
-  border-radius: 50% !important;
-  transform: none !important;
-}
-
 /* One circle while a chat turn is running: the voice control is hidden while
    the stop button is shown. A voice call has no stop button, so it is unaffected. */
 [data-brain-chat] [data-composer-seat]:has([aria-label="Stop generating"]) [class*="_18XBsW_control"] {
   display: none !important;
 }
 
-/* Every state of the voice and primary buttons is the same perfect 36px circle.
-   In a call the voice button's label changes, so it is matched by structure
-   (data-hivemind-live-voice + aria-pressed) and the primary circle by class. */
-[data-brain-chat] [data-composer-seat] [data-hivemind-live-voice] button[aria-pressed],
-[data-brain-chat] [data-composer-seat] [class*="mk7YQa_primary"] {
-  box-sizing: border-box;
-  flex: 0 0 36px;
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px;
-  min-height: 36px;
-  aspect-ratio: 1 / 1;
-  padding: 0 !important;
-  border-radius: 50% !important;
-  overflow: hidden;
-  transform: none !important;
-}
-
-/* Mobile: the composer grid bottom-aligns its items, so the 36px circle sits
-   4px below the centre of the 44px buttons. A matching bottom margin centres it. */
-@media (max-width: 600px) {
-  [data-brain-chat] [data-composer-seat] [class*="mk7YQa_trailing"] {
-    margin-bottom: 4px;
-  }
-}
-
 /* Keep the native hang-up control visible throughout a Brain call. */
 [data-brain-chat] [data-room-call-strip] {
   border-radius: 999px;
   padding-inline-start: 18px;
+}
+
+/* The empty hero is greeting, scope line, connection entry and composer only. The starter
+   chips would sit below the composer and lift it off the floor, so they show once a
+   session has a transcript. */
+[data-brain-chat]:has([data-phase="hero"]) .hm-query-starters {
+  display: none;
 }
