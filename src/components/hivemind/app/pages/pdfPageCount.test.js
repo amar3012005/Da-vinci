@@ -31,7 +31,34 @@ function objStmPdf(pages, { corrupt = false } = {}) {
   return new Uint8Array(Buffer.concat([head, payload, tail]));
 }
 
+// Compressed tree plus an outline whose /Count is larger than the page count.
+function objStmWithOutline(pages, outlineCount, lengthRef) {
+  const kids = Array.from({ length: pages }, (_, i) => `${5 + i} 0 R`).join(' ');
+  const body = `<< /Type /Outlines /Count ${outlineCount} >> << /Type /Pages /Kids [${kids}] /Count ${pages} /Resources << /Font << >> >> >>`;
+  const data = zlib.deflateSync(Buffer.from(`3 0 4 20 ${body}`, 'latin1'));
+  const len = lengthRef ? '12 0 R' : String(data.length);
+  return new Uint8Array(Buffer.concat([
+    Buffer.from(`%PDF-1.5\n2 0 obj\n<< /Type /ObjStm /N 2 /First 8 /Filter /FlateDecode /Length ${len} >>\nstream\n`, 'latin1'),
+    data,
+    Buffer.from('\nendstream\nendobj\n%%EOF\n', 'latin1'),
+  ]));
+}
+
 describe('countPdfPages', () => {
+  it('ignores an outline /Count larger than the page count', async () => {
+    expect(await countPdfPagesFromBytes(objStmWithOutline(12, 40, false))).toBe(12);
+  });
+
+  it('handles an indirect /Length (e.g. 12 0 R)', async () => {
+    expect(await countPdfPagesFromBytes(objStmWithOutline(9, 2, true))).toBe(9);
+  });
+
+  it('rejects when any object stream is unreadable even if a stale /Count is visible', async () => {
+    const bad = objStmPdf(14, { corrupt: true });
+    const withStale = new Uint8Array(Buffer.concat([Buffer.from(bad), enc('9 0 obj\n<< /Type /Pages /Count 5 >>\nendobj\n')]));
+    expect(await countPdfPagesFromBytes(withStale)).toBeNull();
+  });
+
   it('counts a classic uncompressed PDF', async () => {
     expect(await countPdfPagesFromBytes(classicPdf(7))).toBe(7);
   });

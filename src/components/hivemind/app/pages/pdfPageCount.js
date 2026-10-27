@@ -48,33 +48,55 @@ async function inflate(bytes) {
 }
 
 // Text of every Flate-compressed /ObjStm stream in the raw PDF text `s`.
+// `complete` is false when any such stream could not be read, so the caller
+// refuses a count that may be missing part of the page tree.
 async function objectStreamText(bytes, s) {
   const out = [];
   let budget = OBJSTM_TOTAL_CAP;
+  let complete = true;
   const startRe = /stream\r?\n/g;
   let m;
-  while (budget > 0 && (m = startRe.exec(s))) {
+  while ((m = startRe.exec(s))) {
     if (m.index >= 3 && s.startsWith('end', m.index - 3)) continue; // "endstream"
     const dictStart = Math.max(s.lastIndexOf('obj', m.index), m.index - 2048);
     const dict = s.slice(dictStart, m.index);
     if (!/\/Type\s*\/ObjStm/.test(dict) || !/\/FlateDecode/.test(dict)) continue;
     const dataStart = m.index + m[0].length;
     let dataEnd = s.indexOf('endstream', dataStart);
-    if (dataEnd < 0) continue;
+    if (dataEnd < 0) { complete = false; continue; }
     // Flate decoders reject bytes after the zlib trailer: honour a direct
     // /Length, otherwise drop the end-of-line the writer put before "endstream".
-    const direct = /\/Length\s+(\d+)(?!\s+\d+\s+R)/.exec(dict);
-    if (direct && dataStart + Number(direct[1]) <= dataEnd) dataEnd = dataStart + Number(direct[1]);
+    const direct = /\/Length\s+(\d+)(\s+\d+\s+R)?/.exec(dict);
+    if (direct && !direct[2] && dataStart + Number(direct[1]) <= dataEnd) dataEnd = dataStart + Number(direct[1]);
     else {
       if (s[dataEnd - 1] === '\n') dataEnd -= 1;
       if (s[dataEnd - 1] === '\r') dataEnd -= 1;
     }
     const inflated = await inflate(bytes.subarray(dataStart, dataEnd));
-    if (!inflated) continue;
+    if (!inflated || inflated.length > budget) { complete = false; continue; }
     budget -= inflated.length;
     out.push(latin1(inflated));
   }
-  return out.join('\n');
+  return { text: out.join('\n'), complete };
+}
+
+// Text of the innermost dictionary around index `at` (balanced << >>).
+function enclosingDict(s, at) {
+  let depth = 0; let start = -1;
+  for (let i = at; i >= 1; i--) {
+    if (s[i] === '>' && s[i - 1] === '>') { depth++; i--; }
+    else if (s[i] === '<' && s[i - 1] === '<') {
+      if (depth === 0) { start = i - 1; break; }
+      depth--; i--;
+    }
+  }
+  if (start < 0) return '';
+  depth = 0;
+  for (let i = start; i < s.length - 1; i++) {
+    if (s[i] === '<' && s[i + 1] === '<') { depth++; i++; }
+    else if (s[i] === '>' && s[i + 1] === '>') { depth--; i++; if (depth === 0) return s.slice(start, i + 1); }
+  }
+  return '';
 }
 
 /**
@@ -92,12 +114,17 @@ export async function countPdfPagesFromBytes(all) {
       bytes.set(head, 0); bytes.set(tail, head.length);
     }
     let s = latin1(bytes);
-    const compressed = await objectStreamText(bytes, s);
-    if (compressed) s += `\n${compressed}`;
-    // The document total is the largest /Count (the root node aggregates all kids).
+    const { text, complete } = await objectStreamText(bytes, s);
+    if (!complete) return null;
+    if (text) s += `\n${text}`;
+    // The document total is the largest /Count among /Type /Pages nodes (the
+    // root aggregates all kids); /Count in outlines means something else.
     let max = 0; let m;
-    const countRe = /\/Count\s+(\d+)/g;
-    while ((m = countRe.exec(s))) { const n = Number(m[1]); if (n > max) max = n; }
+    const pagesRe = /\/Type\s*\/Pages(?![a-zA-Z])/g;
+    while ((m = pagesRe.exec(s))) {
+      const c = /\/Count\s+(\d+)/.exec(enclosingDict(s, m.index));
+      if (c && Number(c[1]) > max) max = Number(c[1]);
+    }
     if (max > 0) return max;
     // Fallback: count leaf page objects (/Type /Page NOT followed by 's').
     const leaves = (s.match(/\/Type\s*\/Page(?![a-zA-Z])/g) || []).length;
