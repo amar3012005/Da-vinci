@@ -40,7 +40,8 @@ export function postOpenDotSignOut() {
     const target = frame.contentWindow;
     if (!origin || !target) continue;
     try {
-      target.postMessage({ type: 'hivemind.open-dot.sign-out' }, origin);
+      // OpenDot ignores sign-out messages without this protocol version.
+      target.postMessage({ type: 'hivemind.open-dot.sign-out', version: 1 }, origin);
       posted += 1;
     } catch {
       // A frame that refuses the message keeps its cache until it reloads.
