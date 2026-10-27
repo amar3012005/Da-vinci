@@ -296,3 +296,20 @@ html.cinematic-mode::after { bottom: 0; }
 @media (max-width: 900px) {
   html:has([data-native-chat-shell]) { zoom: 1; --hm-app-viewport-height: 100dvh; }
 }
+
+/* Phone chat rooms (Runtime, Brain and HyperAgent rooms): the document itself never scrolls. The conversation
+   scrolls inside its own container, so nothing can sit below the composer and nothing pans sideways.
+   Desktop and tablet widths are unchanged. */
+@media (max-width: 600px) {
+  html:has([data-native-chat-shell], [data-dot-room-phone]),
+  html:has([data-native-chat-shell], [data-dot-room-phone]) body {
+    overflow: hidden;
+    overscroll-behavior: none;
+    max-width: 100%;
+  }
+  html:has([data-native-chat-shell], [data-dot-room-phone]) body {
+    height: var(--hm-app-viewport-height, 100dvh);
+  }
+  [data-native-chat-shell] [data-native-chat-main],
+  [data-dot-room-phone] { max-width: 100%; overflow-x: clip; }
+}

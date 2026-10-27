@@ -4,6 +4,9 @@ import { isNativeApp } from '../shared/native-app';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import React, { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../auth/AuthProvider';
+import { agentRoster } from '../shared/agent-roster';
+import { openDotPreloadRoute, preloadAllowed, rememberOpenDotRoute, whenIdle } from '../shared/open-dot-preload';
 const Apps = React.lazy(() => import('../pages/OpenDotAppsNavigation'));
 const OpenDotEntry = React.lazy(() => import('../pages/OpenDotEntry'));
 
@@ -37,6 +40,25 @@ export default function AgentWorkspaceOutlet() {
   useLayoutEffect(() => {
     if (dot && !dotEntry) setDotEntry({ pathname: location.pathname, search: location.search });
   }, [dot, dotEntry, location.pathname, location.search]);
+  // Warm the single retained OpenDot document while the viewer is in Runtime, so the first switch to an
+  // employee finds a booted workspace instead of loading it. Reads cached state only; one document, kept.
+  const { user, org } = useAuth();
+  const scope = `${user?.id || ''}:${org?.id || ''}`;
+  useEffect(() => { if (dot) rememberOpenDotRoute(scope, location.pathname); }, [dot, scope, location.pathname]);
+  const [rosterSeen, setRosterSeen] = useState(0);
+  useEffect(() => {
+    const seen = () => setRosterSeen(value => value + 1);
+    window.addEventListener('hivemind:runtime-roster', seen);
+    const retry = window.setTimeout(seen, 8000);
+    return () => { window.removeEventListener('hivemind:runtime-roster', seen); window.clearTimeout(retry); };
+  }, []);
+  useEffect(() => {
+    if (mode !== 'runtime' || dotEntry || !preloadAllowed()) return undefined;
+    return whenIdle(() => {
+      const pathname = openDotPreloadRoute(scope, agentRoster.peek(scope));
+      if (pathname) setDotEntry(current => current || { pathname, search: '' });
+    }, 5000);
+  }, [mode, dotEntry, scope, rosterSeen]);
   return <>
     {!dot && !apps && !nativeChat && <Outlet />}
     {persistent && <PersistentHarnessPanes retainBrain={!desktop} />}

@@ -2,7 +2,7 @@ import { clearRuntimePresentation } from '../shared/runtime-presentation-cache';
 import { initialNativePane } from '../shared/native-pane-protocol';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { PhoneRoomFrame, phoneChatRoom } from '../layout/PhoneRoomFrame';
-import { parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } from '../shared/native-harness-seat';
+import { hasParkedNativeHarnessSeat, parkNativeHarnessSeat, takeNativeHarnessSeat, clearNativeHarnessSeat } from '../shared/native-harness-seat';
 import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
@@ -312,7 +312,9 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
     if (brain || !user?.id || !org?.id) return;
     void clearRuntimePresentation(ownerScope);
   }, [brain,ownerScope,user?.id,org?.id]);
-  const [state, setState] = useState({ phase: 'loading', stage: 0, message: null });
+  // A parked, still-running native chat is re-attached by the effect below, so the first frame is the chat itself.
+  const [state, setState] = useState(() => hasParkedNativeHarnessSeat(window.__DSH_EMBED_APP__, ownerScope)
+    ? { phase: 'ready', stage: HARNESS_BOOT_STAGES.length - 1, message: null } : { phase: 'loading', stage: 0, message: null });
   // Hand the phone frame's unsent draft to the native client once it is ready (see pending-composer.js for the message format).
   useEffect(() => {
     if (state.phase !== 'ready' || !user?.id || !org?.id) return;
