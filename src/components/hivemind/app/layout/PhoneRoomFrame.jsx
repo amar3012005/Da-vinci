@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AudioLines, ChevronLeft, Plus, Send } from 'lucide-react';
+import { AudioLines, ChevronLeft, Monitor, PanelRight, Plus, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import BrainModeIcon from './BrainModeIcon';
 import { getDraft, markOnce, queueDraft, setDraft, subscribeAttached, subscribeDraft, subscribePendingEntries } from '../shared/pending-composer';
@@ -93,6 +93,7 @@ export function PhoneRoomFrame({ room, children = null }) {
             ? <><span className="optimistic-phone-room-mark"><BrainModeIcon size={28} /></span><span>{t('topbar.companyBrain', { defaultValue: 'Company Brain' })}</span></>
             : <><span className="optimistic-phone-room-mark">{still ? <img src={still} alt="" width={32} height={32} decoding="async" /> : <span className="optimistic-phone-room-mark-soft" />}</span><span>Runtime</span></>}
         </span>
+        <span className="liquid-glass optimistic-phone-room-trailing">{room === 'brain' ? <PanelRight size={20} strokeWidth={1.8} /> : <Monitor size={20} strokeWidth={1.8} />}</span>
       </div>
       <PhoneRoomComposer room={room} />
       {children}
@@ -108,4 +109,14 @@ export function PhoneRoomFrame({ room, children = null }) {
 export function phoneChatRoom(pathname) {
   if (!phoneViewport()) return null;
   return RUNTIME_ROOM.test(pathname) ? 'runtime' : BRAIN_ROOM.test(pathname) ? 'brain' : null;
+}
+
+/**
+ * Loading state for any stage that can precede a chat room: the room frame on phone chat rooms, else the fallback.
+ * @param {{ pathname: string, fallback: React.ReactNode }} props
+ * @returns {JSX.Element}
+ */
+export function RoomLoading({ pathname, fallback }) {
+  const room = phoneChatRoom(pathname);
+  return room ? <PhoneRoomFrame room={room} /> : fallback;
 }
