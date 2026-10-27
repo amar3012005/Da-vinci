@@ -22,7 +22,7 @@ test('sign-out is posted to each registered frame with that frame origin and nev
   for (const frame of [turing, room]) {
     expect(frame.contentWindow.postMessage).toHaveBeenCalledTimes(1);
     expect(frame.contentWindow.postMessage).toHaveBeenCalledWith(
-      { type: 'hivemind.open-dot.sign-out' },
+      { type: 'hivemind.open-dot.sign-out', version: 1 },
       'https://runtime-runner.singulancelabs.com',
     );
   }
@@ -67,7 +67,7 @@ test('an account or company switch (hm:tenant-changed) signs the frames out', ()
   window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
 
   expect(frame.contentWindow.postMessage).toHaveBeenCalledWith(
-    { type: 'hivemind.open-dot.sign-out' },
+    { type: 'hivemind.open-dot.sign-out', version: 1 },
     'https://runtime-runner.singulancelabs.com',
   );
   dispose();
