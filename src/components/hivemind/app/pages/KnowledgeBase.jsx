@@ -49,6 +49,7 @@ import {
   responseIngestMode,
   uploadQuotaMessage,
 } from '../shared/knowledge-ingest-contract';
+import { countPdfPages } from './pdfPageCount';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -220,42 +221,6 @@ function getDocHashTag(doc) {
   const tags = doc?.tags || [];
   const hit = tags.find((t) => typeof t === 'string' && t.startsWith('doc-hash:'));
   return hit ? hit.split(':')[1] : null;
-}
-
-// Dependency-free PDF page count — no pdfjs, no worker, no bundle cost.
-// Reads the page tree straight from the bytes: prefers the /Pages root
-// /Count, falls back to counting /Type /Page leaf objects. Returns null when
-// it genuinely cannot tell (object-stream / compressed PDFs); upload admission
-// rejects that PDF because the browser cannot safely enforce the page cap.
-// Scan is byte-capped so a huge PDF never janks the main thread.
-async function countPdfPages(file) {
-  try {
-    const SCAN_CAP = 12 * 1024 * 1024; // page tree/catalog is near the head+tail
-    const buf = await file.arrayBuffer();
-    const all = new Uint8Array(buf);
-    let bytes = all;
-    if (all.length > SCAN_CAP) {
-      const head = all.subarray(0, 8 * 1024 * 1024);
-      const tail = all.subarray(all.length - 4 * 1024 * 1024);
-      bytes = new Uint8Array(head.length + tail.length);
-      bytes.set(head, 0); bytes.set(tail, head.length);
-    }
-    // latin1 keeps byte values 1:1 so the raw PDF tokens match.
-    let s = '';
-    const CHUNK = 0x8000;
-    for (let i = 0; i < bytes.length; i += CHUNK) {
-      s += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
-    }
-    // Prefer the page-tree root: /Type /Pages ... /Count N. The document total
-    // is the largest /Count (the root node aggregates all kids).
-    let max = 0; let m;
-    const countRe = /\/Count\s+(\d+)/g;
-    while ((m = countRe.exec(s))) { const n = Number(m[1]); if (n > max) max = n; }
-    if (max > 0) return max;
-    // Fallback: count leaf page objects (/Type /Page NOT followed by 's').
-    const leaves = (s.match(/\/Type\s*\/Page(?![a-zA-Z])/g) || []).length;
-    return leaves > 0 ? leaves : null;
-  } catch { return null; }
 }
 
 function pendingFileKey(file) { return `${file.name}::${file.size}`; }
