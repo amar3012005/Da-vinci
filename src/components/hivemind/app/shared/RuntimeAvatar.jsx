@@ -8,6 +8,7 @@ const RuntimeCharacter = createContext('classic');
 const characters = ['capsule', 'pebble', 'prism', 'orbit', 'spark', 'fold', 'classic'];
 const APPEARANCE_RESOURCE = 'runtime-appearance';
 export const RUNTIME_APPEARANCE_EVENT = 'hivemind:runtime-appearance-saved';
+const APPEARANCE_FRESH_MS = 30_000;
 function cachedCharacter(orgId, userId) {
   const character = readBootCache(orgId, userId, APPEARANCE_RESOURCE)?.value?.character;
   return characters.includes(character) ? character : null;
@@ -27,8 +28,11 @@ export function RuntimeAppearanceProvider({ children }) {
   }, [character]);
   useEffect(() => {
     if (!scope) return undefined;
-    let sequence = 0; let active = true;
-    const refresh = async () => {
+    let sequence = 0; let active = true; let readAt = 0;
+    // Focus and visibility return re-read only a stale appearance; a saved change (the event) always re-reads.
+    const refresh = async (force = true) => {
+      if (!force && Date.now() - readAt < APPEARANCE_FRESH_MS) return;
+      readAt = Date.now();
       const request = ++sequence;
       try {
         const value = await api.getRuntimeAppearance();
@@ -38,12 +42,14 @@ export function RuntimeAppearanceProvider({ children }) {
         }
       } catch { /* Retain the last saved identity during a temporary outage. */ }
     };
-    const visible = () => { if (document.visibilityState === 'visible') void refresh(); };
+    const saved = () => { void refresh(true); };
+    const focused = () => { void refresh(false); };
+    const visible = () => { if (document.visibilityState === 'visible') void refresh(false); };
     void refresh();
-    window.addEventListener(RUNTIME_APPEARANCE_EVENT, refresh);
-    window.addEventListener('focus', refresh);
+    window.addEventListener(RUNTIME_APPEARANCE_EVENT, saved);
+    window.addEventListener('focus', focused);
     document.addEventListener('visibilitychange', visible);
-    return () => { active = false; window.removeEventListener(RUNTIME_APPEARANCE_EVENT, refresh); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', visible); };
+    return () => { active = false; window.removeEventListener(RUNTIME_APPEARANCE_EVENT, saved); window.removeEventListener('focus', focused); document.removeEventListener('visibilitychange', visible); };
   }, [scope]);
   return <RuntimeCharacter.Provider value={character}>{children}</RuntimeCharacter.Provider>;
 }
