@@ -1,13 +1,19 @@
-/* The connection entry belongs to the empty Brain page only. It sits directly above the
-   scope line that precedes the composer. Phones: card 52px + dock padding 10px + reserve 4px
-   + 8px gap + 18px line + 8px gap = 100px from the bottom edge; a safe area above 10px
-   lifts the dock by the excess. Desktop: the card has no dock padding, the reserve is 14px and a
-   16px read-scope row sits above the card, which puts the entry at 130px. */
-[data-brain-chat] .hm-chatgpt-footer { display: none; position: absolute; bottom: calc(100px + max(0px, env(safe-area-inset-bottom, 0px) - 10px)); left: 50%; transform: translateX(-50%); z-index: 5; text-align: center; }
-@media (min-width: 601px) { [data-brain-chat] .hm-chatgpt-footer { bottom: 130px; } }
+/* The original logo connection entry belongs to the empty Brain page only. */
+[data-brain-chat] .hm-chatgpt-footer { display: none; position: absolute; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 5; text-align: center; }
 [data-brain-chat]:has([data-phase="hero"]) .hm-chatgpt-footer { display: block; }
 .hm-chatgpt-connection { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; padding: 5px 8px; border: 0; background: transparent; color: #666; font-size: 12px; cursor: pointer; white-space: nowrap; }
 .hm-chatgpt-connection:hover { text-decoration: underline; }
 .hm-chatgpt-marks { display: flex; align-items: center; justify-content: center; gap: 10px; color: #222; }
 .hm-chatgpt-dots { display: flex; align-items: center; gap: 5px; }
 .hm-chatgpt-dots i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .35; }
+/* Phones keep the empty Brain page to the greeting and composer; the + sheet owns connections there. */
+@media (max-width: 600px) { [data-brain-chat]:has([data-phase="hero"]) .hm-chatgpt-footer { display: none; } }
+
+/* Phones only: the connection entry sits directly above the scope line and stays visible on
+   phones. The composer dock lifts by any safe-area excess over the 10px dock padding. */
+@media (max-width: 600px) {
+  [data-brain-chat]:has([data-phase="hero"]) .hm-chatgpt-footer {
+    display: block;
+    bottom: calc(100px + max(0px, env(safe-area-inset-bottom, 0px) - 10px));
+  }
+}
