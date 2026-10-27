@@ -12,6 +12,15 @@ export function parkNativeHarnessSeat(app, container, path, ownerScope) {
   container.remove();
   return true;
 }
+/**
+ * Whether a parked native chat for this owner can be re-attached synchronously.
+ * @param {unknown} app - the live native application, if any.
+ * @param {string} ownerScope - `${userId}:${orgId}` of the viewer.
+ * @returns {boolean} true when takeNativeHarnessSeat would return the parked seat.
+ */
+export function hasParkedNativeHarnessSeat(app, ownerScope) {
+  return Boolean(parked && app && parked.app === app && parked.ownerScope === ownerScope);
+}
 export function takeNativeHarnessSeat(app, host, ownerScope) {
   if (parked && parked.ownerScope !== ownerScope) discardParkedNativeHarnessSeat('/scope-changed');
   if (!parked || parked.app !== app) { parked = undefined; return null; }
