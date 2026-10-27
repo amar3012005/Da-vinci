@@ -42,3 +42,29 @@ test('other phone routes keep the fallback', () => {
   expect(host.querySelector('[data-optimistic-phone-room]')).toBeNull();
   expect(host.querySelector('[data-fallback]')).not.toBeNull();
 });
+
+test('the Runtime phone frame matches the settled composer instead of grey blocks', () => {
+  mockPath = '/hivemind/app/employee/harness';
+  render();
+  const composer = host.querySelector('.optimistic-phone-room-composer');
+  expect(composer.querySelector('.optimistic-phone-room-add')).not.toBeNull();
+  expect(composer.querySelector('textarea').getAttribute('placeholder')).toBe('chat.messageRuntime');
+  expect(composer.querySelector('.optimistic-phone-room-primary').getAttribute('aria-label')).toBe('chat.voice');
+  expect(host.querySelector('.optimistic-skeleton')).toBeNull();
+});
+
+test('the Runtime phone frame paints the saved character from the boot cache', () => {
+  mockPath = '/hivemind/app/employee/harness';
+  const { rememberTenant, writeBootCache, clearBootCache } = jest.requireActual('../shared/boot-cache');
+  rememberTenant('org-1', 'user-1');
+  writeBootCache('org-1', 'user-1', 'runtime-appearance', { character: 'orbit' });
+  render();
+  expect(host.querySelector('.optimistic-phone-room-mark img').getAttribute('src')).toBe('/assets/runtime-characters/v2/stills/orbit-ready.webp');
+  clearBootCache();
+});
+
+test('the Brain phone frame names Brain in the composer', () => {
+  mockPath = '/hivemind/app/overview/new';
+  render();
+  expect(host.querySelector('.optimistic-phone-room-composer textarea').getAttribute('placeholder')).toBe('chat.messageBrain');
+});

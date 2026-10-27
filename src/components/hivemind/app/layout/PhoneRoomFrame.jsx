@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Send } from 'lucide-react';
+import { AudioLines, ChevronLeft, Plus, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import BrainModeIcon from './BrainModeIcon';
 import { getDraft, markOnce, queueDraft, setDraft, subscribeAttached, subscribeDraft, subscribePendingEntries } from '../shared/pending-composer';
+import { readBootCache, readLastTenant } from '../shared/boot-cache';
 import './liquid-glass.css';
 import './OptimisticAppShell.css';
 
@@ -13,7 +14,7 @@ const BRAIN_ROOM = /^\/hivemind\/app(?:\/overview(?:\/(?:new|session\/[^/]+))?)?
 
 // Composer seat for the frame. It collects the draft only: typing is enabled at once, and sending is enabled
 // once a native room client attaches (see pending-composer.js). Until then no message is queued or shown as pending.
-function PhoneRoomComposer() {
+function PhoneRoomComposer({ room }) {
   const { t } = useTranslation();
   const [draft, setDraftState] = useState(getDraft);
   const [entries, setEntries] = useState([]);
@@ -41,19 +42,21 @@ function PhoneRoomComposer() {
           ))}
         </ul>
       )}
-      <form className="optimistic-phone-room-composer liquid-glass" onSubmit={submit}>
+      {/* Same seats as the settled agent-room composer (InputBar [data-agent-room] phone rules): a 48px glass +,
+          the glass pill from x+56 with the draft at x+70, and the 40px black voice/send circle. */}
+      <form className="optimistic-phone-room-composer" onSubmit={submit}>
+        <span className="optimistic-phone-room-add" aria-hidden="true"><Plus size={20} strokeWidth={2} /></span>
         <textarea
           aria-label={t('chat.messageLabel', 'Message')}
           rows={1}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => { if (attached && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); queueDraft(); } }}
-          placeholder={t('chat.messagePlaceholder', 'Message')}
+          placeholder={room === 'brain' ? t('chat.messageBrain', 'Message Brain') : t('chat.messageRuntime', 'Message Runtime')}
           className="optimistic-phone-room-input"
-          style={{ flex: 1, minWidth: 0, resize: 'none', background: 'transparent', border: 0, outline: 'none', font: 'inherit', color: 'inherit' }}
         />
-        <button type="submit" className="optimistic-phone-room-action is-send" disabled={!attached || !draft.trim()} aria-label={t('chat.send', 'Send')}>
-          <Send size={16} strokeWidth={2} />
+        <button type="submit" className="optimistic-phone-room-primary" disabled={!attached || !draft.trim()} aria-label={draft.trim() ? t('chat.send', 'Send') : t('chat.voice', 'Voice')}>
+          {draft.trim() ? <Send size={17} strokeWidth={2} /> : <AudioLines size={18} strokeWidth={2} />}
         </button>
       </form>
     </>
@@ -67,8 +70,19 @@ function phoneViewport() {
 // Phone frame for the Runtime and Brain chat rooms: the glass back button, the room's identity pill and the composer
 // seat appear at once, in the positions of the settled room, while sign-in, the company check and the chat client load.
 // HarnessSurface reuses it as its opening cover, so the screen stays the same until the room itself is ready.
+const CHARACTERS = ['capsule', 'pebble', 'prism', 'orbit', 'spark', 'fold', 'classic'];
+
+// The Runtime character saved by the last confirmed session (RuntimeAvatar's boot-cache entry), so the frame paints
+// the real avatar at once. A device without that entry shows a soft mark instead of a default character.
+function cachedRuntimeStill() {
+  const tenant = readLastTenant();
+  const character = tenant ? readBootCache(tenant.orgId, tenant.userId, 'runtime-appearance')?.value?.character : null;
+  return CHARACTERS.includes(character) ? `/assets/runtime-characters/${character === 'classic' ? 'v3' : 'v2'}/stills/${character}-ready.webp` : null;
+}
+
 export function PhoneRoomFrame({ room, children = null }) {
   const { t } = useTranslation();
+  const [still] = useState(() => (room === 'runtime' ? cachedRuntimeStill() : null));
   return (
     <div data-hivemind-app-shell data-optimistic-shell data-optimistic-phone-room={room} aria-busy="true" className="optimistic-phone-room">
       <span role="status" className="sr-only">Loading workspace</span>
@@ -77,10 +91,10 @@ export function PhoneRoomFrame({ room, children = null }) {
         <span className="liquid-glass optimistic-phone-room-identity">
           {room === 'brain'
             ? <><span className="optimistic-phone-room-mark"><BrainModeIcon size={28} /></span><span>{t('topbar.companyBrain', { defaultValue: 'Company Brain' })}</span></>
-            : <><span className="optimistic-phone-room-mark optimistic-skeleton" /><span>Runtime</span></>}
+            : <><span className="optimistic-phone-room-mark">{still ? <img src={still} alt="" width={32} height={32} decoding="async" /> : <span className="optimistic-phone-room-mark-soft" />}</span><span>Runtime</span></>}
         </span>
       </div>
-      <PhoneRoomComposer />
+      <PhoneRoomComposer room={room} />
       {children}
     </div>
   );
