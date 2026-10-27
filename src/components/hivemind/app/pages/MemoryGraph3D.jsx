@@ -17,6 +17,7 @@ import {
   getUniqueRadialShellDateIndices,
   getVisibleRadialShellDateIndices,
 } from "./MemoryGraphRadialAtlas";
+import { getDocumentMemberCounts, getNodeSourceGlyph, getSourceChipOpacity } from "./MemoryGraphSourceGlyph";
 
 import { memoryRelationLabel } from "./MemoryGraphLabels";
 
@@ -598,6 +599,249 @@ function getThemeFog(theme) {
   return null;
 }
 
+function hexToRgb(hex) {
+  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!match) return { r: 143, g: 138, b: 130 };
+  return {
+    r: parseInt(match[1], 16),
+    g: parseInt(match[2], 16),
+    b: parseInt(match[3], 16),
+  };
+}
+
+// ─── Source chips (radial atlas) ───────────────────────────────────────────
+// A glass disc carrying a file-type or app glyph, drawn over the memory dot.
+// One texture per glyph key is shared by every chip of that kind.
+const _chipTextureCache = new Map();
+function getSourceChipTexture(glyph) {
+  let texture = _chipTextureCache.get(glyph.key);
+  if (texture) return texture;
+  const size = 192;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  const c = size / 2;
+  const r = c - 12;
+  const rgb = hexToRgb(glyph.color);
+  const tint = (a) => `rgba(${rgb.r},${rgb.g},${rgb.b},${a})`;
+
+  // Liquid Glass body: frosted base, glyph-colour tint wash, soft drop shadow.
+  ctx.save();
+  ctx.shadowColor = "rgba(30,24,16,0.3)";
+  ctx.shadowBlur = 16;
+  ctx.shadowOffsetY = 5;
+  ctx.beginPath();
+  ctx.arc(c, c, r, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.fill();
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(c, c, r, 0, Math.PI * 2);
+  const wash = ctx.createRadialGradient(c * 0.8, c * 0.72, 4, c, c, r);
+  wash.addColorStop(0, tint(0.08));
+  wash.addColorStop(1, tint(0.34));
+  ctx.fillStyle = wash;
+  ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(c, c, r, 0, Math.PI * 2);
+  ctx.clip();
+  // Refraction glow on the lower edge, then the specular highlight on top.
+  const caustic = ctx.createRadialGradient(c * 1.15, c * 1.7, 4, c * 1.15, c * 1.7, r * 0.9);
+  caustic.addColorStop(0, tint(0.45));
+  caustic.addColorStop(1, tint(0));
+  ctx.fillStyle = caustic;
+  ctx.fillRect(0, 0, size, size);
+  const spec = ctx.createLinearGradient(0, c - r, 0, c);
+  spec.addColorStop(0, "rgba(255,255,255,0.95)");
+  spec.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = spec;
+  ctx.beginPath();
+  ctx.ellipse(c, c - r * 0.5, r * 0.76, r * 0.46, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Bright rim lit from the top-left, tinted at the bottom-right.
+  const rim = ctx.createLinearGradient(c - r, c - r, c + r, c + r);
+  rim.addColorStop(0, "rgba(255,255,255,0.98)");
+  rim.addColorStop(0.5, "rgba(255,255,255,0.35)");
+  rim.addColorStop(1, tint(0.8));
+  ctx.beginPath();
+  ctx.arc(c, c, r - 1.5, 0, Math.PI * 2);
+  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = rim;
+  ctx.stroke();
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.save();
+  ctx.shadowColor = tint(0.45);
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
+  if (glyph.kind === "file") {
+    // Filled document glyph: rounded page with a folded corner and a type band.
+    const w = 70; const h = 88; const x = c - w / 2; const y = c - h / 2 - 3; const fold = 22; const rad = 10;
+    ctx.beginPath();
+    ctx.moveTo(x + rad, y);
+    ctx.lineTo(x + w - fold, y);
+    ctx.lineTo(x + w, y + fold);
+    ctx.lineTo(x + w, y + h - rad);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+    ctx.lineTo(x + rad, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+    ctx.lineTo(x, y + rad);
+    ctx.quadraticCurveTo(x, y, x + rad, y);
+    ctx.closePath();
+    const page = ctx.createLinearGradient(0, y, 0, y + h);
+    page.addColorStop(0, "#ffffff");
+    page.addColorStop(1, "rgba(255,255,255,0.86)");
+    ctx.fillStyle = page;
+    ctx.fill();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.moveTo(x + w - fold, y);
+    ctx.lineTo(x + w - fold, y + fold);
+    ctx.lineTo(x + w, y + fold);
+    ctx.closePath();
+    ctx.fillStyle = tint(0.35);
+    ctx.fill();
+    ctx.fillStyle = glyph.color;
+    ctx.beginPath();
+    ctx.roundRect(x + 8, y + h - 34, w - 16, 24, 6);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 19px ui-rounded, ui-monospace, Menlo, monospace";
+    ctx.fillText(glyph.label, c, y + h - 21);
+  } else {
+    const badge = ctx.createLinearGradient(0, c - 46, 0, c + 46);
+    badge.addColorStop(0, tint(0.92));
+    badge.addColorStop(1, tint(1));
+    ctx.beginPath();
+    ctx.arc(c, c, 48, 0, Math.PI * 2);
+    ctx.fillStyle = badge;
+    ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `700 ${glyph.label.length > 2 ? 33 : 46}px ui-rounded, ui-monospace, Menlo, monospace`;
+    ctx.fillText(glyph.label, c, c + 2);
+  }
+  texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  _chipTextureCache.set(glyph.key, texture);
+  return texture;
+}
+
+let _auraTexture = null;
+function getAuraTexture() {
+  if (_auraTexture) return _auraTexture;
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+  const g = ctx.createRadialGradient(64, 64, 8, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,0.85)");
+  g.addColorStop(0.55, "rgba(255,255,255,0.28)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 128, 128);
+  _auraTexture = new THREE.CanvasTexture(canvas);
+  return _auraTexture;
+}
+
+const _badgeTextureCache = new Map();
+function getCountBadgeTexture(count, color) {
+  const key = `${count}:${color}`;
+  let texture = _badgeTextureCache.get(key);
+  if (texture) return texture;
+  const canvas = document.createElement("canvas");
+  canvas.width = 96;
+  canvas.height = 96;
+  const ctx = canvas.getContext("2d");
+  ctx.beginPath();
+  ctx.arc(48, 48, 40, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "#ffffff";
+  ctx.stroke();
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `700 ${String(count).length > 2 ? 34 : 42}px ui-monospace, Menlo, monospace`;
+  ctx.fillText(String(count), 48, 50);
+  texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  _badgeTextureCache.set(key, texture);
+  return texture;
+}
+
+function makeSourceChipSprite(glyph, radius, memberCount = 0) {
+  const material = new THREE.SpriteMaterial({
+    map: getSourceChipTexture(glyph),
+    transparent: true,
+    opacity: 0,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const sprite = new THREE.Sprite(material);
+  const scale = radius * (glyph.isDocument ? 5.2 : 3.6);
+  sprite.scale.set(scale, scale, 1);
+  sprite.renderOrder = 3;
+  sprite.visible = false;
+  sprite.userData.sourceChip = { isDocument: glyph.isDocument, baseScale: scale, followers: [] };
+  if (glyph.isDocument && memberCount > 0) {
+    // Constellation cues, parented to the chip so they inherit its scale and
+    // visibility: a tinted aura that grows with the member count, and a count badge.
+    const aura = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: getAuraTexture(),
+      color: glyph.color,
+      transparent: true,
+      opacity: 0,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    aura.scale.setScalar(2.1 + Math.min(1.6, Math.sqrt(memberCount) * 0.22));
+    aura.renderOrder = 2;
+    sprite.add(aura);
+    const badge = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: getCountBadgeTexture(memberCount, glyph.color),
+      transparent: true,
+      opacity: 0,
+      depthTest: false,
+      depthWrite: false,
+    }));
+    badge.scale.setScalar(0.36);
+    badge.position.set(0.36, 0.36, 0);
+    badge.renderOrder = 4;
+    sprite.add(badge);
+    sprite.userData.sourceChip.followers.push({ material: aura.material, factor: 0.55 }, { material: badge.material, factor: 1 });
+  }
+  return sprite;
+}
+
+// Camera-distance level of detail for a chip. Applied when a chip is created
+// as well as on every camera pass, because the graph rebuilds node objects
+// between passes and a fresh chip would otherwise stay hidden.
+function applySourceChipLod(chip, node, cameraPosition, focused) {
+  const meta = chip.userData.sourceChip;
+  const distance = cameraPosition
+    ? Math.hypot(cameraPosition.x - (node.x || 0), cameraPosition.y - (node.y || 0), cameraPosition.z - (node.z || 0))
+    : Number.NaN;
+  const opacity = focused ? 1 : getSourceChipOpacity(distance, meta.isDocument);
+  chip.material.opacity = opacity;
+  chip.visible = opacity > 0.02;
+  meta.followers.forEach((f) => { f.material.opacity = opacity * f.factor; });
+  if (meta.isDocument && Number.isFinite(distance)) {
+    // Hold a minimum on-screen size so document hubs stay legible at overview zoom.
+    const size = Math.min(meta.baseScale * 4, Math.max(meta.baseScale, distance * 0.04));
+    chip.scale.set(size, size, 1);
+  }
+}
+
 // Perf: share node GEOMETRIES across all nodes. Geometry is the heavy GPU
 // buffer and is never mutated per-node (only material colors are, during
 // recolor — so materials stay per-node, geometries are pooled). Keyed by
@@ -784,6 +1028,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const nodeTagSpritesRef = useRef(new Map());
   const nodeObjectsRef = useRef(new Map());
   const updateNodeAppearanceRef = useRef(null);
+  // Document member counts for the constellation cues, recomputed when graphData changes.
+  const docMemberCacheRef = useRef({ data: null, counts: new Map() });
+  const getDocMemberCount = (node) => {
+    const data = graphDataRef.current;
+    if (docMemberCacheRef.current.data !== data) {
+      docMemberCacheRef.current = { data, counts: getDocumentMemberCounts(data?.nodes, data?.links) };
+    }
+    return docMemberCacheRef.current.counts.get(node.id) || 0;
+  };
   // Label LOD: at massive/large scale, the set of node ids allowed a persistent
   // text-sprite label (top-degree nodes). null = label all (small graphs). A text
   // sprite per node is a canvas texture — 3855 of them is the dominant per-frame
@@ -1465,6 +1718,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         // draw calls stack up fast; only small graphs keep the glow.
         const liteNode = getGraphSizeTier(graphDataRef.current?.nodes?.length || 0) !== "small";
         const shape = makeNodeShape(node, getNodeColorRef.current(node), clusterTint, liteNode);
+        const chipGlyph = radialTemporalRef.current ? getNodeSourceGlyph(node) : null;
+        if (chipGlyph) {
+          const chip = makeSourceChipSprite(chipGlyph, getNodeRadius(node), getDocMemberCount(node));
+          shape.add(chip);
+          shape.userData.sourceChip = chip;
+          applySourceChipLod(chip, node, fgRef.current?.camera?.()?.position, selectedNodeRef.current?.id === node.id);
+        }
         // Append the memory-title label as a child of the node group so it
         // tracks the node automatically. Sprite opacity is camera-ranked.
         // Label LOD: at scale, only top-degree nodes get a persistent sprite.
@@ -1809,6 +2069,17 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             sprite.visible = opacity > 0.01;
           });
 
+          // Read chips off the live scene objects (node.__threeObj) so a rebuilt
+          // node can never leave an orphaned chip behind.
+          (graphDataRef.current?.nodes || []).forEach((node) => {
+            const holder = node.__threeObj;
+            const chip = holder?.userData?.sourceChip;
+            if (!chip) return;
+            if (!holder.visible) { chip.visible = false; return; }
+            const focused = selectedId === node.id || highlightNodesRef.current.has(node.id);
+            applySourceChipLod(chip, node, cameraNow.position, focused);
+          });
+
           refreshHighlightRef.current();
           onViewStateChangeRef.current?.({
             distance,
@@ -2019,6 +2290,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         const object3d = makeNodeShape(node, getNodeColor(node), clusterTint, liteNode);
         const focusId = selectedNodeRef.current?.id;
         const onFocusedTrail = node.id === focusId || neighborMapRef.current.get(focusId)?.has(node.id) || highlightNodesRef.current.has(node.id);
+        const chipGlyph = radialTemporal ? getNodeSourceGlyph(node) : null;
+        if (chipGlyph) {
+          const chip = makeSourceChipSprite(chipGlyph, getNodeRadius(node), getDocMemberCount(node));
+          object3d.add(chip);
+          object3d.userData.sourceChip = chip;
+          applySourceChipLod(chip, node, fgRef.current?.camera?.()?.position, selectedNodeRef.current?.id === node.id);
+        }
         const tag = (labelAllowRef.current && !labelAllowRef.current.has(node.id) && !onFocusedTrail)
           ? null
           : getNodeDisplayLabel(node);
@@ -2114,6 +2392,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         fg.cooldownTicks(0);
       }
       refreshHighlight();
+      // Rebuilt nodes carry fresh chips at opacity 0; the camera-driven pass
+      // would not run until the next camera move, so request one now.
+      window.setTimeout(() => emitViewStateRef.current?.(), 150);
     });
     // New dataset → allow one fresh wide-shot fit when it next settles.
     didInitialFitRef.current = false;
