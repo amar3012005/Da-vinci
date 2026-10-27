@@ -299,6 +299,12 @@ export async function establishHarnessSession({ fresh = false } = {}) {
 export default function HarnessSurface({ sessionEstablished = false, brain = false } = {}) {
   const { user, org } = useAuth();
   const ownerScope = `${user?.id || ""}:${org?.id || ""}`;
+  // The native Brain hero greets the viewer by first name ("Hey there, Amar").
+  const viewerFirstName = (() => {
+    const raw = user?.display_name || user?.name || (user?.email || '').split('@')[0] || '';
+    const token = String(raw).replace(/[._-]+/g, ' ').trim().split(' ')[0];
+    return token ? token.charAt(0).toUpperCase() + token.slice(1) : undefined;
+  })();
   const mountRef = useRef(null);
   // The native conversation renders the latest turns directly. Earlier
   // releases stored a text-only transcript copy; remove it for this owner.
@@ -556,7 +562,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
     </div>;
   }
 
-  return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface data-brain-chat={brain ? '' : undefined}>
+  return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface data-brain-chat={brain ? '' : undefined} data-viewer-first-name={brain ? viewerFirstName : undefined}>
     {(state.phase === 'loading' || state.phase === 'reconnecting') && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} reconnecting={state.phase === 'reconnecting'} dreaming={window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`} /></div>}
     <div ref={mountRef} className="h-full min-h-0 hm-harness-composer-reserve" style={{ visibility: state.phase === 'ready' ? 'visible' : 'hidden' }} />
     {brain && <ChatModelConnection />}
