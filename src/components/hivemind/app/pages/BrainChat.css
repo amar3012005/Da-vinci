@@ -176,3 +176,49 @@ body:has([data-brain-chat]) header.sticky {
   border-radius: 999px;
   padding-inline-start: 18px;
 }
+
+/* Phones only. The phone composer matches the Runtime room: transparent card on the
+   soft surface, a 40px translucent voice circle without the wave, no hero translate,
+   44px send and voice circles, and no bottom offset on the trailing controls. Desktop keeps
+   the controls above. The empty phone hero shows greeting, connection entry and composer only;
+   the starter chips show once a session has a transcript. */
+@media (max-width: 600px) {
+  [data-brain-chat] [class*="mk7YQa_card"] {
+    background-color: transparent !important;
+  }
+  [data-brain-chat] [class*="eqEnzG_composerSeat"]:has([class*="composerHero"]) {
+    transform: none;
+  }
+  [data-brain-chat] [data-composer-seat] [aria-label^="Talk to"] {
+    flex: 0 0 40px;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px;
+    min-height: 40px;
+    background: rgba(0, 0, 0, 0.06) !important;
+    color: rgb(15, 17, 21) !important;
+  }
+  [data-brain-chat] [data-composer-seat] [aria-label^="Talk to"] svg {
+    display: inline-block;
+  }
+  [data-brain-chat] [data-composer-seat] [aria-label^="Talk to"]::before {
+    content: none;
+    animation: none;
+  }
+  [data-brain-chat] [data-composer-seat] [class*="mk7YQa_trailing"] {
+    margin-bottom: 0;
+  }
+  [data-brain-chat] [data-composer-seat] [aria-label="Send message"],
+  [data-brain-chat] [data-composer-seat] [aria-label="Stop generating"],
+  [data-brain-chat] [data-composer-seat] [data-hivemind-live-voice] button[aria-pressed],
+  [data-brain-chat] [data-composer-seat] [class*="mk7YQa_primary"] {
+    flex: 0 0 44px;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  [data-brain-chat]:has([data-phase="hero"]) .hm-query-starters {
+    display: none;
+  }
+}

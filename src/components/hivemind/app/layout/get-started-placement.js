@@ -8,9 +8,9 @@ export function isNativeChatRoute(pathname) {
 }
 
 /**
- * Where the Getting Started pill renders.
- * 'top-bar' docks the compact chip beside the phone room bar; 'overlay' keeps the floating card.
+ * Where the Getting Started card renders.
+ * Phones show no Getting Started surface; larger viewports keep the floating card.
  */
-export function startPlacement({ pathname, phone }) {
-  return phone && isNativeChatRoute(pathname) ? 'top-bar' : 'overlay';
+export function startPlacement({ phone }) {
+  return phone ? 'hidden' : 'overlay';
 }

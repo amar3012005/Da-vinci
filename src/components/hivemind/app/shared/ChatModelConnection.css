@@ -6,3 +6,14 @@
 .hm-chatgpt-marks { display: flex; align-items: center; justify-content: center; gap: 10px; color: #222; }
 .hm-chatgpt-dots { display: flex; align-items: center; gap: 5px; }
 .hm-chatgpt-dots i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .35; }
+/* Phones keep the empty Brain page to the greeting and composer; the + sheet owns connections there. */
+@media (max-width: 600px) { [data-brain-chat]:has([data-phase="hero"]) .hm-chatgpt-footer { display: none; } }
+
+/* Phones only: the connection entry sits directly above the scope line and stays visible on
+   phones. The composer dock lifts by any safe-area excess over the 10px dock padding. */
+@media (max-width: 600px) {
+  [data-brain-chat]:has([data-phase="hero"]) .hm-chatgpt-footer {
+    display: block;
+    bottom: calc(100px + max(0px, env(safe-area-inset-bottom, 0px) - 10px));
+  }
+}
