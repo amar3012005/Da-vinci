@@ -3,12 +3,12 @@ import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } fro
 import { Helmet } from 'react-helmet-async';
 import {
   ArrowRight, BookOpen, Check, Github, GraduationCap, Loader2, LogIn, Mail, MessageSquare, Plus, Rocket,
-  Trash2, UserRound, Wrench,
+  Search, Trash2, Wrench,
 } from 'lucide-react';
 import apiClient from '../hivemind/app/shared/api-client';
 import EmailTurnstile from '../hivemind/app/auth/EmailTurnstile';
 import CopyBlock from '../icarus/CopyBlock';
-import { ICARUS_INSTALL, PRODUCTS } from '../icarus/products';
+import { GITHUB, ICARUS_INSTALL, PRODUCTS } from '../icarus/products';
 import { CHANNELS, ROLES, devApi, errorMessage, timeAgo } from './dev-api';
 
 /**
@@ -65,39 +65,59 @@ function Nav({ dark = false }) {
           <Mark />
           <span className={`font-['Space_Grotesk'] text-[15px] font-semibold tracking-tight ${dark ? 'text-white' : 'text-black'}`}>SINGULANCE <span className={dark ? 'text-white/50' : 'text-[#8a8a82]'}>Developers</span></span>
         </Link>
-        <div className="flex items-center gap-4 sm:gap-6">
-          <div className="hidden items-center gap-6 sm:flex">
-            <NavLink to="/forum" className={link}>Forum</NavLink>
-            <NavLink to="/tools" className={link}>Tools &amp; research</NavLink>
+        <div className="flex items-center gap-4 sm:gap-7">
+          <div className="hidden items-center gap-7 sm:flex">
+            {NAV_LINKS.map(([to, label]) => <NavLink key={to} to={to} className={link}>{label}</NavLink>)}
           </div>
           {session.member ? (
-            <Link to="/profile" className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-semibold ${dark ? 'bg-white text-black' : 'bg-black text-white'}`}>
-              <UserRound size={13} /> @{session.member.handle}
+            <Link to="/profile" className={`inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-[12px] font-semibold ${dark ? 'bg-white/10 text-white hover:bg-white/15' : 'border bg-white text-black hover:bg-[#f6f5ef]'}`} style={dark ? undefined : { borderColor: BORDER }}>
+              <Avatar member={session.member} size={24} /> @{session.member.handle}
             </Link>
           ) : (
-            <Link to="/join" className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12px] font-semibold text-white" style={{ background: EMBER }}>
-              Join free
-            </Link>
+            <span className="flex items-center gap-2">
+              {!session.loading && !session.signedIn && <Link to="/join" className={`hidden text-[13px] font-medium sm:inline ${dark ? 'text-white/70 hover:text-white' : 'text-[#525252] hover:text-black'}`}>Sign in</Link>}
+              <Link to="/join" className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12px] font-semibold text-white" style={{ background: EMBER }}>
+                Join free
+              </Link>
+            </span>
           )}
         </div>
       </div>
-      <div className="flex gap-5 px-4 pb-2.5 sm:hidden">
-        <NavLink to="/forum" className={link}>Forum</NavLink>
-        <NavLink to="/tools" className={link}>Tools &amp; research</NavLink>
+      <div className="flex gap-5 overflow-x-auto px-4 pb-2.5 sm:hidden">
+        {NAV_LINKS.map(([to, label]) => <NavLink key={to} to={to} className={link}>{label}</NavLink>)}
       </div>
     </nav>
   );
 }
 
+const NAV_LINKS = [['/forum', 'Forum'], ['/tools', 'Tools & research']];
+
+const FOOTER = [
+  ['Community', [['Forum', '/forum'], ['Join free', '/join'], ['Your profile', '/profile']]],
+  ['Build', [['ICARUS tools', '/tools'], ['Research', 'https://singulancelabs.com/research'], ['GitHub', GITHUB]]],
+  ['SINGULANCE', [['singulancelabs.com', 'https://singulancelabs.com'], ['Privacy', 'https://singulancelabs.com/privacy'], ['Contact', 'mailto:support@singulancelabs.com']]],
+];
+
 const Footer = () => (
-  <footer className="border-t" style={{ borderColor: BORDER }}>
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-3 px-4 py-8 text-[12px] text-[#8a8a82] sm:flex-row sm:items-center sm:justify-between sm:px-6">
-      <span>SINGULANCE Developers · Singulance UG (haftungsbeschränkt) i.G., Hannover</span>
-      <span className="flex gap-4">
-        <a href="https://singulancelabs.com/research" className="hover:text-black">Research</a>
-        <a href="https://singulancelabs.com/privacy" className="hover:text-black">Privacy</a>
-        <a href="https://github.com/amar3012005" className="hover:text-black">GitHub</a>
-      </span>
+  <footer className="border-t bg-white" style={{ borderColor: BORDER }}>
+    <div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-8 px-4 py-12 sm:px-6 md:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))]">
+      <div className="col-span-2 min-w-0 md:col-span-1">
+        <div className="flex items-center gap-2.5"><Mark /><span className="font-['Space_Grotesk'] text-[15px] font-semibold tracking-tight">SINGULANCE <span className="text-[#8a8a82]">Developers</span></span></div>
+        <p className="mt-4 max-w-xs text-[13px] leading-relaxed" style={{ color: MUTED }}>An open community for people who build with frontier research: students, researchers, open-source maintainers and founders.</p>
+      </div>
+      {FOOTER.map(([heading, links]) => (
+        <div key={heading} className="min-w-0">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a3a3a3]">{heading}</p>
+          <ul className="mt-4 space-y-2.5 text-[13px]">
+            {links.map(([label, href]) => (
+              <li key={label}>{href.startsWith('/') ? <Link to={href} className="hover:text-black" style={{ color: MUTED }}>{label}</Link> : <a href={href} className="hover:text-black" style={{ color: MUTED }}>{label}</a>}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+    <div className="border-t" style={{ borderColor: BORDER }}>
+      <p className="mx-auto max-w-[1200px] px-4 py-5 text-[12px] text-[#8a8a82] sm:px-6">© {new Date().getFullYear()} Singulance UG (haftungsbeschränkt) in formation, Hannover, Germany.</p>
     </div>
   </footer>
 );
@@ -124,14 +144,77 @@ const Avatar = ({ member, size = 40 }) => {
   );
 };
 
+const SectionHead = ({ eyebrow, title, body, action }) => (
+  <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div className="min-w-0 max-w-2xl">
+      <Eyebrow color={EMBER}>{eyebrow}</Eyebrow>
+      <h2 className="font-['Space_Grotesk'] mt-3 text-[32px] font-semibold leading-[1.08] tracking-tight md:text-[44px]">{title}</h2>
+      {body && <p className="mt-4 text-[16px] leading-7" style={{ color: MUTED }}>{body}</p>}
+    </div>
+    {action}
+  </div>
+);
+
 /* ───────────────────────── Home ───────────────────────── */
 
-const OFFERS = [
-  { icon: BookOpen, title: 'Frontier research, free', body: 'Memory filesystems, swarm intelligence, post-quantum security. Read the work and build on it.' },
-  { icon: Wrench, title: 'Open ICARUS tools', body: 'Memory, Harness, Agent Bus and Computer Use. Install in one line, under one account.' },
-  { icon: MessageSquare, title: 'A playground to think out loud', body: 'Share papers, ask for help, show what you built, start reading groups.' },
-  { icon: Rocket, title: 'Build startups together', body: 'Find co-founders across universities and labs, and turn open source into companies.' },
+const AUDIENCES = [
+  { icon: GraduationCap, title: 'Students and universities', body: 'Learn on real research systems, start reading groups across campuses and turn coursework into open source.' },
+  { icon: BookOpen, title: 'Researchers', body: 'Reproduce our results, extend the methods and publish with people who will actually run your code.' },
+  { icon: Wrench, title: 'Open-source builders', body: 'Build on ICARUS Memory, Harness and Agent Bus, ship integrations and get reviews from the people who wrote them.' },
+  { icon: Rocket, title: 'Founders', body: 'Meet co-founders and first users, and build companies on open infrastructure you can inspect.' },
 ];
+
+const PRINCIPLES = [
+  ['Build in the open', 'Share code, data and failures. Work that others can run moves everyone forward.'],
+  ['Credit generously', 'Name the people and papers you build on. Link the source.'],
+  ['Be specific and kind', 'Critique the work, never the person. Help newcomers the way you were helped.'],
+  ['No spam, no hype', 'No cold sales, no undisclosed promotion, no claims you cannot back up.'],
+];
+
+const FAQ = [
+  ['Is it really free?', 'Yes. The developer account, the open ICARUS tools, the research and the forum are free. No card, no trial.'],
+  ['Do I need a company or a HIVEMIND workspace?', 'No. A developer account is personal. If you already use HIVEMIND, the same identity signs you in and your workspace stays as it is.'],
+  ['What do other members see?', 'Only your public profile: name, handle, role, affiliation, interests, links and your posts. Your email is never shown.'],
+  ['Who runs the community?', 'The SINGULANCE team in Hannover moderates the forum and answers questions about the tools and research.'],
+];
+
+const TERMINAL = [
+  ['$', 'curl -fsSL https://…/ICARUS/main/install.sh | bash'],
+  ['', '✓ icarus installed'],
+  ['$', 'icarus connect'],
+  ['', '→ Browser opened. Signed in as @you'],
+  ['', '✓ Memory · Harness · Agent Bus unlocked'],
+  ['$', 'icarus recall "reading group notes"'],
+];
+
+function HeroVisual({ posts }) {
+  const sample = posts[0];
+  return (
+    <div className="relative min-w-0">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#111114]/90 shadow-[0_40px_120px_-40px_rgba(255,82,41,0.45)]">
+        <div className="flex items-center gap-1.5 border-b border-white/10 px-4 py-3">
+          {['#ff5f57', '#febc2e', '#28c840'].map((c) => <span key={c} className="h-2.5 w-2.5 rounded-full" style={{ background: c }} />)}
+          <span className="ml-3 font-mono text-[11px] text-white/40">~/research</span>
+        </div>
+        <pre className="overflow-x-auto px-5 pb-12 pt-5 font-mono text-[12.5px] leading-[1.9]">
+          {TERMINAL.map(([prompt, text], i) => (
+            <div key={i} className={prompt ? 'text-white/90' : text.startsWith('✓') ? 'text-emerald-400/90' : 'text-white/50'}>
+              {prompt && <span style={{ color: '#ff8a6b' }}>{prompt} </span>}{text}
+            </div>
+          ))}
+        </pre>
+      </div>
+      <div className="relative -mt-6 ml-6 mr-2 rounded-xl border border-white/10 bg-[#1a1a1f]/95 p-4 backdrop-blur md:-mt-10 md:ml-12">
+        <div className="flex items-center gap-2 text-[11px] text-white/45">
+          <MessageSquare size={12} /> <span className="font-mono uppercase tracking-wider">{sample ? (CHANNELS.find((c) => c.id === sample.channel)?.label || 'Forum') : 'Research'}</span>
+          <span>·</span><span>{sample ? timeAgo(sample.lastActivity) : 'today'}</span>
+        </div>
+        <p className="mt-2 truncate text-[14px] font-semibold text-white">{sample ? sample.title : 'Reading group: the .amr byte layout'}</p>
+        <p className="mt-1 truncate text-[12px] text-white/55">{sample ? `@${sample.author.handle} · ${sample.replyCount} ${sample.replyCount === 1 ? 'reply' : 'replies'}` : 'Weekly, open to every member'}</p>
+      </div>
+    </div>
+  );
+}
 
 function Home() {
   const session = useSession();
@@ -143,7 +226,9 @@ function Home() {
     devApi.posts().then((d) => setPosts(d.posts.slice(0, 5))).catch(() => {});
     devApi.members(12).then((d) => setMembers(d.members)).catch(() => {});
   }, []);
-  const cta = session.member ? { to: '/forum', label: 'Open the forum' } : { to: '/join', label: 'Join the community, free' };
+  const cta = session.member ? { to: '/forum', label: 'Open the forum' } : { to: '/join', label: 'Create your free account' };
+  // Small numbers read as an empty room; show live counts only once the community has grown.
+  const showStats = (stats?.members || 0) >= 50;
   return (
     <div style={{ background: PAPER, color: INK }} className="min-h-screen font-['Inter']">
       <Helmet>
@@ -152,114 +237,167 @@ function Home() {
         <link rel="canonical" href={`${ORIGIN}/`} />
       </Helmet>
       <section className="relative overflow-hidden bg-[#0b0b0d] text-white">
-        <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(60% 55% at 78% 8%, rgba(255,82,41,0.38), transparent 70%), radial-gradient(45% 40% at 8% 92%, rgba(17,125,255,0.22), transparent 70%)' }} />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '56px 56px' }} />
+        <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(60% 55% at 78% 8%, rgba(255,82,41,0.32), transparent 70%), radial-gradient(45% 40% at 8% 92%, rgba(17,125,255,0.18), transparent 70%)' }} />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '56px 56px', maskImage: 'radial-gradient(80% 70% at 50% 30%, #000, transparent)' }} />
         <Nav dark />
-        <div className="relative mx-auto max-w-[1200px] px-4 pb-20 pt-16 sm:px-6 md:pb-28 md:pt-24">
-          <Eyebrow color="#ff8a6b">SINGULANCE developer account · free</Eyebrow>
-          <h1 className="font-['Space_Grotesk'] mt-5 max-w-4xl text-[44px] font-semibold leading-[1.02] tracking-tight sm:text-6xl md:text-[84px]">
-            Build the future<br />in the open.
-          </h1>
-          <p className="mt-6 max-w-2xl text-[17px] font-light leading-8 text-white/75 md:text-lg">
-            Join SINGULANCE&apos;s developer community. Use our frontier research and open tools for free, meet people from universities, labs and startups, and build what comes next together.
-          </p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <Link to={cta.to} className="inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-[14px] font-semibold text-white transition-transform hover:scale-[1.02]" style={{ background: EMBER }}>
-              {cta.label} <ArrowRight size={16} />
-            </Link>
-            <Link to="/forum" className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/20 px-6 py-3.5 text-[14px] font-semibold text-white hover:bg-white/10">
-              Explore the forum
-            </Link>
+        <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-14 px-4 pb-20 pt-14 sm:px-6 md:pb-28 md:pt-20 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[12px] text-white/75">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: EMBER }} /> The official SINGULANCE developer account
+            </span>
+            <h1 className="font-['Space_Grotesk'] mt-6 text-[44px] font-semibold leading-[1.02] tracking-[-0.02em] sm:text-6xl md:text-[76px]">
+              Build the future<br />in the open.
+            </h1>
+            <p className="mt-6 max-w-xl text-[17px] leading-8 text-white/70">
+              One free account for our frontier research and open-source tools, and a community of people from universities, labs and startups building what comes next.
+            </p>
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <Link to={cta.to} className="inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-[14px] font-semibold text-white transition-transform hover:translate-y-[-1px]" style={{ background: EMBER }}>
+                {cta.label} <ArrowRight size={16} />
+              </Link>
+              <Link to="/tools" className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/20 px-6 py-3.5 text-[14px] font-semibold text-white hover:bg-white/10">
+                Explore tools and research
+              </Link>
+            </div>
+            {showStats ? (
+              <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/10 pt-7">
+                {[['Members', stats.members], ['Institutions', stats.affiliations], ['Threads', stats.threads]].map(([label, n]) => (
+                  <div key={label}>
+                    <dt className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/45">{label}</dt>
+                    <dd className="font-['Space_Grotesk'] mt-1 text-3xl font-semibold">{n.toLocaleString()}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <ul className="mt-12 flex flex-wrap gap-x-6 gap-y-2 border-t border-white/10 pt-7 text-[13px] text-white/60">
+                {['Free forever', 'No card, no company needed', 'Open source on GitHub', 'Moderated by the SINGULANCE team'].map((t) => (
+                  <li key={t} className="flex items-center gap-2"><Check size={14} style={{ color: '#ff8a6b' }} /> {t}</li>
+                ))}
+              </ul>
+            )}
           </div>
-          <dl className="mt-14 grid max-w-2xl grid-cols-3 gap-6 border-t border-white/10 pt-8">
-            {[['Members', stats?.members], ['Institutions', stats?.affiliations], ['Threads', stats?.threads]].map(([label, n]) => (
-              <div key={label}>
-                <dt className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/45">{label}</dt>
-                <dd className="font-['Space_Grotesk'] mt-1 text-3xl font-semibold md:text-4xl">{n ?? '—'}</dd>
-              </div>
-            ))}
-          </dl>
+          <HeroVisual posts={posts} />
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 md:py-24">
-        <Eyebrow color={EMBER}>What you get</Eyebrow>
-        <h2 className="font-['Space_Grotesk'] mt-3 max-w-3xl text-[34px] font-semibold leading-tight tracking-tight md:text-5xl">One account opens the whole lab.</h2>
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {OFFERS.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="rounded-xl border bg-white p-6" style={{ borderColor: BORDER }}>
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#fff1ec]" style={{ color: EMBER }}><Icon size={19} /></span>
-              <h3 className="font-['Space_Grotesk'] mt-5 text-lg font-semibold tracking-tight">{title}</h3>
-              <p className="mt-2 text-[14px] leading-relaxed" style={{ color: MUTED }}>{body}</p>
+      <section className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-28">
+        <SectionHead eyebrow="Open source" title="Tools you can install today." body="The ICARUS family powers SINGULANCE's own agents. Every tool is free with your developer account, and the source is on GitHub."
+          action={<Link to="/tools" className="inline-flex shrink-0 items-center gap-1.5 text-[14px] font-semibold hover:underline">All tools and docs <ArrowRight size={15} /></Link>} />
+        <div className="mt-12 grid grid-cols-1 overflow-hidden rounded-2xl border bg-white sm:grid-cols-2 lg:grid-cols-4" style={{ borderColor: BORDER }}>
+          {PRODUCTS.map((p, i) => (
+            <div key={p.name} className={`flex min-w-0 flex-col p-6 ${i ? 'border-t sm:border-t-0' : ''} ${i % 2 ? 'sm:border-l' : ''} ${i >= 2 ? 'sm:border-t lg:border-t-0' : ''} ${i ? 'lg:border-l' : ''}`} style={{ borderColor: BORDER }}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#a3a3a3]">ICARUS</span>
+                <span className="rounded-full bg-[#f3f2ec] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#737367]">{p.status}</span>
+              </div>
+              <h3 className="font-['Space_Grotesk'] mt-2 text-xl font-semibold tracking-tight">{p.name}</h3>
+              <p className="mt-2 text-[13.5px] leading-relaxed" style={{ color: MUTED }}>{p.line}</p>
             </div>
+          ))}
+        </div>
+        <div className="mt-6 max-w-2xl"><CopyBlock text={ICARUS_INSTALL} label="install command" /></div>
+      </section>
+
+      <section className="border-y bg-white" style={{ borderColor: BORDER }}>
+        <div className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-28">
+          <SectionHead eyebrow="Who it's for" title="One community, across campuses, labs and startups." />
+          <div className="mt-12 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border sm:grid-cols-2" style={{ borderColor: BORDER, background: BORDER }}>
+            {AUDIENCES.map(({ icon: Icon, title, body }) => (
+              <div key={title} className="bg-white p-7 md:p-9">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#fff1ec]" style={{ color: EMBER }}><Icon size={19} /></span>
+                <h3 className="font-['Space_Grotesk'] mt-5 text-xl font-semibold tracking-tight">{title}</h3>
+                <p className="mt-2 max-w-md text-[14.5px] leading-relaxed" style={{ color: MUTED }}>{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-28">
+        <SectionHead eyebrow="Research" title="Read the work. Run it yourself." body="Our papers and benchmarks are open to every member. Discuss them in the forum and build on them."
+          action={<a href="https://singulancelabs.com/research" className="inline-flex shrink-0 items-center gap-1.5 text-[14px] font-semibold hover:underline">All research <ArrowRight size={15} /></a>} />
+        <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {RESEARCH.map((r, i) => (
+            <a key={r.href} href={r.href} className={`group flex min-w-0 flex-col justify-between rounded-2xl border p-6 transition-colors ${i === 0 ? 'bg-[#0b0b0d] text-white lg:row-span-2' : 'bg-white hover:bg-[#f6f5ef]'}`} style={i === 0 ? { borderColor: '#0b0b0d' } : { borderColor: BORDER }}>
+              <span className={`font-mono text-[10px] uppercase tracking-[0.2em] ${i === 0 ? 'text-[#ff8a6b]' : 'text-[#a3a3a3]'}`}>{r.tag}</span>
+              <span className={`font-['Space_Grotesk'] mt-6 block font-semibold leading-tight tracking-tight ${i === 0 ? 'text-3xl md:text-4xl' : 'text-lg'}`}>{r.title}</span>
+              <span className={`mt-6 inline-flex items-center gap-1.5 text-[13px] font-semibold ${i === 0 ? 'text-white/80' : ''}`}>Read <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" /></span>
+            </a>
           ))}
         </div>
       </section>
 
       <section className="border-y bg-white" style={{ borderColor: BORDER }}>
-        <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-10 px-4 py-16 sm:px-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] md:py-24">
+        <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-12 px-4 py-20 sm:px-6 md:py-28 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <div className="min-w-0">
-            <Eyebrow color={EMBER}>How it works</Eyebrow>
-            <h2 className="font-['Space_Grotesk'] mt-3 text-[34px] font-semibold leading-tight tracking-tight md:text-5xl">From sign-up to shipping in an afternoon.</h2>
+            <SectionHead eyebrow="Playground" title="Happening in the forum."
+              action={<Link to="/forum" className="inline-flex shrink-0 items-center gap-1.5 text-[14px] font-semibold hover:underline">All threads <ArrowRight size={15} /></Link>} />
+            <div className="mt-10 divide-y overflow-hidden rounded-2xl border" style={{ borderColor: BORDER }}>
+              {posts.length ? posts.map((p) => <ThreadRow key={p.id} post={p} />) : (
+                <div className="px-6 py-10">
+                  <p className="font-semibold">The first threads are waiting to be written.</p>
+                  <p className="mt-1 text-[14px]" style={{ color: MUTED }}>Start a reading group, ask about the tools or pitch what you want to build.</p>
+                </div>
+              )}
+            </div>
           </div>
-          <ol className="min-w-0 space-y-6">
-            {[
-              ['01', 'Join with email or Google', 'Free. No card, no company workspace. Your SINGULANCE identity works across every product.'],
-              ['02', 'Make your profile', 'Say where you study or build and what you care about, so the right people find you.'],
-              ['03', 'Use the tools and research', 'Install ICARUS, read the papers, run the experiments yourself.'],
-              ['04', 'Post, team up, ship', 'Start a thread, join a reading group, find a co-founder, show what you made.'],
-            ].map(([n, title, body]) => (
-              <li key={n} className="flex gap-5">
-                <span className="font-mono text-[12px] text-[#a3a3a3]">{n}</span>
-                <div><p className="font-semibold">{title}</p><p className="mt-1 text-[14px] leading-relaxed" style={{ color: MUTED }}>{body}</p></div>
-              </li>
-            ))}
-          </ol>
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-[#8a8a82] lg:mt-[86px]">New members</p>
+            <div className="mt-4 rounded-2xl border p-5" style={{ borderColor: BORDER }}>
+              {members.length ? (
+                <ul className="space-y-4">
+                  {members.slice(0, 6).map((m) => (
+                    <li key={m.handle}>
+                      <Link to={`/u/${m.handle}`} className="flex items-center gap-3">
+                        <Avatar member={m} size={36} />
+                        <span className="min-w-0">
+                          <span className="block truncate text-[14px] font-semibold">{m.name}</span>
+                          <span className="block truncate text-[12px]" style={{ color: MUTED }}>{[ROLES.find((r) => r.id === m.role)?.label, m.affiliation].filter(Boolean).join(' · ')}</span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="text-[14px]" style={{ color: MUTED }}>Be one of the first members.</p>}
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-[1200px] grid-cols-1 gap-10 px-4 py-16 sm:px-6 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:py-24">
+      <section className="mx-auto grid max-w-[1200px] grid-cols-1 gap-12 px-4 py-20 sm:px-6 md:py-28 lg:grid-cols-2">
         <div className="min-w-0">
-          <div className="flex items-end justify-between gap-4">
-            <h2 className="font-['Space_Grotesk'] text-2xl font-semibold tracking-tight md:text-3xl">Happening in the forum</h2>
-            <Link to="/forum" className="shrink-0 text-[13px] font-semibold hover:underline">All threads →</Link>
-          </div>
-          <div className="mt-6 divide-y overflow-hidden rounded-xl border bg-white" style={{ borderColor: BORDER }}>
-            {posts.length ? posts.map((p) => <ThreadRow key={p.id} post={p} />) : (
-              <p className="px-5 py-8 text-[14px]" style={{ color: MUTED }}>The first threads are waiting to be written. Start one about what you are building.</p>
-            )}
-          </div>
+          <Eyebrow color={EMBER}>Community principles</Eyebrow>
+          <h2 className="font-['Space_Grotesk'] mt-3 text-[28px] font-semibold leading-tight tracking-tight md:text-4xl">How we work together.</h2>
+          <dl className="mt-8 space-y-6">
+            {PRINCIPLES.map(([title, body], i) => (
+              <div key={title} className="flex gap-5">
+                <span className="font-mono text-[12px] text-[#a3a3a3]">0{i + 1}</span>
+                <div><dt className="font-semibold">{title}</dt><dd className="mt-1 text-[14px] leading-relaxed" style={{ color: MUTED }}>{body}</dd></div>
+              </div>
+            ))}
+          </dl>
         </div>
         <div className="min-w-0">
-          <h2 className="font-['Space_Grotesk'] text-2xl font-semibold tracking-tight md:text-3xl">New members</h2>
-          <div className="mt-6 rounded-xl border bg-white p-5" style={{ borderColor: BORDER }}>
-            {members.length ? (
-              <ul className="space-y-4">
-                {members.slice(0, 6).map((m) => (
-                  <li key={m.handle}>
-                    <Link to={`/u/${m.handle}`} className="flex items-center gap-3">
-                      <Avatar member={m} size={36} />
-                      <span className="min-w-0">
-                        <span className="block truncate text-[14px] font-semibold">{m.name}</span>
-                        <span className="block truncate text-[12px]" style={{ color: MUTED }}>{[ROLES.find((r) => r.id === m.role)?.label, m.affiliation].filter(Boolean).join(' · ')}</span>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="text-[14px]" style={{ color: MUTED }}>Be one of the first members.</p>}
+          <Eyebrow color={EMBER}>Questions</Eyebrow>
+          <h2 className="font-['Space_Grotesk'] mt-3 text-[28px] font-semibold leading-tight tracking-tight md:text-4xl">Before you join.</h2>
+          <div className="mt-8 divide-y border-y" style={{ borderColor: BORDER }}>
+            {FAQ.map(([q, a]) => (
+              <details key={q} className="group py-4" style={{ borderColor: BORDER }}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">{q}<Plus size={16} className="shrink-0 transition-transform group-open:rotate-45" /></summary>
+                <p className="mt-2 text-[14px] leading-relaxed" style={{ color: MUTED }}>{a}</p>
+              </details>
+            ))}
           </div>
         </div>
       </section>
 
       <section className="px-4 pb-20 sm:px-6">
-        <div className="relative mx-auto max-w-[1200px] overflow-hidden rounded-2xl bg-[#0b0b0d] px-6 py-14 text-center text-white md:py-20">
-          <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(50% 80% at 50% 0%, rgba(255,82,41,0.35), transparent 70%)' }} />
+        <div className="relative mx-auto max-w-[1200px] overflow-hidden rounded-3xl bg-[#0b0b0d] px-6 py-16 text-center text-white md:py-24">
+          <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(50% 80% at 50% 0%, rgba(255,82,41,0.32), transparent 70%)' }} />
           <div className="relative">
-            <GraduationCap className="mx-auto" size={28} style={{ color: '#ff8a6b' }} />
-            <h2 className="font-['Space_Grotesk'] mx-auto mt-4 max-w-2xl text-[30px] font-semibold leading-tight tracking-tight md:text-5xl">Bring your university. Bring your idea.</h2>
-            <p className="mx-auto mt-4 max-w-xl text-[15px] text-white/70">Let&apos;s start working for a better future, together and in the open.</p>
-            <Link to={cta.to} className="mt-8 inline-flex items-center gap-2 rounded-lg px-6 py-3.5 text-[14px] font-semibold text-white" style={{ background: EMBER }}>{cta.label} <ArrowRight size={16} /></Link>
+            <h2 className="font-['Space_Grotesk'] mx-auto max-w-2xl text-[32px] font-semibold leading-[1.05] tracking-tight md:text-[56px]">Bring your university.<br />Bring your idea.</h2>
+            <p className="mx-auto mt-5 max-w-xl text-[16px] text-white/65">Let&apos;s start working for a better future, together and in the open.</p>
+            <Link to={cta.to} className="mt-9 inline-flex items-center gap-2 rounded-lg px-6 py-3.5 text-[14px] font-semibold text-white" style={{ background: EMBER }}>{cta.label} <ArrowRight size={16} /></Link>
           </div>
         </div>
       </section>
@@ -592,14 +730,22 @@ function Tools() {
 function ThreadRow({ post }) {
   const channel = CHANNELS.find((c) => c.id === post.channel);
   return (
-    <Link to={`/forum/${post.id}`} className="block px-5 py-4 transition-colors hover:bg-[#f6f5ef]">
-      <div className="flex items-center gap-2 text-[11px] text-[#8a8a82]">
-        <span className="rounded bg-[#f3f2ec] px-1.5 py-0.5 font-mono uppercase tracking-wider">{channel?.label || post.channel}</span>
-        <span>@{post.author.handle}</span><span>·</span><span>{timeAgo(post.lastActivity)}</span>
+    <Link to={`/forum/${post.id}`} className="flex gap-4 bg-white px-5 py-4 transition-colors hover:bg-[#f9f8f4]">
+      <Avatar member={post.author} size={36} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-[#8a8a82]">
+          <span className="font-semibold text-[#3a3a3a]">{post.author.name || `@${post.author.handle}`}</span>
+          <span>in</span>
+          <span className="rounded-full bg-[#f3f2ec] px-2 py-0.5 text-[11px] font-medium text-[#525252]">{channel?.label || post.channel}</span>
+          <span>·</span><span>{timeAgo(post.lastActivity)}</span>
+        </div>
+        <h3 className="mt-1 text-[15px] font-semibold leading-snug">{post.title}</h3>
+        <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed" style={{ color: MUTED }}>{post.excerpt}</p>
       </div>
-      <h3 className="mt-1.5 text-[15px] font-semibold leading-snug">{post.title}</h3>
-      <p className="mt-1 line-clamp-2 text-[13px]" style={{ color: MUTED }}>{post.excerpt}</p>
-      <p className="mt-2 inline-flex items-center gap-1 text-[12px] text-[#8a8a82]"><MessageSquare size={12} /> {post.replyCount} {post.replyCount === 1 ? 'reply' : 'replies'}</p>
+      <span className="hidden shrink-0 flex-col items-end text-right sm:flex">
+        <span className="font-['Space_Grotesk'] text-[18px] font-semibold leading-none">{post.replyCount}</span>
+        <span className="mt-1 text-[11px] text-[#8a8a82]">{post.replyCount === 1 ? 'reply' : 'replies'}</span>
+      </span>
     </Link>
   );
 }
@@ -659,6 +805,7 @@ function Composer({ channel, onCreated }) {
 function ForumList({ channel }) {
   const navigate = useNavigate();
   const [data, setData] = useState({ posts: [], next: null, loading: true, error: false });
+  const [query, setQuery] = useState('');
   const load = useCallback(async (before = '') => {
     try {
       const d = await devApi.posts({ channel: channel || '', before });
@@ -667,16 +814,30 @@ function ForumList({ channel }) {
   }, [channel]);
   useEffect(() => { setData({ posts: [], next: null, loading: true, error: false }); load(); }, [load]);
   const active = CHANNELS.find((c) => c.id === channel);
+  const needle = query.trim().toLowerCase();
+  const shown = needle ? data.posts.filter((p) => `${p.title} ${p.excerpt} ${p.author.handle} ${p.author.name}`.toLowerCase().includes(needle)) : data.posts;
+  const tab = (on) => `shrink-0 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${on ? 'bg-black text-white' : 'text-[#3a3a3a] hover:bg-[#f0efe9]'}`;
   return (
     <Page title={active ? `${active.label} · Forum` : 'Forum'}>
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="min-w-0">
+      <header className="flex flex-col gap-5 border-b pb-8 md:flex-row md:items-end md:justify-between" style={{ borderColor: BORDER }}>
+        <div className="min-w-0">
           <Eyebrow color={EMBER}>Playground</Eyebrow>
-          <h1 className="font-['Space_Grotesk'] mt-2 text-3xl font-semibold tracking-tight">Forum</h1>
-          <nav className="mt-6 flex gap-2 overflow-x-auto pb-1 md:flex-col md:gap-1 md:overflow-visible">
-            <Link to="/forum" className={`shrink-0 rounded-lg px-3 py-2 text-[13px] font-medium ${!channel ? 'bg-black text-white' : 'hover:bg-[#f0efe9]'}`}>All threads</Link>
+          <h1 className="font-['Space_Grotesk'] mt-2 text-[36px] font-semibold leading-tight tracking-tight md:text-5xl">{active ? active.label : 'Forum'}</h1>
+          <p className="mt-2 text-[15px]" style={{ color: MUTED }}>{active ? active.blurb : 'Share research, ask for help, find collaborators and show what you built.'}</p>
+        </div>
+        <label className="relative block w-full md:w-72">
+          <span className="sr-only">Search threads</span>
+          <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search threads" className="h-11 w-full rounded-lg border bg-white pl-10 pr-3 text-[14px] outline-none focus:border-black" style={{ borderColor: BORDER }} />
+        </label>
+      </header>
+      <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_260px]">
+        <aside className="min-w-0">
+          <p className="mb-2 hidden font-mono text-[10px] uppercase tracking-[0.22em] text-[#a3a3a3] md:block">Channels</p>
+          <nav className="flex gap-2 overflow-x-auto pb-1 md:flex-col md:gap-0.5 md:overflow-visible">
+            <Link to="/forum" className={tab(!channel)}>All threads</Link>
             {CHANNELS.map((c) => (
-              <Link key={c.id} to={`/forum/${c.id}`} className={`shrink-0 rounded-lg px-3 py-2 text-[13px] font-medium ${channel === c.id ? 'bg-black text-white' : 'hover:bg-[#f0efe9]'}`}>
+              <Link key={c.id} to={`/forum/${c.id}`} className={tab(channel === c.id)}>
                 {c.label}<span className={`hidden text-[11px] font-normal md:block ${channel === c.id ? 'text-white/60' : 'text-[#8a8a82]'}`}>{c.blurb}</span>
               </Link>
             ))}
@@ -684,14 +845,28 @@ function ForumList({ channel }) {
         </aside>
         <section className="min-w-0 space-y-4">
           <Composer channel={channel} onCreated={(post) => navigate(`/forum/${post.id}`)} />
-          <div className="divide-y overflow-hidden rounded-xl border bg-white" style={{ borderColor: BORDER }}>
-            {data.loading ? <div className="flex h-40 items-center justify-center"><Loader2 className="animate-spin" /></div>
-              : data.error ? <p className="px-5 py-8 text-[14px]" style={{ color: MUTED }}>The forum is briefly unavailable. Refresh in a moment.</p>
-                : data.posts.length ? data.posts.map((p) => <ThreadRow key={p.id} post={p} />)
-                  : <p className="px-5 py-8 text-[14px]" style={{ color: MUTED }}>No threads here yet. Start the first one.</p>}
+          <div className="divide-y overflow-hidden rounded-xl border" style={{ borderColor: BORDER }}>
+            {data.loading ? <div className="flex h-40 items-center justify-center bg-white"><Loader2 className="animate-spin" /></div>
+              : data.error ? <p className="bg-white px-5 py-8 text-[14px]" style={{ color: MUTED }}>The forum is briefly unavailable. Refresh in a moment.</p>
+                : shown.length ? shown.map((p) => <ThreadRow key={p.id} post={p} />)
+                  : <div className="bg-white px-6 py-12 text-center"><p className="font-semibold">{needle ? 'No threads match that search.' : 'No threads here yet.'}</p><p className="mt-1 text-[14px]" style={{ color: MUTED }}>{needle ? 'Try another word, or start the thread yourself.' : 'Start the first one. Good first threads say who you are and what you want to build.'}</p></div>}
           </div>
-          {data.next && <button type="button" onClick={() => load(data.next)} className="w-full rounded-lg border bg-white py-3 text-[13px] font-semibold hover:bg-[#f6f5ef]" style={{ borderColor: BORDER }}>Load more</button>}
+          {data.next && !needle && <button type="button" onClick={() => load(data.next)} className="w-full rounded-lg border bg-white py-3 text-[13px] font-semibold hover:bg-[#f6f5ef]" style={{ borderColor: BORDER }}>Load more</button>}
         </section>
+        <aside className="hidden min-w-0 xl:block">
+          <div className="rounded-xl border bg-white p-5" style={{ borderColor: BORDER }}>
+            <p className="font-['Space_Grotesk'] text-[15px] font-semibold">Community principles</p>
+            <ul className="mt-3 space-y-3">
+              {PRINCIPLES.map(([title, body]) => (
+                <li key={title}><p className="text-[13px] font-semibold">{title}</p><p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: MUTED }}>{body}</p></li>
+              ))}
+            </ul>
+          </div>
+          <Link to="/tools" className="mt-4 flex items-center justify-between gap-3 rounded-xl border bg-white p-5 hover:bg-[#f6f5ef]" style={{ borderColor: BORDER }}>
+            <span><span className="block text-[13px] font-semibold">New to ICARUS?</span><span className="mt-0.5 block text-[12px]" style={{ color: MUTED }}>Install the tools in one line.</span></span>
+            <ArrowRight size={15} className="shrink-0" />
+          </Link>
+        </aside>
       </div>
     </Page>
   );
