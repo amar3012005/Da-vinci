@@ -62,10 +62,11 @@ const fadeUp = {
 // server wins, so err on the side of ALLOWING here: a false reject is invisible
 // to the user ("unsupported file type" for a workbook SheetJS reads natively),
 // while a false accept just surfaces the server's own clear 415.
-const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx',
-  // Macro-enabled + OpenDocument siblings: same parsers as their twins
-  // (sheet-direct reads xlsm/ods natively), previously rejected client-side.
-  'xlsm', 'ods', 'docm', 'odt', 'rtf', 'epub', 'pptm', 'odp',
+const ACCEPTED_EXTS = ['pdf', 'doc', 'docx', 'txt', 'md', 'markdown', 'csv', 'tsv', 'xlsx',
+  // hm-extract formats the server accepts (KB_EXTENSIONS). xlsm, ods, pptm and
+  // odp are NOT listed: the server keeps them withdrawn, so accepting them here
+  // only turned a fast local error into a 415 after the upload.
+  'docm', 'odt', 'rtf', 'epub',
   // pptx RESTORED 2026-08-06, matching the server's KB_EXTENSIONS. The 479s /
   // chunks=0 measurement that withdrew it was caused by per-slide vision calls
   // (picture descriptions); FORMAT_PROFILES now sets pptx pics:false and the same
@@ -84,6 +85,8 @@ const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx',
   'mp3', 'wav', 'm4a', 'ogg', 'flac'];
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'tiff', 'tif', 'webp', 'gif']);
 const AUDIO_EXTS = new Set(['mp3', 'wav', 'm4a', 'ogg', 'flac']);
+// Dropzone accept attribute, derived so it cannot drift from ACCEPTED_EXTS.
+const ACCEPT_ATTRIBUTE = ACCEPTED_EXTS.map((ext) => `.${ext}`).join(',');
 
 // File-based imports — typed entry cards below the upload dropzone. Each card
 // opens a file picker scoped to one document family, then feeds the SAME
@@ -114,7 +117,7 @@ const IMPORT_TYPES = [
     key: 'csv',
     icon: Sheet,
     iconColor: 'text-[#16a34a]',
-    accept: '.csv,.tsv,.xlsx,.xls',
+    accept: '.csv,.tsv,.xlsx',
     titleKey: 'knowledgebase.importCsvTitle',
     titleDefault: 'Spreadsheet',
     descKey: 'knowledgebase.importCsvDesc',
@@ -124,7 +127,7 @@ const IMPORT_TYPES = [
     key: 'slides',
     icon: Presentation,
     iconColor: 'text-[#ea580c]',
-    accept: '.pptx,.ppt',
+    accept: '.pptx',
     titleKey: 'knowledgebase.importSlidesTitle',
     titleDefault: 'Slides',
     descKey: 'knowledgebase.importSlidesDesc',
@@ -971,6 +974,17 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
 // compatibility limit. This gives users an immediate, actionable error rather
 // than accepting a large batch that the ingestion service cannot process well.
 export const KB_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+// Images and recordings are not page-processed documents; the server accepts up
+// to these sizes (KB_UPLOAD_LIMITS), so a 20 MB meeting recording is not refused.
+export const KB_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+export const KB_MAX_AUDIO_BYTES = 50 * 1024 * 1024;
+
+export function maxUploadBytesFor(file) {
+  const ext = (file?.name?.split('.').pop() || '').toLowerCase();
+  if (AUDIO_EXTS.has(ext)) return KB_MAX_AUDIO_BYTES;
+  if (IMAGE_EXTS.has(ext)) return KB_MAX_IMAGE_BYTES;
+  return KB_MAX_UPLOAD_BYTES;
+}
 export const KB_MIN_UPLOAD_BYTES = 32;
 export const KB_MAX_PDF_PAGES = 100;
 
@@ -985,7 +999,7 @@ function friendlyUploadError(err) {
   if (st === 400 && /empty/i.test(raw)) return 'This file is empty — there is nothing to ingest.';
   if (st === 400 && /minimum|too small/i.test(raw)) return 'This file is too small to contain readable content.';
   if (st === 415 || /unsupported|mime/i.test(raw)) {
-    return 'Unsupported file type. Use PDF, Word, Excel, PowerPoint, CSV, Markdown, text or an image.';
+    return 'Unsupported file type. Use PDF, Word, Excel (.xlsx), PowerPoint (.pptx), CSV, Markdown, text, HTML, an image or an audio recording.';
   }
   if (st === 401 || st === 403) return 'You are not signed in, or lack access to this workspace.';
   return raw || 'Upload failed.';
@@ -998,8 +1012,9 @@ function preflightRejectReason(file) {
   const size = Number(file?.size ?? 0);
   if (size === 0) return 'This file is empty — there is nothing to ingest.';
   if (size < KB_MIN_UPLOAD_BYTES) return 'This file is too small to contain readable content.';
-  if (size > KB_MAX_UPLOAD_BYTES) {
-    return `Too large — the limit is ${Math.round(KB_MAX_UPLOAD_BYTES / (1024 * 1024))} MB. Split the file and upload the parts.`;
+  const maxBytes = maxUploadBytesFor(file);
+  if (size > maxBytes) {
+    return `Too large — the limit is ${Math.round(maxBytes / (1024 * 1024))} MB. Split the file and upload the parts.`;
   }
   return null;
 }
@@ -2135,7 +2150,7 @@ export default function KnowledgeBase() {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.docx,.pptx,.txt,.md,.csv,.tsv,.xlsx,.html,.htm,.png,.jpg,.jpeg,.tiff,.tif,.webp,.mp3,.wav,.m4a,.ogg,.flac"
+          accept={ACCEPT_ATTRIBUTE}
           className="hidden"
           onChange={(e) => {
             if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
