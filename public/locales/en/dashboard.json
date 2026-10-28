@@ -918,7 +918,7 @@
     "youreIn": "You're in"
   },
   "knowledgebase": {
-    "acceptedFormats": "PDF · Word · Slides · Spreadsheets · Text · Markdown · HTML · Images · Audio — up to 10 MB per file; PDFs up to 100 pages",
+    "acceptedFormats": "PDF · Word · Slides · Spreadsheets · Text · Markdown · HTML · Images · Audio — up to 50 MB per file (images 20 MB); PDFs up to 100 pages",
     "allTypes": "All Types",
     "allUploadsComplete": "All uploads complete — safe to close this page.",
     "allUploadsHint": "The server is now extracting + indexing. New memories will appear in 2–5 minutes on the Memories page.",
