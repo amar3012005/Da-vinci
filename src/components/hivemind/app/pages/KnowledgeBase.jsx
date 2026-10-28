@@ -986,10 +986,11 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
 // machine string, not something a person can act on. Map them to what the user
 // should DO. Everything else falls through to the server's own message, which is
 // already written for humans on the validation paths.
-// Keep the browser admission limit intentionally smaller than the server's
-// compatibility limit. This gives users an immediate, actionable error rather
-// than accepting a large batch that the ingestion service cannot process well.
-export const KB_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+// Browser admission limit for documents. It matches the server's document limit
+// (KB_UPLOAD_LIMITS) so a file the server accepts is not refused here; the
+// server's reported limit still wins when it is lower, and the plan's page
+// quota is enforced on the server.
+export const KB_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 // Images and recordings are not page-processed documents; the server accepts up
 // to these sizes (KB_UPLOAD_LIMITS), so a 20 MB meeting recording is not refused.
 export const KB_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -1481,7 +1482,7 @@ export default function KnowledgeBase() {
 
       // Final browser-side admission check. The picker normally performs this
       // before the scope dialog, but keeping it beside the network boundary
-      // prevents a future caller from bypassing the 10 MB / 100-page policy.
+      // prevents a future caller from bypassing the 50 MB / 100-page policy.
       let admissionError = preflightRejectReason(file);
       if (!admissionError && isPdfFile(file)) {
         admissionError = pdfPageRejectReason(await countPdfPages(file));
@@ -2204,7 +2205,7 @@ export default function KnowledgeBase() {
             {t('knowledgebase.dropZoneLabel', 'Drop files here, or click to upload')}
           </p>
           <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk'] mt-2">
-            {t('knowledgebase.acceptedFormats', 'PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · PNG · JPG · TIFF · MP3 · WAV — max 10 MB per file; PDFs up to 100 pages')}
+            {t('knowledgebase.acceptedFormats', 'PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · PNG · JPG · TIFF · MP3 · WAV — max 50 MB per file (images 20 MB); PDFs up to 100 pages')}
           </p>
           <p className="text-[#777] text-xs mt-2">
             {t('knowledgebase.chunkedHint', 'Find what matters in your files through Memories and Brain.')}
