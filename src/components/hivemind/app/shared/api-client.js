@@ -2122,6 +2122,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Accepted extensions and per-kind size limits (GET /api/knowledge/upload-capabilities). */
+  async getUploadCapabilities() {
+    const { data } = await this.core.get('/api/knowledge/upload-capabilities');
+    return data;
+  }
+
   async getDocument(id) {
     const { data } = await this.controlPlane.get(`/v1/proxy/documents/${id}`);
     return data;

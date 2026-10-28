@@ -85,8 +85,24 @@ const ACCEPTED_EXTS = ['pdf', 'doc', 'docx', 'txt', 'md', 'markdown', 'csv', 'ts
   'mp3', 'wav', 'm4a', 'ogg', 'flac'];
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'tiff', 'tif', 'webp', 'gif']);
 const AUDIO_EXTS = new Set(['mp3', 'wav', 'm4a', 'ogg', 'flac']);
-// Dropzone accept attribute, derived so it cannot drift from ACCEPTED_EXTS.
-const ACCEPT_ATTRIBUTE = ACCEPTED_EXTS.map((ext) => `.${ext}`).join(',');
+// Server-reported capabilities (upload-capabilities). Until they load, or when
+// the request fails, the static list above is used.
+let serverUploadCaps = null;
+export function applyServerUploadCapabilities(caps) {
+  const kinds = caps && typeof caps === 'object' ? caps.kinds : null;
+  if (!kinds) return false;
+  const exts = Object.values(kinds).flatMap((kind) => (Array.isArray(kind?.extensions) ? kind.extensions : []));
+  if (!exts.length) return false;
+  serverUploadCaps = { exts: new Set(exts), kinds };
+  return true;
+}
+export function isAcceptedExtension(ext) {
+  return serverUploadCaps ? serverUploadCaps.exts.has(ext) : ACCEPTED_EXTS.includes(ext);
+}
+export function acceptAttribute() {
+  const exts = serverUploadCaps ? [...serverUploadCaps.exts] : ACCEPTED_EXTS;
+  return exts.map((ext) => `.${ext}`).join(',');
+}
 
 // File-based imports — typed entry cards below the upload dropzone. Each card
 // opens a file picker scoped to one document family, then feeds the SAME
@@ -981,9 +997,13 @@ export const KB_MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 
 export function maxUploadBytesFor(file) {
   const ext = (file?.name?.split('.').pop() || '').toLowerCase();
-  if (AUDIO_EXTS.has(ext)) return KB_MAX_AUDIO_BYTES;
-  if (IMAGE_EXTS.has(ext)) return KB_MAX_IMAGE_BYTES;
-  return KB_MAX_UPLOAD_BYTES;
+  const kind = serverUploadCaps
+    ? Object.entries(serverUploadCaps.kinds).find(([, def]) => def?.extensions?.includes(ext))?.[1]
+    : null;
+  const serverMax = Number(kind?.maxBytes) || Infinity;
+  if (AUDIO_EXTS.has(ext)) return Math.min(KB_MAX_AUDIO_BYTES, serverMax);
+  if (IMAGE_EXTS.has(ext)) return Math.min(KB_MAX_IMAGE_BYTES, serverMax);
+  return Math.min(KB_MAX_UPLOAD_BYTES, serverMax);
 }
 export const KB_MIN_UPLOAD_BYTES = 32;
 export const KB_MAX_PDF_PAGES = 100;
@@ -1096,6 +1116,16 @@ export default function KnowledgeBase() {
     setUploadParams(next, { replace: true });
   }, [uploadParams, setUploadParams]);
   const fileInputRef = useRef(null);
+  // The server owns the accepted types and limits; re-render once they arrive so
+  // the picker's accept attribute uses them. A failure keeps the static list.
+  const [, setCapsLoaded] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    apiClient.getUploadCapabilities()
+      .then((caps) => { if (!cancelled && applyServerUploadCapabilities(caps)) setCapsLoaded(true); })
+      .catch(() => { /* static list stays in force: the upload path itself reports the server's verdict */ });
+    return () => { cancelled = true; };
+  }, []);
   const typedImportRef = useRef(null);
   // Per-document relationship summaries: { <docId>: { total, byType, cluster_size } }
   const [relSummaries, setRelSummaries] = useState({});
@@ -1383,7 +1413,7 @@ export default function KnowledgeBase() {
     const nowBase = Date.now();
     files.forEach((file, idx) => {
       const ext = file.name.split('.').pop()?.toLowerCase();
-      if (!ACCEPTED_EXTS.includes(ext)) {
+      if (!isAcceptedExtension(ext)) {
         setUploads((prev) => [...prev, {
           id: nowBase + idx + Math.random(),
           filename: file.name,
@@ -1860,7 +1890,7 @@ export default function KnowledgeBase() {
     const nowBase = Date.now();
     const checked = await Promise.all(files.map(async (file, idx) => {
       const ext = (file.name.split('.').pop() || '').toLowerCase();
-      if (!ACCEPTED_EXTS.includes(ext)) {
+      if (!isAcceptedExtension(ext)) {
         return { file, idx, error: `Unsupported file type: .${ext}` };
       }
       const sizeError = preflightRejectReason(file);
@@ -2012,7 +2042,7 @@ export default function KnowledgeBase() {
       }
       for (const file of nonMediaFiles) {
         const ext = file.name.split('.').pop()?.toLowerCase();
-        if (!ACCEPTED_EXTS.includes(ext)) {
+        if (!isAcceptedExtension(ext)) {
           setUploads((prev) => [...prev, {
             id: Date.now() + Math.random(),
             filename: file.name,
@@ -2150,7 +2180,7 @@ export default function KnowledgeBase() {
           ref={fileInputRef}
           type="file"
           multiple
-          accept={ACCEPT_ATTRIBUTE}
+          accept={acceptAttribute()}
           className="hidden"
           onChange={(e) => {
             if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
