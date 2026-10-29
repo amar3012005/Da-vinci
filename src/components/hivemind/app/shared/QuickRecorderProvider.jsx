@@ -332,15 +332,17 @@ export function QuickRecorderProvider({ children }) {
         const m = data?.meeting || {};
         setTranscript(m.transcript || ''); setInsights(m.insights || null);
         setMeetingId(outcome.meetingId); emitUsageChanged();
-        if (cfgRef.current.autoSave !== false) {
-          try {
-            await apiClient.core.post(`/api/meetings/${outcome.meetingId}/ingest`, {}, { timeout: 180000 });
-            setIngested(true); emitUsageChanged();
-          } catch { setError('Meeting saved. HIVEMIND memory sync failed; retry it from the report.'); }
-        }
         writeRecovery(null);
         if (sessionIdRef.current) idbClear(sessionIdRef.current);
+        // Show the result now. The intelligence panel and the memory save run side by side in the
+        // background, so neither waits for the other or holds the summary back.
         setStatus('done');
+        apiClient.core.post(`/api/meetings/${outcome.meetingId}/intelligence`, {}, { timeout: 30000 }).catch(() => {});
+        if (cfgRef.current.autoSave !== false) {
+          apiClient.core.post(`/api/meetings/${outcome.meetingId}/ingest`, {}, { timeout: 180000 })
+            .then(() => { setIngested(true); emitUsageChanged(); })
+            .catch(() => setError('Meeting saved. HIVEMIND memory sync failed; retry it from the report.'));
+        }
       } else if (outcome.state === 'failed') {
         writeRecovery(null);
         setRetryDurable({ sessionId, expected, payload });
