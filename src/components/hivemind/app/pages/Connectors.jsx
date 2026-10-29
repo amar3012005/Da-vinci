@@ -3290,6 +3290,19 @@ export default function Connectors() {
       }
       return c;
     }
+    if (c.composioProvider) {
+      // Composio tiles read the same /v1/connectors row Core derives with the shared
+      // per-toolkit rule (ACTIVE account, personal first; expired-only is reconnect).
+      const live = oauthList.find((o) => o.provider === c.composioProvider || o.provider === c.id);
+      if (live) {
+        return {
+          ...c,
+          status: live.status === 'connected' ? 'connected' : live.status === 'needs_reauth' ? 'needs_reauth' : c.status,
+          accountRef: live.account_ref || null,
+        };
+      }
+      return c;
+    }
     if (c.oauthProvider) {
       const live = oauthList.find((o) => o.provider === c.oauthProvider);
       if (live) {
