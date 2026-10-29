@@ -33,6 +33,7 @@ import {
   Copy,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { isSystemTag } from '../shared/documentTags.mjs';
 import { useApiQuery } from '../shared/hooks';
 import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
@@ -2668,7 +2669,7 @@ export default function KnowledgeBase() {
                     </div>
                   </div>
                   <div data-upload-document-tags className="flex items-center gap-2 shrink-0">
-                    {(doc.tags || []).filter((t) => !['knowledge-base', 'document', 'document-summary', 'schema-record', 'enterprise'].includes(t) && !t.startsWith('document_type:') && !/^(source|platform|ts|doc-hash|filename|scope|project|organization|user|document_id):/.test(t)).slice(0, 3).map((tag) => (
+                    {(doc.tags || []).filter((t) => !isSystemTag(t)).slice(0, 3).map((tag) => (
                       <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252] border border-[#e3e0db]">
                         {tag}
                       </span>
@@ -2695,7 +2696,7 @@ export default function KnowledgeBase() {
                           onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc); }}
                           disabled={deletingDocId === doc.id}
                           className="text-[10px] font-mono px-2 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50"
-                          title="This cascades — removes the document, every chunk, every extracted fact, and Qdrant vectors"
+                          title="Removes this document and everything learned from it"
                         >
                           {deletingDocId === doc.id
                             ? 'Deleting...'

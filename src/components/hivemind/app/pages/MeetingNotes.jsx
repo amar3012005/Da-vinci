@@ -60,6 +60,12 @@ const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#10b981', SPEAKER_0
 const speakerLabel = (s) => { const m = /SPEAKER_(\d+)/.exec(s || ''); return m ? `Speaker ${Number(m[1]) + 1}` : (s || 'Speaker'); };
 const fmtTimer = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 /* real participant name when insights mapped one (from the pre-meeting context) */
+// Server messages are shown only when they read as a sentence; machine codes such as
+// "meeting_finalization_queue_error" become the plain fallback instead.
+const plainError = (e, fallback) => {
+  const text = String(e?.response?.data?.message || e?.response?.data?.error || e?.message || '');
+  return /\s/.test(text.trim()) && !/^(Request failed|Network Error|timeout)/i.test(text) ? text : fallback;
+};
 const nameFor = (speaker, map) => (map && map[speaker]) || speakerLabel(speaker);
 
 /* Notion-style "@Today 11:01 PM" — relative day + time */
@@ -217,7 +223,7 @@ function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMul
           </span>
           <button onClick={() => setMultiSpeaker((v) => !v)} disabled={busy}
             className="flex items-center gap-2 mb-1 text-[12px] text-[#525252] disabled:opacity-50"
-            title={t('meetingnotes.multiSpeakerHint', 'Label who said what (runs speaker diarization)')}>
+            title={t('meetingnotes.multiSpeakerHint', 'Label who said what')}>
             <span className="inline-flex items-center gap-1.5"><Users size={13} className="text-[#f59e0b]" /> {t('meetingnotes.multiShort', 'Multi-speaker')}</span>
             <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${multiSpeaker ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
               <span className="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform" style={{ transform: multiSpeaker ? 'translateX(18px)' : 'translateX(2px)' }} />
@@ -635,7 +641,7 @@ export default function MeetingNotes() {
         setStatus('error'); setError('This meeting is still being processed. You can close this page; it will appear under Past meetings when it is ready.');
       }
     } catch (e) {
-      setStatus('error'); setError(e.response?.data?.error || e.message || 'Processing failed. Your recording is saved; reopen this page to continue.');
+      setStatus('error'); setError(plainError(e, 'We could not finish this meeting yet. Your recording is saved; reopen this page to continue.'));
     }
   }, [loadMeetings]);
 
@@ -667,7 +673,7 @@ export default function MeetingNotes() {
         if (row?.id) setMeetingId(row.id);
         loadMeetings();
       } catch { /* non-fatal — recording is still usable / re-savable */ }
-    } catch (e) { setStatus('error'); setError(e.response?.data?.error || e.message || 'Processing failed.'); }
+    } catch (e) { setStatus('error'); setError(plainError(e, 'We could not process this recording. Please try again.')); }
   }, [notes, participants, persistRow, loadMeetings, finalizeDurable, scope, scopeProjectId]);
 
   // Resume a meeting that was stopped (or interrupted) before the server confirmed
@@ -715,7 +721,7 @@ export default function MeetingNotes() {
         ? createChunkUploader({ sessionId: sessionIdRef.current, store: createIndexedDbChunkStore(), post: (url, body, config) => apiClient.core.post(url, body, config) })
         : null;
     } catch (e) {
-      setError(e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Could not start a durable meeting session.');
+      setError(plainError(e, 'Could not start the recording. Please try again.'));
       return;
     }
     finalizingRef.current = false; setSegDone(0); setSegTotal(0);
@@ -819,7 +825,7 @@ export default function MeetingNotes() {
       await apiClient.core.post(`/api/meetings/${mid}/ingest`, {}, { timeout: 180000 });
       setSaved(true); loadMeetings();
       emitUsageChanged(); // meeting notes became memories — refresh the meter
-    } catch (e) { setError('Save failed: ' + (e.response?.data?.error || e.message)); }
+    } catch (e) { setError(plainError(e, 'We could not save this meeting. Please try again.')); }
     finally { setSaving(false); }
   }, [transcript, saving, saved, insights, speakerSegments, language, loadMeetings, persistRow, meetingId]);
 
@@ -1132,7 +1138,7 @@ export default function MeetingNotes() {
               ) : (
                 <button onClick={start} disabled={busy} className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] font-medium hover:bg-[#0066e0] disabled:opacity-50">
                   {busy ? <Loader2 size={13} className="animate-spin" /> : <Mic size={13} />}
-                  {busy ? (status === 'transcribing' ? `${t('meetingnotes.transcribing', 'Transcribing…')}${segTotal > 1 ? ` ${segDone}/${segTotal}` : ''}` : t('meetingnotes.analyzing', 'Analyzing…')) : t('meetingnotes.start', 'Start transcribing')}
+                  {busy ? (status === 'transcribing' ? `${t('meetingnotes.transcribing', 'Transcribing…')}` : t('meetingnotes.analyzing', 'Analyzing…')) : t('meetingnotes.start', 'Start transcribing')}
                 </button>
               )}
             </div>
@@ -1329,7 +1335,7 @@ export default function MeetingNotes() {
             </div>
 
             <button onClick={() => setMultiSpeaker((v) => !v)} disabled={recording || busy}
-              className="flex items-center gap-2 mb-4 text-[12px] text-[#525252] disabled:opacity-50" title={t('meetingnotes.multiSpeakerHint', 'Label who said what (runs speaker diarization)')}>
+              className="flex items-center gap-2 mb-4 text-[12px] text-[#525252] disabled:opacity-50" title={t('meetingnotes.multiSpeakerHint', 'Label who said what')}>
               <Users size={14} style={{ color: multiSpeaker ? '#117dff' : '#a3a3a3' }} />
               <span>{t('meetingnotes.multiSpeaker', 'Multi-speaker recognition')}</span>
               <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${multiSpeaker ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
