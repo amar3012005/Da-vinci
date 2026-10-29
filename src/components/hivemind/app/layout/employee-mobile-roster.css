@@ -36,7 +36,7 @@
   .mobile-roster-pages button:disabled { opacity:.35; }
   .mobile-roster-search { width:100%; padding:10px 14px; border:1px solid #e3e0db; border-radius:16px; background:#fff; font-size:16px; }
   .mobile-roster-shortcuts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:center; border-top:1px solid #e3e0db; padding-top:20px; gap:8px; }
-  .mobile-roster-shortcuts > button, .mobile-roster-shortcuts > a, .mobile-roster-shortcuts [data-hivemind-artifacts-seat] button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:72px; width:100%; font-size:13px; color:#525252; }
+  .mobile-roster-shortcuts > button, .mobile-roster-shortcuts > a, .mobile-roster-shortcuts [data-hivemind-artifacts-seat] button, .mobile-roster-shortcuts [data-hivemind-calendar-seat] button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:72px; width:100%; font-size:13px; color:#525252; }
   .mobile-roster-create { display:flex; align-items:center; justify-content:center; gap:10px; min-height:48px; border:1px solid #117dff; border-radius:28px; color:#117dff; font-size:16px; }
   .mobile-roster-account { display:flex; align-items:center; gap:12px; min-height:48px; padding:10px 14px; border:1px solid #e3e0db; border-radius:20px; font-size:14px; }
   .mobile-roster-account span { flex:1; text-align:left; }
@@ -90,7 +90,7 @@
   .mobile-unified-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .mobile-unified-heading h2 { font-size:21px; font-weight:650; letter-spacing:-.4px; margin:0; white-space:nowrap; }
   .mobile-unified-heading .mobile-roster-shortcuts { margin:0; border:0; padding:0; display:flex; gap:8px; }
-  .mobile-unified-heading .mobile-roster-shortcuts > button, .mobile-unified-heading .mobile-roster-shortcuts > a, .mobile-unified-heading .mobile-roster-shortcuts [data-hivemind-artifacts-seat] button { min-height:40px; width:auto; gap:3px; font-size:9px; }
+  .mobile-unified-heading .mobile-roster-shortcuts > button, .mobile-unified-heading .mobile-roster-shortcuts > a, .mobile-unified-heading .mobile-roster-shortcuts [data-hivemind-artifacts-seat] button, .mobile-unified-heading .mobile-roster-shortcuts [data-hivemind-calendar-seat] button { min-height:40px; width:auto; gap:3px; font-size:9px; }
   .mobile-unified-heading .mobile-roster-shortcuts svg { width:18px; height:18px; }
   .mobile-roster-grid { gap:12px 8px; }
   .mobile-roster-grid [data-agent-room-link] { min-height:94px; font-size:12px; }

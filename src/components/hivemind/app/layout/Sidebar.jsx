@@ -533,6 +533,7 @@ export default function Sidebar({
           <div className="mobile-unified-heading"><h2>Your team</h2><div className="mobile-roster-shortcuts">
             <button type="button" onClick={() => setCompanyOpen(true)}><Building2 size={18}/><span>Company</span></button>
             {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm"><FolderKanban size={18}/><span>CRM</span></NavLink>}
+            <div data-hivemind-calendar-seat />
             <div data-hivemind-artifacts-seat />
           </div></div>
           <div className="mobile-roster-grid" aria-label="Your employees"
@@ -713,6 +714,7 @@ export default function Sidebar({
           </div>
         ))}
         {teamMode && !mobileRoster && location.pathname.startsWith('/hivemind/app/employee/harness') && (
+          <div data-hivemind-calendar-seat data-collapsed={collapsed || undefined} />
           <div data-hivemind-artifacts-seat data-collapsed={collapsed || undefined} />
         )}
       </nav>}
