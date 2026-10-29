@@ -9,6 +9,7 @@ import { Wrench, Zap, ShieldCheck, Search, Loader2, Plug, Check, Mail, X } from 
 import apiClient from '../shared/api-client';
 import { toolkitConnectionState, toolkitOriginLabel } from '../shared/toolkit-connection';
 import { refreshComposioReturn } from './composio-return-refresh.mjs';
+import { connectClient, connectReturnUrl } from '../shared/connect-return';
 
 const AUTH_LABELS = {
   OAUTH2: 'OAuth2',
@@ -373,7 +374,7 @@ export default function ComposioToolkitBrowser() {
       // browser back to callback_url with ?status=success&connected_account_id
       // appended once OAuth completes, and the mount-effect below reads that
       // straight off window.location on the next load of this same page.
-      const callbackUrl = `${window.location.origin}${window.location.pathname}?composio_toolkit=${encodeURIComponent(toolkit.slug)}`;
+      const callbackUrl = connectReturnUrl({ origin: window.location.origin, toolkit: toolkit.slug, returnPath: window.location.pathname, client: connectClient() });
       const { redirect_url } = await apiClient.createComposioConnectLink(toolkit.slug, {
         toolkitMeta: {
           composioManagedAuthSchemes: toolkit.composioManagedAuthSchemes,

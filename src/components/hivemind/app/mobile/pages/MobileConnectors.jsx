@@ -16,6 +16,7 @@ import apiClient from '../../shared/api-client';
 import MobileShell from '../MobileShell';
 import { glassHeader } from '../MobileGlassHeader';
 import '../mobile-tools.css';
+import { connectClient, connectReturnUrl } from '../../shared/connect-return';
 
 const NATIVE_SLACK_TOOLKIT = 'slack';
 const REDUNDANT_TOOLKITS = new Set(['slackbot']);
@@ -190,7 +191,7 @@ export default function MobileConnectors() {
         setConnectedSlugs((prev) => ({ ...prev, [toolkit.slug]: 'connected' }));
         return;
       }
-      const callbackUrl = `${window.location.origin}${window.location.pathname}?composio_toolkit=${encodeURIComponent(toolkit.slug)}`;
+      const callbackUrl = connectReturnUrl({ origin: window.location.origin, toolkit: toolkit.slug, returnPath: window.location.pathname, client: connectClient() });
       const { redirect_url } = await apiClient.createComposioConnectLink(toolkit.slug, {
         toolkitMeta: { composioManagedAuthSchemes: toolkit.composioManagedAuthSchemes, noAuth: toolkit.noAuth },
         callbackUrl,

@@ -3,6 +3,9 @@ import { RoomLoading } from './layout/PhoneRoomFrame';
 import React, { useEffect } from 'react';
 import { workspaceDocumentRedirect } from './shared/workspace-authority.mjs';
 import { importPage } from './shared/import-page';
+import { bindConnectReturnLinks } from './shared/connect-return';
+import { isNativeApp } from './shared/native-app';
+import { App as CapacitorApp } from '@capacitor/app';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
 import ProtectedRoute from './auth/ProtectedRoute';
@@ -60,6 +63,7 @@ const JoinOrg = React.lazy(() => import('./pages/JoinOrg'));
 const ClaudeCodeConnectCallback = React.lazy(() => import('./pages/ClaudeCodeConnectCallback'));
 const McpConnectCallback = React.lazy(() => import('./pages/McpConnectCallback'));
 const ComposioConnectCallback = React.lazy(() => import('./pages/ComposioConnectCallback'));
+const ConnectReturn = React.lazy(() => import('./pages/ConnectReturn'));
 const AuditLog = React.lazy(() => import('./pages/AuditLog'));
 const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
 const AdminSso = React.lazy(() => import('./pages/AdminSso'));
@@ -129,6 +133,12 @@ function CanonicalCRMRoute() {
   return <PageSuspense><YourCRM /></PageSuspense>;
 }
 
+/** Loads the page a person started from when the desktop or mobile app is reopened by a connect-return link. */
+function ConnectReturnLinks() {
+  useEffect(() => bindConnectReturnLinks({ capacitorApp: isNativeApp() ? CapacitorApp : null }), []);
+  return null;
+}
+
 /**
  * HIVEMIND Dashboard Application
  * Mounts under /hivemind/app/* and /hivemind/login
@@ -148,8 +158,11 @@ export default function HiveMindApp() {
   }
   return (
     <AuthProvider>
+      <ConnectReturnLinks />
       <Routes>
         <Route path="login" element={<LoginPage />} />
+        {/* Provider redirect target after app authorization; public so the system browser can hand back to the app. */}
+        <Route path="connect-return" element={<PageSuspense><ConnectReturn /></PageSuspense>} />
         <Route path="invite" element={<InvitationLanding />} />
         {/* Compatibility for partner links issued before the public invite path
             was corrected. This must remain outside ProtectedRoute. */}
