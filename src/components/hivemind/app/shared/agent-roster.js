@@ -1,5 +1,6 @@
 import { fetchWithRuntimeAdmission } from './runtime-admission';
 import { createAgentRosterCache } from './agent-roster-cache';
+import { rememberEmployeeAppearances } from './employee-appearance-cache';
 function optionalRosterStorage() {
   try { return typeof window === 'undefined' ? null : window.localStorage; } catch { return null; }
 }
@@ -26,4 +27,4 @@ export const agentRoster = createAgentRosterCache(async scope => {
     if (!Array.isArray(value.profiles)) throw new Error('invalid team response');
     return value.profiles.filter(agent => typeof agent.id === 'string' && agent.id !== 'runtime' && typeof agent.name === 'string');
   } finally { clearTimeout(deadline); }
-}, Date.now, optionalRosterStorage());
+}, Date.now, optionalRosterStorage(), rememberEmployeeAppearances);

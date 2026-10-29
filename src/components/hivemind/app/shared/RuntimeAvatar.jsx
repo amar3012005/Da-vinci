@@ -9,17 +9,17 @@ const characters = ['capsule', 'pebble', 'prism', 'orbit', 'spark', 'fold', 'cla
 const APPEARANCE_RESOURCE = 'runtime-appearance';
 export const RUNTIME_APPEARANCE_EVENT = 'hivemind:runtime-appearance-saved';
 const APPEARANCE_FRESH_MS = 30_000;
-function cachedCharacter(orgId, userId) {
-  const character = readBootCache(orgId, userId, APPEARANCE_RESOURCE)?.value?.character;
-  return characters.includes(character) ? character : null;
+function cachedAppearance(orgId, userId) {
+  const value = readBootCache(orgId, userId, APPEARANCE_RESOURCE)?.value;
+  return characters.includes(value?.character) ? { character: value.character, revision: Number.isSafeInteger(value.revision) ? value.revision : -1 } : null;
 }
 export function RuntimeAppearanceProvider({ children }) {
   const { user, org } = useAuth();
   const scope = user?.id && org?.id ? `${user.id}:${org.id}` : '';
   // The per-tenant cache paints the saved character on the first render; the authoritative read below replaces it.
-  const cached = useMemo(() => (scope ? cachedCharacter(org.id, user.id) : null), [scope]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [fetched, setFetched] = useState({ scope: '', character: null });
-  const character = fetched.scope === scope ? fetched.character : cached;
+  const cached = useMemo(() => (scope ? cachedAppearance(org.id, user.id) : null), [scope]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [fetched, setFetched] = useState({ scope: '', character: null, revision: -1 });
+  const character = fetched.scope === scope ? fetched.character : cached?.character ?? null;
   useEffect(() => {
     if (!character) return;
     // Warm the browser cache so the avatar's first paint has its pixels ready.
@@ -29,6 +29,9 @@ export function RuntimeAppearanceProvider({ children }) {
   useEffect(() => {
     if (!scope) return undefined;
     let sequence = 0; let active = true; let readAt = 0;
+    // The newest saved revision seen in this session or the cache. A reply with a lower revision is a default or an older
+    // snapshot (Control answers revision 0 for a missing or unreadable record) and never replaces the saved character.
+    let revision = cachedAppearance(org.id, user.id)?.revision ?? -1;
     // Focus and visibility return re-read only a stale appearance; a saved change (the event) always re-reads.
     const refresh = async (force = true) => {
       if (!force && Date.now() - readAt < APPEARANCE_FRESH_MS) return;
@@ -36,9 +39,11 @@ export function RuntimeAppearanceProvider({ children }) {
       const request = ++sequence;
       try {
         const value = await api.getRuntimeAppearance();
-        if (active && request === sequence && characters.includes(value?.appearance?.character)) {
-          setFetched({ scope, character: value.appearance.character });
-          writeBootCache(org.id, user.id, APPEARANCE_RESOURCE, { character: value.appearance.character });
+        const next = Number.isSafeInteger(value?.revision) ? value.revision : 0;
+        if (active && request === sequence && characters.includes(value?.appearance?.character) && next >= revision) {
+          revision = next;
+          setFetched({ scope, character: value.appearance.character, revision: next });
+          writeBootCache(org.id, user.id, APPEARANCE_RESOURCE, { character: value.appearance.character, revision: next });
         }
       } catch { /* Retain the last saved identity during a temporary outage. */ }
     };

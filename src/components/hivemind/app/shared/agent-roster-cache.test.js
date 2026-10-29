@@ -59,3 +59,19 @@ test('a ready event forces a new catalog read after an in-flight stale read', as
   expect(fetchProfiles).toHaveBeenCalledTimes(2);
   expect(cache.peek('user:org')).toEqual([{ id: 'new' }]);
 });
+
+test('persists the saved look and profile revision, but still no persona or policy', async () => {
+  const storage = new Map();
+  const store = { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) };
+  const appearance = { version: 1, provider: 'humation', seed: 'momo' };
+  const observe = jest.fn();
+  const first = createAgentRosterCache(async () => [{ id: 'one', name: 'Momo', policy_rules: { appearance, native_lifecycle: { profile_revision: 4, secret: 'private' }, secret: 'private' } }], () => 1000, store, observe);
+  await first.load('user-a:org-a');
+  const raw = [...storage.values()].join('');
+  expect(raw).not.toContain('private');
+  expect(JSON.parse(raw).profiles[0].policy_rules).toEqual({ appearance, native_lifecycle: { profile_revision: 4 } });
+  expect(observe).toHaveBeenCalledTimes(1);
+  const second = createAgentRosterCache(jest.fn(), () => 1001, store, observe);
+  expect(second.peek('user-a:org-a')[0].policy_rules.appearance).toEqual(appearance);
+  expect(observe).toHaveBeenCalledTimes(2);
+});

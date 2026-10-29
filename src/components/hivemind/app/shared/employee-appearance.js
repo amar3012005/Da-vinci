@@ -1,5 +1,7 @@
 import { createAvatar, getPartsForSlot } from '@humation/core';
 import { humation1 } from '@humation/assets-humation-1';
+import { useEffect, useSyncExternalStore } from 'react';
+import { appearanceRevision, cachedEmployeeAppearance, rememberEmployeeAppearance, subscribeEmployeeAppearances } from './employee-appearance-cache';
 
 export const APPEARANCE_SLOTS = ['head', 'body', 'bottom', 'item', 'glasses'];
 export const APPEARANCE_COLORS = ['hair', 'clothes', 'bottom', 'skin', 'stroke'];
@@ -56,4 +58,32 @@ export function starterEmployeeAppearance(name) {
     colors: { stroke: '171717', hair: '171717', skin: 'FFFFFF', clothes: starter.clothes, bottom: '283345' },
     background: starter.background,
   });
+}
+
+/**
+ * The saved appearance to draw: the profile's own, unless the cache holds a newer revision or the profile carries none.
+ * @param {object} agent - employee or roster profile.
+ * @param {{ appearance: object, revision: number | undefined } | undefined} cached - cache entry for the agent's id.
+ * @returns {object | null} validated appearance, or null when no saved appearance is known.
+ */
+export function knownEmployeeAppearance(agent, cached) {
+  const own = employeeAppearance(agent);
+  const remembered = cached ? employeeAppearance({ policyRules: { appearance: cached.appearance } }) : null;
+  if (!remembered) return own;
+  if (!own) return remembered;
+  const revision = appearanceRevision(agent);
+  if (revision === undefined) return cached.revision === undefined ? own : remembered;
+  return cached.revision !== undefined && cached.revision > revision ? remembered : own;
+}
+
+/**
+ * Hook form of {@link knownEmployeeAppearance}; also records the profile's own appearance for later renders.
+ * @param {object} agent - employee or roster profile.
+ * @returns {object | null} appearance, or null when none is known yet.
+ */
+export function useKnownEmployeeAppearance(agent) {
+  const id = agent?.id;
+  const cached = useSyncExternalStore(subscribeEmployeeAppearances, () => cachedEmployeeAppearance(id), () => undefined);
+  useEffect(() => { rememberEmployeeAppearance(agent); }, [agent]);
+  return knownEmployeeAppearance(agent, cached);
 }
