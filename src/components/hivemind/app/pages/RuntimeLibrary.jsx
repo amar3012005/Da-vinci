@@ -125,7 +125,7 @@ function FolderButton({ active, onClick, icon: Icon, label, count, nested = fals
  * search is cached for the document, painted immediately on return, and
  * revalidated in the background.
  */
-export default function RuntimeLibrary() {
+export default function RuntimeLibrary({ title = 'Library' }) {
   const [params, setParams] = useSearchParams();
   const folder = params.get('folder') || '';
   const query = params.get('query') || '';
@@ -254,8 +254,8 @@ export default function RuntimeLibrary() {
   const showSkeleton = status === 'loading' && !items;
 
   return <div className="hm-library flex h-full min-h-0 w-full min-w-0 bg-[#faf9f4] text-[#262626]">
-    <nav aria-label="Library folders" className="hidden w-60 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-[#e7e4dd] px-3 py-5 md:flex">
-      <h1 className="mb-3 px-2.5 text-[17px] font-semibold tracking-[-0.01em] text-[#1f2328]">Library</h1>
+    <nav aria-label={`${title} folders`} className="hidden w-60 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-[#e7e4dd] px-3 py-5 md:flex">
+      <h1 className="mb-3 px-2.5 text-[17px] font-semibold tracking-[-0.01em] text-[#1f2328]">{title}</h1>
       <FolderButton active={!folder} onClick={() => chooseFolder('')} icon={FolderOpen} label="All files" count={folders ? totalCount : undefined} />
       {tree.map(group => <React.Fragment key={group.folder}>
         <FolderButton active={folder === group.folder} onClick={() => chooseFolder(group.folder)} icon={Folder} label={group.label} count={group.count} />
@@ -268,7 +268,7 @@ export default function RuntimeLibrary() {
         <div className="flex min-w-0 items-end justify-between gap-3">
           <div className="min-w-0">
             <nav aria-label="Folder path" className="flex min-w-0 items-center gap-1 text-[12px] text-[#7a7f86]">
-              <button type="button" onClick={() => chooseFolder('')} className={`shrink-0 rounded hover:text-[#1f2328] ${FOCUS}`}><span className="md:hidden">Library</span><span className="hidden md:inline">All files</span></button>
+              <button type="button" onClick={() => chooseFolder('')} className={`shrink-0 rounded hover:text-[#1f2328] ${FOCUS}`}><span className="md:hidden">{title}</span><span className="hidden md:inline">All files</span></button>
               {crumbs.map(crumb => <React.Fragment key={crumb.folder}><ChevronRight size={12} className="shrink-0" aria-hidden="true" /><button type="button" onClick={() => chooseFolder(crumb.folder)} className={`truncate rounded hover:text-[#1f2328] ${FOCUS}`}>{crumb.label}</button></React.Fragment>)}
             </nav>
             <h2 className="mt-0.5 truncate text-[20px] font-semibold tracking-[-0.02em] text-[#1f2328]">{folder ? crumbs.at(-1)?.label : 'All files'}</h2>
