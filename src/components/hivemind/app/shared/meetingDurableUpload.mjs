@@ -148,7 +148,7 @@ export async function pendingChunks(store) {
  * Poll the session until the server finalized the meeting or gave up.
  * @returns {Promise<{state:'ready',meetingId:string}|{state:'failed',code:string,detail:string}|{state:'timeout'}>}
  */
-export async function waitForFinalization({ get, sessionId, intervalMs = 3000, timeoutMs = 20 * 60 * 1000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), onStatus = () => {} }) {
+export async function waitForFinalization({ get, sessionId, intervalMs = 1500, timeoutMs = 20 * 60 * 1000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), onStatus = () => {} }) {
   const started = Date.now();
   let consecutiveErrors = 0;
   while (Date.now() - started < timeoutMs) {
