@@ -3,6 +3,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import RuntimeAvatar, { RuntimeAppearanceProvider, RUNTIME_APPEARANCE_EVENT } from '../RuntimeAvatar';
 import api from '../api-client';
 import { useAuth } from '../../auth/AuthProvider';
+import { writeBootCache } from '../boot-cache';
 jest.mock('../api-client', () => ({ __esModule: true, default: { getRuntimeAppearance: jest.fn() } }));
 jest.mock('../../auth/AuthProvider', () => ({ useAuth: jest.fn() }));
 beforeEach(() => { jest.clearAllMocks(); useAuth.mockReturnValue({ user: { id: 'a' }, org: { id: 'org-a' } }); });
@@ -37,4 +38,17 @@ test('follows native status and live reduced-motion changes using the saved char
   act(()=>{media.matches=true;notify();});
   expect(screen.getByAltText('Runtime').src).toContain('/stills/spark-needs-you.webp');
  } finally {window.matchMedia=previous;}
+});
+
+test('a default reply with a lower revision never replaces the saved Runtime character', async () => {
+ writeBootCache('org-a', 'a', 'runtime-appearance', { character: 'classic', revision: 1 });
+ api.getRuntimeAppearance.mockResolvedValue({ appearance: { character: 'orbit' }, revision: 0 });
+ render(<RuntimeAppearanceProvider><RuntimeAvatar size={40}/></RuntimeAppearanceProvider>);
+ expect(screen.getByAltText('Runtime').src).toContain('/runtime-characters/v3/stills/classic-ready.webp');
+ await waitFor(() => expect(api.getRuntimeAppearance).toHaveBeenCalledTimes(1));
+ await act(async () => {});
+ expect(screen.getByAltText('Runtime').src).toContain('/runtime-characters/v3/stills/classic-ready.webp');
+ api.getRuntimeAppearance.mockResolvedValue({ appearance: { character: 'pebble' }, revision: 2 });
+ act(() => window.dispatchEvent(new Event(RUNTIME_APPEARANCE_EVENT)));
+ await waitFor(() => expect(screen.getByAltText('Runtime').src).toContain('pebble-ready.webp'));
 });
