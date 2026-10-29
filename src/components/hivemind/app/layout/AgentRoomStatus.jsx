@@ -59,7 +59,7 @@ export default function AgentRoomStatus({ room, collapsed = false, compact = fal
       {taskStatus && !working && <span className={(collapsed || compact) ? 'sr-only' : `text-[10px] font-medium ${TASK_STATUS_TONE[taskStatus]}`} role="status" title={`Task ${TASK_STATUS_LABEL[taskStatus].toLowerCase()}`}>{TASK_STATUS_LABEL[taskStatus]}</span>}
       {!taskStatus && !working && !actionRequired && !failed && (paused || idle) && <span className={(collapsed || compact) ? 'sr-only' : 'text-[10px] text-[#737373]'} role="status">{paused ? 'Paused' : 'Ready'}</span>}
       {unread && <span className="h-1.5 w-1.5 rounded-full bg-green-500" role="img" aria-label="Unread update" />}
-      {scheduled && !taskStatus && <CalendarClock size={14} className="text-[#737373]" role="img" aria-label="Work scheduled" />}
+      {scheduled && <CalendarClock size={14} className="text-[#737373]" role="img" aria-label="Work scheduled" />}
       {actionRequired && <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700" role="status">
         <Bell size={13} className="animate-pulse motion-reduce:animate-none" aria-hidden="true" />
         {(collapsed || compact) ? <span className="sr-only">{attentionLabel}</span> : attentionLabel}
