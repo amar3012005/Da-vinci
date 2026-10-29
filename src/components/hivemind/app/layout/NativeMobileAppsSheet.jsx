@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Cable, Search, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { LegacyMobileAppsSheet } from '../mobile/LegacyChatSheets';
+import { connectClient, connectReturnUrl } from '../shared/connect-return';
 
 /** Mobile presentation of the existing authorized connector catalog and OAuth flow. */
 export default function NativeMobileAppsSheet({ onClose, legacy = false }) {
@@ -130,7 +131,7 @@ export default function NativeMobileAppsSheet({ onClose, legacy = false }) {
       } else {
         const data = await apiClient.createComposioConnectLink(toolkit.slug, {
           toolkitMeta: { composioManagedAuthSchemes: toolkit.composioManagedAuthSchemes, noAuth: toolkit.noAuth },
-          callbackUrl: callback.href,
+          callbackUrl: connectReturnUrl({ origin: window.location.origin, toolkit: toolkit.slug, returnPath: `${callback.pathname}${callback.search}`, client: connectClient() }),
         });
         target = data.redirect_url;
       }

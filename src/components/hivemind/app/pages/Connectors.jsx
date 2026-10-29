@@ -52,6 +52,7 @@ import UsageTracker from '../components/UsageTracker';
 import ComposioToolkitBrowser from './ComposioToolkitBrowser';
 import RuntimeEventSubscriptions from './RuntimeEventSubscriptions';
 import ConnectorsWelcome from './ConnectorsWelcome';
+import { connectClient, connectReturnUrl } from '../shared/connect-return';
 
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
@@ -2942,6 +2943,24 @@ export default function Connectors() {
     }
   }, [refetchOAuth, searchParams, setSearchParams]);
 
+  // Return from a Composio consent page (see shared/connect-return.js): the query is only a
+  // refresh hint, so reload the connection list and let server data decide what shows as connected.
+  const composioReturnToolkit = searchParams.get('composio_toolkit');
+  const composioReturnStatus = searchParams.get('status');
+  useEffect(() => {
+    if (!composioReturnToolkit) return;
+    const label = composioReturnToolkit.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    if (composioReturnStatus === 'failed') {
+      setToastMessage({ type: 'error', text: `Connecting ${label} failed or was cancelled.` });
+    } else {
+      setToastMessage({ type: 'success', text: `${label} connected. Refreshing your apps…` });
+    }
+    const next = new URLSearchParams(window.location.search);
+    ['composio_toolkit', 'status', 'connected_account_id'].forEach((key) => next.delete(key));
+    setSearchParams(next, { replace: true });
+    refetchOAuth();
+  }, [composioReturnToolkit, composioReturnStatus, refetchOAuth, setSearchParams]);
+
   // Poll for status after connect
   useEffect(() => {
     if (searchParams.get('connector_success')) return;
@@ -3059,7 +3078,7 @@ export default function Connectors() {
     const toolkitSlug = connector.composioProvider;
     setConnectingProvider(toolkitSlug);
     try {
-      const callbackUrl = `${window.location.origin}${window.location.pathname}?composio_toolkit=${encodeURIComponent(toolkitSlug)}`;
+      const callbackUrl = connectReturnUrl({ origin: window.location.origin, toolkit: toolkitSlug, returnPath: window.location.pathname, client: connectClient() });
       const { redirect_url } = await apiClient.createComposioConnectLink(toolkitSlug, { callbackUrl });
       if (!redirect_url) throw new Error('Composio did not return a connect link');
       window.location.href = redirect_url;

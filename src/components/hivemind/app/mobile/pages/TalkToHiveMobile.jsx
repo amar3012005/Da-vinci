@@ -80,6 +80,7 @@ import {
   savePendingConnectorPrompt,
   takePendingConnectorPrompt,
 } from '../../shared/connector-aware-chat';
+import { connectClient, connectReturnUrl } from '../../shared/connect-return';
 
 // The composer changes on every keystroke. Keep completed transcript rows out
 // of that hot render path, especially on iOS where a long animated transcript
@@ -542,7 +543,7 @@ export default function TalkToHiveMobile() {
         window.location.href = authUrl;
         return;
       }
-      const callbackUrl = `${window.location.origin}/hivemind/m/chat?composio_toolkit=${encodeURIComponent(connectToolkit.slug)}`;
+      const callbackUrl = connectReturnUrl({ origin: window.location.origin, toolkit: connectToolkit.slug, returnPath: '/hivemind/m/chat', client: connectClient() });
       const { redirect_url: redirectUrl } = await apiClient.createComposioConnectLink(connectToolkit.slug, {
         toolkitMeta: {
           composioManagedAuthSchemes: connectToolkit.composioManagedAuthSchemes,

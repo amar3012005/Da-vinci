@@ -13,6 +13,7 @@ import { renderArtifactMarkdown } from './artifact-markdown';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 import { mergeRuntimeTaskProjection } from './company-hq-model';
+import { connectClient, connectReturnUrl } from '../shared/connect-return';
 
 export { mergeRuntimeTaskProjection };
 
@@ -1146,7 +1147,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       const toolkitSlug = String(capabilityRequest.connector_toolkit || provider).toLowerCase();
       const authWindow = window.open('', '_blank', 'noopener,noreferrer');
       try {
-        const callbackUrl = `${window.location.origin}/hivemind/app/connectors?composio_toolkit=${encodeURIComponent(toolkitSlug)}`;
+        const callbackUrl = connectReturnUrl({ origin: window.location.origin, toolkit: toolkitSlug, returnPath: '/hivemind/app/connectors', client: connectClient() });
         const data = await apiClient.createComposioConnectLink(toolkitSlug, { callbackUrl });
         if (!data?.redirect_url) throw new Error('Composio did not return a connection URL');
         if (authWindow) authWindow.location.href = data.redirect_url;
