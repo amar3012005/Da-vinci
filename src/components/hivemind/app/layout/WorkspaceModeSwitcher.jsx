@@ -1,6 +1,8 @@
 import { paneForPath, recalledPaneRoute } from '../shared/native-pane-protocol';
 import { useAuth } from '../auth/AuthProvider';
 import { workspaceModeDestination, workspaceModeForPath } from '../shared/workspace-mode';
+import { agentRoster } from '../shared/agent-roster';
+import { runtimeDisabledDestination, runtimeEnabledFor, RUNTIME_SESSION_PATH } from '../shared/runtime-enabled';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +20,8 @@ export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const modeMenuRef = useRef(null);
   const mode = workspaceModeForPath(location.pathname);
+  // Without Runtime, HyperAgents opens on the first employee's room, or the team page.
+  const hyperagentsPath = runtimeEnabledFor(org) ? RUNTIME_SESSION_PATH : runtimeDisabledDestination(agentRoster.peek(user?.id && org?.id ? `${user.id}:${org.id}` : null));
   const voiceMode = mode === 'tara';
   const teamMode = mode === 'hyperagents';
   const chooseMode = (path, selected) => {
@@ -52,7 +56,7 @@ export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
           </button>
           {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 w-[310px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#e3e0db] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.10)] z-50">
             {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), path: '/hivemind/app/overview/new', selected: !teamMode && !voiceMode, brain: true },
-              { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), path: '/hivemind/app/employee/harness', selected: teamMode },
+              { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), path: hyperagentsPath, selected: teamMode },
               { name: t('sidebar.voice', { defaultValue: 'Voice' }), description: t('sidebar.voiceDescription', { defaultValue: 'Speak. Connect. Represent.' }), path: '/hivemind/app/tara', selected: voiceMode, voice: true }].map(mode =>
               <button key={mode.path} role="menuitemradio" aria-checked={mode.selected} type="button" onClick={() => chooseMode(mode.path, mode.selected)} className={`flex items-center gap-3 w-full rounded-xl px-3 py-3 text-left text-[#333333] hover:bg-[#efede6] ${mode.selected ? 'bg-[#f7f6f2]' : ''}`}>
                 <span className="shrink-0">{mode.brain ? <BrainModeIcon size={32} /> : mode.voice ? <VoiceModeIcon size={32} /> : <BotAvatar type="mech" shading="fabric" size={32} interactive={false} />}</span>

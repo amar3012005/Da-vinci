@@ -47,6 +47,7 @@ import RoomVisualGeneration, { assignVisualJobsToTurns, useRoomVisualGeneration 
 import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
+import { runtimeEnabledFor } from '../shared/runtime-enabled';
 import FeatureBetaModal from './FeatureBetaModal';
 import HarnessSurface from './HarnessSurface';
 import {
@@ -229,6 +230,7 @@ export default function HyperAgents({ harnessRooms = false }) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const { user, org, logout } = useAuth();
+  const runtimeEnabled = runtimeEnabledFor(org);
   // The Operating System owns its Rooms/account rail. The app-level sidebar is
   // still collapsed below so the OS workspace has one focused navigation rail.
   const showOperatingSystemSidebar = true;
@@ -539,6 +541,7 @@ export default function HyperAgents({ harnessRooms = false }) {
             <Building2 size={13} className={viewMode === 'hero' ? 'text-white' : 'text-violet-500'} />
             {t('hyperAgents.yourCompany', 'Your Company')}
           </button>
+          {runtimeEnabled && <>
           <button
             type="button"
             onClick={() => {
@@ -569,6 +572,7 @@ export default function HyperAgents({ harnessRooms = false }) {
             <Power size={13} className="text-[#185bcc]" />
             Runtime
           </button>
+          </>}
           {OPERATING_ROOMS_V1 && <button
             type="button"
             onClick={() => setBetaFeature('operatingRooms')}
@@ -2905,7 +2909,7 @@ function RoomThread({ roomId, onArchived }) {
               </span>
             </div>
           )}
-          {isHqRoom && <HqRuntimeConsole
+          {isHqRoom && runtimeEnabled && <HqRuntimeConsole
             objective={growthOperatingState?.goals?.find((goal) => goal.status === 'ACTIVE')?.objective || room?.goal || companyContext?.mission}
             baselineReady={Boolean(growthBaseline)}
           />}
@@ -2987,7 +2991,7 @@ function RoomThread({ roomId, onArchived }) {
                           className="mt-2 inline-flex h-7 items-center gap-1 bg-[#171717] px-2.5 text-[9px] font-semibold text-white disabled:opacity-40"
                         ><Check size={11} /> {workPlanBusy === step.id ? 'Continuing...' : 'Approve and continue'}</button>
                       ) : null}
-                      {canHandoff ? (
+                      {canHandoff && runtimeEnabledFor(org) ? (
                         <button
                           type="button"
                           disabled={workPlanBusy === step.id}
@@ -3394,7 +3398,7 @@ function RoomThread({ roomId, onArchived }) {
               </div>
             </section>
           )}
-          {isHqRoom && <HqRuntimeRail baselineReady={Boolean(growthBaseline)} />}
+          {isHqRoom && runtimeEnabledFor(org) && <HqRuntimeRail baselineReady={Boolean(growthBaseline)} />}
           {isSeoRoom && <SeoRoomProgress
             audit={roomSeoAudit}
             connection={seoConnection}

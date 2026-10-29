@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { fetchWithRuntimeAdmission } from '../shared/runtime-admission';
-import { RUNTIME_WORKSPACE } from '../shared/runtime-workspace';
+import { HYPERAGENTS_WORKSPACE, RUNTIME_WORKSPACE } from '../shared/runtime-workspace';
 
 /** One autonomy dial for Runtime and HyperAgents; it lives in the HyperAgents sidebar on every page. */
 export const AUTONOMY_ENDPOINT = '/api/hivemindHq/autonomyLevel';
@@ -48,7 +48,7 @@ function writeCachedAutonomy(orgId, value) {
   try { window.localStorage.setItem(cacheKey(orgId), JSON.stringify({ level: value.level, revision: value.revision, maxSelectable: value.maxSelectable })); } catch { /* Optional cache: only the instant first paint is lost. */ }
 }
 
-export default function AutonomyDial({ collapsed = false, fetcher = defaultFetcher, orgId }) {
+export default function AutonomyDial({ collapsed = false, fetcher = defaultFetcher, orgId, runtimeEnabled = true }) {
   const [state, setState] = useState(() => readCachedAutonomy(orgId));
   const [remote, setRemote] = useState(false);
   const [draft, setDraft] = useState(null);
@@ -81,6 +81,9 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
   const available = state !== false;
   const saved = available ? state.level ?? UNSET_DISPLAY : UNSET_DISPLAY;
   const shown = draft ?? pending ?? saved;
+  /* Without Runtime the level governs the employees alone, so the copy names only them. */
+  const hint = index => runtimeEnabled ? AUTONOMY_LEVELS[index].hint : AUTONOMY_LEVELS[index].hint.replace(/^Runtime and HyperAgents/, 'Your HyperAgents');
+  const subject = runtimeEnabled ? 'Runtime and HyperAgents' : 'HyperAgents';
   const level = AUTONOMY_LEVELS[Math.max(0, Math.min(MAX, Math.round(shown)))];
   const filled = Math.round((shown / MAX) * CELLS);
   const lockedFrom = available ? Math.round((state.maxSelectable / MAX) * CELLS) : CELLS;
@@ -88,7 +91,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
     const wanted = Number(value);
     setDraft(null);
     if (!available) return;
-    if (remote) { window.location.assign(RUNTIME_WORKSPACE); return; }
+    if (remote) { window.location.assign(runtimeEnabled ? RUNTIME_WORKSPACE : HYPERAGENTS_WORKSPACE); return; }
     if (wanted > state.maxSelectable) { setNotice('Higher levels unlock after the restart and isolation safety tests pass.'); return; }
     if (wanted === state.level) return;
     setNotice(null);
@@ -116,7 +119,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
   }
   return <div className="ha-autonomy-dial" data-unset={(available && state.level === undefined) || undefined} data-unavailable={!available || undefined} data-hivemind-autonomy-dial>
     <div className="ha-autonomy-head">
-      <span className="ha-autonomy-title">Autonomy · Runtime and HyperAgents</span>
+      <span className="ha-autonomy-title">Autonomy · {subject}</span>
       <span className="ha-autonomy-count">{available ? `${Math.round(shown)}/${MAX} · ${level.name}` : 'Unavailable'}</span>
     </div>
     <div className="ha-autonomy-row">
@@ -125,7 +128,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
         <span className="ha-autonomy-cells" aria-hidden="true">{Array.from({ length: CELLS }, (_, index) =>
           <i key={index} data-filled={index < filled || undefined} data-locked={index >= lockedFrom || undefined}/>)}</span>
         <input type="range" className="ha-autonomy-range" min={0} max={MAX} step={1} value={shown}
-          disabled={!available || saving || pending !== null} aria-label="Autonomy level for Runtime and HyperAgents" aria-valuetext={level.name}
+          disabled={!available || saving || pending !== null} aria-label={`Autonomy level for ${subject}`} aria-valuetext={level.name}
           onChange={event => { setNotice(null); setDraft(Number(event.target.value)); }}
           onPointerUp={event => release(event.currentTarget.value)}
           onKeyUp={event => { if (draft !== null) release(event.currentTarget.value); }}
@@ -142,14 +145,16 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
       </button>)}
     </div>
     {notice && <p className="ha-autonomy-notice" role="status">{notice}</p>}
-    {remote && <a className="ha-autonomy-notice" href={RUNTIME_WORKSPACE}>Change the level in the Runtime room</a>}
+    {remote && (runtimeEnabled
+      ? <a className="ha-autonomy-notice" href={RUNTIME_WORKSPACE}>Change the level in the Runtime room</a>
+      : <a className="ha-autonomy-notice" href={HYPERAGENTS_WORKSPACE}>Change the level in your HyperAgents workspace</a>)}
     {pending !== null && createPortal(<div className="ha-autonomy-overlay" role="presentation" onClick={() => { if (!saving) setPending(null); }}>
       <div className="ha-autonomy-confirm" role="dialog" aria-modal="true" aria-labelledby="ha-autonomy-confirm-title" onClick={event => event.stopPropagation()}
         onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); if (!saving) setPending(null); } }}>
         <h3 id="ha-autonomy-confirm-title">Change autonomy?</h3>
         <p className="ha-autonomy-change"><span>{previous}</span><span aria-hidden="true">→</span><strong>{AUTONOMY_LEVELS[pending].name}</strong></p>
-        <p className="ha-autonomy-confirm-hint">{AUTONOMY_LEVELS[pending].hint}</p>
-        <p className="ha-autonomy-confirm-note">This applies to Runtime and all HyperAgents until you change it again.</p>
+        <p className="ha-autonomy-confirm-hint">{hint(pending)}</p>
+        <p className="ha-autonomy-confirm-note">{runtimeEnabled ? 'This applies to Runtime and all HyperAgents until you change it again.' : 'This applies to all your HyperAgents until you change it again.'}</p>
         <div className="ha-autonomy-actions">
           <button type="button" onClick={() => setPending(null)} disabled={saving}>Cancel</button>
           <button type="button" className="is-primary" onClick={() => { void save(); }} disabled={saving} autoFocus>{saving ? 'Saving…' : 'Save'}</button>

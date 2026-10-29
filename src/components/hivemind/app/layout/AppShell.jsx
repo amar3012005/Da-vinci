@@ -12,6 +12,9 @@ import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { RoomLoading } from './PhoneRoomFrame';
 import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
 import { discardParkedNativeHarnessSeat } from '../shared/native-harness-seat';
+import { runtimeEnabledFor, runtimeDisabledDestination } from '../shared/runtime-enabled';
+import { agentRoster } from '../shared/agent-roster';
+import { useRuntimeRouteGuard } from './useRuntimeRouteGuard';
 import { NativeAiConsentGate } from '../mobile/MobileSafetyPanel';
 import { useTranslation } from 'react-i18next';
 import { mobileBrainUserName, mobileBrainGreeting } from './mobile-brain-identity';
@@ -248,6 +251,9 @@ function AppShellContent() {
     if (destination) navigate(destination, { replace:true });
   }, [location, navigate]);
 
+  const runtimeEnabled = runtimeEnabledFor(org);
+  useRuntimeRouteGuard({ enabled: runtimeEnabled, location, navigate, scope: user?.id && org?.id ? `${user.id}:${org.id}` : null });
+
   useEffect(() => {
     if (org?.billing_action_required && location.pathname !== '/hivemind/app/billing') {
       navigate(`/hivemind/app/billing?phase=${org.billing_phase || 'runway'}`, { replace: true });
@@ -451,7 +457,7 @@ function AppShellContent() {
     if (s === sectionForPath(location.pathname)) return;
     setActiveSection(s);
     try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }
-    const landing = { hivemind: '/hivemind/app/overview/new', hyperagents: '/hivemind/app/employee/harness', tara: '/hivemind/app/tara' };
+    const landing = { hivemind: '/hivemind/app/overview/new', hyperagents: runtimeEnabled ? '/hivemind/app/employee/harness' : runtimeDisabledDestination(agentRoster.peek(user?.id && org?.id ? `${user.id}:${org.id}` : null)), tara: '/hivemind/app/tara' };
     if (!landing[s]) return;
 
     // BRAIN embeds the native Harness, which owns an independent React root.
@@ -640,7 +646,7 @@ function AppShellContent() {
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
           <div className={!initialNativePane && !hyperFullscreen && !crmFullscreen && !graphFullscreen && (workspaceModeForPath(location.pathname) === 'hyperagents' || onOverview) ? 'hm-runtime-workspace' : 'contents'}>
-          {workspaceModeForPath(location.pathname) === 'hyperagents' && !/^\/hivemind\/app\/employee\/library(?:\/|$)/.test(location.pathname) && !initialNativePane && !hyperFullscreen && !crmFullscreen && startOverlay && <RuntimeGetStarted key={`${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
+          {workspaceModeForPath(location.pathname) === 'hyperagents' && !/^\/hivemind\/app\/employee\/(?:library|artifacts|calendar)(?:\/|$)/.test(location.pathname) && runtimeEnabled && !initialNativePane && !hyperFullscreen && !crmFullscreen && startOverlay && <RuntimeGetStarted key={`${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
           {workspaceModeForPath(location.pathname) === 'hivemind' && !initialNativePane && !graphFullscreen && !crmFullscreen && startOverlay && <BrainGetStarted key={`brain:${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
           <main data-native-chat-main={nativeChatRoom || undefined} data-dot-room-phone={dotRoomPhone || undefined} className={companyEntry ? 'min-h-screen p-4 sm:p-8' : dotRoomPhone ? 'box-border h-[var(--hm-app-viewport-height,100dvh)] min-h-0 min-w-0 overflow-hidden pt-[env(safe-area-inset-top,0px)]' : graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview || onOpenDotWorkspace ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 min-w-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <BrainFeatureWelcome key={`features-${user?.id || ""}:${org?.id || ""}`} tenant={org?.id} userId={user?.id} />
@@ -649,7 +655,7 @@ function AppShellContent() {
           </div>
         </div>
 
-        {employeeRoom && <React.Suspense fallback={null}><HyperAgentsWelcome key={`${user?.id}:${org?.id}`} company={companyAdmission.company} /></React.Suspense>}
+        {employeeRoom && runtimeEnabled && <React.Suspense fallback={null}><HyperAgentsWelcome key={`${user?.id}:${org?.id}`} company={companyAdmission.company} /></React.Suspense>}
         {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}
         {/* Chat FAB — glass-morph pill, slides in from right, blinking pulse */}
         {SHOW_TALK_TO_HIVE_FAB && <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || crmFullscreen || onOverview || onMeetingNotes || activeSection === 'hyperagents' || activeSection === 'tara'} />}

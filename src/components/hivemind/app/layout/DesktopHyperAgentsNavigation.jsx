@@ -3,7 +3,8 @@ import AutonomyDial from './AutonomyDial';
 import { employeeAppsPath } from '../shared/workspace-mode';
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Plus, Cable, Building2, FolderKanban, Monitor, FolderOpen, Settings, LogOut, Library } from 'lucide-react';
+import { Plus, Cable, Building2, FolderKanban, Monitor, CalendarDays, Settings, LogOut, Library } from 'lucide-react';
+import { ARTIFACTS_PATH, ArtifactsIcon, CALENDAR_PATH } from './sidebar-tools';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
 import CreditBalance from '../shared/CreditBalance';
@@ -22,7 +23,7 @@ function LiveStatus({ room, collapsed }) {
   </span>;
 }
 
-export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgent, openingAgent, onOpenAgent, onCreate, onCompany, columns, collapsed, user, planLabel, credits, logout, orgId }) {
+export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgent, openingAgent, onOpenAgent, onCreate, onCompany, columns, collapsed, user, planLabel, credits, logout, orgId, runtimeEnabled = true }) {
   const location = useLocation();
   const roomFor = id => {
     const room = aggregateAgentRooms(rooms, id);
@@ -33,11 +34,11 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
   return <div className={`desktop-hyperagents-navigation${collapsed ? ' is-collapsed' : ''}`} data-columns={columns}>
     <div className="ha-team-scroll">
       {!collapsed && <div className="ha-team-heading"><h2>Your team</h2><span>{team.length} {team.length === 1 ? 'employee' : 'employees'}</span></div>}
-      <button type="button" data-agent-room-link className={`ha-runtime-card${!selectedAgent ? ' is-selected' : ''}`} aria-label="Runtime, AI Chief of Staff" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => onOpenAgent(event, { id: 'runtime' })} title={collapsed ? 'Runtime · AI Chief of Staff' : undefined}>
+      {runtimeEnabled && <button type="button" data-agent-room-link className={`ha-runtime-card${!selectedAgent ? ' is-selected' : ''}`} aria-label="Runtime, AI Chief of Staff" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => onOpenAgent(event, { id: 'runtime' })} title={collapsed ? 'Runtime · AI Chief of Staff' : undefined}>
         <RuntimeAvatar alt="" room={runtimeRoom}/>
         {!collapsed && <span className="ha-runtime-identity"><strong>Runtime</strong><small>AI Chief of Staff</small><LiveStatus room={runtimeRoom}/></span>}
         {collapsed && <LiveStatus room={runtimeRoom} collapsed/>}
-      </button>
+      </button>}
       <div className="ha-employee-grid" role="region" style={{ gridTemplateColumns: `repeat(${collapsed ? 1 : columns}, minmax(0, 1fr))` }} aria-label="Employees">
         {team.map(agent => {
           const profession = employeeProfession(agent);
@@ -56,11 +57,11 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
         <button type="button" className={`ha-create-employee${span === columns ? ' full-row' : ''}`} style={{ gridColumn: `span ${collapsed ? 1 : span}` }} onClick={onCreate} aria-label="Create employee"><Plus size={23}/>{!collapsed && <span>Create employee</span>}</button>
       </div>
     </div>
-    <div className="ha-autonomy-seat"><AutonomyDial collapsed={collapsed} orgId={orgId}/></div>
+    <div className="ha-autonomy-seat"><AutonomyDial collapsed={collapsed} orgId={orgId} runtimeEnabled={runtimeEnabled}/></div>
     <nav className="ha-workspace-shortcuts" aria-label="Workspace tools">
       <NavLink to={employeeAppsPath(location)} title={collapsed ? 'Apps' : undefined}><Cable size={18}/>{!collapsed && <span>Apps</span>}</NavLink>
-      <div className="ha-artifact-cell"><div className="ha-artifacts-action" data-hivemind-calendar-seat data-collapsed={collapsed || undefined}/></div>
-      <div className="ha-artifact-cell"><div className="ha-artifacts-action" data-hivemind-artifacts-seat data-collapsed={collapsed || undefined}/><button type="button" className="ha-artifacts-unavailable" disabled title="Artifacts become available when the Runtime workspace connects"><FolderOpen size={18}/>{!collapsed && <span>Artifacts</span>}</button></div>
+      <NavLink to={CALENDAR_PATH} data-sidebar-tool="calendar" title={collapsed ? 'Calendar' : undefined}><CalendarDays size={18}/>{!collapsed && <span>Calendar</span>}</NavLink>
+      <NavLink to={ARTIFACTS_PATH} data-sidebar-tool="artifacts" title={collapsed ? 'Artifacts' : undefined}><ArtifactsIcon/>{!collapsed && <span>Artifacts</span>}</NavLink>
       <button type="button" onClick={onCompany} title={collapsed ? 'Company HQ' : undefined}><Building2 size={18}/>{!collapsed && <span>Company HQ</span>}</button>
       <NavLink to="/hivemind/app/employee/library" title={collapsed ? 'Library' : undefined}><Library size={18}/>{!collapsed && <span>Library</span>}</NavLink>
       {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm" title={collapsed ? 'CRM' : undefined}><FolderKanban size={18}/>{!collapsed && <span>CRM</span>}</NavLink>}

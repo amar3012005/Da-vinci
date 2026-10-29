@@ -12,6 +12,7 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './auth/LoginPage';
 import InvitationLanding from './auth/InvitationLanding';
 import RuntimeApprovalPage from './auth/RuntimeApprovalPage';
+import { EmployeesEntry, RuntimeSessionRoute } from './layout/RuntimeSessionRoute';
 import CliVerified from './auth/CliVerified';
 import AppShell from './layout/AppShell';
 import OptimisticAppShell from './layout/OptimisticAppShell';
@@ -22,6 +23,7 @@ const TaraConfig = React.lazy(() => import('./pages/TaraConfig'));
 // Pages (lazy loaded for code splitting)
 const OpenDotAppsNavigation = React.lazy(() => import('./pages/OpenDotAppsNavigation'));
 const RuntimeLibrary = React.lazy(() => import('./pages/RuntimeLibrary'));
+const RuntimeCalendar = React.lazy(() => import('./pages/RuntimeCalendar'));
 const OpenDotEntry = React.lazy(() => import('./pages/OpenDotEntry'));
 const Overview = React.lazy(() => import('./pages/Overview'));
 const DocsPage = React.lazy(() => import('../DocsPage'));
@@ -277,12 +279,15 @@ export default function HiveMindApp() {
               which otherwise recursively appends `overview`. */}
           <Route path="overview/*" element={<PageSuspense><Overview /></PageSuspense>} />
           <Route path="employee/dots/*" element={<PageSuspense><OpenDotEntry /></PageSuspense>} />
-          <Route path="employee/harness/*" element={<PageSuspense><Overview /></PageSuspense>} />
+          <Route path="employee/harness/*" element={<RuntimeSessionRoute><PageSuspense><Overview /></PageSuspense></RuntimeSessionRoute>} />
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
           <Route path="employee/apps" element={<PageSuspense><OpenDotAppsNavigation /></PageSuspense>} />
           <Route path="employee/library" element={<PageSuspense><RuntimeLibrary /></PageSuspense>} />
+          {/* Sidebar tools that read the company's Runtime root as a data owner: they open in every HyperAgents view, with or without Runtime. */}
+          <Route path="employee/artifacts" element={<PageSuspense><RuntimeLibrary title="Artifacts" /></PageSuspense>} />
+          <Route path="employee/calendar" element={<PageSuspense><RuntimeCalendar /></PageSuspense>} />
           <Route path="connectors" element={<PageSuspense><Connectors /></PageSuspense>} />
           <Route path="profile" element={<PageSuspense><Profile /></PageSuspense>} />
           <Route path="entities/:entityId" element={<PageSuspense><EntityProfilePage /></PageSuspense>} />
@@ -316,7 +321,7 @@ export default function HiveMindApp() {
               /employees/rooms/:id (thread) · /employees (redirect→mycompany) */}
           <Route path="employees/operating-rooms" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
           <Route path="employees/operating-rooms/:roomId" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
-          <Route path="employees" element={<Navigate to="/hivemind/app/employee/harness" replace />} />
+          <Route path="employees" element={<EmployeesEntry />} />
           <Route path="employees/*" element={<PageSuspense><HyperAgents /></PageSuspense>} />
           {/* Legacy direct roster path — kept for back-compat */}
           <Route path="employees/roster" element={<PageSuspense><DigitalEmployees /></PageSuspense>} />

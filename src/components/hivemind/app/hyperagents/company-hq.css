@@ -14,6 +14,7 @@
 .hm-hq-wakes { grid-area:wakes; }
 .hm-hq-deliverables { grid-area:deliverables; }
 .hm-hq-files { grid-area:files; }
+.hm-hq-grid[data-runtime-off] { grid-template-areas:"overview" "team" "wakes" "deliverables" "files"; }
 .hm-hq-overview-body { display:grid; gap:16px; grid-template-columns:minmax(0, 1fr); }
 .hm-hq-facts { display:grid; gap:8px; grid-template-columns:minmax(0, 1fr); }
 .hm-hq-team-grid { display:grid; gap:2px; grid-template-columns:minmax(0, 1fr); }
@@ -39,6 +40,12 @@
     grid-template-areas:"overview overview runtime" "team team wakes" "deliverables deliverables files";
   }
   .hm-hq-deliverables-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+@container hm-hq (min-width:700px) {
+  .hm-hq-grid[data-runtime-off] { grid-template-areas:"overview overview" "team team" "wakes deliverables" "files files"; }
+}
+@container hm-hq (min-width:1100px) {
+  .hm-hq-grid[data-runtime-off] { grid-template-areas:"overview overview wakes" "team team deliverables" "team team files"; }
 }
 @container hm-hq (min-width:1360px) {
   .hm-hq-deliverables-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); }

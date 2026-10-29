@@ -3,6 +3,7 @@ import { Bell, Check, Clock3, RefreshCw } from 'lucide-react';
 import MobileShell from '../MobileShell';
 import MobileSafetyPanel from '../MobileSafetyPanel';
 import apiClient from '../../shared/api-client';
+import RuntimeAvailabilitySettings from '../../components/RuntimeAvailabilitySettings';
 import { isNativeApp } from '../../shared/native-app';
 import { HAPTICS_PREFERENCE, touchFeedbackEnabled } from '../../shared/native-haptics';
 
@@ -80,6 +81,8 @@ export default function MobileSettings() {
           <h1 className="mt-1 font-['Space_Grotesk'] text-[24px] font-semibold text-[#0a0a0a]">Stay in the loop.</h1>
           <p className="mt-1 text-[12px] leading-relaxed text-[#737373]">Choose when HIVE-MIND can follow up on work that needs your attention.</p>
         </header>
+
+        <section className="rounded-[16px] border border-[#e3e0db] bg-white p-4"><RuntimeAvailabilitySettings /></section>
 
         <section className="rounded-[16px] border border-[#e3e0db] bg-white p-4">
           <div className="flex items-start gap-3">

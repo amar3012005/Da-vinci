@@ -763,6 +763,18 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Control's per-company "Enable Runtime" switch. Owner/admin only: `{ organization_id, runtime_enabled }`. */
+  async getRuntimeSetting(orgId) {
+    const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/runtime-settings`);
+    return data;
+  }
+
+  /** Saves the switch. Control audits a change and answers `{ organization_id, runtime_enabled, changed }`. */
+  async setRuntimeSetting(orgId, enabled) {
+    const { data } = await this.controlPlane.put(`/v1/orgs/${orgId}/runtime-settings`, { runtime_enabled: enabled === true });
+    return data;
+  }
+
   // Rebuild the user/org profile: re-run the LLM profile-dreamer over the
   // caller's memories and persist the grounded facts. Server-gated to
   // admin/owner. Returns { perUser: [{ applied, ... }] }.
