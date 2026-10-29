@@ -46,3 +46,7 @@ test('stale snapshot shows reconnecting rather than a false working spinner', ()
   expect(value).toContain('Unread update');
   expect(value).not.toContain('aria-label="Working"');
 });
+
+test('shows booked work next to the task status', () => {
+  expect(output({ scheduled: true, taskStatus: 'review' })).toContain('Work scheduled');
+});
