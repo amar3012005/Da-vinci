@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthProvider';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { RoomLoading } from './PhoneRoomFrame';
 import { agentRoster } from '../shared/agent-roster';
+import { runtimeEnabledFor, runtimeRouteAllowed } from '../shared/runtime-enabled';
 import { PANE_ORIGINS, PANE_EVENTS, PANE_REQUESTS, directRuntimeHost, paneForPath, panePath, paneSource, validPaneMessage, rememberPaneRoute } from '../shared/native-pane-protocol';
 
 export function nativePreviewExpanded(doc) { return Boolean(doc.querySelector('[data-sidebar-right-panel][data-sidebar-right-open]')); }
@@ -115,7 +116,9 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
 export default function PersistentHarnessPanes({ retainBrain = true }) {
   const location = useLocation(); const navigate = useNavigate(); const navigateRef = useRef(navigate); navigateRef.current = navigate; const { user, org } = useAuth();
   const scope = `${user?.id || ''}:${org?.id || ''}`;
-  const candidate = paneForPath(location.pathname);
+  // A company without Runtime never boots Runtime's pane except for a deliberately opened employee room.
+  const runtimeBlocked = !runtimeEnabledFor(org) && !runtimeRouteAllowed(location);
+  const candidate = runtimeBlocked && paneForPath(location.pathname) === 'runtime' ? null : paneForPath(location.pathname);
   // The runner owns Runtime directly. Never create a duplicate native client
   // in a same-origin iframe; its direct HarnessSurface retains the native seat.
   const directRuntime = directRuntimeHost(candidate, window.location.origin);

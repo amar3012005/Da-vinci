@@ -4,6 +4,7 @@ import RuntimeAvatar from '../shared/RuntimeAvatar';
 import { ownedOpenDotRoomStatuses, withEmployeeTaskStatuses, reconnectingOpenDotRoomStatuses, withRuntimeReviewDecisions } from '../shared/open-dot-room-status';
 import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
 import { agentRoster } from '../shared/agent-roster';
+import { setEmployeeRoomOpen, useRuntimeEnabled } from '../shared/runtime-enabled';
 import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../shared/open-dot-employee-route';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
@@ -65,7 +66,7 @@ const CreateEmployeeDialog = React.lazy(() => import('./CreateEmployeeDialog'));
 const CompanyWorkspaceOverlay = React.lazy(() => import('../shared/CompanyWorkspaceOverlay'));
 
 /** Build nav sections, conditionally including admin items. Filtered by activeSection. */
-function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection = 'hivemind', team = [] }) {
+function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection = 'hivemind', team = [], runtimeEnabled = true }) {
   const tt = (k, def) => t(`sidebar.${k}`, { defaultValue: def });
   const advancedItems = [
     // Agent Swarm + Engine hidden for now (kept routable, just off the sidebar).
@@ -129,7 +130,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
     {
       label: tt('groups.yourTeam', 'Your Team'),
       items: [
-        { to: '/hivemind/app/employee/harness', icon: Cpu, label: tt('runTime', 'Run Time'), runtime: true },
+        ...(runtimeEnabled ? [{ to: '/hivemind/app/employee/harness', icon: Cpu, label: tt('runTime', 'Run Time'), runtime: true }] : []),
         ...team.map(agent => ({ to: '/hivemind/app/overview', agent, label: agent.name })),
         { to: '/hivemind/app/employee/create', icon: Plus, label: tt('createEmployee', 'Create employee'), createEmployee: true },
       ],
@@ -195,6 +196,7 @@ export default function Sidebar({
 }) {
   const { t } = useTranslation('dashboard');
   const { logout, org, user } = useAuth();
+  const runtimeEnabled = useRuntimeEnabled();
   const location = useLocation();
   const navigate = useNavigate();
   const scope = user?.id && org?.id ? `${user.id}:${org.id}` : null;
@@ -395,6 +397,8 @@ export default function Sidebar({
   const openAgent = async (event, agent) => {
     event.preventDefault();
     if (openingAgent) return false;
+    // A company without Runtime has no Chief of Staff room to open.
+    if (agent.id === 'runtime' && !runtimeEnabled) return false;
     if (onOpenEmployee) {
       const previousSelection = selectedAgent;
       setSelectedAgent(agent.id === 'runtime' ? null : agent.id);
@@ -430,7 +434,8 @@ export default function Sidebar({
     document.documentElement.dataset.agentRoomOpening = 'true';
     const previousStart = window.__HIVEMIND_START_AGENT__;
     const needsNavigation = !/^\/hivemind\/app\/(overview|employee\/harness)(\/|$)/.test(location.pathname);
-    if (needsNavigation) navigate('/hivemind/app/employee/harness');
+    // Native-Harness employee rooms share Runtime's route; tell a company without Runtime that this visit is deliberate.
+    if (needsNavigation) { setEmployeeRoomOpen(true); navigate('/hivemind/app/employee/harness'); }
     try {
       let start;
       for (let attempt = 0; attempt < 60; attempt += 1) {
@@ -494,7 +499,7 @@ export default function Sidebar({
     };
   }, [onCollapsedChange]);
 
-  const allNavSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection: activeSection === 'tara' ? 'tara' : 'hivemind', team });
+  const allNavSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection: activeSection === 'tara' ? 'tara' : 'hivemind', team, runtimeEnabled });
   const navSections = activeSection === 'tara' ? allNavSections : teamMode
     ? [allNavSections[1], { label: null, items: [
       { to: employeeAppsPath(location), icon: Cable, label: t('sidebar.apps', { defaultValue: 'Apps' }) },
@@ -550,7 +555,7 @@ export default function Sidebar({
               rosterSwiped.current = true;
               setRosterPage(page => Math.max(0, Math.min(Math.max(0, Math.ceil(team.length / 5) - 1), page + (dx < 0 ? 1 : -1))));
             }}>
-            <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><RuntimeAvatar alt="" room={aggregateAgentRooms(rooms, 'runtime')}/><strong>Runtime</strong><small>Chief of Staff</small><AgentRoomStatus room={{ ...aggregateAgentRooms(rooms, 'runtime'), loading: openingAgent === 'runtime' }} compact /></button>
+            {runtimeEnabled && <button type="button" data-agent-room-link className="mobile-roster-runtime" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => openAgent(event, { id: 'runtime' })}><RuntimeAvatar alt="" room={aggregateAgentRooms(rooms, 'runtime')}/><strong>Runtime</strong><small>Chief of Staff</small><AgentRoomStatus room={{ ...aggregateAgentRooms(rooms, 'runtime'), loading: openingAgent === 'runtime' }} compact /></button>}
             {team.slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span><AgentRoomStatus room={{ ...aggregateAgentRooms(rooms, agent.id), loading: openingAgent === agent.id }} compact /></button>)}
           </div>
           {team.length > 5 && <div className="mobile-roster-pages"><button type="button" disabled={rosterPage === 0} onClick={() => setRosterPage(value => value - 1)}>Previous</button><span>{rosterPage + 1} / {Math.ceil(team.length / 5)}</span><button type="button" disabled={(rosterPage + 1) * 5 >= team.length} onClick={() => setRosterPage(value => value + 1)}>Next</button></div>}
@@ -565,7 +570,7 @@ export default function Sidebar({
           {advancedOpen && <div className="mobile-unified-advanced-links" aria-label="Advanced features">{[{to:'/hivemind/app/mcp',label:'MCPs'},{to:'/hivemind/app/keys',label:'API keys'},{to:'/hivemind/m/projects',label:'Projects'},{to:'/hivemind/app/evaluation',label:'Evaluation'}].map(item => <NavLink key={item.to} to={item.to}>{item.label}<ChevronRight size={14}/></NavLink>)}</div>}
         </section>
         {/* Company-wide controls sit together at the bottom, above Account. */}
-        <div className="ha-autonomy-seat is-drawer mobile-roster-autonomy" data-drawer-autonomy-seat><AutonomyDial orgId={org?.id}/></div>
+        <div className="ha-autonomy-seat is-drawer mobile-roster-autonomy" data-drawer-autonomy-seat><AutonomyDial orgId={org?.id} runtimeEnabled={runtimeEnabled}/></div>
         <AnatomyModeToggle />
         <div className="mobile-roster-account">
           <button type="button" className="mobile-roster-account-identity" onClick={() => setRosterProfileOpen(true)}>
@@ -590,7 +595,7 @@ export default function Sidebar({
       {(teamMode || mobileRoster) && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">Could not refresh our team. <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>Retry</button></p>}
       {teamError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{teamError}</p>}
       {desktopBrain && <DesktopBrainNavigation sections={navSections} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} />}
-      {desktopHyperAgents && <DesktopHyperAgentsNavigation team={team} rooms={rooms} selectedAgent={selectedAgent} openingAgent={openingAgent} onOpenAgent={openAgent} onCreate={() => setCreateEmployeeOpen(true)} onCompany={() => setCompanyOpen(true)} columns={rosterColumns} collapsed={collapsed} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} orgId={org?.id}/>}
+      {desktopHyperAgents && <DesktopHyperAgentsNavigation team={team} rooms={rooms} selectedAgent={selectedAgent} openingAgent={openingAgent} onOpenAgent={openAgent} onCreate={() => setCreateEmployeeOpen(true)} onCompany={() => setCompanyOpen(true)} columns={rosterColumns} collapsed={collapsed} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} orgId={org?.id} runtimeEnabled={runtimeEnabled}/>}
       {desktopHyperAgents && <div className="ha-resize-grip" role="separator" aria-label="Resize team sidebar" aria-orientation="vertical" aria-valuemin={68} aria-valuemax={452} aria-valuenow={collapsed ? 68 : HYPERAGENT_WIDTHS[rosterColumns]} aria-valuetext={collapsed ? 'Collapsed' : `${rosterColumns} columns`} tabIndex={0}
         onKeyDown={event => { const current = collapsed ? 0 : rosterColumns; if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeRoster(Math.max(0, Math.min(3, current + (event.key === 'ArrowLeft' ? -1 : 1)))); } }}
         onPointerDown={event => { resizeGesture.current = true; event.currentTarget.setPointerCapture(event.pointerId); }}
@@ -600,7 +605,7 @@ export default function Sidebar({
       {!desktopHyperAgents && <nav className={`${desktopBrain ? 'desktop-brain-legacy ' : ''}mobile-roster-legacy flex-1 min-h-0 py-3 px-2.5 overflow-y-auto space-y-4`}>
         {navSections.map((section, si) => (
           <div key={si}>
-            {teamMode && mobileDrawer && !mobileRoster && si === 1 && <div className="ha-autonomy-seat is-drawer" data-drawer-autonomy-seat><AutonomyDial orgId={org?.id}/></div>}
+            {teamMode && mobileDrawer && !mobileRoster && si === 1 && <div className="ha-autonomy-seat is-drawer" data-drawer-autonomy-seat><AutonomyDial orgId={org?.id} runtimeEnabled={runtimeEnabled}/></div>}
             {section.label && !collapsed && (
               <div className="px-2.5 mb-1.5">
                 <span className="text-[#737373] text-[11px] font-semibold uppercase tracking-[0.08em]">
@@ -727,7 +732,7 @@ export default function Sidebar({
           </div>
         )}
         <div className="px-3 py-3">
-          {activeSection === 'hyperagents' && <button type="button" title={t('hyperagentsTour:replay', { defaultValue:'Explore your team' })} onClick={() => window.dispatchEvent(new Event('hm:replay-hyperagents-tour'))} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] text-[#333333] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''}`}><BookOpen size={18}/>{!collapsed && <span>{t('hyperagentsTour:replay', { defaultValue:'Explore your team' })}</span>}</button>}
+          {activeSection === 'hyperagents' && runtimeEnabled && <button type="button" title={t('hyperagentsTour:replay', { defaultValue:'Explore your team' })} onClick={() => window.dispatchEvent(new Event('hm:replay-hyperagents-tour'))} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] text-[#333333] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''}`}><BookOpen size={18}/>{!collapsed && <span>{t('hyperagentsTour:replay', { defaultValue:'Explore your team' })}</span>}</button>}
           <button type="button" title="Account & Settings" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] text-[#333333] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''}`}>
             <Settings size={18}/>{!collapsed && <span>Account & Settings</span>}
           </button>

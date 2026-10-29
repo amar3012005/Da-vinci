@@ -22,7 +22,7 @@ function LiveStatus({ room, collapsed }) {
   </span>;
 }
 
-export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgent, openingAgent, onOpenAgent, onCreate, onCompany, columns, collapsed, user, planLabel, credits, logout, orgId }) {
+export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgent, openingAgent, onOpenAgent, onCreate, onCompany, columns, collapsed, user, planLabel, credits, logout, orgId, runtimeEnabled = true }) {
   const location = useLocation();
   const roomFor = id => {
     const room = aggregateAgentRooms(rooms, id);
@@ -33,11 +33,11 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
   return <div className={`desktop-hyperagents-navigation${collapsed ? ' is-collapsed' : ''}`} data-columns={columns}>
     <div className="ha-team-scroll">
       {!collapsed && <div className="ha-team-heading"><h2>Your team</h2><span>{team.length} {team.length === 1 ? 'employee' : 'employees'}</span></div>}
-      <button type="button" data-agent-room-link className={`ha-runtime-card${!selectedAgent ? ' is-selected' : ''}`} aria-label="Runtime, AI Chief of Staff" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => onOpenAgent(event, { id: 'runtime' })} title={collapsed ? 'Runtime · AI Chief of Staff' : undefined}>
+      {runtimeEnabled && <button type="button" data-agent-room-link className={`ha-runtime-card${!selectedAgent ? ' is-selected' : ''}`} aria-label="Runtime, AI Chief of Staff" aria-busy={openingAgent === 'runtime' || undefined} onClick={event => onOpenAgent(event, { id: 'runtime' })} title={collapsed ? 'Runtime · AI Chief of Staff' : undefined}>
         <RuntimeAvatar alt="" room={runtimeRoom}/>
         {!collapsed && <span className="ha-runtime-identity"><strong>Runtime</strong><small>AI Chief of Staff</small><LiveStatus room={runtimeRoom}/></span>}
         {collapsed && <LiveStatus room={runtimeRoom} collapsed/>}
-      </button>
+      </button>}
       <div className="ha-employee-grid" role="region" style={{ gridTemplateColumns: `repeat(${collapsed ? 1 : columns}, minmax(0, 1fr))` }} aria-label="Employees">
         {team.map(agent => {
           const profession = employeeProfession(agent);
@@ -56,7 +56,7 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
         <button type="button" className={`ha-create-employee${span === columns ? ' full-row' : ''}`} style={{ gridColumn: `span ${collapsed ? 1 : span}` }} onClick={onCreate} aria-label="Create employee"><Plus size={23}/>{!collapsed && <span>Create employee</span>}</button>
       </div>
     </div>
-    <div className="ha-autonomy-seat"><AutonomyDial collapsed={collapsed} orgId={orgId}/></div>
+    <div className="ha-autonomy-seat"><AutonomyDial collapsed={collapsed} orgId={orgId} runtimeEnabled={runtimeEnabled}/></div>
     <nav className="ha-workspace-shortcuts" aria-label="Workspace tools">
       <NavLink to={employeeAppsPath(location)} title={collapsed ? 'Apps' : undefined}><Cable size={18}/>{!collapsed && <span>Apps</span>}</NavLink>
       <div className="ha-artifact-cell"><div className="ha-artifacts-action" data-hivemind-calendar-seat data-collapsed={collapsed || undefined}/></div>

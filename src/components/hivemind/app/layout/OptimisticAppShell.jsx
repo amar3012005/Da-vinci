@@ -45,6 +45,7 @@ function TeamFrame({ hint, reveal }) {
   const named = reveal && Array.isArray(roster) ? roster.filter(entry => entry && entry.name) : null;
   const character = reveal ? readBootCache(hint.orgId, hint.userId, 'runtime-appearance')?.value?.character : undefined;
   const savedCharacter = RUNTIME_CHARACTERS.includes(character) ? character : null;
+  const runtimeHidden = reveal && readBootCache(hint.orgId, hint.userId, 'runtime-enabled')?.value?.enabled === false;
   const tiles = named?.length
     ? named.slice(0, CACHED_TILE_LIMIT)
     : Array.from({ length: SKELETON_TILES }, (_, index) => ({ id: `skeleton-${index}` }));
@@ -58,12 +59,12 @@ function TeamFrame({ hint, reveal }) {
             ? <span>{named.length} {named.length === 1 ? 'employee' : 'employees'}</span>
             : <Skeleton size={COUNT_SKELETON} className="ha-placeholder-name" />}
         </div>
-        <div className="ha-runtime-card">
+        {!runtimeHidden && <div className="ha-runtime-card">
           {savedCharacter
             ? <img alt="" src={runtimeAvatarSource(savedCharacter)} width={RUNTIME_AVATAR_SIZE} height={RUNTIME_AVATAR_SIZE} />
             : <span data-runtime-avatar-pending="" style={{ display: 'inline-block', width: RUNTIME_AVATAR_SIZE, height: RUNTIME_AVATAR_SIZE, flexShrink: 0 }} />}
           <span className="ha-runtime-identity"><strong>Runtime</strong><small>AI Chief of Staff</small></span>
-        </div>
+        </div>}
         <div className="ha-employee-grid" style={{ gridTemplateColumns: `repeat(${TEAM_COLUMNS}, minmax(0, 1fr))` }}>
           {tiles.map(entry => (
             <div key={entry.id} className="ha-employee-tile is-placeholder">

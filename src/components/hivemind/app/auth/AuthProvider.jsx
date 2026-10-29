@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import apiClient from '../shared/api-client';
 import posthog, { isPostHogEnabled } from '../../../../analytics/posthog';
 import { setStorageUser, clearUserScopedStorage } from '../shared/user-storage';
-import { clearBootCache, readLastTenant, rememberTenant } from '../shared/boot-cache';
+import { clearBootCache, readLastTenant, rememberTenant, writeBootCache } from '../shared/boot-cache';
 import { defaultAuthReturnUrl } from './mobile-routing';
 import { isNativeApp } from '../shared/native-app';
 import { bindNativeTouchFeedback } from '../shared/native-haptics';
@@ -161,6 +161,8 @@ export function AuthProvider({ children }) {
         if (activeTenantRef.current && activeTenantRef.current !== nextTenant) window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
         activeTenantRef.current = nextTenant;
         rememberTenant(data.organization?.id, data.user?.id, undefined, { displayName: data.user?.display_name || data.user?.name, orgName: data.organization?.name });
+        // Display-only: lets the restoring frame omit Runtime's card for a company that switched Runtime off.
+        writeBootCache(data.organization?.id, data.user?.id, 'runtime-enabled', { enabled: data.organization?.runtime_enabled !== false });
         if (data.organization?.id) {
           try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         }
@@ -299,6 +301,12 @@ export function AuthProvider({ children }) {
     window.location.href = isNativeApp() ? '/hivemind/login' : '/hivemind';
   }, []);
 
+  // The Enable Runtime setting changes the company in place, so Runtime appears or disappears without a reload.
+  const setRuntimeEnabled = useCallback((enabled) => {
+    setOrg(current => (current ? { ...current, runtime_enabled: enabled === true } : current));
+    if (user?.id && org?.id) writeBootCache(org.id, user.id, 'runtime-enabled', { enabled: enabled === true });
+  }, [user?.id, org?.id]);
+
   const createOrg = useCallback(async (name) => {
     const data = await apiClient.createOrg(name);
     setOrg(data.organization || null);
@@ -341,6 +349,7 @@ export function AuthProvider({ children }) {
     login,
     logout,
     createOrg,
+    setRuntimeEnabled,
     refresh: runBootstrap,
   };
 

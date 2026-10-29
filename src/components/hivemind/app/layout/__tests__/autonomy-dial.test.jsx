@@ -117,3 +117,16 @@ test('Lanes and Auto open the save dialog once Runtime allows every level', asyn
   expect(await screen.findByRole('dialog')).toHaveTextContent('Prepare→Autonomous');
   expect(screen.getByRole('dialog')).toHaveTextContent('No approvals');
 });
+
+test('without Runtime the dial names only the HyperAgents and the confirmation says so', async () => {
+  const fetcher = jest.fn(() => json({ ok: true, sessionId: 'session-root', value: state }));
+  render(<AutonomyDial fetcher={fetcher} runtimeEnabled={false}/>);
+  await screen.findByText('2/4 · Prepare');
+  expect(screen.getByText('Autonomy · HyperAgents')).toBeInTheDocument();
+  const bar = screen.getByRole('slider', { name: 'Autonomy level for HyperAgents' });
+  fireEvent.change(bar, { target: { value: '1' } }); fireEvent.pointerUp(bar, { target: { value: '1' } });
+  const dialog = await screen.findByRole('dialog');
+  expect(dialog).toHaveTextContent('Your HyperAgents propose next steps and drafts');
+  expect(dialog).toHaveTextContent('This applies to all your HyperAgents');
+  expect(dialog).not.toHaveTextContent('Runtime');
+});

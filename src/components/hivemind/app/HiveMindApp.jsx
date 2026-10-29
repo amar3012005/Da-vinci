@@ -12,6 +12,7 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './auth/LoginPage';
 import InvitationLanding from './auth/InvitationLanding';
 import RuntimeApprovalPage from './auth/RuntimeApprovalPage';
+import { EmployeesEntry, RuntimeSessionRoute } from './layout/RuntimeSessionRoute';
 import CliVerified from './auth/CliVerified';
 import AppShell from './layout/AppShell';
 import OptimisticAppShell from './layout/OptimisticAppShell';
@@ -277,7 +278,7 @@ export default function HiveMindApp() {
               which otherwise recursively appends `overview`. */}
           <Route path="overview/*" element={<PageSuspense><Overview /></PageSuspense>} />
           <Route path="employee/dots/*" element={<PageSuspense><OpenDotEntry /></PageSuspense>} />
-          <Route path="employee/harness/*" element={<PageSuspense><Overview /></PageSuspense>} />
+          <Route path="employee/harness/*" element={<RuntimeSessionRoute><PageSuspense><Overview /></PageSuspense></RuntimeSessionRoute>} />
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
@@ -316,7 +317,7 @@ export default function HiveMindApp() {
               /employees/rooms/:id (thread) · /employees (redirect→mycompany) */}
           <Route path="employees/operating-rooms" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
           <Route path="employees/operating-rooms/:roomId" element={<PageSuspense><OperatingRooms /></PageSuspense>} />
-          <Route path="employees" element={<Navigate to="/hivemind/app/employee/harness" replace />} />
+          <Route path="employees" element={<EmployeesEntry />} />
           <Route path="employees/*" element={<PageSuspense><HyperAgents /></PageSuspense>} />
           {/* Legacy direct roster path — kept for back-compat */}
           <Route path="employees/roster" element={<PageSuspense><DigitalEmployees /></PageSuspense>} />

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
+import { useRuntimeEnabled } from '../shared/runtime-enabled';
 import WebsitePreview from './WebsitePreview';
 import AgentAvatar from './AgentAvatar';
 import { LANE_META } from './rooms/shared';
@@ -210,6 +211,7 @@ function Fact({ icon: Icon, label, children }) {
 export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime, showRuntimeInvite = true, runtimeInviteVersion = 'v1', showTasks = true, allowOnboarding = true, team, rooms, onOpenTeammate, onDismiss }) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
+  const runtimeEnabled = useRuntimeEnabled();
   const [entryError, setEntryError] = useState('');
   const cachedCompany = pageCache.read(COMPANY_KEY)?.value;
   const [state, setState] = useState(cachedCompany || null); // {company, employees, hq_room_id}
@@ -287,7 +289,9 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
         .then((value) => { if (active) setHq((current) => ({ ...current, [field]: value })); })
         .catch(() => { if (active) setHq((current) => ({ ...current, [field]: current[field] ?? null })); });
     };
-    read(RUNTIME_KEY, 'runtime', () => apiClient.getHqRuntime());
+    // Without Runtime there is no Chief of Staff state to read; the loading flag still has to settle.
+    if (runtimeEnabled) read(RUNTIME_KEY, 'runtime', () => apiClient.getHqRuntime());
+    else setHq((current) => (current.runtime === undefined ? { ...current, runtime: null } : current));
     read(WORK_KEY, 'work', () => apiClient.getHqWork());
     read(LIBRARY_KEY, 'library', () => readLibraryFirstPage(LIBRARY_KEY));
     const projection = (event) => {
@@ -300,18 +304,18 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
     };
     window.addEventListener('hq-runtime-projection', projection);
     return () => { active = false; window.removeEventListener('hq-runtime-projection', projection); };
-  }, [runtimeCompanyReady, sideRevision]);
+  }, [runtimeCompanyReady, runtimeEnabled, sideRevision]);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 60000);
     return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    if (!showRuntimeInvite || !runtimeCompanyReady) return undefined;
+    if (!showRuntimeInvite || !runtimeCompanyReady || !runtimeEnabled) return undefined;
     try { if (window.localStorage.getItem(runtimeInviteStorageKey) === 'seen') return undefined; } catch { /* continue */ }
     const timer = window.setTimeout(() => setRuntimeInvite('intro'), 5000);
     return () => window.clearTimeout(timer);
-  }, [runtimeCompanyReady, runtimeInviteStorageKey, showRuntimeInvite]);
+  }, [runtimeCompanyReady, runtimeEnabled, runtimeInviteStorageKey, showRuntimeInvite]);
   useEffect(() => {
     if (!state?.company?.screenshot_pending) return undefined;
     let attempts = 0;
@@ -499,7 +503,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
           </div>
         </div>
       ) : null}
-      {runtimeInvite ? (
+      {runtimeInvite && runtimeEnabled ? (
         <div className="fixed inset-0 z-[90] grid place-items-center bg-black/35 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="Activate Runtime">
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="flex max-h-[calc(100vh-2rem)] w-full max-w-[760px] flex-col">
             {runtimeInvite === 'intro' ? (
@@ -551,7 +555,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
           </div>
         </header>
 
-        <div className="hm-hq-grid px-4 py-4 sm:px-6 sm:py-5">
+        <div className="hm-hq-grid px-4 py-4 sm:px-6 sm:py-5" data-runtime-off={runtimeEnabled ? undefined : ''}>
           <HqCard area="overview" title="Company overview" icon={Building2}>
             <div className="hm-hq-overview-body">
               <div className="min-w-0">
@@ -579,13 +583,13 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
             </div>
           </HqCard>
 
-          <RuntimeCard status={runtimeStatus} room={runtimeRoom} agendas={agendas} loading={hq.work === undefined} />
+          {runtimeEnabled && <RuntimeCard status={runtimeStatus} room={runtimeRoom} agendas={agendas} loading={hq.work === undefined} />}
 
-          <TeamCard members={members} onOpenTeammate={onOpenTeammate} onViewProfile={team?.length ? undefined : setViewingProfile} plannedCount={tasks.length} plannedWork={plannedWork} />
+          <TeamCard members={members} onOpenTeammate={onOpenTeammate} onViewProfile={team?.length ? undefined : setViewingProfile} plannedCount={tasks.length} plannedWork={plannedWork} runtime={runtimeEnabled} />
 
-          <WakesCard groups={wakeGroups} scheduledMembers={members.filter((member) => member.state === 'scheduled')} loading={sideLoading} now={now} />
+          <WakesCard groups={wakeGroups} scheduledMembers={members.filter((member) => member.state === 'scheduled')} loading={sideLoading} now={now} runtime={runtimeEnabled} />
 
-          <DeliverablesCard rows={deliverableRows} loading={hq.library === undefined && !(c.deliverables || []).length} now={now} onOpenRoom={onOpenRoom} onOpenLibrary={openLibrary} />
+          <DeliverablesCard rows={deliverableRows} loading={hq.library === undefined && !(c.deliverables || []).length} now={now} onOpenRoom={onOpenRoom} onOpenLibrary={openLibrary} runtime={runtimeEnabled} />
 
           {/* Durable company memory, onboarding web sources and research. */}
           <HqCard area="files" title={t('hyperDash.knowledge', 'Company knowledge')} icon={BookOpen} count={(c.documents || []).length + webArtifacts.length || undefined}>

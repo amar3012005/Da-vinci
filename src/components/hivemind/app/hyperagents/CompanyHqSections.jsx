@@ -118,11 +118,11 @@ export function RuntimeCard({ status, room, agendas, loading }) {
  * Teammates with their live state and assigned agendas, followed by planned company work.
  * @param {{ members: Array<object>, onOpenTeammate?: Function, onViewProfile?: Function, plannedWork?: React.ReactNode, plannedCount: number }} props - projected teammates and the planned-work list.
  */
-export function TeamCard({ members, onOpenTeammate, onViewProfile, plannedWork, plannedCount }) {
+export function TeamCard({ members, onOpenTeammate, onViewProfile, plannedWork, plannedCount, runtime = true }) {
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? members : members.slice(0, 6);
   return <HqCard area="team" title="Team & assignments" icon={Users} count={members.length || undefined}>
-    {!members.length ? <EmptyNote>No teammates yet. Create an employee from the sidebar and Runtime can delegate work to them.</EmptyNote> : null}
+    {!members.length ? <EmptyNote>{runtime ? 'No teammates yet. Create an employee from the sidebar and Runtime can delegate work to them.' : 'No teammates yet. Create an employee from the sidebar and give them work directly.'}</EmptyNote> : null}
     {members.length ? <ul className="hm-hq-team-grid">
       {shown.map(member => {
         const open = onOpenTeammate ? event => onOpenTeammate(event, member.agent) : onViewProfile ? () => onViewProfile(member.agent) : null;
@@ -156,7 +156,7 @@ export function TeamCard({ members, onOpenTeammate, onViewProfile, plannedWork, 
  * Upcoming wakes grouped by day plus teammates whose assignments wait on a schedule.
  * @param {{ groups: Array<object>, scheduledMembers: Array<object>, loading: boolean, now: number }} props - projections from company-hq-model.
  */
-export function WakesCard({ groups, scheduledMembers, loading, now }) {
+export function WakesCard({ groups, scheduledMembers, loading, now, runtime = true }) {
   const today = new Date(now);
   const empty = !groups.length && !scheduledMembers.length;
   return <HqCard area="wakes" title="Calendar & next wakes" icon={CalendarClock} busy={loading}>
@@ -171,7 +171,7 @@ export function WakesCard({ groups, scheduledMembers, loading, now }) {
       </span>
     </div>
     {loading && empty ? <SkeletonLines rows={2} /> : null}
-    {!loading && empty ? <EmptyNote>Nothing scheduled. Runtime also wakes on its own when new evidence or a reply arrives.</EmptyNote> : null}
+    {!loading && empty ? <EmptyNote>{runtime ? 'Nothing scheduled. Runtime also wakes on its own when new evidence or a reply arrives.' : 'Nothing scheduled. Your employees appear here when they have work waiting for its time.'}</EmptyNote> : null}
     {groups.map(group => <div key={group.key} className="mt-2 first:mt-0">
       <h3 className="mb-1 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#8b8b86]">{group.label}</h3>
       <ul className="border-l border-[#e3e0d8] pl-3">
@@ -201,11 +201,11 @@ const KIND_TILE = {
  * Newest deliverables from the Library and sealed company rooms.
  * @param {{ rows: Array<object>, loading: boolean, now: number, onOpenRoom?: Function, onOpenLibrary?: Function }} props - rows from `recentDeliverables`.
  */
-export function DeliverablesCard({ rows, loading, now, onOpenRoom, onOpenLibrary }) {
+export function DeliverablesCard({ rows, loading, now, onOpenRoom, onOpenLibrary, runtime = true }) {
   const action = onOpenLibrary ? <button type="button" onClick={onOpenLibrary} className={`inline-flex min-h-[40px] items-center gap-1 rounded-lg px-2 text-[12.5px] font-medium text-[#2559a8] hover:bg-[#f1f5fb] ${FOCUS}`}>Open Library<ArrowUpRight size={14} aria-hidden="true" /></button> : null;
   return <HqCard area="deliverables" title="Recent deliverables" icon={FolderOpen} action={action} busy={loading}>
     {loading && !rows.length ? <div className="hm-hq-deliverables-grid" aria-hidden="true">{[0, 1, 2].map(index => <span key={index} className="hm-skeleton block h-[68px] rounded-xl" />)}</div> : null}
-    {!loading && !rows.length ? <EmptyNote>Finished reports, drafts and files from Runtime and your team appear here.</EmptyNote> : null}
+    {!loading && !rows.length ? <EmptyNote>{runtime ? 'Finished reports, drafts and files from Runtime and your team appear here.' : 'Finished reports, drafts and files from your team appear here.'}</EmptyNote> : null}
     {rows.length ? <ul className="hm-hq-deliverables-grid">
       {rows.map(row => {
         const kind = row.source === 'library' ? mediaKind(row.item.mediaType, row.item.title) : 'document';

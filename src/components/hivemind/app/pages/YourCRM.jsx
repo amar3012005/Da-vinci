@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { openCompanyRuntime } from '../shared/openCompanyRuntime';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
+import { runtimeEnabledFor } from '../shared/runtime-enabled';
 import './YourCRM.css';
 import { CRMWorkspace } from './CRMWorkspace';
 export { CRMWorkspace } from './CRMWorkspace';
@@ -12,6 +13,7 @@ const ROOT = '/v1/proxy/app-runtime/apps';
 
 export function CRMRuntimeLink({ onError, children }) {
   const navigate = useNavigate();
+  const { org } = useAuth() || {};
   const opening = useRef(false);
   const openRuntime = async event => {
     event.preventDefault();
@@ -21,6 +23,8 @@ export function CRMRuntimeLink({ onError, children }) {
     catch { onError?.('Runtime could not be opened. Please try again.'); }
     finally { opening.current = false; }
   };
+  // A company without Runtime has no Chief of Staff to ask.
+  if (!runtimeEnabledFor(org)) return null;
   return <Link to="/hivemind/app/employee/harness" onClick={openRuntime}>{children || 'Ask Runtime ↗'}</Link>;
 }
 
@@ -96,5 +100,5 @@ export default function YourCRM() {
     }
   };
   if (!CRM_ENABLED) return <div className="crm-empty"><h1>Your CRM</h1><p>Your CRM will be available here soon.</p></div>;
-  return <main className="crm-page"><div className="crm-toolbar"><CRMRuntimeLink onError={setError} /><Link to={fullscreen ? "/hivemind/app/crm" : "/hivemind/app/crm?fullscreen=true"}>{fullscreen ? "Exit full screen" : "Expand ↗"}</Link></div>{error && <div role="alert" className="crm-error">{error} <button type="button" onClick={() => window.location.reload()}>Try again</button></div>}{loading || (!error && workspaceTenant !== tenantKey) ? <div role="status" className="crm-empty">Opening your CRM…</div> : error && !app ? null : !appId ? <div className="crm-empty"><h1>Your CRM</h1><p>Keep your companies, contacts and deals together. Tell Runtime what your team needs, and your CRM will appear here.</p></div> : app && <>{apps.length > 1 && <label className="crm-app-picker">Workspace <select value={appId} onChange={event => setAppId(event.target.value)}>{apps.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}<CRMWorkspace key={`${tenantKey}:${app.id}`} app={app} records={records} workflows={workflows} viewId={viewId} onViewChange={setViewId} onLoadMore={cursor ? loadMore : undefined} loadingMore={loadingMore} onUpdateRecord={updateRecord} /></>}</main>;
+  return <main className="crm-page"><div className="crm-toolbar"><CRMRuntimeLink onError={setError} /><Link to={fullscreen ? "/hivemind/app/crm" : "/hivemind/app/crm?fullscreen=true"}>{fullscreen ? "Exit full screen" : "Expand ↗"}</Link></div>{error && <div role="alert" className="crm-error">{error} <button type="button" onClick={() => window.location.reload()}>Try again</button></div>}{loading || (!error && workspaceTenant !== tenantKey) ? <div role="status" className="crm-empty">Opening your CRM…</div> : error && !app ? null : !appId ? <div className="crm-empty"><h1>Your CRM</h1><p>Keep your companies, contacts and deals together. {runtimeEnabledFor(org) ? 'Tell Runtime what your team needs' : 'Tell your employees what your team needs'}, and your CRM will appear here.</p></div> : app && <>{apps.length > 1 && <label className="crm-app-picker">Workspace <select value={appId} onChange={event => setAppId(event.target.value)}>{apps.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}<CRMWorkspace key={`${tenantKey}:${app.id}`} app={app} records={records} workflows={workflows} viewId={viewId} onViewChange={setViewId} onLoadMore={cursor ? loadMore : undefined} loadingMore={loadingMore} onUpdateRecord={updateRecord} /></>}</main>;
 }

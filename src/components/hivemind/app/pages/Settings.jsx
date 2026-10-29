@@ -14,6 +14,7 @@ import {
 import apiClient from '../shared/api-client';
 import RuntimeRecoverySettings from '../components/RuntimeRecoverySettings';
 import DreamingSettings from '../components/DreamingSettings';
+import RuntimeAvailabilitySettings from '../components/RuntimeAvailabilitySettings';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 
@@ -243,6 +244,7 @@ export default function Settings() {
         className="space-y-6 max-w-3xl"
       >
         {['runtime-runner.singulancelabs.com', 'next.singulancelabs.com'].includes(window.location.hostname) && <SectionCard><RuntimeRecoverySettings organizationId={org?.id} /></SectionCard>}
+        <SectionCard><RuntimeAvailabilitySettings /></SectionCard>
         <SectionCard><DreamingSettings organizationId={org?.id} /></SectionCard>
 
         {/* ── Settings scope ───────────────────────────────────────── */}
