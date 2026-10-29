@@ -1,4 +1,4 @@
-import { CALENDAR_ENDPOINT, CalendarUnavailableError, calendarUrl, fetchCalendar, groupByDay, ownerLabel, rangeEntries, repeatLabel, upcomingItems, weekWindow } from '../runtime-calendar';
+import { CALENDAR_ENDPOINT, CalendarActionError, CalendarUnavailableError, boardRows, calendarUrl, deleteCalendarItem, fetchCalendar, groupByDay, nextRunText, ownerAgent, ownerLabel, rangeEntries, repeatLabel, stopCalendarItem, weekWindow } from '../runtime-calendar';
 
 jest.mock('../runtime-admission', () => ({ fetchWithRuntimeAdmission: jest.fn() }));
 
@@ -49,7 +49,7 @@ test('groupByDay returns seven local days with each run on its own day, and upco
   const days = groupByDay(rangeEntries(calendar, { runtimeEnabled: false }), window);
   expect(days).toHaveLength(7);
   expect(days.flatMap(day => day.entries)).toHaveLength(2);
-  expect(upcomingItems({ items: [booked, { ...duty, active: false }, duty] }).map(entry => entry.title)).toEqual(['Weekly pipeline check', 'Draft the launch note']);
+  expect(boardRows({ items: [booked, { ...duty, active: false }, duty] }, { status: 'active' }).map(row => row.title)).toEqual(['Weekly pipeline check', 'Draft the launch note']);
 });
 
 test('fetchCalendar reads the runner route with the range and maps 404 to unavailable', async () => {
@@ -60,4 +60,42 @@ test('fetchCalendar reads the runner route with the range and maps 404 to unavai
   expect(fetcher).toHaveBeenCalledWith('/api/hivemindHq/calendar?from=10&to=20', expect.objectContaining({ credentials: 'same-origin', cache: 'no-store' }));
   await expect(fetchCalendar(window, { fetcher: () => Promise.resolve({ ok: false, status: 404 }) })).rejects.toBeInstanceOf(CalendarUnavailableError);
   await expect(fetchCalendar(window, { fetcher: () => Promise.resolve({ ok: false, status: 503 }) })).rejects.toThrow('calendar_failed');
+});
+
+const task = { ...duty, id: 'duty-b', label: 'Website check', status: 'active', manageable: true, cadence: 'Every day at 09:00 (Europe/Berlin)', until: '2026-12-31T22:59:59.999Z',
+  ownerId: 'e1', ownerAvatarUrl: 'https://cdn.example/f.png', ownerAppearance: { seed: 'faraday' } };
+
+test('ownerAgent gives AgentAvatar the saved appearance and never an id as the name', () => {
+  expect(ownerAgent(task)).toEqual({ id: 'e1', name: 'Faraday', avatar_url: 'https://cdn.example/f.png', policy_rules: { appearance: { seed: 'faraday' } } });
+  expect(ownerAgent(booked)).toEqual({ id: 'e2', name: 'Team member' });
+});
+
+test('boardRows filters by status and search, lists work ahead first, and carries label, until and manageability', () => {
+  const stopped = { ...task, id: 'duty-c', label: 'Old check', status: 'stopped', active: false, nextAt: '2026-10-01T09:00:00.000Z' };
+  const rows = boardRows({ items: [stopped, task, booked] });
+  expect(rows.map(row => row.id)).toEqual(['duty-b', 'plan-a', 'duty-c']);
+  expect(rows[0]).toMatchObject({ label: 'Website check', repeat: 'Every day at 09:00 (Europe/Berlin)', until: task.until, manageable: true, status: 'active' });
+  expect(rows[1].manageable).toBe(false);
+  expect(boardRows({ items: [stopped, task, booked] }, { status: 'inactive' }).map(row => row.id)).toEqual(['duty-c']);
+  expect(boardRows({ items: [stopped, task, booked] }, { query: ' WEBSITE ' }).map(row => row.id)).toEqual(['duty-b']);
+});
+
+test('nextRunText says how far away a run is', () => {
+  const now = Date.parse('2026-11-02T08:00:00Z');
+  expect(nextRunText(now + 10 * 60000, now).relative).toBe('in 10 min');
+  expect(nextRunText(now + 3 * 3600000, now).relative).toBe('in 3 h');
+  expect(nextRunText(now + 2 * 86400000, now).relative).toBe('in 2 d');
+  expect(nextRunText(now - 1000, now).relative).toBe('now');
+});
+
+test('stop posts to .../stop and delete uses DELETE; a refusal carries the runner code and status', async () => {
+  const fetcher = jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, state: 'stopped' }) }));
+  await stopCalendarItem('duty b', { fetcher });
+  expect(fetcher).toHaveBeenLastCalledWith('/api/hivemindHq/calendar/duty%20b/stop', expect.objectContaining({ method: 'POST', credentials: 'same-origin' }));
+  await deleteCalendarItem('duty-b', { fetcher });
+  expect(fetcher).toHaveBeenLastCalledWith('/api/hivemindHq/calendar/duty-b', expect.objectContaining({ method: 'DELETE' }));
+  const refused = jest.fn(() => Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({ error: 'calendar_item_not_found' }) }));
+  await expect(stopCalendarItem('x', { fetcher: refused })).rejects.toMatchObject({ code: 'calendar_item_not_found', status: 404 });
+  const page = jest.fn(() => Promise.resolve({ ok: false, status: 502, json: () => Promise.reject(new Error('html')) }));
+  await expect(deleteCalendarItem('x', { fetcher: page })).rejects.toBeInstanceOf(CalendarActionError);
 });
