@@ -1,4 +1,5 @@
 import McpClientSetup from '../../shared/McpClientSetup';
+import { toolkitConnectionState } from '../../shared/toolkit-connection';
 // Mobile Connectors — Composio catalog and remote MCP client setup. Nango's popup SDK, the Browser
 // Intelligence promo, and the ChatGPT/Claude featured tiles are gone (not
 // used any more); this page is purely Composio's toolkit catalog, styled
@@ -208,7 +209,7 @@ export default function MobileConnectors() {
       if (toolkit.slug === NATIVE_SLACK_TOOLKIT) await apiClient.disconnectConnector('slack');
       else await apiClient.disconnectComposioToolkit(toolkit.slug);
       setConnectedSlugs((prev) => ({ ...prev, [toolkit.slug]: 'disconnected' }));
-      setToolkits((prev) => prev.map((t) => (t.slug === toolkit.slug ? { ...t, connected: false } : t)));
+      setToolkits((prev) => prev.map((t) => (t.slug === toolkit.slug ? { ...t, connected: false, connection_status: 'available', connection_origin: null } : t)));
     } catch (err) {
       setError(err?.response?.data?.error || err?.message || `Failed to disconnect ${toolkit.name}`);
     } finally {
@@ -222,12 +223,12 @@ export default function MobileConnectors() {
   }, [toolkits, category]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
-    const aConnected = a.connected || connectedSlugs[a.slug] === 'connected';
-    const bConnected = b.connected || connectedSlugs[b.slug] === 'connected';
+    const aConnected = toolkitConnectionState(a, connectedSlugs[a.slug]) === 'connected';
+    const bConnected = toolkitConnectionState(b, connectedSlugs[b.slug]) === 'connected';
     return (bConnected ? 1 : 0) - (aConnected ? 1 : 0);
   }), [filtered, connectedSlugs]);
 
-  const connectedCount = toolkits.filter((tk) => tk.connected || connectedSlugs[tk.slug] === 'connected').length;
+  const connectedCount = toolkits.filter((tk) => toolkitConnectionState(tk, connectedSlugs[tk.slug]) === 'connected').length;
   const liveCount = <span className="whitespace-nowrap">{connectedCount} live</span>;
 
   return (
@@ -280,7 +281,9 @@ export default function MobileConnectors() {
 
         <div>
           {sorted.map((toolkit, index) => {
-            const connected = connectedSlugs[toolkit.slug] === 'disconnected' ? false : (toolkit.connected || connectedSlugs[toolkit.slug] === 'connected');
+            const state = toolkitConnectionState(toolkit, connectedSlugs[toolkit.slug]);
+            const connected = state === 'connected';
+            const reconnect = state === 'reconnect';
             const isNativeSlack = toolkit.slug === NATIVE_SLACK_TOOLKIT;
             const redundant = REDUNDANT_TOOLKITS.has(toolkit.slug);
             const available = (isSelfServeConnectable(toolkit) || isNativeSlack) && !redundant;
@@ -320,7 +323,7 @@ export default function MobileConnectors() {
                       disabled={connecting}
                       className="mg-pill-primary flex-shrink-0 !min-h-[40px] !px-4 text-[14px]"
                     >
-                      {connecting ? <Loader2 size={13} className="animate-spin" /> : <Plug size={13} />} Connect
+                      {connecting ? <Loader2 size={13} className="animate-spin" /> : <Plug size={13} />} {reconnect ? 'Reconnect' : 'Connect'}
                     </button>
                   ) : (
                     <span className="mg-chip flex-shrink-0">Request access</span>

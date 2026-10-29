@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Wrench, Zap, ShieldCheck, Search, Loader2, Plug, Check, Mail, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { toolkitConnectionState, toolkitOriginLabel } from '../shared/toolkit-connection';
 import { refreshComposioReturn } from './composio-return-refresh.mjs';
 
 const AUTH_LABELS = {
@@ -89,7 +90,10 @@ function ToolkitCard({ toolkit, onConnect, onOpenDetail, onDisconnect, connectin
   // means the card should read as connected. An explicit 'disconnected'
   // override (right after clicking Disconnect) wins over the stale
   // toolkit.connected from the last fetch.
-  const connected = connectResult === 'disconnected' ? false : (toolkit.connected || connectResult === 'connected');
+  const state = toolkitConnectionState(toolkit, connectResult);
+  const connected = state === 'connected';
+  const reconnect = state === 'reconnect';
+  const origin = connected ? toolkitOriginLabel(toolkit) : '';
 
   return (
     <div
@@ -145,7 +149,7 @@ function ToolkitCard({ toolkit, onConnect, onOpenDetail, onDisconnect, connectin
         {connected ? (
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-[11px] font-semibold text-[#117dff]">
-              <Check size={12} /> Connected
+              <Check size={12} /> Connected{origin ? ` · ${origin}` : ''}
             </span>
             <button
               onClick={(e) => { e.stopPropagation(); onDisconnect(toolkit); }}
@@ -157,6 +161,17 @@ function ToolkitCard({ toolkit, onConnect, onOpenDetail, onDisconnect, connectin
               {disconnecting ? <Loader2 size={11} className="animate-spin" /> : 'Disconnect'}
             </button>
           </div>
+        ) : reconnect && available && !redundant ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onConnect(toolkit); }}
+            disabled={connecting}
+            title="Reconnect"
+            aria-label="Reconnect"
+            className="flex items-center gap-1.5 rounded-md bg-amber-500 px-2.5 py-1.5 text-[11.5px] font-semibold text-white hover:bg-amber-600 disabled:opacity-50 transition-colors"
+          >
+            {connecting ? <Loader2 size={12} className="animate-spin" /> : <Plug size={12} />}
+            Reconnect
+          </button>
         ) : redundant ? (
           <span className="text-[10.5px] text-[#a3a3a3] font-medium" title="Covered by the Slack toolkit — connect that instead">
             Covered by Slack
@@ -383,7 +398,7 @@ export default function ComposioToolkitBrowser() {
         await apiClient.disconnectComposioToolkit(toolkit.slug);
       }
       setConnectedSlugs((prev) => ({ ...prev, [toolkit.slug]: 'disconnected' }));
-      setToolkits((prev) => prev.map((t) => (t.slug === toolkit.slug ? { ...t, connected: false } : t)));
+      setToolkits((prev) => prev.map((t) => (t.slug === toolkit.slug ? { ...t, connected: false, connection_status: 'available', connection_origin: null } : t)));
     } catch (err) {
       setError(err?.response?.data?.error || err?.message || `Failed to disconnect ${toolkit.name}`);
     } finally {
@@ -391,7 +406,7 @@ export default function ComposioToolkitBrowser() {
     }
   }, []);
 
-  const isConnected = (t) => Boolean(t.connected || connectedSlugs[t.slug] === 'connected');
+  const isConnected = (t) => toolkitConnectionState(t, connectedSlugs[t.slug]) === 'connected';
   const isInstant = (t) => INSTANT_TOOLKITS.includes(t.slug);
 
   // Tab + category narrow the loaded pool; the connected-first order stays
