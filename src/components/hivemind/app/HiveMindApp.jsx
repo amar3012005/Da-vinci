@@ -23,6 +23,7 @@ const TaraConfig = React.lazy(() => import('./pages/TaraConfig'));
 // Pages (lazy loaded for code splitting)
 const OpenDotAppsNavigation = React.lazy(() => import('./pages/OpenDotAppsNavigation'));
 const RuntimeLibrary = React.lazy(() => import('./pages/RuntimeLibrary'));
+const RuntimeCalendar = React.lazy(() => import('./pages/RuntimeCalendar'));
 const OpenDotEntry = React.lazy(() => import('./pages/OpenDotEntry'));
 const Overview = React.lazy(() => import('./pages/Overview'));
 const DocsPage = React.lazy(() => import('../DocsPage'));
@@ -284,6 +285,9 @@ export default function HiveMindApp() {
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
           <Route path="employee/apps" element={<PageSuspense><OpenDotAppsNavigation /></PageSuspense>} />
           <Route path="employee/library" element={<PageSuspense><RuntimeLibrary /></PageSuspense>} />
+          {/* Sidebar tools that read the company's Runtime root as a data owner: they open in every HyperAgents view, with or without Runtime. */}
+          <Route path="employee/artifacts" element={<PageSuspense><RuntimeLibrary title="Artifacts" /></PageSuspense>} />
+          <Route path="employee/calendar" element={<PageSuspense><RuntimeCalendar /></PageSuspense>} />
           <Route path="connectors" element={<PageSuspense><Connectors /></PageSuspense>} />
           <Route path="profile" element={<PageSuspense><Profile /></PageSuspense>} />
           <Route path="entities/:entityId" element={<PageSuspense><EntityProfilePage /></PageSuspense>} />

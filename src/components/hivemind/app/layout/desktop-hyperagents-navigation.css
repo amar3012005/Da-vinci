@@ -50,12 +50,9 @@
  .ha-create-employee.full-row { min-height:48px;margin-top:3px; }
  .ha-create-employee:hover { background:#e6eef9; }
  .ha-workspace-shortcuts { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;flex-shrink:0;border-top:1px solid #e7e4dd;padding:14px 20px 10px; }
- .ha-workspace-shortcuts>a,.ha-workspace-shortcuts>button,.ha-artifacts-action>button { display:flex;align-items:center;gap:8px;min-height:37px;width:100%;min-width:0;padding:7px 9px;border-radius:7px;background:#f1f0eb;text-align:left;font-size:12px; }
+ .ha-workspace-shortcuts>a,.ha-workspace-shortcuts>button { display:flex;align-items:center;gap:8px;min-height:37px;width:100%;min-width:0;padding:7px 9px;border-radius:7px;background:#f1f0eb;text-align:left;font-size:12px; }
  .ha-workspace-shortcuts svg { flex-shrink:0;color:#747970; }
- .ha-workspace-shortcuts>a:hover,.ha-workspace-shortcuts>button:hover,.ha-artifacts-action>button:hover { background:#e8edf3; }
- .ha-artifact-cell { min-width:0; }
- .ha-artifacts-unavailable { display:none; }
- .ha-artifacts-action:empty + .ha-artifacts-unavailable { display:flex;align-items:center;gap:8px;min-height:37px;width:100%;padding:7px 9px;border-radius:7px;background:#f1f0eb;color:#8b9097;font-size:12px; }
+ .ha-workspace-shortcuts>a:hover,.ha-workspace-shortcuts>button:hover { background:#e8edf3; }
  .ha-account-area { flex-shrink:0;margin:0 20px;padding:11px 0 10px;border-top:1px solid #e7e4dd; }
  .ha-account-settings { display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0 12px; }
  .ha-account-settings>span:first-child { font-size:19px;color:#747970; }
@@ -83,7 +80,6 @@
  .desktop-hyperagents-navigation.is-collapsed .ha-create-employee { min-height:34px;padding:5px; }
  .desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts { grid-template-columns:1fr;padding:10px 12px; }
  .desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts>a,.desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts>button { justify-content:center;padding:7px; }
- .desktop-hyperagents-navigation.is-collapsed .ha-artifacts-unavailable { justify-content:center;padding:7px; }
  .desktop-hyperagents-navigation.is-collapsed .ha-sign-out { justify-content:center;width:100%; }
  .desktop-hyperagents-navigation.is-collapsed .ha-account-area { margin:0 10px;text-align:center; }
  .desktop-hyperagents-navigation.is-collapsed .ha-account-settings { justify-content:center;width:100%; }

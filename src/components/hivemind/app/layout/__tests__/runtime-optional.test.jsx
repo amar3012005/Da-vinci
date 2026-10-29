@@ -29,8 +29,8 @@ describe('team sidebar without Runtime', () => {
     expect(screen.getByRole('button', { name: 'Create employee' })).toBeInTheDocument();
     const tools = screen.getByRole('navigation', { name: 'Workspace tools' });
     expect(within(tools).getByText('Apps')).toBeInTheDocument();
-    expect(tools.querySelector('[data-hivemind-calendar-seat]')).not.toBeNull();
-    expect(tools.querySelector('[data-hivemind-artifacts-seat]')).not.toBeNull();
+    expect(within(tools).getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/hivemind/app/employee/calendar');
+    expect(within(tools).getByRole('link', { name: 'Artifacts' })).toHaveAttribute('href', '/hivemind/app/employee/artifacts');
     expect(within(tools).getByText('Company HQ')).toBeInTheDocument();
     expect(within(tools).getByText('Library')).toBeInTheDocument();
     expect(screen.getByTestId('dial')).toHaveAttribute('data-runtime-enabled', 'false');
