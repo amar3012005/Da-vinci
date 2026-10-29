@@ -714,8 +714,8 @@ export default function Sidebar({
           </div>
         ))}
         {teamMode && !mobileRoster && location.pathname.startsWith('/hivemind/app/employee/harness') && (
-          <div data-hivemind-calendar-seat data-collapsed={collapsed || undefined} />
-          <div data-hivemind-artifacts-seat data-collapsed={collapsed || undefined} />
+          <><div data-hivemind-calendar-seat data-collapsed={collapsed || undefined} />
+          <div data-hivemind-artifacts-seat data-collapsed={collapsed || undefined} /></>
         )}
       </nav>}
 
