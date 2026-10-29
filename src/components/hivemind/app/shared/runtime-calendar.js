@@ -61,6 +61,43 @@ export function ownerLabel(item) {
   return item?.owner === 'runtime' ? 'Runtime' : 'Team member';
 }
 
+/** Thrown when the runner refuses to stop or delete an item; `code` is the runner's error code and `status` its HTTP status. */
+export class CalendarActionError extends Error {
+  constructor(code, status) { super(code); this.name = 'CalendarActionError'; this.code = code; this.status = status; }
+}
+
+/**
+ * Stop an employee-booked repeating task: it stays on the Calendar as stopped, no later run starts, and its employee is told.
+ * @param {string} itemId - the calendar item id.
+ * @param {{ fetcher?: typeof fetch }} [options] - transport.
+ * @returns {Promise<{ ok: true, itemId: string, state: string, notified: boolean }>} the runner's answer.
+ * @throws {CalendarActionError} when the runner refuses (404 unknown item, 403 not the administrator, 5xx outage).
+ */
+export function stopCalendarItem(itemId, { fetcher = (...args) => fetchWithRuntimeAdmission(...args) } = {}) {
+  return calendarAction(`${CALENDAR_ENDPOINT}/${encodeURIComponent(itemId)}/stop`, 'POST', fetcher);
+}
+
+/**
+ * Delete an employee-booked task: its series stops, it leaves the Calendar, and its employee is told.
+ * @param {string} itemId - the calendar item id.
+ * @param {{ fetcher?: typeof fetch }} [options] - transport.
+ * @returns {Promise<{ ok: true, itemId: string, state: string, notified: boolean }>} the runner's answer.
+ * @throws {CalendarActionError} when the runner refuses.
+ */
+export function deleteCalendarItem(itemId, { fetcher = (...args) => fetchWithRuntimeAdmission(...args) } = {}) {
+  return calendarAction(`${CALENDAR_ENDPOINT}/${encodeURIComponent(itemId)}`, 'DELETE', fetcher);
+}
+
+async function calendarAction(url, method, fetcher) {
+  const response = await fetcher(url, { method, credentials: 'same-origin', cache: 'no-store' });
+  if (!response.ok) {
+    let code = 'calendar_action_failed';
+    try { const body = await response.json(); if (typeof body?.error === 'string') code = body.error; } catch { /* a non-JSON error page carries no code */ }
+    throw new CalendarActionError(code, response.status);
+  }
+  return response.json();
+}
+
 /**
  * @param {{ rule?: object, atLocal?: string, timeZone?: string, stopped?: boolean } | undefined} recurrence - repeat rule of a series.
  * @returns {string} such as `Every Monday at 08:00 (UTC)`, `Every 3 days at 09:30` or `Stopped`; empty for a single item.
@@ -80,10 +117,46 @@ export function repeatLabel(recurrence) {
 }
 
 /**
+ * What the Calendar shows for an owner's avatar: the shape `AgentAvatar` reads, with the saved appearance when the runner sent one.
+ * @param {{ owner?: string, ownerId?: string, ownerName?: string, ownerAvatarUrl?: string, ownerAppearance?: object }} item - calendar item.
+ * @returns {{ id: string, name: string, avatar_url?: string, policy_rules?: { appearance: object } }} the agent for `AgentAvatar`.
+ */
+export function ownerAgent(item) {
+  return {
+    id: item?.ownerId || item?.owner || 'unknown',
+    name: item?.ownerName || ownerLabel(item),
+    ...(item?.ownerAvatarUrl ? { avatar_url: item.ownerAvatarUrl } : {}),
+    ...(item?.ownerAppearance ? { policy_rules: { appearance: item.ownerAppearance } } : {}),
+  };
+}
+
+/** @param {{ label?: string, title?: string }} item - calendar item. @returns {string} the short name for rows: the saved label, else the title. */
+export function itemLabel(item) {
+  return (item?.label || item?.title || '').trim();
+}
+
+/** @param {{ cadence?: string, recurrence?: object }} item - calendar item. @returns {string} the cadence in words; the runner's wording first. */
+export function cadenceOf(item) {
+  return item?.cadence || repeatLabel(item?.recurrence);
+}
+
+const STATUS_LABEL = { active: 'Active', ended: 'Ended', stopped: 'Stopped', done: 'Done' };
+/** @param {string} status - runner status. @returns {string} the person-facing status. */
+export function statusLabel(status) { return STATUS_LABEL[status] || 'Active'; }
+
+/**
+ * @param {{ status?: string, active?: boolean }} item - calendar item.
+ * @returns {'active' | 'inactive'} the native board's two states: work ahead, or stopped, ended and done.
+ */
+export function boardStatus(item) {
+  return item?.status ? (item.status === 'active' ? 'active' : 'inactive') : (item?.active ? 'active' : 'inactive');
+}
+
+/**
  * Rows for the visible range: every run inside it, plus Runtime's own wakes unless Runtime is off.
  * @param {{ items?: Array<object>, occurrences?: Array<object>, wakes?: Array<object> }} calendar - the route's `value`.
  * @param {{ runtimeEnabled?: boolean }} [options] - whether Runtime's own wakes belong on the page.
- * @returns {Array<{ id: string, at: number, title: string, owner: string, repeat: string, kind: string, active: boolean }>} sorted by time.
+ * @returns {Array<object>} sorted by time; each has `id`, `itemId`, `at`, `title`, `label`, `owner` (name), `agent`, `repeat`, `kind`, `active` and `status`.
  */
 export function rangeEntries(calendar, { runtimeEnabled = true } = {}) {
   const items = new Map((calendar?.items || []).map(item => [item.id, item]));
@@ -91,12 +164,18 @@ export function rangeEntries(calendar, { runtimeEnabled = true } = {}) {
   for (const run of calendar?.occurrences || []) {
     const item = items.get(run.itemId);
     if (!item) continue;
-    entries.push({ id: run.id, at: Date.parse(run.at), title: item.title, owner: ownerLabel(item), repeat: repeatLabel(item.recurrence), kind: item.kind, active: item.active });
+    entries.push({
+      id: run.id, itemId: item.id, at: Date.parse(run.at), title: item.title, label: itemLabel(item), owner: ownerLabel(item), agent: ownerAgent(item),
+      repeat: cadenceOf(item), kind: item.kind, active: item.active, status: boardStatus(item),
+    });
   }
   // A wake that plans a task is already one of the task's calendar items.
   if (runtimeEnabled) for (const wake of calendar?.wakes || []) {
     if (wake.taskId) continue;
-    entries.push({ id: `wake:${wake.id}`, at: Date.parse(wake.scheduledAt), title: wake.title, owner: 'Runtime', repeat: '', kind: 'wake', active: wake.status === 'active' });
+    entries.push({
+      id: `wake:${wake.id}`, itemId: null, at: Date.parse(wake.scheduledAt), title: wake.title, label: wake.title, owner: 'Runtime', agent: null,
+      repeat: '', kind: 'wake', active: wake.status === 'active', status: wake.status === 'active' ? 'active' : 'inactive',
+    });
   }
   return entries.filter(entry => Number.isFinite(entry.at)).sort((a, b) => a.at - b.at);
 }
@@ -118,14 +197,31 @@ export function groupByDay(entries, window) {
 }
 
 /**
- * Items that still have work ahead, soonest first, for the "Duties and booked work" list.
+ * The list view's rows, like the native Automation board: one row per calendar item, work ahead first.
  * @param {{ items?: Array<object> }} calendar - the route's `value`.
- * @returns {Array<{ id: string, at: number, title: string, owner: string, repeat: string, kind: string, active: boolean }>} active items by next run.
+ * @param {{ status?: 'all' | 'active' | 'inactive', query?: string }} [filter] - the board's status tabs and search box.
+ * @returns {Array<object>} rows with `id`, `at` (next run), `title`, `label`, `owner`, `agent`, `repeat`, `kind`, `status`, `statusText`, `until` and `manageable`.
  */
-export function upcomingItems(calendar) {
-  return (calendar?.items || []).filter(item => item.active).map(item => ({
-    id: item.id, at: Date.parse(item.nextAt), title: item.title, owner: ownerLabel(item), repeat: repeatLabel(item.recurrence), kind: item.kind, active: true,
-  })).filter(entry => Number.isFinite(entry.at)).sort((a, b) => a.at - b.at);
+export function boardRows(calendar, { status = 'all', query = '' } = {}) {
+  const needle = query.trim().toLowerCase();
+  return (calendar?.items || []).map(item => ({
+    id: item.id, at: Date.parse(item.nextAt), title: item.title, label: itemLabel(item), owner: ownerLabel(item), agent: ownerAgent(item), repeat: cadenceOf(item),
+    kind: item.kind, status: boardStatus(item), statusText: statusLabel(item.status || (item.active ? 'active' : 'ended')), until: item.until || '', manageable: item.manageable === true,
+  })).filter(row => (status === 'all' || row.status === status)
+    && (!needle || `${row.label} ${row.title} ${row.owner} ${row.repeat}`.toLowerCase().includes(needle)))
+    .sort((a, b) => (a.status === b.status ? a.at - b.at : a.status === 'active' ? -1 : 1));
+}
+
+/**
+ * @param {number} at - next run, epoch milliseconds.
+ * @param {number} [now] - the current time.
+ * @returns {{ absolute: string, relative: string }} the run's local date and time, and how far away it is (`in 3 d`, `in 2 h`, `in 10 min`, `now`).
+ */
+export function nextRunText(at, now = Date.now()) {
+  const absolute = new Date(at).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const minutes = Math.round((at - now) / 60000);
+  const relative = minutes <= 0 ? 'now' : minutes < 60 ? `in ${minutes} min` : minutes < 1440 ? `in ${Math.round(minutes / 60)} h` : `in ${Math.round(minutes / 1440)} d`;
+  return { absolute, relative };
 }
 
 export { DAY_MS };
