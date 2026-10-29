@@ -24,6 +24,17 @@ import { useTranslation } from 'react-i18next';
 import UsageTracker from '../components/UsageTracker';
 import { emitUsageChanged } from '../shared/useUsage';
 import { useQuickRecorder } from '../shared/QuickRecorderProvider';
+import {
+  DURABLE_SEGMENT_MS, createChunkUploader, createIndexedDbChunkStore, pendingChunks,
+  waitForFinalization, describeFinalizationFailure,
+} from '../shared/meetingDurableUpload.mjs';
+
+// A stopped meeting waits here until the server confirms it finalized it, so a
+// closed tab or a reload resumes the upload and the wait instead of losing it.
+const PENDING_KEY = 'hm.meeting.pending';
+const readPending = () => { try { return JSON.parse(localStorage.getItem(PENDING_KEY) || 'null'); } catch { return null; } };
+const writePending = (value) => { try { localStorage.setItem(PENDING_KEY, JSON.stringify(value)); } catch { /* storage blocked: the server still finalizes */ } };
+const clearPending = () => { try { localStorage.removeItem(PENDING_KEY); } catch { /* ignore */ } };
 
 // Pick a MediaRecorder MIME the browser actually supports. Chrome/Firefox do
 // webm/opus; Safari + iOS do NOT support webm and only offer mp4 — hardcoding
@@ -49,6 +60,12 @@ const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#10b981', SPEAKER_0
 const speakerLabel = (s) => { const m = /SPEAKER_(\d+)/.exec(s || ''); return m ? `Speaker ${Number(m[1]) + 1}` : (s || 'Speaker'); };
 const fmtTimer = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 /* real participant name when insights mapped one (from the pre-meeting context) */
+// Server messages are shown only when they read as a sentence; machine codes such as
+// "meeting_finalization_queue_error" become the plain fallback instead.
+const plainError = (e, fallback) => {
+  const text = String(e?.response?.data?.message || e?.response?.data?.error || e?.message || '');
+  return /\s/.test(text.trim()) && !/^(Request failed|Network Error|timeout)/i.test(text) ? text : fallback;
+};
 const nameFor = (speaker, map) => (map && map[speaker]) || speakerLabel(speaker);
 
 /* Notion-style "@Today 11:01 PM" — relative day + time */
@@ -206,7 +223,7 @@ function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMul
           </span>
           <button onClick={() => setMultiSpeaker((v) => !v)} disabled={busy}
             className="flex items-center gap-2 mb-1 text-[12px] text-[#525252] disabled:opacity-50"
-            title={t('meetingnotes.multiSpeakerHint', 'Label who said what (runs speaker diarization)')}>
+            title={t('meetingnotes.multiSpeakerHint', 'Label who said what')}>
             <span className="inline-flex items-center gap-1.5"><Users size={13} className="text-[#f59e0b]" /> {t('meetingnotes.multiShort', 'Multi-speaker')}</span>
             <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${multiSpeaker ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
               <span className="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform" style={{ transform: multiSpeaker ? 'translateX(18px)' : 'translateX(2px)' }} />
@@ -419,7 +436,7 @@ export default function MeetingNotes() {
   // that transcribes IN PARALLEL while the next segment is already recording. At
   // stop we await all segment transcriptions, stitch them in order into one full
   // transcript, then run insights ONCE on the whole meeting.
-  const SEGMENT_MS = 10 * 60 * 1000;
+  const SEGMENT_MS = DURABLE_SEGMENT_MS; // short chunks: a crash loses at most one minute, not ten
   const segTimerRef = useRef(null);    // rotation interval
   const segIdxRef = useRef(0);         // next segment index to assign
   const sessionIdRef = useRef(null);   // P1: client session id — durable segment key (crash-recovery)
@@ -429,6 +446,11 @@ export default function MeetingNotes() {
   const segSegsRef = useRef({});       // idx -> speakerSegments
   const languageRef = useRef(null);    // first detected language wins
   const finalizingRef = useRef(false); // true once Stop pressed — stops rotation
+  const uploaderRef = useRef(null);    // durable chunk uploader; null = browser-side transcription (older path)
+  const recStartRef = useRef(0);       // Date.now() when recording began
+  const segStartMsRef = useRef(0);     // offset (ms) at which the current chunk began
+  const durationSecRef = useRef(0);
+  const [retryable, setRetryable] = useState(null); // { sessionId, expected, payload } after a failed finalization
   const [segDone, setSegDone] = useState(0);
   const [segTotal, setSegTotal] = useState(0);
 
@@ -549,6 +571,21 @@ export default function MeetingNotes() {
     segPromisesRef.current.push(p);
   }, [multiSpeaker, notes, participants]);
 
+  // Send one finished chunk to the server's durable path. If the server cannot
+  // store audio durably, the whole recording falls back to the older
+  // browser-side transcription so nothing is lost.
+  const shipSegment = useCallback((idx, blob) => {
+    const endMs = Math.max(0, Date.now() - recStartRef.current);
+    const startMs = segStartMsRef.current; segStartMsRef.current = endMs;
+    const uploader = uploaderRef.current;
+    if (!uploader) { transcribeSegment(idx, blob); return; }
+    setSegTotal((n) => Math.max(n, idx + 1));
+    uploader.enqueue(idx, blob, { startMs, endMs, contentType: blob.type }).then((outcome) => {
+      setSegDone((n) => n + 1);
+      if (outcome.fallback) { uploaderRef.current = null; transcribeSegment(idx, blob); }
+    });
+  }, [transcribeSegment]);
+
   // Roll one segment recorder on the live stream. On stop it ships the segment
   // for transcription and (unless we're finalizing) immediately starts the next
   // one — so recording never pauses while older segments transcribe in parallel.
@@ -562,14 +599,61 @@ export default function MeetingNotes() {
     rec.onstop = () => {
       const idx = segIdxRef.current++;
       const blob = new Blob(segChunksRef.current, { type: rec.mimeType || mime || 'audio/webm' });
-      if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
+      if (blob.size > 1024) shipSegment(idx, blob); else segIdxRef.current--;
       if (!finalizingRef.current) startSegmentRecorder(); // roll the next segment instantly
     };
     rec.start(1000);
-  }, [transcribeSegment]);
+  }, [shipSegment]);
 
   // Stitch all segments in order → full transcript → ONE insights pass.
+  // Durable finalization: wait for the chunk uploads, ask the server to finalize,
+  // then follow the server's own progress. The server finishes the meeting even if
+  // this tab closes; reopening the page resumes from the pending record.
+  const finalizeDurable = useCallback(async ({ sessionId, expected, payload, resume = false }) => {
+    setError(null); setRetryable(null); setStatus('transcribing');
+    writePending({ sessionId, expected, payload });
+    try {
+      const uploader = uploaderRef.current;
+      if (uploader) {
+        const { failed } = await uploader.settle();
+        if (failed.length) {
+          setStatus('error');
+          setError('Some audio could not be uploaded (no connection). It is saved on this device and will upload automatically when you reopen this page with a connection.');
+          return;
+        }
+      }
+      setStatus('analyzing');
+      await apiClient.core.post(`/api/meetings/sessions/${sessionId}/finalize`, { expected_segment_count: expected, ...payload }, { timeout: 60000 });
+      const outcome = await waitForFinalization({
+        sessionId, get: (url) => apiClient.core.get(url),
+        onStatus: (session, seg) => { setSegTotal(expected); setSegDone(Number(seg.audio_transcribed || seg.count || 0)); setStatus(session.status === 'analyzing' ? 'analyzing' : 'transcribing'); },
+      });
+      if (outcome.state === 'ready') {
+        const { data } = await apiClient.core.get(`/api/meetings/${outcome.meetingId}`);
+        const m = data?.meeting || {};
+        setTranscript(m.transcript || ''); setInsights(m.insights || null); setLanguage(m.language || null);
+        setSpeakerSegments(Array.isArray(m.segments) && m.segments.length ? m.segments : null);
+        setMeetingId(outcome.meetingId); setStatus('done'); clearPending(); loadMeetings();
+      } else if (outcome.state === 'failed') {
+        clearPending(); setRetryable({ sessionId, expected, payload });
+        setStatus('error'); setError(describeFinalizationFailure(outcome));
+      } else {
+        setStatus('error'); setError('This meeting is still being processed. You can close this page; it will appear under Past meetings when it is ready.');
+      }
+    } catch (e) {
+      setStatus('error'); setError(plainError(e, 'We could not finish this meeting yet. Your recording is saved; reopen this page to continue.'));
+    }
+  }, [loadMeetings]);
+
   const finalize = useCallback(async () => {
+    if (uploaderRef.current && sessionIdRef.current) {
+      const payload = {
+        notes, participants: participants.map((p) => p.name).filter(Boolean),
+        duration_sec: durationSecRef.current, language: languageRef.current,
+        scope, project_id: scope === 'project' ? scopeProjectId : null,
+      };
+      return finalizeDurable({ sessionId: sessionIdRef.current, expected: segIdxRef.current, payload });
+    }
     setError(null); setStatus('transcribing');
     try {
       await Promise.allSettled(segPromisesRef.current);
@@ -589,8 +673,34 @@ export default function MeetingNotes() {
         if (row?.id) setMeetingId(row.id);
         loadMeetings();
       } catch { /* non-fatal — recording is still usable / re-savable */ }
-    } catch (e) { setStatus('error'); setError(e.response?.data?.error || e.message || 'Processing failed.'); }
-  }, [notes, participants, persistRow, loadMeetings]);
+    } catch (e) { setStatus('error'); setError(plainError(e, 'We could not process this recording. Please try again.')); }
+  }, [notes, participants, persistRow, loadMeetings, finalizeDurable, scope, scopeProjectId]);
+
+  // Resume a meeting that was stopped (or interrupted) before the server confirmed
+  // it: upload any chunks still on this device, then follow finalization.
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (resumedRef.current) return;
+    resumedRef.current = true;
+    const pending = readPending();
+    if (!pending?.sessionId || !Number.isInteger(pending.expected)) return;
+    (async () => {
+      const store = createIndexedDbChunkStore();
+      const uploader = createChunkUploader({ sessionId: pending.sessionId, store, post: (url, body, config) => apiClient.core.post(url, body, config) });
+      const rows = (await pendingChunks(store)).filter((row) => row.sessionId === pending.sessionId);
+      rows.forEach((row) => { uploader.enqueue(row.idx, row.blob, { startMs: row.startMs, endMs: row.endMs, contentType: row.contentType }); });
+      uploaderRef.current = uploader; sessionIdRef.current = pending.sessionId;
+      finalizeDurable({ sessionId: pending.sessionId, expected: pending.expected, payload: pending.payload || {}, resume: true });
+    })();
+  }, [finalizeDurable]);
+
+  // Retry after a server-side failure: finalizing again reopens audio chunks that
+  // ran out of attempts, so the stored recording is processed again.
+  const retryFinalization = useCallback(() => {
+    if (!retryable) return;
+    uploaderRef.current = null;
+    finalizeDurable(retryable);
+  }, [retryable, finalizeDurable]);
 
   const start = useCallback(async () => {
     setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null); setMeetingId(null);
@@ -607,8 +717,11 @@ export default function MeetingNotes() {
       });
       sessionIdRef.current = admission.data?.session_id || null;
       if (!sessionIdRef.current) throw new Error('meeting session was not created');
+      uploaderRef.current = admission.data?.durability
+        ? createChunkUploader({ sessionId: sessionIdRef.current, store: createIndexedDbChunkStore(), post: (url, body, config) => apiClient.core.post(url, body, config) })
+        : null;
     } catch (e) {
-      setError(e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Could not start a durable meeting session.');
+      setError(plainError(e, 'Could not start the recording. Please try again.'));
       return;
     }
     finalizingRef.current = false; setSegDone(0); setSegTotal(0);
@@ -661,6 +774,7 @@ export default function MeetingNotes() {
     }
 
     streamRef.current = recordStream; chunksRef.current = [];
+    recStartRef.current = Date.now(); segStartMsRef.current = 0;
     startSegmentRecorder(); setStatus('recording');
     // Rotate to a fresh segment every SEGMENT_MS — stopping the current recorder
     // fires its onstop (ship for transcription + roll next). Short meetings never
@@ -673,6 +787,7 @@ export default function MeetingNotes() {
 
   const stop = useCallback(() => {
     finalizingRef.current = true; // halt rotation re-arm
+    durationSecRef.current = Math.max(0, Math.round((Date.now() - recStartRef.current) / 1000));
     if (segTimerRef.current) { clearInterval(segTimerRef.current); segTimerRef.current = null; }
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     const rec = recRef.current;
@@ -680,12 +795,12 @@ export default function MeetingNotes() {
       rec.onstop = () => { // final (possibly partial) segment → ship, tear down, stitch
         const idx = segIdxRef.current++;
         const blob = new Blob(segChunksRef.current, { type: rec.mimeType || 'audio/webm' });
-        if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
+        if (blob.size > 1024) shipSegment(idx, blob); else segIdxRef.current--;
         cleanup(); finalize();
       };
       rec.stop();
     } else { cleanup(); finalize(); }
-  }, [transcribeSegment, finalize, cleanup]);
+  }, [shipSegment, finalize, cleanup]);
 
   const save = useCallback(async () => {
     if (!transcript || saving || saved) return;
@@ -710,7 +825,7 @@ export default function MeetingNotes() {
       await apiClient.core.post(`/api/meetings/${mid}/ingest`, {}, { timeout: 180000 });
       setSaved(true); loadMeetings();
       emitUsageChanged(); // meeting notes became memories — refresh the meter
-    } catch (e) { setError('Save failed: ' + (e.response?.data?.error || e.message)); }
+    } catch (e) { setError(plainError(e, 'We could not save this meeting. Please try again.')); }
     finally { setSaving(false); }
   }, [transcript, saving, saved, insights, speakerSegments, language, loadMeetings, persistRow, meetingId]);
 
@@ -1023,7 +1138,7 @@ export default function MeetingNotes() {
               ) : (
                 <button onClick={start} disabled={busy} className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] font-medium hover:bg-[#0066e0] disabled:opacity-50">
                   {busy ? <Loader2 size={13} className="animate-spin" /> : <Mic size={13} />}
-                  {busy ? (status === 'transcribing' ? `${t('meetingnotes.transcribing', 'Transcribing…')}${segTotal > 1 ? ` ${segDone}/${segTotal}` : ''}` : t('meetingnotes.analyzing', 'Analyzing…')) : t('meetingnotes.start', 'Start transcribing')}
+                  {busy ? (status === 'transcribing' ? `${t('meetingnotes.transcribing', 'Transcribing…')}` : t('meetingnotes.analyzing', 'Analyzing…')) : t('meetingnotes.start', 'Start transcribing')}
                 </button>
               )}
             </div>
@@ -1220,7 +1335,7 @@ export default function MeetingNotes() {
             </div>
 
             <button onClick={() => setMultiSpeaker((v) => !v)} disabled={recording || busy}
-              className="flex items-center gap-2 mb-4 text-[12px] text-[#525252] disabled:opacity-50" title={t('meetingnotes.multiSpeakerHint', 'Label who said what (runs speaker diarization)')}>
+              className="flex items-center gap-2 mb-4 text-[12px] text-[#525252] disabled:opacity-50" title={t('meetingnotes.multiSpeakerHint', 'Label who said what')}>
               <Users size={14} style={{ color: multiSpeaker ? '#117dff' : '#a3a3a3' }} />
               <span>{t('meetingnotes.multiSpeaker', 'Multi-speaker recognition')}</span>
               <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${multiSpeaker ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
@@ -1249,7 +1364,7 @@ export default function MeetingNotes() {
             </div>
           </div>
 
-          {error && (<div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-[8px] px-3 py-2"><AlertTriangle size={12} className="inline mr-1" /> {error}</div>)}
+          {error && (<div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-[8px] px-3 py-2"><AlertTriangle size={12} className="inline mr-1" /> {error}{retryable && (<button type="button" onClick={retryFinalization} className="ml-2 underline font-medium">{t('meetingnotes.retry', 'Retry')}</button>)}</div>)}
 
           {insights && (
             <div className="space-y-3">
