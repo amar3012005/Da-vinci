@@ -134,6 +134,7 @@ export function createChunkUploader({ post, sessionId, store = createMemoryChunk
       return { uploaded: [...results.values()].filter((r) => r.ok).length, failed };
     },
     results,
+    store,
   };
 }
 

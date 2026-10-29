@@ -5,6 +5,16 @@ import { Mic, MonitorUp, Pause, Play, Square, Sparkles, CheckCircle2, X, Users, 
 import apiClient from './api-client';
 import { useAuth } from '../auth/AuthProvider';
 import { emitUsageChanged } from './useUsage';
+import {
+  DURABLE_SEGMENT_MS, createChunkUploader, createIndexedDbChunkStore,
+  waitForFinalization, describeFinalizationFailure, pendingChunks,
+} from './meetingDurableUpload.mjs';
+
+// Server messages are shown only when they read as a sentence; machine codes become the fallback.
+const plainError = (e, fallback) => {
+  const text = String(e?.response?.data?.message || e?.response?.data?.error || e?.message || '');
+  return /\s/.test(text.trim()) && !/^(Request failed|Network Error|timeout)/i.test(text) ? text : fallback;
+};
 
 /**
  * QuickRecorderProvider — app-wide "record a meeting from anywhere" engine.
@@ -20,7 +30,7 @@ import { emitUsageChanged } from './useUsage';
 const Ctx = createContext(null);
 export const useQuickRecorder = () => useContext(Ctx) || { status: 'idle', start: () => {}, openConfig: () => {}, supported: false };
 
-const SEGMENT_MS = 10 * 60 * 1000;
+const SEGMENT_MS = DURABLE_SEGMENT_MS; // one-minute chunks: an interruption costs at most a minute of audio
 const MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/mp4;codecs=mp4a.40.2'];
 function pickMime() {
   if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
@@ -186,6 +196,10 @@ export function QuickRecorderProvider({ children }) {
   const segPromisesRef = useRef([]);
   const pendingSegRef = useRef(new Map()); // idx → text, windows not yet confirmed server-side
   const sessionIdRef = useRef(null);
+  const uploaderRef = useRef(null);   // durable chunk uploader; null = older browser-side transcription
+  const recStartRef = useRef(0);
+  const segStartMsRef = useRef(0);
+  const [retryDurable, setRetryDurable] = useState(null); // { sessionId, expected, payload } after a server-side failure
   const langRef = useRef(null);
   const finalizingRef = useRef(false);
   const segTimerRef = useRef(null);
@@ -251,6 +265,19 @@ export function QuickRecorderProvider({ children }) {
     segPromisesRef.current.push(p);
   }, [persistSegment, flushPendingSegments]);
 
+  // Send one finished chunk to the server's durable path; fall back to browser-side
+  // transcription when the server cannot store audio durably.
+  const shipSegment = useCallback((idx, blob) => {
+    const endMs = Math.max(0, Date.now() - recStartRef.current);
+    const startMs = segStartMsRef.current; segStartMsRef.current = endMs;
+    const uploader = uploaderRef.current;
+    if (!uploader) { transcribeSegment(idx, blob); return; }
+    uploader.enqueue(idx, blob, { startMs, endMs, contentType: blob.type }).then((outcome) => {
+      if (outcome.ok) { if (sessionIdRef.current) idbTakeChunks(sessionIdRef.current, idx); }
+      else if (outcome.fallback) { uploaderRef.current = null; transcribeSegment(idx, blob); }
+    });
+  }, [transcribeSegment]);
+
   const rollSegment = useCallback(() => {
     const stream = streamRef.current; if (!stream) return;
     const mime = pickMime();
@@ -267,7 +294,7 @@ export function QuickRecorderProvider({ children }) {
     rec.onstop = () => {
       const idx = segIdxRef.current++;
       const blob = new Blob(segChunksRef.current, { type: rec.mimeType || mime || 'audio/webm' });
-      if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
+      if (blob.size > 1024) shipSegment(idx, blob); else segIdxRef.current--;
       // Keep cached audio until persistSegment confirms the transcript is
       // durable. Starting an STT request is not an acknowledgement.
       if (sessionIdRef.current) {
@@ -276,11 +303,68 @@ export function QuickRecorderProvider({ children }) {
       if (!finalizingRef.current) rollSegment();
     };
     rec.start(1000);
-  }, [readRecovery, transcribeSegment, writeRecovery]);
+  }, [readRecovery, shipSegment, writeRecovery]);
 
   // Stop → stitch → analyze → save the meeting ROW (Past meetings) — NO ingest.
   // The user decides in the results popup via "Save to HIVEMIND memory".
+  // Durable finish: wait for the chunk uploads, ask the server to finalize, then
+  // follow its progress. The server completes the meeting even if this tab closes;
+  // the recovery record lets a reload pick the wait up again.
+  const finalizeDurable = useCallback(async ({ sessionId, expected, payload }) => {
+    setError(null); setRetryDurable(null); setStatus('transcribing'); setCollapsed(false);
+    const saved = readRecovery();
+    if (saved) writeRecovery({ ...saved, finalizing: true, durable: true, expected, payload, elapsed });
+    try {
+      const uploader = uploaderRef.current;
+      if (uploader) {
+        const { failed } = await uploader.settle();
+        if (failed.length) {
+          setStatus('error');
+          setError('Some audio could not be uploaded (no connection). It stays on this device and uploads when you reopen the app online.');
+          return;
+        }
+      }
+      setStatus('analyzing');
+      await apiClient.core.post(`/api/meetings/sessions/${sessionId}/finalize`, { expected_segment_count: expected, ...payload }, { timeout: 60000 });
+      const outcome = await waitForFinalization({ sessionId, get: (url) => apiClient.core.get(url) });
+      if (outcome.state === 'ready') {
+        const { data } = await apiClient.core.get(`/api/meetings/${outcome.meetingId}`);
+        const m = data?.meeting || {};
+        setTranscript(m.transcript || ''); setInsights(m.insights || null);
+        setMeetingId(outcome.meetingId); emitUsageChanged();
+        if (cfgRef.current.autoSave !== false) {
+          try {
+            await apiClient.core.post(`/api/meetings/${outcome.meetingId}/ingest`, {}, { timeout: 180000 });
+            setIngested(true); emitUsageChanged();
+          } catch { setError('Meeting saved. HIVEMIND memory sync failed; retry it from the report.'); }
+        }
+        writeRecovery(null);
+        if (sessionIdRef.current) idbClear(sessionIdRef.current);
+        setStatus('done');
+      } else if (outcome.state === 'failed') {
+        writeRecovery(null);
+        setRetryDurable({ sessionId, expected, payload });
+        setStatus('error'); setError(describeFinalizationFailure(outcome));
+      } else {
+        setStatus('error'); setError('This meeting is still being processed. You can close this; it will appear under Past meetings when it is ready.');
+      }
+    } catch (e) {
+      setStatus('error'); setError(plainError(e, 'We could not finish this meeting yet. Your recording is saved; reopen the app to continue.'));
+    }
+  }, [elapsed, readRecovery, writeRecovery]);
+
   const finalize = useCallback(async () => {
+    if (uploaderRef.current && sessionIdRef.current) {
+      const c = cfgRef.current;
+      return finalizeDurable({
+        sessionId: sessionIdRef.current, expected: segIdxRef.current,
+        payload: {
+          notes: c.notes || null, participants: c.participants.map((n) => ({ type: 'external', name: n })),
+          duration_sec: elapsed, language: langRef.current,
+          scope: c.scope, project_id: c.scope === 'project' ? c.projectId : null,
+        },
+      });
+    }
     setError(null); setStatus('transcribing'); setCollapsed(false);
     const cfg = cfgRef.current;
     // The recording has ended, but its final row is not durable yet. A reload
@@ -335,9 +419,10 @@ export function QuickRecorderProvider({ children }) {
     } catch (e) {
       setStatus('error'); setError(e?.response?.data?.error || e?.message || 'Processing failed.');
     }
-  }, [elapsed, flushPendingSegments, readRecovery, writeRecovery]);
+  }, [elapsed, finalizeDurable, flushPendingSegments, readRecovery, writeRecovery]);
 
   const retryMeetingSave = useCallback(async () => {
+    if (retryDurable) { uploaderRef.current = null; finalizeDurable(retryDurable); return; }
     const text = transcript.trim();
     if (!text) return;
     const cfg = cfgRef.current;
@@ -371,7 +456,7 @@ export function QuickRecorderProvider({ children }) {
     } catch (e) {
       setStatus('error'); setError(e?.response?.data?.error || e?.message || 'Meeting save failed. Your transcript is still recoverable.');
     }
-  }, [elapsed, insights, transcript, writeRecovery]);
+  }, [elapsed, insights, transcript, writeRecovery, retryDurable, finalizeDurable]);
 
   const openConfig = useCallback(() => {
     if (!SUPPORTED) { setError('Recording not supported on this device.'); setStatus('error'); return; }
@@ -403,13 +488,16 @@ export function QuickRecorderProvider({ children }) {
     } catch { /* browser storage checks are best-effort */ }
     let allowance = -1;
     try {
-      const admission = await apiClient.core.post('/api/meetings/sessions', { consent: true });
+      const admission = await apiClient.core.post('/api/meetings/sessions', { consent: true, expected_segment_ms: SEGMENT_MS });
       sessionIdRef.current = admission.data?.session_id || null;
+      uploaderRef.current = sessionIdRef.current && admission.data?.durability
+        ? createChunkUploader({ sessionId: sessionIdRef.current, store: createIndexedDbChunkStore(), post: (url, body, config) => apiClient.core.post(url, body, config) })
+        : null;
       allowance = Number(admission.data?.remaining_seconds ?? -1);
       setRemainingSeconds(allowance);
     } catch (e) {
       if (displayPromise) displayPromise.then((stream) => stream.getTracks().forEach((track) => track.stop())).catch(() => {});
-      setError(e?.response?.data?.message || e?.response?.data?.error || 'Unable to start a meeting.');
+      setError(plainError(e, 'We could not start the recording. Please try again.'));
       setStatus('error');
       return;
     }
@@ -457,6 +545,7 @@ export function QuickRecorderProvider({ children }) {
       cfg: cfgRef.current, owner: { orgId: org?.id || null, userId: user?.id || null },
       remainingSeconds: allowance, elapsed: 0,
     });
+    recStartRef.current = Date.now(); segStartMsRef.current = 0;
     rollSegment(); setStatus('recording'); forceTick((x) => x + 1);
     setPaused(false);
     segTimerRef.current = setInterval(() => {
@@ -474,12 +563,12 @@ export function QuickRecorderProvider({ children }) {
       rec.onstop = () => {
         const idx = segIdxRef.current++;
         const blob = new Blob(segChunksRef.current, { type: rec.mimeType || 'audio/webm' });
-        if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
+        if (blob.size > 1024) shipSegment(idx, blob); else segIdxRef.current--;
         cleanup(); finalize();
       };
       rec.stop();
     } else { cleanup(); finalize(); }
-  }, [transcribeSegment, cleanup, finalize]);
+  }, [shipSegment, cleanup, finalize]);
   stopRef.current = stop;
 
   const togglePause = useCallback(() => {
@@ -564,6 +653,15 @@ export function QuickRecorderProvider({ children }) {
           segIdxRef.current = Math.max(segIdxRef.current, Number(row.idx) + 1);
         }
       } catch { /* keep what we have */ }
+      if (s.finalizing && s.durable && Number.isInteger(s.expected)) {
+        // Chunks still in this device's upload queue go up first, then the wait resumes.
+        const uploader = createChunkUploader({ sessionId: s.sessionId, store: createIndexedDbChunkStore(), post: (url, body, config) => apiClient.core.post(url, body, config) });
+        const rows = (await pendingChunks(uploader.store)).filter((row) => row.sessionId === s.sessionId);
+        rows.forEach((row) => { uploader.enqueue(row.idx, row.blob, { startMs: row.startMs, endMs: row.endMs, contentType: row.contentType }); });
+        uploaderRef.current = uploader;
+        finalizeDurable({ sessionId: s.sessionId, expected: s.expected, payload: s.payload || {} });
+        return;
+      }
       if (s.finalizing) {
         const restored = Object.keys(segTextsRef.current).map(Number).sort((a, b) => a - b)
           .map((idx) => segTextsRef.current[idx]).filter(Boolean).join('\n').trim();
@@ -865,9 +963,9 @@ export function QuickRecorderProvider({ children }) {
       {status === 'error' && (
         <div className="mt-3 flex items-center justify-between gap-3">
           <p className="text-[12.5px] text-[#dc2626]">{error}</p>
-          {transcript.trim() && (
+          {(transcript.trim() || retryDurable) && (
             <button onClick={retryMeetingSave} className="shrink-0 px-3 py-1.5 rounded-[8px] bg-[#117dff] text-white text-[12px] font-semibold hover:bg-[#0066e0]">
-              Retry saving meeting
+              {retryDurable ? 'Try again' : 'Retry saving meeting'}
             </button>
           )}
         </div>
