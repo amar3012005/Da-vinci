@@ -10,6 +10,7 @@ import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import apiClient from '../shared/api-client';
+import { useSidebarCopy } from './sidebar-copy';
 import { readBootCache, writeBootCache } from '../shared/boot-cache';
 
 const pageTitles = {
@@ -61,9 +62,9 @@ const pageDescriptions = {
 };
 
 const SECTIONS = [
-  { key: 'hivemind', label: 'BRAIN', tint: '#f3eaff' },
-  { key: 'hyperagents', label: 'OS', tint: '#eaf3ff' },
-  { key: 'tara', label: 'VOICE', tint: '#eaf8ef' },
+  { key: 'hivemind', copyKey: 'productBrain', label: 'BRAIN', tint: '#f3eaff' },
+  { key: 'hyperagents', copyKey: 'productOs', label: 'OS', tint: '#eaf3ff' },
+  { key: 'tara', copyKey: 'productVoice', label: 'VOICE', tint: '#eaf8ef' },
 ];
 
 const FALLBACK_HUMATION_TEAM = [
@@ -78,6 +79,8 @@ function normalizeEmployees(payload) {
 }
 
 export function HumationSystemSwitcher({ activeSection, onSectionChange, employees = [], agentRoom = false }) {
+  const s = useSidebarCopy();
+  const labelOf = section => s(section.copyKey, section.label);
   const team = useMemo(
     () => SECTIONS.map((_, index) => employees[index] || FALLBACK_HUMATION_TEAM[index]),
     [employees],
@@ -87,7 +90,7 @@ export function HumationSystemSwitcher({ activeSection, onSectionChange, employe
   // existing product switcher presentation.
   if (agentRoom || activeSection === 'hyperagents') {
     return (
-      <nav className="flex items-center gap-1" aria-label="Switch product">
+      <nav className="flex items-center gap-1" aria-label={s('switchProduct', 'Switch product')}>
         {SECTIONS.map((section) => (
           <button
             key={section.key}
@@ -95,9 +98,9 @@ export function HumationSystemSwitcher({ activeSection, onSectionChange, employe
             onClick={() => onSectionChange?.(section.key)}
             className={`rounded-lg px-3 py-2 text-[12px] font-semibold tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#117dff] focus-visible:ring-offset-2 ${activeSection === section.key ? 'bg-[#f3f2ef] text-[#0a0a0a]' : 'text-[#737373] hover:bg-[#f7f6f3] hover:text-[#333333]'}`}
             aria-current={activeSection === section.key ? 'page' : undefined}
-            aria-label={section.label}
+            aria-label={labelOf(section)}
           >
-            {section.label}
+            {labelOf(section)}
           </button>
         ))}
       </nav>
@@ -105,11 +108,11 @@ export function HumationSystemSwitcher({ activeSection, onSectionChange, employe
   }
 
   return (
-    <nav className="flex items-end" aria-label="Switch product">
+    <nav className="flex items-end" aria-label={s('switchProduct', 'Switch product')}>
       {SECTIONS.map((section, index) => {
         const active = activeSection === section.key;
         const agent = team[index];
-        const agentName = agent?.name || agent?.slug || 'Humation agent';
+        const agentName = agent?.name || agent?.slug || s('humationAgent', 'Humation agent');
         return (
           <button
             key={section.key}
@@ -117,8 +120,8 @@ export function HumationSystemSwitcher({ activeSection, onSectionChange, employe
             onClick={() => onSectionChange?.(section.key)}
             className={`group relative flex w-[48px] flex-col items-center outline-none transition-[filter,opacity,transform] duration-300 focus-visible:z-10 focus-visible:rounded-xl focus-visible:ring-2 focus-visible:ring-[#117dff] focus-visible:ring-offset-2 ${index ? '-ml-1.5' : ''} ${active ? 'z-[3]' : 'z-[1] opacity-62 grayscale-[0.12] hover:z-[2] hover:opacity-90 hover:grayscale-0'}`}
             aria-current={active ? 'page' : undefined}
-            aria-label={`${section.label}, represented by ${agentName}`}
-            title={`${section.label} · ${agentName}`}
+            aria-label={s('representedBy', '{{label}}, represented by {{name}}', { label: labelOf(section), name: agentName })}
+            title={`${labelOf(section)} · ${agentName}`}
           >
             <span
               className={`hm-system-avatar relative grid place-items-center overflow-hidden rounded-full border-2 border-white shadow-[0_2px_8px_rgba(10,10,10,0.10)] transition-[transform,box-shadow] duration-300 ${active ? 'hm-system-avatar-active h-[46px] w-[46px] -translate-y-0.5 shadow-[0_5px_13px_rgba(10,10,10,0.15)]' : 'h-[41px] w-[41px] group-hover:-translate-y-0.5'}`}
@@ -134,7 +137,7 @@ export function HumationSystemSwitcher({ activeSection, onSectionChange, employe
               />
             </span>
             <span className={`mt-0.5 font-mono text-[7px] font-semibold uppercase tracking-[0.13em] transition-colors ${active ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'}`}>
-              {section.label}
+              {labelOf(section)}
             </span>
           </button>
         );
@@ -191,6 +194,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
   const description = pageDescriptions[pagePath] || '';
 
   const { t } = useTranslation('dashboard');
+  const s = useSidebarCopy();
   // Translate page title/description via topbar.pages.<routeSlug> keys when present.
   const routeSlug = (pagePath || '').replace(/^\/+/, '').replace(/\//g, '.') || 'home';
   const tTitle = t(`topbar.titles.${routeSlug}`, { defaultValue: title });
@@ -200,7 +204,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
   // Runtime and Brain phone rooms: liquid-glass back control and identity pill, matching the HyperAgent room bar.
   // The OpenDot room bar (DotView.module.css): a 52px row max(8px, safe area) from the top, 12px from the sides.
   if (floatingMobile) return <div data-mobile-agent-overlay-controls className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center px-3" style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 0px))', height: 'calc(max(8px, env(safe-area-inset-top, 0px)) + 52px)', boxSizing: 'border-box' }}>
-    <button type="button" aria-label="Open your team" aria-haspopup="dialog" onClick={mobileTeamToggle} className="liquid-glass pointer-events-auto grid h-12 w-12 place-items-center rounded-full text-[#292929]"><ChevronLeft size={22} strokeWidth={2} /></button>
+    <button type="button" aria-label={s('openYourTeam', 'Open your team')} aria-haspopup="dialog" onClick={mobileTeamToggle} className="liquid-glass pointer-events-auto grid h-12 w-12 place-items-center rounded-full text-[#292929]"><ChevronLeft size={22} strokeWidth={2} /></button>
     {/* Runtime's own identity pill (ui-hivemind-connect) is centred here and opens its Environment sheet, so only Brain gets one from the shell. */}
     {roomIdentity === 'brain' && <div className="pointer-events-auto absolute left-1/2 flex h-12 max-w-[calc(100%-144px)] -translate-x-1/2 items-center gap-2 rounded-full pl-2 pr-4 text-[#292929] liquid-glass">
       <span className="grid h-8 w-8 shrink-0 place-items-center"><BrainModeIcon size={28} /></span>
@@ -214,7 +218,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
     <header className={`pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-[#faf9f4] md:bg-white' : 'bg-transparent'}`}>
       {/* Branding and team selection live in the persistent HIVE sidebar. */}
       <div className="pointer-events-auto min-w-0 justify-self-start flex items-center gap-2">
-        <>{mobileTeamToggle && <button type="button" aria-label="Open your team" aria-haspopup="dialog" onClick={mobileTeamToggle} className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full text-[#292929] hover:bg-[#f3f2ee]"><Menu size={22} /></button>}</><h1 className="flex items-center gap-2 min-w-0 text-[#292929] text-[16px] font-semibold tracking-tight leading-none" title={org?.name || org?.slug || 'Workspace'}>
+        <>{mobileTeamToggle && <button type="button" aria-label={s('openYourTeam', 'Open your team')} aria-haspopup="dialog" onClick={mobileTeamToggle} className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full text-[#292929] hover:bg-[#f3f2ee]"><Menu size={22} /></button>}</><h1 className="flex items-center gap-2 min-w-0 text-[#292929] text-[16px] font-semibold tracking-tight leading-none" title={org?.name || org?.slug || 'Workspace'}>
           <Building2 size={18} strokeWidth={1.75} className="shrink-0 text-[#626262]" />
           <span className="truncate">{org?.name || org?.slug || t('sidebar.workspace', { defaultValue: 'Workspace' })}</span>
         </h1>
@@ -238,7 +242,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
           <span className="hidden md:inline">{t('topbar.inviteTeam', 'Invite your Team')}</span>
         </button>
 
-        {mobileTeamToggle && <button type="button" aria-label="Open chat history" onClick={() => window.dispatchEvent(new Event('hivemind:mobile-history'))} className="min-h-[44px] px-2 rounded-full text-[12px] text-[#525252]">Recents</button>}
+        {mobileTeamToggle && <button type="button" aria-label={s('openChatHistory', 'Open chat history')} onClick={() => window.dispatchEvent(new Event('hivemind:mobile-history'))} className="min-h-[44px] px-2 rounded-full text-[12px] text-[#525252]">{s('recents', 'Recents')}</button>}
         {/* Language switcher */}
         <div className={mobileTeamToggle ? "block" : "hidden md:block"}><LangSwitcher /></div>
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Shapes } from 'lucide-react';
 import { fetchWithRuntimeAdmission } from '../shared/runtime-admission';
+import { useSidebarCopy } from './sidebar-copy';
 
 export const ANATOMY_ENDPOINT = '/api/hivemindHq/anatomyMode';
 
@@ -9,6 +10,7 @@ export const ANATOMY_ENDPOINT = '/api/hivemindHq/anatomyMode';
  * until Runtime serves the setting, and a stale tab's save is refused and replaced by the current value.
  */
 export default function AnatomyModeToggle({ fetcher = fetchWithRuntimeAdmission }) {
+  const s = useSidebarCopy();
   const [state, setState] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -28,14 +30,14 @@ export default function AnatomyModeToggle({ fetcher = fetchWithRuntimeAdmission 
         headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: !state.enabled, expectedRevision: state.revision }) });
       const body = await response.json().catch(() => ({}));
       if (body?.value) setState(body.value);
-      if (!response.ok) setError(response.status === 409 ? 'Changed on another device. Showing the current setting.' : 'Anatomy mode could not be saved.');
-    } catch { setError('Anatomy mode could not be saved.'); }
+      if (!response.ok) setError(response.status === 409 ? s('anatomyChanged', 'Changed on another device. Showing the current setting.') : s('anatomySaveFailed', 'Anatomy mode could not be saved.'));
+    } catch { setError(s('anatomySaveFailed', 'Anatomy mode could not be saved.')); }
     finally { setBusy(false); }
   };
   return <div className="mobile-roster-anatomy">
     <button type="button" role="switch" aria-checked={state.enabled} disabled={busy} onClick={toggle}>
       <Shapes size={20} aria-hidden="true" />
-      <span><strong>Anatomy mode</strong><small>{state.enabled ? 'Visual answers on' : 'Answers with interactive illustrations'}</small></span>
+      <span><strong>{s('anatomyMode', 'Anatomy mode')}</strong><small>{state.enabled ? s('anatomyOn', 'Visual answers on') : s('anatomyOff', 'Answers with interactive illustrations')}</small></span>
       <i aria-hidden="true" data-on={state.enabled || undefined} />
     </button>
     {error && <p role="status">{error}</p>}

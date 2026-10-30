@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 
 import { fetchWithRuntimeAdmission } from '../shared/runtime-admission';
 import { HYPERAGENTS_WORKSPACE, RUNTIME_WORKSPACE } from '../shared/runtime-workspace';
+import { useSidebarCopy } from './sidebar-copy';
 
 /** One autonomy dial for Runtime and HyperAgents; it lives in the HyperAgents sidebar on every page. */
 export const AUTONOMY_ENDPOINT = '/api/hivemindHq/autonomyLevel';
@@ -12,6 +13,8 @@ const MAX = 4;
 const CELLS = 20;
 /** Short checkpoint labels under the bar, one per level. */
 const CHECKPOINTS = ['Observe', 'Suggest', 'Prepare', 'Lanes', 'Auto'];
+/** Notices are stored by id so a language switch re-renders them; the text is `sidebar.autonomy.notice<Id>`. */
+const NOTICES = { Locked: 'Higher levels unlock after the restart and isolation safety tests pass.', Changed: 'The level changed elsewhere. The current level is loaded.', Reopen: 'Open HIVEMIND again to change the level.', SaveFailed: 'The level could not be saved. Try again.' };
 /** Shown before a level was ever chosen; the previous approval rules behave closest to Prepare. */
 const UNSET_DISPLAY = 2;
 export const AUTONOMY_LEVELS = [
@@ -59,6 +62,9 @@ function reportAuthoritySet() {
 }
 
 export default function AutonomyDial({ collapsed = false, fetcher = defaultFetcher, orgId, runtimeEnabled = true }) {
+  const s = useSidebarCopy();
+  const a = (key, defaultValue, vars) => s(`autonomy.${key}`, defaultValue, vars);
+  const levelName = index => a(`level${index}`, AUTONOMY_LEVELS[index].name);
   const [state, setState] = useState(() => readCachedAutonomy(orgId));
   const [remote, setRemote] = useState(false);
   const [draft, setDraft] = useState(null);
@@ -124,9 +130,9 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
   const saved = available ? state.level ?? UNSET_DISPLAY : UNSET_DISPLAY;
   const shown = draft ?? pending ?? saved;
   /* Without Runtime the level governs the employees alone, so the copy names only them. */
-  const hint = index => runtimeEnabled ? AUTONOMY_LEVELS[index].hint : AUTONOMY_LEVELS[index].hint.replace(/^Runtime and HyperAgents/, 'Your HyperAgents');
-  const subject = runtimeEnabled ? 'Runtime and HyperAgents' : 'HyperAgents';
-  const level = AUTONOMY_LEVELS[Math.max(0, Math.min(MAX, Math.round(shown)))];
+  const hint = index => runtimeEnabled ? a(`level${index}Hint`, AUTONOMY_LEVELS[index].hint) : a(`level${index}HintHyper`, AUTONOMY_LEVELS[index].hint.replace(/^Runtime and HyperAgents/, 'Your HyperAgents'));
+  const subject = runtimeEnabled ? a('subjectBoth', 'Runtime and HyperAgents') : a('subjectHyper', 'HyperAgents');
+  const currentName = levelName(Math.max(0, Math.min(MAX, Math.round(shown))));
   const filled = Math.round((shown / MAX) * CELLS);
   const lockedFrom = available ? Math.round((state.maxSelectable / MAX) * CELLS) : CELLS;
   const release = (value) => {
@@ -134,7 +140,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
     setDraft(null);
     if (!available) return;
     if (remote) { window.location.assign(runtimeEnabled ? RUNTIME_WORKSPACE : HYPERAGENTS_WORKSPACE); return; }
-    if (wanted > state.maxSelectable) { setNotice('Higher levels unlock after the restart and isolation safety tests pass.'); return; }
+    if (wanted > state.maxSelectable) { setNotice('Locked'); return; }
     if (wanted === state.level) return;
     setNotice(null);
     setPending(wanted);
@@ -165,59 +171,59 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
         setState(body.value.value); writeCachedAutonomy(orgId, body.value.value); const saved = pending; setPending(null); setNotice(null); reportAuthoritySet();
         if (viaOpenDot) void syncRuntime(saved);
       }
-      else if (response.ok && body?.value?.ok === false) { setState(body.value.current); setPending(null); setNotice('The level changed elsewhere. The current level is loaded.'); }
-      else setNotice(body?.error === 'cross_site_request' ? 'Open HIVEMIND again to change the level.' : 'The level could not be saved. Try again.');
-    } catch { setNotice('The level could not be saved. Try again.'); }
+      else if (response.ok && body?.value?.ok === false) { setState(body.value.current); setPending(null); setNotice('Changed'); }
+      else setNotice(body?.error === 'cross_site_request' ? 'Reopen' : 'SaveFailed');
+    } catch { setNotice('SaveFailed'); }
     finally { setSaving(false); }
   };
-  const previous = available && state.level !== undefined ? AUTONOMY_LEVELS[state.level].name : 'Not set';
+  const previous = available && state.level !== undefined ? levelName(state.level) : a('notSet', 'Not set');
 
   if (collapsed) {
-    return <div className="ha-autonomy-dial is-collapsed" title={`Autonomy · ${available ? level.name : 'unavailable'}`} data-hivemind-autonomy-dial>
+    return <div className="ha-autonomy-dial is-collapsed" title={a('titleState', 'Autonomy · {{state}}', { state: available ? currentName : a('unavailable', 'Unavailable').toLowerCase() })} data-hivemind-autonomy-dial>
       <span className="ha-autonomy-badge">{available ? `${Math.round(saved)}/${MAX}` : '–'}</span>
     </div>;
   }
   return <div ref={root} className="ha-autonomy-dial" data-attention={attention || undefined} data-unset={(available && state.level === undefined) || undefined} data-unavailable={!available || undefined} data-hivemind-autonomy-dial>
     <div className="ha-autonomy-head">
-      <span className="ha-autonomy-title">Autonomy · {subject}</span>
-      <span className="ha-autonomy-count">{available ? `${Math.round(shown)}/${MAX} · ${level.name}` : 'Unavailable'}</span>
+      <span className="ha-autonomy-title">{a('titleSubject', 'Autonomy · {{subject}}', { subject })}</span>
+      <span className="ha-autonomy-count">{available ? `${Math.round(shown)}/${MAX} · ${currentName}` : a('unavailable', 'Unavailable')}</span>
     </div>
     <div className="ha-autonomy-row">
-      <span className="ha-autonomy-end" title="Human in the loop"><HumanIcon/></span>
+      <span className="ha-autonomy-end" title={a('humanInLoop', 'Human in the loop')}><HumanIcon/></span>
       <div className="ha-autonomy-bar">
         <span className="ha-autonomy-cells" aria-hidden="true">{Array.from({ length: CELLS }, (_, index) =>
           <i key={index} data-filled={index < filled || undefined} data-locked={index >= lockedFrom || undefined}/>)}</span>
         <input type="range" className="ha-autonomy-range" min={0} max={MAX} step={1} value={shown}
-          disabled={!available || saving || pending !== null} aria-label={`Autonomy level for ${subject}`} aria-valuetext={level.name}
+          disabled={!available || saving || pending !== null} aria-label={a('levelFor', 'Autonomy level for {{subject}}', { subject })} aria-valuetext={currentName}
           onChange={event => { setNotice(null); setDraft(Number(event.target.value)); }}
           onPointerUp={event => release(event.currentTarget.value)}
           onKeyUp={event => { if (draft !== null) release(event.currentTarget.value); }}
           onBlur={event => { if (draft !== null) release(event.currentTarget.value); }}/>
       </div>
-      <span className="ha-autonomy-end" title="Fully autonomous"><AgentIcon/></span>
+      <span className="ha-autonomy-end" title={a('fullyAutonomous', 'Fully autonomous')}><AgentIcon/></span>
     </div>
-    <div className="ha-autonomy-checkpoints" role="group" aria-label="Autonomy checkpoints">
+    <div className="ha-autonomy-checkpoints" role="group" aria-label={a('checkpoints', 'Autonomy checkpoints')}>
       {CHECKPOINTS.map((label, index) => <button key={label} type="button" className="ha-autonomy-checkpoint"
         data-current={index === Math.round(saved) || undefined} data-locked={(available && index > state.maxSelectable) || undefined}
         disabled={!available || saving || pending !== null} aria-pressed={index === Math.round(saved)}
-        title={AUTONOMY_LEVELS[index].name} onClick={() => release(index)}>
-        <span className="ha-autonomy-checkpoint-mark" aria-hidden="true"/>{label}
+        title={levelName(index)} onClick={() => release(index)}>
+        <span className="ha-autonomy-checkpoint-mark" aria-hidden="true"/>{a(`cp${index}`, label)}
       </button>)}
     </div>
-    {notice && <p className="ha-autonomy-notice" role="status">{notice}</p>}
+    {notice && <p className="ha-autonomy-notice" role="status">{a(`notice${notice}`, NOTICES[notice])}</p>}
     {remote && (runtimeEnabled
-      ? <a className="ha-autonomy-notice" href={RUNTIME_WORKSPACE}>Change the level in the Runtime room</a>
-      : <a className="ha-autonomy-notice" href={HYPERAGENTS_WORKSPACE}>Change the level in your HyperAgents workspace</a>)}
+      ? <a className="ha-autonomy-notice" href={RUNTIME_WORKSPACE}>{a('remoteRuntime', 'Change the level in the Runtime room')}</a>
+      : <a className="ha-autonomy-notice" href={HYPERAGENTS_WORKSPACE}>{a('remoteHyper', 'Change the level in your HyperAgents workspace')}</a>)}
     {pending !== null && createPortal(<div className="ha-autonomy-overlay" role="presentation" onClick={() => { if (!saving) setPending(null); }}>
       <div className="ha-autonomy-confirm" role="dialog" aria-modal="true" aria-labelledby="ha-autonomy-confirm-title" onClick={event => event.stopPropagation()}
         onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); if (!saving) setPending(null); } }}>
-        <h3 id="ha-autonomy-confirm-title">Change autonomy?</h3>
-        <p className="ha-autonomy-change"><span>{previous}</span><span aria-hidden="true">→</span><strong>{AUTONOMY_LEVELS[pending].name}</strong></p>
+        <h3 id="ha-autonomy-confirm-title">{a('changeQuestion', 'Change autonomy?')}</h3>
+        <p className="ha-autonomy-change"><span>{previous}</span><span aria-hidden="true">→</span><strong>{levelName(pending)}</strong></p>
         <p className="ha-autonomy-confirm-hint">{hint(pending)}</p>
-        <p className="ha-autonomy-confirm-note">{runtimeEnabled ? 'This applies to Runtime and all HyperAgents until you change it again.' : 'This applies to all your HyperAgents until you change it again.'}</p>
+        <p className="ha-autonomy-confirm-note">{runtimeEnabled ? a('confirmRuntime', 'This applies to Runtime and all HyperAgents until you change it again.') : a('confirmHyper', 'This applies to all your HyperAgents until you change it again.')}</p>
         <div className="ha-autonomy-actions">
-          <button type="button" onClick={() => setPending(null)} disabled={saving}>Cancel</button>
-          <button type="button" className="is-primary" onClick={() => { void save(); }} disabled={saving} autoFocus>{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" onClick={() => setPending(null)} disabled={saving}>{a('cancel', 'Cancel')}</button>
+          <button type="button" className="is-primary" onClick={() => { void save(); }} disabled={saving} autoFocus>{saving ? a('saving', 'Saving…') : a('save', 'Save')}</button>
         </div>
       </div>
     </div>, document.body)}

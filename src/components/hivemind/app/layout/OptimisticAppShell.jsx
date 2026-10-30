@@ -8,6 +8,7 @@ import { optimisticIdentityEnabled } from '../shared/optimistic-identity';
 import { workspaceModeForPath } from '../shared/workspace-mode';
 import { HYPERAGENT_WIDTHS } from './hyperagent-widths';
 import { PhoneRoomFrame, phoneChatRoom } from './PhoneRoomFrame';
+import { useSidebarCopy } from './sidebar-copy';
 import './desktop-hyperagents-navigation.css';
 import './OptimisticAppShell.css';
 
@@ -41,6 +42,7 @@ function Skeleton({ size, className = '' }) {
 
 // Team sidebar frame: grid geometry of the settled DesktopHyperAgentsNavigation. Cached identity is read only when `reveal` is set.
 function TeamFrame({ hint, reveal }) {
+  const s = useSidebarCopy();
   const roster = reveal ? readBootCache(hint.orgId, hint.userId, 'employees')?.value : undefined;
   const named = reveal && Array.isArray(roster) ? roster.filter(entry => entry && entry.name) : null;
   const character = reveal ? readBootCache(hint.orgId, hint.userId, 'runtime-appearance')?.value?.character : undefined;
@@ -54,16 +56,16 @@ function TeamFrame({ hint, reveal }) {
     <div className="desktop-hyperagents-navigation">
       <div className="ha-team-scroll">
         <div className="ha-team-heading">
-          <h2>Your team</h2>
+          <h2>{s('yourTeam', 'Your team')}</h2>
           {named
-            ? <span>{named.length} {named.length === 1 ? 'employee' : 'employees'}</span>
+            ? <span>{named.length === 1 ? s('employeeCountOne', '{{count}} employee', { count: named.length }) : s('employeeCountMany', '{{count}} employees', { count: named.length })}</span>
             : <Skeleton size={COUNT_SKELETON} className="ha-placeholder-name" />}
         </div>
         {!runtimeHidden && <div className="ha-runtime-card">
           {savedCharacter
             ? <img alt="" src={runtimeAvatarSource(savedCharacter)} width={RUNTIME_AVATAR_SIZE} height={RUNTIME_AVATAR_SIZE} />
             : <span data-runtime-avatar-pending="" style={{ display: 'inline-block', width: RUNTIME_AVATAR_SIZE, height: RUNTIME_AVATAR_SIZE, flexShrink: 0 }} />}
-          <span className="ha-runtime-identity"><strong>Runtime</strong><small>AI Chief of Staff</small></span>
+          <span className="ha-runtime-identity"><strong>Runtime</strong><small>{s('runtimeRole', 'AI Chief of Staff')}</small></span>
         </div>}
         <div className="ha-employee-grid" style={{ gridTemplateColumns: `repeat(${TEAM_COLUMNS}, minmax(0, 1fr))` }}>
           {tiles.map(entry => (
@@ -85,6 +87,7 @@ function TeamFrame({ hint, reveal }) {
  * @returns {JSX.Element}
  */
 export default function OptimisticAppShell({ fallback = null }) {
+  const s = useSidebarCopy();
   const { optimisticShell, restoredShell } = useAuth();
   const { pathname } = useLocation();
   const hint = restoredShell || optimisticShell;
@@ -102,7 +105,7 @@ export default function OptimisticAppShell({ fallback = null }) {
 
   return (
     <div data-hivemind-app-shell data-optimistic-shell data-identity-revealed={reveal || undefined} aria-busy="true" className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
-      <span role="status" className="sr-only">Loading workspace</span>
+      <span role="status" className="sr-only">{s('loadingWorkspace', 'Loading workspace')}</span>
       <aside
         className="fixed left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40"
         style={{ width: sidebarWidth }}

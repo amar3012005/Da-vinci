@@ -2,8 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Users, ChevronDown, Plus, Check, Folder } from 'lucide-react';
 import { useTeamContext } from '../shared/team-context';
 import apiClient from '../shared/api-client';
+import { useSidebarCopy } from './sidebar-copy';
 
 export default function TeamSwitcher() {
+  const s = useSidebarCopy();
   const {
     teams,
     projects,
@@ -79,7 +81,7 @@ export default function TeamSwitcher() {
           </div>
           <div className="max-h-[200px] overflow-y-auto">
             {teams.length === 0 && (
-              <div className="px-3 py-3 text-xs text-[#a3a3a3]">No teams yet</div>
+              <div className="px-3 py-3 text-xs text-[#a3a3a3]">{s('noTeamsYet', 'No teams yet')}</div>
             )}
             {teams.map(t => (
               <button
@@ -93,7 +95,7 @@ export default function TeamSwitcher() {
                   <Users size={12} className="text-[#525252] flex-shrink-0" />
                   <span className="truncate">{t.name}</span>
                   {(t.isDefault || t.is_default) && (
-                    <span className="text-[9px] uppercase text-[#a3a3a3]">default</span>
+                    <span className="text-[9px] uppercase text-[#a3a3a3]">{s('defaultTag', 'default')}</span>
                   )}
                 </span>
                 {t.id === activeTeamId && <Check size={12} className="text-[#16a34a]" />}
@@ -117,7 +119,7 @@ export default function TeamSwitcher() {
                   autoFocus
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
-                  placeholder="Team name"
+                  placeholder={s('teamNamePlaceholder', 'Team name')}
                   className="flex-1 h-7 px-2 text-xs border border-[#e3e0db] rounded-[4px] focus:outline-none focus:border-[#117dff]"
                 />
                 <button
@@ -145,12 +147,12 @@ export default function TeamSwitcher() {
                   className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[#f3f1ec] transition-colors text-xs"
                 >
                   <span className="flex items-center gap-2 text-[#525252]">
-                    <span className="text-[10px] uppercase tracking-wide">All</span>
+                    <span className="text-[10px] uppercase tracking-wide">{s('all', 'All')}</span>
                   </span>
                   {!activeProjectId && <Check size={12} className="text-[#16a34a]" />}
                 </button>
                 {projects.length === 0 && (
-                  <div className="px-3 py-2 text-xs text-[#a3a3a3]">No projects in this team</div>
+                  <div className="px-3 py-2 text-xs text-[#a3a3a3]">{s('noProjectsInTeam', 'No projects in this team')}</div>
                 )}
                 {projects.map(p => (
                   <button
