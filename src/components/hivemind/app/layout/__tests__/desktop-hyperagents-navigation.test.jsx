@@ -49,7 +49,9 @@ test('keeps call, work, unread, schedule and unanswered-question evidence scoped
 });
 test('never assumes an employee is ready without status evidence, and keeps status on collapsed tiles',()=>{
  const r=render(view());
- expect(screen.getAllByText('Status unavailable').length).toBe(6);
+ // Without published room status no tile claims Ready, Working or any other state.
+ expect(screen.queryByText('Ready')).toBeNull();
+ expect(screen.queryAllByRole('status')).toHaveLength(0);
  r.rerender(view({collapsed:true,rooms:[{id:'agent-0',updatedAt:1,activeCall:true,unread:true,scheduled:true}]}));
  expect(screen.getByRole('img',{name:'In call'})).toBeInTheDocument();
  expect(screen.getByRole('img',{name:'Unread update'})).toBeInTheDocument();
@@ -61,7 +63,9 @@ test('snap widths progress through 3, 2, 1 and collapsed; workspace shortcuts re
  expect(screen.getByRole('link',{name:'Apps'})).toHaveAttribute('href',expect.stringContaining('/employee/apps?return_to='));
  fireEvent.click(screen.getByRole('button',{name:'Company HQ'}));
  expect(props.onCompany).toHaveBeenCalledTimes(1);
- expect(screen.getByRole('button',{name:'Artifacts'})).toBeDisabled();
+ // Artifacts moved into the one Library page, which every view links to.
+ expect(screen.getByRole('link',{name:'Library'})).toHaveAttribute('href','/hivemind/app/employee/library');
+ expect(screen.queryByRole('button',{name:'Artifacts'})).toBeNull();
 });
 test('keeps the autonomy dial seat directly above the workspace shortcuts on every page',()=>{
  const { container } = render(view());

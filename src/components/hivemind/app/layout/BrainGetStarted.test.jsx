@@ -3,7 +3,7 @@ import { render, screen, act, fireEvent } from '@testing-library/react';
 import BrainGetStarted from './BrainGetStarted';
 import apiClient from '../shared/api-client';
 const mockNavigate = jest.fn(); let mockPath = '/hivemind/app/overview';
-jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate, useLocation: () => ({ pathname: mockPath }) }));
+jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate, useLocation: () => ({ pathname: mockPath }) }), { virtual: true });
 jest.mock('../shared/api-client', () => ({ listDocuments: jest.fn(async () => ({ documents: [{ id: 'doc' }] })), listMemories: jest.fn(async () => ({ memories: [] })), getConnectorConnectionStatus: jest.fn(async () => ({ connectors: [] })) }));
 beforeEach(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); apiClient.listDocuments.mockResolvedValue({ documents: [{ id: 'doc' }] }); apiClient.listMemories.mockResolvedValue({ memories: [] }); apiClient.getConnectorConnectionStatus.mockResolvedValue({ connectors: [] }); localStorage.clear(); mockPath = '/hivemind/app/overview'; });
 it('uses Brain milestones and does not complete a save from navigation', async () => {
