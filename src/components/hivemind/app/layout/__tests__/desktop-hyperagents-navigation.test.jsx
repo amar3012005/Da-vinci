@@ -4,9 +4,12 @@ jest.mock('react-router-dom', () => {
  return require('../../../../../../node_modules/react-router/dist/development/index.js');
 }, { virtual: true });
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
 import DesktopHyperAgentsNavigation, { createEmployeeSpan, columnsForWidth } from '../DesktopHyperAgentsNavigation';
+i18n.use(initReactI18next).init({ lng: 'en', resources: {}, interpolation: { escapeValue: false } });
 const team = Array.from({length:5}, (_,i)=>({id:`agent-${i}`,name:`Employee ${i}`,role:i===0?'Financial Product Strategist':'Specialist'}));
 const props = {team,rooms:[],selectedAgent:null,openingAgent:null,columns:3,collapsed:false,user:{display_name:'Amar'},planLabel:'Enterprise',onOpenAgent:jest.fn(),onCreate:jest.fn(),onCompany:jest.fn(),logout:jest.fn()};
 const view = overrides => <MemoryRouter><DesktopHyperAgentsNavigation {...props} {...overrides}/></MemoryRouter>;
@@ -65,4 +68,38 @@ test('keeps the autonomy dial seat directly above the workspace shortcuts on eve
  const seat = container.querySelector('.ha-autonomy-seat');
  expect(seat).not.toBeNull();
  expect(seat.nextElementSibling).toBe(screen.getByRole('navigation',{name:'Workspace tools'}));
+});
+test('native employees can be deleted after an in-page confirmation; computer employees have no control here',async()=>{
+ const onDeleteEmployee=jest.fn().mockResolvedValue({removed:true});
+ const computer={id:'c14aaef5-24fb-46c2-806c-c3f6c1d88b07',name:'Desk',role:'Specialist',policy_rules:{open_dot_employee:{version:1,state:'bound'}}};
+ const r=render(view({team:[team[0],computer],onDeleteEmployee}));
+ expect(screen.getAllByRole('button',{name:/^Delete /})).toHaveLength(1);
+ fireEvent.click(screen.getByRole('button',{name:'Delete Employee 0'}));
+ expect(onDeleteEmployee).not.toHaveBeenCalled();
+ const confirm=screen.getByRole('group',{name:'Confirm delete Employee 0'});
+ expect(within(confirm).getByText('Delete Employee 0?')).toBeInTheDocument();
+ expect(confirm).toHaveTextContent('Library');
+ expect(confirm.textContent).not.toMatch(/dot/i);
+ fireEvent.click(within(confirm).getByRole('button',{name:'Cancel'}));
+ expect(screen.queryByRole('group')).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Delete Employee 0'}));
+ fireEvent.click(within(screen.getByRole('group')).getByRole('button',{name:'Delete'}));
+ await waitFor(()=>expect(onDeleteEmployee).toHaveBeenCalledWith(team[0]));
+ await waitFor(()=>expect(screen.queryByRole('group')).toBeNull());
+ r.unmount();
+});
+test('a failed delete keeps the confirmation open and shows the error',async()=>{
+ const onDeleteEmployee=jest.fn().mockRejectedValue({response:{data:{error:'admin_required'}}});
+ render(view({team:[team[0]],onDeleteEmployee}));
+ fireEvent.click(screen.getByRole('button',{name:'Delete Employee 0'}));
+ fireEvent.click(within(screen.getByRole('group')).getByRole('button',{name:'Delete'}));
+ expect(await screen.findByRole('alert')).toHaveTextContent('admin_required');
+ expect(screen.getByRole('group')).toBeInTheDocument();
+});
+test('no delete control without a handler or in the collapsed roster',()=>{
+ const r=render(view());
+ expect(screen.queryByRole('button',{name:/^Delete /})).toBeNull();
+ r.unmount();
+ render(view({collapsed:true,onDeleteEmployee:jest.fn()}));
+ expect(screen.queryByRole('button',{name:/^Delete /})).toBeNull();
 });
