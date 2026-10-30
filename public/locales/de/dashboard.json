@@ -1660,7 +1660,10 @@
       "resets": "Wird zurückgesetzt: {{when}} · Bestehende Dienstlimits gelten weiterhin.",
       "monthlyWord": "monatlich"
     },
-    "planLabelGeneric": "Tarif {{name}}"
+    "planLabelGeneric": "Tarif {{name}}",
+    "needsYou": "Braucht dich",
+    "needsYouBadge": "{{n}} warten auf dich",
+    "openingNeedsYou": "„Braucht dich“ wird geöffnet…"
   },
   "swarmgovernance": {
     "actionLogHeading": "Aktionsprotokoll",
@@ -2615,5 +2618,27 @@
       "loadingApps": "Apps werden geladen…",
       "tapToConnect": "Tippen zum Verbinden und hierher zurückkehren"
     }
+  },
+  "needsYou": {
+    "windowLabel": "hivemind — braucht dich",
+    "title": "Braucht dich",
+    "loading": "Wir prüfen, was wartet…",
+    "loadFailed": "Diese Liste konnte nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "empty": "Nichts braucht dich.",
+    "employeeFallback": "Mitarbeiter",
+    "kindApproval": "Freigabe",
+    "kindQuestion": "Frage",
+    "kindSecure": "Sichere Eingabe",
+    "kindConnect": "App verbinden",
+    "kindSchedule": "Termin",
+    "justNow": "Gerade eben",
+    "open": "Öffnen",
+    "approve": "Freigeben",
+    "deny": "Ablehnen",
+    "openAria": "Raum von {{name}} an dieser Karte öffnen",
+    "approveAria": "Freigeben: {{title}}",
+    "denyAria": "Ablehnen: {{title}}",
+    "actionFailed": "Das hat nicht geklappt. Öffne den Raum, um zu antworten."
   }
 }

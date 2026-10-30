@@ -1641,7 +1641,10 @@
       "resets": "Réinitialisation : {{when}} · Les limites de service existantes restent en vigueur.",
       "monthlyWord": "chaque mois"
     },
-    "planLabelGeneric": "Forfait {{name}}"
+    "planLabelGeneric": "Forfait {{name}}",
+    "needsYou": "Besoin de vous",
+    "needsYouBadge": "{{n}} en attente de vous",
+    "openingNeedsYou": "Ouverture de « Besoin de vous »…"
   },
   "swarmgovernance": {
     "actionLogHeading": "Journal d'actions",
@@ -2596,5 +2599,27 @@
       "loadingApps": "Chargement des applications…",
       "tapToConnect": "Touchez pour connecter et revenir ici"
     }
+  },
+  "needsYou": {
+    "windowLabel": "hivemind — besoin de vous",
+    "title": "Besoin de vous",
+    "loading": "Vérification de ce qui attend…",
+    "loadFailed": "Impossible de charger cette liste.",
+    "retry": "Réessayer",
+    "empty": "Rien n’a besoin de vous.",
+    "employeeFallback": "Employé",
+    "kindApproval": "Approbation",
+    "kindQuestion": "Question",
+    "kindSecure": "Saisie sécurisée",
+    "kindConnect": "Connecter une appli",
+    "kindSchedule": "Planification",
+    "justNow": "À l’instant",
+    "open": "Ouvrir",
+    "approve": "Approuver",
+    "deny": "Refuser",
+    "openAria": "Ouvrir la salle de {{name}} à cette carte",
+    "approveAria": "Approuver : {{title}}",
+    "denyAria": "Refuser : {{title}}",
+    "actionFailed": "Cela n’a pas abouti. Ouvrez la salle pour répondre."
   }
 }

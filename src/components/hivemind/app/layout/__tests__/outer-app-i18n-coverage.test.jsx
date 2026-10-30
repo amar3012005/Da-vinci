@@ -46,6 +46,7 @@ const COMPONENTS = {
   'layout/GlobalUploadStrip.jsx': 'outerApp.uploadStrip',
   'layout/WorkspaceNotifications.jsx': 'outerApp.notifications',
   'layout/NativeMobileAppsSheet.jsx': 'outerApp.mobileApps',
+  'layout/NeedsYouPanel.jsx': 'needsYou',
   'mobile/LegacyChatSheets.jsx': 'outerApp.mobileApps',
 };
 /** Components that are JSX and must carry no English text; the draft module only returns strings. */

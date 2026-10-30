@@ -1,0 +1,25 @@
+/* Needs you list: ink on paper, hairline separators, one dark pill for the primary action. */
+.ny-panel { padding: 22px 22px 18px; color: #111; font-feature-settings: "tnum"; }
+.ny-title { margin: 0 0 8px; font-size: 28px; font-weight: 300; letter-spacing: -.035em; line-height: 1.1; }
+.ny-note, .ny-empty { margin: 14px 0 6px; font-size: 14px; color: #6b6b68; }
+.ny-empty { padding: 28px 0 22px; text-align: center; font-size: 15px; }
+.ny-link { text-decoration: underline; color: #111; }
+.ny-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.ny-row { display: flex; gap: 12px; padding: 14px 0; border-top: 1px solid rgba(17,17,17,.08); }
+.ny-row:first-child { border-top: 0; }
+.ny-avatar { flex: none; width: 36px; height: 36px; border-radius: 999px; overflow: hidden; }
+.ny-main { min-width: 0; flex: 1; }
+.ny-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 12px; color: #6b6b68; }
+.ny-meta strong { font-size: 14px; font-weight: 500; color: #111; }
+.ny-meta time { margin-inline-start: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; text-transform: uppercase; color: #a3a39f; }
+.ny-card-title { margin: 4px 0 0; font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
+.ny-error { margin: 6px 0 0; font-size: 12px; color: #b3261e; }
+.ny-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ny-actions button { min-height: 36px; padding: 0 16px; border-radius: 999px; font-size: 13px; font-weight: 500; border: 1px solid rgba(17,17,17,.18); background: #fff; color: #111; transition: background-color .2s cubic-bezier(.2,.8,.2,1); }
+.ny-actions button:hover:not(:disabled) { background: #f3f1ec; }
+.ny-actions .ny-approve { background: #111; color: #fff; border-color: #111; }
+.ny-actions .ny-approve:hover:not(:disabled) { background: #2b2b2b; }
+.ny-actions button:disabled { opacity: .5; }
+.ny-actions button:focus-visible, .ny-link:focus-visible { outline: 2px solid #3484ff; outline-offset: 2px; }
+.ny-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-inline-start: auto; padding: 0 5px; border-radius: 999px; background: #111; color: #fff; font-size: 11px; font-weight: 600; line-height: 1; }
+@media (prefers-reduced-motion: reduce) { .ny-actions button { transition: none; } }

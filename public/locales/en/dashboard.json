@@ -1661,7 +1661,10 @@
       "resets": "Resets {{when}} · Existing service limits still apply.",
       "monthlyWord": "monthly"
     },
-    "planLabelGeneric": "{{name}} Plan"
+    "planLabelGeneric": "{{name}} Plan",
+    "needsYou": "Needs you",
+    "needsYouBadge": "{{n}} waiting for you",
+    "openingNeedsYou": "Opening Needs you…"
   },
   "swarmgovernance": {
     "actionLogHeading": "Action log",
@@ -2621,5 +2624,27 @@
       "loadingApps": "Loading apps…",
       "tapToConnect": "Tap to connect and return here"
     }
+  },
+  "needsYou": {
+    "windowLabel": "hivemind — needs you",
+    "title": "Needs you",
+    "loading": "Checking what is waiting…",
+    "loadFailed": "Could not load this list.",
+    "retry": "Try again",
+    "empty": "Nothing needs you.",
+    "employeeFallback": "Employee",
+    "kindApproval": "Approval",
+    "kindQuestion": "Question",
+    "kindSecure": "Secure input",
+    "kindConnect": "Connect an app",
+    "kindSchedule": "Schedule",
+    "justNow": "Just now",
+    "open": "Open",
+    "approve": "Approve",
+    "deny": "Deny",
+    "openAria": "Open {{name}}’s room at this card",
+    "approveAria": "Approve: {{title}}",
+    "denyAria": "Deny: {{title}}",
+    "actionFailed": "That did not go through. Open the room to answer."
   }
 }

@@ -1661,7 +1661,10 @@
       "resets": "रीसेट: {{when}} · मौजूदा सेवा सीमाएँ लागू रहती हैं।",
       "monthlyWord": "हर महीने"
     },
-    "planLabelGeneric": "{{name}} प्लान"
+    "planLabelGeneric": "{{name}} प्लान",
+    "needsYou": "आपकी ज़रूरत",
+    "needsYouBadge": "{{n}} आपका इंतज़ार कर रहे हैं",
+    "openingNeedsYou": "«आपकी ज़रूरत» खुल रहा है…"
   },
   "swarmgovernance": {
     "actionLogHeading": "कार्रवाई लॉग",
@@ -2621,5 +2624,27 @@
       "loadingApps": "ऐप्स लोड हो रहे हैं…",
       "tapToConnect": "जोड़ने के लिए टैप करें और यहाँ लौटें"
     }
+  },
+  "needsYou": {
+    "windowLabel": "hivemind — आपकी ज़रूरत",
+    "title": "आपकी ज़रूरत",
+    "loading": "देखा जा रहा है कि क्या इंतज़ार कर रहा है…",
+    "loadFailed": "यह सूची लोड नहीं हो सकी।",
+    "retry": "फिर कोशिश करें",
+    "empty": "अभी किसी को आपकी ज़रूरत नहीं।",
+    "employeeFallback": "कर्मचारी",
+    "kindApproval": "मंज़ूरी",
+    "kindQuestion": "सवाल",
+    "kindSecure": "सुरक्षित इनपुट",
+    "kindConnect": "ऐप जोड़ें",
+    "kindSchedule": "शेड्यूल",
+    "justNow": "अभी",
+    "open": "खोलें",
+    "approve": "मंज़ूर करें",
+    "deny": "अस्वीकार करें",
+    "openAria": "इस कार्ड पर {{name}} का कमरा खोलें",
+    "approveAria": "मंज़ूर करें: {{title}}",
+    "denyAria": "अस्वीकार करें: {{title}}",
+    "actionFailed": "यह पूरा नहीं हुआ। जवाब देने के लिए कमरा खोलें।"
   }
 }
