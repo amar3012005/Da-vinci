@@ -18,6 +18,7 @@ import AppShell from './layout/AppShell';
 import OptimisticAppShell from './layout/OptimisticAppShell';
 import { QuickRecorderProvider } from './shared/QuickRecorderProvider';
 import { TeamProvider } from './shared/team-context';
+import LegacyArtifactsRedirect from './pages/LegacyArtifactsRedirect';
 const TaraConfig = React.lazy(() => import('./pages/TaraConfig'));
 
 // Pages (lazy loaded for code splitting)
@@ -284,9 +285,9 @@ export default function HiveMindApp() {
           <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
           <Route path="employee/apps" element={<PageSuspense><OpenDotAppsNavigation /></PageSuspense>} />
+          {/* The Library is the one place for saved artifacts; the former Artifacts path redirects so old links keep working. */}
           <Route path="employee/library" element={<PageSuspense><RuntimeLibrary /></PageSuspense>} />
-          {/* Sidebar tools that read the company's Runtime root as a data owner: they open in every HyperAgents view, with or without Runtime. */}
-          <Route path="employee/artifacts" element={<PageSuspense><RuntimeLibrary title="Artifacts" /></PageSuspense>} />
+          <Route path="employee/artifacts" element={<LegacyArtifactsRedirect />} />
           <Route path="employee/calendar" element={<PageSuspense><RuntimeCalendar /></PageSuspense>} />
           <Route path="connectors" element={<PageSuspense><Connectors /></PageSuspense>} />
           <Route path="profile" element={<PageSuspense><Profile /></PageSuspense>} />

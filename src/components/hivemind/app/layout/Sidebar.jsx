@@ -15,7 +15,7 @@ import BrainModeIcon from './BrainModeIcon';
 import DesktopBrainNavigation from './DesktopBrainNavigation';
 import DesktopHyperAgentsNavigation, { HYPERAGENT_WIDTHS, columnsForWidth } from './DesktopHyperAgentsNavigation';
 import AutonomyDial from './AutonomyDial';
-import { ARTIFACTS_PATH, ArtifactsIcon, CALENDAR_PATH } from './sidebar-tools';
+import { CALENDAR_PATH, LIBRARY_PATH } from './sidebar-tools';
 import AnatomyModeToggle from './AnatomyModeToggle';
 import LangSwitcher from './LangSwitcher';
 import WorkspaceNotifications from './WorkspaceNotifications';
@@ -56,6 +56,7 @@ import {
   Database,
   Monitor,
   MessageCircle,
+  Library,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
@@ -559,7 +560,7 @@ export default function Sidebar({
             <button type="button" onClick={() => setCompanyOpen(true)}><Building2 size={18}/><span>Company</span></button>
             {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm"><FolderKanban size={18}/><span>CRM</span></NavLink>}
             <NavLink to={CALENDAR_PATH} data-sidebar-tool="calendar"><CalendarDays size={18}/><span>Calendar</span></NavLink>
-            <NavLink to={ARTIFACTS_PATH} data-sidebar-tool="artifacts"><ArtifactsIcon/><span>Artifacts</span></NavLink>
+            <NavLink to={LIBRARY_PATH} data-sidebar-tool="library"><Library size={18}/><span>Library</span></NavLink>
           </div></div>
           <div className="mobile-roster-grid" aria-label="Your employees"
             onClickCapture={event => { if (rosterSwiped.current) { event.preventDefault(); event.stopPropagation(); rosterSwiped.current = false; } }}
@@ -739,7 +740,7 @@ export default function Sidebar({
           </div>
         ))}
         {teamMode && !mobileRoster && (
-          <>{[[CALENDAR_PATH, 'Calendar', <CalendarDays key="i" size={18}/>, 'calendar'], [ARTIFACTS_PATH, 'Artifacts', <ArtifactsIcon key="i"/>, 'artifacts']].map(([to, label, icon, tool]) =>
+          <>{[[CALENDAR_PATH, 'Calendar', <CalendarDays key="i" size={18}/>, 'calendar'], [LIBRARY_PATH, 'Library', <Library key="i" size={18}/>, 'library']].map(([to, label, icon, tool]) =>
             <NavLink key={tool} to={to} data-sidebar-tool={tool} title={collapsed ? label : undefined} className={({ isActive }) => `flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-[#f3f1ec] text-[#0a0a0a] font-medium' : 'text-[#333333]'}`}>{icon}{!collapsed && <span>{label}</span>}</NavLink>)}</>
         )}
       </nav>}

@@ -2,11 +2,13 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useSearchParams } from 'react-router-dom';
 import {
   Check, ChevronRight, Download, ExternalLink, FileCode2, FileImage, FileSpreadsheet, FileText, File as FileIcon,
-  Folder, FolderOpen, LayoutGrid, Link2, List, RefreshCw, Search, X,
+  Folder, FolderOpen, LayoutGrid, Link2, List, RefreshCw, Search, Trash2, X,
 } from 'lucide-react';
+import { useAuth } from '../auth/AuthProvider';
 import {
-  LIBRARY_KINDS, artifactShareUrl, artifactUrl, fetchLibraryPage, filterLibraryItems, folderLabel, folderTree,
-  formatShortDate, libraryUrl, mediaBadge, mediaKind, mergeLibraryPage, readLibraryFirstPage, taskLabel,
+  LIBRARY_DELETE_CONFIRM, LIBRARY_KINDS, artifactShareUrl, artifactUrl, canDeleteLibrary, deleteLibraryArtifacts, fetchLibraryPage,
+  filterLibraryItems, folderLabel, folderTree, formatShortDate, libraryUrl, mediaBadge, mediaKind, mergeLibraryPage, readLibraryFirstPage,
+  taskLabel,
 } from '../shared/runtime-library';
 import { pageCache } from '../shared/resource-cache';
 import '../shared/skeleton.css';
@@ -68,30 +70,41 @@ function ItemActions({ item, copied, onCopy, overlay = false }) {
   </div>;
 }
 
-const GalleryCard = memo(function GalleryCard({ item, copied, onCopy, now }) {
-  return <li className="hm-library-item group relative min-w-0 overflow-hidden rounded-xl border border-[#e7e4dd] bg-white transition-shadow hover:shadow-[0_10px_28px_-18px_rgba(30,30,25,0.45)] focus-within:border-[#c9c5bc]">
-    <a href={artifactUrl(item)} target="_blank" rel="noopener noreferrer" className={`block rounded-xl ${FOCUS}`}>
+/** Checkbox shown on every item in delete mode; the label gives it a 40px hit area. */
+function SelectBox({ item, selected, onToggle, className = '' }) {
+  return <label className={`grid h-10 w-10 shrink-0 cursor-pointer place-items-center ${className}`}>
+    <input type="checkbox" checked={selected} onChange={() => onToggle(item.artifactId)} aria-label={`Select ${item.title || 'file'}`} className="h-[18px] w-[18px] cursor-pointer accent-[#1f2328]" />
+  </label>;
+}
+
+const GalleryCard = memo(function GalleryCard({ item, copied, onCopy, now, selecting = false, selected = false, onToggle }) {
+  const pick = event => { if (selecting) { event.preventDefault(); onToggle(item.artifactId); } };
+  return <li className={`hm-library-item group relative min-w-0 overflow-hidden rounded-xl border bg-white transition-shadow hover:shadow-[0_10px_28px_-18px_rgba(30,30,25,0.45)] focus-within:border-[#c9c5bc] ${selected ? 'border-[#1f2328] ring-1 ring-[#1f2328]' : 'border-[#e7e4dd]'}`}>
+    <a href={artifactUrl(item)} target="_blank" rel="noopener noreferrer" onClick={pick} className={`block rounded-xl ${FOCUS}`}>
       <Thumbnail item={item} />
       <span className="block px-3 pb-3 pt-2.5">
         <span className="line-clamp-2 block min-h-[2.5rem] text-[13px] font-medium leading-5 text-[#20252a]">{item.title || 'Untitled file'}</span>
         <span className="hm-library-meta mt-1 block min-h-[18px] truncate text-[11.5px] leading-[18px] text-[#7a7f86]">{itemMeta(item, now)}</span>
       </span>
     </a>
-    <ItemActions item={item} copied={copied} onCopy={onCopy} overlay />
+    {selecting ? <SelectBox item={item} selected={selected} onToggle={onToggle} className="absolute left-1 top-1 rounded-lg bg-white/95 shadow-sm" />
+      : <ItemActions item={item} copied={copied} onCopy={onCopy} overlay />}
   </li>;
 });
 
-const ListRow = memo(function ListRow({ item, copied, onCopy, now }) {
-  return <li className="hm-library-item flex min-h-[60px] items-center gap-3 px-2 py-2 sm:px-3">
+const ListRow = memo(function ListRow({ item, copied, onCopy, now, selecting = false, selected = false, onToggle }) {
+  const pick = event => { if (selecting) { event.preventDefault(); onToggle(item.artifactId); } };
+  return <li className={`hm-library-item flex min-h-[60px] items-center gap-3 px-2 py-2 sm:px-3 ${selected ? 'bg-[#f3f1ec]' : ''}`}>
+    {selecting ? <SelectBox item={item} selected={selected} onToggle={onToggle} className="-ml-1" /> : null}
     <TypeTile item={item} size="sm" />
-    <a href={artifactUrl(item)} target="_blank" rel="noopener noreferrer" className={`min-w-0 flex-1 rounded-md ${FOCUS}`}>
+    <a href={artifactUrl(item)} target="_blank" rel="noopener noreferrer" onClick={pick} className={`min-w-0 flex-1 rounded-md ${FOCUS}`}>
       <span className="block truncate text-[13.5px] font-medium text-[#20252a] hover:underline">{item.title || 'Untitled file'}</span>
       <span className="block truncate text-[11.5px] text-[#7a7f86] sm:hidden">{itemMeta(item, now)}</span>
       <span className="hidden truncate text-[11.5px] text-[#7a7f86] sm:block">{[folderLabel(item.folder), taskLabel(item)].filter(Boolean).join(' · ')}</span>
     </a>
     <span className="hidden w-36 shrink-0 truncate text-[12px] text-[#5f646b] md:block">{item.producerName || '—'}</span>
     <span className="hidden w-28 shrink-0 truncate text-right text-[12px] text-[#5f646b] sm:block">{formatShortDate(item.updatedAt, now)}{item.latestVersion > 1 ? ` · v${item.latestVersion}` : ''}</span>
-    <ItemActions item={item} copied={copied} onCopy={onCopy} />
+    {selecting ? null : <ItemActions item={item} copied={copied} onCopy={onCopy} />}
   </li>;
 });
 
@@ -119,13 +132,62 @@ function FolderButton({ active, onClick, icon: Icon, label, count, nested = fals
 }
 
 /**
+ * In-page confirmation for a permanent deletion. Deleting every file also asks the admin to type the confirmation word.
+ * Escape and the Cancel button close it unless a request is running; an error stays inside the dialog.
+ */
+function DeleteDialog({ count, everything, scopeLabel, busy, error, onCancel, onConfirm }) {
+  const [typed, setTyped] = useState('');
+  const cancel = useRef(null);
+  useEffect(() => { cancel.current?.focus(); }, []);
+  useEffect(() => {
+    const onKey = event => { if (event.key === 'Escape' && !busy) onCancel(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [busy, onCancel]);
+  const noun = count === 1 ? 'file' : 'files';
+  const ready = !busy && (!everything || typed === LIBRARY_DELETE_CONFIRM);
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
+    <div role="alertdialog" aria-modal="true" aria-labelledby="hm-library-delete-title" aria-describedby="hm-library-delete-body"
+      className="w-full max-w-[420px] rounded-2xl border border-[#e7e4dd] bg-white p-5 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.45)]">
+      <h2 id="hm-library-delete-title" className="text-[16px] font-semibold tracking-[-0.01em] text-[#1f2328]">
+        {everything ? `Delete all ${count} ${noun}${scopeLabel ? ` in ${scopeLabel}` : ''} permanently?` : `Delete ${count} ${noun} permanently?`}
+      </h2>
+      <p id="hm-library-delete-body" className="mt-2 text-[13px] leading-5 text-[#6f747b]">
+        This removes {count === 1 && !everything ? 'it' : 'them'} with every version and the stored {noun}. It can’t be undone.
+      </p>
+      {everything ? <label className="mt-4 block text-[12.5px] font-medium text-[#3d4249]">
+        Type {LIBRARY_DELETE_CONFIRM} to confirm
+        <input value={typed} onChange={event => setTyped(event.target.value)} autoComplete="off" spellCheck="false" disabled={busy}
+          className="mt-1.5 h-10 w-full rounded-lg border border-[#e3e0db] px-3 text-[14px] outline-none focus:border-[#9fb4cf]" />
+      </label> : null}
+      {error ? <p role="alert" className="mt-3 rounded-lg bg-[#fbeeee] px-3 py-2 text-[12.5px] leading-5 text-[#9b2c2c]">{error}</p> : null}
+      <div className="mt-5 flex justify-end gap-2">
+        <button ref={cancel} type="button" onClick={onCancel} disabled={busy} className={`h-10 rounded-lg border border-[#e3e0db] bg-white px-4 text-[13px] font-medium text-[#3d4249] hover:border-[#c9c5bc] disabled:opacity-60 ${FOCUS}`}>Cancel</button>
+        <button type="button" onClick={onConfirm} disabled={!ready} className={`flex h-10 items-center gap-1.5 rounded-full bg-[#111] px-4 text-[13px] font-medium text-white disabled:opacity-40 ${FOCUS}`}>
+          <Trash2 size={15} aria-hidden="true" />{busy ? 'Deleting…' : 'Delete permanently'}
+        </button>
+      </div>
+    </div>
+  </div>;
+}
+
+function deleteErrorText(error) {
+  if (error?.status === 403 || error?.code === 'artifact_admin_required') return 'Only owners and admins can delete Library files. Nothing was deleted.';
+  if (error?.status === 400) return 'The request wasn’t accepted. Refresh the Library and try again.';
+  return 'The deletion couldn’t be confirmed. Refresh the Library to see what was removed before trying again.';
+}
+
+/**
  * Per-tenant Library of saved Runtime and specialist artifacts: folder tree,
  * sticky search and type filter, gallery or list view. Shows titles, owners,
  * dates and folders only; never raw ids. The first page of each folder and
  * search is cached for the document, painted immediately on return, and
- * revalidated in the background.
+ * revalidated in the background. Owners and admins get a delete mode (top right) that removes
+ * selected files, or every file in the current folder, permanently after an in-page confirmation.
  */
 export default function RuntimeLibrary({ title = 'Library' }) {
+  const { org, user } = useAuth();
+  const canDelete = canDeleteLibrary({ org, user });
   const [params, setParams] = useSearchParams();
   const folder = params.get('folder') || '';
   const query = params.get('query') || '';
@@ -140,6 +202,13 @@ export default function RuntimeLibrary({ title = 'Library' }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [now, setNow] = useState(() => Date.now());
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
+  const [everything, setEverything] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [notice, setNotice] = useState('');
   const currentKey = useRef(key);
   const moreController = useRef(null);
   const scroller = useRef(null);
@@ -253,6 +322,53 @@ export default function RuntimeLibrary({ title = 'Library' }) {
   const items = page.items;
   const showSkeleton = status === 'loading' && !items;
 
+  // Delete mode: a selection of loaded files, or every file of the current folder once all loaded files are selected.
+  const deleteCount = everything ? folderCount : selected.size;
+  const allVisibleSelected = visible.length > 0 && (everything || visible.every(item => selected.has(item.artifactId)));
+  const offerEverything = deleteMode && !everything && allVisibleSelected && Boolean(page.next) && !filtered && folderCount > visible.length;
+  const scopeLabel = folder ? folderLabel(folder) : '';
+
+  const leaveDeleteMode = useCallback(() => { setDeleteMode(false); setSelected(new Set()); setEverything(false); setConfirming(false); setDeleteError(''); }, []);
+  // A different folder, search or type means a different set of files: the selection no longer describes what is shown.
+  useEffect(() => { setSelected(new Set()); setEverything(false); }, [key, kind]);
+  useEffect(() => { if (!canDelete) leaveDeleteMode(); }, [canDelete, leaveDeleteMode]);
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = window.setTimeout(() => setNotice(''), 6000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  const toggleItem = useCallback(id => {
+    setEverything(false);
+    setSelected(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  }, []);
+  const toggleAll = () => {
+    setEverything(false);
+    setSelected(allVisibleSelected ? new Set() : new Set(visible.map(item => item.artifactId)));
+  };
+  const toggleDeleteMode = () => { if (deleteMode) leaveDeleteMode(); else { setNotice(''); setDeleteMode(true); } };
+
+  const confirmDelete = async () => {
+    setDeleting(true);
+    setDeleteError('');
+    const removedIds = new Set(selected);
+    try {
+      const result = await deleteLibraryArtifacts(everything ? { all: true, folder } : { ids: [...selected] });
+      pageCache.clear();
+      setPage(current => ({ ...current, items: everything
+        ? (current.items || []).filter(item => folder && item.folder !== folder && !String(item.folder).startsWith(`${folder}/`))
+        : (current.items || []).filter(item => !removedIds.has(item.artifactId)) }));
+      leaveDeleteMode();
+      setNotice(`Deleted ${result.artifacts} ${result.artifacts === 1 ? 'file' : 'files'} permanently.${result.blobsFailed ? ' Some stored files could not be removed and were logged for cleanup.' : ''}`);
+      revalidate(key, { force: true });
+    } catch (error) {
+      setDeleteError(deleteErrorText(error));
+      // A batch may have completed before the failure; show what is left.
+      pageCache.clear();
+      revalidate(key, { force: true });
+    } finally { setDeleting(false); }
+  };
+
   return <div className="hm-library flex h-full min-h-0 w-full min-w-0 bg-[#faf9f4] text-[#262626]">
     <nav aria-label={`${title} folders`} className="hidden w-60 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-[#e7e4dd] px-3 py-5 md:flex">
       <h1 className="mb-3 px-2.5 text-[17px] font-semibold tracking-[-0.01em] text-[#1f2328]">{title}</h1>
@@ -280,6 +396,8 @@ export default function RuntimeLibrary({ title = 'Library' }) {
               {[['grid', LayoutGrid, 'Gallery view'], ['list', List, 'List view']].map(([value, Icon, label]) => <button key={value} type="button" onClick={() => setView(value)} aria-pressed={view === value} aria-label={label} title={label}
                 className={`grid h-9 w-9 place-items-center rounded-md ${view === value ? 'bg-[#efede6] text-[#1f2328]' : 'text-[#7a7f86] hover:text-[#1f2328]'} ${FOCUS}`}><Icon size={16} /></button>)}
             </div>
+            {canDelete ? <button type="button" onClick={toggleDeleteMode} aria-pressed={deleteMode} aria-label="Delete files" title="Delete files"
+              className={`grid h-10 w-10 place-items-center rounded-lg ${deleteMode ? 'bg-[#1f2328] text-white' : 'text-[#5f6368] hover:bg-[#efede6] hover:text-[#1f2328]'} ${FOCUS}`}><Trash2 size={16} /></button> : null}
           </div>
         </div>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -293,6 +411,21 @@ export default function RuntimeLibrary({ title = 'Library' }) {
               className={`h-10 shrink-0 whitespace-nowrap rounded-full border px-3.5 text-[12.5px] ${kind === entry.id ? 'border-[#1f2328] bg-[#1f2328] text-white' : 'border-[#e3e0db] bg-white text-[#3d4249] hover:border-[#c9c5bc]'} ${FOCUS}`}>{entry.label}</button>)}
           </div>
         </div>
+        {deleteMode ? <div role="region" aria-label="Delete files" className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[#e3e0db] bg-white px-3 py-2">
+          <label className="flex min-h-[40px] cursor-pointer items-center gap-2 text-[13px] text-[#1f2328]">
+            <input type="checkbox" checked={allVisibleSelected} disabled={visible.length === 0} onChange={toggleAll} className="h-[18px] w-[18px] cursor-pointer accent-[#1f2328]" />
+            Select all
+          </label>
+          <span className="text-[12.5px] tabular-nums text-[#6f747b]" aria-live="polite">{deleteCount === 0 ? 'Nothing selected' : `${deleteCount} selected`}</span>
+          {offerEverything ? <button type="button" onClick={() => setEverything(true)} className={`min-h-[40px] rounded-md text-[12.5px] font-medium text-[#41608f] underline-offset-2 hover:underline ${FOCUS}`}>
+            Select all {folderCount} files{scopeLabel ? ` in ${scopeLabel}` : ''}
+          </button> : null}
+          <span className="hidden flex-1 sm:block" />
+          <button type="button" onClick={leaveDeleteMode} className={`h-10 rounded-lg px-3 text-[13px] text-[#3d4249] hover:bg-[#efede6] ${FOCUS}`}>Cancel</button>
+          <button type="button" disabled={deleteCount === 0} onClick={() => { setDeleteError(''); setConfirming(true); }}
+            className={`flex h-10 items-center gap-1.5 rounded-full bg-[#111] px-4 text-[13px] font-medium text-white disabled:opacity-40 ${FOCUS}`}><Trash2 size={15} aria-hidden="true" />Delete {deleteCount} permanently</button>
+        </div> : null}
+        {notice ? <p role="status" className="mt-3 rounded-lg bg-[#ebf4ee] px-3 py-2 text-[12.5px] text-[#2f6b45]">{notice}</p> : null}
         {tree.length ? <div className="hm-library-chips -mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 md:hidden" role="group" aria-label="Folders">
           {[{ folder: '', label: 'All files' }, ...tree].map(group => <button key={group.folder || 'all'} type="button" onClick={() => chooseFolder(group.folder)} aria-pressed={activeRoot === group.folder}
             className={`flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[12.5px] ${activeRoot === group.folder ? 'bg-[#ebe8df] font-medium text-[#1f2328]' : 'text-[#3d4249] hover:bg-[#f1efe9]'} ${FOCUS}`}><Folder size={14} aria-hidden="true" />{group.label}</button>)}
@@ -309,18 +442,22 @@ export default function RuntimeLibrary({ title = 'Library' }) {
           body={filtered ? 'Try another search or file type.' : 'Saved deliverables from Runtime and your team appear here.'}
           action={filtered ? <button type="button" onClick={() => { setText(''); updateParams({ query: '', type: '' }); }} className={`mt-4 h-10 rounded-lg border border-[#e3e0db] bg-white px-4 text-[13px] font-medium hover:border-[#c9c5bc] ${FOCUS}`}>Clear filters</button> : null} /> : null}
         {items && visible.length > 0 && status !== 'unavailable' ? (view === 'grid'
-          ? <ul className="hm-library-grid">{visible.map(item => <GalleryCard key={item.artifactId} item={item} copied={copiedId === item.artifactId} onCopy={copyLink} now={now} />)}</ul>
+          ? <ul className="hm-library-grid">{visible.map(item => <GalleryCard key={item.artifactId} item={item} copied={copiedId === item.artifactId} onCopy={copyLink} now={now}
+            selecting={deleteMode} selected={everything || selected.has(item.artifactId)} onToggle={toggleItem} />)}</ul>
           : <div className="overflow-hidden rounded-xl border border-[#e7e4dd] bg-white">
             <div className="hidden items-center gap-3 border-b border-[#ece9e2] px-3 py-2 text-[11px] font-medium uppercase tracking-[0.05em] text-[#8b8b86] sm:flex" aria-hidden="true">
               <span className="w-10" /><span className="flex-1">Name</span><span className="hidden w-36 md:block">Owner</span><span className="w-28 text-right">Updated</span><span className="w-[120px]" />
             </div>
-            <ul className="divide-y divide-[#ece9e2]">{visible.map(item => <ListRow key={item.artifactId} item={item} copied={copiedId === item.artifactId} onCopy={copyLink} now={now} />)}</ul>
+            <ul className="divide-y divide-[#ece9e2]">{visible.map(item => <ListRow key={item.artifactId} item={item} copied={copiedId === item.artifactId} onCopy={copyLink} now={now}
+              selecting={deleteMode} selected={everything || selected.has(item.artifactId)} onToggle={toggleItem} />)}</ul>
           </div>) : null}
         {page.next && items ? <div ref={sentinel} className="flex justify-center pt-5">
           <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className={`h-10 rounded-lg border border-[#e3e0db] bg-white px-4 text-[13px] font-medium text-[#3d4249] hover:border-[#c9c5bc] disabled:opacity-60 ${FOCUS}`}>{loadingMore ? 'Loading…' : 'Load more'}</button>
         </div> : null}
       </section>
     </main>
+    {confirming ? <DeleteDialog count={deleteCount} everything={everything} scopeLabel={scopeLabel} busy={deleting} error={deleteError}
+      onCancel={() => { setConfirming(false); setDeleteError(''); }} onConfirm={confirmDelete} /> : null}
   </div>;
 }
 

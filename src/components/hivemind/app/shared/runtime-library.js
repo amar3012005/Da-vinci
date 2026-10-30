@@ -170,3 +170,66 @@ export async function fetchLibraryPage(url, { signal, fetcher = (...args) => fet
 export function readLibraryFirstPage(url) {
   return fetchLibraryPage(url).catch(error => (error instanceof LibraryUnavailableError ? { unavailable: true, items: [] } : Promise.reject(error)));
 }
+
+/** Typed confirmation word the delete API requires and the all-files dialog asks the admin to type. */
+export const LIBRARY_DELETE_CONFIRM = 'DELETE';
+/** Ids per delete request; equals the Runtime route's default `maxDeleteIds`. */
+export const LIBRARY_DELETE_BATCH = 200;
+
+/**
+ * Whether the signed-in member may delete Library files: an owner or admin of the organization.
+ * The Runtime route decides again from its own membership data; this only decides what to show.
+ * @param {{ org?: { role?: string } | null, user?: { orgRole?: string, role?: string } | null }} account - bootstrap account.
+ * @returns {boolean} true for an owner or admin.
+ */
+export function canDeleteLibrary({ org, user } = {}) {
+  const role = org?.role || user?.orgRole || user?.role;
+  return role === 'owner' || role === 'admin';
+}
+
+/** Thrown when a deletion request is refused or fails; `code` is the API error code when one came back. */
+export class LibraryDeleteError extends Error {
+  constructor(status, code) {
+    super(code || `library_delete_${status}`);
+    this.name = 'LibraryDeleteError';
+    this.status = status;
+    this.code = code || '';
+  }
+}
+
+async function postDelete(body, fetcher) {
+  const response = await fetcher(`${LIBRARY_PATH}/delete`, {
+    method: 'POST',
+    credentials: 'include',
+    cache: 'no-store',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ...body, confirm: LIBRARY_DELETE_CONFIRM }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new LibraryDeleteError(response.status, payload?.error);
+  return payload?.deleted || {};
+}
+
+/**
+ * Permanently delete artifacts through the Runtime API.
+ * @param {{ ids: string[] } | { all: true, folder?: string }} selection - artifact ids, or every artifact (optionally one folder).
+ * @param {{ fetcher?: typeof fetch }} [options] - transport.
+ * @returns {Promise<{ artifacts: number, versions: number, blobsFailed: number }>} counts summed over all requests.
+ * @throws {LibraryDeleteError} on the first refused or failed request; earlier batches stay deleted.
+ */
+export async function deleteLibraryArtifacts(selection, { fetcher = (...args) => fetch(...args) } = {}) {
+  const total = { artifacts: 0, versions: 0, blobsFailed: 0 };
+  const add = deleted => {
+    total.artifacts += Number(deleted.artifacts) || 0;
+    total.versions += Number(deleted.versions) || 0;
+    total.blobsFailed += Number(deleted.blobsFailed) || 0;
+  };
+  if (selection.all) {
+    add(await postDelete({ all: true, ...(selection.folder ? { folder: selection.folder } : {}) }, fetcher));
+    return total;
+  }
+  for (let start = 0; start < selection.ids.length; start += LIBRARY_DELETE_BATCH) {
+    add(await postDelete({ ids: selection.ids.slice(start, start + LIBRARY_DELETE_BATCH) }, fetcher));
+  }
+  return total;
+}
