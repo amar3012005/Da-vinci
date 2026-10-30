@@ -4,7 +4,7 @@ import { employeeAppsPath } from '../shared/workspace-mode';
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Plus, Cable, Building2, FolderKanban, Monitor, CalendarDays, Settings, LogOut, Library } from 'lucide-react';
-import { ARTIFACTS_PATH, ArtifactsIcon, CALENDAR_PATH } from './sidebar-tools';
+import { CALENDAR_PATH, LIBRARY_PATH } from './sidebar-tools';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
 import CreditBalance from '../shared/CreditBalance';
@@ -61,9 +61,8 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
     <nav className="ha-workspace-shortcuts" aria-label="Workspace tools">
       <NavLink to={employeeAppsPath(location)} title={collapsed ? 'Apps' : undefined}><Cable size={18}/>{!collapsed && <span>Apps</span>}</NavLink>
       <NavLink to={CALENDAR_PATH} data-sidebar-tool="calendar" title={collapsed ? 'Calendar' : undefined}><CalendarDays size={18}/>{!collapsed && <span>Calendar</span>}</NavLink>
-      <NavLink to={ARTIFACTS_PATH} data-sidebar-tool="artifacts" title={collapsed ? 'Artifacts' : undefined}><ArtifactsIcon/>{!collapsed && <span>Artifacts</span>}</NavLink>
       <button type="button" onClick={onCompany} title={collapsed ? 'Company HQ' : undefined}><Building2 size={18}/>{!collapsed && <span>Company HQ</span>}</button>
-      <NavLink to="/hivemind/app/employee/library" title={collapsed ? 'Library' : undefined}><Library size={18}/>{!collapsed && <span>Library</span>}</NavLink>
+      <NavLink to={LIBRARY_PATH} data-sidebar-tool="library" title={collapsed ? 'Library' : undefined}><Library size={18}/>{!collapsed && <span>Library</span>}</NavLink>
       {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm" title={collapsed ? 'CRM' : undefined}><FolderKanban size={18}/>{!collapsed && <span>CRM</span>}</NavLink>}
     </nav>
     <div className="ha-account-area">

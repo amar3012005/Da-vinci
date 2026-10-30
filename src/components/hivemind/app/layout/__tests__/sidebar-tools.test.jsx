@@ -34,14 +34,16 @@ const props = { team, rooms: [], selectedAgent: 'agent-0', openingAgent: null, c
 
 function expectTools(scope) {
   const calendar = within(scope).getByRole('link', { name: /Calendar/ });
-  const artifacts = within(scope).getByRole('link', { name: /Artifacts/ });
+  const library = within(scope).getByRole('link', { name: /Library/ });
   expect(calendar).toHaveAttribute('href', '/hivemind/app/employee/calendar');
-  expect(artifacts).toHaveAttribute('href', '/hivemind/app/employee/artifacts');
+  expect(library).toHaveAttribute('href', '/hivemind/app/employee/library');
+  expect(within(scope).queryByRole('link', { name: /Artifacts/ })).toBeNull();
   expect(scope.querySelector('[disabled]')).toBeNull();
   expect(scope.querySelector('.ha-artifacts-unavailable, [data-hivemind-calendar-seat], [data-hivemind-artifacts-seat]')).toBeNull();
+  expect(scope.querySelectorAll('a[href="/hivemind/app/employee/library"]')).toHaveLength(1);
 }
 
-describe.each([['with Runtime', true], ['without Runtime', false]])('Calendar and Artifacts in an employee room %s', (unused, runtimeEnabled) => {
+describe.each([['with Runtime', true], ['without Runtime', false]])('Calendar and Library in an employee room %s', (unused, runtimeEnabled) => {
   beforeEach(() => { mockOrg = runtimeEnabled ? { name: 'Acme' } : { name: 'Acme', runtime_enabled: false }; });
 
   test('the desktop team sidebar renders both as working links, expanded and collapsed', () => {
@@ -52,7 +54,7 @@ describe.each([['with Runtime', true], ['without Runtime', false]])('Calendar an
     render(view(<DesktopHyperAgentsNavigation {...props} runtimeEnabled={runtimeEnabled} collapsed />));
     const tools = screen.getByRole('navigation', { name: 'Workspace tools' });
     expect(tools.querySelector('[data-sidebar-tool="calendar"]')).toHaveAttribute('title', 'Calendar');
-    expect(tools.querySelector('[data-sidebar-tool="artifacts"]')).toHaveAttribute('title', 'Artifacts');
+    expect(tools.querySelector('[data-sidebar-tool="library"]')).toHaveAttribute('title', 'Library');
   });
 
   test('the phone roster renders both as working links', () => {
