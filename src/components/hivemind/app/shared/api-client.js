@@ -775,18 +775,6 @@ class HiveMindApiClient {
     return data;
   }
 
-  /** Control's per-company default language for team-wide messages. Owner/admin only: `{ organization_id, default_locale, supported }`. */
-  async getLanguageSetting(orgId) {
-    const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/language-settings`);
-    return data;
-  }
-
-  /** Saves the default (a supported tag, or null to clear). Control audits a change and answers `{ organization_id, default_locale, supported, changed }`. */
-  async setLanguageSetting(orgId, locale) {
-    const { data } = await this.controlPlane.put(`/v1/orgs/${orgId}/language-settings`, { default_locale: locale || null });
-    return data;
-  }
-
   // Rebuild the user/org profile: re-run the LLM profile-dreamer over the
   // caller's memories and persist the grounded facts. Server-gated to
   // admin/owner. Returns { perUser: [{ applied, ... }] }.

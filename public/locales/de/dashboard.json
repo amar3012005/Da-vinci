@@ -1882,13 +1882,5 @@
     "title": "Workspace‑Admin",
     "viewAll": "Alle anzeigen",
     "yourOrg": "Deine Organisation"
-  },
-  "orgLanguage": {
-    "title": "Standardsprache des Teams",
-    "help": "Wird für teamweite Nachrichten wie Zusammenfassungen und E-Mails an Administratoren verwendet, wenn jemand keine eigene Sprache gewählt hat. Jede Person kann weiterhin eine persönliche Sprache wählen.",
-    "label": "Standardsprache",
-    "none": "Nicht festgelegt (Englisch)",
-    "saved": "Gespeichert",
-    "saveFailed": "Die Sprache konnte nicht gespeichert werden. Versuche es erneut."
   }
 }

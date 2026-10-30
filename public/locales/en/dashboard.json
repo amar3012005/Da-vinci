@@ -1891,13 +1891,5 @@
     "noSignInNeeded": "This app doesn't need a sign-in.",
     "connectFailed": "Unable to start connection. Please retry.",
     "tryAsking": "Try asking an employee"
-  },
-  "orgLanguage": {
-    "title": "Team default language",
-    "help": "Used for team-wide messages such as digests and emails to administrators when a person has not chosen their own language. Everyone can still choose a personal language.",
-    "label": "Default language",
-    "none": "Not set (English)",
-    "saved": "Saved",
-    "saveFailed": "The language could not be saved. Try again."
   }
 }

@@ -1863,13 +1863,5 @@
     "title": "Admin de l’espace de travail",
     "viewAll": "Voir tout",
     "yourOrg": "Votre organisation"
-  },
-  "orgLanguage": {
-    "title": "Langue par défaut de l'équipe",
-    "help": "Utilisée pour les messages destinés à toute l'équipe, comme les synthèses et les e-mails aux administrateurs, lorsqu'une personne n'a pas choisi sa propre langue. Chacun peut toujours choisir une langue personnelle.",
-    "label": "Langue par défaut",
-    "none": "Non définie (anglais)",
-    "saved": "Enregistré",
-    "saveFailed": "La langue n'a pas pu être enregistrée. Réessayez."
   }
 }

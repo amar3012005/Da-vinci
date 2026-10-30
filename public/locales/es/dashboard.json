@@ -1863,13 +1863,5 @@
     "title": "Administrador del espacio de trabajo",
     "viewAll": "Ver todo",
     "yourOrg": "Tu organización"
-  },
-  "orgLanguage": {
-    "title": "Idioma predeterminado del equipo",
-    "help": "Se usa en los mensajes para todo el equipo, como los resúmenes y los correos a administradores, cuando una persona no ha elegido su propio idioma. Cada persona puede seguir eligiendo un idioma personal.",
-    "label": "Idioma predeterminado",
-    "none": "Sin definir (inglés)",
-    "saved": "Guardado",
-    "saveFailed": "No se pudo guardar el idioma. Inténtalo de nuevo."
   }
 }
