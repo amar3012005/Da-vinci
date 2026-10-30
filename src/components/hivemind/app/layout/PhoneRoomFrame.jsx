@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AudioLines, ChevronLeft, Monitor, PanelRight, Plus, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSidebarCopy } from './sidebar-copy';
 import BrainModeIcon from './BrainModeIcon';
 import { getDraft, markOnce, queueDraft, setDraft, subscribeAttached, subscribeDraft, subscribePendingEntries } from '../shared/pending-composer';
 import { readBootCache, readLastTenant } from '../shared/boot-cache';
@@ -15,7 +16,7 @@ const BRAIN_ROOM = /^\/hivemind\/app(?:\/overview(?:\/(?:new|session\/[^/]+))?)?
 // Composer seat for the frame. It collects the draft only: typing is enabled at once, and sending is enabled
 // once a native room client attaches (see pending-composer.js). Until then no message is queued or shown as pending.
 function PhoneRoomComposer({ room }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('dashboard');
   const [draft, setDraftState] = useState(getDraft);
   const [entries, setEntries] = useState([]);
   const [attached, setAttached] = useState(false);
@@ -81,11 +82,12 @@ function cachedRuntimeStill() {
 }
 
 export function PhoneRoomFrame({ room, children = null }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('dashboard');
+  const s = useSidebarCopy();
   const [still] = useState(() => (room === 'runtime' ? cachedRuntimeStill() : null));
   return (
     <div data-hivemind-app-shell data-optimistic-shell data-optimistic-phone-room={room} aria-busy="true" className="optimistic-phone-room">
-      <span role="status" className="sr-only">Loading workspace</span>
+      <span role="status" className="sr-only">{s('loadingWorkspace', 'Loading workspace')}</span>
       <div className="optimistic-phone-room-bar" aria-hidden="true">
         <span className="liquid-glass optimistic-phone-room-back"><ChevronLeft size={22} strokeWidth={2} /></span>
         <span className="liquid-glass optimistic-phone-room-identity">

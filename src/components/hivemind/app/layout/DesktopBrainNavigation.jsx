@@ -6,6 +6,7 @@ import BrainKeyboardFace from './BrainKeyboardFace';
 import BrainUpdateBanner from './BrainUpdateBanner';
 import CreditBalance from '../shared/CreditBalance';
 import { brainSidebarBanner } from './brain-sidebar-banner';
+import { useSidebarCopy } from './sidebar-copy';
 import './desktop-brain-navigation.css';
 
 const destinations = [
@@ -15,6 +16,7 @@ const destinations = [
 
 export default function DesktopBrainNavigation({ sections, user, planLabel, credits, logout, banner = brainSidebarBanner }) {
   const { pathname } = useLocation();
+  const s = useSidebarCopy();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const advancedId = useId();
   const advancedButton = useRef(null);
@@ -67,37 +69,37 @@ export default function DesktopBrainNavigation({ sections, user, planLabel, cred
   const next = keyboardDestinations[(currentIndex + 1) % keyboardDestinations.length];
 
   return <div className="desktop-brain-slice" data-desktop-brain>
-    <nav ref={destinationsScroll} className="brain-destinations" aria-label="Brain navigation">
+    <nav ref={destinationsScroll} className="brain-destinations" aria-label={s('brainNavigation', 'Brain navigation')}>
       <div className="brain-keyboard-stack">
         <NavLink to="/hivemind/app/overview/new" className="brain-key brain-key-chat">
-          <span className="brain-key-face"><MessageCircle size={22} aria-hidden="true"/><span>Ask Me Anything</span><ArrowUpRight size={17} aria-hidden="true"/></span>
+          <span className="brain-key-face"><MessageCircle size={22} aria-hidden="true"/><span>{s('askMeAnything', 'Ask Me Anything')}</span><ArrowUpRight size={17} aria-hidden="true"/></span>
         </NavLink>
       <div className="brain-icon-grid">{destinations.map(([kind, suffix]) => {
         const item = items.find(entry => entry.to.endsWith(suffix));
-        return item ? <NavLink key={kind} to={item.to} className={({ isActive }) => `brain-icon-link brain-key brain-key-${kind}${isActive ? ' is-current' : ''}`}><BrainKeyboardFace kind={kind} label={kind === 'uploads' ? 'Uploads' : item.label}/></NavLink> : null;
+        return item ? <NavLink key={kind} to={item.to} className={({ isActive }) => `brain-icon-link brain-key brain-key-${kind}${isActive ? ' is-current' : ''}`}><BrainKeyboardFace kind={kind} label={kind === 'uploads' ? s('uploads', 'Uploads') : item.label}/></NavLink> : null;
       })}
-        <button ref={advancedButton} type="button" aria-haspopup="dialog" className={`brain-icon-link brain-key brain-key-advanced${advancedActive ? ' is-current' : ''}`} aria-expanded={advancedOpen} aria-controls={advancedId} onClick={() => setAdvancedOpen(value => !value)}><BrainKeyboardFace kind="advanced" label="Advanced"/></button>
+        <button ref={advancedButton} type="button" aria-haspopup="dialog" className={`brain-icon-link brain-key brain-key-advanced${advancedActive ? ' is-current' : ''}`} aria-expanded={advancedOpen} aria-controls={advancedId} onClick={() => setAdvancedOpen(value => !value)}><BrainKeyboardFace kind="advanced" label={s('advanced', 'Advanced')}/></button>
         {[['dreaming', '/hivemind/app/overview/dreaming'], ['workspace', '/hivemind/app/workspace']].map(([kind, path]) => {
           const item = items.find(entry => entry.to === path);
           return item ? <NavLink key={kind} to={item.to} className={({ isActive }) => `brain-icon-link brain-key brain-key-${kind}${isActive ? ' is-current' : ''}`}><BrainKeyboardFace kind={kind} label={item.label}/></NavLink> : null;
         })}
-        <NavLink to="/hivemind/app/overview/new" className="brain-key brain-key-return" aria-label="Open Brain chat"><span className="brain-key-face"><CornerDownLeft size={20} aria-hidden="true"/></span></NavLink>
-        {previous && <NavLink to={previous.to} className="brain-key brain-key-arrow brain-key-previous" aria-label={`Previous Brain page: ${previous.label}`}><span className="brain-key-face"><ArrowLeft size={22} aria-hidden="true"/></span></NavLink>}
-        <button type="button" className="brain-key brain-key-arrow brain-key-top" aria-label="Scroll Brain navigation to top" onClick={() => destinationsScroll.current?.scrollTo({ top: 0, behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}><span className="brain-key-face"><ArrowUp size={22} aria-hidden="true"/></span></button>
-        {next && <NavLink to={next.to} className="brain-key brain-key-arrow brain-key-next" aria-label={`Next Brain page: ${next.label}`}><span className="brain-key-face"><ArrowRight size={22} aria-hidden="true"/></span></NavLink>}
+        <NavLink to="/hivemind/app/overview/new" className="brain-key brain-key-return" aria-label={s('openBrainChat', 'Open Brain chat')}><span className="brain-key-face"><CornerDownLeft size={20} aria-hidden="true"/></span></NavLink>
+        {previous && <NavLink to={previous.to} className="brain-key brain-key-arrow brain-key-previous" aria-label={s('previousBrainPage', 'Previous Brain page: {{label}}', { label: previous.label })}><span className="brain-key-face"><ArrowLeft size={22} aria-hidden="true"/></span></NavLink>}
+        <button type="button" className="brain-key brain-key-arrow brain-key-top" aria-label={s('scrollBrainTop', 'Scroll Brain navigation to top')} onClick={() => destinationsScroll.current?.scrollTo({ top: 0, behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}><span className="brain-key-face"><ArrowUp size={22} aria-hidden="true"/></span></button>
+        {next && <NavLink to={next.to} className="brain-key brain-key-arrow brain-key-next" aria-label={s('nextBrainPage', 'Next Brain page: {{label}}', { label: next.label })}><span className="brain-key-face"><ArrowRight size={22} aria-hidden="true"/></span></NavLink>}
       </div>
       </div>
-      {advancedOpen && createPortal(<div ref={flyout} role="dialog" aria-label="Advanced features" id={advancedId} className="brain-advanced-flyout" style={{ ...flyoutPosition, visibility: flyoutPosition ? 'visible' : 'hidden' }}>
-        <nav aria-label="Advanced destinations">{advanced.map(item => <NavLink key={item.to} to={item.to} onClick={() => setAdvancedOpen(false)}><item.icon size={17}/><span>{item.label}</span><ChevronRight size={14}/></NavLink>)}</nav>
+      {advancedOpen && createPortal(<div ref={flyout} role="dialog" aria-label={s('advancedFeatures', 'Advanced features')} id={advancedId} className="brain-advanced-flyout" style={{ ...flyoutPosition, visibility: flyoutPosition ? 'visible' : 'hidden' }}>
+        <nav aria-label={s('advancedDestinations', 'Advanced destinations')}>{advanced.map(item => <NavLink key={item.to} to={item.to} onClick={() => setAdvancedOpen(false)}><item.icon size={17}/><span>{item.label}</span><ChevronRight size={14}/></NavLink>)}</nav>
       </div>, document.body)}
     </nav>
     <footer className="brain-bottom">
       <div className="brain-account-actions">
-        <button type="button" className="brain-footer-link" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))}><Settings size={19}/><span>Account &amp; Settings</span></button>
+        <button type="button" className="brain-footer-link" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))}><Settings size={19}/><span>{s('accountSettings', 'Account & Settings')}</span></button>
       </div>
       <BrainUpdateBanner slides={banner}/>
       {user && <div className="brain-account-usage"><div className="brain-account-name"><span className="brain-account-initial" aria-hidden="true">{(user.display_name || user.email || 'U')[0].toUpperCase()}</span><div><strong>{user.display_name || user.email || 'User'}</strong><span>{planLabel}</span></div></div><CreditBalance credits={credits} inline/></div>}
-      <button type="button" onClick={logout} className="brain-footer-link brain-sign-out"><LogOut size={17}/><span>Sign out</span></button>
+      <button type="button" onClick={logout} className="brain-footer-link brain-sign-out"><LogOut size={17}/><span>{s('signOutShort', 'Sign out')}</span></button>
     </footer>
   </div>;
 }

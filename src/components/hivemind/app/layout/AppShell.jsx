@@ -18,6 +18,7 @@ import { agentRoster } from '../shared/agent-roster';
 import { useRuntimeRouteGuard } from './useRuntimeRouteGuard';
 import { NativeAiConsentGate } from '../mobile/MobileSafetyPanel';
 import { useTranslation } from 'react-i18next';
+import { useSidebarCopy } from './sidebar-copy';
 import { mobileBrainUserName, mobileBrainGreeting } from './mobile-brain-identity';
 import { mobilePageDestination } from '../shared/mobile-route';
 import MobileShell from '../mobile/MobileShell';
@@ -243,6 +244,7 @@ function sectionForPath(pathname) { return workspaceModeForPath(pathname); }
 function AppShellContent() {
   const { needsOnboarding, org, logout, user, workspaceModesEnabled, workspaceModesReady, workspaceModesError } = useAuth();
   const { t } = useTranslation('dashboard');
+  const s = useSidebarCopy();
   const location = useLocation();
   useEffect(() => { discardParkedNativeHarnessSeat(location.pathname); }, [location.pathname]);
   useEffect(() => () => { discardParkedNativeHarnessSeat('/signed-out'); }, [user?.id, org?.id]);
@@ -568,21 +570,21 @@ function AppShellContent() {
   const companyStatus = companyAdmission.scope === org?.id ? companyAdmission.status : 'checking';
   const modelAccountSettings = ['/hivemind/app/usage', '/hivemind/m/usage', '/hivemind/app/connectors', '/hivemind/m/connectors'].includes(location.pathname);
   // Desktop, and the Runtime and Brain chat rooms on phones, keep the restoring frame on screen during the company check, so the room appears without a spinner gap.
-  if (companyStatus === 'checking' && !modelAccountSettings && (window.matchMedia('(min-width: 901px)').matches || (brainPhone && nativeChatRoom))) return <OptimisticAppShell fallback={<AsciiWorkspaceLoading label="Connecting…" />} />;
+  if (companyStatus === 'checking' && !modelAccountSettings && (window.matchMedia('(min-width: 901px)').matches || (brainPhone && nativeChatRoom))) return <OptimisticAppShell fallback={<AsciiWorkspaceLoading label={s('shellStatus.connecting', 'Connecting…')} />} />;
   if (companyStatus !== 'ready' && !modelAccountSettings) return <div data-hivemind-app-shell className="min-h-[var(--hm-app-viewport-height,100dvh)] bg-[#faf9f4] p-4 sm:p-8">
-    {companyStatus === 'checking' ? <RoomLoading pathname={location.pathname} fallback={<AsciiWorkspaceLoading label="Connecting…" />} />
-      : companyStatus === 'error' ? <div role="alert" className="mx-auto max-w-lg p-8"><p>We couldn’t check your company setup. Your progress is saved.</p><button type="button" onClick={() => (clearCompanyRead(`${user?.id}:${org?.id}`), setCompanyRetry(value => value + 1))} className="mt-4 text-[#117dff] underline">Try again</button></div>
-      : <React.Suspense fallback={<p role="status">Opening company onboarding…</p>}><HyperOnboarding onComplete={completeCompany} /></React.Suspense>}
-    {companyStatus !== 'required' && <button type="button" onClick={() => setAccountOpen(true)} className="fixed bottom-6 right-6 rounded-lg border bg-white px-4 py-2 text-sm">Account & Settings</button>}
+    {companyStatus === 'checking' ? <RoomLoading pathname={location.pathname} fallback={<AsciiWorkspaceLoading label={s('shellStatus.connecting', 'Connecting…')} />} />
+      : companyStatus === 'error' ? <div role="alert" className="mx-auto max-w-lg p-8"><p>{s('shellStatus.companyCheckFailed', 'We couldn’t check your company setup. Your progress is saved.')}</p><button type="button" onClick={() => (clearCompanyRead(`${user?.id}:${org?.id}`), setCompanyRetry(value => value + 1))} className="mt-4 text-[#117dff] underline">{s('shellStatus.tryAgain', 'Try again')}</button></div>
+      : <React.Suspense fallback={<p role="status">{s('shellStatus.openingOnboarding', 'Opening company onboarding…')}</p>}><HyperOnboarding onComplete={completeCompany} /></React.Suspense>}
+    {companyStatus !== 'required' && <button type="button" onClick={() => setAccountOpen(true)} className="fixed bottom-6 right-6 rounded-lg border bg-white px-4 py-2 text-sm">{s('accountSettings', 'Account & Settings')}</button>}
     {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}
   </div>;
 
-  if (!workspaceModesReady && requiresWorkspaceModeAccess(location.pathname)) return <OptimisticAppShell fallback={<AsciiWorkspaceLoading label="Connecting…" />} />;
+  if (!workspaceModesReady && requiresWorkspaceModeAccess(location.pathname)) return <OptimisticAppShell fallback={<AsciiWorkspaceLoading label={s('shellStatus.connecting', 'Connecting…')} />} />;
   if (workspaceModesReady && !workspaceModesEnabled && !workspaceModesError && requiresWorkspaceModeAccess(location.pathname)) return <Navigate to="/hivemind/app/overview/new" replace />;
   if (!workspaceModesEnabled && requiresWorkspaceModeAccess(location.pathname)) return (
     <section role="alert" className="grid min-h-screen place-content-center gap-4 p-6 text-center">
-      <p>{workspaceModesError || 'Workspace access is not enabled for this account. Your saved conversations are unchanged.'}</p>
-      <button type="button" onClick={() => window.location.reload()}>Retry this workspace</button>
+      <p>{workspaceModesError || s('shellStatus.accessDisabled', 'Workspace access is not enabled for this account. Your saved conversations are unchanged.')}</p>
+      <button type="button" onClick={() => window.location.reload()}>{s('shellStatus.retryWorkspace', 'Retry this workspace')}</button>
     </section>
   );
 
@@ -667,7 +669,7 @@ function AppShellContent() {
         <GlobalUploadStrip />
 
         {/* Chat Panel */}
-        {(chatOpen || chatLoaded) && <React.Suspense fallback={<AsciiWorkspaceLoading label="Connecting…" />}><ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} /></React.Suspense>}
+        {(chatOpen || chatLoaded) && <React.Suspense fallback={<AsciiWorkspaceLoading label={s('shellStatus.connecting', 'Connecting…')} />}><ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} /></React.Suspense>}
 
         {/* Global plan-limit upgrade prompt — reacts to 'hm:plan-limit' */}
         <PlanLimitGate />

@@ -6,8 +6,10 @@ import { X } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { LANE_META } from '../hyperagents/rooms/shared';
 import { APPEARANCE_SLOTS, APPEARANCE_COLORS, appearanceParts, createEmployeeAppearance } from '../shared/employee-appearance';
+import { useSidebarCopy } from './sidebar-copy';
 
-const labels = { head: 'Hair', body: 'Top', bottom: 'Bottom', item: 'Accessory', glasses: 'Glasses', clothes: 'Clothes', skin: 'Skin', stroke: 'Outline' };
+/** English defaults for the character slot names; the visible text is read from `sidebar.createEmployeeDialog.slot<Name>`. */
+const SLOT_COPY = { head: ['slotHead', 'Hair'], body: ['slotBody', 'Top'], bottom: ['slotBottom', 'Bottom'], item: ['slotItem', 'Accessory'], glasses: ['slotGlasses', 'Glasses'], clothes: ['slotClothes', 'Clothes'], skin: ['slotSkin', 'Skin'], stroke: ['slotStroke', 'Outline'] };
 const accents = ['117dff', '8755d8', 'e9a23b', 'e56c8b', '3f9d82', '667383'];
 
 function Character({ appearance, size, title, selections }) {
@@ -15,6 +17,9 @@ function Character({ appearance, size, title, selections }) {
 }
 
 export default function CreateEmployeeDialog({ onClose, onCreated, portalContainer }) {
+  const s = useSidebarCopy();
+  const c = (key, defaultValue, vars) => s(`createEmployeeDialog.${key}`, defaultValue, vars);
+  const labels = Object.fromEntries(Object.entries(SLOT_COPY).map(([id, [key, defaultValue]]) => [id, c(key, defaultValue)]));
   const [creationKey] = useState(() => window.crypto.randomUUID());
   const [name, setName] = useState('');
   const [needsComputerAccess, setNeedsComputerAccess] = useState(false);
@@ -47,14 +52,14 @@ export default function CreateEmployeeDialog({ onClose, onCreated, portalContain
         const result = submitted.current.needsComputerAccess
           ? await apiClient.createRegisteredOpenDotEmployee({ creation_key: request.creation_key, name: request.name, appearance: request.appearance })
           : await apiClient.manageNativeEmployeeLifecycle(request);
-        if (!result?.employee?.id) throw new Error(result?.message || result?.error || 'Employee creation was not confirmed.');
+        if (!result?.employee?.id) throw new Error(result?.message || result?.error || c('errNotConfirmed', 'Employee creation was not confirmed.'));
         employee = result.employee;
         setCreated(employee);
       }
-      if (await onCreated(employee) === false) throw new Error('Your employee is created. Its room could not open yet. Please try again.');
+      if (await onCreated(employee) === false) throw new Error(c('errRoomNotOpen', 'Your employee is created. Its room could not open yet. Please try again.'));
       onClose();
     } catch (failure) {
-      setError(failure.response?.data?.message || failure.response?.data?.error || failure.message || 'Could not create this employee.');
+      setError(failure.response?.data?.message || failure.response?.data?.error || failure.message || c('errCouldNotCreate', 'Could not create this employee.'));
     } finally { setBusy(false); }
   }
 
@@ -75,36 +80,36 @@ export default function CreateEmployeeDialog({ onClose, onCreated, portalContain
       <form ref={container} onSubmit={submit} onKeyDown={keys} role="dialog" aria-modal="true" aria-labelledby="create-employee-title"
         data-create-employee-card className="flex max-h-[94dvh] w-full max-w-[480px] flex-col overflow-hidden rounded-[30px] bg-[#fbfbfa] p-6 shadow-2xl sm:max-h-[90dvh] sm:rounded-[26px] sm:p-8">
         <header className="flex items-center gap-4">
-          <button type="button" aria-label="Close" disabled={busy} onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-[#f0f0ee] text-[#292929] disabled:opacity-40"><X size={22} /></button>
-          <h2 id="create-employee-title" className="text-[20px] font-semibold tracking-[-0.03em]">Create employee</h2>
+          <button type="button" aria-label={c('close', 'Close')} disabled={busy} onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-[#f0f0ee] text-[#292929] disabled:opacity-40"><X size={22} /></button>
+          <h2 id="create-employee-title" className="text-[20px] font-semibold tracking-[-0.03em]">{s('createEmployee', 'Create employee')}</h2>
         </header>
         <div className="min-h-0 overflow-y-auto px-1 pb-1">
-          <div className="my-6 flex justify-center"><Character appearance={appearance} size={148} title={name.trim() || 'Your employee'} /></div>
-          <input ref={nameInput} aria-label="Employee name" maxLength={80} value={name} disabled={locked} onChange={event => setName(event.target.value)} placeholder="Name your employee"
+          <div className="my-6 flex justify-center"><Character appearance={appearance} size={148} title={name.trim() || c('yourEmployee', 'Your employee')} /></div>
+          <input ref={nameInput} aria-label={c('employeeName', 'Employee name')} maxLength={80} value={name} disabled={locked} onChange={event => setName(event.target.value)} placeholder={c('namePlaceholder', 'Name your employee')}
             className="h-14 w-full rounded-[17px] border-0 bg-[#efefed] px-4 text-center text-[19px] font-medium outline-none focus:ring-2 focus:ring-[#b9cdef] disabled:opacity-60" />
-          <div className="mt-5 grid grid-cols-6 gap-2" role="group" aria-label="Choose a character">
+          <div className="mt-5 grid grid-cols-6 gap-2" role="group" aria-label={c('chooseCharacter', 'Choose a character')}>
             {accents.map((accent, index) => {
               const candidate = createEmployeeAppearance(`${creationKey}:${index}`, { colors: { clothes: accent }, background: 'transparent' });
               const selected = appearance.seed === candidate.seed;
-              return <button key={accent} type="button" disabled={locked} onClick={() => setAppearance(candidate)} aria-label={`Character ${index + 1}`} aria-pressed={selected}
+              return <button key={accent} type="button" disabled={locked} onClick={() => setAppearance(candidate)} aria-label={c('character', 'Character {{n}}', { n: index + 1 })} aria-pressed={selected}
                 className={`aspect-square overflow-hidden rounded-[14px] border-2 bg-white ${selected ? 'border-[#6693d9]' : 'border-transparent'} disabled:opacity-50`}><Character appearance={candidate} size="100%" /></button>;
             })}
           </div>
           <label className="mt-4 flex items-center justify-center gap-2 text-[13px] text-[#484848]">
             <input type="checkbox" checked={needsComputerAccess} disabled={locked} onChange={event => setNeedsComputerAccess(event.target.checked)} className="h-4 w-4 accent-[#141414]" />
-            Needs computer access
+            {c('computerAccess', 'Needs computer access')}
           </label>
-          <button type="button" disabled={locked} onClick={() => setCustomizing(value => !value)} className="mt-4 w-full text-center text-[12px] font-medium text-[#666] underline underline-offset-4">{customizing ? 'Done customizing' : 'Customize character'}</button>
+          <button type="button" disabled={locked} onClick={() => setCustomizing(value => !value)} className="mt-4 w-full text-center text-[12px] font-medium text-[#666] underline underline-offset-4">{customizing ? c('doneCustomizing', 'Done customizing') : c('customize', 'Customize character')}</button>
           {customizing && <div className="mt-4 border-t border-[#e5e5e1] pt-4">
-            <div className="flex flex-wrap justify-center gap-1" role="group" aria-label="Character parts">{APPEARANCE_SLOTS.map(id => <button key={id} disabled={locked} type="button" onClick={() => setSlot(id)} aria-pressed={slot === id} className={`rounded-full px-3 py-1.5 text-[11px] ${slot === id ? 'bg-[#e4eaf5] text-[#284c82]' : 'text-[#666]'}`}>{labels[id]}</button>)}</div>
-            <div className="mt-3 grid max-h-40 grid-cols-5 gap-2 overflow-y-auto" role="group" aria-label={`${labels[slot]} options`}>{appearanceParts(slot).map(part => <button key={part.id} type="button" disabled={locked} aria-label={`${labels[slot]}: ${part.name}`} aria-pressed={appearance.selections[slot] === part.id} onClick={() => changeAppearance({ selections: { ...appearance.selections, [slot]: part.id } })} className={`aspect-square overflow-hidden rounded-lg border bg-white ${appearance.selections[slot] === part.id ? 'border-[#6693d9]' : 'border-[#e5e5e1]'}`}>
-              {part.name === 'none' ? <span className="text-[10px] text-[#666]">None</span> : <Character appearance={appearance} selections={{ ...appearance.selections, [slot]: part.id }} size="100%" />}
+            <div className="flex flex-wrap justify-center gap-1" role="group" aria-label={c('parts', 'Character parts')}>{APPEARANCE_SLOTS.map(id => <button key={id} disabled={locked} type="button" onClick={() => setSlot(id)} aria-pressed={slot === id} className={`rounded-full px-3 py-1.5 text-[11px] ${slot === id ? 'bg-[#e4eaf5] text-[#284c82]' : 'text-[#666]'}`}>{labels[id]}</button>)}</div>
+            <div className="mt-3 grid max-h-40 grid-cols-5 gap-2 overflow-y-auto" role="group" aria-label={c('options', '{{slot}} options', { slot: labels[slot] })}>{appearanceParts(slot).map(part => <button key={part.id} type="button" disabled={locked} aria-label={`${labels[slot]}: ${part.name}`} aria-pressed={appearance.selections[slot] === part.id} onClick={() => changeAppearance({ selections: { ...appearance.selections, [slot]: part.id } })} className={`aspect-square overflow-hidden rounded-lg border bg-white ${appearance.selections[slot] === part.id ? 'border-[#6693d9]' : 'border-[#e5e5e1]'}`}>
+              {part.name === 'none' ? <span className="text-[10px] text-[#666]">{c('none', 'None')}</span> : <Character appearance={appearance} selections={{ ...appearance.selections, [slot]: part.id }} size="100%" />}
             </button>)}</div>
-            <div className="mt-4 flex flex-wrap justify-center gap-3">{APPEARANCE_COLORS.map(color => <label key={color} className="flex flex-col items-center gap-1 text-[10px] text-[#666]">{labels[color] || color}<input type="color" aria-label={`${labels[color] || color} color`} disabled={locked} value={`#${appearance.colors[color]}`} onChange={event => changeAppearance({ colors: { ...appearance.colors, [color]: event.target.value.slice(1) } })} className="h-7 w-8 cursor-pointer border-0 bg-transparent" /></label>)}</div>
+            <div className="mt-4 flex flex-wrap justify-center gap-3">{APPEARANCE_COLORS.map(color => <label key={color} className="flex flex-col items-center gap-1 text-[10px] text-[#666]">{labels[color] || color}<input type="color" aria-label={c('color', '{{slot}} color', { slot: labels[color] || color })} disabled={locked} value={`#${appearance.colors[color]}`} onChange={event => changeAppearance({ colors: { ...appearance.colors, [color]: event.target.value.slice(1) } })} className="h-7 w-8 cursor-pointer border-0 bg-transparent" /></label>)}</div>
           </div>}
           {error && <p role="alert" className="mt-4 text-center text-[12px] leading-5 text-red-600">{error}</p>}
         </div>
-        <button type="submit" disabled={busy || !name.trim()} className="mt-6 h-12 shrink-0 rounded-full bg-[#141414] text-[15px] font-semibold text-white disabled:bg-[#a5a5a2]">{busy ? (created ? 'Opening…' : 'Creating…') : created ? 'Open employee' : submitted.current ? 'Retry create' : 'Create'}</button>
+        <button type="submit" disabled={busy || !name.trim()} className="mt-6 h-12 shrink-0 rounded-full bg-[#141414] text-[15px] font-semibold text-white disabled:bg-[#a5a5a2]">{busy ? (created ? c('opening', 'Opening…') : c('creating', 'Creating…')) : created ? c('open', 'Open employee') : submitted.current ? c('retry', 'Retry create') : c('create', 'Create')}</button>
       </form>
     </div>, portalContainer || document.body,
   );

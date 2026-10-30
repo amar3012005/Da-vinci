@@ -6,6 +6,7 @@ import { runtimeDisabledDestination, runtimeEnabledFor, RUNTIME_SESSION_PATH } f
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useSidebarCopy } from './sidebar-copy';
 import { ChevronDown } from 'lucide-react';
 import { BotAvatar } from 'bot-avatars';
 import BrainModeIcon from './BrainModeIcon';
@@ -17,6 +18,7 @@ export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
   const { user, org, workspaceModesEnabled } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation('dashboard');
+  const s = useSidebarCopy();
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const modeMenuRef = useRef(null);
   const mode = workspaceModeForPath(location.pathname);
@@ -47,14 +49,14 @@ export default function WorkspaceModeSwitcher({ collapsed = false, onChoose }) {
     window.addEventListener('pointerdown', outside);
     return () => { window.removeEventListener('keydown', dismiss); window.removeEventListener('pointerdown', outside); };
   }, [modeMenuOpen]);
-  if (!workspaceModesEnabled) return <div className="mt-1 flex items-center gap-2 px-1 py-1.5 text-[#383838]" aria-label="Brain workspace"><BrainModeIcon size={32} />{!collapsed && <span className="text-[15px] font-medium">Brain</span>}</div>;
+  if (!workspaceModesEnabled) return <div className="mt-1 flex items-center gap-2 px-1 py-1.5 text-[#383838]" aria-label={s('brainWorkspace', 'Brain workspace')}><BrainModeIcon size={32} />{!collapsed && <span className="text-[15px] font-medium">{s('brain', 'Brain')}</span>}</div>;
   return (
         <div ref={modeMenuRef} className="relative mt-1">
-          <button type="button" aria-label="Choose workspace mode" aria-expanded={modeMenuOpen} aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)} className="flex items-center gap-2 rounded-xl px-1 py-1.5 text-[#383838] hover:bg-[#eeece6]">
+          <button type="button" aria-label={s('chooseWorkspaceMode', 'Choose workspace mode')} aria-expanded={modeMenuOpen} aria-haspopup="menu" onClick={() => setModeMenuOpen(value => !value)} className="flex items-center gap-2 rounded-xl px-1 py-1.5 text-[#383838] hover:bg-[#eeece6]">
             {voiceMode ? <VoiceModeIcon size={32} /> : teamMode ? <BotAvatar type="mech" shading="fabric" size={32} interactive={false} /> : <BrainModeIcon size={32} />}
             {!collapsed && <><span className="text-[15px] font-medium">{voiceMode ? t('sidebar.voice', { defaultValue: 'Voice' }) : teamMode ? 'HyperAgents' : t('sidebar.brain', { defaultValue: 'Brain' })}</span><ChevronDown size={14} /></>}
           </button>
-          {modeMenuOpen && <div role="menu" aria-label="Workspace mode" className="absolute left-0 top-full mt-2 w-[310px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#e3e0db] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.10)] z-50">
+          {modeMenuOpen && <div role="menu" aria-label={s('workspaceMode', 'Workspace mode')} className="absolute left-0 top-full mt-2 w-[310px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#e3e0db] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.10)] z-50">
             {[{ name: t('sidebar.brain', { defaultValue: 'Brain' }), description: t('sidebar.brainDescription', { defaultValue: 'Remember. Connect. Understand.' }), path: '/hivemind/app/overview/new', selected: !teamMode && !voiceMode, brain: true },
               { name: 'HyperAgents', description: t('sidebar.hyperagentsDescription', { defaultValue: 'Assign. Build. Deliver.' }), path: hyperagentsPath, selected: teamMode },
               { name: t('sidebar.voice', { defaultValue: 'Voice' }), description: t('sidebar.voiceDescription', { defaultValue: 'Speak. Connect. Represent.' }), path: '/hivemind/app/tara', selected: voiceMode, voice: true }].map(mode =>
