@@ -64,7 +64,7 @@ import apiClient from '../shared/api-client';
 import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
 import AgentAvatar from '../hyperagents/AgentAvatar';
-import { fillCopy } from './sidebar-copy';
+import { fillCopy, usePlanLabel } from './sidebar-copy';
 
 const CreateEmployeeDialog = React.lazy(() => import('./CreateEmployeeDialog'));
 const GetStartedCard = React.lazy(() => import('./GetStartedCard'));
@@ -200,6 +200,7 @@ export default function Sidebar({
   onDesktopColumnsChange,
 }) {
   const { t } = useTranslation('dashboard');
+  const formatPlanLabel = usePlanLabel();
   const { logout, org, user } = useAuth();
   const runtimeEnabled = useRuntimeEnabled();
   const location = useLocation();
@@ -571,9 +572,7 @@ export default function Sidebar({
       ...(process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? [{ to: '/hivemind/app/crm', icon: FolderKanban, label: 'Your CRM' }] : []),
     ] }]
     : allNavSections.filter((_, index) => index !== 1);
-  const planLabel = org?.plan
-    ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })
-    : t('sidebar.planLabel.free', { defaultValue: 'Free Plan' });
+  const planLabel = formatPlanLabel(org?.plan);
   const tt = (k, def, vars) => fillCopy(t(`sidebar.${k}`, { ...vars, defaultValue: def }), vars);
 
   const workspaceModeSwitcher = <WorkspaceModeSwitcher collapsed={collapsed} />;

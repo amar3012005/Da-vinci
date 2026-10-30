@@ -16,14 +16,16 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, ArrowUpRight } from 'lucide-react';
 import { useUploads, removeUpload } from '../shared/upload-store';
+import { usePluralCopy, useCopy, useLocaleFormat } from './sidebar-copy';
 
 const KB_ROUTE = '/hivemind/app/knowledge';
 
-function fmtUpBytes(n) {
+/** Byte count with the units of the interface language: `Intl.NumberFormat` unit style, e.g. "1.5 MB" or "१.५ एमबी". */
+function fmtUpBytes(n, format) {
   if (!n && n !== 0) return '';
-  if (n < 1024) return `${n}B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)}KB`;
-  return `${(n / 1024 / 1024).toFixed(1)}MB`;
+  if (n < 1024) return format.unit(n, 'byte', 0);
+  if (n < 1024 * 1024) return format.unit(n / 1024, 'kilobyte', 0);
+  return format.unit(n / 1024 / 1024, 'megabyte', 1);
 }
 
 function fmtElapsed(ms) {
@@ -32,15 +34,18 @@ function fmtElapsed(ms) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-function statusBadge(u) {
-  if (u.status === 'success') return { icon: CheckCircle2, color: '#16a34a', label: u.message || 'Uploaded' };
-  if (u.status === 'limited') return { icon: AlertTriangle, color: '#b45309', label: 'Quota reached' };
-  if (u.status === 'error' || u.status === 'cancelled') return { icon: AlertTriangle, color: '#dc2626', label: u.status === 'cancelled' ? 'Cancelled' : 'Failed' };
-  if (u.status === 'uploading') return { icon: Upload, color: '#117dff', label: u.bytesDone ? (u.stageLabel || 'Processing') : `${u.progress || 0}%` };
-  return { icon: Upload, color: '#a3a3a3', label: 'Queued' };
+function statusBadge(u, tx, format) {
+  if (u.status === 'success') return { icon: CheckCircle2, color: '#16a34a', label: u.message || tx('uploaded', 'Uploaded') };
+  if (u.status === 'limited') return { icon: AlertTriangle, color: '#b45309', label: tx('quota', 'Quota reached') };
+  if (u.status === 'error' || u.status === 'cancelled') return { icon: AlertTriangle, color: '#dc2626', label: u.status === 'cancelled' ? tx('cancelled', 'Cancelled') : tx('failed', 'Failed') };
+  if (u.status === 'uploading') return { icon: Upload, color: '#117dff', label: u.bytesDone ? (u.stageLabel || tx('processing', 'Processing')) : format.percent(u.progress || 0) };
+  return { icon: Upload, color: '#a3a3a3', label: tx('queued', 'Queued') };
 }
 
 export default function GlobalUploadStrip() {
+  const tx = useCopy('outerApp.uploadStrip');
+  const plural = usePluralCopy('outerApp.uploadStrip');
+  const format = useLocaleFormat();
   const uploads = useUploads();
   const navigate = useNavigate();
   const location = useLocation();
@@ -98,13 +103,13 @@ export default function GlobalUploadStrip() {
           <div className="flex-1 min-w-0 text-left">
             <div className="text-[12.5px] font-semibold text-[#0a0a0a] leading-tight">
               {inFlight > 0
-                ? `Uploading ${inFlight} ${inFlight === 1 ? 'file' : 'files'}…`
+                ? plural('uploadingFiles', 'Uploading {{n}} file…', 'Uploading {{n}} files…', inFlight)
                 : allLanded && failed === 0 && limited === 0
-                  ? `${done} ${done === 1 ? 'upload' : 'uploads'} complete`
-                  : `${done} done · ${failed + limited} unavailable`}
+                  ? plural('uploadsComplete', '{{n}} upload complete', '{{n}} uploads complete', done)
+                  : tx('doneUnavailable', '{{done}} done · {{unavailable}} unavailable', { done: format.number(done), unavailable: format.number(failed + limited) })}
             </div>
             <div className="text-[10.5px] text-[#8a8a8a] mt-0.5 font-mono">
-              {inFlight > 0 ? "Don't close this tab" : 'Safe to leave — server processing'}
+              {inFlight > 0 ? tx('dontClose', "Don't close this tab") : tx('safeToLeave', 'Safe to leave — server processing')}
             </div>
           </div>
           {collapsed ? <ChevronUp size={14} className="text-[#a3a3a3]" /> : <ChevronDown size={14} className="text-[#a3a3a3]" />}
@@ -121,7 +126,7 @@ export default function GlobalUploadStrip() {
             >
               <div className="max-h-[260px] overflow-y-auto px-2 py-2 space-y-1">
                 {visible.map((u) => {
-                  const { icon: Icon, color, label } = statusBadge(u);
+                  const { icon: Icon, color, label } = statusBadge(u, tx, format);
                   const progress = u.bytesDone ? Number(u.serverProgress || 0) : Number(u.progress || 0);
                   const elapsed = fmtElapsed(clockNow - Number(u.startedAt || clockNow));
                   return (
@@ -137,7 +142,7 @@ export default function GlobalUploadStrip() {
                         </div>
                         {u.ingestMode && (
                           <div className="text-[9px] text-[#8a8a8a] font-mono mt-0.5">
-                            {u.ingestMode === 'evidence' ? 'Evidence only' : 'Memories + evidence'}
+                            {u.ingestMode === 'evidence' ? tx('evidenceOnly', 'Evidence only') : tx('memoriesEvidence', 'Memories + evidence')}
                           </div>
                         )}
                         {/* tqdm-style filling bar — determinate while uploading,
@@ -152,8 +157,8 @@ export default function GlobalUploadStrip() {
                             </div>
                             <div className="text-[9px] text-[#a3a3a3] font-mono mt-0.5 truncate">
                               {u.bytesDone
-                                ? `${Math.round(progress)}/100 [${elapsed} elapsed] · ${u.stageLabel || 'Processing'}`
-                                : `${Math.round(progress)}/100 [${elapsed}${u.etaSec != null ? `<${fmtElapsed(u.etaSec * 1000)}` : ''}]${u.bytesTotal ? ` · ${fmtUpBytes(u.bytesLoaded)}/${fmtUpBytes(u.bytesTotal)}` : ''}${u.speedBps > 0 ? ` · ${fmtUpBytes(u.speedBps)}/s` : ''}`}
+                                ? tx('stageLine', '{{done}}/{{total}} [{{elapsed}} elapsed] · {{stage}}', { done: format.number(Math.round(progress)), total: format.number(100), elapsed, stage: u.stageLabel || tx('processing', 'Processing') })
+                                : `${format.number(Math.round(progress))}/${format.number(100)} [${elapsed}${u.etaSec != null ? `<${fmtElapsed(u.etaSec * 1000)}` : ''}]${u.bytesTotal ? ` · ${fmtUpBytes(u.bytesLoaded, format)}/${fmtUpBytes(u.bytesTotal, format)}` : ''}${u.speedBps > 0 ? ` · ${tx('perSecond', '{{amount}}/s', { amount: fmtUpBytes(u.speedBps, format) })}` : ''}`}
                             </div>
                           </>
                         )}
@@ -164,7 +169,7 @@ export default function GlobalUploadStrip() {
                       <button
                         onClick={() => removeUpload(u.id)}
                         className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded-md text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#e3e0db]/40 flex-shrink-0 transition-opacity"
-                        aria-label="Dismiss"
+                        aria-label={tx('dismiss', 'Dismiss')}
                       >
                         <X size={11} />
                       </button>
@@ -178,7 +183,7 @@ export default function GlobalUploadStrip() {
                 onClick={() => navigate(KB_ROUTE)}
                 className="w-full flex items-center justify-center gap-1.5 px-3 py-2 border-t border-[#ece9e2] text-[11.5px] font-semibold text-[#117dff] hover:bg-[#117dff]/5 transition-colors"
               >
-                <span>Open Knowledge Base</span>
+                <span>{tx('openKb', 'Open Knowledge Base')}</span>
                 <ArrowUpRight size={12} />
               </button>
             </motion.div>

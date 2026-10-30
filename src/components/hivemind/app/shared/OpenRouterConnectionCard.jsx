@@ -3,14 +3,17 @@ import { CheckCircle2, Plug, RefreshCw } from 'lucide-react';
 import ProviderConnectionFrame from './ProviderConnectionFrame';
 import ProviderModelCatalog from './ProviderModelCatalog';
 import { useAuth } from '../auth/AuthProvider';
+import { useCopy, useLocaleFormat } from '../layout/sidebar-copy';
 
-const money = v => typeof v === 'number' && Number.isFinite(v) ? `$${v.toFixed(4)}` : 'Unavailable';
-const messages = {
-  openrouter_sign_in_expired: 'This sign-in expired or was already used. Connect again.',
-  openrouter_sign_in_failed: 'OpenRouter could not complete sign-in. Connect again.',
-  openrouter_reconnect_required: 'Reconnect your OpenRouter account to continue.',
-};
 export default function OpenRouterConnectionCard({compact=false}) {
+  const tx = useCopy('outerApp.openrouter');
+  const format = useLocaleFormat();
+  const money = v => typeof v === 'number' && Number.isFinite(v) ? `$${format.number(Number(v.toFixed(4)))}` : tx('unavailable', 'Unavailable');
+  const messages = {
+    openrouter_sign_in_expired: tx('errExpired', 'This sign-in expired or was already used. Connect again.'),
+    openrouter_sign_in_failed: tx('errFailed', 'OpenRouter could not complete sign-in. Connect again.'),
+    openrouter_reconnect_required: tx('errReconnect', 'Reconnect your OpenRouter account to continue.'),
+  };
   const { org, user } = useAuth();
   const [status, setStatus] = useState(null), [error, setError] = useState(''), [busy, setBusy] = useState(false), [consent, setConsent] = useState(false);
   const lifetime = useRef(null), callback = useRef(null);
@@ -20,7 +23,7 @@ export default function OpenRouterConnectionCard({compact=false}) {
       ...(body === undefined ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
     });
     const value = await response.json();
-    if (!response.ok) throw Error(response.status === 401 ? 'Sign in to your workspace again.' : messages[value.error] || 'OpenRouter is unavailable. Your current provider has not changed.');
+    if (!response.ok) throw Error(response.status === 401 ? tx('errSignIn', 'Sign in to your workspace again.') : messages[value.error] || tx('errUnavailable', 'OpenRouter is unavailable. Your current provider has not changed.'));
     return value;
   }
   useEffect(() => {
@@ -28,7 +31,7 @@ export default function OpenRouterConnectionCard({compact=false}) {
     setStatus(null); setError(''); setBusy(false); setConsent(false);
     // Capture once, remove the single-use code from browser history before other requests.
     const url = new URL(window.location.href);
-    if (url.searchParams.has('openrouter_error')) setError('Sign-in could not be confirmed. Refresh the connection before trying again.');
+    if (url.searchParams.has('openrouter_error')) setError(tx('errConfirm', 'Sign-in could not be confirmed. Refresh the connection before trying again.'));
     if (url.searchParams.has('openrouter_connected') || url.searchParams.has('openrouter_error')) {
       ['openrouter_connected', 'openrouter_error'].forEach(key => url.searchParams.delete(key));
       window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
@@ -61,7 +64,7 @@ export default function OpenRouterConnectionCard({compact=false}) {
       if (controller.signal.aborted) return;
       if (action === 'start') {
         const url = new URL(value.url);
-        if (url.origin !== 'https://openrouter.ai' || url.pathname !== '/auth') throw Error('Invalid OpenRouter sign-in link.');
+        if (url.origin !== 'https://openrouter.ai' || url.pathname !== '/auth') throw Error(tx('errLink', 'Invalid OpenRouter sign-in link.'));
         window.location.assign(url.href); return;
       }
       const next = action === 'status' ? value : await request('status', undefined, controller.signal);
@@ -70,13 +73,13 @@ export default function OpenRouterConnectionCard({compact=false}) {
     finally { if (!controller.signal.aborted) setBusy(false); }
   }
   const button = 'rounded-lg border border-[#dedbd5] px-3 py-2 text-sm font-medium disabled:opacity-50 hover:bg-[#f7f6f1]';
-  return <ProviderConnectionFrame provider="OpenRouter" connected={status?.connected} compact={compact}><section aria-label="OpenRouter connection" className="mb-5 rounded-2xl border border-[#e3e0db] bg-white p-5">
-    <div className="flex flex-wrap justify-between gap-3"><div><h2 className="flex items-center gap-2 text-base font-semibold"><Plug size={18}/>OpenRouter</h2><p className="mt-1 text-sm text-[#666]">Connect your own account and use free models.</p></div><span role="status" className="flex items-center gap-1.5 text-xs text-[#666]">{status?.connected && <CheckCircle2 size={14} className="text-emerald-600"/>}{status?.connected ? status.selected_model ? 'Free mode active' : 'Connected' : status?.available === false ? 'Not enabled for this workspace' : status ? 'Not connected' : 'Checking connection…'}</span></div>
+  return <ProviderConnectionFrame provider="OpenRouter" connected={status?.connected} compact={compact}><section aria-label={tx('aria', 'OpenRouter connection')} className="mb-5 rounded-2xl border border-[#e3e0db] bg-white p-5">
+    <div className="flex flex-wrap justify-between gap-3"><div><h2 className="flex items-center gap-2 text-base font-semibold"><Plug size={18}/>OpenRouter</h2><p className="mt-1 text-sm text-[#666]">{tx('subtitle', 'Connect your own account and use free models.')}</p></div><span role="status" className="flex items-center gap-1.5 text-xs text-[#666]">{status?.connected && <CheckCircle2 size={14} className="text-emerald-600"/>}{status?.connected ? status.selected_model ? tx('freeActive', 'Free mode active') : tx('connected', 'Connected') : status?.available === false ? tx('notEnabled', 'Not enabled for this workspace') : status ? tx('notConnected', 'Not connected') : tx('checking', 'Checking connection…')}</span></div>
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
-    {status?.available && !status.connected && <div className="mt-4 space-y-3"><label className="flex items-start gap-2 text-sm text-[#555]"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} disabled={busy} className="mt-1"/>Allow this workspace to use my OpenRouter connection on the server, including while my computer is closed.</label><button className={button} disabled={!consent || busy} onClick={() => act('start', { consent: true })}>Connect OpenRouter</button></div>}
-    {status?.connected && <div className="mt-4 space-y-3"><p className="text-sm">Free only · OpenRouter randomly selects a compatible free model.</p><p className="text-sm text-[#666]">Account usage today: {money(status.usage?.usage_daily)} · Key limit remaining: {money(status.usage?.limit_remaining)}</p>{!status.selected_model && <button className={button} disabled={busy} onClick={() => act('select', { mode: 'free' })}>Use free models</button>}<button className={button+' ml-2'} disabled={busy} onClick={() => act('disconnect', {})}>Disconnect</button></div>}
-    <p className="mt-3 text-xs text-[#777]">The free router does not guarantee the fastest or strongest model. Free models have account-wide rate limits. Temporary model failures can retry within free models; an exhausted account pauses work. No automatic paid fallback. Credentials stay encrypted on the server for your account in {org?.name || 'this workspace'}. Disconnect removes our stored key; you can also revoke it in <a className="underline" href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">OpenRouter settings</a>.</p>
-    <button className={button+' mt-3 inline-flex items-center gap-1.5'} disabled={busy} onClick={() => act('status', undefined)}><RefreshCw size={14}/>Refresh</button>
+    {status?.available && !status.connected && <div className="mt-4 space-y-3"><label className="flex items-start gap-2 text-sm text-[#555]"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} disabled={busy} className="mt-1"/>{tx('consent', 'Allow this workspace to use my OpenRouter connection on the server, including while my computer is closed.')}</label><button className={button} disabled={!consent || busy} onClick={() => act('start', { consent: true })}>{tx('connect', 'Connect OpenRouter')}</button></div>}
+    {status?.connected && <div className="mt-4 space-y-3"><p className="text-sm">{tx('freeOnly', 'Free only · OpenRouter randomly selects a compatible free model.')}</p><p className="text-sm text-[#666]">{tx('usageToday', 'Account usage today: {{usage}} · Key limit remaining: {{remaining}}', { usage: money(status.usage?.usage_daily), remaining: money(status.usage?.limit_remaining) })}</p>{!status.selected_model && <button className={button} disabled={busy} onClick={() => act('select', { mode: 'free' })}>{tx('useFree', 'Use free models')}</button>}<button className={button+' ml-2'} disabled={busy} onClick={() => act('disconnect', {})}>{tx('disconnect', 'Disconnect')}</button></div>}
+    <p className="mt-3 text-xs text-[#777]">{tx('notes', 'The free router does not guarantee the fastest or strongest model. Free models have account-wide rate limits. Temporary model failures can retry within free models; an exhausted account pauses work. No automatic paid fallback. Credentials stay encrypted on the server for your account in {{workspace}}. Disconnect removes our stored key; you can also revoke it in', { workspace: org?.name || tx('thisWorkspace', 'this workspace') })} <a className="underline" href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">{tx('settingsLink', 'OpenRouter settings')}</a>.</p>
+    <button className={button+' mt-3 inline-flex items-center gap-1.5'} disabled={busy} onClick={() => act('status', undefined)}><RefreshCw size={14}/>{tx('refresh', 'Refresh')}</button>
     <ProviderModelCatalog provider="OpenRouter"/>
   </section></ProviderConnectionFrame>;
 }

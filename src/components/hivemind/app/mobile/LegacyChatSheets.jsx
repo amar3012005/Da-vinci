@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Image as ImageIcon, Camera, FileText, Search, Check, Globe, Mic, Cable, X } from 'lucide-react';
+import { useCopy } from '../layout/sidebar-copy';
 
 function useSheetKeyboard(open, selector, onClose) {
   useEffect(() => {
@@ -120,7 +121,7 @@ export function LegacyMobileAddSheet({ plusSheetOpen, onClose, onPickFiles, deep
         )}
       </AnimatePresence>
 ); }
-export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSearch, setConnectorSearch, visibleToolkits, chooseToolkit, loading = false, error = '', nativeViewport = false, onScroll, onWheel, onTouchStart, onTouchMove, footer, emptyLabel = 'No apps match this search.' }) { useSheetKeyboard(connectorSheetOpen, '[data-legacy-mobile-apps]', onClose); return (
+export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSearch, setConnectorSearch, visibleToolkits, chooseToolkit, loading = false, error = '', nativeViewport = false, onScroll, onWheel, onTouchStart, onTouchMove, footer, emptyLabel }) { const tx = useCopy('outerApp.mobileApps'); const emptyText = emptyLabel === undefined ? tx('noMatch', 'No apps match this search.') : emptyLabel; useSheetKeyboard(connectorSheetOpen, '[data-legacy-mobile-apps]', onClose); return (
 <AnimatePresence>
         {connectorSheetOpen && (
           <motion.div
@@ -132,7 +133,7 @@ export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSe
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 360, damping: 34 }}
-              data-legacy-mobile-apps role="dialog" aria-modal="true" aria-label="Apps and connectors"
+              data-legacy-mobile-apps role="dialog" aria-modal="true" aria-label={tx('sheetLabel', 'Apps and connectors')}
               className="w-full rounded-t-[24px] border-t border-[#e3e0db] bg-white px-4 pt-2.5"
               style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 18px)', ...(nativeViewport ? { maxHeight: 'calc(var(--hm-app-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - 12px)', overflowY: 'auto', overscrollBehavior: 'contain' } : {}) }}
               onClick={(event) => event.stopPropagation()}
@@ -140,10 +141,10 @@ export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSe
               <div className="mx-auto mb-3 h-1 w-8 rounded-full bg-[#d5d1c8]" />
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Apps &amp; connectors</h3>
-                  <p className="mt-0.5 text-[11px] text-[#737373]">Choose a connected app, or connect a new one.</p>
+                  <h3 className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{tx('title', 'Apps & connectors')}</h3>
+                  <p className="mt-0.5 text-[11px] text-[#737373]">{tx('subtitle', 'Choose a connected app, or connect a new one.')}</p>
                 </div>
-                <button type="button" onClick={() => onClose()} className="p-1.5 text-[#a3a3a3]" aria-label="Close apps"><X size={15} /></button>
+                <button type="button" onClick={() => onClose()} className="p-1.5 text-[#a3a3a3]" aria-label={tx('closeApps', 'Close apps')}><X size={15} /></button>
               </div>
               <label className="mb-3 flex h-10 items-center gap-2 rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] px-3 focus-within:border-[#117dff]">
                 <Search size={14} className="text-[#a3a3a3]" />
@@ -151,14 +152,14 @@ export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSe
                   type="search"
                   value={connectorSearch}
                   onChange={(event) => setConnectorSearch(event.target.value)}
-                  placeholder="Search Gmail, Slack, Calendar…"
+                  placeholder={tx('searchPlaceholder', 'Search Gmail, Slack, Calendar…')}
                   className="min-w-0 flex-1 bg-transparent text-[13px] text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3]"
                   style={nativeViewport ? { fontSize: '16px' } : undefined}
                   autoFocus
                 />
               </label>
               <div data-apps-scroll onScroll={onScroll} onWheel={onWheel} onTouchStart={onTouchStart} onTouchMove={onTouchMove} className="max-h-[52vh] overflow-y-auto pb-1" style={nativeViewport ? { maxHeight: 'max(80px, calc(var(--hm-app-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 170px))', overscrollBehavior: 'contain' } : undefined}>
-                {loading && <div role="status" className="py-10 text-center text-[12px] text-[#737373]">Loading apps…</div>}
+                {loading && <div role="status" className="py-10 text-center text-[12px] text-[#737373]">{tx('loadingApps', 'Loading apps…')}</div>}
                 {error && <div role="alert" className="py-3 text-[12px] text-red-700">{error}</div>}
                 {visibleToolkits.length > 0 ? visibleToolkits.map((toolkit) => (
                   <button
@@ -172,11 +173,11 @@ export function LegacyMobileAppsSheet({ connectorSheetOpen, onClose, connectorSe
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] font-semibold text-[#0a0a0a]">{toolkit.name || toolkit.slug}</span>
-                      <span className="block truncate text-[10.5px] text-[#8a867e]">{toolkit.connected ? 'Ready for this chat' : 'Tap to connect and return here'}</span>
+                      <span className="block truncate text-[10.5px] text-[#8a867e]">{toolkit.connected ? tx('ready', 'Ready for this chat') : tx('tapToConnect', 'Tap to connect and return here')}</span>
                     </span>
-                    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-medium ${toolkit.connected ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>{toolkit.connected ? 'Connected' : 'Connect'}</span>
+                    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-medium ${toolkit.connected ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>{toolkit.connected ? tx('connected', 'Connected') : tx('connect', 'Connect')}</span>
                   </button>
-                )) : (!loading && !error && emptyLabel && <div className="py-10 text-center text-[12px] text-[#a3a3a3]">{emptyLabel}</div>)}
+                )) : (!loading && !error && emptyText && <div className="py-10 text-center text-[12px] text-[#a3a3a3]">{emptyText}</div>)}
                 {footer}
               </div>
             </motion.div>
