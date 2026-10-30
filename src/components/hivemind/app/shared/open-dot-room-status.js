@@ -12,7 +12,24 @@ export function openDotRoomStatus(data, expectedEmployeeId) {
   }));
 }
 
-/** Aggregate entries must match the signed-in canonical roster's durable Dot binding. */
+const AGENT_MOTION = { archived: 'sleeping', paused: 'sleeping', waiting: 'needs-you', working: 'working', error: 'blocked', idle: 'ready' };
+
+/**
+ * The employee's one status row, from the server's `agent` facts (pending card, held run lease, pause, archive, failed last turn).
+ * Returns null for anything else, so a missing or malformed status shows nothing instead of a guess.
+ */
+export function agentStatusRow(employeeId, agent) {
+  if (!AGENT_MOTION[agent?.state]) return null;
+  const waiting = agent.state === 'waiting', running = agent.state === 'working';
+  return { id: employeeId, sessionId: 'agent-status', updatedAt: 0, serverStatus: true, status: agent.state, motion: AGENT_MOTION[agent.state],
+    running, waitingForAnswer: waiting, actionRequired: waiting, error: agent.state === 'error' };
+}
+
+/**
+ * Aggregate entries must match the signed-in canonical roster's durable Dot binding.
+ * Working, waiting, paused, archived and failed come only from the entry's server `agent` status; per-room flags
+ * and stored status words are dropped, so an old room or a live frame cannot show "Waiting for you".
+ */
 export function ownedOpenDotRoomStatuses(employees, roster, readAt = {}) {
   if (!Array.isArray(employees) || employees.length > 64) return {};
   const statuses = {};
@@ -21,13 +38,15 @@ export function ownedOpenDotRoomStatuses(employees, roster, readAt = {}) {
     const binding = (employee?.policy_rules ?? employee?.policyRules)?.open_dot_employee;
     if (!employee || binding?.version !== 1 || binding.state !== 'bound' || binding.dot_id !== entry.dotId) continue;
     const rooms = openDotRoomStatus({ type: 'hivemind.open-dot.room-status', version: 1, employeeId: entry.employeeId, rooms: entry.rooms }, entry.employeeId);
-    if (rooms !== null) statuses[entry.employeeId] = rooms.length === 0 && ['idle', 'paused'].includes(entry.status)
-      ? [{ id: entry.employeeId, updatedAt: 0, status: entry.status }]
-      : rooms.map(room => {
+    if (rooms === null) continue;
+    const plain = rooms.map(room => {
       const lastAssistantAt = entry.rooms.find(value => value.conversationId === room.sessionId)?.lastAssistantAt;
       const watermark = readAt[entry.employeeId];
-      return { ...room, unread: Number.isFinite(lastAssistantAt) ? Number.isFinite(watermark) && lastAssistantAt > watermark : room.unread };
-      });
+      return { ...room, status: undefined, activity: undefined, running: false, actionRequired: false, waitingForAnswer: false, error: false,
+        unread: Number.isFinite(lastAssistantAt) ? Number.isFinite(watermark) && lastAssistantAt > watermark : room.unread };
+    });
+    const status = agentStatusRow(entry.employeeId, entry.agent);
+    statuses[entry.employeeId] = status ? [...plain, status] : plain;
   }
   return statuses;
 }

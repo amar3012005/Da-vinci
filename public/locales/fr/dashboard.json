@@ -1380,7 +1380,14 @@
     "webAdmin": "Admin Web",
     "webIntel": "Intelligence Web",
     "workspaceAdmin": "Admin Espace de travail",
-    "runTime": "Run Time"
+    "runTime": "Run Time",
+    "statusWaiting": "Vous attend",
+    "statusActionRequired": "Action requise",
+    "statusArchived": "Archivé",
+    "statusPaused": "En pause",
+    "statusReady": "Prêt",
+    "statusWorking": "En cours",
+    "statusFailed": "Échec du travail"
   },
   "swarmgovernance": {
     "actionLogHeading": "Journal d'actions",
