@@ -493,6 +493,8 @@ export default function Sidebar({
     setTeam(current => current.some(item => item.id === employee.id) ? current : [...current, employee]);
     agentRoster.remember(scope, [...team.filter(item => item.id !== employee.id), employee]);
     setTeamRetry(value => value + 1);
+    // The employee exists: the setup dialog is finished whatever the room does next, so a remount or a failed open cannot leave a fresh empty one.
+    setCreateEmployeeOpen(false);
     return openAgent({ preventDefault() {} }, employee);
   };
   // A deleted employee leaves the roster at once; a person viewing its room moves to another employee, or home when none is left.

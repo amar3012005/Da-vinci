@@ -9,6 +9,9 @@ import { registerOpenDotFrame } from '../shared/open-dot-frames';
 
 const DOT_ORIGIN = 'https://runtime-runner.singulancelabs.com';
 const READY_TIMEOUT_MS = 30000;
+const NAVIGATE_RETRY_MS = 1000;
+// A retained document that has not acknowledged the new employee by now is replaced by a frame opened on it.
+const NAVIGATE_UNACKNOWLEDGED_MS = 6000;
 
 export function postToDotFrame(frame, message) {
   const target = frame?.contentWindow;
@@ -34,6 +37,9 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
   languageRef.current = language;
   // The first address carries the interface language so OpenDot's first paint is already in it; later changes arrive as a message.
   const initialTarget = useRef(withOpenDotLocale(initialRoute ? buildOpenDotEmbedTarget(initialRoute.pathname.slice('/hivemind/app/employee/dots'.length), initialRoute.search) : src, i18n.language));
+  // Starts on the first employee; follows the current employee when the retained document never acknowledges a switch.
+  const [forcedTarget, setForcedTarget] = useState(null);
+  const frameTarget = forcedTarget || initialTarget.current;
   const iframeRef = useRef(null);
   const frameRegistration = useRef(null);
   // Registers each mounted iframe for sign-out; the disposer runs when React replaces or unmounts it.
@@ -49,7 +55,7 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
   const [attempt, setAttempt] = useState(0);
   const [readyFrameKey, setReadyFrameKey] = useState(null);
   const [timedOutFrameKey, setTimedOutFrameKey] = useState(null);
-  const frameKey = `${initialTarget.current || 'invalid'}:${attempt}`;
+  const frameKey = `${frameTarget || 'invalid'}:${attempt}`;
   const ready = readyFrameKey === frameKey && (!employeeId || readyEmployee === employeeId);
   const timedOut = timedOutFrameKey === frameKey;
 
@@ -80,6 +86,14 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
         window.dispatchEvent(new CustomEvent('hivemind:preview-visibility', {detail:{open:event.data.open === true}}));
         return;
       }
+      // A room report for the current employee proves the frame shows it, even when its ready message was missed.
+      if (employeeId && event.data?.type === 'hivemind.open-dot.room-status' && event.data.version === 1 && event.data.employeeId === employeeId) {
+        setLoaded(true);
+        setReadyEmployee(employeeId);
+        setReadyFrameKey(frameKey);
+        window.clearTimeout(timer);
+        window.clearInterval(probe);
+      }
       const rooms = openDotRoomStatus(event.data, openDotEmployeeIdFromPath(pathname));
       if (rooms !== null) {
         window.dispatchEvent(new CustomEvent('hivemind:open-dot-rooms', { detail: { employeeId: openDotEmployeeIdFromPath(pathname), dotId: event.data.dotId, clear: event.data.connected === false, rooms, employees: event.data.employees } }));
@@ -99,7 +113,7 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
       window.removeEventListener('message', onMessage);
       if (active) window.dispatchEvent(new CustomEvent('hivemind:preview-visibility', {detail:{open:false}}));
     };
-  }, [frameKey, loadedFrameKey, src, pathname, apps, active, i18n]);
+  }, [frameKey, loadedFrameKey, src, pathname, apps, active, i18n, employeeId]);
 
   // Tell the frame the shell's language once it is ready and whenever the person changes it here.
   useEffect(() => {
@@ -108,8 +122,15 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
   }, [language, readyFrameKey, frameKey]);
 
   useEffect(() => {
-    if (!active || !loaded || !employeeId || !src || readyEmployee === employeeId) return;
-    postToDotFrame(iframeRef.current, { type: 'hivemind.open-dot.navigate', version: 1, employeeId, target: src });
+    if (!active || !loaded || !employeeId || !src || readyEmployee === employeeId) return undefined;
+    const navigate = () => postToDotFrame(iframeRef.current, { type: 'hivemind.open-dot.navigate', version: 1, employeeId, target: src });
+    navigate();
+    const retry = window.setInterval(navigate, NAVIGATE_RETRY_MS);
+    const replace = window.setTimeout(() => {
+      setReadyEmployee(null);
+      setForcedTarget(withOpenDotLocale(src, languageRef.current));
+    }, NAVIGATE_UNACKNOWLEDGED_MS);
+    return () => { window.clearInterval(retry); window.clearTimeout(replace); };
   }, [active, loaded, employeeId, src, readyEmployee]);
 
   if (!src) return <main className="flex h-full min-h-0 items-center justify-center p-6 text-sm text-[#737373]">Invalid Dot address.</main>;
@@ -132,7 +153,7 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
         ref={attachFrame}
         onLoad={() => setLoadedFrameKey(frameKey)}
         title={apps ? 'Apps' : 'HyperAgent workspace'}
-        src={initialTarget.current}
+        src={frameTarget}
         allow="microphone; autoplay"
         className="h-full min-h-0 w-full flex-1 border-0"
       />
