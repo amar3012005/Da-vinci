@@ -477,6 +477,24 @@ export default function Sidebar({
     setTeamRetry(value => value + 1);
     return openAgent({ preventDefault() {} }, employee);
   };
+  // A deleted employee leaves the roster at once; a person viewing its room moves to another employee, or home when none is left.
+  useEffect(() => {
+    const removed = event => {
+      const id = typeof event.detail?.employeeId === 'string' ? event.detail.employeeId : null;
+      if (!id) return;
+      const next = team.filter(item => item.id !== id);
+      setTeam(next);
+      agentRoster.remember(scope, next);
+      window.dispatchEvent(new Event('hm:employees-changed'));
+      if (openDotEmployeeIdFromPath(location.pathname) !== id && selectedAgent !== id) return;
+      setSelectedAgent(null);
+      const following = next.find(item => openDotEmployeePath(item));
+      if (following) openAgent({ preventDefault() {} }, following);
+      else navigate(runtimeEnabled ? '/hivemind/app/employee/harness' : '/hivemind/app/overview', { replace: true });
+    };
+    window.addEventListener('hivemind:employee-removed', removed);
+    return () => window.removeEventListener('hivemind:employee-removed', removed);
+  });
   const [companyOpen, setCompanyOpen] = useState(false);
   const closeCompany = useCallback(() => setCompanyOpen(false), []);
   useEffect(() => { setCompanyOpen(false); }, [org?.id, user?.id]);

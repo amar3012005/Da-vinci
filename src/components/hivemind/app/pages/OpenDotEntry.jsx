@@ -59,6 +59,11 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
         window.dispatchEvent(new CustomEvent('hivemind:open-dot-team'));
         return;
       }
+      // The room's employee was deleted (or its address no longer resolves): the sidebar drops it and opens another room.
+      if (event.data?.type === 'hivemind.open-dot.employee-removed' && event.data.version === 1 && typeof event.data.employeeId === 'string' && active) {
+        window.dispatchEvent(new CustomEvent('hivemind:employee-removed', { detail: { employeeId: event.data.employeeId } }));
+        return;
+      }
       if (event.data?.type === 'hivemind.open-dot.preview' && event.data.version === 1 && active) {
         window.dispatchEvent(new CustomEvent('hivemind:preview-visibility', {detail:{open:event.data.open === true}}));
         return;
