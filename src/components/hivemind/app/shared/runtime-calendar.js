@@ -1,11 +1,16 @@
 /**
- * Reads and presents the company calendar kept by Runtime's root session.
- * The root is only the data owner: the read needs no open Runtime chat and answers while Runtime is switched off.
+ * Reads and presents the company calendar kept by Runtime's root session, together with the duties OpenDot keeps itself for employees
+ * that booked while Runtime did not answer. The root is only the data owner: the read needs no open Runtime chat and answers while
+ * Runtime is switched off, and the OpenDot items are shown even when Runtime cannot be reached.
  */
 import { fetchWithRuntimeAdmission } from './runtime-admission';
 
 /** Runner route that serves the calendar between two instants. */
 export const CALENDAR_ENDPOINT = '/api/hivemindHq/calendar';
+/** OpenDot route that lists, stops and deletes the duties employees keep in OpenDot (same item fields as the Runtime calendar). */
+export const LOCAL_DUTIES_ENDPOINT = '/api/dots/local-duties';
+/** Id prefix of every item OpenDot keeps; stop and delete for these ids go to OpenDot, not Runtime. */
+export const LOCAL_ITEM_PREFIX = 'local-duty:';
 const DAY_MS = 86400000;
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -51,6 +56,65 @@ export async function fetchCalendar(window, { signal, fetcher = (...args) => fet
   return response.json();
 }
 
+/** @param {unknown} id - calendar item id. @returns {boolean} whether OpenDot, not Runtime, keeps the item. */
+export function isLocalItem(id) {
+  return typeof id === 'string' && id.startsWith(LOCAL_ITEM_PREFIX);
+}
+
+/**
+ * Read the duties OpenDot keeps for the window. A failure is not an error: the page then shows Runtime's items only.
+ * @param {{ from: number, to: number }} window - the visible range.
+ * @param {{ signal?: AbortSignal, fetcher?: typeof fetch }} [options] - cancellation and transport.
+ * @returns {Promise<object | null>} the calendar of OpenDot's items, or null when OpenDot did not answer.
+ */
+export async function fetchLocalCalendar({ from, to }, { signal, fetcher = (...args) => fetchWithRuntimeAdmission(...args) } = {}) {
+  try {
+    const response = await fetcher(`${LOCAL_DUTIES_ENDPOINT}?from=${from}&to=${to}`, { credentials: 'same-origin', cache: 'no-store', signal });
+    if (!response?.ok) return null;
+    const body = await response.json();
+    return body?.value && Array.isArray(body.value.items) ? body.value : null;
+  } catch { return null; /* OpenDot being unreachable or slow only hides its own items */ }
+}
+
+/**
+ * One calendar from Runtime's and OpenDot's. An OpenDot item Runtime already lists (same duty key and employee, or the id Runtime gives it
+ * once it owns the duty) is shown once, as Runtime's.
+ * @param {object | null} runtime - Runtime's `value`, or null.
+ * @param {object | null} local - OpenDot's `value`, or null.
+ * @returns {object | null} the merged `value`; Runtime's own when OpenDot has no items.
+ */
+export function mergeCalendars(runtime, local) {
+  if (!local?.items?.length) return runtime;
+  if (!runtime) return local;
+  const ids = new Set((runtime.items || []).map(item => item.id));
+  const keys = new Set((runtime.items || []).filter(item => item.dutyKey).map(item => `${item.ownerId}\0${item.dutyKey}`));
+  const kept = local.items.filter(item => !(item.runtimeItemId && ids.has(item.runtimeItemId)) && !keys.has(`${item.ownerId}\0${item.dutyKey}`));
+  const keptIds = new Set(kept.map(item => item.id));
+  return {
+    ...runtime,
+    items: [...(runtime.items || []), ...kept],
+    occurrences: [...(runtime.occurrences || []), ...(local.occurrences || []).filter(run => keptIds.has(run.itemId))],
+  };
+}
+
+/**
+ * Read Runtime's calendar and OpenDot's items together. Runtime failing (unreachable, 404, error) does not blank the page while OpenDot has items.
+ * @param {{ from: number, to: number }} window - the visible range.
+ * @param {{ signal?: AbortSignal, fetcher?: typeof fetch, localFetcher?: typeof fetch }} [options] - cancellation and transports.
+ * @returns {Promise<{ sessionId?: string, value: object | null, runtimeDown?: boolean }>} the merged calendar; `runtimeDown` when only OpenDot's items are shown.
+ * @throws {CalendarUnavailableError | Error} Runtime's failure when OpenDot has no items to show instead.
+ */
+export async function fetchMergedCalendar(window, { signal, fetcher, localFetcher } = {}) {
+  const [runtime, local] = await Promise.allSettled([
+    fetchCalendar(window, { signal, ...(fetcher ? { fetcher } : {}) }),
+    fetchLocalCalendar(window, { signal, ...(localFetcher ? { fetcher: localFetcher } : {}) }),
+  ]);
+  const own = local.status === 'fulfilled' ? local.value : null;
+  if (runtime.status === 'fulfilled') return { ...runtime.value, value: mergeCalendars(runtime.value?.value ?? null, own) };
+  if (!signal?.aborted && own?.items?.length) return { value: own, runtimeDown: true };
+  throw runtime.reason;
+}
+
 /**
  * Person-facing owner of an item; an opaque directory id is never shown.
  * @param {{ owner?: string, ownerName?: string }} item - calendar item.
@@ -67,29 +131,31 @@ export class CalendarActionError extends Error {
 }
 
 /**
- * Stop an employee-booked repeating task: it stays on the Calendar as stopped, no later run starts, and its employee is told.
+ * Stop an employee-booked repeating task (a task OpenDot keeps is stopped in OpenDot): it stays on the Calendar as stopped, no later run starts, and its employee is told.
  * @param {string} itemId - the calendar item id.
  * @param {{ fetcher?: typeof fetch }} [options] - transport.
  * @returns {Promise<{ ok: true, itemId: string, state: string, notified: boolean }>} the runner's answer.
  * @throws {CalendarActionError} when the runner refuses (404 unknown item, 403 not the administrator, 5xx outage).
  */
 export function stopCalendarItem(itemId, { fetcher = (...args) => fetchWithRuntimeAdmission(...args) } = {}) {
+  if (isLocalItem(itemId)) return calendarAction(LOCAL_DUTIES_ENDPOINT, 'POST', fetcher, { action: 'stop', id: itemId });
   return calendarAction(`${CALENDAR_ENDPOINT}/${encodeURIComponent(itemId)}/stop`, 'POST', fetcher);
 }
 
 /**
- * Delete an employee-booked task: its series stops, it leaves the Calendar, and its employee is told.
+ * Delete an employee-booked task (a task OpenDot keeps is deleted in OpenDot): its series stops, it leaves the Calendar, and its employee is told.
  * @param {string} itemId - the calendar item id.
  * @param {{ fetcher?: typeof fetch }} [options] - transport.
  * @returns {Promise<{ ok: true, itemId: string, state: string, notified: boolean }>} the runner's answer.
  * @throws {CalendarActionError} when the runner refuses.
  */
 export function deleteCalendarItem(itemId, { fetcher = (...args) => fetchWithRuntimeAdmission(...args) } = {}) {
+  if (isLocalItem(itemId)) return calendarAction(LOCAL_DUTIES_ENDPOINT, 'POST', fetcher, { action: 'delete', id: itemId });
   return calendarAction(`${CALENDAR_ENDPOINT}/${encodeURIComponent(itemId)}`, 'DELETE', fetcher);
 }
 
-async function calendarAction(url, method, fetcher) {
-  const response = await fetcher(url, { method, credentials: 'same-origin', cache: 'no-store' });
+async function calendarAction(url, method, fetcher, body) {
+  const response = await fetcher(url, { method, credentials: 'same-origin', cache: 'no-store', ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}) });
   if (!response.ok) {
     let code = 'calendar_action_failed';
     try { const body = await response.json(); if (typeof body?.error === 'string') code = body.error; } catch { /* a non-JSON error page carries no code */ }
