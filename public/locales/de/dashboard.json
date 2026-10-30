@@ -1399,7 +1399,14 @@
     "webAdmin": "Web-Admin",
     "webIntel": "Web-Intelligenz",
     "workspaceAdmin": "Workspace-Admin",
-    "runTime": "Run Time"
+    "runTime": "Run Time",
+    "statusWaiting": "Wartet auf dich",
+    "statusActionRequired": "Aktion erforderlich",
+    "statusArchived": "Archiviert",
+    "statusPaused": "Pausiert",
+    "statusReady": "Bereit",
+    "statusWorking": "In Arbeit",
+    "statusFailed": "Arbeit fehlgeschlagen"
   },
   "swarmgovernance": {
     "actionLogHeading": "Aktionsprotokoll",

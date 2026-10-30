@@ -246,8 +246,11 @@ export default function Sidebar({
   const [dotRooms, setDotRooms] = useState({});
   const [liveDotRooms, setLiveDotRooms] = useState({});
   const liveDotSnapshot = useRef(null);
+  const liveStatusSignal = useRef(null);
   const [scheduledEmployees, setScheduledEmployees] = useState([]);
-  const rooms = [...nativeRooms, ...Object.values(dotRooms).flat(), ...Object.values(liveDotRooms).flat(), ...scheduledEmployees.map(id => ({ id, scheduled: true, scheduleOnly: true, updatedAt: 0 }))];
+  // Only OpenDot's server status shows an employee as working, waiting or failed; a native room for another id keeps its presence and unread marks only.
+  const presenceOnly = room => room.id === 'runtime' ? room : { ...room, status: undefined, activity: undefined, running: false, actionRequired: false, waitingForAnswer: false, error: false };
+  const rooms = [...nativeRooms.map(presenceOnly), ...Object.values(dotRooms).flat(), ...Object.values(liveDotRooms).flat(), ...scheduledEmployees.map(id => ({ id, scheduled: true, scheduleOnly: true, updatedAt: 0 }))];
   const dotReadAt = useRef({});
   const lastDotPush = useRef(0);
   // Last authoritative task state per employee from the status read. Live room
@@ -284,7 +287,7 @@ export default function Sidebar({
         const result = await response.json();
         // A team with no active task or running room is read less often; any
         // assignment, room activity or visibility change returns to 15 s.
-        quiet = Array.isArray(result.employees) && result.employees.every(entry => ['idle', 'paused', undefined].includes(entry?.status) && !(entry?.rooms ?? []).some(room => room?.running || room?.live))
+        quiet = Array.isArray(result.employees) && result.employees.every(entry => ['idle', 'paused', 'archived', undefined].includes(entry?.status) && !(entry?.rooms ?? []).some(room => room?.running || room?.live))
           && (!Array.isArray(result.taskStatus) || result.taskStatus.every(entry => entry?.status === 'idle' || entry?.status === 'accepted'));
         if (Array.isArray(result.taskStatus)) {
           result.taskStatus = withRuntimeReviewDecisions(result.taskStatus, await runtimeReviewDecisions(scope, controller.signal));
@@ -300,7 +303,8 @@ export default function Sidebar({
     document.addEventListener('visibilitychange', visible);
     window.addEventListener('hivemind:session-established', visible);
     window.addEventListener('hm:employees-changed', visible);
-    return () => { controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', visible); window.removeEventListener('hivemind:session-established', visible); window.removeEventListener('hm:employees-changed', visible); };
+    window.addEventListener('hivemind:employee-status-changed', visible);
+    return () => { controller.abort(); clearTimeout(timer); window.removeEventListener('hivemind:employee-status-changed', visible); document.removeEventListener('visibilitychange', visible); window.removeEventListener('hivemind:session-established', visible); window.removeEventListener('hm:employees-changed', visible); };
   }, [scope]);
   const teamScope = useRef(null);
   const [teamLoadError, setTeamLoadError] = useState(false);
@@ -363,12 +367,17 @@ export default function Sidebar({
     setRooms([]);
     setDotRooms({});
     const dotActivity = event => {
-      if (event.detail?.clear !== true) lastDotPush.current = Date.now();
+      // A push that carries the server's agent status replaces the next read; live room frames and older frames do not.
+      if (event.detail?.clear !== true && (event.detail?.employees ?? []).some(entry => entry?.agent)) lastDotPush.current = Date.now();
       if (event.detail?.clear === true) { liveDotSnapshot.current = null; setLiveDotRooms({}); setDotRooms(previous => reconnectingOpenDotRoomStatuses(previous)); return; }
       const employeeId = event.detail?.employeeId;
       if (typeof employeeId !== 'string' || !Array.isArray(event.detail?.rooms)) return;
       const entries = event.detail.employees ?? [{ employeeId, dotId: event.detail.dotId, rooms: event.detail.rooms }];
       if (Array.isArray(entries) && entries.length <= 64 && entries.some(entry => entry.rooms?.some(room => room.live === true))) {
+        // The stored word never shows; a change of it only asks for a fresh server status read.
+        const signal = entries.map(entry => `${entry.employeeId}:${entry.rooms?.map(room => room.status).join(',')}`).join('|');
+        if (liveStatusSignal.current !== null && liveStatusSignal.current !== signal) window.dispatchEvent(new Event('hivemind:employee-status-changed'));
+        liveStatusSignal.current = signal;
         liveDotSnapshot.current = entries;
         setLiveDotRooms(withTaskStatus(ownedOpenDotRoomStatuses(entries, agentRoster.peek(scope) || [], dotReadAt.current)));
         return;

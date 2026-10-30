@@ -66,3 +66,25 @@ test('live chat activity wins over stale polling and retains the same employee c
  view.rerender(<AgentRoomStatus room={{ status: 'working', activity: 'Running commands' }} />);
  expect(screen.getByRole('status').textContent).toBe('Running commands');
 });
+
+test('the server agent status decides the row: waiting only while a card waits, a spinner while a turn runs', () => {
+  const rooms = [{ id: 'romeo', updatedAt: 9, live: true, status: 'waiting', waitingForAnswer: true, actionRequired: true }, { id: 'romeo', updatedAt: 0, serverStatus: true, status: 'idle', motion: 'ready' }];
+  const idle = aggregateAgentRooms(rooms, 'romeo');
+  expect(idle).toMatchObject({ status: 'idle', running: false, waitingForAnswer: false, actionRequired: false });
+  const view = render(<AgentRoomStatus room={idle} />);
+  expect(screen.queryByText('Waiting for you')).toBeNull();
+  const waiting = aggregateAgentRooms([{ id: 'romeo', updatedAt: 0, serverStatus: true, status: 'waiting', waitingForAnswer: true, actionRequired: true }], 'romeo');
+  view.rerender(<AgentRoomStatus room={waiting} compact />);
+  expect(screen.getByRole('status').textContent).toContain('Waiting for you');
+  const working = aggregateAgentRooms([{ id: 'romeo', updatedAt: 0, serverStatus: true, status: 'working', running: true }], 'romeo');
+  view.rerender(<AgentRoomStatus room={working} compact />);
+  expect(screen.getByRole('img', { name: 'Working' })).toBeTruthy();
+  expect(screen.queryByText('Waiting for you')).toBeNull();
+  view.rerender(<AgentRoomStatus room={aggregateAgentRooms([{ id: 'romeo', updatedAt: 0, serverStatus: true, status: 'archived' }], 'romeo')} />);
+  expect(screen.getByRole('status').textContent).toBe('Archived');
+});
+test('a task waiting on the person is not shown as the employee waiting', () => {
+  render(<AgentRoomStatus room={{ status: 'idle', taskStatus: 'waiting' }} />);
+  expect(screen.queryByText('Waiting on you')).toBeNull();
+  expect(screen.getByRole('status').textContent).toBe('Ready');
+});

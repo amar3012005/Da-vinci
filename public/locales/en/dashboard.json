@@ -1400,7 +1400,14 @@
     "webAdmin": "Web Admin",
     "webIntel": "Web Intel",
     "workspaceAdmin": "Workspace Admin",
-    "runTime": "Run Time"
+    "runTime": "Run Time",
+    "statusWaiting": "Waiting for you",
+    "statusActionRequired": "Action required",
+    "statusArchived": "Archived",
+    "statusPaused": "Paused",
+    "statusReady": "Ready",
+    "statusWorking": "Working",
+    "statusFailed": "Work failed"
   },
   "swarmgovernance": {
     "actionLogHeading": "Action log",

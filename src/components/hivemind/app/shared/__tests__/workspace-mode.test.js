@@ -20,8 +20,22 @@ test('background Dot unread requires an owned binding and real local read waterm
 });
 test('an authenticated bound employee with no room is ready, not unavailable', () => {
   const roster = [{ id: 'owned', policy_rules: { open_dot_employee: { version: 1, state: 'bound', dot_id: 'dot-owned' } } }];
-  expect(ownedOpenDotRoomStatuses([{ employeeId: 'owned', dotId: 'dot-owned', rooms: [], status: 'idle' }], roster).owned).toEqual([{ id: 'owned', updatedAt: 0, status: 'idle' }]);
-  expect(ownedOpenDotRoomStatuses([{ employeeId: 'owned', dotId: 'foreign', rooms: [], status: 'idle' }], roster)).toEqual({});
+  expect(ownedOpenDotRoomStatuses([{ employeeId: 'owned', dotId: 'dot-owned', rooms: [], agent: { state: 'idle' } }], roster).owned)
+    .toMatchObject([{ id: 'owned', serverStatus: true, status: 'idle', running: false, waitingForAnswer: false, actionRequired: false }]);
+  expect(ownedOpenDotRoomStatuses([{ employeeId: 'owned', dotId: 'foreign', rooms: [], agent: { state: 'idle' } }], roster)).toEqual({});
+});
+
+test('working, waiting and failed come only from the server agent status, never from room flags or stored words', () => {
+  const roster = [{ id: 'owned', policy_rules: { open_dot_employee: { version: 1, state: 'bound', dot_id: 'dot-owned' } } }];
+  const rooms = [{ conversationId: 'old', updatedAt: 5, status: 'waiting', running: true, waitingForAnswer: true, actionRequired: true, error: true }];
+  const without = ownedOpenDotRoomStatuses([{ employeeId: 'owned', dotId: 'dot-owned', status: 'waiting', rooms }], roster).owned;
+  expect(without.some(room => room.running || room.waitingForAnswer || room.actionRequired || room.error || room.status)).toBe(false);
+  const waiting = ownedOpenDotRoomStatuses([{ employeeId: 'owned', dotId: 'dot-owned', rooms, agent: { state: 'waiting' } }], roster).owned;
+  expect(waiting.filter(room => room.waitingForAnswer)).toHaveLength(1);
+  const working = ownedOpenDotRoomStatuses([{ employeeId: 'owned', dotId: 'dot-owned', rooms, agent: { state: 'working' } }], roster).owned;
+  expect(working.some(room => room.waitingForAnswer || room.actionRequired)).toBe(false);
+  expect(working.some(room => room.running)).toBe(true);
+  expect(ownedOpenDotRoomStatuses([{ employeeId: 'owned', dotId: 'dot-owned', rooms: [], agent: { state: 'bogus' } }], roster).owned).toEqual([]);
 });
 
 test('shared apps use Runtime without changing Brain connectors', () => {
