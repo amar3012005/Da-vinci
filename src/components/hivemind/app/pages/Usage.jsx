@@ -10,17 +10,12 @@ import apiClient from '../shared/api-client';
 import CreditBalance from '../shared/CreditBalance';
 import CreditUsageBreakdown from '../shared/CreditUsageBreakdown';
 import WorkspaceAccessCard from '../shared/WorkspaceAccessCard';
+import { useCopy, useLocaleFormat, usePlanLabel } from '../layout/sidebar-copy';
 
 // One screen, whole-platform, high-level usage. Cards = current month (DB-sourced,
 // accurate across replicas). Graphs = per-day series from OrgUsageDaily.
 // Tokens are metered at chat + TARA today (tokensScope) — labelled honestly.
 
-const fmt = (n) => {
-  const v = Number(n) || 0;
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(v >= 10_000_000 ? 0 : 1)}M`;
-  if (v >= 1_000) return `${(v / 1_000).toFixed(v >= 10_000 ? 0 : 1)}K`;
-  return String(Math.round(v));
-};
 const isUnlimited = (lim) => lim == null || lim === -1;
 
 const METRICS = [
@@ -36,6 +31,15 @@ const METRICS = [
   { key: 'connectors',  label: 'Connectors',    icon: Plug,     accent: '#7c3aed', sub: 'active sources' },
   { key: 'users',       label: 'Seats',         icon: UserPlus, accent: '#b45309', sub: 'org members' },
 ];
+
+/** Translated card title and caption of a metric; the English text in METRICS is the default. */
+function useMetricText() {
+  const tx = useCopy('outerApp.usage');
+  return (metric) => ({
+    label: tx(`metric.${metric.key}.label`, metric.label),
+    sub: tx(`metric.${metric.key}.sub`, metric.sub),
+  });
+}
 
 const DAILY_METRICS = METRICS.filter((metric) =>
   ['tokens', 'searches', 'kbPages', 'deepResearch', 'webIntel', 'taraSeconds', 'hyperAgentRuns'].includes(metric.key),
@@ -57,6 +61,8 @@ function lastNDays(n) {
 // Bar chart — renders cleanly with ANY number of points (incl. a single day),
 // unlike an area line which is invisible at 1 point. Gradient bars + hover.
 function BarChart({ values, days, accent }) {
+  const tx = useCopy('outerApp.usage');
+  const { compact: fmt, date } = useLocaleFormat();
   const [hover, setHover] = useState(null);
   const W = 760, H = 220, padL = 8, padR = 8, padT = 16, padB = 22;
   const innerW = W - padL - padR, innerH = H - padT - padB;
@@ -99,23 +105,23 @@ function BarChart({ values, days, accent }) {
         })}
         {[0, Math.floor((n - 1) / 2), n - 1].map((i) => days[i] && (
           <text key={i} x={Math.min(W - padR - 26, Math.max(padL, padL + i * slot))} y={H - 5}
-                fontSize="10" fill="#aaa">{days[i]?.slice(5)}</text>
+                fontSize="10" fill="#aaa">{date(days[i], { month: 'numeric', day: 'numeric' })}</text>
         ))}
         {!hasData && (
           <text x={W / 2} y={padT + innerH / 2} textAnchor="middle" fontSize="12" fill="#bbb">
-            No activity yet in this window
+            {tx('noActivity', 'No activity yet in this window')}
           </text>
         )}
       </svg>
       {hover != null && days[hover] && (
         <div className="absolute top-1 right-2 bg-white border border-[#e3e0db] rounded-lg px-2.5 py-1 shadow-sm pointer-events-none">
-          <div className="text-[10px] text-[#999]">{days[hover]}</div>
+          <div className="text-[10px] text-[#999]">{date(days[hover], { year: 'numeric', month: 'short', day: 'numeric' })}</div>
           <div className="text-sm font-bold font-['Space_Grotesk']" style={{ color: accent }}>{fmt(values[hover])}</div>
         </div>
       )}
       <div className="flex items-center gap-4 mt-1 px-1 text-[11px] text-[#888]">
-        <span>Σ {fmt(total)} this period</span>
-        <span>peak {fmt(peak)}/day</span>
+        <span>{tx('periodTotal', 'Σ {{total}} this period', { total: fmt(total) })}</span>
+        <span>{tx('peakPerDay', 'peak {{peak}}/day', { peak: fmt(peak) })}</span>
       </div>
     </div>
   );
@@ -137,6 +143,9 @@ function Sparkline({ values, accent }) {
 }
 
 function MetricCard({ metric, data, spark, active, onClick, attributed = false }) {
+  const tx = useCopy('outerApp.usage');
+  const { compact: fmt, percent } = useLocaleFormat();
+  const text = useMetricText()(metric);
   const Icon = metric.icon;
   const used = Number(data?.used) || 0;
   const limit = data?.limit;
@@ -155,8 +164,8 @@ function MetricCard({ metric, data, spark, active, onClick, attributed = false }
             <Icon size={16} style={{ color: metric.accent }} />
           </div>
           <div>
-            <div className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{metric.label}</div>
-            <div className="text-[10px] text-[#999] leading-tight">{metric.sub}{data?.isDaily ? ' · today' : ''}</div>
+            <div className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{text.label}</div>
+            <div className="text-[10px] text-[#999] leading-tight">{text.sub}{data?.isDaily ? ` · ${tx('today', 'today')}` : ''}</div>
           </div>
         </div>
         {(warn || danger) && <AlertTriangle size={15} style={{ color: barColor }} />}
@@ -164,16 +173,18 @@ function MetricCard({ metric, data, spark, active, onClick, attributed = false }
       <div className="flex items-end gap-1.5">
         <span className="text-2xl font-bold text-[#0a0a0a] font-['Space_Grotesk'] leading-none">{fmt(used)}</span>
         <span className="text-xs text-[#999] mb-0.5">
-          {attributed ? 'attributed' : (unlimited ? <span className="inline-flex items-center gap-0.5">/<InfinityIcon size={12} /></span> : `/ ${fmt(limit)}`)}
+          {attributed ? tx('attributed', 'attributed') : (unlimited ? <span className="inline-flex items-center gap-0.5">/<InfinityIcon size={12} /></span> : `/ ${fmt(limit)}`)}
         </span>
       </div>
       <Sparkline values={spark} accent={metric.accent} />
-      <div className="text-[10px] text-[#999]">{attributed ? 'Attributed to you' : (unlimited ? 'Unlimited on plan' : `${pct}% of limit`)}</div>
+      <div className="text-[10px] text-[#999]">{attributed ? tx('attributedToYou', 'Attributed to you') : (unlimited ? tx('unlimitedOnPlan', 'Unlimited on plan') : tx('pctOfLimit', '{{pct}} of limit', { pct: percent(pct) }))}</div>
     </button>
   );
 }
 
 function DailyBudget({ metric, data }) {
+  const { compact: fmt } = useLocaleFormat();
+  const text = useMetricText()(metric);
   const Icon = metric.icon;
   const used = Number(data?.used) || 0;
   const limit = data?.limit;
@@ -183,7 +194,7 @@ function DailyBudget({ metric, data }) {
   return (
     <div className="rounded-xl border border-[#e3e0db] bg-white px-3 py-3">
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#525252]"><Icon size={13} style={{ color }} />{metric.label}</span>
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#525252]"><Icon size={13} style={{ color }} />{text.label}</span>
         <span className="text-[10px] text-[#888]">{fmt(used)} / {unlimited ? '∞' : fmt(limit)}</span>
       </div>
       <div className="h-1.5 rounded-full bg-[#eceae4] overflow-hidden">
@@ -194,6 +205,10 @@ function DailyBudget({ metric, data }) {
 }
 
 export default function Usage() {
+  const tx = useCopy('outerApp.usage');
+  const { date, ...format } = useLocaleFormat();
+  const planLabelFor = usePlanLabel();
+  const metricText = useMetricText();
   const [metricKey, setMetricKey] = useState('tokens');
   const [days, setDays] = useState(30);
   const [usageView, setUsageView] = useState('organization');
@@ -202,8 +217,8 @@ export default function Usage() {
   const { data: billing, refetch: refetchBilling } = useApiQuery(() => apiClient.getBillingPlan().catch(() => null), []);
   const { data: daily, refetch: refetchDaily } = useApiQuery(() => apiClient.getDailyUsage(days).catch(() => null), [days]);
 
-  const planName = data?.planName || data?.plan || '—';
-  const month = data?.period?.month || '';
+  const planName = data?.planName || data?.plan ? planLabelFor(data?.planName || data?.plan) : '—';
+  const month = data?.period?.month ? date(`${data.period.month}-01T00:00:00`, { year: 'numeric', month: 'long' }) || data.period.month : '';
   const reminders = Array.isArray(data?.reminders) ? data.reminders : [];
   const memberTotals = useMemo(() => {
     const totals = {};
@@ -247,18 +262,18 @@ export default function Usage() {
             <Gauge size={20} className="text-[#117dff]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">Usage</h1>
+            <h1 className="text-xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">{tx('title', 'Usage')}</h1>
             <p className="text-xs text-[#666]">
-              {usageView === 'organization' ? 'Organization usage' : 'Your attributed usage'}{month ? ` · ${month}` : ''} ·{' '}
-              <span className="font-medium text-[#117dff]">{planName}</span> plan
+              {usageView === 'organization' ? tx('organizationUsage', 'Organization usage') : tx('yourAttributedUsage', 'Your attributed usage')}{month ? ` · ${month}` : ''} ·{' '}
+              <span className="font-medium text-[#117dff]">{planName}</span>
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden" aria-label="Usage scope">
+          <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden" aria-label={tx('scope', 'Usage scope')}>
             {[
-              ['organization', 'Organization'],
-              ['user', 'You'],
+              ['organization', tx('scopeOrganization', 'Organization')],
+              ['user', tx('scopeYou', 'You')],
             ].map(([value, label]) => (
               <button key={value} onClick={() => setUsageView(value)}
                 className={`px-2.5 py-1.5 text-xs font-medium ${usageView === value ? 'bg-[#0a0a0a] text-white' : 'text-[#525252] hover:bg-[#faf9f4]'}`}>{label}</button>
@@ -267,12 +282,12 @@ export default function Usage() {
           <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden">
             {[7, 30, 90].map((d) => (
               <button key={d} onClick={() => setDays(d)}
-                className={`px-2.5 py-1.5 text-xs font-medium ${days === d ? 'bg-[#117dff] text-white' : 'text-[#525252] hover:bg-[#faf9f4]'}`}>{d}d</button>
+                className={`px-2.5 py-1.5 text-xs font-medium ${days === d ? 'bg-[#117dff] text-white' : 'text-[#525252] hover:bg-[#faf9f4]'}`}>{tx('daysShort', '{{n}}d', { n: format.number(d) })}</button>
             ))}
           </div>
           <button onClick={() => { refetch(); refetchDaily(); refetchBilling(); }}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#e3e0db] text-xs font-medium text-[#525252] hover:bg-[#faf9f4]">
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> {tx('refresh', 'Refresh')}
           </button>
         </div>
       </div>
@@ -300,8 +315,8 @@ export default function Usage() {
 
       {usageView === 'organization' && <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Today’s plan limits</h2>
-          <span className="text-[10px] text-[#999]">Resets daily · {data?.period?.day || 'UTC'}</span>
+          <h2 className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{tx('todaysLimits', 'Today’s plan limits')}</h2>
+          <span className="text-[10px] text-[#999]">{tx('resetsDaily', 'Resets daily · {{day}}', { day: data?.period?.day || 'UTC' })}</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
           {DAILY_METRICS.map((metric) => <DailyBudget key={metric.key} metric={metric} data={data?.daily?.[metric.key]} />)}
@@ -315,20 +330,20 @@ export default function Usage() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <heroMetric.icon size={17} style={{ color: heroMetric.accent }} />
-            <span className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{heroMetric.label} · per day</span>
+            <span className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{metricText(heroMetric).label} · {tx('perDay', 'per day')}</span>
           </div>
           <div className="flex flex-wrap gap-1.5 justify-end">
             {METRICS.map((m) => (
               <button key={m.key} onClick={() => setMetricKey(m.key)}
                 className={`px-2 py-1 text-[11px] font-medium transition-colors ${metricKey === m.key ? 'text-white' : 'text-[#666] hover:bg-[#faf9f4]'}`}
-                style={metricKey === m.key ? { background: m.accent } : undefined}>{m.label}</button>
+                style={metricKey === m.key ? { background: m.accent } : undefined}>{metricText(m).label}</button>
             ))}
           </div>
         </div>
         <BarChart values={seriesByKey[metricKey] || []} days={axis} accent={heroMetric.accent} />
       </section> : (
         <section className="mb-7 border-y border-[#e6e3dd] py-5 text-sm text-[#666]">
-          This view shows usage attributed to your user ID in this organization. Workspace limits and billing remain organization-level.
+          {tx('attributedNote', 'This view shows usage attributed to your user ID in this organization. Workspace limits and billing remain organization-level.')}
         </section>
       )}
 
@@ -344,7 +359,7 @@ export default function Usage() {
 
       <div className="flex items-start gap-1.5 text-[10px] text-[#aaa] mt-5 justify-center">
         <Info size={12} className="mt-px shrink-0" />
-        <span>{usageView === 'organization' ? 'Organization totals drive plan limits and billing.' : 'Personal totals include only events attributed to your user ID.'} Tokens are metered at chat + TARA + HyperAgents background LLM ({data?.tokensScope || 'chat+tara+hyperagents'}); embeddings, vision &amp; ingest are not yet in the token count.</span>
+        <span>{usageView === 'organization' ? tx('footerOrganization', 'Organization totals drive plan limits and billing.') : tx('footerPersonal', 'Personal totals include only events attributed to your user ID.')} {tx('tokensNote', 'Tokens are metered at chat + TARA + HyperAgents background LLM ({{scope}}); embeddings, vision & ingest are not yet in the token count.', { scope: data?.tokensScope || 'chat+tara+hyperagents' })}</span>
       </div>
     </div>
   );
