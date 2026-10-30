@@ -18,13 +18,21 @@ export const agentRoster = createAgentRosterCache(async scope => {
   }
   const controller = new AbortController();
   const deadline = setTimeout(() => controller.abort(), 15000);
-  try {
-    // Brain's host has no Runtime employee API; it reads the same company roster OpenDot serves.
-    const companyRoster = ['dots.singulancelabs.com', 'next.singulancelabs.com'].includes(window.location.hostname) || window.location.pathname === '/apps';
-    const response = await fetchWithRuntimeAdmission(companyRoster ? '/api/hivemind/workspace-shell?resource=roster' : '/api/hivemind/employees', { credentials: 'same-origin', signal: controller.signal });
+  const read = async url => {
+    const response = await fetchWithRuntimeAdmission(url, { credentials: 'same-origin', signal: controller.signal });
     if (!response.ok) throw new Error('team unavailable');
+    if (!(response.headers.get('content-type') || '').includes('json')) throw new Error('team response is not JSON');
     const value = await response.json();
     if (!Array.isArray(value.profiles)) throw new Error('invalid team response');
     return value.profiles.filter(agent => typeof agent.id === 'string' && agent.id !== 'runtime' && typeof agent.name === 'string');
+  };
+  try {
+    // The OpenDot company roster is the source of truth on every host, so the sidebar
+    // never depends on the Runtime service (Runtime may be disabled). The native
+    // Runtime catalog is only a fallback for the Runtime host.
+    try { return await read('/api/hivemind/workspace-shell?resource=roster'); } catch (error) {
+      if (window.location.hostname !== 'runtime-runner.singulancelabs.com' || controller.signal.aborted) throw error;
+      return await read('/api/hivemind/employees');
+    }
   } finally { clearTimeout(deadline); }
 }, Date.now, optionalRosterStorage(), rememberEmployeeAppearances);

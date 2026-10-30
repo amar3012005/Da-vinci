@@ -119,9 +119,9 @@ test('generic API traffic without Harness admission stays on Da-vinci', async ()
     body: JSON.stringify({ request: {} }),
   }), env);
 
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 404);
   assert.equal(calls, 0);
-  assert.match(await response.text(), /Da-vinci/);
+  assert.deepEqual(await response.json(), { error: 'api_route_not_found' });
 });
 
 test('remote runner transport preserves public browser Origin', async () => {

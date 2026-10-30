@@ -739,6 +739,14 @@ export default {
       headers.set('cdn-cache-control', 'no-store');
       return noIndex(new Response(response.body, { status: response.status, statusText: response.statusText, headers }));
     }
+    // The Runtime roster belongs to the native runner. Admission cookies expire
+    // after an hour, so cookie presence must not decide whether this GET reaches
+    // the runner: without it the request used to fall through to the SPA and the
+    // sidebar received index.html. The runner authenticates and answers 401 JSON.
+    if (pathname === '/api/hivemind/employees' && ['GET', 'HEAD'].includes(request.method)
+      && hostname(request) === 'runtime-runner.singulancelabs.com') {
+      return noIndex(await proxyHarnessRunner(request, env));
+    }
     // Plugin graph bundles are native-owned public code. Cookie presence is
     // not an authorization decision and must never select the SPA as fallback.
     // The native runner retains all authentication for its protected endpoints.
@@ -857,6 +865,11 @@ export default {
       ? new Request(new URL('/', request.url), request)
       : request;
     let response = withLocaleCacheHeaders(await env.ASSETS.fetch(assetRequest), pathname);
+    // No API path may be answered by the SPA document: clients parse these as JSON.
+    if (pathname.startsWith('/api/') && isHtml(response)) {
+      await response.body?.cancel();
+      return Response.json({ error: 'api_route_not_found' }, { status: 404, headers: { 'cache-control': 'private, no-store' } });
+    }
     if (isDavinciPublicAsset(pathname) && isHtml(response)) {
       return new Response('Asset not found', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
     }
