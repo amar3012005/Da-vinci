@@ -15,6 +15,7 @@ import apiClient from '../shared/api-client';
 import RuntimeRecoverySettings from '../components/RuntimeRecoverySettings';
 import DreamingSettings from '../components/DreamingSettings';
 import RuntimeAvailabilitySettings from '../components/RuntimeAvailabilitySettings';
+import OrgLanguageSettings from '../components/OrgLanguageSettings';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 
@@ -245,6 +246,7 @@ export default function Settings() {
       >
         {['runtime-runner.singulancelabs.com', 'next.singulancelabs.com'].includes(window.location.hostname) && <SectionCard><RuntimeRecoverySettings organizationId={org?.id} /></SectionCard>}
         <SectionCard><RuntimeAvailabilitySettings /></SectionCard>
+        <SectionCard><OrgLanguageSettings /></SectionCard>
         <SectionCard><DreamingSettings organizationId={org?.id} /></SectionCard>
 
         {/* ── Settings scope ───────────────────────────────────────── */}
