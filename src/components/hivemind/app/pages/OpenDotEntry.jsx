@@ -1,7 +1,7 @@
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { openDotEmployeeIdFromPath } from '../shared/open-dot-employee-route';
 import { openDotRoomStatus } from '../shared/open-dot-room-status';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { buildOpenDotEmbedTarget, openDotLocale, withOpenDotLocale } from '../shared/open-dot-embed-target';
@@ -42,6 +42,14 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
   const [forcedTarget, setForcedTarget] = useState(null);
   const frameTarget = forcedTarget || initialTarget.current;
   const iframeRef = useRef(null);
+  // Employees the Create dialog just made: the retained document answers a switch to them at once (its router moves) but has no room
+  // for them yet, so the frame is opened on them directly instead of waiting on that answer.
+  const createdEmployees = useRef(new Set());
+  useEffect(() => {
+    const created = event => { const id = event.detail?.employeeId; if (typeof id === 'string') createdEmployees.current.add(id.toLowerCase()); };
+    window.addEventListener('hivemind:employee-created', created);
+    return () => window.removeEventListener('hivemind:employee-created', created);
+  }, []);
   const frameRegistration = useRef(null);
   // Registers each mounted iframe for sign-out; the disposer runs when React replaces or unmounts it.
   const attachFrame = useCallback(node => {
@@ -53,6 +61,13 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
   const [loadedFrameKey, setLoadedFrameKey] = useState(null);
   const [readyEmployee, setReadyEmployee] = useState(null);
   const employeeId = openDotEmployeeIdFromPath(pathname);
+  useLayoutEffect(() => {
+    const key = employeeId?.toLowerCase();
+    if (!key || !src || !createdEmployees.current.delete(key)) return;
+    if (frameTarget && frameTarget.toLowerCase().includes(`/employees/${key}`)) return;
+    setReadyEmployee(null);
+    setForcedTarget(withOpenDotLocale(src, languageRef.current));
+  }, [employeeId, src, frameTarget]);
   const [attempt, setAttempt] = useState(0);
   const [readyFrameKey, setReadyFrameKey] = useState(null);
   const [timedOutFrameKey, setTimedOutFrameKey] = useState(null);
