@@ -279,6 +279,8 @@ export default function HiveMindApp() {
               route instead of falling through to the relative catch-all,
               which otherwise recursively appends `overview`. */}
           <Route path="overview/*" element={<PageSuspense><Overview /></PageSuspense>} />
+          {/* The bare employee entry opens the HyperAgents room; without a route it fell to the catch-all and landed on the Brain overview. */}
+          <Route path="employee" element={<EmployeesEntry />} />
           <Route path="employee/dots/*" element={<PageSuspense><OpenDotEntry /></PageSuspense>} />
           <Route path="employee/harness/*" element={<RuntimeSessionRoute><PageSuspense><Overview /></PageSuspense></RuntimeSessionRoute>} />
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />

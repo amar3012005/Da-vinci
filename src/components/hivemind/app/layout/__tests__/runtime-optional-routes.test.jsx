@@ -77,3 +77,18 @@ describe('shell wiring', () => {
     expect(app).toMatch(/path="employees" element=\{<EmployeesEntry \/>\}/);
   });
 });
+
+test('the bare /employee/ entry opens the HyperAgents room instead of falling to the Brain overview', () => {
+  const entry = path => <MemoryRouter initialEntries={[path]}><Routes>
+    <Route path="/hivemind/app/employee" element={<EmployeesEntry />} /><Route path="*" element={<Where />} />
+  </Routes></MemoryRouter>;
+  mockOrg = { id: 'org-a', runtime_enabled: true };
+  const on = render(entry('/hivemind/app/employee/'));
+  expect(screen.getByTestId('where')).toHaveTextContent('/hivemind/app/employee/harness');
+  on.unmount();
+  mockOrg = null;
+  render(entry('/hivemind/app/employee'));
+  expect(screen.getByTestId('where')).toHaveTextContent('/hivemind/app/employee/harness');
+  const app = fs.readFileSync(path.join(__dirname, '../../HiveMindApp.jsx'), 'utf8');
+  expect(app).toMatch(/<Route path="employee" element=\{<EmployeesEntry \/>\} \/>/);
+});

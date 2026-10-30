@@ -35,7 +35,7 @@
  .ha-employee-tile:hover { background:#f0eee7; }
  .ha-employee-tile.is-selected { background:#e9eef7; }
  .ha-avatar-wrap { position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:72px;height:72px;margin-bottom:9px; }
- .ha-profession { position:absolute;z-index:5;top:-4px;left:50%;transform:translateX(-50%);width:124px;min-height:80px;display:flex;align-items:center;justify-content:center;padding:6px;border-radius:12px;background:#faf9f4f5;color:#344a63;box-shadow:0 2px 12px #24324412;font-size:11px;line-height:1.45;overflow-wrap:anywhere;visibility:hidden;opacity:0;pointer-events:none; }
+ .ha-profession { position:absolute;z-index:5;top:-4px;left:50%;transform:translateX(-50%);width:124px;min-height:80px;display:flex;align-items:center;justify-content:center;padding:6px 30px 6px 6px;border-radius:12px;background:#faf9f4f5;color:#344a63;box-shadow:0 2px 12px #24324412;font-size:11px;line-height:1.45;overflow-wrap:anywhere;visibility:hidden;opacity:0;pointer-events:none; }
  .ha-employee-tile:hover .ha-profession,.ha-employee-tile:focus-visible .ha-profession { visibility:visible;opacity:1; }
  .ha-dot-marker { position:absolute;right:-2px;bottom:0;background:#faf9f4;color:#7b8087;padding:1px;box-sizing:content-box;border-radius:3px; }
  .ha-employee-name { font-size:14px;line-height:1.4;max-width:100%;overflow-wrap:anywhere;color:#2b3037; }
@@ -142,8 +142,8 @@ nav .ha-autonomy-seat.is-drawer { padding:4px 10px 12px; }
 @media (prefers-reduced-motion: reduce) { .ha-autonomy-cells i { transition:none; } }
  .ha-employee-cell { position:relative;display:flex;min-width:0; }
  .ha-employee-cell>.ha-employee-tile { width:100%; }
- .ha-employee-delete { position:absolute;top:6px;right:6px;z-index:6;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:9999px;color:#7a7f86;background:#faf9f4;opacity:0; }
- .ha-employee-cell:hover .ha-employee-delete,.ha-employee-delete:focus-visible { opacity:1; }
+ .ha-employee-delete { position:absolute;top:6px;right:6px;z-index:9;box-shadow:0 0 0 1px #e3e0db;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:9999px;color:#7a7f86;background:#faf9f4;opacity:0; }
+ .ha-employee-cell:hover .ha-employee-delete,.ha-employee-cell:focus-within .ha-employee-delete,.ha-employee-delete:focus-visible { opacity:1; }
  .ha-employee-delete:hover { color:#b42318; }
  .ha-employee-confirm { position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:10px;background:#faf9f4;box-shadow:0 2px 12px #24324420;text-align:center;font-size:11px;line-height:1.35;color:#344a63; }
  .ha-employee-confirm>strong { font-size:13px;font-weight:600;color:#2b3037;overflow-wrap:anywhere; }
