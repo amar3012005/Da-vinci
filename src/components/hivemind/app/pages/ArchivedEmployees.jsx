@@ -5,6 +5,20 @@ import apiClient from '../shared/api-client';
 
 const FOCUS = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3484ff]';
 
+/** Roster row for an employee Core just restored, in the shape the team roster uses. */
+export function restoredRosterProfile(employee) {
+  const rules = employee?.policyRules || {};
+  const marker = rules.open_dot_employee || {};
+  return {
+    id: String(employee.id), name: String(employee.name || ''), role_archetype: employee.roleArchetype, avatar_url: employee.avatarUrl, status: employee.status,
+    policy_rules: {
+      ...(rules.appearance ? { appearance: rules.appearance } : {}),
+      ...(marker.dot_id ? { open_dot_employee: { version: marker.version, state: marker.state, dot_id: marker.dot_id } } : {}),
+      native_lifecycle: { phase: rules.native_lifecycle?.phase },
+    },
+  };
+}
+
 /** Fields the read-only view shows; the persona is the employee's saved profile, shown as written. */
 export function archivedEmployeeView(employee) {
   const lifecycle = employee?.policyRules?.native_lifecycle || {};
@@ -54,11 +68,16 @@ export default function ArchivedEmployees() {
     setBusy(true);
     setError('');
     try {
-      await apiClient.manageNativeEmployeeLifecycle({ operation: 'unarchive', employee_id: employee.id });
+      const restored = await apiClient.manageNativeEmployeeLifecycle({ operation: 'unarchive', employee_id: employee.id });
+      // The employee workspace clears its pause now, so the roster never shows a restored employee as Paused. Core already
+      // holds the restore, and the next roster read repairs the workspace if this call fails.
+      await apiClient.restoreArchivedEmployeeDot(employee.id).catch(() => undefined);
+      // The roster adds the employee at once and refreshes itself a few seconds later; without the profile it refreshes now.
+      if (restored?.employee) window.dispatchEvent(new CustomEvent('hivemind:employee-restored', { detail: { profile: restoredRosterProfile(restored.employee) } }));
+      else window.dispatchEvent(new Event('hm:employees-changed'));
       setEmployees(current => (current || []).filter(item => item.id !== employee.id));
       setOpenId(null);
       setNotice(t('library.archived.restored', '{{name}} is back on your team and its duties have resumed.', { name: employee.name }));
-      window.dispatchEvent(new Event('hm:employees-changed'));
     } catch {
       setError(t('library.archived.restoreFailed', 'Unarchiving isn’t confirmed. Reload and try again.'));
     } finally { setBusy(false); }
