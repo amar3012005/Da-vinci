@@ -14,6 +14,11 @@ export default function EmployeeMobileNavigation({ activeSection, onClose }) {
     query.addEventListener?.('change', changed);
     return () => query.removeEventListener?.('change', changed);
   }, []);
+  // A Get Started step that opens another page closes the drawer first.
+  useEffect(() => {
+    window.addEventListener('hm:onboarding-navigate', onClose);
+    return () => window.removeEventListener('hm:onboarding-navigate', onClose);
+  }, [onClose]);
   useEffect(() => {
     const previous = document.activeElement;
     const focusable = () => [...(document.querySelector('.ha-autonomy-confirm') || root.current.querySelector('[data-mobile-roster-profile]') || root.current).querySelectorAll('button, a[href], input, select, [tabindex="0"]')].filter(node => !node.disabled && !node.closest('[hidden]') && !(phone && node.closest('.mobile-roster-legacy')));

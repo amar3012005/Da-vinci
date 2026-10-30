@@ -8,9 +8,12 @@ export function isNativeChatRoute(pathname) {
 }
 
 /**
- * Where the Getting Started card renders.
- * Phones show no Getting Started surface; larger viewports keep the floating card.
+ * Where the Get Started checklist renders.
+ * Phones show it as a chip on the home screen (the team roster) that opens a bottom sheet, never over a room; larger
+ * viewports keep the floating card.
+ * @param {{ phone: boolean }} input
+ * @returns {'home'|'overlay'}
  */
 export function startPlacement({ phone }) {
-  return phone ? 'hidden' : 'overlay';
+  return phone ? 'home' : 'overlay';
 }

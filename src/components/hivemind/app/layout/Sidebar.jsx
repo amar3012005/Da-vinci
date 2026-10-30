@@ -66,6 +66,7 @@ import CreditBalance from '../shared/CreditBalance';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 
 const CreateEmployeeDialog = React.lazy(() => import('./CreateEmployeeDialog'));
+const GetStartedCard = React.lazy(() => import('./GetStartedCard'));
 const CompanyWorkspaceOverlay = React.lazy(() => import('../shared/CompanyWorkspaceOverlay'));
 
 /** Build nav sections, conditionally including admin items. Filtered by activeSection. */
@@ -469,6 +470,13 @@ export default function Sidebar({
     });
   }, [scope, team, location.search, onOpenEmployee]);
   const [createEmployeeOpen, setCreateEmployeeOpen] = useState(false);
+  // The walkthrough's "meet your first employee" step opens employee creation when the team is empty.
+  useEffect(() => {
+    if (!teamMode && !mobileRoster) return undefined;
+    const open = () => setCreateEmployeeOpen(true);
+    window.addEventListener('hm:create-employee', open);
+    return () => window.removeEventListener('hm:create-employee', open);
+  }, [teamMode, mobileRoster]);
   const closeCreateEmployee = useCallback(() => setCreateEmployeeOpen(false), []);
   useEffect(() => setCreateEmployeeOpen(false), [org?.id, user?.id]);
   const employeeCreated = async employee => {
@@ -575,6 +583,7 @@ export default function Sidebar({
         </header>
         <div className="mobile-unified-user-name">{user?.display_name || user?.name || user?.email?.split('@')[0] || 'Your account'}</div>
         <div className="mobile-roster-org"><Building2 size={18}/><strong>{org?.name || org?.slug || 'Workspace'}</strong></div>
+        <React.Suspense fallback={null}><GetStartedCard variant="home" userId={user?.id} orgId={org?.id} /></React.Suspense>
         <CreditBalance credits={usage?.credits} inline className="mobile-unified-plan" />
         <div className="mobile-roster-team">
           <div className="mobile-unified-heading"><h2>Your team</h2><div className="mobile-roster-shortcuts">

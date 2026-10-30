@@ -8,6 +8,7 @@ import { render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DesktopHyperAgentsNavigation from '../DesktopHyperAgentsNavigation';
 import Sidebar from '../Sidebar';
+jest.mock('../GetStartedCard', () => () => null);
 
 jest.mock('@humation/react', () => ({ __esModule: true, default: () => null, HumationAvatar: () => null }), { virtual: true });
 jest.mock('../../hyperagents/AgentAvatar', () => ({ __esModule: true, default: () => null }));

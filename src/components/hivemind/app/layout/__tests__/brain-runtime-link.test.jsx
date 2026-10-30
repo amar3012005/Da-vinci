@@ -3,6 +3,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import Sidebar from '../Sidebar';
 import { RUNTIME_WORKSPACE } from '../../shared/runtime-workspace';
+jest.mock('../GetStartedCard', () => () => null);
 
 jest.mock('react-router-dom', () => ({
   NavLink: ({ to, children, className, ...props }) => <a href={to} className={typeof className === 'function' ? className({}) : className} {...props}>{children}</a>,

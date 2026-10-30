@@ -153,3 +153,7 @@ nav .ha-autonomy-seat.is-drawer { padding:4px 10px 12px; }
  .ha-employee-confirm-actions button.is-danger { background:#b42318;color:#fff; }
  .ha-employee-confirm-actions button:disabled { opacity:.6; }
  @media (hover:none) { .ha-employee-delete { opacity:1; } }
+
+/* Walkthrough authority step: a short hairline ring on the dial it points at. */
+.ha-autonomy-dial[data-attention] { outline:2px solid #111; outline-offset:4px; border-radius:14px; transition:outline-color .24s cubic-bezier(.2,.8,.2,1); }
+@media (prefers-reduced-motion:reduce) { .ha-autonomy-dial[data-attention] { transition:none; } }
