@@ -69,11 +69,12 @@ test('keeps the autonomy dial seat directly above the workspace shortcuts on eve
  expect(seat).not.toBeNull();
  expect(seat.nextElementSibling).toBe(screen.getByRole('navigation',{name:'Workspace tools'}));
 });
-test('native employees can be deleted after an in-page confirmation; computer employees have no control here',async()=>{
+test('employees can be deleted after an in-page confirmation, computer employees included',async()=>{
  const onDeleteEmployee=jest.fn().mockResolvedValue({removed:true});
  const computer={id:'c14aaef5-24fb-46c2-806c-c3f6c1d88b07',name:'Desk',role:'Specialist',policy_rules:{open_dot_employee:{version:1,state:'bound'}}};
  const r=render(view({team:[team[0],computer],onDeleteEmployee}));
- expect(screen.getAllByRole('button',{name:/^Delete /})).toHaveLength(1);
+ expect(screen.getAllByRole('button',{name:/^Delete /})).toHaveLength(2);
+ expect(screen.getByRole('button',{name:'Delete Desk'})).toBeInTheDocument();
  fireEvent.click(screen.getByRole('button',{name:'Delete Employee 0'}));
  expect(onDeleteEmployee).not.toHaveBeenCalled();
  const confirm=screen.getByRole('group',{name:'Confirm delete Employee 0'});
@@ -87,6 +88,14 @@ test('native employees can be deleted after an in-page confirmation; computer em
  await waitFor(()=>expect(onDeleteEmployee).toHaveBeenCalledWith(team[0]));
  await waitFor(()=>expect(screen.queryByRole('group')).toBeNull());
  r.unmount();
+});
+test('a computer employee is removed with the same handler',async()=>{
+ const onDeleteEmployee=jest.fn().mockResolvedValue({removed:true});
+ const computer={id:'c14aaef5-24fb-46c2-806c-c3f6c1d88b07',name:'Desk',role:'A very long specialist role that wraps over several lines',policy_rules:{open_dot_employee:{version:1,state:'bound'}}};
+ render(view({team:[computer],onDeleteEmployee}));
+ fireEvent.click(screen.getByRole('button',{name:'Delete Desk'}));
+ fireEvent.click(within(screen.getByRole('group')).getByRole('button',{name:'Delete'}));
+ await waitFor(()=>expect(onDeleteEmployee).toHaveBeenCalledWith(computer));
 });
 test('a failed delete keeps the confirmation open and shows the error',async()=>{
  const onDeleteEmployee=jest.fn().mockRejectedValue({response:{data:{error:'admin_required'}}});

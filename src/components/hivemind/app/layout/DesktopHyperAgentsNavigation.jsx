@@ -17,7 +17,9 @@ export const columnsForWidth = width => width < 145 ? 0 : width < 278 ? 1 : widt
 export const createEmployeeSpan = (count, columns) => columns - (count % columns);
 export const employeeProfession = agent => String(agent.role || agent.job_title || agent.role_archetype || agent.roleArchetype || 'Team member').replace(/_/g, ' ');
 
-/** A native employee has no computer workspace; only these can be removed through the native lifecycle. */
+/** Every roster employee except the Runtime lead is removed through Control's native lifecycle `remove`; computer employees use the same call. */
+export const isRemovableEmployee = agent => !!agent && agent.id !== 'runtime';
+/** A native employee has no computer workspace. */
 export const isNativeEmployee = agent => !!agent && agent.id !== 'runtime' && !hasOpenDotEmployeeBinding(agent);
 
 function LiveStatus({ room, collapsed }) {
@@ -57,7 +59,7 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
         {team.map(agent => {
           const profession = employeeProfession(agent);
           const room = roomFor(agent.id);
-          const removable = !collapsed && !!onDeleteEmployee && isNativeEmployee(agent);
+          const removable = !collapsed && !!onDeleteEmployee && isRemovableEmployee(agent);
           const confirming = removable && confirmId === agent.id;
           return <div key={agent.id} className="ha-employee-cell">
           <button type="button" data-agent-room-link className={`ha-employee-tile${selectedAgent === agent.id ? ' is-selected' : ''}`} aria-label={`${agent.name}, ${profession}`} aria-busy={openingAgent === agent.id || undefined} onClick={event => onOpenAgent(event, agent)} title={collapsed ? `${agent.name} · ${profession}` : undefined}>
