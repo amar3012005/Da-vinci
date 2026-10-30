@@ -489,13 +489,18 @@ export default function Sidebar({
       window.dispatchEvent(new Event('hm:employees-changed'));
       if (openDotEmployeeIdFromPath(location.pathname) !== id && selectedAgent !== id) return;
       setSelectedAgent(null);
-      const following = next.find(item => openDotEmployeePath(item));
+      const following = next.find(item => openDotEmployeePath(item)) || next[0];
       if (following) openAgent({ preventDefault() {} }, following);
       else navigate(runtimeEnabled ? '/hivemind/app/employee/harness' : '/hivemind/app/overview', { replace: true });
     };
     window.addEventListener('hivemind:employee-removed', removed);
     return () => window.removeEventListener('hivemind:employee-removed', removed);
   });
+  // Native employees are removed through Control's native lifecycle; Library files they made stay.
+  const deleteNativeEmployee = async employee => {
+    await apiClient.manageNativeEmployeeLifecycle({ operation: 'remove', employee_id: employee.id });
+    window.dispatchEvent(new CustomEvent('hivemind:employee-removed', { detail: { employeeId: employee.id } }));
+  };
   const [companyOpen, setCompanyOpen] = useState(false);
   const closeCompany = useCallback(() => setCompanyOpen(false), []);
   useEffect(() => { setCompanyOpen(false); }, [org?.id, user?.id]);
@@ -616,7 +621,7 @@ export default function Sidebar({
       {(teamMode || mobileRoster) && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">Could not refresh our team. <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>Retry</button></p>}
       {teamError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{teamError}</p>}
       {desktopBrain && <DesktopBrainNavigation sections={navSections} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} />}
-      {desktopHyperAgents && <DesktopHyperAgentsNavigation team={team} rooms={rooms} selectedAgent={selectedAgent} openingAgent={openingAgent} onOpenAgent={openAgent} onCreate={() => setCreateEmployeeOpen(true)} onCompany={() => setCompanyOpen(true)} columns={rosterColumns} collapsed={collapsed} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} orgId={org?.id} runtimeEnabled={runtimeEnabled}/>}
+      {desktopHyperAgents && <DesktopHyperAgentsNavigation team={team} rooms={rooms} selectedAgent={selectedAgent} openingAgent={openingAgent} onOpenAgent={openAgent} onCreate={() => setCreateEmployeeOpen(true)} onCompany={() => setCompanyOpen(true)} columns={rosterColumns} collapsed={collapsed} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} orgId={org?.id} onDeleteEmployee={deleteNativeEmployee} runtimeEnabled={runtimeEnabled}/>}
       {desktopHyperAgents && <div className="ha-resize-grip" role="separator" aria-label="Resize team sidebar" aria-orientation="vertical" aria-valuemin={68} aria-valuemax={452} aria-valuenow={collapsed ? 68 : HYPERAGENT_WIDTHS[rosterColumns]} aria-valuetext={collapsed ? 'Collapsed' : `${rosterColumns} columns`} tabIndex={0}
         onKeyDown={event => { const current = collapsed ? 0 : rosterColumns; if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeRoster(Math.max(0, Math.min(3, current + (event.key === 'ArrowLeft' ? -1 : 1)))); } }}
         onPointerDown={event => { resizeGesture.current = true; event.currentTarget.setPointerCapture(event.pointerId); }}

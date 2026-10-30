@@ -1,20 +1,24 @@
 import RuntimeAvatar from '../shared/RuntimeAvatar';
 import AutonomyDial from './AutonomyDial';
 import { employeeAppsPath } from '../shared/workspace-mode';
-import React from 'react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Plus, Cable, Building2, FolderKanban, Monitor, CalendarDays, Settings, LogOut, Library } from 'lucide-react';
+import { Plus, Trash2, Cable, Building2, FolderKanban, Monitor, CalendarDays, Settings, LogOut, Library } from 'lucide-react';
 import { CALENDAR_PATH, LIBRARY_PATH } from './sidebar-tools';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
 import CreditBalance from '../shared/CreditBalance';
-import { openDotEmployeePath } from '../shared/open-dot-employee-route';
+import { hasOpenDotEmployeeBinding, openDotEmployeePath } from '../shared/open-dot-employee-route';
 import './desktop-hyperagents-navigation.css';
 
 export { HYPERAGENT_WIDTHS } from './hyperagent-widths';
 export const columnsForWidth = width => width < 145 ? 0 : width < 278 ? 1 : width < 391 ? 2 : 3;
 export const createEmployeeSpan = (count, columns) => columns - (count % columns);
 export const employeeProfession = agent => String(agent.role || agent.job_title || agent.role_archetype || agent.roleArchetype || 'Team member').replace(/_/g, ' ');
+
+/** A native employee has no computer workspace; only these can be removed through the native lifecycle. */
+export const isNativeEmployee = agent => !!agent && agent.id !== 'runtime' && !hasOpenDotEmployeeBinding(agent);
 
 function LiveStatus({ room, collapsed }) {
   return <span className="ha-live-status">
@@ -23,8 +27,18 @@ function LiveStatus({ room, collapsed }) {
   </span>;
 }
 
-export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgent, openingAgent, onOpenAgent, onCreate, onCompany, columns, collapsed, user, planLabel, credits, logout, orgId, runtimeEnabled = true }) {
+export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgent, openingAgent, onOpenAgent, onCreate, onCompany, columns, collapsed, user, planLabel, credits, logout, orgId, runtimeEnabled = true, onDeleteEmployee }) {
   const location = useLocation();
+  const { t } = useTranslation('dashboard');
+  const [confirmId, setConfirmId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
+  const confirmDelete = async agent => {
+    setDeletingId(agent.id); setDeleteError('');
+    try { await onDeleteEmployee(agent); setConfirmId(null); }
+    catch (error) { setDeleteError(error?.response?.data?.error || error?.message || t('sidebar.deleteEmployeeFailed', { defaultValue: 'Delete failed. Try again.' })); }
+    finally { setDeletingId(null); }
+  };
   const roomFor = id => {
     const room = aggregateAgentRooms(rooms, id);
     return openingAgent === id ? { ...room, loading: true } : room;
@@ -43,14 +57,28 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
         {team.map(agent => {
           const profession = employeeProfession(agent);
           const room = roomFor(agent.id);
-          return <button key={agent.id} type="button" data-agent-room-link className={`ha-employee-tile${selectedAgent === agent.id ? ' is-selected' : ''}`} aria-label={`${agent.name}, ${profession}`} aria-busy={openingAgent === agent.id || undefined} onClick={event => onOpenAgent(event, agent)} title={collapsed ? `${agent.name} · ${profession}` : undefined}>
+          const removable = !collapsed && !!onDeleteEmployee && isNativeEmployee(agent);
+          const confirming = removable && confirmId === agent.id;
+          return <div key={agent.id} className="ha-employee-cell">
+          <button type="button" data-agent-room-link className={`ha-employee-tile${selectedAgent === agent.id ? ' is-selected' : ''}`} aria-label={`${agent.name}, ${profession}`} aria-busy={openingAgent === agent.id || undefined} onClick={event => onOpenAgent(event, agent)} title={collapsed ? `${agent.name} · ${profession}` : undefined}>
             <span className="ha-avatar-wrap"><AgentAvatar agent={agent} size={collapsed ? 34 : 72}/>
               {!collapsed && <span className="ha-profession" role="tooltip">{profession}</span>}
               {openDotEmployeePath(agent) && <Monitor size={12} className="ha-dot-marker" role="img" aria-label="Computer workspace"/>}
             </span>
             {!collapsed && <span className="ha-employee-name">{agent.name}</span>}
             <LiveStatus room={room} collapsed={collapsed}/>
-          </button>;
+          </button>
+            {removable && !confirming && <button type="button" className="ha-employee-delete" aria-label={t('sidebar.deleteEmployee', { defaultValue: 'Delete {{name}}', name: agent.name })} title={t('sidebar.deleteEmployeeTitle', { defaultValue: 'Delete employee' })} onClick={() => { setDeleteError(''); setConfirmId(agent.id); }}><Trash2 size={14}/></button>}
+            {confirming && <div className="ha-employee-confirm" role="group" aria-label={t('sidebar.deleteEmployeeGroup', { defaultValue: 'Confirm delete {{name}}', name: agent.name })}>
+              <strong>{t('sidebar.deleteEmployeeQuestion', { defaultValue: 'Delete {{name}}?', name: agent.name })}</strong>
+              <span>{t('sidebar.deleteEmployeeNote', { defaultValue: 'Their chats and memory are removed. Files they made stay in Library. This cannot be undone.' })}</span>
+              {deleteError && <span role="alert" className="ha-employee-confirm-error">{deleteError}</span>}
+              <span className="ha-employee-confirm-actions">
+                <button type="button" disabled={deletingId === agent.id} onClick={() => setConfirmId(null)}>{t('sidebar.deleteEmployeeCancel', { defaultValue: 'Cancel' })}</button>
+                <button type="button" className="is-danger" disabled={deletingId === agent.id} onClick={() => confirmDelete(agent)}>{deletingId === agent.id ? t('sidebar.deleteEmployeeDeleting', { defaultValue: 'Deleting…' }) : t('sidebar.deleteEmployeeConfirm', { defaultValue: 'Delete' })}</button>
+              </span>
+            </div>}
+          </div>;
         })}
         {/* Empty roster: placeholder tiles hold the grid height until the roster read settles. */}
         {!team.length && !collapsed && [0, 1, 2].map(index => <div key={`placeholder-${index}`} aria-hidden="true" className="ha-employee-tile is-placeholder"><span className="ha-avatar-wrap" style={{ width: 72, height: 72 }}/><span className="ha-placeholder-name"/></div>)}
