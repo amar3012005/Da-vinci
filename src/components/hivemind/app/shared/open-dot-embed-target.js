@@ -27,3 +27,28 @@ export function buildOpenDotEmbedTarget(suffix, search = '') {
   if (route === '/apps' && provider && /^[a-z0-9_-]{1,80}$/i.test(provider)) target.searchParams.set('app', provider);
   return target.href;
 }
+
+/**
+ * The language tag the embedded OpenDot understands.
+ * @param {string|null|undefined} language - i18next language such as `de`, `pt-BR` or `zh_CN`.
+ * @returns {string|null} Primary subtag in lower case, or null when the value is not a language tag.
+ */
+export function openDotLocale(language) {
+  const tag = String(language || '').toLowerCase().split(/[-_]/)[0];
+  return /^[a-z]{2,3}$/.test(tag) ? tag : null;
+}
+
+/**
+ * Add the HIVEMIND interface language to an embed address, so the embedded OpenDot renders its first paint in it
+ * (OpenDot keeps it in its `hivemind_locale` cookie and reads it before `Accept-Language`).
+ * @param {string|null} url - Address from {@link buildOpenDotEmbedTarget}.
+ * @param {string|null|undefined} language - i18next language.
+ * @returns {string|null} The address with `hm_locale`, or the unchanged address when the language is unusable.
+ */
+export function withOpenDotLocale(url, language) {
+  const tag = openDotLocale(language);
+  if (!url || !tag) return url;
+  const target = new URL(url);
+  target.searchParams.set('hm_locale', tag);
+  return target.href;
+}

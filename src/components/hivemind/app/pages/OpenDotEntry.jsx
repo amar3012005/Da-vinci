@@ -3,7 +3,8 @@ import { openDotEmployeeIdFromPath } from '../shared/open-dot-employee-route';
 import { openDotRoomStatus } from '../shared/open-dot-room-status';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { buildOpenDotEmbedTarget } from '../shared/open-dot-embed-target';
+import { useTranslation } from 'react-i18next';
+import { buildOpenDotEmbedTarget, openDotLocale, withOpenDotLocale } from '../shared/open-dot-embed-target';
 import { registerOpenDotFrame } from '../shared/open-dot-frames';
 
 const DOT_ORIGIN = 'https://runtime-runner.singulancelabs.com';
@@ -27,7 +28,12 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
   const { pathname, search } = route || location;
   const suffix = apps ? '/apps' : pathname.slice('/hivemind/app/employee/dots'.length);
   const src = useMemo(() => buildOpenDotEmbedTarget(suffix, search), [suffix, search]);
-  const initialTarget = useRef(initialRoute ? buildOpenDotEmbedTarget(initialRoute.pathname.slice('/hivemind/app/employee/dots'.length), initialRoute.search) : src);
+  const { i18n } = useTranslation();
+  const language = openDotLocale(i18n.language);
+  const languageRef = useRef(language);
+  languageRef.current = language;
+  // The first address carries the interface language so OpenDot's first paint is already in it; later changes arrive as a message.
+  const initialTarget = useRef(withOpenDotLocale(initialRoute ? buildOpenDotEmbedTarget(initialRoute.pathname.slice('/hivemind/app/employee/dots'.length), initialRoute.search) : src, i18n.language));
   const iframeRef = useRef(null);
   const frameRegistration = useRef(null);
   // Registers each mounted iframe for sign-out; the disposer runs when React replaces or unmounts it.
@@ -55,6 +61,12 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
     const probe = window.setInterval(connect, 1000);
     const onMessage = event => {
       if (event.origin !== DOT_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
+      // The person changed the language inside OpenDot: the shell follows, so both stay on one language.
+      if (event.data?.type === 'hivemind.open-dot.locale' && event.data.version === 1 && typeof event.data.locale === 'string') {
+        const next = openDotLocale(event.data.locale);
+        if (next && next !== languageRef.current && (i18n.options?.supportedLngs || []).includes(next)) i18n.changeLanguage(next);
+        return;
+      }
       if (event.data?.type === 'hivemind.open-dot.back' && event.data.version === 1 && active) {
         window.dispatchEvent(new CustomEvent('hivemind:open-dot-team'));
         return;
@@ -87,7 +99,13 @@ export default function OpenDotEntry({ apps = false, route, initialRoute, active
       window.removeEventListener('message', onMessage);
       if (active) window.dispatchEvent(new CustomEvent('hivemind:preview-visibility', {detail:{open:false}}));
     };
-  }, [frameKey, loadedFrameKey, src, pathname, apps, active]);
+  }, [frameKey, loadedFrameKey, src, pathname, apps, active, i18n]);
+
+  // Tell the frame the shell's language once it is ready and whenever the person changes it here.
+  useEffect(() => {
+    if (!language || readyFrameKey !== frameKey) return;
+    postToDotFrame(iframeRef.current, { type: 'hivemind.open-dot.locale', version: 1, locale: language });
+  }, [language, readyFrameKey, frameKey]);
 
   useEffect(() => {
     if (!active || !loaded || !employeeId || !src || readyEmployee === employeeId) return;
