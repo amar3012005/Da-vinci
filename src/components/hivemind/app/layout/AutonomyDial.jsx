@@ -6,6 +6,8 @@ import { HYPERAGENTS_WORKSPACE, RUNTIME_WORKSPACE } from '../shared/runtime-work
 
 /** One autonomy dial for Runtime and HyperAgents; it lives in the HyperAgents sidebar on every page. */
 export const AUTONOMY_ENDPOINT = '/api/hivemindHq/autonomyLevel';
+/** OpenDot's own copy of the dial: the source of truth the employees' approval decisions read, so the dial and the policy cannot disagree. */
+export const OPEN_DOT_AUTONOMY_ENDPOINT = '/api/dots/autonomy';
 const MAX = 4;
 const CELLS = 20;
 /** Short checkpoint labels under the bar, one per level. */
@@ -69,6 +71,17 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
   const load = useCallback(async () => {
     const current = ++generation.current;
     try {
+      // OpenDot's copy first. With no OpenDot API on this host (404) the legacy Runtime read below applies.
+      let local = null;
+      try {
+        const own = await fetcher(OPEN_DOT_AUTONOMY_ENDPOINT, { credentials: 'same-origin', cache: 'no-store' });
+        if (current !== generation.current) return;
+        if (own.ok) local = (await own.json())?.value ?? null;
+      } catch { /* OpenDot unreachable: fall through to the legacy read */ }
+      if (current !== generation.current) return;
+      if (local && local.level !== undefined) { setRemote(false); setState(local); writeCachedAutonomy(orgId, local); return; }
+      // OpenDot answered but no level was ever chosen there. With Runtime off nothing else is asked.
+      if (local && !runtimeEnabled) { setRemote(false); setState(previous => previous ?? local); return; }
       const response = await fetcher(AUTONOMY_ENDPOINT, { credentials: 'same-origin', cache: 'no-store' });
       if (current !== generation.current) return;
       if (response.status === 404) { setRemote(true); setState(previous => previous ?? readCachedAutonomy(orgId) ?? { revision: 0, maxSelectable: MAX }); return; }
@@ -77,8 +90,10 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
       setRemote(false);
       setState(body.value);
       writeCachedAutonomy(orgId, body.value);
+      // A level chosen before OpenDot kept its own copy is handed over once.
+      if (local && body.value.level !== undefined) void fetcher(OPEN_DOT_AUTONOMY_ENDPOINT, { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ level: body.value.level }) }).catch(() => undefined);
     } catch { if (current === generation.current) setState(previous => previous ?? false); }
-  }, [fetcher, orgId]);
+  }, [fetcher, orgId, runtimeEnabled]);
   useEffect(() => {
     void load();
     const refresh = () => { if (document.visibilityState !== 'hidden') void load(); };
@@ -124,14 +139,32 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
     setNotice(null);
     setPending(wanted);
   };
+  /** Runtime's copy follows OpenDot's, best effort and only while Runtime is on; a failure here never changes what the person saved. */
+  const syncRuntime = async level => {
+    if (!runtimeEnabled) return;
+    try {
+      const read = await fetcher(AUTONOMY_ENDPOINT, { credentials: 'same-origin', cache: 'no-store' });
+      if (!read.ok) return;
+      const revision = (await read.json())?.value?.revision;
+      await fetcher(AUTONOMY_ENDPOINT, { method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'content-type': 'application/json' }, body: JSON.stringify({ level, expectedRevision: revision }) });
+    } catch { /* Runtime offline or disabled: OpenDot already holds the level. */ }
+  };
   const save = async () => {
     if (pending === null || !available) return;
     setSaving(true);
     try {
-      const response = await fetcher(AUTONOMY_ENDPOINT, { method: 'POST', credentials: 'same-origin', cache: 'no-store',
-        headers: { 'content-type': 'application/json' }, body: JSON.stringify({ level: pending, expectedRevision: state.revision }) });
+      const post = (endpoint, body) => fetcher(endpoint, { method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      // OpenDot first: it is the source of truth. Without an OpenDot API on this host (404) the legacy Runtime save applies.
+      let response = await post(OPEN_DOT_AUTONOMY_ENDPOINT, { level: pending, expectedRevision: state.revision });
+      const viaOpenDot = response.status !== 404;
+      if (!viaOpenDot) response = await post(AUTONOMY_ENDPOINT, { level: pending, expectedRevision: state.revision });
       const body = await response.json().catch(() => null);
-      if (response.ok && body?.value?.ok) { setState(body.value.value); writeCachedAutonomy(orgId, body.value.value); setPending(null); setNotice(null); reportAuthoritySet(); }
+      if (response.ok && body?.value?.ok) {
+        setState(body.value.value); writeCachedAutonomy(orgId, body.value.value); const saved = pending; setPending(null); setNotice(null); reportAuthoritySet();
+        if (viaOpenDot) void syncRuntime(saved);
+      }
       else if (response.ok && body?.value?.ok === false) { setState(body.value.current); setPending(null); setNotice('The level changed elsewhere. The current level is loaded.'); }
       else setNotice(body?.error === 'cross_site_request' ? 'Open HIVEMIND again to change the level.' : 'The level could not be saved. Try again.');
     } catch { setNotice('The level could not be saved. Try again.'); }

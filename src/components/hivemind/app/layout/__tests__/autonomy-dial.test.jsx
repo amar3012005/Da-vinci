@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import AutonomyDial, { AUTONOMY_ENDPOINT } from '../AutonomyDial';
+import AutonomyDial, { AUTONOMY_ENDPOINT, OPEN_DOT_AUTONOMY_ENDPOINT } from '../AutonomyDial';
 
 afterEach(() => window.localStorage.clear());
 
@@ -24,7 +24,7 @@ test('shows the saved level as a progress bar and saves a change only after conf
   expect(dialog).toHaveTextContent('Prepare→Suggest');
   expect(fetcher).toHaveBeenCalledTimes(1);
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
-  expect(fetcher).toHaveBeenLastCalledWith(AUTONOMY_ENDPOINT, expect.objectContaining({ method: 'POST', body: JSON.stringify({ level: 1, expectedRevision: 3 }) }));
+  expect(fetcher).toHaveBeenCalledWith(OPEN_DOT_AUTONOMY_ENDPOINT, expect.objectContaining({ method: 'POST', body: JSON.stringify({ level: 1, expectedRevision: 3 }) }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(screen.getByText('1/4 · Suggest')).toBeInTheDocument();
 });
@@ -55,7 +55,7 @@ test('stays visible where the autonomy API does not exist, showing the cached le
   render(<AutonomyDial fetcher={fetcher}/>);
   await waitFor(() => expect(fetcher).toHaveBeenCalled());
   expect(screen.getByText('3/4 · Act in lanes')).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'Change the level in the Runtime room' })).toHaveAttribute('href', expect.stringContaining('runtime-runner.singulancelabs.com'));
+  expect(await screen.findByRole('link', { name: 'Change the level in the Runtime room' })).toHaveAttribute('href', expect.stringContaining('runtime-runner.singulancelabs.com'));
   window.localStorage.clear();
 });
 
@@ -96,7 +96,7 @@ test('clicking a checkpoint opens the previous → new dialog and Save sets that
   fireEvent.click(screen.getByRole('button', { name: 'Suggest' }));
   expect(await screen.findByRole('dialog')).toHaveTextContent('Prepare→Suggest');
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
-  expect(fetcher).toHaveBeenLastCalledWith(AUTONOMY_ENDPOINT, expect.objectContaining({ body: JSON.stringify({ level: 1, expectedRevision: 3 }) }));
+  expect(fetcher).toHaveBeenCalledWith(OPEN_DOT_AUTONOMY_ENDPOINT, expect.objectContaining({ body: JSON.stringify({ level: 1, expectedRevision: 3 }) }));
   expect(await screen.findByText('1/4 · Suggest')).toBeInTheDocument();
 });
 
@@ -129,4 +129,49 @@ test('without Runtime the dial names only the HyperAgents and the confirmation s
   expect(dialog).toHaveTextContent('Your HyperAgents propose next steps and drafts');
   expect(dialog).toHaveTextContent('This applies to all your HyperAgents');
   expect(dialog).not.toHaveTextContent('Runtime');
+});
+
+const urlsOf = (fetcher, method) => fetcher.mock.calls.filter(([, init]) => (init?.method ?? 'GET') === method).map(([url]) => url);
+
+test('the dial reads OpenDot first and never asks Runtime when OpenDot holds the level', async () => {
+  const fetcher = setup();
+  await screen.findByText('2/4 · Prepare');
+  expect(urlsOf(fetcher, 'GET')).toEqual([OPEN_DOT_AUTONOMY_ENDPOINT]);
+});
+
+test('Save writes OpenDot first and Runtime best effort afterwards while Runtime is on', async () => {
+  const fetcher = setup();
+  await screen.findByText('2/4 · Prepare');
+  move(1);
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
+  await waitFor(() => expect(urlsOf(fetcher, 'POST')).toEqual([OPEN_DOT_AUTONOMY_ENDPOINT, AUTONOMY_ENDPOINT]));
+});
+
+test('a failing Runtime sync never undoes the saved level', async () => {
+  const fetcher = jest.fn((url, init) => url === AUTONOMY_ENDPOINT ? Promise.reject(new Error('503'))
+    : init?.method === 'POST' ? json({ ok: true, value: { ok: true, value: { ...state, revision: 4, level: 1 } } }) : json({ ok: true, value: state }));
+  render(<AutonomyDial fetcher={fetcher}/>);
+  await screen.findByText('2/4 · Prepare');
+  move(1);
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
+  expect(await screen.findByText('1/4 · Suggest')).toBeInTheDocument();
+  expect(screen.queryByRole('status')).toBeNull();
+});
+
+test('with Runtime disabled the dial never calls Runtime to read or save', async () => {
+  const fetcher = jest.fn((url, init) => init?.method === 'POST' ? json({ ok: true, value: { ok: true, value: { ...state, revision: 4, level: 1 } } }) : json({ ok: true, value: state }));
+  render(<AutonomyDial fetcher={fetcher} runtimeEnabled={false}/>);
+  await screen.findByText('2/4 · Prepare');
+  const bar = screen.getByRole('slider', { name: 'Autonomy level for HyperAgents' });
+  fireEvent.change(bar, { target: { value: '1' } }); fireEvent.pointerUp(bar, { target: { value: '1' } });
+  await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Save' })); });
+  await screen.findByText('1/4 · Suggest');
+  expect(fetcher.mock.calls.map(([url]) => url).filter(url => url === AUTONOMY_ENDPOINT)).toEqual([]);
+});
+
+test('a level OpenDot does not hold yet is handed over from Runtime once', async () => {
+  const fetcher = jest.fn((url, init) => url === OPEN_DOT_AUTONOMY_ENDPOINT && !init?.method ? json({ ok: true, value: { revision: 1, maxSelectable: 4 } }) : init?.method === 'POST' ? json({ ok: true }) : json({ ok: true, value: { ...state, level: 4, maxSelectable: 4 } }));
+  render(<AutonomyDial fetcher={fetcher}/>);
+  await screen.findByText('4/4 · Autonomous');
+  await waitFor(() => expect(fetcher).toHaveBeenCalledWith(OPEN_DOT_AUTONOMY_ENDPOINT, expect.objectContaining({ method: 'POST', body: JSON.stringify({ level: 4 }) })));
 });
