@@ -102,6 +102,15 @@ test('folding the card is saved; in a chat room it starts folded; a finished wal
   expect(container.querySelector('.hm-onb')).toBeNull();
 });
 
+test('without the server record the card stays hidden instead of showing progress it cannot save', () => {
+  mockState.view = null;
+  const { container } = mount();
+  expect(container.querySelector('.hm-onb')).toBeNull();
+  mockState.view = null;
+  mount({ variant: 'home' });
+  expect(screen.queryByRole('button', { name: /Get started/ })).toBeNull();
+});
+
 test('phone: a chip on the home screen opens the list as a bottom sheet; Escape returns focus to the chip', () => {
   mount({ variant: 'home' });
   const chip = screen.getByRole('button', { name: /Get started/ });

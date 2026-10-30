@@ -60,7 +60,8 @@ export default function GetStartedCard({ userId, orgId, variant = 'float' }) {
     return () => document.removeEventListener('keydown', key);
   }, [sheetOpen, closeSheet]);
 
-  if (!store || (view && count === total)) return null;
+  // Nothing shows until the server record (or its cached copy) exists: a card that cannot save progress would mislead.
+  if (!store || !view || count === total) return null;
 
   const scope = `${userId}:${orgId}`;
   const run = (step, secondary) => {
