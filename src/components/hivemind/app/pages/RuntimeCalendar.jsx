@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, MoreHorizontal, RefreshCw, Search, Square, Trash2, X } from 'lucide-react';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import {
-  CalendarActionError, CalendarUnavailableError, boardRows, deleteCalendarItem, fetchCalendar, groupByDay, nextRunText, rangeEntries, stopCalendarItem, weekWindow,
+  CalendarActionError, CalendarUnavailableError, boardRows, deleteCalendarItem, fetchMergedCalendar, groupByDay, isLocalItem, nextRunText, rangeEntries, stopCalendarItem, weekWindow,
 } from '../shared/runtime-calendar';
 import { useRuntimeEnabled } from '../shared/runtime-enabled';
 import '../shared/skeleton.css';
@@ -127,7 +128,8 @@ function ConfirmDialog({ target, busy, error, onCancel, onConfirm }) {
  * task shows its employee's avatar and name and a short label. A task an employee scheduled for itself has a menu to stop or delete it.
  * Read from the Runtime root as a data owner, so it opens in every HyperAgents view with or without Runtime.
  */
-export default function RuntimeCalendar({ fetcher }) {
+export default function RuntimeCalendar({ fetcher, localFetcher }) {
+  const { t } = useTranslation('dashboard');
   const runtimeEnabled = useRuntimeEnabled();
   const [offset, setOffset] = useState(0);
   const [view, setView] = useState('list');
@@ -147,13 +149,13 @@ export default function RuntimeCalendar({ fetcher }) {
     controller.current = new AbortController();
     if (!silent) setState(before => ({ status: before.value ? 'refreshing' : 'loading', value: before.value }));
     try {
-      const result = await fetchCalendar(window_, { signal: controller.current.signal, ...(fetcher ? { fetcher } : {}) });
-      if (generation.current === current) setState({ status: 'ready', value: result.value ?? null });
+      const result = await fetchMergedCalendar(window_, { signal: controller.current.signal, ...(fetcher ? { fetcher } : {}), ...(localFetcher ? { localFetcher } : {}) });
+      if (generation.current === current) setState({ status: 'ready', value: result.value ?? null, runtimeDown: result.runtimeDown === true });
     } catch (error) {
       if (generation.current !== current) return;
-      setState(before => (error instanceof CalendarUnavailableError ? { status: 'unavailable', value: null } : { status: before.value ? 'ready' : 'error', value: before.value }));
+      setState(before => (error instanceof CalendarUnavailableError ? { status: 'unavailable', value: null } : { status: before.value ? 'ready' : 'error', value: before.value, runtimeDown: before.runtimeDown }));
     }
-  }, [window_, fetcher]);
+  }, [window_, fetcher, localFetcher]);
 
   useEffect(() => {
     void load();
@@ -167,7 +169,8 @@ export default function RuntimeCalendar({ fetcher }) {
     if (!confirm) return;
     setOutcome({ busy: true, error: '' });
     try {
-      const options = fetcher ? { fetcher } : {};
+      const transport = isLocalItem(confirm.row.id) ? localFetcher : fetcher;
+      const options = transport ? { fetcher: transport } : {};
       if (confirm.mode === 'delete') await deleteCalendarItem(confirm.row.id, options);
       else await stopCalendarItem(confirm.row.id, options);
       setNotice(`${confirm.mode === 'delete' ? 'Deleted' : 'Stopped'} “${confirm.row.label}”.`);
@@ -177,7 +180,7 @@ export default function RuntimeCalendar({ fetcher }) {
     } catch (error) {
       setOutcome({ busy: false, error: actionMessage(error) });
     }
-  }, [confirm, fetcher, load]);
+  }, [confirm, fetcher, localFetcher, load]);
 
   const now = Date.now();
   const entries = useMemo(() => rangeEntries(state.value, { runtimeEnabled }), [state.value, runtimeEnabled]);
@@ -199,6 +202,10 @@ export default function RuntimeCalendar({ fetcher }) {
           <button type="button" aria-label="Refresh calendar" title="Refresh" onClick={() => void load()} className={`grid h-9 w-9 place-items-center rounded-md text-[#5f646b] hover:bg-[#f1efe9] ${FOCUS}`}><RefreshCw size={15} className={state.status === 'refreshing' ? 'animate-spin' : undefined} /></button>
         </div>
       </header>
+
+      {state.runtimeDown ? <p role="status" className="mb-3 rounded-lg border border-[#e7e4dd] bg-white px-3 py-2 text-[12.5px] text-[#5f646b]" data-calendar-local-only>
+        {t('runtimeCalendar.localOnly', 'Runtime’s calendar is not answering right now. These are the tasks your employees keep themselves; the rest returns with Runtime.')}
+      </p> : null}
 
       {notice ? <p role="status" className="mb-3 flex items-center justify-between rounded-lg border border-[#e7e4dd] bg-white px-3 py-2 text-[12.5px] text-[#3d4249]" data-calendar-notice>
         <span>{notice}</span>

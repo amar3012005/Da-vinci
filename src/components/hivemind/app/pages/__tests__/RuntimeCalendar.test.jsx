@@ -142,3 +142,38 @@ test('offers a retry after a failed read and a plain message where the route is 
   render(<RuntimeCalendar fetcher={() => Promise.reject(new CalendarUnavailableError())} />);
   expect(await screen.findByText('The calendar isn’t available here yet')).toBeInTheDocument();
 });
+
+const localTask = { id: 'local-duty:dot_a:brief', kind: 'duty', title: 'Morning brief', label: 'Morning brief', status: 'active', active: true, manageable: true, local: true, owner: 'Faraday', ownerName: 'Faraday',
+  ownerId: 'e1', dutyKey: 'brief', nextAt: at(2), startsAt: at(2), cadence: 'Every day at 08:00 (UTC)' };
+const localValue = { items: [localTask], occurrences: [{ id: 'local-duty:dot_a:brief:1', itemId: localTask.id, at: at(2) }], wakes: [] };
+
+test('shows a task OpenDot keeps while Runtime is down, says so, and stops it in OpenDot', async () => {
+  const calls = [];
+  const fetcher = jest.fn(() => Promise.resolve({ ok: false, status: 502, json: () => Promise.resolve({ error: 'open_dot_temporarily_unavailable' }) }));
+  const localFetcher = jest.fn((url, init = {}) => {
+    if (init.method === 'POST') { calls.push([url, init.body]); return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) }); }
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, value: localValue }) });
+  });
+  render(<RuntimeCalendar fetcher={fetcher} localFetcher={localFetcher} />);
+  expect(await screen.findByText('Morning brief')).toBeInTheDocument();
+  expect(document.querySelector('[data-calendar-local-only]')).not.toBeNull();
+  expect(screen.queryByText('The calendar could not be loaded')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Week' }));
+  expect(screen.getByText(/08:00 · Faraday|· Faraday/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'List' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Actions for Morning brief' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Stop' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Stop task' }));
+  await waitFor(() => expect(calls).toEqual([['/api/dots/local-duties', JSON.stringify({ action: 'stop', id: localTask.id })]]));
+});
+
+test('lists Runtime and OpenDot tasks together without blanking when OpenDot does not answer', async () => {
+  const { unmount } = render(<RuntimeCalendar fetcher={ok({ ok: true, value })} localFetcher={ok({ ok: true, value: localValue })} />);
+  expect(await screen.findByText('Pipeline check')).toBeInTheDocument();
+  expect(screen.getByText('Morning brief')).toBeInTheDocument();
+  expect(document.querySelector('[data-calendar-local-only]')).toBeNull();
+  unmount();
+  render(<RuntimeCalendar fetcher={ok({ ok: true, value })} localFetcher={() => Promise.reject(new Error('down'))} />);
+  expect(await screen.findByText('Pipeline check')).toBeInTheDocument();
+  expect(screen.queryByText('Morning brief')).toBeNull();
+});
