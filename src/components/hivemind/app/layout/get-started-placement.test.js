@@ -5,9 +5,9 @@ test('native chat routes include the employee harness and the Brain overview cha
   }
   expect(isNativeChatRoute('/hivemind/app/knowledge')).toBe(false);
 });
-test('phones hide Getting Started on every route', () => {
+test('phones keep Get Started on the home screen, never over a room', () => {
   for (const pathname of ['/hivemind/app/overview/session/abc', '/hivemind/app/knowledge', '/hivemind/app/employee/dots/dot-a']) {
-    expect(startPlacement({ pathname, phone: true })).toBe('hidden');
+    expect(startPlacement({ pathname, phone: true })).toBe('home');
   }
 });
 test('desktop keeps the floating overlay', () => {

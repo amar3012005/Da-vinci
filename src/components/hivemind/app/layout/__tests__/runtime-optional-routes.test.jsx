@@ -67,9 +67,10 @@ describe('shell wiring', () => {
     expect(sidebar).toMatch(/runtimeEnabled=\{runtimeEnabled\}\/>\}/);
     expect(sidebar).toMatch(/agent\.id === 'runtime' && !runtimeEnabled\) return false/);
   });
-  test('AppShell hides the Wake up Runtime card and guards the route', () => {
+  test('AppShell shows the Get Started card with Runtime off and guards the route', () => {
     const shell = read('AppShell.jsx');
-    expect(shell).toMatch(/runtimeEnabled && !initialNativePane && !hyperFullscreen && !crmFullscreen && startOverlay && <RuntimeGetStarted/);
+    expect(shell).toMatch(/\.test\(location\.pathname\) && !initialNativePane && !hyperFullscreen && !crmFullscreen && startOverlay && <GetStartedCard/);
+    expect(shell).not.toMatch(/RuntimeGetStarted /);
     expect(shell).toMatch(/useRuntimeRouteGuard\(\{ enabled: runtimeEnabled/);
   });
   test('the router wraps the Runtime session route and the /employees entry', () => {

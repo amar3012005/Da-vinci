@@ -7,6 +7,10 @@ import LangSwitcher from '../layout/LangSwitcher';
 import { readTourProgress, tourCards, tourKey } from './hyperagents-tour';
 import './hyperagents-welcome.css';
 import { englishTour } from './hyperagents-tour-i18n';
+import { useOnboarding } from './onboarding/onboarding-store';
+import { LEGACY_SURFACES } from './onboarding/registry';
+
+const SURFACE = LEGACY_SURFACES.companyTour.surface;
 
 export default function HyperAgentsWelcome({ company }) {
   const { user, org } = useAuth();
@@ -15,26 +19,34 @@ export default function HyperAgentsWelcome({ company }) {
   const key = tourKey(user?.id, org?.id);
   const [progress, setProgress] = useState(() => readTourProgress(localStorage, key));
   const [open, setOpen] = useState(() => Boolean(key) && !readTourProgress(localStorage, key).done);
+  // Closing the tour is saved with the walkthrough on the server, so it never reopens on another device.
+  const { view, store } = useOnboarding({ userId: user?.id, orgId: org?.id });
+  const closedOnServer = Boolean(view?.surfaces?.[SURFACE]);
+  const [replayed, setReplayed] = useState(false);
+  // Wait for the server record before a first automatic open; a replay always opens.
+  const visible = open && (replayed || (Boolean(view) && !closedOnServer));
   const [team, setTeam] = useState(() => agentRoster.peek(scope) || []);
   const panel = useRef(null);
   const close = useCallback(() => {
     setOpen(false);
     setProgress(value => { const next = { ...value, done: true }; try { localStorage.setItem(key, JSON.stringify(next)); } catch {} return next; });
-  }, [key]);
+    store?.closeSurfaces([SURFACE]);
+    setReplayed(false);
+  }, [key, store]);
   useEffect(() => {
     const saved = readTourProgress(localStorage, key); setProgress(saved); setOpen(Boolean(key) && !saved.done);
-    const replay = () => { setProgress({ step:0, done:false }); setOpen(true); };
+    const replay = () => { setProgress({ step:0, done:false }); setOpen(true); setReplayed(true); };
     window.addEventListener('hm:replay-hyperagents-tour', replay);
     return () => window.removeEventListener('hm:replay-hyperagents-tour', replay);
   }, [key]);
   useEffect(() => {
-    if (!open || !scope) return;
+    if (!visible || !scope) return;
     let alive = true;
     agentRoster.load(scope).then(value => { if (alive) setTeam(value); }).catch(() => {});
     return () => { alive = false; };
-  }, [scope, open]);
+  }, [scope, visible]);
   useEffect(() => {
-    if (!open) return;
+    if (!visible) return;
     const root = document.querySelector('[data-hivemind-app-shell]');
     const previous = document.activeElement, oldInert = root?.inert;
     const overflow = document.body.style.overflow;
@@ -52,16 +64,16 @@ export default function HyperAgentsWelcome({ company }) {
     };
     document.addEventListener('keydown', keyboard);
     return () => { if (root) root.inert = oldInert; document.body.style.overflow = overflow; document.removeEventListener('keydown', keyboard); if (previous?.isConnected) previous.focus(); };
-  }, [open, close]);
+  }, [visible, close]);
   const go = step => {
     const next = { step, done:false }; setProgress(next);
     try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
   };
   useEffect(() => {
-    if (!open || progress.step === 5) return;
+    if (!visible || progress.step === 5) return;
     const image = new Image(); image.src = `/assets/hyperagents-tour/${tourCards[progress.step + 1 === 5 ? 0 : progress.step + 1].id}.webp?v=serenity-v3`;
-  }, [open, progress.step]);
-  if (!open) return null;
+  }, [visible, progress.step]);
+  if (!visible) return null;
   const card = tourCards[progress.step], [x,y,w,h] = card.crop;
   const title = t(`cards.${progress.step}.title`, { defaultValue: englishTour[progress.step * 2] });
   const body = t(`cards.${progress.step}.body`, { defaultValue: englishTour[progress.step * 2 + 1] });

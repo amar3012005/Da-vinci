@@ -7,7 +7,23 @@ jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (text, options) 
 jest.mock('./hyperagents-tour-i18n', () => ({ englishTour: require('./hyperagents-tour-locales.json').en }));
 jest.mock('../layout/LangSwitcher', () => () => <button>Choose language</button>);
 jest.mock('./agent-roster', () => ({ agentRoster:{peek:()=>[],load:()=>Promise.resolve([{id:'faraday',name:'Faraday',job_title:'Brand researcher'}])} }));
-beforeEach(()=>localStorage.clear());
+const mockOnboarding={ view:{ surfaces:{} }, store:{ closeSurfaces: jest.fn() } };
+jest.mock('./onboarding/onboarding-store', () => ({ useOnboarding: () => mockOnboarding }));
+beforeEach(()=>{ localStorage.clear(); mockOnboarding.view={ surfaces:{} }; mockOnboarding.store.closeSurfaces.mockClear(); });
+test('waits for the server record and stays closed when another device already closed the tour; replay still opens',()=>{
+ mockOnboarding.view=null;
+ const first=render(<HyperAgentsWelcome/>);
+ expect(screen.queryByRole('dialog')).toBeNull();
+ first.unmount();
+ mockOnboarding.view={ surfaces:{ 'company_tour:editorial-v1': 1 } };
+ render(<HyperAgentsWelcome/>);
+ expect(screen.queryByRole('dialog')).toBeNull();
+ expect(document.querySelector('[data-hivemind-app-shell]')?.inert).toBeFalsy();
+ fireEvent(window,new Event('hm:replay-hyperagents-tour'));
+ expect(screen.getByRole('dialog')).toBeTruthy();
+ fireEvent.click(screen.getAllByRole('button',{name:'Close',exact:true})[0]);
+ expect(mockOnboarding.store.closeSurfaces).toHaveBeenCalledWith(['company_tour:editorial-v1']);
+});
 test('separates users and organizations, resumes safely and rejects invalid saved progress',()=>{
  expect(tourKey('a','b')).not.toBe(tourKey('b','a'));
  localStorage.setItem('bad','{"step":99,"done":false}');

@@ -1,0 +1,374 @@
+{
+  "en": {
+    "title": "Get started",
+    "summary": "Get started, {{count}} of {{total}}",
+    "progress": "{{count}} of {{total}}",
+    "hint": "Your progress is saved on every device.",
+    "hintDone": "You’re ready. Your team takes it from here.",
+    "skip": "Skip for now",
+    "hide": "Hide",
+    "guide": "Guide",
+    "continue": "Continue",
+    "close": "Close",
+    "error": "Your progress is saved. It will show again in a moment.",
+    "language": {
+      "question": "Is this your language?",
+      "label": "Language"
+    },
+    "proactive": {
+      "ready": "Your team noticed something and prepared it.",
+      "watching": "Watching your connected apps. The first update lands here.",
+      "waiting": "Connect an app or book a morning brief, and your team starts watching."
+    },
+    "steps": {
+      "language": {
+        "title": "Choose your language",
+        "body": "Your team writes to you in it."
+      },
+      "awaken": {
+        "title": "Wake up your company",
+        "body": "Your team reads your website and learns the company."
+      },
+      "meet": {
+        "title": "Meet your first employee",
+        "body": "Say hello and tell them what to own."
+      },
+      "first_task": {
+        "title": "Give the first task",
+        "body": "Pick a first job, or describe your own."
+      },
+      "authority": {
+        "title": "Decide how far they go",
+        "body": "Ask first is the safe default. Change it any time."
+      },
+      "connect_app": {
+        "title": "Connect one app",
+        "body": "Connect Gmail or Calendar so your team can notice what needs you."
+      },
+      "first_proactive": {
+        "title": "See what your team noticed",
+        "body": "Updates arrive before you ask."
+      },
+      "shared_brain": {
+        "title": "Your team shares one memory",
+        "body": "What one employee learns, the others can use."
+      },
+      "brief_team": {
+        "title": "Get a morning brief",
+        "body": "Book a daily brief, or invite a colleague."
+      }
+    },
+    "invite": "Invite a colleague",
+    "done": "Done"
+  },
+  "de": {
+    "title": "Erste Schritte",
+    "summary": "Erste Schritte, {{count}} von {{total}}",
+    "progress": "{{count}} von {{total}}",
+    "hint": "Dein Fortschritt ist auf jedem Gerät gespeichert.",
+    "hintDone": "Alles bereit. Dein Team übernimmt ab hier.",
+    "skip": "Jetzt überspringen",
+    "hide": "Ausblenden",
+    "guide": "Anleitung",
+    "continue": "Weiter",
+    "close": "Schließen",
+    "error": "Dein Fortschritt ist gespeichert. Er erscheint gleich wieder.",
+    "language": {
+      "question": "Ist das deine Sprache?",
+      "label": "Sprache"
+    },
+    "proactive": {
+      "ready": "Dein Team hat etwas bemerkt und vorbereitet.",
+      "watching": "Dein Team beobachtet deine verbundenen Apps. Die erste Meldung erscheint hier.",
+      "waiting": "Verbinde eine App oder buche ein Morgen-Briefing, dann beginnt dein Team zu beobachten."
+    },
+    "steps": {
+      "language": {
+        "title": "Sprache wählen",
+        "body": "Dein Team schreibt dir in dieser Sprache."
+      },
+      "awaken": {
+        "title": "Unternehmen wecken",
+        "body": "Dein Team liest deine Website und lernt das Unternehmen kennen."
+      },
+      "meet": {
+        "title": "Ersten Mitarbeiter kennenlernen",
+        "body": "Sag Hallo und lege fest, wofür er zuständig ist."
+      },
+      "first_task": {
+        "title": "Erste Aufgabe geben",
+        "body": "Wähle eine erste Aufgabe oder beschreibe deine eigene."
+      },
+      "authority": {
+        "title": "Spielraum festlegen",
+        "body": "Erst fragen ist die sichere Vorgabe. Du kannst sie jederzeit ändern."
+      },
+      "connect_app": {
+        "title": "Eine App verbinden",
+        "body": "Verbinde Gmail oder Kalender, damit dein Team bemerkt, was dich braucht."
+      },
+      "first_proactive": {
+        "title": "Sehen, was dein Team bemerkt hat",
+        "body": "Meldungen kommen, bevor du fragst."
+      },
+      "shared_brain": {
+        "title": "Dein Team teilt ein Gedächtnis",
+        "body": "Was ein Mitarbeiter lernt, können die anderen nutzen."
+      },
+      "brief_team": {
+        "title": "Morgen-Briefing erhalten",
+        "body": "Buche ein tägliches Briefing oder lade eine Kollegin ein."
+      }
+    },
+    "invite": "Kollegen einladen",
+    "done": "Erledigt"
+  },
+  "es": {
+    "title": "Primeros pasos",
+    "summary": "Primeros pasos, {{count}} de {{total}}",
+    "progress": "{{count}} de {{total}}",
+    "hint": "Tu progreso se guarda en todos tus dispositivos.",
+    "hintDone": "Todo listo. Tu equipo se encarga a partir de aquí.",
+    "skip": "Omitir por ahora",
+    "hide": "Ocultar",
+    "guide": "Guía",
+    "continue": "Continuar",
+    "close": "Cerrar",
+    "error": "Tu progreso está guardado. Volverá a aparecer en un momento.",
+    "language": {
+      "question": "¿Es este tu idioma?",
+      "label": "Idioma"
+    },
+    "proactive": {
+      "ready": "Tu equipo detectó algo y lo preparó.",
+      "watching": "Vigilando tus apps conectadas. La primera novedad aparecerá aquí.",
+      "waiting": "Conecta una app o programa un resumen matutino y tu equipo empezará a vigilar."
+    },
+    "steps": {
+      "language": {
+        "title": "Elige tu idioma",
+        "body": "Tu equipo te escribe en él."
+      },
+      "awaken": {
+        "title": "Despierta tu empresa",
+        "body": "Tu equipo lee tu web y conoce la empresa."
+      },
+      "meet": {
+        "title": "Conoce a tu primer empleado",
+        "body": "Salúdalo y dile de qué se encarga."
+      },
+      "first_task": {
+        "title": "Da la primera tarea",
+        "body": "Elige un primer trabajo o describe el tuyo."
+      },
+      "authority": {
+        "title": "Decide hasta dónde llegan",
+        "body": "Preguntar primero es lo seguro por defecto. Cámbialo cuando quieras."
+      },
+      "connect_app": {
+        "title": "Conecta una app",
+        "body": "Conecta Gmail o Calendar para que tu equipo note lo que te necesita."
+      },
+      "first_proactive": {
+        "title": "Mira lo que detectó tu equipo",
+        "body": "Las novedades llegan antes de que preguntes."
+      },
+      "shared_brain": {
+        "title": "Tu equipo comparte una memoria",
+        "body": "Lo que aprende un empleado lo pueden usar los demás."
+      },
+      "brief_team": {
+        "title": "Recibe un resumen matutino",
+        "body": "Programa un resumen diario o invita a un colega."
+      }
+    },
+    "invite": "Invitar a un colega",
+    "done": "Hecho"
+  },
+  "fr": {
+    "title": "Premiers pas",
+    "summary": "Premiers pas, {{count}} sur {{total}}",
+    "progress": "{{count}} sur {{total}}",
+    "hint": "Votre progression est enregistrée sur tous vos appareils.",
+    "hintDone": "Tout est prêt. Votre équipe prend le relais.",
+    "skip": "Passer pour l’instant",
+    "hide": "Masquer",
+    "guide": "Guide",
+    "continue": "Continuer",
+    "close": "Fermer",
+    "error": "Votre progression est enregistrée. Elle réapparaîtra dans un instant.",
+    "language": {
+      "question": "Est-ce votre langue ?",
+      "label": "Langue"
+    },
+    "proactive": {
+      "ready": "Votre équipe a remarqué quelque chose et l’a préparé.",
+      "watching": "Surveillance de vos apps connectées. La première mise à jour arrivera ici.",
+      "waiting": "Connectez une app ou réservez un point du matin, et votre équipe commencera à surveiller."
+    },
+    "steps": {
+      "language": {
+        "title": "Choisissez votre langue",
+        "body": "Votre équipe vous écrit dans cette langue."
+      },
+      "awaken": {
+        "title": "Réveillez votre entreprise",
+        "body": "Votre équipe lit votre site et découvre l’entreprise."
+      },
+      "meet": {
+        "title": "Rencontrez votre premier employé",
+        "body": "Dites bonjour et précisez ce dont il s’occupe."
+      },
+      "first_task": {
+        "title": "Confiez la première tâche",
+        "body": "Choisissez une première tâche, ou décrivez la vôtre."
+      },
+      "authority": {
+        "title": "Décidez jusqu’où ils vont",
+        "body": "Demander d’abord est le réglage sûr par défaut. Modifiable à tout moment."
+      },
+      "connect_app": {
+        "title": "Connectez une app",
+        "body": "Connectez Gmail ou Agenda pour que votre équipe repère ce qui vous attend."
+      },
+      "first_proactive": {
+        "title": "Voyez ce que votre équipe a remarqué",
+        "body": "Les mises à jour arrivent avant que vous ne demandiez."
+      },
+      "shared_brain": {
+        "title": "Votre équipe partage une mémoire",
+        "body": "Ce qu’un employé apprend, les autres peuvent l’utiliser."
+      },
+      "brief_team": {
+        "title": "Recevez un point du matin",
+        "body": "Réservez un point quotidien, ou invitez un collègue."
+      }
+    },
+    "invite": "Inviter un collègue",
+    "done": "Terminé"
+  },
+  "hi": {
+    "title": "शुरुआत करें",
+    "summary": "शुरुआत करें, {{total}} में से {{count}}",
+    "progress": "{{total}} में से {{count}}",
+    "hint": "आपकी प्रगति हर डिवाइस पर सहेजी जाती है।",
+    "hintDone": "सब तैयार है। अब आपकी टीम आगे संभालेगी।",
+    "skip": "अभी छोड़ें",
+    "hide": "छिपाएँ",
+    "guide": "गाइड",
+    "continue": "आगे बढ़ें",
+    "close": "बंद करें",
+    "error": "आपकी प्रगति सहेजी गई है। यह थोड़ी देर में फिर दिखेगी।",
+    "language": {
+      "question": "क्या यह आपकी भाषा है?",
+      "label": "भाषा"
+    },
+    "proactive": {
+      "ready": "आपकी टीम ने कुछ देखा और उसे तैयार किया।",
+      "watching": "आपके जुड़े ऐप्स पर नज़र रखी जा रही है। पहला अपडेट यहाँ आएगा।",
+      "waiting": "कोई ऐप जोड़ें या सुबह की ब्रीफ़ बुक करें, फिर आपकी टीम नज़र रखना शुरू करेगी।"
+    },
+    "steps": {
+      "language": {
+        "title": "अपनी भाषा चुनें",
+        "body": "आपकी टीम आपसे इसी भाषा में लिखेगी।"
+      },
+      "awaken": {
+        "title": "अपनी कंपनी को जगाएँ",
+        "body": "आपकी टीम आपकी वेबसाइट पढ़कर कंपनी को समझती है।"
+      },
+      "meet": {
+        "title": "अपने पहले कर्मचारी से मिलें",
+        "body": "नमस्ते कहें और बताएँ कि उन्हें क्या संभालना है।"
+      },
+      "first_task": {
+        "title": "पहला काम दें",
+        "body": "पहला काम चुनें, या अपना काम बताएँ।"
+      },
+      "authority": {
+        "title": "तय करें कि वे कितना आगे जाएँ",
+        "body": "पहले पूछना सुरक्षित डिफ़ॉल्ट है। इसे कभी भी बदलें।"
+      },
+      "connect_app": {
+        "title": "एक ऐप जोड़ें",
+        "body": "Gmail या Calendar जोड़ें ताकि आपकी टीम देख सके कि आपको किस चीज़ की ज़रूरत है।"
+      },
+      "first_proactive": {
+        "title": "देखें आपकी टीम ने क्या देखा",
+        "body": "अपडेट आपके पूछने से पहले आते हैं।"
+      },
+      "shared_brain": {
+        "title": "आपकी टीम की एक साझा याददाश्त है",
+        "body": "एक कर्मचारी जो सीखता है, बाकी उसका उपयोग कर सकते हैं।"
+      },
+      "brief_team": {
+        "title": "सुबह की ब्रीफ़ पाएँ",
+        "body": "रोज़ की ब्रीफ़ बुक करें, या किसी सहकर्मी को आमंत्रित करें।"
+      }
+    },
+    "invite": "सहकर्मी को आमंत्रित करें",
+    "done": "पूरा"
+  },
+  "ja": {
+    "title": "はじめに",
+    "summary": "はじめに、{{total}}件中{{count}}件",
+    "progress": "{{count}} / {{total}}",
+    "hint": "進捗はすべてのデバイスに保存されます。",
+    "hintDone": "準備ができました。ここからはチームが進めます。",
+    "skip": "今はスキップ",
+    "hide": "閉じる",
+    "guide": "ガイド",
+    "continue": "続ける",
+    "close": "閉じる",
+    "error": "進捗は保存されています。まもなく再表示されます。",
+    "language": {
+      "question": "この言語でよろしいですか？",
+      "label": "言語"
+    },
+    "proactive": {
+      "ready": "チームが気づいたことを準備しました。",
+      "watching": "接続したアプリを見守っています。最初のお知らせはここに届きます。",
+      "waiting": "アプリを接続するか朝のブリーフを予約すると、チームが見守りを始めます。"
+    },
+    "steps": {
+      "language": {
+        "title": "言語を選ぶ",
+        "body": "チームはこの言語で連絡します。"
+      },
+      "awaken": {
+        "title": "会社を起動する",
+        "body": "チームがウェブサイトを読み、会社を理解します。"
+      },
+      "meet": {
+        "title": "最初の社員に会う",
+        "body": "あいさつして、担当してほしいことを伝えましょう。"
+      },
+      "first_task": {
+        "title": "最初の仕事を頼む",
+        "body": "最初の仕事を選ぶか、自分の依頼を書きましょう。"
+      },
+      "authority": {
+        "title": "任せる範囲を決める",
+        "body": "「まず確認」が安全な初期設定です。いつでも変更できます。"
+      },
+      "connect_app": {
+        "title": "アプリを一つ接続する",
+        "body": "Gmail やカレンダーを接続すると、チームが対応すべきことに気づけます。"
+      },
+      "first_proactive": {
+        "title": "チームが気づいたことを見る",
+        "body": "頼む前にお知らせが届きます。"
+      },
+      "shared_brain": {
+        "title": "チームは一つの記憶を共有します",
+        "body": "一人が学んだことを、他の社員も使えます。"
+      },
+      "brief_team": {
+        "title": "朝のブリーフを受け取る",
+        "body": "毎日のブリーフを予約するか、同僚を招待しましょう。"
+      }
+    },
+    "invite": "同僚を招待",
+    "done": "完了"
+  }
+}

@@ -48,6 +48,14 @@ function writeCachedAutonomy(orgId, value) {
   try { window.localStorage.setItem(cacheKey(orgId), JSON.stringify({ level: value.level, revision: value.revision, maxSelectable: value.maxSelectable })); } catch { /* Optional cache: only the instant first paint is lost. */ }
 }
 
+let authorityReported = false;
+/** Tell the walkthrough the person has a chosen level; the server keeps the first time only. */
+function reportAuthoritySet() {
+  if (authorityReported) return;
+  authorityReported = true;
+  window.dispatchEvent(new CustomEvent('hm:onboarding', { detail: { milestone: 'authority_set' } }));
+}
+
 export default function AutonomyDial({ collapsed = false, fetcher = defaultFetcher, orgId, runtimeEnabled = true }) {
   const [state, setState] = useState(() => readCachedAutonomy(orgId));
   const [remote, setRemote] = useState(false);
@@ -56,6 +64,8 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState(null);
   const generation = useRef(0);
+  const root = useRef(null);
+  const [attention, setAttention] = useState(false);
   const load = useCallback(async () => {
     const current = ++generation.current;
     try {
@@ -76,6 +86,23 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
     const timer = setInterval(refresh, 60_000);
     return () => { generation.current++; window.removeEventListener('focus', refresh); clearInterval(timer); };
   }, [load]);
+  // The walkthrough's authority step points here: the visible dial scrolls into view and takes focus.
+  useEffect(() => {
+    const focus = () => {
+      const node = root.current;
+      if (!node || !node.getClientRects().length) return;
+      node.scrollIntoView?.({ block: 'center', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      node.querySelector('input[type=range]')?.focus({ preventScroll: true });
+      setAttention(true);
+      setTimeout(() => setAttention(false), 2400);
+    };
+    window.addEventListener('hm:focus-autonomy', focus);
+    return () => window.removeEventListener('hm:focus-autonomy', focus);
+  }, []);
+  // A level already chosen (here or on another device) completes the walkthrough's authority step, once per page load.
+  useEffect(() => {
+    if (state && state.level !== undefined) reportAuthoritySet();
+  }, [state]);
 
   if (state === undefined || state === null) return null;
   const available = state !== false;
@@ -104,7 +131,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
       const response = await fetcher(AUTONOMY_ENDPOINT, { method: 'POST', credentials: 'same-origin', cache: 'no-store',
         headers: { 'content-type': 'application/json' }, body: JSON.stringify({ level: pending, expectedRevision: state.revision }) });
       const body = await response.json().catch(() => null);
-      if (response.ok && body?.value?.ok) { setState(body.value.value); writeCachedAutonomy(orgId, body.value.value); setPending(null); setNotice(null); }
+      if (response.ok && body?.value?.ok) { setState(body.value.value); writeCachedAutonomy(orgId, body.value.value); setPending(null); setNotice(null); reportAuthoritySet(); }
       else if (response.ok && body?.value?.ok === false) { setState(body.value.current); setPending(null); setNotice('The level changed elsewhere. The current level is loaded.'); }
       else setNotice(body?.error === 'cross_site_request' ? 'Open HIVEMIND again to change the level.' : 'The level could not be saved. Try again.');
     } catch { setNotice('The level could not be saved. Try again.'); }
@@ -117,7 +144,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
       <span className="ha-autonomy-badge">{available ? `${Math.round(saved)}/${MAX}` : '–'}</span>
     </div>;
   }
-  return <div className="ha-autonomy-dial" data-unset={(available && state.level === undefined) || undefined} data-unavailable={!available || undefined} data-hivemind-autonomy-dial>
+  return <div ref={root} className="ha-autonomy-dial" data-attention={attention || undefined} data-unset={(available && state.level === undefined) || undefined} data-unavailable={!available || undefined} data-hivemind-autonomy-dial>
     <div className="ha-autonomy-head">
       <span className="ha-autonomy-title">Autonomy · {subject}</span>
       <span className="ha-autonomy-count">{available ? `${Math.round(shown)}/${MAX} · ${level.name}` : 'Unavailable'}</span>

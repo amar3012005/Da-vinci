@@ -3,7 +3,8 @@ import { measureHarnessBoot } from '../shared/harness-boot-timing';
 import { scopedCompanyRead, clearCompanyRead } from '../shared/company-read-cache';
 import { cacheKey, getSharedBrowserCache } from '../shared/browser-cache';
 import BrainGetStarted from './BrainGetStarted';
-import RuntimeGetStarted from './RuntimeGetStarted';
+import GetStartedCard from './GetStartedCard';
+import './RuntimeGetStarted.css';
 import { isNativeChatRoute, startPlacement } from './get-started-placement';
 import BrainFeatureWelcome from '../shared/BrainFeatureWelcome';
 import NativePaneBridge from './NativePaneBridge';
@@ -616,7 +617,7 @@ function AppShellContent() {
     </QuickRecorderProvider>
   );
 
-  // Phones show no Getting Started surface, so nothing covers the composer or the room bar.
+  // Phones show Get Started as a chip on the home screen (the team roster), so nothing covers the composer or the room bar.
   const startOverlay = startPlacement({ pathname: location.pathname, phone: brainPhone }) === 'overlay';
 
   return (
@@ -646,7 +647,8 @@ function AppShellContent() {
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
           <div className={!initialNativePane && !hyperFullscreen && !crmFullscreen && !graphFullscreen && (workspaceModeForPath(location.pathname) === 'hyperagents' || onOverview) ? 'hm-runtime-workspace' : 'contents'}>
-          {workspaceModeForPath(location.pathname) === 'hyperagents' && !/^\/hivemind\/app\/employee\/(?:library|artifacts|calendar)(?:\/|$)/.test(location.pathname) && runtimeEnabled && !initialNativePane && !hyperFullscreen && !crmFullscreen && startOverlay && <RuntimeGetStarted key={`${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
+          {/* One Get Started card from the step registry; it needs no Runtime, so it shows with Runtime off too. */}
+          {workspaceModeForPath(location.pathname) === 'hyperagents' && !/^\/hivemind\/app\/employee\/(?:library|artifacts|calendar)(?:\/|$)/.test(location.pathname) && !initialNativePane && !hyperFullscreen && !crmFullscreen && startOverlay && <GetStartedCard key={`${user?.id}:${org?.id}`} userId={user?.id} orgId={org?.id} />}
           {workspaceModeForPath(location.pathname) === 'hivemind' && !initialNativePane && !graphFullscreen && !crmFullscreen && startOverlay && <BrainGetStarted key={`brain:${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
           <main data-native-chat-main={nativeChatRoom || undefined} data-dot-room-phone={dotRoomPhone || undefined} className={companyEntry ? 'min-h-screen p-4 sm:p-8' : dotRoomPhone ? 'box-border h-[var(--hm-app-viewport-height,100dvh)] min-h-0 min-w-0 overflow-hidden pt-[env(safe-area-inset-top,0px)]' : graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview || onOpenDotWorkspace ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 min-w-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <BrainFeatureWelcome key={`features-${user?.id || ""}:${org?.id || ""}`} tenant={org?.id} userId={user?.id} />

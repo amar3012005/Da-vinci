@@ -1,5 +1,6 @@
 import { proxyRuntimeBootstrap } from './runtime-bootstrap.mjs';
 import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot } from './runtime-open-dot.mjs';
+import { proxyOnboarding } from './onboarding-proxy.mjs';
 import { edgeCachedNativeCode, runtimeNativeAsset } from './runtime-native-assets.mjs';
 import { handleComposioAccount } from './composio-account.mjs';
 import { withLocaleCacheHeaders } from './locale-cache.mjs';
@@ -548,6 +549,8 @@ export default {
       const employeeGate = await gateWorkspaceDocument(new Request(new URL(OPEN_DOT_ENTRY_PATH,url),request),env);
       if (employeeGate) return employeeGate;
     }
+    const onboardingResponse = await proxyOnboarding(request);
+    if (onboardingResponse) return onboardingResponse;
     const openDotResponse = await proxyRuntimeOpenDot(request);
     if (openDotResponse) return openDotResponse;
     const runtimeProductCover = await runtimePublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
