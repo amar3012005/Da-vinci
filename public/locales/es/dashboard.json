@@ -2122,5 +2122,8 @@
   },
   "getStarted": {
     "summary": "Primeros pasos, {{count}} de {{total}}"
+  },
+  "runtimeCalendar": {
+    "localOnly": "El calendario de Runtime no responde en este momento. Estas son las tareas que tus empleados guardan por sí mismos; el resto vuelve con Runtime."
   }
 }
