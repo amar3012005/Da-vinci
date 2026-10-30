@@ -5,7 +5,7 @@ import { cacheKey, getSharedBrowserCache } from '../shared/browser-cache';
 import BrainGetStarted from './BrainGetStarted';
 import GetStartedCard from './GetStartedCard';
 import './RuntimeGetStarted.css';
-import { isNativeChatRoute, startPlacement } from './get-started-placement';
+import { hyperAgentsStartPlacement, isNativeChatRoute, startPlacement } from './get-started-placement';
 import BrainFeatureWelcome from '../shared/BrainFeatureWelcome';
 import NativePaneBridge from './NativePaneBridge';
 import { initialNativePane, persistentShellEnabled } from '../shared/native-pane-protocol';
@@ -648,7 +648,7 @@ function AppShellContent() {
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
           <div className={!initialNativePane && !hyperFullscreen && !crmFullscreen && !graphFullscreen && (workspaceModeForPath(location.pathname) === 'hyperagents' || onOverview) ? 'hm-runtime-workspace' : 'contents'}>
           {/* One Get Started card from the step registry; it needs no Runtime, so it shows with Runtime off too. */}
-          {workspaceModeForPath(location.pathname) === 'hyperagents' && !/^\/hivemind\/app\/employee\/(?:library|artifacts|calendar)(?:\/|$)/.test(location.pathname) && !initialNativePane && !hyperFullscreen && !crmFullscreen && startOverlay && <GetStartedCard key={`${user?.id}:${org?.id}`} userId={user?.id} orgId={org?.id} />}
+          {workspaceModeForPath(location.pathname) === 'hyperagents' && !/^\/hivemind\/app\/employee\/(?:library|artifacts|calendar)(?:\/|$)/.test(location.pathname) && !initialNativePane && !hyperFullscreen && !crmFullscreen && hyperAgentsStartPlacement({ pathname: location.pathname, phone: brainPhone }) === 'overlay' && <GetStartedCard key={`${user?.id}:${org?.id}`} userId={user?.id} orgId={org?.id} />}
           {workspaceModeForPath(location.pathname) === 'hivemind' && !initialNativePane && !graphFullscreen && !crmFullscreen && startOverlay && <BrainGetStarted key={`brain:${user?.id}:${org?.id}`} scope={`${user?.id}:${org?.id}`} />}
           <main data-native-chat-main={nativeChatRoom || undefined} data-dot-room-phone={dotRoomPhone || undefined} className={companyEntry ? 'min-h-screen p-4 sm:p-8' : dotRoomPhone ? 'box-border h-[var(--hm-app-viewport-height,100dvh)] min-h-0 min-w-0 overflow-hidden pt-[env(safe-area-inset-top,0px)]' : graphFullscreen ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] overflow-hidden" : onOverview || onOpenDotWorkspace ? "h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 min-w-0 overflow-hidden" : onMemories ? "memory-page-scroll h-[calc(var(--hm-app-viewport-height,100dvh)-56px)] min-h-0 overflow-y-auto overscroll-contain" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <BrainFeatureWelcome key={`features-${user?.id || ""}:${org?.id || ""}`} tenant={org?.id} userId={user?.id} />

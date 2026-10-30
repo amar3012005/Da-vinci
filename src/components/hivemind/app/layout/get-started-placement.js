@@ -17,3 +17,27 @@ export function isNativeChatRoute(pathname) {
 export function startPlacement({ phone }) {
   return phone ? 'home' : 'overlay';
 }
+
+/** Employee pages without a composer; every other `/hivemind/app/employee/…` route is a room with one. */
+const EMPLOYEE_PAGES_WITHOUT_COMPOSER = /^\/hivemind\/app\/employee\/(?:apps|library|artifacts|calendar)(?:\/|$)/u;
+
+/**
+ * Whether a route shows a chat composer (an employee room, the Runtime room or a Brain chat).
+ * @param {string} pathname
+ * @returns {boolean}
+ */
+export function isComposerRoute(pathname) {
+  if (isNativeChatRoute(pathname)) return true;
+  return /^\/hivemind\/app\/(?:employee|employees)\/[^/]/u.test(pathname) && !EMPLOYEE_PAGES_WITHOUT_COMPOSER.test(pathname);
+}
+
+/**
+ * Where the HyperAgents Get Started checklist renders. It never covers a composer:
+ * phones keep it on the home screen; desktop rooms show it as a chip in the sidebar; other desktop pages float the card.
+ * @param {{ pathname: string, phone: boolean }} input
+ * @returns {'home'|'sidebar'|'overlay'}
+ */
+export function hyperAgentsStartPlacement({ pathname, phone }) {
+  if (phone) return 'home';
+  return isComposerRoute(pathname) ? 'sidebar' : 'overlay';
+}

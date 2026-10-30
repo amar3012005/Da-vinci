@@ -61,3 +61,14 @@ li[data-active] .hm-onb-label { font-weight:500; }
 @keyframes hm-onb-up { from { transform:translateY(24px); opacity:0; } to { transform:none; opacity:1; } }
 @keyframes hm-onb-fade { from { opacity:0; } to { opacity:1; } }
 @media (prefers-reduced-motion:reduce) { .hm-onb-detail, .hm-onb-sheet, .hm-onb-sheet-backdrop { animation:none; } .hm-onb-progress > span { transition:none; } }
+
+/* Never over a text field: the floating card steps aside while it would cover one. */
+.hm-onb[data-blocking] { visibility:hidden; pointer-events:none; }
+/* Desktop rooms: the chip sits in the sidebar and opens the list as a dialog beside it. */
+.ha-get-started-seat { padding:0 12px 8px; }
+.ha-get-started-seat .hm-onb-home { margin:0; }
+.ha-get-started-seat .hm-onb-chip { width:100%; }
+@media (min-width:768px) {
+  .hm-onb-sheet-backdrop { align-items:flex-end; justify-content:flex-start; padding:0 0 24px 24px; background:rgba(17,17,17,.12); }
+  .hm-onb-sheet { width:min(380px, calc(100vw - 48px)); max-height:min(80dvh, 640px); border-radius:24px; padding-bottom:16px; }
+}

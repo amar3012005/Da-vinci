@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -7,9 +7,9 @@ import { agentRoster } from '../shared/agent-roster';
 import { useOnboarding } from '../shared/onboarding/onboarding-store';
 import { STEPS, STEP_TILE, completedCount, nextStepId } from '../shared/onboarding/registry';
 import { ONBOARDING_LANGUAGES } from '../shared/onboarding/onboarding-i18n';
+import { isComposerRoute } from './get-started-placement';
 import './GetStartedCard.css';
 
-const CHAT_ROUTE = /^\/hivemind\/app\/employee\/(?:harness|dots)(?:\/|$)/;
 
 /**
  * The first-run checklist, read from the one step registry and the server record.
@@ -28,6 +28,9 @@ export default function GetStartedCard({ userId, orgId, variant = 'float' }) {
   const chip = useRef(null);
   const sheet = useRef(null);
   const viewed = useRef(new Set());
+  const floating = useRef(null);
+  // A floating card that would cover any text field steps aside until the layout changes.
+  const [blocking, setBlocking] = useState(false);
 
   useEffect(() => {
     const changed = event => setPreviewOpen(event.detail?.open === true);
@@ -43,13 +46,27 @@ export default function GetStartedCard({ userId, orgId, variant = 'float' }) {
   const next = nextStepId(steps);
   // In a chat room the card starts folded so it never covers the conversation; the person can open it.
   const [forced, setForced] = useState(null);
-  const expanded = home ? sheetOpen : forced ?? (view?.open !== false && !CHAT_ROUTE.test(pathname));
+  const expanded = home ? sheetOpen : forced ?? (view?.open !== false && !isComposerRoute(pathname));
 
   useEffect(() => {
     if (!store || !next || !(home ? sheetOpen : expanded) || viewed.current.has(next)) return;
     viewed.current.add(next);
     store.track('onb_step_view', next);
   }, [store, next, expanded, home, sheetOpen]);
+
+  useLayoutEffect(() => {
+    if (home) return undefined;
+    const check = () => {
+      const card = floating.current?.getBoundingClientRect();
+      if (!card || !card.width) { setBlocking(false); return; }
+      setBlocking(overlapsTextField(card, floating.current));
+    };
+    check();
+    window.addEventListener('resize', check);
+    document.addEventListener('focusin', check);
+    const timer = setInterval(check, 1500);
+    return () => { window.removeEventListener('resize', check); document.removeEventListener('focusin', check); clearInterval(timer); };
+  }, [home, pathname, view]);
 
   const closeSheet = useCallback(() => { setSheetOpen(false); chip.current?.focus(); }, []);
   useEffect(() => {
@@ -117,7 +134,7 @@ export default function GetStartedCard({ userId, orgId, variant = 'float' }) {
     </div>}
   </div>;
 
-  return <aside hidden={previewOpen} className="hm-onb" aria-label={t('title')} dir={i18n.dir()}>
+  return <aside ref={floating} hidden={previewOpen} data-blocking={blocking || undefined} className="hm-onb" aria-label={t('title')} dir={i18n.dir()}>
     <div className="hm-onb-card" data-open={expanded || undefined}>
       <button type="button" className="hm-onb-summary" aria-expanded={expanded} onClick={toggle}>
         <span className="hm-onb-ring" style={{ '--hm-onb-progress': `${count / total * 100}%` }} aria-hidden="true" />
@@ -127,6 +144,23 @@ export default function GetStartedCard({ userId, orgId, variant = 'float' }) {
       {expanded && <>{progress}{list}{footer}</>}
     </div>
   </aside>;
+}
+
+/**
+ * Whether a rectangle overlaps any visible text field, text area or editable region of the page outside `self`.
+ * @param {DOMRect} rect
+ * @param {Element|null} self
+ * @returns {boolean}
+ */
+export function overlapsTextField(rect, self) {
+  const fields = document.querySelectorAll('textarea, input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=range]), [contenteditable=""], [contenteditable=true], [role=textbox]');
+  for (const field of fields) {
+    if (self?.contains(field)) continue;
+    const box = field.getBoundingClientRect();
+    if (!box.width || !box.height) continue;
+    if (box.left < rect.right && box.right > rect.left && box.top < rect.bottom && box.bottom > rect.top) return true;
+  }
+  return false;
 }
 
 function StepList({ t, i18n, steps, next, view, onRun, onSkip, onLanguage }) {
