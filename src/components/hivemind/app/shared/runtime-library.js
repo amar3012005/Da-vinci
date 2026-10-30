@@ -1,3 +1,4 @@
+import { fetchWithRuntimeAdmission } from './runtime-admission';
 /** URL and label helpers for the per-tenant Runtime Library API. */
 const LIBRARY_PATH = '/api/hivemind/artifacts';
 
@@ -154,7 +155,7 @@ export class LibraryUnavailableError extends Error {
  * @returns {Promise<{ folders?: Array<object>, items: Array<object>, next?: string }>} the page.
  * @throws {LibraryUnavailableError} when the route answers 404.
  */
-export async function fetchLibraryPage(url, { signal, fetcher = (...args) => fetch(...args) } = {}) {
+export async function fetchLibraryPage(url, { signal, fetcher = (...args) => fetchWithRuntimeAdmission(...args) } = {}) {
   const response = await fetcher(url, { credentials: 'include', cache: 'no-store', signal });
   if (response.status === 404) throw new LibraryUnavailableError();
   if (!response.ok) throw new Error('library_failed');
@@ -217,7 +218,7 @@ async function postDelete(body, fetcher) {
  * @returns {Promise<{ artifacts: number, versions: number, blobsFailed: number }>} counts summed over all requests.
  * @throws {LibraryDeleteError} on the first refused or failed request; earlier batches stay deleted.
  */
-export async function deleteLibraryArtifacts(selection, { fetcher = (...args) => fetch(...args) } = {}) {
+export async function deleteLibraryArtifacts(selection, { fetcher = (...args) => fetchWithRuntimeAdmission(...args) } = {}) {
   const total = { artifacts: 0, versions: 0, blobsFailed: 0 };
   const add = deleted => {
     total.artifacts += Number(deleted.artifacts) || 0;
