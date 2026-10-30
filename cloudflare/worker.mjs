@@ -739,14 +739,6 @@ export default {
       headers.set('cdn-cache-control', 'no-store');
       return noIndex(new Response(response.body, { status: response.status, statusText: response.statusText, headers }));
     }
-    // The Runtime roster belongs to the native runner. Admission cookies expire
-    // after an hour, so cookie presence must not decide whether this GET reaches
-    // the runner: without it the request used to fall through to the SPA and the
-    // sidebar received index.html. The runner authenticates and answers 401 JSON.
-    if (pathname === '/api/hivemind/employees' && ['GET', 'HEAD'].includes(request.method)
-      && hostname(request) === 'runtime-runner.singulancelabs.com') {
-      return noIndex(await proxyHarnessRunner(request, env));
-    }
     // Plugin graph bundles are native-owned public code. Cookie presence is
     // not an authorization decision and must never select the SPA as fallback.
     // The native runner retains all authentication for its protected endpoints.
@@ -765,11 +757,15 @@ export default {
     // session as 401, never a successful SPA document. Cookie presence below
     // selects the carrier only; the runner validates the actual principal.
     // The short-lived edge marker must not strand a longer-lived native session.
+    // On the Runtime host every runner API reaches the runner regardless of
+    // cookies: the one-hour admission marker otherwise expires and the request
+    // falls to the JSON 404 below (Library, roster). The runner answers 401 JSON.
     if (pathname === '/api/hivemind/embed/exchange'
       || pathname === '/api/hivemind/session/establish'
       || pathname === '/api/hivemind/boot'
       || isHarnessDocumentOrAsset(request, pathname)
-      || ((hasHarnessAdmission(request) || hasHarnessSession(request)) && isHarnessRunnerRoute(pathname))) {
+      || ((hasHarnessAdmission(request) || hasHarnessSession(request) || hostname(request) === 'runtime-runner.singulancelabs.com')
+        && isHarnessRunnerRoute(pathname))) {
       return noIndex(await edgeCachedNativeCode(request, ctx, () => harnessResponse(request, env)));
     }
 
