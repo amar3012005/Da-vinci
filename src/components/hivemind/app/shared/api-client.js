@@ -1418,6 +1418,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Employees archived reversibly; owners and admins only (the list is empty for anyone else). */
+  async listArchivedEmployees() {
+    const { data } = await this.controlPlane.get('/v1/employees', { params: { archived: 1 } });
+    return data;
+  }
+
   async manageNativeEmployeeLifecycle(payload) {
     const { data } = await this.controlPlane.post('/v1/employees/native-lifecycle', payload);
     return data;
