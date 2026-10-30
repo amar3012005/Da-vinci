@@ -50,6 +50,28 @@ export function postOpenDotSignOut() {
   return posted;
 }
 
+/**
+ * Ask every connected, registered OpenDot frame to show one card. Each frame answers only when it shows that room.
+ * @param {{ cardId: string, dotId: string, conversationId: string }} request - Card message, room and conversation ids.
+ * @returns {number} number of frames the message was posted to.
+ */
+export function postOpenDotFocusCard({ cardId, dotId, conversationId }) {
+  let posted = 0;
+  for (const frame of [...frames]) {
+    if (frame.isConnected === false) { frames.delete(frame); continue; }
+    const origin = frameOrigin(frame);
+    const target = frame.contentWindow;
+    if (!origin || !target) continue;
+    try {
+      target.postMessage({ type: 'hivemind.open-dot.focus-card', version: 1, cardId, dotId, conversationId }, origin);
+      posted += 1;
+    } catch {
+      // A frame that refuses the message keeps showing its room.
+    }
+  }
+  return posted;
+}
+
 // Sign-out, account switch and organization switch all dispatch hm:tenant-changed.
 if (typeof window !== 'undefined') {
   window.addEventListener('hm:tenant-changed', () => { postOpenDotSignOut(); });

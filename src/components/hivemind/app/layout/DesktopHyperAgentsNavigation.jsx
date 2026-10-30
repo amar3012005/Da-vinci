@@ -4,7 +4,7 @@ import { employeeAppsPath } from '../shared/workspace-mode';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Plus, Trash2, Cable, Building2, FolderKanban, Monitor, CalendarDays, Settings, LogOut, Library } from 'lucide-react';
+import { Plus, Trash2, Cable, Building2, FolderKanban, Monitor, CalendarDays, Settings, LogOut, Library, Inbox } from 'lucide-react';
 import { CALENDAR_PATH, LIBRARY_PATH } from './sidebar-tools';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
@@ -34,7 +34,7 @@ function LiveStatus({ room, collapsed }) {
   </span>;
 }
 
-export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgent, openingAgent, onOpenAgent, onCreate, onCompany, columns, collapsed, user, planLabel, credits, logout, orgId, runtimeEnabled = true, onDeleteEmployee }) {
+export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgent, openingAgent, onOpenAgent, onCreate, onCompany, onNeedsYou, needsYouCount = 0, columns, collapsed, user, planLabel, credits, logout, orgId, runtimeEnabled = true, onDeleteEmployee }) {
   const location = useLocation();
   const { t } = useTranslation('dashboard');
   const s = useSidebarCopy();
@@ -102,6 +102,7 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
     <div className="ha-autonomy-seat"><AutonomyDial collapsed={collapsed} orgId={orgId} runtimeEnabled={runtimeEnabled}/></div>
     <nav className="ha-workspace-shortcuts" aria-label={s('workspaceTools', 'Workspace tools')}>
       <NavLink to={employeeAppsPath(location)} title={collapsed ? s('apps', 'Apps') : undefined}><Cable size={18}/>{!collapsed && <span>{s('apps', 'Apps')}</span>}</NavLink>
+      <button type="button" data-sidebar-tool="needs-you" onClick={onNeedsYou} title={collapsed ? s('needsYou', 'Needs you') : undefined} aria-label={needsYouCount > 0 ? s('needsYouBadge', '{{n}} waiting for you', { n: needsYouCount }) : s('needsYou', 'Needs you')}><Inbox size={18}/>{!collapsed && <span>{s('needsYou', 'Needs you')}</span>}{needsYouCount > 0 && <b className="ny-badge">{needsYouCount}</b>}</button>
       <NavLink to={CALENDAR_PATH} data-sidebar-tool="calendar" title={collapsed ? s('calendar', 'Calendar') : undefined}><CalendarDays size={18}/>{!collapsed && <span>{s('calendar', 'Calendar')}</span>}</NavLink>
       <button type="button" onClick={onCompany} title={collapsed ? s('companyHq', 'Company HQ') : undefined}><Building2 size={18}/>{!collapsed && <span>{s('companyHq', 'Company HQ')}</span>}</button>
       <NavLink to={LIBRARY_PATH} data-sidebar-tool="library" title={collapsed ? s('library', 'Library') : undefined}><Library size={18}/>{!collapsed && <span>{s('library', 'Library')}</span>}</NavLink>

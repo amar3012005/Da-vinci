@@ -1641,7 +1641,10 @@
       "resets": "Se restablece: {{when}} · Los límites de servicio existentes siguen vigentes.",
       "monthlyWord": "mensualmente"
     },
-    "planLabelGeneric": "Plan {{name}}"
+    "planLabelGeneric": "Plan {{name}}",
+    "needsYou": "Te necesitan",
+    "needsYouBadge": "{{n}} esperan por ti",
+    "openingNeedsYou": "Abriendo «Te necesitan»…"
   },
   "swarmgovernance": {
     "actionLogHeading": "Registro de acciones",
@@ -2596,5 +2599,27 @@
       "loadingApps": "Cargando aplicaciones…",
       "tapToConnect": "Toca para conectar y volver aquí"
     }
+  },
+  "needsYou": {
+    "windowLabel": "hivemind — te necesitan",
+    "title": "Te necesitan",
+    "loading": "Comprobando qué está esperando…",
+    "loadFailed": "No se pudo cargar esta lista.",
+    "retry": "Reintentar",
+    "empty": "Nada te necesita.",
+    "employeeFallback": "Empleado",
+    "kindApproval": "Aprobación",
+    "kindQuestion": "Pregunta",
+    "kindSecure": "Entrada segura",
+    "kindConnect": "Conectar una app",
+    "kindSchedule": "Programación",
+    "justNow": "Ahora mismo",
+    "open": "Abrir",
+    "approve": "Aprobar",
+    "deny": "Rechazar",
+    "openAria": "Abrir la sala de {{name}} en esta tarjeta",
+    "approveAria": "Aprobar: {{title}}",
+    "denyAria": "Rechazar: {{title}}",
+    "actionFailed": "No se pudo completar. Abre la sala para responder."
   }
 }

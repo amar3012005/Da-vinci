@@ -1661,7 +1661,10 @@
       "resets": "إعادة التعيين: {{when}} · تظل حدود الخدمة الحالية سارية.",
       "monthlyWord": "شهريًا"
     },
-    "planLabelGeneric": "خطة {{name}}"
+    "planLabelGeneric": "خطة {{name}}",
+    "needsYou": "بانتظارك",
+    "needsYouBadge": "{{n}} بانتظارك",
+    "openingNeedsYou": "جارٍ فتح «بانتظارك»…"
   },
   "swarmgovernance": {
     "actionLogHeading": "سجل الإجراءات",
@@ -2621,5 +2624,27 @@
       "loadingApps": "جارٍ تحميل التطبيقات…",
       "tapToConnect": "المس للربط ثم العودة إلى هنا"
     }
+  },
+  "needsYou": {
+    "windowLabel": "hivemind — بانتظارك",
+    "title": "بانتظارك",
+    "loading": "جارٍ التحقق مما ينتظر…",
+    "loadFailed": "تعذّر تحميل هذه القائمة.",
+    "retry": "حاول مرة أخرى",
+    "empty": "لا شيء بانتظارك.",
+    "employeeFallback": "موظف",
+    "kindApproval": "موافقة",
+    "kindQuestion": "سؤال",
+    "kindSecure": "إدخال آمن",
+    "kindConnect": "ربط تطبيق",
+    "kindSchedule": "جدولة",
+    "justNow": "الآن",
+    "open": "فتح",
+    "approve": "موافقة",
+    "deny": "رفض",
+    "openAria": "فتح غرفة {{name}} عند هذه البطاقة",
+    "approveAria": "موافقة: {{title}}",
+    "denyAria": "رفض: {{title}}",
+    "actionFailed": "لم تكتمل العملية. افتح الغرفة للرد."
   }
 }

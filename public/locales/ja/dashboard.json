@@ -1661,7 +1661,10 @@
       "resets": "リセット：{{when}} · 既存のサービス上限は引き続き適用されます。",
       "monthlyWord": "毎月"
     },
-    "planLabelGeneric": "{{name}} プラン"
+    "planLabelGeneric": "{{name}} プラン",
+    "needsYou": "対応待ち",
+    "needsYouBadge": "{{n}}件があなたを待っています",
+    "openingNeedsYou": "「対応待ち」を開いています…"
   },
   "swarmgovernance": {
     "actionLogHeading": "アクションログ",
@@ -2621,5 +2624,27 @@
       "loadingApps": "アプリを読み込み中…",
       "tapToConnect": "タップして接続し、ここに戻ります"
     }
+  },
+  "needsYou": {
+    "windowLabel": "hivemind — 対応待ち",
+    "title": "対応待ち",
+    "loading": "待っている項目を確認しています…",
+    "loadFailed": "このリストを読み込めませんでした。",
+    "retry": "もう一度試す",
+    "empty": "対応待ちはありません。",
+    "employeeFallback": "社員",
+    "kindApproval": "承認",
+    "kindQuestion": "質問",
+    "kindSecure": "安全な入力",
+    "kindConnect": "アプリを接続",
+    "kindSchedule": "スケジュール",
+    "justNow": "たった今",
+    "open": "開く",
+    "approve": "承認する",
+    "deny": "却下する",
+    "openAria": "{{name}}のルームをこのカードで開く",
+    "approveAria": "承認する：{{title}}",
+    "denyAria": "却下する：{{title}}",
+    "actionFailed": "完了できませんでした。ルームを開いて回答してください。"
   }
 }

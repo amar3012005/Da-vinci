@@ -12,7 +12,7 @@ const FORWARDED_TO_OPEN_DOT = [
   '/api/dots/autonomy', '/api/dots/company-glance', '/api/dots/local-duties', '/api/dots/team-week',
   ...['agenda', 'control', 'conversations', 'event-watches', 'files', 'frames', 'input', 'library', 'live', 'results', 'screen', 'stream', 'warm', 'workspace']
     .map(name => `/api/dots/dot_2c1a636bd2ac7f18/${name}`),
-  '/api/hivemind/setup', '/api/hivemind/voice/context', '/api/hivemind/voice/events',
+  '/api/hivemind/setup', '/api/hivemind/needs-you', '/api/hivemind/voice/context', '/api/hivemind/voice/events',
   '/api/locale', '/api/desktop/entry', '/api/models', '/api/organization', '/api/settings/open-dot-recovery', '/api/composio/oauth',
 ];
 
@@ -23,6 +23,11 @@ test('every OpenDot client API path is forwarded to OpenDot on the Runtime origi
   for (const path of FORWARDED_TO_OPEN_DOT) {
     assert.equal(isRuntimeOpenDotRequest(new URL(path, 'https://runtime-runner.singulancelabs.com')), true, `${path} must be in the allowlist`);
   }
+});
+
+test('the Needs you path is forwarded on the Runtime origin only, and not when nested', () => {
+  assert.equal(isRuntimeOpenDotRequest(new URL('/api/hivemind/needs-you/extra', 'https://runtime-runner.singulancelabs.com')), false);
+  assert.equal(isRuntimeOpenDotRequest(new URL('/api/hivemind/needs-you', 'https://next.singulancelabs.com')), false);
 });
 
 test('the allowlist does not forward other origins or unlisted paths', () => {

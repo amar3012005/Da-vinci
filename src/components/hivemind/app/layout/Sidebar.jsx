@@ -4,6 +4,7 @@ import RuntimeAvatar from '../shared/RuntimeAvatar';
 import { ownedOpenDotRoomStatuses, withEmployeeTaskStatuses, reconnectingOpenDotRoomStatuses, withRuntimeReviewDecisions } from '../shared/open-dot-room-status';
 import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
 import { agentRoster } from '../shared/agent-roster';
+import { focusCardInRoom, waitingEmployeeIds } from '../shared/needs-you';
 import { setEmployeeRoomOpen, useRuntimeEnabled } from '../shared/runtime-enabled';
 import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../shared/open-dot-employee-route';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -57,6 +58,7 @@ import {
   Monitor,
   MessageCircle,
   Library,
+  Inbox,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
@@ -65,9 +67,11 @@ import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import { fillCopy, usePlanLabel } from './sidebar-copy';
+import './needs-you.css';
 
 const CreateEmployeeDialog = React.lazy(() => import('./CreateEmployeeDialog'));
 const GetStartedCard = React.lazy(() => import('./GetStartedCard'));
+const NeedsYouPanel = React.lazy(() => import('./NeedsYouPanel'));
 const CompanyWorkspaceOverlay = React.lazy(() => import('../shared/CompanyWorkspaceOverlay'));
 
 /** Build nav sections, conditionally including admin items. Filtered by activeSection. */
@@ -540,6 +544,22 @@ export default function Sidebar({
     await apiClient.manageNativeEmployeeLifecycle({ operation: 'remove', employee_id: employee.id });
     window.dispatchEvent(new CustomEvent('hivemind:employee-removed', { detail: { employeeId: employee.id } }));
   };
+  // The Needs you badge counts the employees the roster shows as "Waiting for you", read from the same room rows the shared poll and live frames fill.
+  const waitingIds = waitingEmployeeIds(rooms);
+  const waitingKey = waitingIds.join(',');
+  const [needsYouOpen, setNeedsYouOpen] = useState(false);
+  const closeNeedsYou = useCallback(() => setNeedsYouOpen(false), []);
+  useEffect(() => { setNeedsYouOpen(false); }, [org?.id, user?.id]);
+  const cancelFocus = useRef(null);
+  useEffect(() => () => cancelFocus.current?.(), []);
+  const openNeedsYouCard = async card => {
+    setNeedsYouOpen(false);
+    const agent = team.find(item => item.id?.toLowerCase() === card.employeeId.toLowerCase());
+    if (!agent) return;
+    cancelFocus.current?.();
+    await openAgent({ preventDefault() {} }, agent);
+    cancelFocus.current = focusCardInRoom(card);
+  };
   const [companyOpen, setCompanyOpen] = useState(false);
   const closeCompany = useCallback(() => setCompanyOpen(false), []);
   useEffect(() => { setCompanyOpen(false); }, [org?.id, user?.id]);
@@ -602,6 +622,7 @@ export default function Sidebar({
           <div className="mobile-unified-heading"><h2>{tt('yourTeam', 'Your team')}</h2><div className="mobile-roster-shortcuts">
             <button type="button" onClick={() => setCompanyOpen(true)}><Building2 size={18}/><span>{tt('company', 'Company')}</span></button>
             {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm"><FolderKanban size={18}/><span>CRM</span></NavLink>}
+            <button type="button" data-sidebar-tool="needs-you" aria-label={waitingIds.length ? tt('needsYouBadge', '{{n}} waiting for you', { n: waitingIds.length }) : undefined} onClick={() => setNeedsYouOpen(true)}><Inbox size={18}/><span>{tt('needsYou', 'Needs you')}{waitingIds.length > 0 && <b className="ny-badge">{waitingIds.length}</b>}</span></button>
             <NavLink to={CALENDAR_PATH} data-sidebar-tool="calendar"><CalendarDays size={18}/><span>{tt('calendar', 'Calendar')}</span></NavLink>
             <NavLink to={LIBRARY_PATH} data-sidebar-tool="library"><Library size={18}/><span>{tt('library', 'Library')}</span></NavLink>
           </div></div>
@@ -659,7 +680,7 @@ export default function Sidebar({
       {(teamMode || mobileRoster) && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{tt('teamRefreshFailed', 'Could not refresh our team.')} <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>{tt('retry', 'Retry')}</button></p>}
       {teamError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{teamError}</p>}
       {desktopBrain && <DesktopBrainNavigation sections={navSections} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} />}
-      {desktopHyperAgents && <DesktopHyperAgentsNavigation team={team} rooms={rooms} selectedAgent={selectedAgent} openingAgent={openingAgent} onOpenAgent={openAgent} onCreate={() => setCreateEmployeeOpen(true)} onCompany={() => setCompanyOpen(true)} columns={rosterColumns} collapsed={collapsed} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} orgId={org?.id} onDeleteEmployee={deleteNativeEmployee} runtimeEnabled={runtimeEnabled}/>}
+      {desktopHyperAgents && <DesktopHyperAgentsNavigation team={team} rooms={rooms} selectedAgent={selectedAgent} openingAgent={openingAgent} onOpenAgent={openAgent} onCreate={() => setCreateEmployeeOpen(true)} onCompany={() => setCompanyOpen(true)} onNeedsYou={() => setNeedsYouOpen(true)} needsYouCount={waitingIds.length} columns={rosterColumns} collapsed={collapsed} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} orgId={org?.id} onDeleteEmployee={deleteNativeEmployee} runtimeEnabled={runtimeEnabled}/>}
       {desktopHyperAgents && <div className="ha-resize-grip" role="separator" aria-label={tt('resizeSidebar', 'Resize team sidebar')} aria-orientation="vertical" aria-valuemin={68} aria-valuemax={452} aria-valuenow={collapsed ? 68 : HYPERAGENT_WIDTHS[rosterColumns]} aria-valuetext={collapsed ? tt('collapsedValue', 'Collapsed') : tt('columnsValue', '{{count}} columns', { count: rosterColumns })} tabIndex={0}
         onKeyDown={event => { const current = collapsed ? 0 : rosterColumns; if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeRoster(Math.max(0, Math.min(3, current + (event.key === 'ArrowLeft' ? -1 : 1)))); } }}
         onPointerDown={event => { resizeGesture.current = true; event.currentTarget.setPointerCapture(event.pointerId); }}
@@ -783,7 +804,7 @@ export default function Sidebar({
           </div>
         ))}
         {teamMode && !mobileRoster && (
-          <>{[[CALENDAR_PATH, 'Calendar', <CalendarDays key="i" size={18}/>, 'calendar'], [LIBRARY_PATH, 'Library', <Library key="i" size={18}/>, 'library']].map(([to, label, icon, tool]) =>
+          <><button type="button" data-sidebar-tool="needs-you" title={collapsed ? tt('needsYou', 'Needs you') : undefined} aria-label={waitingIds.length ? tt('needsYouBadge', '{{n}} waiting for you', { n: waitingIds.length }) : undefined} onClick={() => setNeedsYouOpen(true)} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] text-[#333333] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''}`}><Inbox size={18}/>{!collapsed && <span className="flex flex-1 items-center">{tt('needsYou', 'Needs you')}{waitingIds.length > 0 && <b className="ny-badge">{waitingIds.length}</b>}</span>}</button>{[[CALENDAR_PATH, 'Calendar', <CalendarDays key="i" size={18}/>, 'calendar'], [LIBRARY_PATH, 'Library', <Library key="i" size={18}/>, 'library']].map(([to, label, icon, tool]) =>
             <NavLink key={tool} to={to} data-sidebar-tool={tool} title={collapsed ? label : undefined} className={({ isActive }) => `flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-[#f3f1ec] text-[#0a0a0a] font-medium' : 'text-[#333333]'}`}>{icon}{!collapsed && <span>{label}</span>}</NavLink>)}</>
         )}
       </nav>}
@@ -833,6 +854,7 @@ export default function Sidebar({
         </div>
       </div>}
       {mobileRoster && rosterProfileOpen && <div className="mobile-roster-profile fixed inset-0 z-[95] flex items-end bg-black/25 p-2" onClick={() => setRosterProfileOpen(false)}><section data-mobile-roster-profile role="dialog" aria-modal="true" aria-label={tt('yourProfile', 'Your profile')} onClick={event => event.stopPropagation()} className="w-full rounded-[32px] bg-white p-6" style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))' }}><button type="button" autoFocus aria-label={tt('closeProfile', 'Close profile')} onClick={() => setRosterProfileOpen(false)} className="mb-6 h-11 w-11 rounded-full bg-[#f3f1ec]">×</button><div className="overflow-hidden rounded-3xl bg-[#f3f1ec]">{[{to:'/hivemind/m/profile',label:user?.display_name || user?.name || 'Profile'}, {to:'/hivemind/m/usage',label:tt('usage', 'Usage')}, {to:'/hivemind/m/billing',label:tt('billing', 'Billing')}, {to:'/hivemind/m/settings',label:tt('settings', 'Settings')}, {to:'/hivemind/m/connectors',label:tt('appsConnectors', 'Apps & connectors')}].map(item => <NavLink key={item.to} to={item.to} className="block border-b border-[#e3e0db] p-5 text-[17px]">{item.label}</NavLink>)}<button type="button" onClick={logout} className="block w-full p-5 text-left text-[17px]">{tt('signOutShort', 'Sign out')}</button></div></section></div>}
+      {needsYouOpen ? <React.Suspense fallback={<div role="status" className="sr-only">{tt('openingNeedsYou', 'Opening Needs you…')}</div>}><NeedsYouPanel team={team} refreshKey={waitingKey} onClose={closeNeedsYou} onOpenCard={openNeedsYouCard} portalContainer={portalContainer} /></React.Suspense> : null}
       {companyOpen ? <React.Suspense fallback={<div role="status" className="sr-only">{tt('openingCompany', 'Opening Company HQ…')}</div>}><CompanyWorkspaceOverlay onClose={closeCompany} portalContainer={portalContainer} team={team} rooms={rooms} onOpenTeammate={openAgent} /></React.Suspense> : null}
       {createEmployeeOpen && <React.Suspense fallback={<div role="status">{tt('openingEmployeeSetup', 'Opening employee setup…')}</div>}><CreateEmployeeDialog onClose={closeCreateEmployee} onCreated={employeeCreated} portalContainer={portalContainer} /></React.Suspense>}
     </aside>
