@@ -2,9 +2,10 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useSearchParams } from 'react-router-dom';
 import {
   Check, ChevronRight, Download, ExternalLink, FileCode2, FileImage, FileSpreadsheet, FileText, File as FileIcon,
-  Folder, FolderOpen, LayoutGrid, Link2, List, RefreshCw, Search, Trash2, X,
+  Archive, Folder, FolderOpen, LayoutGrid, Link2, List, RefreshCw, Search, Trash2, X,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
+import ArchivedEmployees from './ArchivedEmployees';
 import {
   LIBRARY_DELETE_CONFIRM, LIBRARY_KINDS, artifactShareUrl, artifactUrl, canDeleteLibrary, deleteLibraryArtifacts, fetchLibraryPage,
   filterLibraryItems, folderLabel, folderTree, formatShortDate, libraryUrl, mediaBadge, mediaKind, mergeLibraryPage, readLibraryFirstPage,
@@ -191,6 +192,7 @@ export default function RuntimeLibrary({ title = 'Library' }) {
   const [params, setParams] = useSearchParams();
   const folder = params.get('folder') || '';
   const query = params.get('query') || '';
+  const archivedView = canDelete && params.get('section') === 'archived';
   const kind = LIBRARY_KINDS.some(entry => entry.id === params.get('type')) ? params.get('type') : 'all';
   const key = libraryUrl({ folder, query });
   const [text, setText] = useState(query);
@@ -307,7 +309,7 @@ export default function RuntimeLibrary({ title = 'Library' }) {
     try { window.localStorage.setItem(VIEW_KEY, value); } catch { /* per-viewer preference only */ }
   };
   const chooseFolder = value => {
-    updateParams({ folder: value });
+    updateParams({ folder: value, section: '' });
     scroller.current?.scrollTo?.({ top: 0 });
   };
 
@@ -372,14 +374,24 @@ export default function RuntimeLibrary({ title = 'Library' }) {
   return <div className="hm-library flex h-full min-h-0 w-full min-w-0 bg-[#faf9f4] text-[#262626]">
     <nav aria-label={`${title} folders`} className="hidden w-60 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-[#e7e4dd] px-3 py-5 md:flex">
       <h1 className="mb-3 px-2.5 text-[17px] font-semibold tracking-[-0.01em] text-[#1f2328]">{title}</h1>
-      <FolderButton active={!folder} onClick={() => chooseFolder('')} icon={FolderOpen} label="All files" count={folders ? totalCount : undefined} />
+      <FolderButton active={!folder && !archivedView} onClick={() => chooseFolder('')} icon={FolderOpen} label="All files" count={folders ? totalCount : undefined} />
       {tree.map(group => <React.Fragment key={group.folder}>
         <FolderButton active={folder === group.folder} onClick={() => chooseFolder(group.folder)} icon={Folder} label={group.label} count={group.count} />
         {group.children.length && activeRoot === group.folder ? group.children.map(child => <FolderButton key={child.folder} nested active={folder === child.folder} onClick={() => chooseFolder(child.folder)} label={child.label} count={child.count} />) : null}
       </React.Fragment>)}
       {!folders && status !== 'unavailable' ? <div className="mt-1 space-y-2 px-2.5" aria-hidden="true">{[70, 55, 62].map(width => <span key={width} className="hm-skeleton block h-7 rounded-lg" style={{ width: `${width}%` }} />)}</div> : null}
+      {canDelete ? <><span className="my-2 h-px bg-[#e7e4dd]" aria-hidden="true" /><FolderButton active={archivedView} onClick={() => updateParams({ section: 'archived', folder: '', query: '', type: '' })} icon={Archive} label="Archived employees" /></> : null}
     </nav>
     <main className="flex min-w-0 flex-1 flex-col">
+      {archivedView ? <>
+        <header className="shrink-0 border-b border-[#e7e4dd] bg-[#faf9f4] px-4 pb-3 pt-4 md:px-6">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <h2 className="truncate text-[20px] font-semibold tracking-[-0.02em] text-[#1f2328]">Archived employees</h2>
+            <button type="button" onClick={() => chooseFolder('')} className={`h-10 shrink-0 rounded-lg px-3 text-[13px] text-[#3d4249] hover:bg-[#efede6] md:hidden ${FOCUS}`}>{title}</button>
+          </div>
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto"><ArchivedEmployees /></div>
+      </> : <>
       <header className="shrink-0 border-b border-[#e7e4dd] bg-[#faf9f4] px-4 pb-3 pt-4 md:px-6">
         <div className="flex min-w-0 items-end justify-between gap-3">
           <div className="min-w-0">
@@ -426,6 +438,7 @@ export default function RuntimeLibrary({ title = 'Library' }) {
             className={`flex h-10 items-center gap-1.5 rounded-full bg-[#111] px-4 text-[13px] font-medium text-white disabled:opacity-40 ${FOCUS}`}><Trash2 size={15} aria-hidden="true" />Delete {deleteCount} permanently</button>
         </div> : null}
         {notice ? <p role="status" className="mt-3 rounded-lg bg-[#ebf4ee] px-3 py-2 text-[12.5px] text-[#2f6b45]">{notice}</p> : null}
+        {canDelete ? <button type="button" onClick={() => updateParams({ section: 'archived', folder: '', query: '', type: '' })} className={`mt-2 flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] text-[#3d4249] hover:bg-[#f1efe9] md:hidden ${FOCUS}`}><Archive size={14} aria-hidden="true" />Archived employees</button> : null}
         {tree.length ? <div className="hm-library-chips -mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 md:hidden" role="group" aria-label="Folders">
           {[{ folder: '', label: 'All files' }, ...tree].map(group => <button key={group.folder || 'all'} type="button" onClick={() => chooseFolder(group.folder)} aria-pressed={activeRoot === group.folder}
             className={`flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[12.5px] ${activeRoot === group.folder ? 'bg-[#ebe8df] font-medium text-[#1f2328]' : 'text-[#3d4249] hover:bg-[#f1efe9]'} ${FOCUS}`}><Folder size={14} aria-hidden="true" />{group.label}</button>)}
@@ -455,6 +468,7 @@ export default function RuntimeLibrary({ title = 'Library' }) {
           <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className={`h-10 rounded-lg border border-[#e3e0db] bg-white px-4 text-[13px] font-medium text-[#3d4249] hover:border-[#c9c5bc] disabled:opacity-60 ${FOCUS}`}>{loadingMore ? 'Loading…' : 'Load more'}</button>
         </div> : null}
       </section>
+      </>}
     </main>
     {confirming ? <DeleteDialog count={deleteCount} everything={everything} scopeLabel={scopeLabel} busy={deleting} error={deleteError}
       onCancel={() => { setConfirming(false); setDeleteError(''); }} onConfirm={confirmDelete} /> : null}

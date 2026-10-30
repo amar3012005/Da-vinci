@@ -203,3 +203,16 @@ describe('admin deletion', () => {
     expect(screen.getByText('1 selected')).toBeTruthy();
   });
 });
+
+test('owners and admins get an Archived employees entry that opens the section; members do not', async () => {
+  const first = render(<RuntimeLibrary />);
+  await screen.findByText('Launch plan');
+  expect(screen.queryByText('Archived employees')).toBeNull();
+  first.unmount();
+  mockAccount = { org: { role: 'admin' }, user: {} };
+  render(<RuntimeLibrary />);
+  await screen.findByText('Launch plan');
+  fireEvent.click(screen.getAllByText('Archived employees')[0]);
+  expect(mockSetParams).toHaveBeenCalled();
+  expect(new URLSearchParams(mockSetParams.mock.calls.at(-1)[0]).get('section')).toBe('archived');
+});
