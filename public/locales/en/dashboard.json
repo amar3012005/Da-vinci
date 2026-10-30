@@ -1878,5 +1878,18 @@
   },
   "getStarted": {
     "summary": "Getting Started, {{count}} of {{total}}"
+  },
+  "runtimeApps": {
+    "authUnavailable": "Unavailable",
+    "connectedCloud": "Connected through HIVEMIND.",
+    "connectedApp": "Connected. Your employees can use {{app}}.",
+    "signIn": "Sign in to {{app}}",
+    "connecting": "Connecting\u2026",
+    "checkingOptions": "Checking connection options\u2026",
+    "signInNote": "You'll sign in with {{app}} directly. Your employees never see your password.",
+    "connectUnavailable": "This app can't be connected right now. We're on it.",
+    "noSignInNeeded": "This app doesn't need a sign-in.",
+    "connectFailed": "Unable to start connection. Please retry.",
+    "tryAsking": "Try asking an employee"
   }
 }
