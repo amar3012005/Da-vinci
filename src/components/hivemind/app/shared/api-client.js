@@ -1438,6 +1438,14 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Clears the archived Dot in the employee workspace right after Core unarchived the employee. */
+  async restoreArchivedEmployeeDot(employeeId) {
+    const { data } = await axios.post('/api/hivemind/employees/restore', { employee_id: employeeId }, {
+      withCredentials: true, timeout: 20000, headers: { 'Content-Type': 'application/json' },
+    });
+    return data;
+  }
+
   async createEmployee(payload) {
     const { data } = await this.controlPlane.post('/v1/employees', payload);
     return data;

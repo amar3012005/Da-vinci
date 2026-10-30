@@ -260,7 +260,8 @@ async function proxyHarnessRunner(request, env) {
 
 async function proxyEmployeeRegistry(request) {
   const url = new URL(request.url);
-  const create = url.pathname === '/api/hivemind/employees/create';
+  // Create and restore carry a small JSON body; the roster status read is a GET.
+  const create = url.pathname === '/api/hivemind/employees/create' || url.pathname === '/api/hivemind/employees/restore';
   const method = create ? 'POST' : 'GET';
   const origin = request.headers.get('origin');
   const allowed = ['https://next.singulancelabs.com', 'https://runtime-runner.singulancelabs.com'];
@@ -584,7 +585,7 @@ export default {
       }
       if (pathname.startsWith('/_next/') || pathname.startsWith('/shared-hyperagent-shell/') || ['/api/hivemind/apps','/api/hivemind/workspace-shell','/api/events'].includes(pathname) || /^\/api\/apps\/[a-zA-Z0-9_-]+$/.test(pathname)) return proxyRuntimeApps(request, ctx);
     }
-    if (['/api/hivemind/employees/status', '/api/hivemind/employees/create'].includes(pathname)) {
+    if (['/api/hivemind/employees/status', '/api/hivemind/employees/create', '/api/hivemind/employees/restore'].includes(pathname)) {
       return proxyEmployeeRegistry(request);
     }
     // Bare overview on Runtime is a Runtime entry alias, not a Brain session.

@@ -496,6 +496,22 @@ export default function Sidebar({
     window.addEventListener('hivemind:employee-removed', removed);
     return () => window.removeEventListener('hivemind:employee-removed', removed);
   });
+  // An unarchived employee joins the roster at once; a normal refresh follows once the workspace has caught up.
+  const restoredRefresh = useRef(null);
+  useEffect(() => () => clearTimeout(restoredRefresh.current), []);
+  useEffect(() => {
+    const restored = event => {
+      const profile = event.detail?.profile;
+      if (!profile || typeof profile.id !== 'string' || typeof profile.name !== 'string') return;
+      const next = [...team.filter(item => item.id !== profile.id), profile];
+      setTeam(next);
+      agentRoster.remember(scope, next);
+      clearTimeout(restoredRefresh.current);
+      restoredRefresh.current = setTimeout(() => window.dispatchEvent(new Event('hm:employees-changed')), 4000);
+    };
+    window.addEventListener('hivemind:employee-restored', restored);
+    return () => window.removeEventListener('hivemind:employee-restored', restored);
+  });
   // Native employees are removed through Control's native lifecycle; Library files they made stay.
   const deleteNativeEmployee = async employee => {
     await apiClient.manageNativeEmployeeLifecycle({ operation: 'remove', employee_id: employee.id });
