@@ -19,7 +19,7 @@ jest.mock('../shared/onboarding/onboarding-store', () => ({ useOnboarding: () =>
 
 const view = (statuses = {}, extra = {}) => ({ version: 1, open: true, locale: null, surfaces: {}, steps: STEP_IDS.map(id => ({ id, status: statuses[id] || 'todo', ready: false })), proactive: { state: 'waiting', item: null }, ...extra });
 function Where() { return <span data-testid="where">{useLocation().pathname}</span>; }
-const mount = (props = {}, path = '/hivemind/app/employee/library-not') => render(<MemoryRouter initialEntries={[path]}><Routes><Route path="*" element={<><GetStartedCard userId="u" orgId="o" {...props} /><Where /></>} /></Routes></MemoryRouter>);
+const mount = (props = {}, path = '/hivemind/app/crm') => render(<MemoryRouter initialEntries={[path]}><Routes><Route path="*" element={<><GetStartedCard userId="u" orgId="o" {...props} /><Where /></>} /></Routes></MemoryRouter>);
 
 beforeEach(() => {
   mockState.view = view({ awaken: 'done' });
@@ -100,6 +100,27 @@ test('folding the card is saved; in a chat room it starts folded; a finished wal
   mockState.view = view(Object.fromEntries(STEP_IDS.map(id => [id, 'done'])));
   const { container } = mount();
   expect(container.querySelector('.hm-onb')).toBeNull();
+});
+
+test('a floating card that would cover a text field steps aside, and comes back when it no longer would', () => {
+  const box = (left, top, width, height) => () => ({ left, top, width, height, right: left + width, bottom: top + height });
+  const composer = document.createElement('textarea');
+  composer.getBoundingClientRect = box(0, 700, 800, 60);
+  document.body.appendChild(composer);
+  const original = HTMLElement.prototype.getBoundingClientRect;
+  HTMLElement.prototype.getBoundingClientRect = function rect() { return this.classList?.contains('hm-onb') ? box(16, 650, 272, 120)() : original.call(this); };
+  try {
+    const { container } = mount();
+    expect(container.querySelector('.hm-onb').hasAttribute('data-blocking')).toBe(true);
+    composer.getBoundingClientRect = box(0, 0, 0, 0);
+    fireEvent(window, new Event('resize'));
+    expect(container.querySelector('.hm-onb').hasAttribute('data-blocking')).toBe(false);
+  } finally { HTMLElement.prototype.getBoundingClientRect = original; composer.remove(); }
+});
+
+test('in a room the card starts folded even when the sidebar chip is missing', () => {
+  mount({}, '/hivemind/app/employee/976c0a88-8c22-4ea9-9638-d3296db486da');
+  expect(screen.queryByRole('list')).toBeNull();
 });
 
 test('without the server record the card stays hidden instead of showing progress it cannot save', () => {

@@ -10,7 +10,10 @@ import AgentAvatar from '../hyperagents/AgentAvatar';
 import AgentRoomStatus, { aggregateAgentRooms } from './AgentRoomStatus';
 import CreditBalance from '../shared/CreditBalance';
 import { hasOpenDotEmployeeBinding, openDotEmployeePath } from '../shared/open-dot-employee-route';
+import { hyperAgentsStartPlacement } from './get-started-placement';
 import './desktop-hyperagents-navigation.css';
+
+const GetStartedCard = React.lazy(() => import('./GetStartedCard'));
 
 export { HYPERAGENT_WIDTHS } from './hyperagent-widths';
 export const columnsForWidth = width => width < 145 ? 0 : width < 278 ? 1 : width < 391 ? 2 : 3;
@@ -87,6 +90,8 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
         <button type="button" className={`ha-create-employee${span === columns ? ' full-row' : ''}`} style={{ gridColumn: `span ${collapsed ? 1 : span}` }} onClick={onCreate} aria-label="Create employee"><Plus size={23}/>{!collapsed && <span>Create employee</span>}</button>
       </div>
     </div>
+    {/* In a room the checklist is a sidebar chip, so it never covers the composer. */}
+    {!collapsed && user?.id && hyperAgentsStartPlacement({ pathname: location.pathname, phone: false }) === 'sidebar' && <div className="ha-get-started-seat" data-get-started-seat><React.Suspense fallback={null}><GetStartedCard variant="home" userId={user.id} orgId={orgId} /></React.Suspense></div>}
     <div className="ha-autonomy-seat"><AutonomyDial collapsed={collapsed} orgId={orgId} runtimeEnabled={runtimeEnabled}/></div>
     <nav className="ha-workspace-shortcuts" aria-label="Workspace tools">
       <NavLink to={employeeAppsPath(location)} title={collapsed ? 'Apps' : undefined}><Cable size={18}/>{!collapsed && <span>Apps</span>}</NavLink>

@@ -69,7 +69,7 @@ describe('shell wiring', () => {
   });
   test('AppShell shows the Get Started card with Runtime off and guards the route', () => {
     const shell = read('AppShell.jsx');
-    expect(shell).toMatch(/\.test\(location\.pathname\) && !initialNativePane && !hyperFullscreen && !crmFullscreen && startOverlay && <GetStartedCard/);
+    expect(shell).toMatch(/\.test\(location\.pathname\) && !initialNativePane && !hyperFullscreen && !crmFullscreen && hyperAgentsStartPlacement\(/);
     expect(shell).not.toMatch(/RuntimeGetStarted /);
     expect(shell).toMatch(/useRuntimeRouteGuard\(\{ enabled: runtimeEnabled/);
   });
