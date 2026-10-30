@@ -28,3 +28,24 @@ test('reuses native Apps catalog inside the Runtime shell with bounded provider 
   expect(buildOpenDotEmbedTarget('/apps', '?connect=gmail')).toBe('https://runtime-runner.singulancelabs.com/apps?embed=hivemind&app=gmail');
   expect(buildOpenDotEmbedTarget('/apps', '?connect=https://evil.test')).toBe('https://runtime-runner.singulancelabs.com/apps?embed=hivemind');
 });
+
+describe('interface language handoff', () => {
+  const { withOpenDotLocale, openDotLocale } = require('../../shared/open-dot-embed-target');
+  const target = `https://runtime-runner.singulancelabs.com/employees/${EMPLOYEE_ID}?embed=hivemind`;
+
+  test('adds the primary language subtag to the embed address and keeps the rest', () => {
+    expect(withOpenDotLocale(target, 'de')).toBe(`${target}&hm_locale=de`);
+    expect(withOpenDotLocale(target, 'pt-BR')).toBe(`${target}&hm_locale=pt`);
+    expect(withOpenDotLocale(target, 'ar_EG')).toBe(`${target}&hm_locale=ar`);
+    expect(withOpenDotLocale(`${target}&hm_locale=fr`, 'ja')).toBe(`${target}&hm_locale=ja`);
+  });
+
+  test.each([undefined, null, '', 'x', '../../etc', 'de<script>'])('leaves the address alone for the unusable language %p', (language) => {
+    expect(openDotLocale(language)).toBeNull();
+    expect(withOpenDotLocale(target, language)).toBe(target);
+  });
+
+  test('an invalid embed target stays null', () => {
+    expect(withOpenDotLocale(null, 'de')).toBeNull();
+  });
+});

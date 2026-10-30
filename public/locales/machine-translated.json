@@ -1,0 +1,23 @@
+{
+  "note": "Strings machine-translated on 2026-10-30 (first pass). Needs native review; keys that were already present before are not counted.",
+  "locales": {
+    "hi": {
+      "dashboard": {
+        "machineTranslatedKeys": 1691,
+        "humanKeptKeys": 94
+      }
+    },
+    "ja": {
+      "dashboard": {
+        "machineTranslatedKeys": 1691,
+        "humanKeptKeys": 94
+      }
+    },
+    "ar": {
+      "dashboard": {
+        "machineTranslatedKeys": 1691,
+        "humanKeptKeys": 94
+      }
+    }
+  }
+}
