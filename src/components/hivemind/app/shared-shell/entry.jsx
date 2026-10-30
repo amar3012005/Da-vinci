@@ -5,12 +5,18 @@ import { AuthProvider, useAuth } from '../auth/AuthProvider';
 import Sidebar from '../layout/Sidebar';
 import { openDotEmployeePath } from '../shared/open-dot-employee-route';
 import { matchingShellIdentity, runtimeNavigation, RUNTIME_ORIGIN } from './navigation';
-import '../../../../i18n';
+import i18n from '../../../../i18n';
 
 function Shell({ identity, host, portalContainer }) {
   const auth = useAuth();
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
   useEffect(() => { host.style.width = collapsed ? '68px' : '300px'; }, [collapsed, host]);
+  // The OpenDot room that embeds this sidebar announces its interface language; the sidebar follows it without a reload.
+  useEffect(() => {
+    const follow = event => { const locale = event?.detail?.locale; if (typeof locale === 'string' && locale && locale !== i18n.language) void i18n.changeLanguage(locale); };
+    window.addEventListener('hivemind:set-language', follow);
+    return () => window.removeEventListener('hivemind:set-language', follow);
+  }, []);
   useEffect(() => {
     const account = () => window.location.assign(`${RUNTIME_ORIGIN}/hivemind/app/profile`);
     const tour = () => window.location.assign(`${RUNTIME_ORIGIN}/hivemind/app/employee/harness`);
