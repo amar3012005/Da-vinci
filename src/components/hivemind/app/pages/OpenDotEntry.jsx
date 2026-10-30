@@ -10,8 +10,9 @@ import { registerOpenDotFrame } from '../shared/open-dot-frames';
 const DOT_ORIGIN = 'https://runtime-runner.singulancelabs.com';
 const READY_TIMEOUT_MS = 30000;
 const NAVIGATE_RETRY_MS = 1000;
-// A retained document that has not acknowledged the new employee by now is replaced by a frame opened on it.
-const NAVIGATE_UNACKNOWLEDGED_MS = 6000;
+// The in-frame switch is only the fast path for an employee the retained document already knows: it must be acknowledged within this
+// time, or the frame is replaced at once by one opened on the new employee (a just-created employee is never acknowledged).
+const NAVIGATE_UNACKNOWLEDGED_MS = 300;
 
 export function postToDotFrame(frame, message) {
   const target = frame?.contentWindow;

@@ -48,18 +48,33 @@ describe('a newly created employee after another employee', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
-  test('swaps the frame to the new employee when the retained document never acknowledges the switch', () => {
+  test('swaps the frame to the new employee as soon as the in-frame switch is not acknowledged within 300 ms', () => {
     const view = render(<OpenDotEntry initialRoute={route(first)} route={route(first)} />);
     const frame = screen.getByTitle('HyperAgent workspace');
     send(frame, { type: 'hivemind.open-dot.ready', version: 1, employeeId: first });
     view.rerender(<OpenDotEntry initialRoute={route(first)} route={route(created)} />);
     expect(screen.getByTitle('HyperAgent workspace').getAttribute('src')).toContain(`/employees/${first}`);
-    act(() => { jest.advanceTimersByTime(6500); });
+    act(() => { jest.advanceTimersByTime(250); });
+    expect(screen.getByTitle('HyperAgent workspace')).toBe(frame);
+    act(() => { jest.advanceTimersByTime(100); });
     const next = screen.getByTitle('HyperAgent workspace');
     expect(next).not.toBe(frame);
     expect(next.getAttribute('src')).toContain(`/employees/${created}`);
     expect(screen.getByRole('status')).toBeTruthy();
     send(next, { type: 'hivemind.open-dot.ready', version: 1, employeeId: created });
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  test('keeps the same frame when the in-frame switch is acknowledged inside 300 ms', () => {
+    const view = render(<OpenDotEntry initialRoute={route(first)} route={route(first)} />);
+    const frame = screen.getByTitle('HyperAgent workspace');
+    send(frame, { type: 'hivemind.open-dot.ready', version: 1, employeeId: first });
+    view.rerender(<OpenDotEntry initialRoute={route(first)} route={route(created)} />);
+    act(() => { jest.advanceTimersByTime(200); });
+    send(frame, status(created));
+    act(() => { jest.advanceTimersByTime(5000); });
+    expect(screen.getByTitle('HyperAgent workspace')).toBe(frame);
+    expect(frame.getAttribute('src')).toContain(`/employees/${first}`);
     expect(screen.queryByRole('status')).toBeNull();
   });
 });

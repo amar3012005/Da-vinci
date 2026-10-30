@@ -1536,6 +1536,21 @@
       "resolved": "Resolved",
       "failed": "Failed"
     },
+    "signOutShort": "Sign out",
+    "aiMeetingNotes": "AI meeting notes",
+    "memoryGraphLower": "Memory graph",
+    "memoriesTitle": "Memories",
+    "connectorsTitle": "Connectors",
+    "apiKeysLower": "API keys",
+    "evaluationTitle": "Evaluation",
+    "accountLoading": "Loading…",
+    "productBrain": "BRAIN",
+    "productOs": "OS",
+    "productVoice": "VOICE",
+    "representedBy": "{{label}}, represented by {{name}}",
+    "humationAgent": "Humation agent",
+    "activationPending": "Your company is ready. Team activation is still pending.",
+    "activationFailed": "Your company setup is saved. Team activation could not finish.",
     "autonomy": {
       "title": "Autonomy",
       "titleSubject": "Autonomy · {{subject}}",
@@ -1630,22 +1645,7 @@
       "openingOnboarding": "Opening company onboarding…",
       "accessDisabled": "Workspace access is not enabled for this account. Your saved conversations are unchanged.",
       "retryWorkspace": "Retry this workspace"
-    },
-    "signOutShort": "Sign out",
-    "aiMeetingNotes": "AI meeting notes",
-    "memoryGraphLower": "Memory graph",
-    "memoriesTitle": "Memories",
-    "connectorsTitle": "Connectors",
-    "apiKeysLower": "API keys",
-    "evaluationTitle": "Evaluation",
-    "accountLoading": "Loading…",
-    "productBrain": "BRAIN",
-    "productOs": "OS",
-    "productVoice": "VOICE",
-    "representedBy": "{{label}}, represented by {{name}}",
-    "humationAgent": "Humation agent",
-    "activationPending": "Your company is ready. Team activation is still pending.",
-    "activationFailed": "Your company setup is saved. Team activation could not finish."
+    }
   },
   "swarmgovernance": {
     "actionLogHeading": "Action log",
@@ -2138,6 +2138,9 @@
     "noSignInNeeded": "This app doesn't need a sign-in.",
     "connectFailed": "Unable to start connection. Please retry.",
     "tryAsking": "Try asking an employee"
+  },
+  "runtimeCalendar": {
+    "localOnly": "Runtime’s calendar is not answering right now. These are the tasks your employees keep themselves; the rest returns with Runtime."
   },
   "chat": {
     "messageBrain": "Message Brain",

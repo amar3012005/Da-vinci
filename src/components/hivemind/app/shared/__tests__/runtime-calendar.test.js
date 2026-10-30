@@ -1,4 +1,4 @@
-import { CALENDAR_ENDPOINT, CalendarActionError, CalendarUnavailableError, boardRows, calendarUrl, deleteCalendarItem, fetchCalendar, groupByDay, nextRunText, ownerAgent, ownerLabel, rangeEntries, repeatLabel, stopCalendarItem, weekWindow } from '../runtime-calendar';
+import { LOCAL_DUTIES_ENDPOINT, fetchLocalCalendar, fetchMergedCalendar, isLocalItem, mergeCalendars, CALENDAR_ENDPOINT, CalendarActionError, CalendarUnavailableError, boardRows, calendarUrl, deleteCalendarItem, fetchCalendar, groupByDay, nextRunText, ownerAgent, ownerLabel, rangeEntries, repeatLabel, stopCalendarItem, weekWindow } from '../runtime-calendar';
 
 jest.mock('../runtime-admission', () => ({ fetchWithRuntimeAdmission: jest.fn() }));
 
@@ -98,4 +98,63 @@ test('stop posts to .../stop and delete uses DELETE; a refusal carries the runne
   await expect(stopCalendarItem('x', { fetcher: refused })).rejects.toMatchObject({ code: 'calendar_item_not_found', status: 404 });
   const page = jest.fn(() => Promise.resolve({ ok: false, status: 502, json: () => Promise.reject(new Error('html')) }));
   await expect(deleteCalendarItem('x', { fetcher: page })).rejects.toBeInstanceOf(CalendarActionError);
+});
+
+const localItem = { id: 'local-duty:dot_a:brief', kind: 'duty', title: 'Morning brief', label: 'Morning brief', status: 'active', active: true, manageable: true, local: true, owner: 'Faraday', ownerName: 'Faraday',
+  ownerId: 'e1', dutyKey: 'brief', runtimeItemId: 'duty-abc', nextAt: '2026-11-03T08:00:00.000Z', cadence: 'Every day at 08:00 (UTC)' };
+const localValue = { items: [localItem], occurrences: [{ id: 'local-duty:dot_a:brief:1', itemId: localItem.id, at: localItem.nextAt }], wakes: [] };
+const response = value => ({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, value }) });
+
+test('mergeCalendars lists OpenDot items beside Runtime items and shows a duty once when Runtime already owns it', () => {
+  const merged = mergeCalendars(calendar, localValue);
+  expect(merged.items.map(item => item.id)).toEqual(['duty-a', 'plan-a', 'local-duty:dot_a:brief']);
+  expect(merged.occurrences.some(run => run.itemId === localItem.id)).toBe(true);
+  expect(merged.wakes).toBe(calendar.wakes);
+  // Runtime lists the same duty under the id it gives a handed-over duty, so the OpenDot copy is dropped with its runs.
+  const handed = mergeCalendars({ ...calendar, items: [...calendar.items, { id: 'duty-abc', kind: 'duty', title: 'Morning brief', owner: 'e1', active: true, nextAt: localItem.nextAt }] }, localValue);
+  expect(handed.items.filter(item => item.title === 'Morning brief')).toHaveLength(1);
+  expect(handed.occurrences.some(run => run.itemId === localItem.id)).toBe(false);
+  // By duty key and employee when Runtime sends the key.
+  const keyed = mergeCalendars({ ...calendar, items: [{ id: 'other-id', dutyKey: 'brief', ownerId: 'e1', owner: 'e1' }] }, localValue);
+  expect(keyed.items.map(item => item.id)).toEqual(['other-id']);
+  expect(mergeCalendars(calendar, { items: [] })).toBe(calendar);
+  expect(mergeCalendars(null, localValue)).toBe(localValue);
+});
+
+test('fetchLocalCalendar reads the OpenDot route and treats any failure as no items', async () => {
+  const window = { from: 1, to: 2 };
+  const fetcher = jest.fn(() => Promise.resolve(response(localValue)));
+  await expect(fetchLocalCalendar(window, { fetcher })).resolves.toEqual(localValue);
+  expect(fetcher).toHaveBeenCalledWith(`${LOCAL_DUTIES_ENDPOINT}?from=1&to=2`, expect.objectContaining({ credentials: 'same-origin' }));
+  await expect(fetchLocalCalendar(window, { fetcher: () => Promise.reject(new Error('down')) })).resolves.toBeNull();
+  await expect(fetchLocalCalendar(window, { fetcher: () => Promise.resolve({ ok: false, status: 502 }) })).resolves.toBeNull();
+  await expect(fetchLocalCalendar(window, { fetcher: () => Promise.resolve(undefined) })).resolves.toBeNull();
+});
+
+test('fetchMergedCalendar shows OpenDot items when Runtime fails or has no root, and still fails when nothing is left to show', async () => {
+  const window = { from: 1, to: 2 };
+  const local = () => Promise.resolve(response(localValue));
+  const down = () => Promise.resolve({ ok: false, status: 502 });
+  await expect(fetchMergedCalendar(window, { fetcher: down, localFetcher: local })).resolves.toEqual({ value: localValue, runtimeDown: true });
+  await expect(fetchMergedCalendar(window, { fetcher: () => Promise.reject(new TypeError('Failed to fetch')), localFetcher: local })).resolves.toMatchObject({ runtimeDown: true });
+  await expect(fetchMergedCalendar(window, { fetcher: () => Promise.resolve({ ok: false, status: 404 }), localFetcher: local })).resolves.toMatchObject({ runtimeDown: true });
+  const noRoot = await fetchMergedCalendar(window, { fetcher: () => Promise.resolve(response(null)), localFetcher: local });
+  expect(noRoot.value).toBe(localValue);
+  expect(noRoot.runtimeDown).toBeUndefined();
+  await expect(fetchMergedCalendar(window, { fetcher: down, localFetcher: () => Promise.reject(new Error('x')) })).rejects.toThrow('calendar_failed');
+  await expect(fetchMergedCalendar(window, { fetcher: () => Promise.resolve({ ok: false, status: 404 }), localFetcher: () => Promise.resolve(response({ items: [] })) })).rejects.toBeInstanceOf(CalendarUnavailableError);
+  const merged = await fetchMergedCalendar(window, { fetcher: () => Promise.resolve(response(calendar)), localFetcher: local });
+  expect(merged.value.items).toHaveLength(3);
+});
+
+test('stop and delete of an OpenDot item go to OpenDot, those of a Runtime item to Runtime', async () => {
+  expect(isLocalItem(localItem.id)).toBe(true);
+  expect(isLocalItem('duty-a')).toBe(false);
+  const fetcher = jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) }));
+  await stopCalendarItem(localItem.id, { fetcher });
+  await deleteCalendarItem(localItem.id, { fetcher });
+  expect(fetcher).toHaveBeenNthCalledWith(1, LOCAL_DUTIES_ENDPOINT, expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'stop', id: localItem.id }) }));
+  expect(fetcher).toHaveBeenNthCalledWith(2, LOCAL_DUTIES_ENDPOINT, expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'delete', id: localItem.id }) }));
+  await stopCalendarItem('duty-a', { fetcher });
+  expect(fetcher).toHaveBeenLastCalledWith('/api/hivemindHq/calendar/duty-a/stop', expect.objectContaining({ method: 'POST' }));
 });
