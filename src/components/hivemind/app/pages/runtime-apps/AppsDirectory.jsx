@@ -4,7 +4,9 @@ import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Check, ChevronDown, ExternalLink, Hammer, LayoutGrid, Plus, Search, ShieldCheck, X, Zap } from "lucide-react";
 import { appsResponse } from "./apps-response";
+import { useTranslation } from "react-i18next";
 import { openAfter } from "./popup";
+import { connectBlock, connectErrorMessage } from "./connect-state";
 import apiClient from "../../shared/api-client";
 const INSTANT = ["serpapi", "firecrawl", "tavily", "exa", "elevenlabs", "peopledatalabs"];
 const PAGE = 60;
@@ -300,6 +302,7 @@ function loadDetail(slug) {
   return p;
 }
 function AppDrawer({ app, cloud, connected, signedIn, instant, onClose }) {
+  const { t } = useTranslation("dashboard", { useSuspense: false });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
   const [toolkitMeta, setToolkitMeta] = useState(null);
@@ -311,11 +314,12 @@ function AppDrawer({ app, cloud, connected, signedIn, instant, onClose }) {
       const meta = catalog.toolkits?.find(toolkit => toolkit.slug === app.slug);
       if (!meta) throw new Error("Authentication details unavailable. Close and reopen this app to retry.");
       if (!disposed) setToolkitMeta(meta);
-    }).catch(error => { if (!disposed) setError(error?.response?.data?.error || error?.message || "Authentication details unavailable."); });
+    }).catch(error => { if (!disposed) setError(connectErrorMessage(error, "Authentication details unavailable.")); });
     return () => { disposed = true; };
   }, [app.slug]);
   const schemes = toolkitMeta?.authSchemes || [];
   const usesKey = !schemes.includes("OAUTH2") && schemes.includes("API_KEY");
+  const blocked = connectBlock(toolkitMeta);
   const connect = async () => {
     setPending(true);
     try {
@@ -332,12 +336,12 @@ function AppDrawer({ app, cloud, connected, signedIn, instant, onClose }) {
         const result = await apiClient.createComposioConnectLink(app.slug, {
           toolkitMeta,
           callbackUrl: callback.toString(),
-        });
+        }).catch((failure) => { throw new Error(connectErrorMessage(failure, t("runtimeApps.connectUnavailable"))); });
         if (!result.redirect_url) throw new Error("Authorization link unavailable");
         return { url: result.redirect_url };
       }, setError);
     } catch (error) {
-      setError(error?.response?.data?.error || error?.message || "Unable to start connection. Please retry.");
+      setError(connectErrorMessage(error, t("runtimeApps.connectFailed")));
     } finally {
       setPending(false);
     }
@@ -362,7 +366,7 @@ function AppDrawer({ app, cloud, connected, signedIn, instant, onClose }) {
       /* @__PURE__ */ jsx("dl", { className: "grid grid-cols-3 divide-x divide-black/[0.06] rounded-lg border border-black/[0.06]", children: [
         ["Tools", fmt(app.tools)],
         ["Triggers", fmt(app.triggers)],
-        ["Auth", app.managed ? "Managed" : instant ? "Instant" : "Your key"]
+        ["Auth", blocked ? t("runtimeApps.authUnavailable") : app.managed ? "Managed" : instant ? "Instant" : "Your key"]
       ].map(([k, v]) => /* @__PURE__ */ jsxs("div", { className: "px-3 py-2.5", children: [
         /* @__PURE__ */ jsx("dt", { className: "eyebrow", children: k }),
         /* @__PURE__ */ jsx("dd", { className: "mt-0.5 text-[15px]", children: v })
@@ -370,24 +374,19 @@ function AppDrawer({ app, cloud, connected, signedIn, instant, onClose }) {
       connected || keyConnected ? /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 rounded-lg bg-success/10 px-3.5 py-2.5 text-body-sm text-success", children: [
         /* @__PURE__ */ jsx(Check, { className: "size-4", strokeWidth: 2 }),
         " ",
-        cloud ? "Connected through HIVEMIND." : "Connected. Your dots can use",
-        " ",
-        !cloud && app.name
+        cloud ? t("runtimeApps.connectedCloud") : t("runtimeApps.connectedApp", { app: app.name })
       ] }) : /* @__PURE__ */ jsxs("div", { className: "space-y-1.5", children: [
-        usesKey && jsx("label", { className: "block text-body-sm", children: ["API key", jsx("input", { type: "password", autoComplete: "off", value: key, onChange: e => setKey(e.target.value), className: "mt-2 w-full rounded-lg border p-3", "aria-label": `${app.name} API key` })] }),
-        /* @__PURE__ */ jsx("button", { className: "btn-primary h-10 w-full", disabled: pending || !toolkitMeta || (usesKey && !key.trim()), onClick: connect, children: pending ? "Connecting…" : !toolkitMeta ? "Checking connection options…" : usesKey ? `Connect ${app.name}` : `Sign in to ${app.name}` }),
-        error && /* @__PURE__ */ jsx("p", { className: "text-caption text-destructive", children: error }),
-        /* @__PURE__ */ jsxs("p", { className: "text-caption text-foreground/45", children: usesKey ? "Your key is submitted securely to connect this account. It is not included in agent conversations." : [
-          "You'll sign in with ",
-          app.name,
-          " directly. Your dots never see your password."
-        ] })
+        !blocked && usesKey && jsx("label", { className: "block text-body-sm", children: ["API key", jsx("input", { type: "password", autoComplete: "off", value: key, onChange: e => setKey(e.target.value), className: "mt-2 w-full rounded-lg border p-3", "aria-label": `${app.name} API key` })] }),
+        blocked ? /* @__PURE__ */ jsx("p", { role: "status", className: "rounded-lg bg-black/[0.04] px-3.5 py-2.5 text-body-sm text-foreground/65", children: t(blocked === "no_sign_in" ? "runtimeApps.noSignInNeeded" : "runtimeApps.connectUnavailable") }) : /* @__PURE__ */ jsx("button", { className: "btn-primary h-10 w-full", disabled: pending || !toolkitMeta || (usesKey && !key.trim()), onClick: connect, children: pending ? t("runtimeApps.connecting") : !toolkitMeta ? t("runtimeApps.checkingOptions") : usesKey ? `Connect ${app.name}` : t("runtimeApps.signIn", { app: app.name }) }),
+        !blocked && error && /* @__PURE__ */ jsx("p", { role: "alert", className: "text-caption text-destructive", children: error }),
+        !blocked && /* @__PURE__ */ jsxs("p", { className: "text-caption text-foreground/45", children: usesKey ? "Your key is submitted securely to connect this account. It is not included in agent conversations." : t("runtimeApps.signInNote", { app: app.name }) })
       ] }),
       /* @__PURE__ */ jsx(Suspense, { fallback: /* @__PURE__ */ jsx("div", { className: "text-body-sm text-foreground/45", children: "Loading tools\u2026" }), children: /* @__PURE__ */ jsx(DetailBody, { slug: app.slug }) })
     ] })
   ] }) });
 }
 function DetailBody({ slug }) {
+  const { t: translate } = useTranslation("dashboard", { useSuspense: false });
   const [d, setDetail] = useState(null);
   useEffect(() => {
     let active = true;
@@ -405,7 +404,7 @@ function DetailBody({ slug }) {
   const tools = d.tools.filter((t) => !q || `${t.slug} ${t.name} ${t.description}`.toLowerCase().includes(q.toLowerCase()));
   return /* @__PURE__ */ jsxs(Fragment, { children: [
     d.prompts.length > 0 && /* @__PURE__ */ jsxs("section", { children: [
-      /* @__PURE__ */ jsx("h3", { className: "eyebrow mb-2", children: "Try asking a dot" }),
+      /* @__PURE__ */ jsx("h3", { className: "eyebrow mb-2", children: translate("runtimeApps.tryAsking") }),
       /* @__PURE__ */ jsx("div", { className: "space-y-1.5", children: d.prompts.map((p) => /* @__PURE__ */ jsxs("div", { className: "rounded-md bg-popover px-3 py-2 text-body-sm text-foreground/75", children: [
         "\u201C",
         p,
