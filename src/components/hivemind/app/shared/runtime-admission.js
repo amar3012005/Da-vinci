@@ -8,7 +8,24 @@ const RUNTIME_ORIGIN = 'https://runtime-runner.singulancelabs.com';
 export const ADMISSION_COOLDOWN_MS = 5 * 60_000;
 
 let admission = null;
+let runtimeHostAdmission = null;
 let uselessAdmissionAt = -Infinity;
+let uselessRuntimeHostAdmissionAt = -Infinity;
+
+/**
+ * Packaged app: admit a Runtime session on the Runtime host with a Control Harness ticket, as a browser on that host does.
+ * The session cookie stays in the native Runtime-host jar. No `hivemind:session-established` event is sent, so Brain
+ * listeners do not re-read.
+ * @returns {Promise<void>} resolves when the Runtime host accepted the ticket.
+ * @throws {Error} when no ticket is issued or the host refuses it.
+ */
+async function admitRuntimeHost() {
+  const { default: apiClient } = await import('./api-client');
+  const { data } = await apiClient.controlPlane.post('/v1/harness-chat/bootstrap', {});
+  if (data?.mode !== 'harness' || typeof data.ticket !== 'string' || !data.ticket) throw new Error('runtime_admission_unavailable');
+  const established = await nativeRuntimeFetch('/api/hivemind/session/establish', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ticket: data.ticket, request_id: crypto.randomUUID() }) });
+  if (!established.ok) throw new Error('runtime_admission_refused');
+}
 let runtimeHostUnsupported = false;
 
 /**
@@ -52,7 +69,16 @@ export async function nativeRuntimeFetch(input, init = {}, plugin = nativePlugin
  */
 export async function fetchWithRuntimeAdmission(input, init, now = Date.now) {
   if (isNativeApp() && !runtimeHostUnsupported) {
-    try { return await nativeRuntimeFetch(input, init); } catch (error) {
+    try {
+      const response = await nativeRuntimeFetch(input, init);
+      // Runtime-runner APIs (Library, calendar, HQ) need a Runtime session besides Control's cookie; admit once and retry.
+      if (response.status !== 401 || now() - uselessRuntimeHostAdmissionAt < ADMISSION_COOLDOWN_MS) return response;
+      runtimeHostAdmission ||= admitRuntimeHost().finally(() => { runtimeHostAdmission = null; });
+      try { await runtimeHostAdmission; } catch { uselessRuntimeHostAdmissionAt = now(); return response; }
+      const retried = await nativeRuntimeFetch(input, init);
+      if (retried.status === 401) uselessRuntimeHostAdmissionAt = now();
+      return retried;
+    } catch (error) {
       if (error?.message !== 'runtime_host_unsupported') throw error;
       runtimeHostUnsupported = true;
     }
@@ -78,4 +104,4 @@ export function fetchRuntime(input, init) {
 }
 
 /** Test hook: forget the cooldown and the shell capability. */
-export function resetRuntimeAdmissionForTests() { uselessAdmissionAt = -Infinity; runtimeHostUnsupported = false; admission = null; }
+export function resetRuntimeAdmissionForTests() { uselessAdmissionAt = -Infinity; uselessRuntimeHostAdmissionAt = -Infinity; runtimeHostUnsupported = false; admission = null; runtimeHostAdmission = null; }
