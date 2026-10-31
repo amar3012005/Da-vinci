@@ -64,7 +64,7 @@ describe('packaged app without a runner session', () => {
   });
 
   test('still reports the runner error when Control lists nobody', async () => {
-    mockControl(jest.fn().mockResolvedValue({ employees: [] }), jest.fn());
+    mockControl(jest.fn().mockResolvedValue({ employees: [] }), jest.fn().mockResolvedValue(null));
     await expect(loadOn('https://next.singulancelabs.com/hivemind/app/overview', unauthorized)).rejects.toThrow('team unavailable');
   });
 
