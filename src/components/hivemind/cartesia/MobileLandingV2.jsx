@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LazyProactiveStory } from '../../mobile/story/ProactiveStory';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowRight, Brain, CheckCircle2, Mic2, Users,
@@ -114,40 +115,6 @@ const Hero = ({ desktop = false, profileName = null }) => (
       </Rise>
     </div>
 
-    <Rise delay={0.3} className={`relative mx-auto mt-12 max-w-md ${desktop ? 'md:mt-16 md:max-w-3xl' : ''}`}>
-      <div className="overflow-hidden rounded-2xl border border-[#DEDAD1] bg-white shadow-[0_28px_70px_-34px_rgba(20,20,20,.34)]">
-        <div className="flex h-11 items-center gap-2 border-b border-[#ECE9E2] px-4">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#E96E64]" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#EAB64D]" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#5DBB63]" />
-          <span className="ml-2 font-mono text-[10px] tracking-[.16em] text-[#9C988E]">hivemind — operating · live</span>
-        </div>
-        <div className="p-5 text-left">
-          <p className="font-mono text-[10px] uppercase tracking-[.18em] text-[#117DFF]">Objective received</p>
-          <p className="mt-3 font-['Space_Grotesk'] text-[22px] font-semibold leading-tight tracking-[-.03em] text-[#0A0A0A]">
-            Prepare our next market move.
-          </p>
-          <div className="mt-5 space-y-3">
-            {[
-              ['BRAIN', 'Recalling company context', 'ready'],
-              ['HYPERAGENTS', 'Omar and Priya are researching', 'working'],
-              ['VOICE', 'TARA is ready for customer follow-up', 'queued'],
-            ].map(([label, task, status], index) => (
-              <div key={label} className="flex items-center gap-3 rounded-xl border border-[#ECE9E2] bg-[#FCFCFA] p-3">
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${index === 1 ? 'bg-[#F3F0FF] text-[#7C5CFC]' : index === 2 ? 'bg-[#ECF8F3] text-[#178A62]' : 'bg-[#EEF6FF] text-[#117DFF]'}`}>
-                  {index === 0 ? <Brain size={16} /> : index === 1 ? <Users size={16} /> : <Mic2 size={16} />}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-mono text-[9px] font-semibold tracking-[.14em] text-[#77736B]">{label}</span>
-                  <span className="mt-0.5 block truncate text-[12px] font-medium text-[#242321]">{task}</span>
-                </span>
-                <span className="font-mono text-[8px] uppercase tracking-[.1em] text-[#9C988E]">{status}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </Rise>
   </section>
 );
 
@@ -245,6 +212,7 @@ export default function MobileLandingV2({ desktop = false, profileName = null })
   return (
     <main className={desktop ? 'hidden md:block' : 'md:hidden'} style={{ background: PAPER, color: INK }}>
       <Hero desktop={desktop} profileName={profileName} />
+      <LazyProactiveStory centered />
       <ProofRail />
       <OperatingSystem desktop={desktop} />
     </main>
