@@ -1,3 +1,4 @@
+import { normalizeBrainEntry } from './components/hivemind/app/shared/brain-landing';
 import Seo from './components/Seo';
 import PublicProduct from './components/PublicProduct';
 import PublicPageLoading from './components/PublicPageLoading';
@@ -71,6 +72,9 @@ const MarketingHomepage = () => (
 
 // The public company homepage stays visible; sign-in is an explicit action.
 const ReturningUserMarketingHomepage = MarketingHomepage;
+
+// A bare Brain overview URL (desktop app start page, old links) is rewritten before the router reads it.
+normalizeBrainEntry();
 
 function App() {
   const isPublicProductHost = typeof window !== 'undefined' && ['singulancelabs.com', 'www.singulancelabs.com', 'next.singulancelabs.com'].includes(window.location.hostname);

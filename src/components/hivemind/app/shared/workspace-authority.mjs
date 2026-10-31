@@ -22,8 +22,19 @@ export function workspaceDocumentRedirect(input, { embedded = false } = {}) {
     && !/^\/hivemind\/app(?:\/|$)/.test(url.pathname)) return null;
   url.host = new URL(MAIN_ORIGIN).host;
   url.searchParams.delete('native_pane');
-  if (url.pathname === '/' || url.pathname === '/hivemind') url.pathname = '/hivemind/app/overview/new';
+  if (url.pathname === '/' || url.pathname === '/hivemind' || /^\/hivemind\/app\/overview\/?$/.test(url.pathname)) url.pathname = '/hivemind/app/overview/new';
   return url.href;
+}
+/**
+ * The document URL that actually serves a link: the owning host's address, so following it needs no redirect.
+ * @param {string|URL} href - absolute link or one relative to `base`.
+ * @param {string} base - the page's URL.
+ * @param {{ embedded?: boolean }} [options] - whether the page is framed.
+ * @returns {string} the final URL (the input resolved against `base` when no host change applies).
+ */
+export function finalDocumentHref(href, base, options = {}) {
+  const url = new URL(String(href), base);
+  return workspaceDocumentRedirect(url, options) || url.href;
 }
 export function runtimeLoginUrl(input) {
   const target = new URL(input);

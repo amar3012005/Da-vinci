@@ -1,3 +1,4 @@
+import { rememberBrainMode } from '../shared/brain-landing';
 import { clearRuntimePresentation } from '../shared/runtime-presentation-cache';
 import { initialNativePane } from '../shared/native-pane-protocol';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
@@ -270,6 +271,7 @@ export async function establishHarnessSession({ fresh = false } = {}) {
   // The rollout is deliberately binary.  A user outside the Harness cohort
   // must stay on the existing LangGraph conversation surface, including when
   // they arrive through a stale /overview/new or /overview/session/:id URL.
+  rememberBrainMode(admission?.mode === 'legacy');
   if (admission?.mode === 'legacy') {
     // Brain rollout eligibility cannot move an existing employee conversation
     // to another product or discard a pending native draft during recovery.

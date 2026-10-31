@@ -1,6 +1,7 @@
 import AsciiWorkspaceLoading from './components/AsciiWorkspaceLoading';
 import { RoomLoading } from './layout/PhoneRoomFrame';
 import React, { useEffect } from 'react';
+import { brainLandingPath } from './shared/brain-landing';
 import { workspaceDocumentRedirect } from './shared/workspace-authority.mjs';
 import { importPage } from './shared/import-page';
 import { bindNativeInAppLinks } from './shared/native-in-app-links';
@@ -129,6 +130,11 @@ function PageSuspense({ children }) {
   );
 }
 
+/** The app root and unknown paths land on Brain's final route in one replace (a legacy company keeps the bare overview). */
+function BrainEntry() {
+  return <Navigate to={brainLandingPath() || '/hivemind/app/overview'} replace />;
+}
+
 function CanonicalCRMRoute() {
   const location = useLocation();
   if (location.pathname !== '/hivemind/app/crm') {
@@ -183,7 +189,7 @@ export default function HiveMindApp() {
           path="m/chat"
           element={
             <ProtectedRoute>
-              <Navigate to="/hivemind/app/overview" replace />
+              <BrainEntry />
             </ProtectedRoute>
           }
         />
@@ -276,7 +282,7 @@ export default function HiveMindApp() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/hivemind/app/overview" replace />} />
+          <Route index element={<BrainEntry />} />
           {/* Native Harness owns explicit overview session URLs.  The wildcard
               keeps `/overview/new` and `/overview/session/:id` inside this
               route instead of falling through to the relative catch-all,
@@ -337,11 +343,11 @@ export default function HiveMindApp() {
           <Route path="connect/composio/callback" element={<PageSuspense><ComposioConnectCallback /></PageSuspense>} />
           {/* Unknown /hivemind/app/* child (stray OAuth redirect_uri like
               /app/callback, typos) → overview instead of a blank Outlet. */}
-          <Route path="*" element={<Navigate to="/hivemind/app/overview" replace />} />
+          <Route path="*" element={<BrainEntry />} />
         </Route>
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/hivemind/app/overview" replace />} />
+        <Route path="*" element={<BrainEntry />} />
       </Routes>
     </AuthProvider>
   );
