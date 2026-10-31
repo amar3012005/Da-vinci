@@ -131,7 +131,16 @@ export default function NotificationBannerHost() {
       // The card route re-checks the card's state; a notification button never approves by itself.
       if (action === 'approve' && cardId) answerNeedsYouCard(cardId, 'approve').then(ok => { if (ok) { haptic('success'); window.dispatchEvent(new Event('hivemind:employee-status-changed')); } });
     });
-    const offLink = desktop?.onDeepLink?.((href) => { const path = normalizeDeepLink(href); if (path.startsWith('/') && window.__hmNativeNavigate) window.__hmNativeNavigate(path); });
+    // The macOS preload announces notification clicks on window.electron.onDeepLink as singulance://app/<path>;
+    // routing in place (history + popstate) avoids a reload when the shell has no native navigate hook.
+    const onLink = (href) => {
+      const path = normalizeDeepLink(href);
+      if (!path.startsWith('/')) return;
+      if (window.__hmNativeNavigate) { window.__hmNativeNavigate(path); return; }
+      window.history.pushState({}, '', path);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    };
+    const offLink = (desktop?.onDeepLink || window.electron?.onDeepLink)?.(onLink);
     return () => {
       unsubscribers.forEach(off => off()); window.clearInterval(timer);
       window.removeEventListener('hivemind:employee-status-changed', refresh); document.removeEventListener('visibilitychange', refresh);
