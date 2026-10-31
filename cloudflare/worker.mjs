@@ -8,6 +8,7 @@ import { isStaticBuildAsset, matchBuildAsset, storeBuildAsset } from './build-as
 export { ComposioAccount } from './composio-account.mjs';
 import { proxyConnectorTransport } from './connector-transport.mjs';
 import { handleModeAccess, gateWorkspaceDocument, proxyPlatformAdmin } from './account-mode-access.mjs';
+import { handleBugReport } from './bug-report.mjs';
 export { AccountModeAccess } from './account-mode-access.mjs';
 import { devCommunity } from './dev-community.mjs';
 export { DevCommunity } from './dev-community.mjs';
@@ -541,6 +542,8 @@ export default {
     if (connectorResponse) return connectorResponse;
     const adminProxyResponse = await proxyPlatformAdmin(request);
     if (adminProxyResponse) return adminProxyResponse;
+    const bugReportResponse = await handleBugReport(request, env);
+    if (bugReportResponse) return bugReportResponse;
     const accountAccessResponse = await handleModeAccess(request, env);
     if (accountAccessResponse) return accountAccessResponse;
     const accountRouteGate = await gateWorkspaceDocument(request, env);

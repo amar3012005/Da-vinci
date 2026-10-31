@@ -31,8 +31,14 @@ export default function NativeOpenDotRoom({ route, active = true }) {
     onNativeRoomClosed(() => { setState('closed'); window.dispatchEvent(new CustomEvent('hivemind:open-dot-team')); })
       .then(handle => { if (gone) handle.remove(); else listener = handle; });
     open();
-    return () => { gone = true; listener?.remove(); closeNativeRoom().catch(() => { /* No room was open. */ }); };
+    return () => { gone = true; listener?.remove(); };
   }, [active, employeeId, open, visit]);
+  // Close the native room only when this page leaves or shows another employee: choosing the same employee again
+  // re-runs the effect above with a new visit, and closing there would close the room that tap just opened.
+  useEffect(() => {
+    if (!active || !employeeId) return undefined;
+    return () => { closeNativeRoom(employeeId).catch(() => { /* No room was open. */ }); };
+  }, [active, employeeId]);
   return <main className="flex h-full min-h-0 flex-col items-center justify-center gap-3 bg-white p-6 text-center">
     {state === 'opening'
       ? <AsciiWorkspaceLoading label="Opening workspace…" />

@@ -157,3 +157,7 @@ nav .ha-autonomy-seat.is-drawer { padding:4px 10px 12px; }
 /* Walkthrough authority step: a short hairline ring on the dial it points at. */
 .ha-autonomy-dial[data-attention] { outline:2px solid #111; outline-offset:4px; border-radius:14px; transition:outline-color .24s cubic-bezier(.2,.8,.2,1); }
 @media (prefers-reduced-motion:reduce) { .ha-autonomy-dial[data-attention] { transition:none; } }
+
+.ha-account-row { display:flex; align-items:center; gap:4px; }
+.ha-account-row .ha-account-settings { flex:1; min-width:0; }
+.desktop-hyperagents-navigation.is-collapsed .ha-account-row { flex-direction:column; }

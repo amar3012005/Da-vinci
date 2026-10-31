@@ -1,9 +1,13 @@
 import { hedgedFetch } from './hedged-fetch.mjs';
+import { bugReportDurable } from './bug-report.mjs';
 import {requiresWorkspaceModeAccess} from '../src/components/hivemind/app/shared/workspace-mode-policy.mjs';
 /** Account grants are strongly consistent; only this Worker's verified admin path writes them. */
 export class AccountModeAccess {
   constructor(ctx) { this.ctx = ctx; }
   async fetch(request) {
+    // Bug reports share this Durable Object class, keyed per user (see bug-report.mjs); grants keep their own keys.
+    const bug = await bugReportDurable(request, this.ctx.storage);
+    if (bug) return bug;
     if (request.method === 'GET') return Response.json(await this.ctx.storage.get('grant') || { enabled: null });
     if (request.method !== 'PUT') return new Response(null, { status: 405 });
     const input = await request.json();
