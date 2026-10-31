@@ -47,6 +47,7 @@ const COMPONENTS = {
   'layout/WorkspaceNotifications.jsx': 'outerApp.notifications',
   'layout/NativeMobileAppsSheet.jsx': 'outerApp.mobileApps',
   'layout/NeedsYouPanel.jsx': 'needsYou',
+  'hyperagents/TeamBoard.jsx': 'teamBoard',
   'mobile/LegacyChatSheets.jsx': 'outerApp.mobileApps',
 };
 /** Components that are JSX and must carry no English text; the draft module only returns strings. */

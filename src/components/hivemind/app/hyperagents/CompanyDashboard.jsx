@@ -17,6 +17,7 @@ import { aggregateAgentRooms } from '../layout/AgentRoomStatus';
 import { pageCache } from '../shared/resource-cache';
 import { libraryUrl, readLibraryFirstPage } from '../shared/runtime-library';
 import { assignmentsByTeammate, recentDeliverables, runtimeAgendas, runtimeStatusSummary, upcomingWakes } from './company-hq-model';
+import TeamBoard from './TeamBoard';
 import { DeliverablesCard, EmptyNote, FOCUS, HqCard, HqSkeleton, RuntimeCard, StatusChip, TeamCard, WakesCard } from './CompanyHqSections';
 import '../shared/skeleton.css';
 import './company-hq.css';
@@ -220,6 +221,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
   const [openingTask, setOpeningTask] = useState(null);
   const [confirmRerun, setConfirmRerun] = useState(false);
   const [viewingProfile, setViewingProfile] = useState(null);
+  const [view, setView] = useState('overview');
   const [resetting, setResetting] = useState(false);
   const [editingContacts, setEditingContacts] = useState(false);
   const [savingContacts, setSavingContacts] = useState(false);
@@ -546,6 +548,10 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <div role="group" aria-label={t('teamBoard.viewLabel', 'View')} className="inline-flex h-10 items-center rounded-full border border-[#e3e0db] bg-white p-0.5 text-[12.5px] font-medium">
+              {[['overview', t('teamBoard.viewOverview', 'Overview')], ['team', t('teamBoard.viewTeam', 'Team')]].map(([id, label]) => <button key={id} type="button" aria-pressed={view === id} data-hq-view={id} onClick={() => setView(id)}
+                className={`h-9 rounded-full px-3.5 transition-colors ${view === id ? 'bg-[#111] text-white' : 'text-[#3d4249] hover:bg-[#f3f1ec]'} ${FOCUS}`}>{label}</button>)}
+            </div>
             {onShowRoster ? <button type="button" onClick={onShowRoster} className={`inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#e3e0db] bg-white px-3 text-[12.5px] font-medium text-[#3d4249] hover:border-[#c9c5bc] hover:text-[#0a0a0a] ${FOCUS}`}>
               <LayoutGrid size={14} aria-hidden="true" /> {t('hyperDash.agents', 'Agents')}
             </button> : null}
@@ -555,6 +561,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
           </div>
         </header>
 
+        {view === 'team' ? <TeamBoard team={team?.length ? team : employees} rooms={rooms} onOpenTeammate={onOpenTeammate} /> : <>
         <div className="hm-hq-grid px-4 py-4 sm:px-6 sm:py-5" data-runtime-off={runtimeEnabled ? undefined : ''}>
           <HqCard area="overview" title="Company overview" icon={Building2}>
             <div className="hm-hq-overview-body">
@@ -643,6 +650,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
           <span className="inline-flex items-center gap-1.5"><Building2 size={13} aria-hidden="true" /> {t('hyperDash.onboardedAt', 'Onboarded')} {c.onboarded_at ? new Date(c.onboarded_at).toLocaleDateString() : ''}</span>
           {allowOnboarding ? <button type="button" onClick={() => setConfirmRerun(true)} className={`min-h-[40px] rounded-lg px-1 text-[#2559a8] hover:underline ${FOCUS}`}>{t('hyperDash.rerun', 'Re-run onboarding')}</button> : null}
         </footer>
+        </>}
       </div>
 
       {editingContacts && contactDraft ? (
