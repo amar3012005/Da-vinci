@@ -338,8 +338,10 @@ export default function Sidebar({
         setTeam(profiles);
         forceRefresh = false;
         setTeamLoadError(false);
-      } catch {
+      } catch (error) {
         if (controller.signal.aborted || teamScope.current !== scope) return;
+        // A rejected session is not a restart: ask the auth provider to re-check it, which signs out only on a real 401.
+        if ((error?.status ?? error?.response?.status) === 401) window.dispatchEvent(new CustomEvent('hm:session-check'));
         // A Runtime or HyperAgent restart takes up to a minute: keep retrying across it and only
         // report the failure once brief blips are ruled out.
         attempts += 1;

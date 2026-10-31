@@ -216,6 +216,15 @@ export function AuthProvider({ children }) {
     runBootstrap();
   }, [runBootstrap]);
 
+  // A 401 from a data request (for example the team roster) re-checks the session at most every 30 s,
+  // so an expired session reaches sign-in instead of leaving a stale screen.
+  useEffect(() => {
+    let last = 0;
+    const recheck = () => { if (Date.now() - last < 30000) return; last = Date.now(); void runBootstrap(); };
+    window.addEventListener('hm:session-check', recheck);
+    return () => window.removeEventListener('hm:session-check', recheck);
+  }, [runBootstrap]);
+
   useEffect(() => {
     if (authState !== 'control_plane_unreachable') return undefined;
     const retry = () => { void runBootstrap(); };
