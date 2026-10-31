@@ -53,7 +53,15 @@ function useFitCanvas(screenRef, canvasRef, width) {
 function Device({ phone, screenRef, canvasRef, lidRef, glowRef, deviceRef, staticFrame = false }) {
   const screen = <div className="ps-screen" ref={screenRef}><div className="ps-canvas" ref={canvasRef}><StoryScreen phone={phone} /></div>{!staticFrame && <div className="ps-glow" ref={glowRef} />}</div>;
   if (phone) return <div className="ps-iphone" ref={deviceRef}><span className="ps-island" />{screen}</div>;
-  return <div className="ps-mac" ref={deviceRef}><div className="ps-lid" ref={lidRef}>{screen}</div><div className="ps-base" /><span className="ps-shadow" /></div>;
+  return <div className="ps-mac" ref={deviceRef}>
+    <div className="ps-lid" ref={lidRef}>
+      <div className="ps-lid-back" data-mac-back aria-hidden="true" />
+      <div className="ps-bezel"><span className="ps-notch" aria-hidden="true"><i /></span>{screen}{!staticFrame && <span className="ps-sheen" data-mac-sheen aria-hidden="true" />}</div>
+    </div>
+    <div className="ps-hinge" aria-hidden="true" />
+    <div className="ps-base" aria-hidden="true"><span className="ps-scoop" /><span className="ps-foot is-left" /><span className="ps-foot is-right" /></div>
+    <span className="ps-shadow" data-mac-shadow aria-hidden="true" />
+  </div>;
 }
 
 /** Reduced motion: each chapter as text with the screen frozen at the end of that chapter. */
