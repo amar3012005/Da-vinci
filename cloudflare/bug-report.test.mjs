@@ -62,3 +62,11 @@ test('limits reports per user per hour and keeps the newest 50', async () => {
   assert.ok((await store.add({ text: 't' }, 'u')).id);
   assert.equal((await store.list()).length, 6);
 });
+
+test('accepts the packaged app on the Runtime host with its own origin', async () => {
+  const e = env();
+  const req = new Request('https://runtime-runner.singulancelabs.com/api/hivemind/bug-report', {
+    method: 'POST', headers: { 'content-type': 'application/json', cookie: 'hm_cp_session=s', origin: 'https://runtime-runner.singulancelabs.com' }, body: JSON.stringify(body({ platform: 'ios' })),
+  });
+  assert.equal((await handleBugReport(req, e, { lookupUser: user })).status, 201);
+});

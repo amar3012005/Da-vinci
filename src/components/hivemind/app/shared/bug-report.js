@@ -4,7 +4,7 @@ import { detectPlatform } from './app-update';
 export const BUG_REPORT_MAX_BYTES = 8 * 1024;
 export const BUG_REPORT_MAX_TEXT = 4000;
 export const BUG_REPORT_ENDPOINT = '/api/hivemind/bug-report';
-const NATIVE_ORIGIN = 'https://next.singulancelabs.com';
+const RUNTIME_HOST_ORIGIN = 'https://runtime-runner.singulancelabs.com';
 
 /**
  * Builds the report body. Carries no tokens or emails: only ids the Worker can check, the route and client details.
@@ -33,7 +33,7 @@ export function validateBugReport(report) {
 
 /**
  * Sends a report. Browsers and the macOS app post to the Worker with the session cookie; the packaged iOS app needs the
- * native plugin's `bugReport` method (its session is a bearer held by the plugin, not a cookie).
+ * native plugin's `request`, which signs Runtime-host calls with Control's session cookie.
  * @param {object} report - result of `buildBugReport`.
  * @param {{ fetchImpl?: Function, plugin?: object, native?: boolean }} [options] - test seams.
  * @returns {Promise<{id: string}>} stored report id.
@@ -43,11 +43,17 @@ export async function sendBugReport(report, { fetchImpl = typeof fetch === 'unde
   const invalid = validateBugReport(report);
   if (invalid) throw Object.assign(new Error(invalid), { code: invalid });
   if (native) {
-    if (typeof plugin?.bugReport !== 'function') throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
-    const result = await plugin.bugReport({ url: NATIVE_ORIGIN + BUG_REPORT_ENDPOINT, body: JSON.stringify(report) });
+    // The plugin attaches Control's session cookie and the Runtime host's Origin to requests for this host.
+    if (typeof plugin?.request !== 'function') throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
+    let result;
+    try {
+      result = await plugin.request({ url: RUNTIME_HOST_ORIGIN + BUG_REPORT_ENDPOINT, method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(report), responseType: 'text' });
+    } catch { throw Object.assign(new Error('unavailable'), { code: 'unavailable' }); }
     if (result?.status === 401) throw Object.assign(new Error('sign_in_required'), { code: 'sign_in_required' });
-    if (result?.status !== 201 && result?.status !== 200) throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
-    return { id: String(result.id || '') };
+    let data = {};
+    try { data = JSON.parse(result?.data || '{}'); } catch { /* Non-JSON body: treated as failure below. */ }
+    if (result?.status !== 201 || !data.id) throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
+    return { id: String(data.id) };
   }
   let response;
   try {

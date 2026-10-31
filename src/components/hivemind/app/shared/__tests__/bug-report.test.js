@@ -29,10 +29,13 @@ describe('sending', () => {
     await expect(sendBugReport(report, { fetchImpl: jest.fn().mockRejectedValue(new Error('offline')) })).rejects.toMatchObject({ code: 'unavailable' });
     await expect(sendBugReport({ ...report, text: '' }, { fetchImpl: jest.fn() })).rejects.toMatchObject({ code: 'text_required' });
   });
-  test('the iOS app needs the native plugin method and says so otherwise', async () => {
+  test('the iOS app posts to the Runtime host through the native request path', async () => {
     const ios = { ...report, platform: 'ios' };
-    await expect(sendBugReport(ios, { plugin: {} })).rejects.toMatchObject({ code: 'unavailable' });
-    const plugin = { bugReport: jest.fn().mockResolvedValue({ status: 201, id: 'r-2' }) };
+    const plugin = { request: jest.fn().mockResolvedValue({ status: 201, data: '{"id":"r-2"}' }) };
     await expect(sendBugReport(ios, { plugin })).resolves.toEqual({ id: 'r-2' });
+    expect(plugin.request).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://runtime-runner.singulancelabs.com/api/hivemind/bug-report', method: 'POST' }));
+    await expect(sendBugReport(ios, { plugin: { request: jest.fn().mockResolvedValue({ status: 401, data: '' }) } })).rejects.toMatchObject({ code: 'sign_in_required' });
+    await expect(sendBugReport(ios, { plugin: { request: jest.fn().mockResolvedValue({ status: 503, data: '' }) } })).rejects.toMatchObject({ code: 'unavailable' });
+    await expect(sendBugReport(ios, { plugin: {} })).rejects.toMatchObject({ code: 'unavailable' });
   });
 });
