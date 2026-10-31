@@ -1,4 +1,4 @@
-import { createAgentRosterCache } from './agent-roster-cache';
+import { createAgentRosterCache, ROSTER_KEPT_MS } from './agent-roster-cache';
 test('reuses roster immediately across mounts and joins concurrent loads', async () => {
   let finish;
   const fetchProfiles = jest.fn(() => new Promise(resolve => { finish = resolve; }));
@@ -45,7 +45,9 @@ test('paints only scoped minimal roster from browser cache then revalidates', as
   await second.load('user-a:org-a');
   expect(fetchProfiles).toHaveBeenCalledTimes(1);
   expect(second.peek('user-a:org-a')[0].id).toBe('two');
-  expect(createAgentRosterCache(fetchProfiles, () => 603001, store).peek('user-a:org-a')).toBeUndefined();
+  // Local-first: the last known team still paints after hours offline; it is dropped after a week.
+  expect(createAgentRosterCache(fetchProfiles, () => 2000 + 6 * 3600_000, store).peek('user-a:org-a')[0].id).toBe('two');
+  expect(createAgentRosterCache(fetchProfiles, () => 2000 + ROSTER_KEPT_MS + 1, store).peek('user-a:org-a')).toBeUndefined();
 });
 test('a ready event forces a new catalog read after an in-flight stale read', async () => {
   let finish;

@@ -39,6 +39,9 @@ import {
   sanitizeEvidenceMetadata,
 } from '../shared/knowledge-ingest-contract';
 import { useApiQuery, useDebounce } from '../shared/hooks';
+import { LOCAL_FIRST } from '../shared/sync/catalog';
+import { firstPageOf } from '../shared/sync/trim';
+import { useLocalFirst } from '../shared/sync/use-local-first';
 import { useTeamContext } from '../shared/team-context';
 import { filterUserVisibleMemories } from '../shared/memory-filters';
 import UsageTracker from '../components/UsageTracker';
@@ -1569,10 +1572,12 @@ function MemoriesTab({
     loading: listLoading,
     error: listError,
     refetch: refetchList,
-  } = useApiQuery(
-    () => apiClient.listMemories(listParams),
-    [listParams],
-  );
+  } = useLocalFirst({
+    spec: LOCAL_FIRST.memories,
+    key: `list:${JSON.stringify(listParams)}`,
+    load: () => apiClient.listMemories(listParams),
+    persistTrim: firstPageOf,
+  });
 
   // Search-mode fetch
   const {
@@ -1894,12 +1899,16 @@ function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelect
     data,
     loading,
     error,
-  } = useApiQuery(
-    () => isSearching
+  } = useLocalFirst({
+    spec: LOCAL_FIRST.uploads,
+    key: `documents:${isSearching ? `search:${debouncedQuery}` : `page:${offset}`}`,
+    // Only the first unfiltered page is kept on the device; searches and later pages read the server.
+    persist: !isSearching && offset === 0,
+    load: () => (isSearching
       ? apiClient.searchDocuments(debouncedQuery, { limit: 200 })
-      : apiClient.listDocuments({ limit: PAGE_SIZE, offset }),
-    [isSearching, debouncedQuery, offset]
-  );
+      : apiClient.listDocuments({ limit: PAGE_SIZE, offset })),
+    persistTrim: firstPageOf,
+  });
 
   useEffect(() => {
     if (!data) return;

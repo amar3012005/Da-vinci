@@ -20,6 +20,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import apiClient from './api-client';
 import { PLAN_LIMIT_EVENT } from './planLimit';
+import { LOCAL_FIRST } from './sync/catalog';
+import { useLocalCopy } from './sync/use-local-first';
+import { maskMeterKeys, unmaskMeterKeys } from './sync/trim';
 
 export const USAGE_CHANGED_EVENT = 'hm:usage-changed';
 
@@ -28,6 +31,7 @@ let cache = null; // last successful usage payload (or null)
 let loading = false; // an in-flight fetch is running
 let inflight = null; // the in-flight promise (dedupes concurrent callers)
 const subscribers = new Set(); // Set<() => void>
+let persistUsage = null; // writes the settled summary to the device copy of the mounted tracker
 
 function notify() {
   subscribers.forEach((fn) => {
@@ -52,6 +56,7 @@ export async function fetchUsage(force = false) {
     try {
       const data = await apiClient.getUsage();
       cache = data || null;
+      if (cache) persistUsage?.(cache);
       return cache;
     } catch {
       // Keep the last-known-good cache on failure; a tracker just shows stale
@@ -78,7 +83,7 @@ function wireGlobalEvents() {
   window.addEventListener(PLAN_LIMIT_EVENT, onChanged);
   window.addEventListener('hm:tenant-changed', () => {
     // Never retain an organization-scoped meter across account/org switches.
-    cache = null; inflight = null; loading = false; notify();
+    cache = null; inflight = null; loading = false; persistUsage = null; notify();
   });
 }
 
@@ -101,6 +106,12 @@ export function emitUsageChanged() {
  */
 export function useUsage() {
   const [, setTick] = useState(0);
+  // The last summary of this person and company paints from the device while the shared read runs.
+  const local = useLocalCopy({ spec: LOCAL_FIRST.usage, key: 'summary', persistTrim: maskMeterKeys, restore: unmaskMeterKeys, onForeground: () => { fetchUsage(true).catch(() => {}); } });
+  useEffect(() => {
+    persistUsage = local.save;
+    return () => { if (persistUsage === local.save) persistUsage = null; };
+  }, [local.save]);
 
   useEffect(() => {
     wireGlobalEvents();
@@ -117,7 +128,8 @@ export function useUsage() {
 
   const refresh = useCallback(() => fetchUsage(true), []);
 
-  return { usage: cache, loading, refresh };
+  const usage = cache ?? local.cached?.data ?? null;
+  return { usage, loading: loading && !usage, refresh, stale: cache === null && Boolean(local.cached?.stale) };
 }
 
 export default useUsage;

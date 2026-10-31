@@ -17,13 +17,36 @@ export function createResourceCache({ maxEntries = 40, now = () => Date.now() } 
   const settled = new Map();
   const inflight = new Map();
   let generation = 0;
+  const listeners = new Set();
   const remember = (key, value) => {
+    const at = now();
     settled.delete(key);
-    settled.set(key, { value, at: now() });
+    settled.set(key, { value, at });
     while (settled.size > maxEntries) settled.delete(settled.keys().next().value);
+    for (const listener of listeners) listener(key, value, at);
   };
   return {
     read: key => settled.get(key),
+    /** Current clear counter; a hydration that started under an older one must not seed. */
+    generation: () => generation,
+    /**
+     * Seed a value restored from the device without overwriting a fresher one and without notifying listeners.
+     * @param {string} key - cache key.
+     * @param {unknown} value - restored value.
+     * @param {number} at - time the value was fetched.
+     * @param {number} [since] - generation read before the restore began; a clear in between drops the seed.
+     */
+    seed(key, value, at, since = generation) {
+      if (since !== generation || settled.has(key)) return;
+      settled.set(key, { value, at });
+      while (settled.size > maxEntries) settled.delete(settled.keys().next().value);
+    },
+    /**
+     * Listen for values the network just settled (not for seeds).
+     * @param {(key: string, value: unknown, at: number) => void} listener - called after every settled load.
+     * @returns {() => void} unsubscribe.
+     */
+    subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     pending: key => inflight.has(key),
     load(key, fetcher) {
       const existing = inflight.get(key);
