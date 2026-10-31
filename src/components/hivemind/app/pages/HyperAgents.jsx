@@ -2909,7 +2909,7 @@ function RoomThread({ roomId, onArchived }) {
               </span>
             </div>
           )}
-          {isHqRoom && runtimeEnabled && <HqRuntimeConsole
+          {isHqRoom && runtimeEnabledFor(org) && <HqRuntimeConsole
             objective={growthOperatingState?.goals?.find((goal) => goal.status === 'ACTIVE')?.objective || room?.goal || companyContext?.mission}
             baselineReady={Boolean(growthBaseline)}
           />}
