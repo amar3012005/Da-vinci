@@ -25,6 +25,7 @@ const RuntimeProduct = React.lazy(() => import('./components/RuntimeProduct'));
 const VisibilityPages = React.lazy(() => import('./components/VisibilityPages'));
 const RuntimeResearch = React.lazy(() => import('./components/RuntimeResearch'));
 const IcarusResearch = React.lazy(() => import('./components/IcarusResearch'));
+const PitchRoom = React.lazy(() => import('./components/PitchRoom'));
 const CsiResearch = React.lazy(() => import('./components/CsiResearch'));
 const PostQuantumResearch = React.lazy(() => import('./components/research/PostQuantumResearch'));
 const DevCommunity = React.lazy(() => import('./components/dev/DevCommunity'));
@@ -101,6 +102,7 @@ function App() {
     );
   }
 
+  if (window.location.hostname === 'pitch.singulancelabs.com' || (['localhost', '127.0.0.1'].includes(window.location.hostname) && new URLSearchParams(window.location.search).has('pitch-room'))) return <Router><React.Suspense fallback={<PublicPageLoading/>}><PitchRoom/></React.Suspense></Router>;
   if (window.location.hostname === 'dev.singulancelabs.com') return <Router><CookieConsent/><React.Suspense fallback={<PublicPageLoading/>}><DevCommunity/></React.Suspense></Router>;
   if (window.location.hostname === 'getruntime.singulancelabs.com') return <Router><CookieConsent/><React.Suspense fallback={<PublicPageLoading/>}><GetRuntime/></React.Suspense></Router>;
 
