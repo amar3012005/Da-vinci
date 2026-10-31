@@ -45,9 +45,12 @@ export async function sendBugReport(report, { fetchImpl = typeof fetch === 'unde
   if (native) {
     // The plugin attaches Control's session cookie and the Runtime host's Origin to requests for this host.
     if (typeof plugin?.request !== 'function') throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
+    const post = () => plugin.request({ url: RUNTIME_HOST_ORIGIN + BUG_REPORT_ENDPOINT, method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(report), responseType: 'text' });
     let result;
     try {
-      result = await plugin.request({ url: RUNTIME_HOST_ORIGIN + BUG_REPORT_ENDPOINT, method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(report), responseType: 'text' });
+      result = await post();
+      // A 401 can come from a Control session cookie the plugin cached just before it was replaced; the plugin drops its cached cookie on 401, so one retry signs with a fresh one.
+      if (result?.status === 401) result = await post();
     } catch { throw Object.assign(new Error('unavailable'), { code: 'unavailable' }); }
     if (result?.status === 401) throw Object.assign(new Error('sign_in_required'), { code: 'sign_in_required' });
     let data = {};

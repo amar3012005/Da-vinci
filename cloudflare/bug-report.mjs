@@ -138,7 +138,7 @@ export async function handleBugReport(request, env, { lookupUser = sessionUser, 
   if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
   const origin = request.headers.get('origin');
   if ((origin && origin !== url.origin && !ALLOWED_ORIGINS.has(origin)) || request.headers.get('sec-fetch-site') === 'cross-site') return reply({ error: 'origin_denied' }, 403);
-  if (!/(?:^|;\s*)hm_cp_session=/.test(request.headers.get('cookie') || '')) return reply({ error: 'authentication_required' }, 401);
+  if (!/(?:^|;\s*)hm_cp_session=/.test(request.headers.get('cookie') || '')) { console.error('[bug-report] 401 no hm_cp_session cookie'); return reply({ error: 'authentication_required', reason: 'no_session_cookie' }, 401); }
   if (!request.headers.get('content-type')?.startsWith('application/json')) return reply({ error: 'json_required' }, 415);
   if (!env.ACCOUNT_MODE_ACCESS) return reply({ error: 'bug_report_unavailable' }, 503);
   const declared = Number(request.headers.get('content-length'));
@@ -151,7 +151,7 @@ export async function handleBugReport(request, env, { lookupUser = sessionUser, 
   if (checked.error) return reply({ error: checked.error }, 400);
   let user;
   try { user = await lookupUser(request); } catch { return reply({ error: 'identity_unavailable' }, 503); }
-  if (!user?.id) return reply({ error: 'authentication_required' }, 401);
+  if (!user?.id) { console.error('[bug-report] 401 session rejected by Control'); return reply({ error: 'authentication_required', reason: 'session_rejected' }, 401); }
   try {
     const stub = env.ACCOUNT_MODE_ACCESS.get(env.ACCOUNT_MODE_ACCESS.idFromName(`bug-reports:${user.id}`));
     const response = await stub.fetch('https://bug-reports/bug-report', {
@@ -165,7 +165,8 @@ export async function handleBugReport(request, env, { lookupUser = sessionUser, 
     try {
       await indexStub(env).fetch('https://bug-reports/bug-index', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(summarize(entry)) });
     } catch (error) { console.error('bug_report_index_failed', error?.message); }
-    const notify = Promise.resolve().then(() => sendEmail(env, entry)).catch(error => console.error('bug_report_email_failed', error?.message));
+    if (!env.BUG_REPORT_EMAIL) console.error(`[bug-report-email] binding BUG_REPORT_EMAIL missing, no notification for report=${stored.id}`);
+    const notify = Promise.resolve().then(() => sendEmail(env, entry)).catch(error => console.error(`[bug-report-email] notification failed report=${stored.id} code=${error?.code ?? 'none'} message=${error?.message}`));
     if (ctx?.waitUntil) ctx.waitUntil(notify);
     return reply({ id: stored.id }, 201);
   } catch { return reply({ error: 'bug_report_unavailable' }, 503); }

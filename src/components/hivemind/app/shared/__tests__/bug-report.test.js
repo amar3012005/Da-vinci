@@ -35,6 +35,12 @@ describe('sending', () => {
     await expect(sendBugReport(ios, { plugin })).resolves.toEqual({ id: 'r-2' });
     expect(plugin.request).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://runtime-runner.singulancelabs.com/api/hivemind/bug-report', method: 'POST' }));
     await expect(sendBugReport(ios, { plugin: { request: jest.fn().mockResolvedValue({ status: 401, data: '' }) } })).rejects.toMatchObject({ code: 'sign_in_required' });
+    const retry = { request: jest.fn().mockResolvedValueOnce({ status: 401, data: '{"error":"signed_out"}' }).mockResolvedValueOnce({ status: 201, data: '{"id":"r-3"}' }) };
+    await expect(sendBugReport(ios, { plugin: retry })).resolves.toEqual({ id: 'r-3' });
+    expect(retry.request).toHaveBeenCalledTimes(2);
+    const always = { request: jest.fn().mockResolvedValue({ status: 401, data: '' }) };
+    await expect(sendBugReport(ios, { plugin: always })).rejects.toMatchObject({ code: 'sign_in_required' });
+    expect(always.request).toHaveBeenCalledTimes(2);
     await expect(sendBugReport(ios, { plugin: { request: jest.fn().mockResolvedValue({ status: 503, data: '' }) } })).rejects.toMatchObject({ code: 'unavailable' });
     await expect(sendBugReport(ios, { plugin: {} })).rejects.toMatchObject({ code: 'unavailable' });
   });

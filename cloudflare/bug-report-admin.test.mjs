@@ -141,3 +141,26 @@ test('subject cannot carry line breaks from report text', () => {
   const { subject } = bugReportMessage({ id: 'i', platform: 'web', text: 'hi\r\nBcc: evil@example.com', at: 't', userId: 'u' });
   assert.doesNotMatch(subject, /[\r\n]/);
 });
+
+test('email failures log a stable prefix with the error code, successes log the message id', async () => {
+  const logs = [], errors = [];
+  const realLog = console.log, realError = console.error;
+  console.log = (...a) => logs.push(a.join(' ')); console.error = (...a) => errors.push(a.join(' '));
+  try {
+    const ok = env({ BUG_REPORT_EMAIL: { send: async () => ({ messageId: 'm-1' }) } });
+    const w1 = [];
+    await submit(ok, report(), 'u-1', { ctx: { waitUntil: p => w1.push(p) }, sendEmail: sendBugReportEmail });
+    await Promise.all(w1);
+    const bad = env({ BUG_REPORT_EMAIL: { send: async () => { throw Object.assign(new Error('not allowed'), { code: 'E_RECIPIENT_NOT_ALLOWED' }); } } });
+    const w2 = [];
+    await submit(bad, report(), 'u-2', { ctx: { waitUntil: p => w2.push(p) }, sendEmail: sendBugReportEmail });
+    await Promise.all(w2);
+    const missing = env({});
+    const w3 = [];
+    await submit(missing, report(), 'u-3', { ctx: { waitUntil: p => w3.push(p) }, sendEmail: sendBugReportEmail });
+    await Promise.all(w3);
+  } finally { console.log = realLog; console.error = realError; }
+  assert.ok(logs.some(l => l.startsWith('[bug-report-email] accepted') && l.includes('messageId=m-1')));
+  assert.ok(errors.some(l => l.startsWith('[bug-report-email] send failed') && l.includes('E_RECIPIENT_NOT_ALLOWED')));
+  assert.ok(errors.some(l => l.startsWith('[bug-report-email] binding BUG_REPORT_EMAIL missing')));
+});
