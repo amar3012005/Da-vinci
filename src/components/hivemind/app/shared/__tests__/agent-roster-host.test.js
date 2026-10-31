@@ -36,30 +36,43 @@ test('an HTML answer from both sources is an error, never a parse crash', async 
 });
 
 describe('packaged app without a runner session', () => {
-  const company = { onboarded: true, company: { team: [
-    { id: 'u1', name: 'Feynmann', role: 'User & Market Researcher', policy_rules: { appearance: { seed: 'x' } } },
+  const listing = { employees: [
+    { id: 'u1', name: 'Feynmann', roleArchetype: 'researcher', policyRules: { appearance: { seed: 'x' } } },
+    { id: '83aed244', name: 'QA Speedrun', roleArchetype: 'qa' },
     { id: 'runtime', name: 'Runtime' }, { name: 'no id' },
-  ] } };
+  ] };
+  const company = { company: { team: [{ id: 'u1', name: 'Feynmann', role: 'User & Market Researcher' }] } };
   const unauthorized = { ok: false, status: 401, headers: { get: () => 'application/json' } };
-
-  test('falls back to the Control team, mapped to sidebar profiles', async () => {
+  const mockControl = (employees, hyperCompany) => {
     jest.doMock('../native-app', () => ({ isNativeApp: () => true }));
-    jest.doMock('../api-client', () => ({ __esModule: true, default: { hyperCompany: jest.fn().mockResolvedValue(company) } }));
+    jest.doMock('../api-client', () => ({ __esModule: true, default: { listEmployees: employees, hyperCompany } }));
+  };
+
+  test('falls back to the complete Control employee list, with company roles', async () => {
+    mockControl(jest.fn().mockResolvedValue(listing), jest.fn().mockResolvedValue(company));
     const { profiles } = await loadOn('https://next.singulancelabs.com/hivemind/app/overview', unauthorized);
-    expect(profiles).toEqual([{ id: 'u1', name: 'Feynmann', role: 'User & Market Researcher', policy_rules: { appearance: { seed: 'x' } }, policyRules: { appearance: { seed: 'x' } } }]);
+    expect(profiles).toEqual([
+      { id: 'u1', name: 'Feynmann', role: 'User & Market Researcher', policyRules: { appearance: { seed: 'x' } } },
+      { id: '83aed244', name: 'QA Speedrun', role: 'qa' },
+    ]);
   });
 
-  test('still reports the runner error when Control has no team', async () => {
-    jest.doMock('../native-app', () => ({ isNativeApp: () => true }));
-    jest.doMock('../api-client', () => ({ __esModule: true, default: { hyperCompany: jest.fn().mockResolvedValue({ onboarded: false }) } }));
+  test('a failed company read only drops the role labels', async () => {
+    mockControl(jest.fn().mockResolvedValue(listing), jest.fn().mockRejectedValue(new Error('down')));
+    const { profiles } = await loadOn('https://next.singulancelabs.com/hivemind/app/overview', unauthorized);
+    expect(profiles.map(profile => profile.role)).toEqual(['researcher', 'qa']);
+  });
+
+  test('still reports the runner error when Control lists nobody', async () => {
+    mockControl(jest.fn().mockResolvedValue({ employees: [] }), jest.fn());
     await expect(loadOn('https://next.singulancelabs.com/hivemind/app/overview', unauthorized)).rejects.toThrow('team unavailable');
   });
 
-  test('web never reads the Control team', async () => {
-    const hyperCompany = jest.fn().mockResolvedValue(company);
+  test('web never reads the Control list', async () => {
+    const listEmployees = jest.fn().mockResolvedValue(listing);
     jest.doMock('../native-app', () => ({ isNativeApp: () => false }));
-    jest.doMock('../api-client', () => ({ __esModule: true, default: { hyperCompany } }));
+    jest.doMock('../api-client', () => ({ __esModule: true, default: { listEmployees, hyperCompany: jest.fn() } }));
     await expect(loadOn('https://next.singulancelabs.com/hivemind/app/overview', unauthorized)).rejects.toThrow('team unavailable');
-    expect(hyperCompany).not.toHaveBeenCalled();
+    expect(listEmployees).not.toHaveBeenCalled();
   });
 });
