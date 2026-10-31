@@ -4,6 +4,7 @@ import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { openDotEmployeeIdFromPath } from '../shared/open-dot-employee-route';
 import { closeNativeRoom, onNativeRoomClosed, openNativeRoom } from '../shared/native-room';
 import { useSidebarCopy } from '../layout/sidebar-copy';
+import { useOptionalAuth } from '../auth/AuthProvider';
 
 /**
  * Employee room in the packaged app. OpenDot refuses to be framed by capacitor://localhost, so the native
@@ -16,11 +17,13 @@ export default function NativeOpenDotRoom({ route, active = true }) {
   const employeeId = openDotEmployeeIdFromPath((route || location).pathname);
   // Choosing the same employee again after Done is a new navigation of the same path; its key reopens the room.
   const visit = (route || location).key;
+  const { user, org } = useOptionalAuth() || {};
+  const scope = org?.id && user?.id ? `${org.id}:${user.id}` : undefined;
   const [state, setState] = useState('opening');
   const open = useCallback(() => {
     setState('opening');
-    return openNativeRoom(employeeId).catch(() => setState('failed'));
-  }, [employeeId]);
+    return openNativeRoom(employeeId, { scope }).catch(() => setState('failed'));
+  }, [employeeId, scope]);
   useEffect(() => {
     if (!active || !employeeId) return undefined;
     let listener;

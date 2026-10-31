@@ -11,9 +11,16 @@ export async function nativeWorkspaceAccess(plugin = nativePlugin) {
   return { enabled: result.enabled };
 }
 
-/** Opens (or switches) the native full-screen OpenDot room of one employee. */
-export function openNativeRoom(employeeId, plugin = nativePlugin) {
-  return plugin.openRoom({ path: `/employees/${employeeId}` });
+/**
+ * Opens (or switches) the native full-screen OpenDot room of one employee.
+ * @param {string} employeeId - employee id.
+ * @param {{ scope?: string, plugin?: object }} [options] - `org:user` of the signed-in person (rooms of one scope keep one
+ *   persistent web store, the room's own history cache, and the stores of other scopes are removed; without it the room
+ *   uses a store discarded on close) and the SingulanceNative plugin.
+ * @returns {Promise<void>} resolves when the room is shown.
+ */
+export function openNativeRoom(employeeId, { scope, plugin = nativePlugin } = {}) {
+  return plugin.openRoom({ path: `/employees/${employeeId}`, ...(scope ? { scope } : {}) });
 }
 
 /** Closes the native room without emitting `roomClosed`. */

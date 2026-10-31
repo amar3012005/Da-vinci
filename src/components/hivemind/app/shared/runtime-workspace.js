@@ -14,6 +14,6 @@ export const BRAIN_CHAT = 'https://next.singulancelabs.com/hivemind/app/overview
  * @param {(path: string) => void} navigate - Router navigation for the current host.
  */
 export function openBrainChat(navigate) {
-  if (window.location.hostname === 'next.singulancelabs.com' || isNativeApp()) navigate('/hivemind/app/overview/new');
+  if (window.location.hostname === 'next.singulancelabs.com' || isNativeApp()) navigate('/hivemind/app/overview/new', { state: { fromTeam: true } });
   else window.location.assign(BRAIN_CHAT);
 }

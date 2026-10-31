@@ -22,7 +22,7 @@ afterEach(cleanup);
 
 test('opens the native room of the route employee and closes it on leaving', async () => {
   const { unmount } = render(<NativeOpenDotRoom active />);
-  await waitFor(() => expect(mockOpen).toHaveBeenCalledWith(EMPLOYEE));
+  await waitFor(() => expect(mockOpen).toHaveBeenCalledWith(EMPLOYEE, { scope: undefined }));
   unmount();
   expect(mockClose).toHaveBeenCalled();
 });

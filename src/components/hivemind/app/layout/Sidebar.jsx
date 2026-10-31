@@ -612,7 +612,7 @@ export default function Sidebar({
     >
       {mobileRoster && <div className="mobile-roster-intro">
         <header className="mobile-roster-top">
-          <NavLink to="/hivemind/app/overview/new" className="mobile-unified-brand" aria-label={tt('openBrainChat', 'Open Brain chat')}><img src="/images/singulance-orbit.png" alt=""/>HIVEMIND</NavLink>
+          <NavLink to="/hivemind/app/overview/new" state={{ fromTeam: true }} className="mobile-unified-brand" aria-label={tt('openBrainChat', 'Open Brain chat')}><img src="/images/singulance-orbit.png" alt=""/>HIVEMIND</NavLink>
           <div className="mobile-roster-header-utilities"><LangSwitcher compact/><WorkspaceNotifications/></div>
         </header>
         <div className="mobile-unified-user-name">{user?.display_name || user?.name || user?.email?.split('@')[0] || tt('yourAccount', 'Your account')}</div>
