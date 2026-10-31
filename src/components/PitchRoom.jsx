@@ -71,7 +71,13 @@ const css = `
 .pr-foot{border-top:1px solid var(--rule);padding:28px 0 calc(40px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between;font-size:12.5px;color:var(--muted)}
 .pr-foot a{color:var(--body)}
 @media (max-width:720px){
-  .pr-hero{padding:40px 0 26px}
+  .pr-top{padding-top:16px}
+  .pr-hero{padding:22px 0 16px;gap:10px}
+  .pr-copy{gap:8px}
+  .pr-eyebrow{font-size:10px}
+  .pr-name{font-size:36px;letter-spacing:-.03em}
+  .pr-tag{font-size:18px;line-height:1.2}
+  .pr-sub{font-size:13px;line-height:1.5}
   .pr-full{margin-left:calc(-1 * max(20px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(20px,env(safe-area-inset-right,0px)))}
   .pr-slides{gap:8px}
   .pr-slide{border-radius:0;box-shadow:none}
@@ -129,7 +135,7 @@ function Embed({ id }) {
   }, [id]);
   return (
     <div className="pr-embed pr-full">
-      <iframe ref={ref} key={id} className="pr-frame" title={EMBEDS[id].title} src={`/pitch/market-map.html?embed=1#${EMBEDS[id].hash}`} style={height ? { height } : undefined} />
+      <iframe ref={ref} key={id} className="pr-frame" title={EMBEDS[id].title} src={`/pitch/market-map?embed=1#${EMBEDS[id].hash}`} style={height ? { height } : undefined} />
     </div>
   );
 }
@@ -205,7 +211,7 @@ export default function PitchRoom() {
           <div className="pr-actions">
             {isDeck
               ? <a className="pr-btn primary" href={meta.pdf} download>Download PDF</a>
-              : <a className="pr-btn" href={`/pitch/market-map.html#${meta.hash}`} target="_blank" rel="noreferrer">Open full page ↗</a>}
+              : <a className="pr-btn" href={`/pitch/market-map#${meta.hash}`} target="_blank" rel="noreferrer">Open full page ↗</a>}
           </div>
         </div>
         {isDeck ? <Deck id={tab} /> : <Embed id={tab} />}
