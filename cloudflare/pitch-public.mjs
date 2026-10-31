@@ -19,7 +19,9 @@ export async function pitchPublic(request, env) {
     assetRequest.headers.delete('if-none-match'); assetRequest.headers.delete('if-modified-since');
     return withNoindex(await env.ASSETS.fetch(assetRequest), 'no-cache');
   }
-  if (url.pathname === '/pitch/market-map.html') return withNoindex(await env.ASSETS.fetch(request), 'no-cache');
+  // Static Assets strips .html and serves the page at its extensionless path.
+  if (url.pathname === '/pitch/market-map.html') return Response.redirect(`https://${HOST}/pitch/market-map${url.search}`, 308);
+  if (url.pathname === '/pitch/market-map') return withNoindex(await env.ASSETS.fetch(request), 'no-cache');
   if (/^\/pitch\/(?:(?:product|sales|investor)\/\d{2}\.jpg|SINGULANCE-(?:Product|Sales|Investor)-Deck-2026\.pdf)$/.test(url.pathname)
     || /^\/static\//.test(url.pathname)
     || ['/favicon.ico', '/favicon.svg', '/logo.svg', '/singulance-mark.svg', '/singulance-mark-192.png', '/singulance-mark-512.png', '/manifest.json', '/manifest.webmanifest'].includes(url.pathname)) {

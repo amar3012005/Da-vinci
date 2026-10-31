@@ -129,7 +129,7 @@ function Embed({ id }) {
   }, [id]);
   return (
     <div className="pr-embed pr-full">
-      <iframe ref={ref} key={id} className="pr-frame" title={EMBEDS[id].title} src={`/pitch/market-map.html?embed=1#${EMBEDS[id].hash}`} style={height ? { height } : undefined} />
+      <iframe ref={ref} key={id} className="pr-frame" title={EMBEDS[id].title} src={`/pitch/market-map?embed=1#${EMBEDS[id].hash}`} style={height ? { height } : undefined} />
     </div>
   );
 }
@@ -205,7 +205,7 @@ export default function PitchRoom() {
           <div className="pr-actions">
             {isDeck
               ? <a className="pr-btn primary" href={meta.pdf} download>Download PDF</a>
-              : <a className="pr-btn" href={`/pitch/market-map.html#${meta.hash}`} target="_blank" rel="noreferrer">Open full page ↗</a>}
+              : <a className="pr-btn" href={`/pitch/market-map#${meta.hash}`} target="_blank" rel="noreferrer">Open full page ↗</a>}
           </div>
         </div>
         {isDeck ? <Deck id={tab} /> : <Embed id={tab} />}
