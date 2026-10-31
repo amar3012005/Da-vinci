@@ -23,9 +23,14 @@ export function openNativeRoom(employeeId, { scope, plugin = nativePlugin } = {}
   return plugin.openRoom({ path: `/employees/${employeeId}`, ...(scope ? { scope } : {}) });
 }
 
-/** Closes the native room without emitting `roomClosed`. */
-export function closeNativeRoom(plugin = nativePlugin) {
-  return plugin.closeRoom();
+/**
+ * Closes the native room without emitting `roomClosed`.
+ * @param {string} [employeeId] - close only when this employee's room is the one on screen (a newer room stays open).
+ * @param {object} [plugin] - the SingulanceNative plugin.
+ * @returns {Promise<void>} resolves when handled.
+ */
+export function closeNativeRoom(employeeId, plugin = nativePlugin) {
+  return plugin.closeRoom(employeeId ? { path: `/employees/${employeeId}` } : {});
 }
 
 /** Subscribes to the person closing the native room with its Done button; resolves to a handle with `remove()`. */

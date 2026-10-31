@@ -63,6 +63,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
+import { isNativeApp } from '../shared/native-app';
+import { openNativeRoom } from '../shared/native-room';
 import apiClient from '../shared/api-client';
 import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
@@ -440,6 +442,8 @@ export default function Sidebar({
       selectionPending.current = null;
       setTeamError('');
       setSelectedAgent(agent.id);
+      // The packaged app shows the room natively: ask for it on the tap itself, not after the route's page has loaded.
+      if (isNativeApp()) openNativeRoom(agent.id, { scope: org?.id && user?.id ? `${org.id}:${user.id}` : undefined }).catch(() => { /* The route's page offers Try again. */ });
       navigate(openDotPath);
       return true;
     }

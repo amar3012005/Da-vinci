@@ -31,7 +31,7 @@ export default function NativeOpenDotRoom({ route, active = true }) {
     onNativeRoomClosed(() => { setState('closed'); window.dispatchEvent(new CustomEvent('hivemind:open-dot-team')); })
       .then(handle => { if (gone) handle.remove(); else listener = handle; });
     open();
-    return () => { gone = true; listener?.remove(); closeNativeRoom().catch(() => { /* No room was open. */ }); };
+    return () => { gone = true; listener?.remove(); closeNativeRoom(employeeId).catch(() => { /* No room was open. */ }); };
   }, [active, employeeId, open, visit]);
   return <main className="flex h-full min-h-0 flex-col items-center justify-center gap-3 bg-white p-6 text-center">
     {state === 'opening'

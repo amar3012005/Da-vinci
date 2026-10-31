@@ -36,7 +36,7 @@ describe('native room', () => {
     const listener = jest.fn();
     await expect(onNativeRoomClosed(listener, plugin)).resolves.toBe(handle);
     expect(plugin.addListener).toHaveBeenCalledWith('roomClosed', listener);
-    await closeNativeRoom(plugin);
+    await closeNativeRoom(undefined, plugin);
     expect(plugin.closeRoom).toHaveBeenCalled();
   });
 });
