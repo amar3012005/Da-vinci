@@ -9,7 +9,7 @@ import { isRuntimeOpenDotRequest } from './runtime-open-dot.mjs';
  */
 const FORWARDED_TO_OPEN_DOT = [
   '/api/cards/msg_example', '/api/conversations/conv_example', '/api/files/file_example',
-  '/api/dots/autonomy', '/api/dots/company-glance', '/api/dots/local-duties', '/api/dots/team-week',
+  '/api/dots/autonomy', '/api/dots/company-glance', '/api/dots/local-duties', '/api/dots/team-board', '/api/dots/team-week',
   ...['agenda', 'control', 'conversations', 'event-watches', 'files', 'frames', 'input', 'library', 'live', 'results', 'screen', 'stream', 'warm', 'workspace']
     .map(name => `/api/dots/dot_2c1a636bd2ac7f18/${name}`),
   '/api/hivemind/setup', '/api/hivemind/needs-you', '/api/hivemind/voice/context', '/api/hivemind/voice/events',
@@ -34,4 +34,10 @@ test('the allowlist does not forward other origins or unlisted paths', () => {
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/autonomy', 'https://next.singulancelabs.com')), false);
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/dot_x/secret', 'https://runtime-runner.singulancelabs.com')), false);
   assert.equal(HANDLED_ELSEWHERE.length > 0, true);
+});
+
+test('the team board read is forwarded on the Runtime origin only, and not when nested', () => {
+  assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/team-board', 'https://runtime-runner.singulancelabs.com')), true);
+  assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/team-board/extra', 'https://runtime-runner.singulancelabs.com')), false);
+  assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/team-board', 'https://next.singulancelabs.com')), false);
 });
