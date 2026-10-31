@@ -94,7 +94,7 @@ export function createSyncEngine({ store, scope, adapter = null }) {
     if (closed) return;
     memory.set(memoryKey(entity, key), snapshot);
     emit(entity, key, snapshot);
-    await store.put(scope, entity, key, { v: SNAPSHOT_VERSION, items: snapshot.items, cursor: snapshot.cursor ?? null });
+    await store.put(scope, entity, key, { v: SNAPSHOT_VERSION, items: snapshot.items, cursor: snapshot.cursor ?? null, meta: snapshot.meta ?? null });
     await evict(entity);
   };
 
@@ -102,7 +102,7 @@ export function createSyncEngine({ store, scope, adapter = null }) {
     /**
      * Declare an entity.
      * @param {string} entity - entity name.
-     * @param {{ fetchSince: (key: string, cursor: unknown, context: { signal?: AbortSignal }) => Promise<{ items?: object[], deletes?: string[], cursor?: unknown, replace?: boolean }>, applyEvent?: (event: unknown, key: string) => ({ items?: object[], deletes?: string[] }|null), limit?: number, maxKeys?: number, idOf?: Function, revisionOf?: Function, orderOf?: Function }} spec
+     * @param {{ fetchSince: (key: string, cursor: unknown, context: { signal?: AbortSignal }) => Promise<{ items?: object[], deletes?: string[], cursor?: unknown, replace?: boolean, meta?: unknown }>, applyEvent?: (event: unknown, key: string) => ({ items?: object[], deletes?: string[] }|null), limit?: number, maxKeys?: number, idOf?: Function, revisionOf?: Function, orderOf?: Function }} spec
      *   `fetchSince` returns changes after `cursor` (null asks for the latest page); `replace` marks a complete list.
      *   `limit` bounds items per key (newest kept); `maxKeys` bounds stored keys (least recently written evicted).
      * @returns {() => void} unregisters the entity.
@@ -131,7 +131,7 @@ export function createSyncEngine({ store, scope, adapter = null }) {
       if (hit) return hit;
       const row = await store.get(scope, entity, key);
       if (closed || row?.value?.v !== SNAPSHOT_VERSION || !Array.isArray(row.value.items)) return undefined;
-      const snapshot = { items: row.value.items, cursor: row.value.cursor ?? null };
+      const snapshot = { items: row.value.items, cursor: row.value.cursor ?? null, meta: row.value.meta ?? null };
       if (!memory.has(memoryKey(entity, key))) memory.set(memoryKey(entity, key), snapshot);
       return memory.get(memoryKey(entity, key));
     },
@@ -151,7 +151,7 @@ export function createSyncEngine({ store, scope, adapter = null }) {
         const page = await spec.fetchSince(key, before?.cursor ?? null, context);
         const current = memory.get(id) || before;
         const items = reconcile(current?.items, page, spec);
-        const snapshot = { items, cursor: page?.cursor !== undefined ? page.cursor : current?.cursor ?? null };
+        const snapshot = { items, cursor: page?.cursor !== undefined ? page.cursor : current?.cursor ?? null, meta: page?.meta !== undefined ? page.meta : current?.meta ?? null };
         await save(entity, key, snapshot);
         return snapshot;
       })().finally(() => inflight.delete(id));
@@ -188,7 +188,7 @@ export function createSyncEngine({ store, scope, adapter = null }) {
       const replaced = new Set(optimistic.map((item) => item.clientId));
       const local = [...(current?.items || []).filter((item) => !(item?.pending && replaced.has(item.clientId))), ...optimistic];
       const server = { items: (change.items || []).filter((item) => !item?.pending), deletes: change.deletes };
-      const snapshot = { items: reconcile(local, server, spec), cursor: current?.cursor ?? null };
+      const snapshot = { items: reconcile(local, server, spec), cursor: current?.cursor ?? null, meta: current?.meta ?? null };
       await save(entity, key, snapshot);
       return snapshot;
     },

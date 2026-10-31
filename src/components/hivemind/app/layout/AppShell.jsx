@@ -396,6 +396,9 @@ function AppShellContent() {
   ));
   const employeeRoom = location.pathname.startsWith('/hivemind/app/employee/harness');
   const nativeChatRoom = isNativeChatRoute(location.pathname);
+  // A page opened from the team (Calendar, Library, CRM...) shows itself, not the team; the chats keep the first-open team
+  // view while booting restores a conversation route.
+  useEffect(() => { if (!isNativeChatRoute(location.pathname)) setMobileTeamOpen(false); }, [location.pathname]);
   const brainChat = /^\/hivemind\/app\/overview(?:\/(?:new|session\/[^/]+))?\/?$/.test(location.pathname);
   const [brainPhone, setBrainPhone] = useState(() => window.matchMedia('(max-width: 600px)').matches);
   useEffect(() => {

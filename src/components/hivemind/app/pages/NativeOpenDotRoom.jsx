@@ -14,6 +14,8 @@ export default function NativeOpenDotRoom({ route, active = true }) {
   const s = useSidebarCopy();
   const location = useLocation();
   const employeeId = openDotEmployeeIdFromPath((route || location).pathname);
+  // Choosing the same employee again after Done is a new navigation of the same path; its key reopens the room.
+  const visit = (route || location).key;
   const [state, setState] = useState('opening');
   const open = useCallback(() => {
     setState('opening');
@@ -27,7 +29,7 @@ export default function NativeOpenDotRoom({ route, active = true }) {
       .then(handle => { if (gone) handle.remove(); else listener = handle; });
     open();
     return () => { gone = true; listener?.remove(); closeNativeRoom().catch(() => { /* No room was open. */ }); };
-  }, [active, employeeId, open]);
+  }, [active, employeeId, open, visit]);
   return <main className="flex h-full min-h-0 flex-col items-center justify-center gap-3 bg-white p-6 text-center">
     {state === 'opening'
       ? <AsciiWorkspaceLoading label="Opening workspace…" />

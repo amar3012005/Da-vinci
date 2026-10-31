@@ -375,3 +375,11 @@ export function useAuth() {
   }
   return context;
 }
+
+/**
+ * Auth context when one is mounted, otherwise null: for components that also render outside the signed-in app.
+ * @returns {object|null} the auth context.
+ */
+export function useOptionalAuth() {
+  return useContext(AuthContext) ?? null;
+}

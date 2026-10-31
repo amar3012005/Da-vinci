@@ -1,8 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, Check, ChevronRight, Mail, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { useOptionalAuth } from '../auth/AuthProvider';
+import { syncScope } from '../shared/sync';
+import { NOTIFICATIONS, registerNotifications } from '../shared/sync/entities';
 import { whenIdle } from '../shared/idle';
 import WorkspacePopupSurface from '../shared/WorkspacePopupSurface';
 import AgentAvatar from '../hyperagents/AgentAvatar';
@@ -101,9 +104,30 @@ export default function WorkspaceNotifications() {
   const tx = useCopy('outerApp.notifications');
   const format = useLocaleFormat();
   const relativeTime = useRelativeTime();
-  const [items, setItems] = useState([]);
-  const [unread, setUnread] = useState(0);
+  const { user, org } = useOptionalAuth() || {};
+  // The bell paints this person's last list at once (local copy, newest first) and the read below replaces it.
+  const engine = useMemo(() => {
+    if (!org?.id || !user?.id) return null;
+    const { engine: scoped } = syncScope(org.id, user.id);
+    registerNotifications(scoped, apiClient);
+    return scoped;
+  }, [org?.id, user?.id]);
+  const [items, setItems] = useState(() => [...(engine?.peek(NOTIFICATIONS, 'bell')?.items || [])].reverse());
+  const [unread, setUnread] = useState(() => engine?.peek(NOTIFICATIONS, 'bell')?.meta?.unread ?? 0);
+  useEffect(() => {
+    if (!engine) return undefined;
+    let active = true;
+    engine.read(NOTIFICATIONS, 'bell').then((snapshot) => {
+      if (!active || !snapshot || initialized.current) return;
+      setItems([...snapshot.items].reverse());
+      setUnread(snapshot.meta?.unread ?? snapshot.items.filter((notice) => !notice.readAt && !notice.read_at).length);
+    }).catch(() => { /* No local copy: the network read paints the list. */ });
+    return () => { active = false; };
+  }, [engine]);
   const [open, setOpen] = useState(false);
+  // On a phone the bell can sit inside the narrow team drawer, which clips its content: the list opens as a sheet over the page.
+  const phonePanel = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 600px)').matches === true;
+  const renderPanel = (panel) => (phonePanel && typeof document !== 'undefined' ? createPortal(panel, document.body) : panel);
   const [toast, setToast] = useState(null);
   const [detail, setDetail] = useState(null);
   const [lifecycleContext, setLifecycleContext] = useState(null);
@@ -121,7 +145,8 @@ export default function WorkspaceNotifications() {
 
   const load = useCallback(async () => {
     try {
-      const result = await apiClient.listWorkspaceNotifications({ limit: 30 });
+      const snapshot = engine ? await engine.refresh(NOTIFICATIONS, 'bell') : null;
+      const result = snapshot ? { items: [...snapshot.items].reverse(), unread: snapshot.meta?.unread ?? snapshot.items.filter((notice) => !notice.readAt && !notice.read_at).length } : await apiClient.listWorkspaceNotifications({ limit: 30 });
       const next = Array.isArray(result?.items) ? result.items : [];
       const persistedLifecycle = unseenLifecycle(next);
       const newlyPersisted = next.find((notice) => !knownIds.current.has(notice.id));
@@ -145,7 +170,7 @@ export default function WorkspaceNotifications() {
         });
       }
     } catch { /* session/bootstrap can still be settling */ }
-  }, [unseenLifecycle]);
+  }, [unseenLifecycle, engine]);
 
   // Lifecycle notices and announcements change rarely: the first read waits for
   // idle time, then poll while visible and catch up when the tab returns.
@@ -215,10 +240,10 @@ export default function WorkspaceNotifications() {
   return <>
     <div className="relative">
       <button onClick={() => setOpen((value) => !value)} className="relative flex h-8 w-8 items-center justify-center rounded-[6px] text-[#737373] transition-colors hover:bg-[#f3f1ec] hover:text-[#0a0a0a]" aria-label={tx('title', 'Notifications')}><Bell size={15} />{unread > 0 ? <span className="absolute right-0.5 top-0.5 min-w-[14px] rounded-full bg-[#117dff] px-1 text-center text-[8px] font-bold leading-[14px] text-white">{unread > 9 ? tx('nineplus', '{{count}}+', { count: format.number(9) }) : format.number(unread)}</span> : null}</button>
-      <AnimatePresence>{open ? <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="absolute right-0 top-10 z-50 w-[390px] max-w-[calc(100vw-24px)] overflow-hidden rounded-[14px] border border-[#e3e0db] bg-white shadow-xl">
+      {renderPanel(<AnimatePresence>{open ? <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className={`${phonePanel ? 'fixed inset-x-3 z-[2147483000] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-80px)]' : 'absolute right-0 top-10 z-50 w-[390px] max-w-[calc(100vw-24px)]'} overflow-hidden rounded-[14px] border border-[#e3e0db] bg-white shadow-xl`} style={phonePanel ? { top: 'calc(env(safe-area-inset-top, 0px) + 64px)' } : undefined}>
         <header className="flex items-center justify-between border-b border-[#eae7e1] px-5 py-4"><div><div className="text-[14px] font-semibold text-[#0a0a0a]">{tx('title', 'Notifications')}</div><div className="mt-1 font-mono text-[9px] uppercase tracking-wider text-[#a3a3a3]">{tx('subtitle', 'Your workspace lifecycle')}</div></div><button onClick={() => setOpen(false)} className="p-1 text-[#a3a3a3] hover:text-[#0a0a0a]" aria-label={tx('close', 'Close notifications')}><X size={16} /></button></header>
         <div className="max-h-[480px] overflow-y-auto">{items.length ? items.map((notice) => { const isRead = Boolean(notice.readAt || notice.read_at); return <button key={notice.id} onClick={() => openDetail(notice)} className="flex w-full items-start gap-3 border-b border-[#eae7e1] px-5 py-4 text-left transition-colors hover:bg-[#faf9f4]"><span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center border border-[#e3e0db] bg-white"><NotificationIcon notice={notice} size={21} /></span><span className="min-w-0 flex-1"><span className="flex items-start gap-2"><span className="flex-1 text-[12px] font-semibold leading-5 text-[#0a0a0a]">{notice.title}</span>{!isRead ? <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#117dff]" /> : <Check size={12} className="mt-1 text-[#a3a3a3]" />}</span>{notice.body ? <span className="mt-1 block text-[11px] leading-4 text-[#737373]">{notice.body}</span> : null}<span className="mt-2 block font-mono text-[9px] text-[#a3a3a3]">{relativeTime(notice.createdAt || notice.created_at)}</span></span><ChevronRight size={14} className="mt-3 shrink-0 text-[#a3a3a3]" /></button>; }) : <div className="px-4 py-10 text-center text-[11px] text-[#a3a3a3]">{tx('empty', 'No notifications yet.')}</div>}</div>
-      </motion.section> : null}</AnimatePresence>
+      </motion.section> : null}</AnimatePresence>)}
     </div>
 
     {typeof document !== 'undefined' ? createPortal(<AnimatePresence>{toast ? <motion.div className="fixed -bottom-3 left-4 z-[2147483647] w-[min(420px,calc(100vw-28px))] sm:left-6" initial={{ opacity: 1, y: 'calc(100% - 34px)' }} animate={{ y: 0 }} exit={{ opacity: 0, y: 'calc(100% - 34px)' }} transition={{ type: 'spring', stiffness: 190, damping: 25, mass: 0.9 }}>
