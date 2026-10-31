@@ -1,15 +1,42 @@
+import { useSyncExternalStore } from 'react';
 import { nativePlugin } from './native-auth';
 import { isNativeApp } from './native-app';
 
-/** Electron preload bridge for native rooms (macOS app), or `null` in a browser or the iOS app. */
+let desktopRoomsFailed = false;
+const failureListeners = new Set();
+
+/**
+ * Electron preload bridge for native rooms (macOS app), or `null` in a browser, the iOS app, a macOS app older than
+ * 2.3.0 (SINGULANCE 2.2.0 has no `singulanceDesktop`) or one whose bridge lacks the room methods.
+ */
 export function desktopRoomBridge(win = typeof window === 'undefined' ? null : window) {
   const bridge = win?.singulanceDesktop;
-  return typeof bridge?.openRoom === 'function' ? bridge : null;
+  if (!bridge || typeof bridge.version !== 'number' || bridge.version < 1) return null;
+  if (typeof bridge.openRoom !== 'function' || typeof bridge.closeRoom !== 'function' || typeof bridge.onRoomClosed !== 'function') return null;
+  return desktopRoomsFailed ? null : bridge;
 }
 
-/** True when employee rooms open as a native full-screen room: the iOS app or the macOS app. Browsers keep the web room. */
+/**
+ * Stops using the macOS native room for this document after the bridge failed to open one, so the in-page web room
+ * takes over. Subscribers (see `useHasNativeRooms`) re-render.
+ */
+export function markDesktopRoomsUnavailable() {
+  if (desktopRoomsFailed) return;
+  desktopRoomsFailed = true;
+  failureListeners.forEach(listener => listener());
+}
+
+/** True when employee rooms open as a native full-screen room: the iOS app or a macOS app with a working room bridge. Browsers keep the web room. */
 export function hasNativeRooms(win = typeof window === 'undefined' ? null : window) {
   return isNativeApp(win) || desktopRoomBridge(win) !== null;
+}
+
+/** `hasNativeRooms()` that re-renders when the macOS bridge is given up on. */
+export function useHasNativeRooms() {
+  return useSyncExternalStore(
+    listener => { failureListeners.add(listener); return () => failureListeners.delete(listener); },
+    () => hasNativeRooms(),
+  );
 }
 
 /**

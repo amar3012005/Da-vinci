@@ -1,6 +1,6 @@
 import PersistentHarnessPanes from './PersistentHarnessPanes';
 import { directRuntimeHost, paneForPath, persistentShellEnabled } from '../shared/native-pane-protocol';
-import { hasNativeRooms } from '../shared/native-room';
+import { useHasNativeRooms } from '../shared/native-room';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import React, { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -14,7 +14,8 @@ const NativeOpenDotRoom = React.lazy(() => import('../pages/NativeOpenDotRoom'))
 // Retain the employee application while the outer sidebar changes routes.
 export default function AgentWorkspaceOutlet() {
   const location = useLocation();
-  const persistent = persistentShellEnabled() && !hasNativeRooms();
+  const nativeRooms = useHasNativeRooms();
+  const persistent = persistentShellEnabled() && !nativeRooms;
   const [desktop, setDesktop] = useState(() => window.matchMedia?.('(min-width: 768px)').matches ?? false);
   useEffect(() => {
     const media = window.matchMedia?.('(min-width: 768px)');
@@ -67,7 +68,7 @@ export default function AgentWorkspaceOutlet() {
       <Suspense fallback={<AsciiWorkspaceLoading label="Opening Apps…" />}><Apps /></Suspense>
     </div>}
     {dotEntry && <div hidden={!dot} className="h-full min-h-0" style={{ display: dot ? 'block' : 'none' }}>
-      <Suspense fallback={<AsciiWorkspaceLoading label="Opening workspace…" />}>{hasNativeRooms()
+      <Suspense fallback={<AsciiWorkspaceLoading label="Opening workspace…" />}>{nativeRooms
         ? <NativeOpenDotRoom route={dot ? location : dotEntry} active={dot} />
         : <OpenDotEntry initialRoute={dotEntry} route={dot ? location : dotEntry} active={dot} />}</Suspense>
     </div>}
