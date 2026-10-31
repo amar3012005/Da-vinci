@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import WorkspacePopupSurface from '../shared/WorkspacePopupSurface';
 import { answerNeedsYouCard, fetchNeedsYou } from '../shared/needs-you';
+import { haptic } from '../shared/platform-haptics';
 import { useOptionalAuth } from '../auth/AuthProvider';
 import { syncScope } from '../shared/sync';
 import { NEEDS_YOU, registerNeedsYou } from '../shared/sync/entities';
@@ -77,6 +78,7 @@ export default function NeedsYouPanel({ team, refreshKey, onClose, onOpenCard, p
     if (!alive.current) return;
     setBusy(current => ({ ...current, [card.id]: '' }));
     if (!ok) { setErrors(current => ({ ...current, [card.id]: cr('actionFailed', 'That did not go through. Open the room to answer.') })); return; }
+    if (choice === 'approve') haptic('success');
     setCards(current => (current || []).filter(entry => entry.id !== card.id));
     window.dispatchEvent(new Event('hivemind:employee-status-changed'));
   };

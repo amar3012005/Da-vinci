@@ -1,6 +1,6 @@
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { User, Gauge, CreditCard, Settings, Cpu, X } from 'lucide-react';
+import { User, Gauge, CreditCard, Settings, Cpu, Bell, X } from 'lucide-react';
 import { useSidebarCopy } from '../layout/sidebar-copy';
 /** `label` is the English default; the visible text is `sidebar.accountDialog.<copyKey>`. */
 const sections = [
@@ -8,6 +8,7 @@ const sections = [
   { id: 'usage', copyKey: 'usage', label: 'Usage', icon: Gauge, page: React.lazy(() => import('../pages/Usage')) },
   { id: 'ai-models', copyKey: 'aiModels', label: 'AI Models', icon: Cpu, page: React.lazy(() => import('../pages/AIModels')) },
   { id: 'billing', copyKey: 'billing', label: 'Billing', icon: CreditCard, page: React.lazy(() => import('../pages/Billing')) },
+  { id: 'notifications', copyKey: 'notifications', label: 'Notifications & permissions', icon: Bell, page: React.lazy(() => import('../pages/NotificationSettings')) },
   { id: 'settings', copyKey: 'settings', label: 'Settings', icon: Settings, page: React.lazy(() => import('../pages/Settings')) },
 ];
 export default function AccountSettingsDialog({ onClose }) {
