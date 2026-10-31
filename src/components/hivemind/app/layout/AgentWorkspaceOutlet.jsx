@@ -9,6 +9,7 @@ import { agentRoster } from '../shared/agent-roster';
 import { openDotPreloadRoute, preloadAllowed, rememberOpenDotRoute, whenIdle } from '../shared/open-dot-preload';
 const Apps = React.lazy(() => import('../pages/OpenDotAppsNavigation'));
 const OpenDotEntry = React.lazy(() => import('../pages/OpenDotEntry'));
+const NativeOpenDotRoom = React.lazy(() => import('../pages/NativeOpenDotRoom'));
 
 // Retain the employee application while the outer sidebar changes routes.
 export default function AgentWorkspaceOutlet() {
@@ -66,7 +67,9 @@ export default function AgentWorkspaceOutlet() {
       <Suspense fallback={<AsciiWorkspaceLoading label="Opening Apps…" />}><Apps /></Suspense>
     </div>}
     {dotEntry && <div hidden={!dot} className="h-full min-h-0" style={{ display: dot ? 'block' : 'none' }}>
-      <Suspense fallback={<AsciiWorkspaceLoading label="Opening workspace…" />}><OpenDotEntry initialRoute={dotEntry} route={dot ? location : dotEntry} active={dot} /></Suspense>
+      <Suspense fallback={<AsciiWorkspaceLoading label="Opening workspace…" />}>{isNativeApp()
+        ? <NativeOpenDotRoom route={dot ? location : dotEntry} active={dot} />
+        : <OpenDotEntry initialRoute={dotEntry} route={dot ? location : dotEntry} active={dot} />}</Suspense>
     </div>}
   </>;
 }
