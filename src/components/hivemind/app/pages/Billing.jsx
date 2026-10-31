@@ -70,7 +70,7 @@ const PLANS = [
   {
     id: 'plus',
     name: 'BRAIN+',
-    price: '€39',
+    price: '€24',
     period: '/month',
     description: 'Keep your work history permanently. 1,000 pages included.',
     accent: false,
@@ -138,8 +138,8 @@ const PLANS = [
   },
   {
     id: 'scale',
-    name: 'Scale',
-    price: '€239',
+    name: 'Max',
+    price: '€199',
     period: '/month',
     description: 'Operate with a small AI team. 10,000 pages included for one person.',
     accent: false,
