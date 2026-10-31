@@ -4,6 +4,15 @@ import '@testing-library/jest-dom';
 import RuntimeCalendar from '../RuntimeCalendar';
 import { CalendarUnavailableError } from '../../shared/runtime-calendar';
 
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key, arg, extra) => {
+      const options = typeof arg === 'object' && arg ? arg : { ...(extra || {}), defaultValue: arg };
+      return String(options.defaultValue ?? key).replace(/\{\{(\w+)\}\}/g, (all, name) => (options[name] !== undefined ? options[name] : all));
+    },
+  }),
+}));
+
 let mockRuntimeEnabled = true;
 jest.mock('../../shared/runtime-enabled', () => ({ useRuntimeEnabled: () => mockRuntimeEnabled }));
 jest.mock('../../shared/runtime-admission', () => ({ fetchWithRuntimeAdmission: jest.fn() }));
@@ -176,4 +185,96 @@ test('lists Runtime and OpenDot tasks together without blanking when OpenDot doe
   render(<RuntimeCalendar fetcher={ok({ ok: true, value })} localFetcher={() => Promise.reject(new Error('down'))} />);
   expect(await screen.findByText('Pipeline check')).toBeInTheDocument();
   expect(screen.queryByText('Morning brief')).toBeNull();
+});
+
+const dutyRuns = [
+  { at: at(-1), outcome: 'done', note: 'Two new leads from Acme.', messageId: 'msg_9', conversationId: 'conv_9' },
+  { at: at(-2), outcome: 'missed', note: 'Missed: no server was running at the time and the run was too late to start.', messageId: null, conversationId: null },
+  { at: at(-3), outcome: 'skipped', note: 'Paused: this run was skipped.', messageId: null, conversationId: null },
+  { at: at(-4), outcome: 'no_change', note: 'Nothing changed.', messageId: 'msg_5', conversationId: 'conv_9' },
+  { at: at(-5), outcome: 'blocked', note: 'Send the quote?', messageId: 'msg_4', conversationId: 'conv_9' },
+  { at: at(-6), outcome: 'failed', note: 'The run failed.', messageId: null, conversationId: null },
+];
+function lifecycleFetcher(calls, { paused = false } = {}) {
+  let isPaused = paused;
+  return jest.fn((url, init = {}) => {
+    if (init.method === 'POST') {
+      const body = JSON.parse(init.body); calls.push(body.action);
+      isPaused = body.action === 'pause';
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, state: isPaused ? 'paused' : 'active' }) });
+    }
+    if (String(url).includes('history=')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, value: { id: localTask.id, dotId: 'dot_a', paused: isPaused, runs: dutyRuns } }) });
+    const item = isPaused ? { ...localTask, status: 'paused', active: false, paused: true, until: '2026-12-31T22:59:59.999Z' } : { ...localTask, until: '2026-12-31T22:59:59.999Z' };
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, value: { items: [item], occurrences: isPaused ? [] : localValue.occurrences, wakes: [] } }) });
+  });
+}
+
+test('opens a drawer for a task OpenDot keeps: next run, repeat, end date and its last runs with outcomes and a chat link', async () => {
+  const calls = [];
+  const localFetcher = lifecycleFetcher(calls);
+  render(<RuntimeCalendar fetcher={() => Promise.reject(new Error('down'))} localFetcher={localFetcher} />);
+  fireEvent.click(await screen.findByRole('button', { name: /^Morning brief/ }));
+  const drawer = await screen.findByRole('dialog', { name: 'Task details' });
+  expect(within(drawer).getByText('Next run')).toBeInTheDocument();
+  expect(within(drawer).getByText('Every day at 08:00 (UTC)')).toBeInTheDocument();
+  expect(drawer.querySelector('[data-calendar-ends]').textContent).toMatch(/2026|2027/);
+  const runs = await waitFor(() => { const found = drawer.querySelectorAll('[data-calendar-run]'); expect(found).toHaveLength(6); return found; });
+  expect([...runs].map(run => run.getAttribute('data-calendar-run'))).toEqual(['done', 'missed', 'skipped', 'no_change', 'blocked', 'failed']);
+  expect(within(drawer).getByText('Two new leads from Acme.')).toBeInTheDocument();
+  expect(within(drawer).getAllByRole('link', { name: /Open the chat message/ })[0]).toHaveAttribute('href', '/hivemind/app/employee/dots/dot_a?c=conv_9&m=msg_9');
+  expect(within(drawer).getByText('Skipped (paused)')).toBeInTheDocument();
+  expect(localFetcher.mock.calls.some(([url]) => String(url) === `/api/dots/local-duties?history=${encodeURIComponent(localTask.id)}`)).toBe(true);
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(screen.queryByRole('dialog', { name: 'Task details' })).toBeNull();
+});
+
+test('Pause keeps the task and Resume brings it back, from the drawer next to Stop and Delete', async () => {
+  const calls = [];
+  render(<RuntimeCalendar fetcher={() => Promise.reject(new Error('down'))} localFetcher={lifecycleFetcher(calls)} />);
+  fireEvent.click(await screen.findByRole('button', { name: /^Morning brief/ }));
+  const drawer = await screen.findByRole('dialog', { name: 'Task details' });
+  expect(within(drawer).getByRole('button', { name: 'Stop' })).toBeInTheDocument();
+  expect(within(drawer).getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+  expect(within(drawer).queryByRole('button', { name: 'Resume' })).toBeNull();
+  fireEvent.click(within(drawer).getByRole('button', { name: 'Pause' }));
+  expect(await screen.findByText('Paused “Morning brief”. Its runs are skipped until you resume it.')).toBeInTheDocument();
+  await waitFor(() => expect(within(screen.getByRole('dialog', { name: 'Task details' })).getByRole('button', { name: 'Resume' })).toBeInTheDocument());
+  const paused = screen.getByRole('dialog', { name: 'Task details' });
+  expect(within(paused).getByText('Next run once resumed')).toBeInTheDocument();
+  expect(within(paused).getByRole('button', { name: 'Stop' })).toBeInTheDocument();
+  fireEvent.click(within(paused).getByRole('button', { name: 'Resume' }));
+  expect(await screen.findByText('Resumed “Morning brief”.')).toBeInTheDocument();
+  await waitFor(() => expect(within(screen.getByRole('dialog', { name: 'Task details' })).getByRole('button', { name: 'Pause' })).toBeInTheDocument());
+  expect(calls).toEqual(['pause', 'resume']);
+});
+
+test('the row menu offers Pause and Resume for a task OpenDot keeps, and a refusal is shown in the drawer', async () => {
+  const calls = [];
+  render(<RuntimeCalendar fetcher={() => Promise.reject(new Error('down'))} localFetcher={lifecycleFetcher(calls, { paused: true })} />);
+  await screen.findByText('Morning brief');
+  fireEvent.click(screen.getByRole('button', { name: 'Actions for Morning brief' }));
+  expect(screen.getByRole('menuitem', { name: 'Resume' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Stop' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Pause' })).toBeNull();
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Resume' }));
+  await waitFor(() => expect(calls).toEqual(['resume']));
+});
+
+test('a task Runtime keeps opens a drawer that points to where history is kept and offers no Pause', async () => {
+  const localFetcher = jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, value: { items: [], occurrences: [], wakes: [] } }) }));
+  render(<RuntimeCalendar fetcher={ok({ ok: true, value })} localFetcher={localFetcher} />);
+  fireEvent.click(await screen.findByRole('button', { name: /^Pipeline check/ }));
+  const drawer = await screen.findByRole('dialog', { name: 'Task details' });
+  expect(within(drawer).getByText('History available for duties the employee keeps in HIVEMIND')).toBeInTheDocument();
+  expect(within(drawer).queryByRole('button', { name: 'Pause' })).toBeNull();
+  expect(within(drawer).getByRole('button', { name: 'Stop' })).toBeInTheDocument();
+  expect(drawer.querySelectorAll('[data-calendar-run]')).toHaveLength(0);
+  expect(localFetcher.mock.calls.some(([url]) => String(url).includes('history='))).toBe(false);
+  expect(within(drawer).getByText('Every Wednesday at 08:00 (UTC)')).toBeInTheDocument();
+});
+
+test('booked work that is not a scheduled task has no drawer', async () => {
+  render(<RuntimeCalendar fetcher={ok({ ok: true, value })} />);
+  await screen.findByText('Draft the launch note');
+  expect(screen.queryByRole('button', { name: /^Draft the launch note/ })).toBeNull();
 });

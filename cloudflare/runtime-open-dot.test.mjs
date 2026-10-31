@@ -25,6 +25,12 @@ test('every OpenDot client API path is forwarded to OpenDot on the Runtime origi
   }
 });
 
+test('the local duty history read and the pause and resume actions use the allowlisted local-duties path with their query', () => {
+  const history = new URL('/api/dots/local-duties?history=local-duty%3Adot_a%3Abrief', 'https://runtime-runner.singulancelabs.com');
+  assert.equal(isRuntimeOpenDotRequest(history), true);
+  assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/local-duties/history', 'https://runtime-runner.singulancelabs.com')), false, 'no second path is exposed');
+});
+
 test('the Needs you path is forwarded on the Runtime origin only, and not when nested', () => {
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/hivemind/needs-you/extra', 'https://runtime-runner.singulancelabs.com')), false);
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/hivemind/needs-you', 'https://next.singulancelabs.com')), false);

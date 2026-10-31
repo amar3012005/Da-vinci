@@ -7,7 +7,7 @@ import { fetchWithRuntimeAdmission } from './runtime-admission';
 
 /** Runner route that serves the calendar between two instants. */
 export const CALENDAR_ENDPOINT = '/api/hivemindHq/calendar';
-/** OpenDot route that lists, stops and deletes the duties employees keep in OpenDot (same item fields as the Runtime calendar). */
+/** OpenDot route that lists, stops, deletes, pauses and resumes the duties employees keep in OpenDot (same item fields as the Runtime calendar), and reads one duty's last runs with `?history=<item id>`. */
 export const LOCAL_DUTIES_ENDPOINT = '/api/dots/local-duties';
 /** Id prefix of every item OpenDot keeps; stop and delete for these ids go to OpenDot, not Runtime. */
 export const LOCAL_ITEM_PREFIX = 'local-duty:';
@@ -154,6 +154,55 @@ export function deleteCalendarItem(itemId, { fetcher = (...args) => fetchWithRun
   return calendarAction(`${CALENDAR_ENDPOINT}/${encodeURIComponent(itemId)}`, 'DELETE', fetcher);
 }
 
+/**
+ * Pause a task OpenDot keeps: its series stays, each due run is skipped and recorded until it is resumed. Only OpenDot keeps run state for
+ * these tasks; Runtime's own tasks are paused by their employee.
+ * @param {string} itemId - the calendar item id (`local-duty:`).
+ * @param {{ fetcher?: typeof fetch }} [options] - transport.
+ * @returns {Promise<{ ok: true, itemId: string, state: 'paused' }>} OpenDot's answer.
+ * @throws {CalendarActionError} when OpenDot refuses (404 unknown or not running, 403 not the administrator).
+ */
+export function pauseCalendarItem(itemId, { fetcher = (...args) => fetchWithRuntimeAdmission(...args) } = {}) {
+  return calendarAction(LOCAL_DUTIES_ENDPOINT, 'POST', fetcher, { action: 'pause', id: itemId });
+}
+
+/**
+ * Resume a paused task OpenDot keeps; its next run is the first one after now.
+ * @param {string} itemId - the calendar item id (`local-duty:`).
+ * @param {{ fetcher?: typeof fetch }} [options] - transport.
+ * @returns {Promise<{ ok: true, itemId: string, state: 'active' }>} OpenDot's answer.
+ * @throws {CalendarActionError} when OpenDot refuses.
+ */
+export function resumeCalendarItem(itemId, { fetcher = (...args) => fetchWithRuntimeAdmission(...args) } = {}) {
+  return calendarAction(LOCAL_DUTIES_ENDPOINT, 'POST', fetcher, { action: 'resume', id: itemId });
+}
+
+/**
+ * Read the last runs of a task OpenDot keeps. Runtime does not expose run history, so only `local-duty:` ids have one.
+ * @param {string} itemId - the calendar item id (`local-duty:`).
+ * @param {{ signal?: AbortSignal, fetcher?: typeof fetch }} [options] - cancellation and transport.
+ * @returns {Promise<{ id: string, dotId: string, paused: boolean, runs: Array<{ at: string, outcome: string, note: string, messageId: string | null, conversationId: string | null }> }>} newest run first.
+ * @throws {Error} `duty_history_failed` when OpenDot does not answer with the history.
+ */
+export async function fetchDutyHistory(itemId, { signal, fetcher = (...args) => fetchWithRuntimeAdmission(...args) } = {}) {
+  const response = await fetcher(`${LOCAL_DUTIES_ENDPOINT}?history=${encodeURIComponent(itemId)}`, { credentials: 'same-origin', cache: 'no-store', signal });
+  if (!response?.ok) throw new Error('duty_history_failed');
+  const body = await response.json();
+  if (!body?.value || !Array.isArray(body.value.runs)) throw new Error('duty_history_failed');
+  return body.value;
+}
+
+/**
+ * Where a run's chat message opens: the employee's chat on the conversation that holds it.
+ * @param {string} dotId - the employee's OpenDot id.
+ * @param {{ conversationId?: string | null, messageId?: string | null }} run - a history run.
+ * @returns {string | null} the path, or null when the run has no conversation.
+ */
+export function runMessageHref(dotId, run) {
+  if (!dotId || !run?.conversationId) return null;
+  return `/hivemind/app/employee/dots/${encodeURIComponent(dotId)}?c=${encodeURIComponent(run.conversationId)}${run.messageId ? `&m=${encodeURIComponent(run.messageId)}` : ''}`;
+}
+
 async function calendarAction(url, method, fetcher, body) {
   const response = await fetcher(url, { method, credentials: 'same-origin', cache: 'no-store', ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}) });
   if (!response.ok) {
@@ -206,7 +255,7 @@ export function cadenceOf(item) {
   return item?.cadence || repeatLabel(item?.recurrence);
 }
 
-const STATUS_LABEL = { active: 'Active', ended: 'Ended', stopped: 'Stopped', done: 'Done' };
+const STATUS_LABEL = { active: 'Active', paused: 'Paused', ended: 'Ended', stopped: 'Stopped', done: 'Done' };
 /** @param {string} status - runner status. @returns {string} the person-facing status. */
 export function statusLabel(status) { return STATUS_LABEL[status] || 'Active'; }
 
@@ -266,13 +315,13 @@ export function groupByDay(entries, window) {
  * The list view's rows, like the native Automation board: one row per calendar item, work ahead first.
  * @param {{ items?: Array<object> }} calendar - the route's `value`.
  * @param {{ status?: 'all' | 'active' | 'inactive', query?: string }} [filter] - the board's status tabs and search box.
- * @returns {Array<object>} rows with `id`, `at` (next run), `title`, `label`, `owner`, `agent`, `repeat`, `kind`, `status`, `statusText`, `until` and `manageable`.
+ * @returns {Array<object>} rows with `id`, `at` (next run), `title`, `label`, `owner`, `agent`, `repeat`, `kind`, `status` (active or inactive), `state` (the runner's status, such as `paused`), `local` (OpenDot keeps it), `dotId`, `statusText`, `until` and `manageable`.
  */
 export function boardRows(calendar, { status = 'all', query = '' } = {}) {
   const needle = query.trim().toLowerCase();
   return (calendar?.items || []).map(item => ({
     id: item.id, at: Date.parse(item.nextAt), title: item.title, label: itemLabel(item), owner: ownerLabel(item), agent: ownerAgent(item), repeat: cadenceOf(item),
-    kind: item.kind, status: boardStatus(item), statusText: statusLabel(item.status || (item.active ? 'active' : 'ended')), until: item.until || '', manageable: item.manageable === true,
+    kind: item.kind, status: boardStatus(item), state: item.status || (item.active ? 'active' : 'ended'), local: isLocalItem(item.id), dotId: item.dotId || '', statusText: statusLabel(item.status || (item.active ? 'active' : 'ended')), until: item.until || '', manageable: item.manageable === true,
   })).filter(row => (status === 'all' || row.status === status)
     && (!needle || `${row.label} ${row.title} ${row.owner} ${row.repeat}`.toLowerCase().includes(needle)))
     .sort((a, b) => (a.status === b.status ? a.at - b.at : a.status === 'active' ? -1 : 1));
