@@ -18,9 +18,6 @@
   --accent:#5AA2FF; --accent-soft:#132A47; --comp:#6E7D8F; --hi:#F59E6B; --hi-soft:#3A2214; --mid:#E3B341; --mid-soft:#33290F; --lo:#9BCB5C; --lo-soft:#1F2D12; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body.embed>.wrap>header{display:none}
-body.embed{padding-block:4px 40px}
-body.embed .wrap{gap:40px}
 body{background:var(--bg);color:var(--body);font:15px/1.6 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 64px}
 .wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
 h1,h2,h3{font-family:var(--f-display);color:var(--ink);text-wrap:balance;margin:0;letter-spacing:-.015em}
@@ -82,6 +79,64 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-off
 .rec{border-left:3px solid var(--accent)}
 ol.sources{font-size:12.5px;padding-left:20px;margin:0;display:grid;gap:4px;columns:2;column-gap:28px}
 @media (max-width:640px){ol.sources{columns:1}}
+/* Embedded in the pitch room: the host page already shows the title. */
+body.embed>.wrap>header{display:none}
+body.embed #view-research>section:first-child>.eyebrow,body.embed #view-research>section:first-child>h2,body.embed #view-research>section:first-child>.lede{display:none}
+body.embed{padding-block:4px 40px}
+/* Phones: one column, no sideways scrolling, tables become cards. */
+@media (max-width:640px){
+  body{font-size:14px;padding-block:24px 48px}
+  .wrap{gap:36px}
+  body.embed .wrap{gap:32px}
+  h1{font-size:30px}
+  h2{font-size:20px}
+  h3{font-size:15.5px}
+  .lede{font-size:15px}
+  .meta{font-size:10.5px}
+  p{max-width:none}
+  .tabs{margin-top:14px}
+  .tabs a{font-size:14px;padding:8px 10px}
+  .toc{flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:2px max(16px,env(safe-area-inset-left,0px)) 4px;scrollbar-width:none}
+  .toc::-webkit-scrollbar{display:none}
+  .toc a{flex:none;text-decoration:none;font-size:12px;padding:6px 11px;border:1px solid var(--rule);border-radius:999px;background:var(--surface);color:var(--ink)}
+  .takeaways li{grid-template-columns:20px 1fr;gap:6px;font-size:14px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}
+  .stat{padding:12px 13px}
+  .stat .v{font-size:21px}
+  .stat .l{font-size:12.5px;line-height:1.4}
+  .stat .s,.method{font-size:9.5px}
+  .card{padding:14px 15px}
+  .card p{font-size:13.5px}
+  .chart{padding:14px 12px 10px}
+  .ladder{min-width:0}
+  .lrow{grid-template-columns:1fr;height:auto;padding:4px 0}
+  .lrow .lb{font-size:11.5px;white-space:normal;padding:0}
+  .track{height:16px}
+  .bar{top:5px}
+  .grid{bottom:0}
+  .axis{margin-left:0}
+  .axis span{font-size:9.5px}
+  .legend{font-size:11.5px;gap:10px}
+  .scroll{overflow:visible;border:0;background:none;border-radius:0}
+  table,table.small{min-width:0;font-size:13px}
+  table thead{display:none}
+  table tbody{display:grid;gap:10px}
+  table tr{display:block;background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:6px 12px}
+  table tr.cat{background:none;border:0;padding:10px 0 0}
+  table tr.cat td{background:none;padding:0;font-size:15px;border:0}
+  table td{display:grid;grid-template-columns:86px 1fr;gap:10px;padding:7px 0;border-bottom:1px solid var(--rule);white-space:normal!important}
+  table td:last-child{border-bottom:0}
+  table td .cv{min-width:0}
+  table td .cv .pill{vertical-align:middle}
+  table td::before{content:attr(data-label);font-family:var(--f-mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+  table td.co{display:block;font-size:15px;padding-top:9px}
+  table td.co::before{display:none}
+  table td.co .hq{display:inline;margin-left:6px}
+  .slot div{flex:1 1 45%}
+  .timeline li{padding-left:18px}
+  .timeline p{font-size:13.5px}
+  ol.sources{font-size:12px}
+}
 .toc{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px}
 .tabs{display:flex;gap:6px;border-bottom:1px solid var(--rule);margin-top:20px}
 .tabs a{font-family:var(--f-display);font-size:15px;color:var(--body);text-decoration:none;padding:9px 14px;border-bottom:2px solid transparent;margin-bottom:-1px}
@@ -434,6 +489,14 @@ table.small{min-width:640px}
 
 <script>
 try{if(new URLSearchParams(location.search).has("embed"))document.body.classList.add("embed")}catch(e){}
+document.querySelectorAll("table").forEach(t=>{
+  const heads=[...t.querySelectorAll("thead th")].map(th=>th.textContent.trim());
+  t.querySelectorAll("tbody tr:not(.cat)").forEach(tr=>[...tr.children].forEach((td,i)=>{
+    if(!heads[i]) return;
+    td.setAttribute("data-label",heads[i]);
+    if(!td.classList.contains("co")){ const v=document.createElement("span"); v.className="cv"; while(td.firstChild) v.appendChild(td.firstChild); td.appendChild(v); }
+  }));
+});
 (function(){
   const vm=document.getElementById("view-market"), vr=document.getElementById("view-research");
   function route(){
