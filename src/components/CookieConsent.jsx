@@ -1,6 +1,6 @@
 import React from 'react';
 import { Cookie, ShieldCheck, X } from 'lucide-react';
-import { CONSENT_EVENT, OPEN_CONSENT_EVENT, readConsent, writeConsent } from '../privacy/consent';
+import { CONSENT_EVENT, OPEN_CONSENT_EVENT, readConsent, restoreConsent, writeConsent } from '../privacy/consent';
 
 const categories = [
   {
@@ -32,6 +32,14 @@ export default function CookieConsent() {
   const [bannerOpen, setBannerOpen] = React.useState(!initial);
   const [preferencesOpen, setPreferencesOpen] = React.useState(false);
   const [choices, setChoices] = React.useState({ ...defaults, ...(initial || {}) });
+
+  // The packaged app may hold the choice in native storage only (after a reinstall); a found choice closes the banner.
+  React.useEffect(() => {
+    if (initial) return undefined;
+    let alive = true;
+    restoreConsent().then((restored) => { if (alive && restored) { setChoices({ ...defaults, ...restored }); setBannerOpen(false); } });
+    return () => { alive = false; };
+  }, [initial]);
 
   React.useEffect(() => {
     const open = () => {

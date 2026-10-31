@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 
 import { fetchWithRuntimeAdmission } from '../shared/runtime-admission';
 import { HYPERAGENTS_WORKSPACE, RUNTIME_WORKSPACE } from '../shared/runtime-workspace';
+import { openProductPage } from '../shared/native-in-app-links';
 import { useSidebarCopy } from './sidebar-copy';
 
 /** One autonomy dial for Runtime and HyperAgents; it lives in the HyperAgents sidebar on every page. */
@@ -139,7 +140,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
     const wanted = Number(value);
     setDraft(null);
     if (!available) return;
-    if (remote) { window.location.assign(runtimeEnabled ? RUNTIME_WORKSPACE : HYPERAGENTS_WORKSPACE); return; }
+    if (remote) { openProductPage(runtimeEnabled ? RUNTIME_WORKSPACE : HYPERAGENTS_WORKSPACE); return; }
     if (wanted > state.maxSelectable) { setNotice('Locked'); return; }
     if (wanted === state.level) return;
     setNotice(null);

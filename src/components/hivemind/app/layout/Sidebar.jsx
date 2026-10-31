@@ -1,4 +1,5 @@
 import { readRuntimeRoute } from '../shared/runtime-presentation-cache';
+import { fetchRuntime } from '../shared/runtime-admission';
 import { RUNTIME_WORKSPACE, openBrainChat } from '../shared/runtime-workspace';
 import RuntimeAvatar from '../shared/RuntimeAvatar';
 import { ownedOpenDotRoomStatuses, withEmployeeTaskStatuses, reconnectingOpenDotRoomStatuses, withRuntimeReviewDecisions } from '../shared/open-dot-room-status';
@@ -185,7 +186,7 @@ async function runtimeReviewDecisions(scope, signal) {
   const sessionId = route && route.split('/').pop();
   if (!sessionId) return undefined;
   try {
-    const response = await fetch(`/api/hivemindHq/teamStatus?sessionId=${encodeURIComponent(sessionId)}`, { credentials: 'same-origin', cache: 'no-store', signal });
+    const response = await fetchRuntime(`/api/hivemindHq/teamStatus?sessionId=${encodeURIComponent(sessionId)}`, { credentials: 'same-origin', cache: 'no-store', signal });
     return response.ok ? (await response.json())?.employees : undefined;
   } catch { return undefined; }
 }
@@ -281,7 +282,7 @@ export default function Sidebar({
       loading = true;
       let responseStatus;
       try {
-        const response = await fetch('/api/hivemind/employees/status', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
+        const response = await fetchRuntime('/api/hivemind/employees/status', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
         responseStatus = response.status;
         // A fresh Runtime pane can finish its cookie exchange after this first
         // read. Retry authorization a couple of times, then stop until the

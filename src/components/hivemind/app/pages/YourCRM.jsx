@@ -44,17 +44,23 @@ export default function YourCRM() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  // Control answers 404 when this company has no CRM yet; that is the same state as a build without the CRM.
+  const [companyWithoutCRM, setCompanyWithoutCRM] = useState(false);
   const requestGeneration = useRef(0);
   useEffect(() => {
     requestGeneration.current += 1;
-    setWorkspaceTenant(''); setApps([]); setAppId(''); setApp(null); setRecords([]); setWorkflows([]); setCursor(null); setError(''); setLoading(true);
+    setWorkspaceTenant(''); setApps([]); setAppId(''); setApp(null); setRecords([]); setWorkflows([]); setCursor(null); setError(''); setLoading(true); setCompanyWithoutCRM(false);
     if (!CRM_ENABLED) { setLoading(false); return undefined; }
     const controller = new AbortController();
     apiClient.controlPlane.get(ROOT, { signal: controller.signal, params: { published: true } }).then(({ data }) => {
       const published = (data.apps || []).filter(item => item.publishedVersion != null);
       if (controller.signal.aborted) return;
       setWorkspaceTenant(tenantKey); setApps(published); setAppId(published[0]?.id || '');
-    }).catch(() => { if (!controller.signal.aborted) setError('Your CRM could not be opened. Please try again.'); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    }).catch(cause => {
+      if (controller.signal.aborted) return;
+      if (cause?.response?.status === 404) setCompanyWithoutCRM(true);
+      else setError('Your CRM could not be opened. Please try again.');
+    }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [tenantKey]);
   useEffect(() => {
@@ -99,6 +105,6 @@ export default function YourCRM() {
       throw new Error('The change could not be confirmed. Try saving again. We’ll check whether your change was already saved.');
     }
   };
-  if (!CRM_ENABLED) return <div className="crm-empty"><h1>Your CRM</h1><p>Your CRM will be available here soon.</p></div>;
+  if (!CRM_ENABLED || companyWithoutCRM) return <div className="crm-empty"><h1>Your CRM</h1><p>Your CRM will be available here soon.</p></div>;
   return <main className="crm-page"><div className="crm-toolbar"><CRMRuntimeLink onError={setError} /><Link to={fullscreen ? "/hivemind/app/crm" : "/hivemind/app/crm?fullscreen=true"}>{fullscreen ? "Exit full screen" : "Expand ↗"}</Link></div>{error && <div role="alert" className="crm-error">{error} <button type="button" onClick={() => window.location.reload()}>Try again</button></div>}{loading || (!error && workspaceTenant !== tenantKey) ? <div role="status" className="crm-empty">Opening your CRM…</div> : error && !app ? null : !appId ? <div className="crm-empty"><h1>Your CRM</h1><p>Keep your companies, contacts and deals together. {runtimeEnabledFor(org) ? 'Tell Runtime what your team needs' : 'Tell your employees what your team needs'}, and your CRM will appear here.</p></div> : app && <>{apps.length > 1 && <label className="crm-app-picker">Workspace <select value={appId} onChange={event => setAppId(event.target.value)}>{apps.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}<CRMWorkspace key={`${tenantKey}:${app.id}`} app={app} records={records} workflows={workflows} viewId={viewId} onViewChange={setViewId} onLoadMore={cursor ? loadMore : undefined} loadingMore={loadingMore} onUpdateRecord={updateRecord} /></>}</main>;
 }

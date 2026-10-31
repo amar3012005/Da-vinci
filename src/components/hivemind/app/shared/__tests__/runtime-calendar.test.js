@@ -147,6 +147,13 @@ test('fetchMergedCalendar shows OpenDot items when Runtime fails or has no root,
   expect(merged.value.items).toHaveLength(3);
 });
 
+test('fetchMergedCalendar shows OpenDot\'s calendar, even empty, when Runtime refuses the session', async () => {
+  const window = { from: 1, to: 2 };
+  const empty = { items: [], occurrences: [] };
+  await expect(fetchMergedCalendar(window, { fetcher: () => Promise.resolve({ ok: false, status: 401 }), localFetcher: () => Promise.resolve(response(empty)) })).resolves.toEqual({ value: empty });
+  await expect(fetchMergedCalendar(window, { fetcher: () => Promise.resolve({ ok: false, status: 401 }), localFetcher: () => Promise.reject(new Error('x')) })).rejects.toThrow('calendar_failed');
+});
+
 test('stop and delete of an OpenDot item go to OpenDot, those of a Runtime item to Runtime', async () => {
   expect(isLocalItem(localItem.id)).toBe(true);
   expect(isLocalItem('duty-a')).toBe(false);

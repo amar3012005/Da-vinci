@@ -390,8 +390,9 @@ function AppShellContent() {
   const [mobileBrainAddOpen, setMobileBrainAddOpen] = useState(false);
   const closeMobileBrainAdd = useCallback(() => setMobileBrainAddOpen(false), []);
   const closeMobileApps = useCallback(() => setMobileAppsOpen(false), []);
+  // The packaged app opens on the team; a page opened from the team (which may mount a new shell) starts with it closed.
   const [mobileTeamOpen, setMobileTeamOpen] = useState(() => (
-    isNativeApp() && window.matchMedia('(max-width: 600px)').matches
+    isNativeApp() && window.matchMedia('(max-width: 600px)').matches && isNativeChatRoute(window.location.pathname)
   ));
   const employeeRoom = location.pathname.startsWith('/hivemind/app/employee/harness');
   const nativeChatRoom = isNativeChatRoute(location.pathname);
@@ -644,8 +645,8 @@ function AppShellContent() {
             '--hm-harness-center-offset': `${-((overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? 0 : desktopTeamNavigation ? desktopTeamWidth / 2 : sidebarCollapsed ? 34 : 150)}px`,
           }}
         >
-          {!companyEntry && !crmFullscreen && !dotRoomPhone && <TopBar floatingMobile={glassRoomPhone} roomIdentity={brainChat ? 'brain' : 'runtime'} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} />}
-          {((nativeChatRoom && overlayNavigation) || dotRoomPhone) && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
+          {!companyEntry && !crmFullscreen && !dotRoomPhone && <TopBar floatingMobile={glassRoomPhone} roomIdentity={brainChat ? 'brain' : 'runtime'} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} mobileBack={overlayNavigation && !nativeChatRoom ? () => setMobileTeamOpen(true) : null} />}
+          {(overlayNavigation || dotRoomPhone) && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
           <div className={!initialNativePane && !hyperFullscreen && !crmFullscreen && !graphFullscreen && (workspaceModeForPath(location.pathname) === 'hyperagents' || onOverview) ? 'hm-runtime-workspace' : 'contents'}>
