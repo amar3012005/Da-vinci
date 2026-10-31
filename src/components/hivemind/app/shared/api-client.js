@@ -71,6 +71,22 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Platform-admin bug report inbox; same-origin Worker routes authorized by the admin cookie. */
+  async listBugReports(params = {}) {
+    const { data } = await axios.get('/api/hivemind/admin/bug-reports', { params, withCredentials: true, timeout: 20000 });
+    return data;
+  }
+
+  async getBugReport(id) {
+    const { data } = await axios.get(`/api/hivemind/admin/bug-reports/${encodeURIComponent(id)}`, { withCredentials: true, timeout: 20000 });
+    return data.report;
+  }
+
+  async setBugReportStatus(id, status) {
+    const { data } = await axios.patch(`/api/hivemind/admin/bug-reports/${encodeURIComponent(id)}`, { status }, { withCredentials: true, timeout: 20000 });
+    return data.report;
+  }
+
   async getRuntimeRecovery(signal) {
     const { data } = await axios.get('/api/hivemind/recovery', { withCredentials: true, signal, timeout: 22000 });
     return data;

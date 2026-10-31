@@ -36,7 +36,7 @@ test('stores a signed-in report under the verified user and returns its id', asy
   assert.equal(res.status, 201);
   const { id } = await res.json();
   assert.ok(id);
-  assert.deepEqual(e.seen, ['bug-reports:u-1']);
+  assert.deepEqual(e.seen, ['bug-reports:u-1', 'bug-reports:index']);
   const [stored] = [...(await e.storage.list({ prefix: 'report:' })).values()];
   assert.equal(stored.userId, 'u-1');
   assert.equal(stored.id, id);
