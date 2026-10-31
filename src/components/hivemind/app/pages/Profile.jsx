@@ -40,6 +40,7 @@ import { useApiQuery } from '../shared/hooks';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import WorkspaceAccessCard from '../shared/WorkspaceAccessCard';
+import { useIsPhone } from '../shared/useIsPhone';
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
 
@@ -80,10 +81,11 @@ function PillBadge({ children, variant = 'blue' }) {
 }
 
 function Card({ children, className = '' }) {
+  const phone = useIsPhone();
   return (
     <motion.div
       variants={fadeUp}
-      className={`bg-white backdrop-blur-xl border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${className}`}
+      className={`bg-white backdrop-blur-xl border border-[#e3e0db] ${phone ? 'rounded-2xl p-4' : 'rounded-xl p-6'} shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${className}`}
     >
       {children}
     </motion.div>
@@ -117,12 +119,12 @@ function PlanBadge({ plan, label }) {
   const cfg = map[plan?.toLowerCase()] || { label: plan ? String(plan).replaceAll('_', ' ') : 'Not available', variant: 'gray', dot: '#a3a3a3' };
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono border ${
+      className={`inline-flex max-w-full items-center gap-1.5 whitespace-nowrap px-3 py-1 rounded-full text-xs font-mono border ${
         { gray: 'bg-[#f3f1ec] text-[#525252] border-[#e3e0db]', blue: 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20', purple: 'bg-purple-50 text-purple-700 border-purple-200', green: 'bg-emerald-50 text-emerald-700 border-emerald-200' }[cfg.variant]
       }`}
     >
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.dot }} />
-      {label || cfg.label}
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: cfg.dot }} />
+      <span className="min-w-0 truncate">{label || cfg.label}</span>
     </span>
   );
 }
@@ -233,6 +235,8 @@ function AccountHeaderCard({ user, org, plan, planLabel, onSignOut }) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const displayName = user?.display_name || user?.name || user?.email?.split('@')[0] || 'Your account';
+  const phone = useIsPhone();
+  if (phone) return <PhoneAccount user={user} org={org} plan={plan} planLabel={planLabel} displayName={displayName} onSignOut={onSignOut} />;
 
   return (
     <Card>
@@ -261,6 +265,52 @@ function AccountHeaderCard({ user, org, plan, planLabel, onSignOut }) {
         </div>
       </div>
     </Card>
+  );
+}
+
+/** One tappable inset-list row: label left, optional value right, chevron when it opens something. */
+function ListRow({ label, value, onClick, chevron, children }) {
+  const body = (
+    <>
+      <span className="min-w-0 shrink-0 text-[15px] text-[#111]">{label}</span>
+      <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-[15px] text-[#6b6b68]">
+        {value != null && <span className="min-w-0 truncate">{value}</span>}
+        {children}
+        {chevron && <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-[#a3a39f]" />}
+      </span>
+    </>
+  );
+  const cls = 'flex min-h-[48px] w-full items-center justify-between gap-3 px-4 text-left';
+  return onClick
+    ? <button type="button" onClick={onClick} className={`${cls} active:bg-[#f3f3f1]`}>{body}</button>
+    : <div className={cls}>{body}</div>;
+}
+
+// Phone account section: identity header, inset grouped rows, then Sign Out in its own row.
+function PhoneAccount({ user, org, plan, planLabel, displayName, onSignOut }) {
+  const { t } = useTranslation('dashboard');
+  const navigate = useNavigate();
+  const email = user?.email || '—';
+  const initials = (displayName || email).split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
+  const copyEmail = () => { try { navigator.clipboard?.writeText(email); } catch { /* clipboard blocked: the full email stays in the title attribute */ } };
+  const group = 'divide-y divide-[#111]/[.08] overflow-hidden rounded-2xl bg-white shadow-[0_0_0_1px_rgba(17,17,17,.08)]';
+  return (
+    <motion.div variants={fadeUp} data-layout="phone-account" className="space-y-4">
+      <div className="flex items-center gap-4 overflow-hidden rounded-2xl bg-white p-4 shadow-[0_0_0_1px_rgba(17,17,17,.08)]">
+        <div aria-hidden="true" className="grid h-14 w-14 shrink-0 select-none place-items-center rounded-full bg-[#111] text-xl font-medium text-white">{initials}</div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[17px] font-semibold text-[#111]">{displayName}</p>
+          <button type="button" onClick={copyEmail} title={email} aria-label={`${t('profile.copyEmail', 'Copy email')}: ${email}`} className="mt-0.5 block w-full truncate text-left text-[15px] text-[#6b6b68]">{email}</button>
+        </div>
+      </div>
+      <div className={group}>
+        <ListRow label={t('profile.workspaceLabel', 'Workspace')} value={`${org?.name || org?.slug || 'Personal'}${user?.role ? ` · ${user.role}` : ''}`} />
+        <ListRow label={t('profile.planLabel', 'Plan')}><PlanBadge plan={plan} label={planLabel} /></ListRow>
+        <ListRow label={t('profile.manageBilling', 'Manage billing')} chevron onClick={() => navigate('/hivemind/app/billing')} />
+        <ListRow label={t('profile.openSettings', 'Open settings')} chevron onClick={() => navigate('/hivemind/app/settings')} />
+      </div>
+      <button type="button" onClick={onSignOut} className="flex h-12 w-full items-center justify-center rounded-full bg-white text-[15px] font-medium text-[#dc2626] shadow-[0_0_0_1px_rgba(17,17,17,.08)] active:bg-[#f3f3f1]">{t('profile.signOut', 'Sign Out')}</button>
+    </motion.div>
   );
 }
 
@@ -1199,6 +1249,7 @@ export default function Profile() {
   const workspaceFacts = facts.filter(isWorkspaceFact);
   const editorFacts = detailScope === 'all' ? facts : detailScope === 'workspace' ? workspaceFacts : personalFacts;
   const loading = profilesLoading && statsLoading;
+  const phone = useIsPhone();
 
   if (loading) {
     return (
@@ -1211,14 +1262,14 @@ export default function Profile() {
   return (
     <div className="min-h-full mx-auto max-w-3xl pb-8">
       {/* Page header */}
-      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">{t('profile.title', 'Your Profile')}</h1>
-        <p className="text-[#525252] text-sm font-['Space_Grotesk']">
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={phone ? 'mb-4' : 'mb-6'}>
+        <h1 className={`text-[#0a0a0a] ${phone ? 'text-[22px] font-semibold tracking-[-0.02em]' : 'text-2xl font-bold'} font-['Space_Grotesk'] mb-1`}>{t('profile.title', 'Your Profile')}</h1>
+        <p className={`text-[#525252] text-sm font-['Space_Grotesk'] ${phone ? 'line-clamp-2' : ''}`}>
           {t('profile.settingsSubtitle', 'Your account, what Brain remembers, and your privacy.')}
         </p>
       </motion.div>
 
-      <div role="tablist" aria-label={t('profile.sectionsLabel', 'Profile sections')} className="mb-6 flex gap-1 overflow-x-auto border-b border-[#e3e0db]">
+      <div role="tablist" aria-label={t('profile.sectionsLabel', 'Profile sections')} data-layout={phone ? 'pills' : 'underline'} className={phone ? '-mx-4 mb-4 flex snap-x scroll-px-4 gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : 'mb-6 flex gap-1 overflow-x-auto border-b border-[#e3e0db]'}>
         {[
           ['account', t('profile.accountTab', 'Account')],
           ['about', t('profile.personalizationTab', 'Personalization')],
@@ -1236,7 +1287,9 @@ export default function Profile() {
               setActiveTab(next);
               document.getElementById(`profile-tab-${next}`)?.focus();
             }
-          }} className={`shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === id ? 'border-[#117dff] text-[#117dff]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}>{label}</button>
+          }} className={phone
+            ? `inline-flex h-11 shrink-0 snap-start items-center whitespace-nowrap rounded-full px-4 text-[15px] font-medium transition-colors ${activeTab === id ? 'bg-[#111] text-white' : 'bg-white text-[#525252] shadow-[0_0_0_1px_rgba(17,17,17,.08)]'}`
+            : `shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === id ? 'border-[#117dff] text-[#117dff]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}>{label}</button>
         ))}
       </div>
       <motion.div
