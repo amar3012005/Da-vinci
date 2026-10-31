@@ -26,7 +26,8 @@
     "RUNNER_ORIGIN": "https://harness-chat-origin.singulancelabs.com",
     "RUNTIME_RUNNER_PUBLIC_ORIGIN": "https://runtime-runner.singulancelabs.com",
     "RUNTIME_RUNNER_ORIGIN": "https://runtime-runner-origin.singulancelabs.com",
-    "DEV_COMMUNITY_ADMINS": "support@singulancelabs.com"
+    "DEV_COMMUNITY_ADMINS": "support@singulancelabs.com",
+    "BUG_REPORT_FROM": "bugs@admin.singulancelabs.com"
   },
   "routes": [
     {
@@ -71,7 +72,7 @@
     }
   ],
   "send_email": [
-    { "name": "BUG_REPORT_EMAIL", "destination_address": "support@singulancelabs.com" }
+    { "name": "BUG_REPORT_EMAIL", "allowed_destination_addresses": ["support@singulancelabs.com"] }
   ],
   "durable_objects": {
     "bindings": [

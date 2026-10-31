@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BugReportIndex, bugReportDurable, handleBugReport, handleBugReportAdmin, summarize } from './bug-report.mjs';
-import { buildMime, bugReportMessage, sendBugReportEmail } from './bug-report-email.mjs';
+import { bugReportMessage, sendBugReportEmail } from './bug-report-email.mjs';
 
 class MemoryStorage {
   constructor() { this.map = new Map(); }
@@ -107,20 +107,17 @@ test('an email is sent once per new report with its fields; send failures never 
   const sent = [];
   const e = env({ BUG_REPORT_EMAIL: { send: async message => { sent.push(message); } } });
   const waited = [];
-  class FakeMessage { constructor(from, to, raw) { Object.assign(this, { from, to, raw }); } }
-  const sendEmail = (environment, entry) => sendBugReportEmail(environment, entry, { EmailMessage: FakeMessage });
+  const sendEmail = sendBugReportEmail;
   const { res, id } = await submit(e, report({ text: 'Line one\nLine two' }), 'u-1', { ctx: { waitUntil: p => waited.push(p) }, sendEmail });
   assert.equal(res.status, 201);
   await Promise.all(waited);
   assert.equal(sent.length, 1);
   assert.equal(sent[0].to, 'support@singulancelabs.com');
-  assert.equal(sent[0].from, 'bugs@singulancelabs.com');
-  const raw = sent[0].raw;
-  assert.match(raw, /^Subject: =\?UTF-8\?B\?/m);
-  const encoded = raw.split('\r\n\r\n')[1].replace(/\r\n/g, '');
-  const body = Buffer.from(encoded, 'base64').toString();
+  assert.deepEqual(sent[0].from, { email: 'bugs@admin.singulancelabs.com', name: 'HIVEMIND bug reports' });
+  assert.equal(sent[0].subject, '[HIVEMIND bug] web · Line one Line two');
+  const body = sent[0].text;
   for (const piece of [id, 'Platform: web', 'org-1', 'u-1', '/hivemind/app/overview', 'Line two', 'admin.hivemind.singulancelabs.com']) assert.ok(body.includes(piece), piece);
-  assert.doesNotMatch(raw + body, /hm_cp_session|token|secret/i);
+  assert.doesNotMatch(sent[0].subject + body, /hm_cp_session|token|secret/i);
 
   const failing = env({ BUG_REPORT_EMAIL: { send: async () => { throw new Error('smtp down'); } } });
   const pending = [];
@@ -134,16 +131,15 @@ test('rate limited reports send no email', async () => {
   const sent = [];
   const e = env({ BUG_REPORT_EMAIL: { send: async m => sent.push(m) } });
   const waited = [];
-  class FakeMessage { constructor(from, to, raw) { Object.assign(this, { raw }); } }
-  const options = { ctx: { waitUntil: p => waited.push(p) }, sendEmail: (environment, entry) => sendBugReportEmail(environment, entry, { EmailMessage: FakeMessage }) };
+  const options = { ctx: { waitUntil: p => waited.push(p) }, sendEmail: sendBugReportEmail };
   for (let i = 0; i < 6; i += 1) await submit(e, report(), 'u-1', options);
   await Promise.all(waited);
   assert.equal(sent.length, 5);
 });
 
-test('mime headers cannot be injected through report text', () => {
+test('subject cannot carry line breaks from report text', () => {
   const { subject } = bugReportMessage({ id: 'i', platform: 'web', text: 'hi\r\nBcc: evil@example.com', at: 't', userId: 'u' });
   assert.doesNotMatch(subject, /[\r\n]/);
-  const mime = buildMime({ from: 'bugs@singulancelabs.com', to: 'support@singulancelabs.com', subject, body: 'b', id: 'i' });
+});
   assert.doesNotMatch(mime.split('\r\n\r\n')[0], /^Bcc:/m);
 });
