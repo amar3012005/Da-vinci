@@ -20,7 +20,7 @@
 .ps-note{margin:14px 0 0;font-size:12px;color:var(--muted)}
 
 /* Device stage */
-.ps-device{position:relative;min-width:0;display:grid;place-items:center;perspective:2200px}
+.ps-device{position:relative;min-width:0;display:grid;place-items:center;perspective:1300px;perspective-origin:50% 35%}
 .ps-macwrap,.ps-phonewrap{width:100%;display:grid;place-items:center}
 .ps-mac{position:relative;width:min(88%,calc((100svh - 150px) * 1.46));transform-style:preserve-3d;will-change:transform}
 /* MacBook Pro, front view: aluminium rim, black glass bezel, notch, hinge, space-grey base. */
