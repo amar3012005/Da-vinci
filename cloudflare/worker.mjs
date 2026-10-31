@@ -13,6 +13,7 @@ import { devCommunity } from './dev-community.mjs';
 export { DevCommunity } from './dev-community.mjs';
 import { runtimePublic } from './runtime-public.mjs';
 import { amarPublic } from './amar-public.mjs';
+import { pitchPublic } from './pitch-public.mjs';
 import { getRuntimePublic } from './getruntime-public.mjs';
 import { icarusPublic } from './icarus-public.mjs';
 import { workspaceDocumentRedirect } from '../src/components/hivemind/app/shared/workspace-authority.mjs';
@@ -555,6 +556,8 @@ export default {
     if (openDotResponse) return openDotResponse;
     const runtimeProductCover = await runtimePublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
     if (runtimeProductCover) return runtimeProductCover;
+    const pitchRoom = await pitchPublic(request, env);
+    if (pitchRoom) return pitchRoom;
     const founderCover = await amarPublic(request, env, { seo: publicSeoResponse, markdown: markdownResponse, prefersMarkdown });
     if (founderCover) return founderCover;
     if (['singulancelabs.com','www.singulancelabs.com'].includes(url.hostname) && /^\/amar-sai-gadde(?:\/|$)/.test(url.pathname) && ['GET','HEAD'].includes(request.method)) return Response.redirect('https://amar.singulancelabs.com/' + (/index\.(md|txt)$/.test(url.pathname) ? 'index.md' : ''), 308);

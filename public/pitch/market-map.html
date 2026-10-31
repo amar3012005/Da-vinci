@@ -1,0 +1,493 @@
+<title>SINGULANCE Market Map 2026</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single reading column (~980px) with wide tables in their own scroll boxes; SINGULANCE brand tokens. */
+:root{
+  --bg:#FAFAF7; --surface:#FFFFFF; --ink:#0E1D32; --body:#4F5C6B; --muted:#7A8592; --rule:#E3E6E4;
+  --accent:#117DFF; --accent-soft:#E6F0FF; --comp:#8C9AAB; --hi:#C2410C; --hi-soft:#FCEBDD; --mid:#A16207; --mid-soft:#FBF1D6; --lo:#3F6212; --lo-soft:#EAF3DA;
+  --f-display:"Space Grotesk",system-ui,sans-serif; --f-body:"IBM Plex Sans",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B0F14; --surface:#121820; --ink:#E8EDF3; --body:#B4BDC8; --muted:#8792A0; --rule:#243040;
+  --accent:#5AA2FF; --accent-soft:#132A47; --comp:#6E7D8F; --hi:#F59E6B; --hi-soft:#3A2214; --mid:#E3B341; --mid-soft:#33290F; --lo:#9BCB5C; --lo-soft:#1F2D12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B0F14; --surface:#121820; --ink:#E8EDF3; --body:#B4BDC8; --muted:#8792A0; --rule:#243040;
+  --accent:#5AA2FF; --accent-soft:#132A47; --comp:#6E7D8F; --hi:#F59E6B; --hi-soft:#3A2214; --mid:#E3B341; --mid-soft:#33290F; --lo:#9BCB5C; --lo-soft:#1F2D12; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body.embed>.wrap>header{display:none}
+body.embed{padding-block:4px 40px}
+body.embed .wrap{gap:40px}
+body{background:var(--bg);color:var(--body);font:15px/1.6 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 64px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
+h1,h2,h3{font-family:var(--f-display);color:var(--ink);text-wrap:balance;margin:0;letter-spacing:-.015em}
+h1{font-size:clamp(30px,5vw,44px);line-height:1.08;font-weight:600}
+h2{font-size:24px;font-weight:600;margin-bottom:6px}
+h3{font-size:17px;font-weight:500}
+p{margin:0;max-width:68ch}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.lede{font-size:17px;color:var(--body);margin-top:12px}
+.meta{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);margin-top:14px}
+section{display:flex;flex-direction:column;gap:16px}
+.intro{color:var(--body)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;min-width:0}
+.stat .v{font-family:var(--f-display);font-size:30px;color:var(--ink);font-weight:500;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat .l{font-size:13.5px;margin-top:4px}
+.stat .s{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-top:8px}
+.takeaways{display:grid;gap:12px;padding:0;margin:0;list-style:none}
+.takeaways li{display:grid;grid-template-columns:26px 1fr;gap:10px;align-items:baseline}
+.takeaways li b{color:var(--ink);font-weight:600}
+.takeaways .n{font-family:var(--f-mono);font-size:12px;color:var(--accent)}
+.scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:860px;font-size:13.5px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500;background:var(--bg);position:sticky;top:0}
+td.co{color:var(--ink);font-weight:600;white-space:nowrap}
+td .hq{display:block;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);font-weight:400}
+td.price{font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+tr.cat td{background:var(--accent-soft);color:var(--ink);font-family:var(--f-display);font-weight:500;font-size:14px;padding:8px 12px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:10.5px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.pill:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.t-hi{color:var(--hi);background:var(--hi-soft)} .t-mid{color:var(--mid);background:var(--mid-soft)} .t-lo{color:var(--lo);background:var(--lo-soft)}
+.src{font-family:var(--f-mono);font-size:10.5px}
+a{color:var(--accent);text-underline-offset:2px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* price ladder */
+.chart{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:18px 18px 12px;overflow-x:auto}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;margin-bottom:10px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:16px;height:6px;border-radius:3px;display:inline-block}
+.ladder{min-width:760px;position:relative}
+.lrow{display:grid;grid-template-columns:270px 1fr;align-items:center;height:26px}
+.lrow .lb{font-size:12.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:10px}
+.lrow .lb small{color:var(--muted)}
+.lrow.us .lb{color:var(--accent);font-weight:600}
+.track{position:relative;height:26px}
+.bar{position:absolute;top:10px;height:6px;border-radius:3px;background:var(--comp);min-width:8px;cursor:default}
+.us .bar{background:var(--accent)}
+.bar:hover,.bar:focus{outline:2px solid var(--surface);box-shadow:0 0 0 4px var(--accent-soft)}
+.grid{position:absolute;top:0;bottom:22px;width:1px;background:var(--rule)}
+.axis{position:relative;height:22px;margin-left:270px}
+.axis span{position:absolute;transform:translateX(-50%);font-family:var(--f-mono);font-size:10.5px;color:var(--muted);top:4px}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 9px;border-radius:4px;max-width:260px;line-height:1.4;z-index:20}
+.note{font-size:12.5px;color:var(--muted)}
+.cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;min-width:0}
+.card h3{margin-bottom:6px}
+.card p{font-size:14px}
+.rec{border-left:3px solid var(--accent)}
+ol.sources{font-size:12.5px;padding-left:20px;margin:0;display:grid;gap:4px;columns:2;column-gap:28px}
+@media (max-width:640px){ol.sources{columns:1}}
+.toc{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--rule);margin-top:20px}
+.tabs a{font-family:var(--f-display);font-size:15px;color:var(--body);text-decoration:none;padding:9px 14px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:500}
+.view{display:flex;flex-direction:column;gap:48px}
+.timeline{list-style:none;margin:0;padding:0;display:grid;gap:0;border-left:2px solid var(--rule);margin-left:6px}
+.timeline li{position:relative;padding:0 0 18px 22px}
+.timeline li:before{content:"";position:absolute;left:-7px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--accent)}
+.timeline .d{font-family:var(--f-mono);font-size:11.5px;color:var(--accent)}
+.timeline h3{margin:2px 0 3px}
+.timeline p{font-size:14px}
+.method{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.slot{display:flex;flex-wrap:wrap;border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--surface)}
+.slot div{padding:10px 12px;border-right:1px solid var(--rule);min-width:0;flex:1 1 120px}
+.slot div:last-child{border-right:0}
+.slot b{display:block;font-family:var(--f-mono);font-size:10.5px;color:var(--accent);font-weight:500}
+.slot span{font-size:13px;color:var(--ink)}
+.warn{border-left:3px solid var(--mid)}
+table.small{min-width:640px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Competitive research · Europe · 31 October 2026</div>
+  <h1>SINGULANCE Market Map 2026</h1>
+  <p class="lede">Who sells AI to European firms, SMEs and agencies today, what they charge, and where SINGULANCE's pricing sits in that range.</p>
+  <p class="meta">Scope: horizontal AI assistants, European AI workspaces, agent and "AI employee" platforms, voice AI, and vertical tools for law, audit and agencies. Prices are monthly, per user unless stated; $ and € are shown as published.</p>
+  <nav class="tabs" aria-label="Views"><a href="#market" data-view="market">Market map</a><a href="#research" data-view="research">ICARUS research</a></nav>
+</header>
+
+<div class="view" id="view-market">
+<nav class="toc" aria-label="Sections"><a href="#summary">Summary</a><a href="#market">Market</a><a href="#ladder">Price ladder</a><a href="#competitors">Competitors</a><a href="#position">Where we fit</a><a href="#pricing">Recommended pricing</a><a href="#gaps">Open questions</a><a href="#sources">Sources</a></nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <ul class="takeaways">
+    <li><span class="n">1</span><span><b>Chat seats have become a commodity at €20–25.</b> ChatGPT Business, Claude Team, Copilot Business, Mistral Team, Notion Business and Langdock all land in this range, and Google bundles Gemini into Workspace. Do not compete for this seat.</span></li>
+    <li><span class="n">2</span><span><b>Heavier usage is sold in a €100–150 "premium seat" tier.</b> ChatGPT and Claude premium seats, Dust Max and Langdock Business Max all sit here. This is the closest match for SINGULANCE Pro (€79).</span></li>
+    <li><span class="n">3</span><span><b>Agent work is moving to usage and outcome pricing.</b> Copilot Studio charges per credit, Agentforce per action or conversation, Notion per agent credit, and HubSpot moved its main agents to outcome pricing in April 2026.</span></li>
+    <li><span class="n">4</span><span><b>Vertical tools charge far more.</b> Legal AI is reported at roughly $250 per lawyer per month (Legora) up to $1,200–2,000 (Harvey), with seat minimums. A law-firm wedge supports a much higher price than horizontal tools.</span></li>
+    <li><span class="n">5</span><span><b>The direct European rivals are Langdock and Dust.</b> Langdock (Berlin) reports about €50M ARR and 13,000+ organisations at a €25 seat. Dust (Paris) raised a $40M Series B led by Sequoia. Cohere's deal with Aleph Alpha targets large sovereign buyers.</span></li>
+    <li><span class="n">6</span><span><b>Nobody in this scan sells a proactive AI Chief of Staff that leads persistent specialists.</b> Competitors sell assistants, search or agent builders. Proactivity, reviewed work, signed memory and voice on one context are SINGULANCE's open position.</span></li>
+    <li><span class="n">7</span><span><b>Proactive AI arrived in 2026, but as consumer agents from US platforms.</b> Meta Muse, OpenAI dots and xAI Grok Bot act without being asked, run on the provider's cloud, and keep data on the provider's servers. They will teach buyers to expect proactivity; SINGULANCE offers it for company operations, inside the company's own walls.</span></li>
+  </ul>
+</section>
+
+<section id="market">
+  <h2>Market size and adoption</h2>
+  <p class="intro">European AI spend is growing fast, and most smaller firms have not adopted AI yet.</p>
+  <div class="stats">
+    <div class="stat"><div class="v">~$470B</div><div class="l">European AI spending by 2030, 35% CAGR 2025–2030</div><div class="s">IDC, Sep 2026</div></div>
+    <div class="stat"><div class="v">20%</div><div class="l">of EU enterprises (10+ staff) used AI in 2025, up from 13.5% in 2024</div><div class="s">Eurostat, Dec 2025</div></div>
+    <div class="stat"><div class="v">17% · 30% · 55%</div><div class="l">AI use in small, medium and large EU firms</div><div class="s">Eurostat, 2025</div></div>
+    <div class="stat"><div class="v">€50M ARR</div><div class="l">Langdock, 13,000+ organisations: proof European firms pay for an EU-built AI workspace</div><div class="s">Dealroom, Sep 2026 (unaudited)</div></div>
+  </div>
+  <p class="note">What this means: 83% of small EU firms and 70% of medium firms do not use AI yet, so SMEs are the largest growth pool. Large firms are mostly already using AI and are buying second-generation tools: agents, governance and sovereignty.</p>
+</section>
+
+<section id="ladder">
+  <h2>Price ladder</h2>
+  <p class="intro">Monthly price per user, log scale. Grey bars are competitors, blue bars are SINGULANCE. Hover or focus a bar for detail.</p>
+  <div class="chart">
+    <div class="legend"><span><i style="background:var(--comp)"></i>Competitor (published or reported range)</span><span><i style="background:var(--accent)"></i>SINGULANCE</span></div>
+    <div class="ladder" id="ladder-chart" role="img" aria-label="Price ladder of AI products per user per month, from about 7 to 2,000, on a log scale"></div>
+  </div>
+  <p class="note">SINGULANCE bars show the recommended prices; Growth (€4,500 per month) is converted to a per-user figure at 50 and at 20 users. Ranges reflect conflicting third-party reports; see the table below for sources.</p>
+</section>
+
+<section id="competitors">
+  <h2>Competitors and pricing</h2>
+  <p class="intro">Threat level reflects overlap with SINGULANCE's buyer and offer, not company size.</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Company</th><th>What they sell</th><th>Price</th><th>Pricing model</th><th>Threat</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr class="cat"><td colspan="6">European AI workspaces (most direct)</td></tr>
+      <tr><td class="co">Langdock<span class="hq">Berlin</span></td><td>GDPR-focused multi-model AI workspace with assistants, agents and workflows</td><td class="price">€25 Business<br>€99 Business Max<br>Enterprise custom</td><td>Per seat, plus per-workspace workflow plans</td><td><span class="pill t-hi">High</span></td><td class="src"><a href="https://langdock.com/pricing">langdock.com</a>, <a href="https://app.dealroom.co/news/note/langdock-hits-50m-arr-55m">Dealroom</a></td></tr>
+      <tr><td class="co">Dust<span class="hq">Paris</span></td><td>Custom AI agents connected to company data (Notion, Slack, Drive, GitHub)</td><td class="price">$30 Pro ($24 annual)<br>$150 Max ($120 annual)<br>Enterprise custom</td><td>Seats with included credits (changed mid-2026)</td><td><span class="pill t-hi">High</span></td><td class="src"><a href="https://usagepricing.com/blueprint/activity/dust-2026-06-24-price-change">usagepricing</a>, <a href="https://automationatlas.io/answers/dust-pricing-explained-2026/">automationatlas</a></td></tr>
+      <tr><td class="co">Mistral Le Chat<span class="hq">Paris</span></td><td>European model provider; Le Chat Team and Enterprise</td><td class="price">~$20–25 Team<br>Enterprise quote</td><td>Per seat; Enterprise custom</td><td><span class="pill t-mid">Medium</span></td><td class="src"><a href="https://wise.com/gb/blog/mistral-ai-pricing">Wise</a>, <a href="https://www.costbench.com/software/ai-chatbots/le-chat-mistral/">costbench</a></td></tr>
+      <tr><td class="co">Cohere + Aleph Alpha<span class="hq">Toronto / Heidelberg</span></td><td>Sovereign enterprise AI (North platform); deal backed by Schwarz Group</td><td class="price">Custom only</td><td>Enterprise contracts, private deployment</td><td><span class="pill t-mid">Medium</span></td><td class="src"><a href="https://futurumgroup.com/insights/cohere-acquires-aleph-alpha-a-deal-born-of-sovereignty-necessity/">Futurum</a>, <a href="https://schwarz-digits.de/en/presse/archive/2026/cohere-and-aleph-alpha-to-form-global-ai-powerhouse">Schwarz Digits</a></td></tr>
+
+      <tr class="cat"><td colspan="6">Consumer proactive agents (US platforms, 2025–2026)</td></tr>
+      <tr><td class="co">OpenAI dots<span class="hq">OpenAI · US</span></td><td>Always-on agents inside ChatGPT, each on its own cloud computer; proactive read-only research between tasks. Launched 29 Sep 2026</td><td class="price">ChatGPT Pro and Business Premium<br>Enterprise pilots</td><td>Bundled in top consumer and business tiers</td><td><span class="pill t-hi">High</span></td><td class="src"><a href="https://techcrunch.com/2026/09/29/openai-launches-dots-its-bubbly-agentic-avatar/">TechCrunch</a>, <a href="https://www.aljazeera.com/economy/2026/9/30/openai-launches-dots-personal-ai-assistant-built-to-handle-everything">Al Jazeera</a></td></tr>
+      <tr><td class="co">Meta Muse<span class="hq">Meta · US</span></td><td>Personal agent that messages users unprompted, books, shops and fills forms; keeps working after the app closes. US launch 8 Sep 2026</td><td class="price">Free to try<br>Paid plans for heavier use</td><td>Freemium consumer</td><td><span class="pill t-mid">Medium</span></td><td class="src"><a href="https://about.fb.com/news/2026/09/introducing-muse">Meta</a>, <a href="https://axios.com/2026/09/08/meta-debuts-muse-personal-ai-agent">Axios</a></td></tr>
+      <tr><td class="co">xAI Grok Bot<span class="hq">xAI · US</span></td><td>Always-on cloud agent with persistent runtime (reported Aug 2026; xAI has not published full details)</td><td class="price">Not confirmed</td><td>Consumer subscription (Grok)</td><td><span class="pill t-lo">Low</span></td><td class="src"><a href="https://www.iphoneincanada.ca/2026/09/29/openai-dots-take-on-meta-muse-and-grok-bot-with-24-7-ai-agents/">iPhone in Canada</a></td></tr>
+      <tr><td class="co">ChatGPT Pulse<span class="hq">OpenAI · US</span></td><td>Proactive overnight research delivered as morning cards, using chat history, memory and connected apps. Launched Sep 2025</td><td class="price">ChatGPT Pro ($200 at launch)</td><td>Bundled in consumer tier</td><td><span class="pill t-lo">Low</span></td><td class="src"><a href="https://techcrunch.com/2025/09/25/openai-launches-chatgpt-pulse-to-proactively-write-you-morning-briefs">TechCrunch</a></td></tr>
+
+      <tr class="cat"><td colspan="6">Horizontal AI assistants (set price expectations)</td></tr>
+      <tr><td class="co">ChatGPT Business / Enterprise<span class="hq">OpenAI · US</span></td><td>General assistant with connectors and agents</td><td class="price">$20 ($25 monthly)<br>Premium seat ~$100–125<br>Enterprise ~$60 reported</td><td>Per seat; 2-seat minimum</td><td><span class="pill t-mid">Medium</span></td><td class="src"><a href="https://elephas.app/resources/chatgpt-business-pricing">elephas</a>, <a href="https://www.eesel.ai/blog/chatgpt-work-pricing">eesel</a></td></tr>
+      <tr><td class="co">Claude Team / Enterprise<span class="hq">Anthropic · US</span></td><td>General assistant; Enterprise adds usage billing</td><td class="price">$20 Team ($25 monthly)<br>Premium $100–125<br>Ent. $20 + usage</td><td>Per seat; 5-seat minimum (Team)</td><td><span class="pill t-mid">Medium</span></td><td class="src"><a href="https://redresscompliance.com/anthropic-claude-enterprise-licensing-guide-2026.html">Redress</a>, <a href="https://tldv.io/blog/claude-enterprise-pricing/">tldv</a></td></tr>
+      <tr><td class="co">Microsoft 365 Copilot<span class="hq">Microsoft · US</span></td><td>AI inside Office; SMB edition up to 300 users</td><td class="price">$21 Business ($18 promo)<br>$30 Enterprise</td><td>Add-on seat to Microsoft 365</td><td><span class="pill t-hi">High (SMB)</span></td><td class="src"><a href="https://www.pax8.com/blog/microsoft-365-copilot-business-smb-offers">Pax8</a>, <a href="https://eesel.ai/blog/copilot-pricing">eesel</a></td></tr>
+      <tr><td class="co">Gemini in Workspace<span class="hq">Google · US</span></td><td>AI bundled into every Workspace business plan</td><td class="price">$7–22 incl. suite<br>NotebookLM Ent. $25</td><td>Bundled; no separate AI fee</td><td><span class="pill t-mid">Medium</span></td><td class="src"><a href="https://www.techrepublic.com/article/google-workspace-gemini-pricing-plans/">TechRepublic</a></td></tr>
+      <tr><td class="co">Notion AI<span class="hq">Notion · US</span></td><td>Workspace with AI bundled; custom agents metered</td><td class="price">$20 Business ($24 monthly)<br>Agents $10 / 1K credits</td><td>Seat plus agent credits</td><td><span class="pill t-lo">Low</span></td><td class="src"><a href="https://www.sentra.app/articles/notion-ai-pricing">Sentra</a></td></tr>
+
+      <tr class="cat"><td colspan="6">Enterprise knowledge and search</td></tr>
+      <tr><td class="co">Glean<span class="hq">US</span></td><td>Enterprise search and work AI across company apps</td><td class="price">~$45–50+ per user<br>~100-seat min (~$60K ACV)</td><td>Annual seats; +~10% support fee</td><td><span class="pill t-mid">Medium</span></td><td class="src"><a href="https://www.gosearch.ai/blog/glean-pricing-explained">GoSearch</a>, <a href="https://www.eesel.ai/blog/glean-ai-pricing">eesel</a></td></tr>
+
+      <tr class="cat"><td colspan="6">Agent platforms and "AI employees"</td></tr>
+      <tr><td class="co">Microsoft Copilot Studio<span class="hq">US</span></td><td>Build custom agents on Microsoft 365</td><td class="price">$200 / 25K credits<br>$0.01 per credit PAYG</td><td>Consumption credits</td><td><span class="pill t-mid">Medium</span></td><td class="src"><a href="https://www.cloudzero.com/blog/copilot-studio-pricing/">CloudZero</a></td></tr>
+      <tr><td class="co">Salesforce Agentforce<span class="hq">US</span></td><td>CRM agents for sales and service</td><td class="price">$2 / conversation or ~$0.10 / action<br>$125+ user add-on</td><td>Consumption or per user</td><td><span class="pill t-lo">Low</span></td><td class="src"><a href="https://www.eesel.ai/blog/agentforce-pricing">eesel</a>, <a href="https://www.11x.ai/guides/agentforce-pricing">11x</a></td></tr>
+      <tr><td class="co">Sintra<span class="hq">Lithuania</span></td><td>"AI employees" bundle for small businesses</td><td class="price">$39 one helper<br>$97 all 12 helpers</td><td>Per account, credits</td><td><span class="pill t-hi">High (SMB)</span></td><td class="src"><a href="https://www.eesel.ai/blog/sintra-ai-pricing">eesel</a></td></tr>
+      <tr><td class="co">n8n<span class="hq">Berlin</span></td><td>Workflow automation with AI agent nodes; self-host free</td><td class="price">€24 Starter · €60 Pro<br>€800 Business</td><td>Per workspace, by executions</td><td><span class="pill t-lo">Low</span></td><td class="src"><a href="https://costbench.com/compare/lindy-vs-n8n/">costbench</a></td></tr>
+      <tr><td class="co">Lindy / Relevance AI<span class="hq">US / AU</span></td><td>No-code agent builders</td><td class="price">Lindy ~$30–200<br>Relevance from $19</td><td>Credits</td><td><span class="pill t-lo">Low</span></td><td class="src"><a href="https://www.costbench.com/compare/lindy-vs-relevance-ai/">costbench</a></td></tr>
+
+      <tr class="cat"><td colspan="6">Voice AI (TARA's market)</td></tr>
+      <tr><td class="co">Parloa<span class="hq">Berlin</span></td><td>Enterprise contact-centre voice agents</td><td class="price">Per minute (published Oct 2026)</td><td>Per minute / per resolution</td><td><span class="pill t-mid">Medium</span></td><td class="src"><a href="https://www.usagepricing.com/blueprint/activity/parloa-2026-10-08-per-minute-pricing-published">usagepricing</a></td></tr>
+      <tr><td class="co">PolyAI<span class="hq">London</span></td><td>Managed enterprise voice agents; self-serve API</td><td class="price">~2¢ / min API (reported)</td><td>Per minute + managed service</td><td><span class="pill t-lo">Low</span></td><td class="src"><a href="https://www.usagepricing.com/blueprint/activity/polyai-2026-10-22-dialog-rsn-1-api-pricing">usagepricing</a></td></tr>
+      <tr><td class="co">Cognigy (NiCE)<span class="hq">Düsseldorf</span></td><td>Contact-centre conversational AI</td><td class="price">Custom</td><td>Per interaction or minute</td><td><span class="pill t-lo">Low</span></td><td class="src"><a href="https://parloa.com/knowledge-hub/cognigy-alternatives/">Parloa</a></td></tr>
+
+      <tr class="cat"><td colspan="6">Vertical: law, audit, agencies</td></tr>
+      <tr><td class="co">Legora<span class="hq">Stockholm</span></td><td>Legal AI workspace for law firms</td><td class="price">~$3,000 / lawyer / yr<br>(~$250 / month), ~10-seat min</td><td>Annual seats; metered option</td><td><span class="pill t-hi">High (law)</span></td><td class="src"><a href="https://www.layer3labs.io/guides/legora-pricing">Layer3</a>, <a href="https://www.vaquill.ai/blog/harvey-legora-cocounsel-pricing-reality-2026">Vaquill</a></td></tr>
+      <tr><td class="co">Harvey<span class="hq">US</span></td><td>Legal AI for large firms</td><td class="price">$1,200–2,000 / user / mo (reported)<br>25–50 seat min</td><td>Annual seats</td><td><span class="pill t-mid">Medium</span></td><td class="src"><a href="https://www.vaquill.ai/blog/harvey-legora-cocounsel-pricing-reality-2026">Vaquill</a>, <a href="https://sacra.com/c/harvey/">Sacra</a></td></tr>
+      <tr><td class="co">Noxtua<span class="hq">Berlin</span></td><td>Sovereign legal AI; C.H. Beck majority owner; &gt;€100M Series C reported</td><td class="price">Not published</td><td>Enterprise; Europe licence in beta</td><td><span class="pill t-hi">High (DACH law)</span></td><td class="src"><a href="https://www.noxtua.com/news/press-releases/noxtuas-europe-license">Noxtua</a>, <a href="https://www.startbase.de/news/noxtua-erhaelt-mehr-als-100-millionen-euro-in-series-c/">startbase</a></td></tr>
+      <tr><td class="co">DataSnipper<span class="hq">Amsterdam</span></td><td>AI automation for audit and finance in Excel</td><td class="price">~€49–64 / user (reported)</td><td>Annual seats, quote</td><td><span class="pill t-mid">Medium (audit)</span></td><td class="src"><a href="https://toolradar.com/tools/datasnipper/pricing">Toolradar</a></td></tr>
+      <tr><td class="co">HubSpot Breeze<span class="hq">US</span></td><td>Marketing and sales agents inside HubSpot</td><td class="price">Marketing Pro from ~$800 / mo<br>~$10 / 1K credits</td><td>Platform + credits; outcome pricing</td><td><span class="pill t-mid">Medium (agencies)</span></td><td class="src"><a href="https://eesel.ai/blog/hubspot-ai-pricing">eesel</a></td></tr>
+      <tr><td class="co">Jasper<span class="hq">US</span></td><td>Marketing content AI and agents</td><td class="price">~$39–69 / seat</td><td>Per seat; Business custom</td><td><span class="pill t-lo">Low</span></td><td class="src"><a href="https://dupple.com/learn/best-ai-tools-for-marketers">Dupple</a></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">Most prices come from third-party trackers and buyer reports, not vendor rate cards, and several disagree. Treat ranges as directional and confirm on the vendor's page before quoting them to a customer.</p>
+</section>
+
+<section id="position">
+  <h2>Where SINGULANCE fits</h2>
+  <div class="cols2">
+    <div class="card"><h3>What competitors sell</h3><p>Assistants that answer when asked (ChatGPT, Claude, Copilot, Mistral). Search across company apps (Glean). Agent builders the customer has to assemble (Copilot Studio, n8n, Lindy). Vertical copilots for one profession (Legora, Harvey, DataSnipper).</p></div>
+    <div class="card"><h3>What only SINGULANCE combines</h3><p>A company brain that acts on signals without a prompt, a Chief of Staff that assigns and reviews work, persistent specialists with their own computer and memory, post-quantum signed memory, and voice on the same context.</p></div>
+    <div class="card"><h3>Biggest threat: Langdock</h3><p>Same buyer (European, GDPR-sensitive), proven distribution (13,000+ organisations), €25 seat and agents. If a prospect already uses Langdock, sell the proactive and reviewed-work layer, not another chat workspace.</p></div>
+    <div class="card"><h3>Consumer proactive agents</h3><p>Muse, dots and Grok Bot prove the demand for AI that acts first. They are consumer-first, run on US platforms' clouds and keep data on the provider's servers. dots is the one to watch: it already reaches Business Premium and enterprise pilots.</p></div>
+    <div class="card"><h3>SME threat: Microsoft and Sintra</h3><p>Copilot Business at $18–21 sets what an SME expects to pay for "AI". Sintra sells "AI employees" for $39–97. Self-serve plans must show work done, not chat, to justify €24–199.</p></div>
+  </div>
+</section>
+
+<section id="pricing">
+  <h2>Recommended pricing</h2>
+  <p class="intro">Per person for individuals, capacity on annual contracts for companies, and every add-on as a subscription so expansion shows up as recurring revenue. These are recommendations to validate with costs and buyers, not tested prices.</p>
+  <h3>Self-serve (individuals, freelancers, small teams)</h3>
+  <div class="scroll"><table class="small">
+    <thead><tr><th>Plan</th><th>Current</th><th>Recommended</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td class="co">Free</td><td class="price">€0</td><td class="price">€0</td><td>Brain, 3 sources, a taste of agents and voice. Funnel, including ICARUS developers.</td></tr>
+      <tr><td class="co">Plus</td><td class="price">€39</td><td class="price">€24 · €19 annual</td><td>Match the €20–25 seat market; add Runtime's daily proactive briefing, which those seats lack.</td></tr>
+      <tr><td class="co">Pro</td><td class="price">€79</td><td class="price">€79 · €64 annual</td><td>Keep. Below the €100–150 premium seats from OpenAI, Anthropic and Dust.</td></tr>
+      <tr><td class="co">Max (was Scale)</td><td class="price">€239</td><td class="price">€199 · €159 annual</td><td>€239 is above every single-person plan in the market. Fixed TARA minute bundle included.</td></tr>
+      <tr><td class="co">Team</td><td class="price">—</td><td class="price">€249 for 5 people, +€29 each</td><td>Base workspace fee avoids the €20 seat comparison; seats expand revenue.</td></tr>
+      <tr><td class="co">Agency</td><td class="price">—</td><td class="price">€449 incl. 3 clients, +€99 per client</td><td>Agencies buy per client, so revenue grows with their client list.</td></tr>
+    </tbody>
+  </table></div>
+  <h3 style="margin-top:8px">Enterprise (regulated firms, starting with DACH law)</h3>
+  <div class="scroll"><table class="small">
+    <thead><tr><th>Element</th><th>Current</th><th>Recommended</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td class="co">Paid activation</td><td class="price">€2K–€4K</td><td class="price">€6K–€12K, 6–8 weeks</td><td>Fully credited to year one on an annual contract, so the pilot converts into recurring revenue.</td></tr>
+      <tr><td class="co">Growth (≤50 users)</td><td class="price">€4K–€5K</td><td class="price">€4,500 / month</td><td>About Glean's ~€60K minimum contract; €90 per user at 50 users.</td></tr>
+      <tr><td class="co">Business (≤200 users)</td><td class="price">—</td><td class="price">€9,000 / month</td><td>Second tier so larger firms expand without renegotiating.</td></tr>
+      <tr><td class="co">Enterprise</td><td class="price">—</td><td class="price">from €18,000 / month</td><td>Dedicated or self-hosted, "inside your walls"; identity, audit, SLAs.</td></tr>
+      <tr><td class="co">AI employees</td><td class="price">By scope</td><td class="price">€290–€990 per specialist / month</td><td>The main expansion unit; buyers compare it to a hire.</td></tr>
+      <tr><td class="co">TARA voice</td><td class="price">By service</td><td class="price">Voice line + ~€0.20 / min</td><td>Market rate is $0.10–0.25 per minute.</td></tr>
+      <tr><td class="co">Contract terms</td><td class="price">—</td><td class="price">12-month min, auto-renew</td><td>Annual or quarterly prepay; 5–7% renewal uplift (Glean reportedly 7–12%).</td></tr>
+    </tbody>
+  </table></div>
+  <div class="cols2">
+    <div class="card rec"><h3>€100K MRR model</h3><p>15 Growth × €4.5K + 3 Business × €9K + 18 AI employees × €490 = about €103K per month, before self-serve revenue.</p></div>
+    <div class="card rec"><h3>Validate before publishing</h3><p>Cost one specialist run and one voice minute (model fees and compute) and keep every plan at ≥75% gross margin. Test the enterprise tiers with 5–10 DACH law firms and ask what they pay today.</p></div>
+    <div class="card rec"><h3>Update the website</h3><p>singulancelabs.com still lists Plus €39 and Scale €239. Change it when these prices are adopted so decks and site match.</p></div>
+  </div>
+</section>
+
+<section id="gaps">
+  <h2>Open questions</h2>
+  <div class="cols2">
+    <div class="card"><h3>Verify before quoting</h3><p>Dust's new credit model, Mistral Enterprise, Glean and Harvey prices are third-party reports. Confirm on vendor pages or through a buyer quote.</p></div>
+    <div class="card"><h3>German law-firm adoption</h3><p>No German-specific 2026 figure was found. The Legal Tech Monitor 2026 was still collecting responses; the Wolters Kluwer Future Ready Lawyer 2026 report may have a country breakdown.</p></div>
+    <div class="card"><h3>Win/loss evidence</h3><p>Ask every prospect what they use today and what they pay. Ten real answers from DACH firms are worth more than this whole table.</p></div>
+  </div>
+</section>
+
+<section id="sources">
+  <h2>Sources</h2>
+  <ol class="sources">
+    <li><a href="https://www.idc.com/resource-center/press-releases/european-ai-spending-forecast-2030/">IDC European AI spending forecast (Sep 2026)</a></li>
+    <li><a href="https://ec.europa.eu/eurostat/statistics-explained/index.php/Use_of_artificial_intelligence_in_enterprises">Eurostat: Use of AI in enterprises (2025)</a></li>
+    <li><a href="https://langdock.com/pricing">Langdock pricing</a></li>
+    <li><a href="https://app.dealroom.co/news/note/langdock-hits-50m-arr-55m">Dealroom: Langdock €50M ARR</a></li>
+    <li><a href="https://usagepricing.com/blueprint/activity/dust-2026-06-24-price-change">usagepricing: Dust price change</a></li>
+    <li><a href="https://automationatlas.io/answers/dust-pricing-explained-2026/">automationatlas: Dust pricing</a></li>
+    <li><a href="https://wise.com/gb/blog/mistral-ai-pricing">Wise: Mistral pricing</a></li>
+    <li><a href="https://futurumgroup.com/insights/cohere-acquires-aleph-alpha-a-deal-born-of-sovereignty-necessity/">Futurum: Cohere and Aleph Alpha</a></li>
+    <li><a href="https://elephas.app/resources/chatgpt-business-pricing">Elephas: ChatGPT Business pricing</a></li>
+    <li><a href="https://redresscompliance.com/anthropic-claude-enterprise-licensing-guide-2026.html">Redress: Claude licensing 2026</a></li>
+    <li><a href="https://www.pax8.com/blog/microsoft-365-copilot-business-smb-offers">Pax8: Copilot Business for SMBs</a></li>
+    <li><a href="https://www.techrepublic.com/article/google-workspace-gemini-pricing-plans/">TechRepublic: Workspace and Gemini pricing</a></li>
+    <li><a href="https://www.sentra.app/articles/notion-ai-pricing">Sentra: Notion AI pricing</a></li>
+    <li><a href="https://www.gosearch.ai/blog/glean-pricing-explained">GoSearch: Glean pricing</a></li>
+    <li><a href="https://www.cloudzero.com/blog/copilot-studio-pricing/">CloudZero: Copilot Studio pricing</a></li>
+    <li><a href="https://www.eesel.ai/blog/agentforce-pricing">eesel: Agentforce pricing</a></li>
+    <li><a href="https://www.eesel.ai/blog/sintra-ai-pricing">eesel: Sintra pricing</a></li>
+    <li><a href="https://costbench.com/compare/lindy-vs-n8n/">costbench: Lindy vs n8n</a></li>
+    <li><a href="https://www.usagepricing.com/blueprint/activity/parloa-2026-10-08-per-minute-pricing-published">usagepricing: Parloa per-minute pricing</a></li>
+    <li><a href="https://www.usagepricing.com/blueprint/activity/polyai-2026-10-22-dialog-rsn-1-api-pricing">usagepricing: PolyAI API pricing</a></li>
+    <li><a href="https://thelevel.ai/blog/voice-ai-pricing-guide">Level AI: voice AI pricing guide</a></li>
+    <li><a href="https://www.layer3labs.io/guides/legora-pricing">Layer3: Legora pricing</a></li>
+    <li><a href="https://www.vaquill.ai/blog/harvey-legora-cocounsel-pricing-reality-2026">Vaquill: Harvey and Legora pricing</a></li>
+    <li><a href="https://www.noxtua.com/news/press-releases/noxtuas-europe-license">Noxtua: Europe licence</a></li>
+    <li><a href="https://toolradar.com/tools/datasnipper/pricing">Toolradar: DataSnipper pricing</a></li>
+    <li><a href="https://eesel.ai/blog/hubspot-ai-pricing">eesel: HubSpot AI pricing</a></li>
+    <li><a href="https://dupple.com/learn/best-ai-tools-for-marketers">Dupple: AI tools for marketers</a></li>
+    <li><a href="https://www.wolterskluwer.com/en/news/wolters-kluwer-releases-2026-future-ready-lawyer-survey-report">Wolters Kluwer: Future Ready Lawyer 2026</a></li>
+    <li><a href="https://techcrunch.com/2026/09/29/openai-launches-dots-its-bubbly-agentic-avatar/">TechCrunch: OpenAI launches dots</a></li>
+    <li><a href="https://about.fb.com/news/2026/09/introducing-muse">Meta: Introducing Muse</a></li>
+    <li><a href="https://www.iphoneincanada.ca/2026/09/29/openai-dots-take-on-meta-muse-and-grok-bot-with-24-7-ai-agents/">iPhone in Canada: dots vs Muse and Grok Bot</a></li>
+    <li><a href="https://techcrunch.com/2025/09/25/openai-launches-chatgpt-pulse-to-proactively-write-you-morning-briefs">TechCrunch: ChatGPT Pulse</a></li>
+  </ol>
+</section>
+
+</div>
+
+<div class="view" id="view-research" hidden>
+<section>
+  <div class="eyebrow">SINGULANCE Labs · published research</div>
+  <h2 style="font-size:30px">ICARUS research</h2>
+  <p class="lede">ICARUS is SINGULANCE's open-source memory engine: one memory-mapped <code>.amr</code> file per tenant, no server, used in production behind HIVEMIND. This view collects every published result, with the method and the stated limits beside each number.</p>
+  <p class="meta">Software Apache-2.0 · thesis CC BY 4.0 · CLI v0.3.98 (19 Oct 2026) · <a href="https://github.com/amar3012005/ICARUS">github.com/amar3012005/ICARUS</a> · <a href="https://singulancelabs.com/research">singulancelabs.com/research</a></p>
+</section>
+
+<section>
+  <h2>Timeline</h2>
+  <ol class="timeline">
+    <li><div class="d">24 Jun 2026</div><h3>ICARUS research v1: the format RFC</h3><p>Freezes the 202-byte <code>.amr</code> slot. Thesis: the byte layout, not the query engine, is the innovation.</p></li>
+    <li><div class="d">26 Jun 2026</div><h3>Thesis v2: "mneme, A Memory Filesystem for AI Agents"</h3><p>Ten-part design document with benchmarks, a comparison with other stores, limits and a reproducibility section.</p></li>
+    <li><div class="d">26 Jun 2026</div><h3>LongMemEval benchmark (HIVEMIND)</h3><p>87.2% full-set accuracy against 68.9% for naive vector RAG and 41.3% for keyword search; public question set and harness, regression gates before deploys.</p></li>
+    <li><div class="d">2 Jul 2026</div><h3>Post-quantum cryptography</h3><p>Three shipped layers: hybrid PQ transport (FIPS 203), signed memory writes (FIPS 204), tamper-evident audit chain (FIPS 205).</p></li>
+    <li><div class="d">3 Jul 2026</div><h3>ICARUS v2: the production engine</h3><p>Rust core with a Node binding, built through seven scripted pass/fail gates on real production embeddings, then cut over live behind HIVEMIND.</p></li>
+    <li><div class="d">1–6 Sep 2026</div><h3>CLI releases v0.3.83–v0.3.88</h3><p>Durable dual-scope <code>.amr</code> memory (v0.3.87), safe cross-agent daemon upgrades (v0.3.88), non-blocking update checks.</p></li>
+    <li><div class="d">8 Oct 2026</div><h3>Runtime design note: "intelligence with continuity"</h3><p>How company signals become scoped work, reviewed results and next steps. Proposes evaluation dimensions; reports no results yet.</p></li>
+    <li><div class="d">19 Oct 2026</div><h3>CLI v0.3.98: Agent Memory by default</h3><p>Self-contained binary for macOS, Linux and Windows; local memory without an account; tools registered for Codex, Claude Code and Cursor.</p></li>
+    <li><div class="d">2026</div><h3>Cognitive Swarm Intelligence</h3><p>Proposed architecture: memory, behaviour and policy live in a shared substrate so many agents act as one. Presented as a proposal with future benchmarks.</p></li>
+  </ol>
+</section>
+
+<section>
+  <h2>Headline results</h2>
+  <p class="intro">Company-reported. Each card names the conditions it was measured under.</p>
+  <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(165px,1fr))">
+    <div class="stat"><div class="v">13.3×</div><div class="l">faster scan than Qdrant over REST</div><div class="method">0.155 ms vs 2.057 ms p50 · real 10k bge-m3 embeddings (LongMemEval) · in-process mmap scan</div></div>
+    <div class="stat"><div class="v">1.33 ms</div><div class="l">recall@10 at 1M vectors</div><div class="method">HNSW p50 · 99.25% overlap with exact · 1M set expanded from real 10k by deterministic perturbation (latency only)</div></div>
+    <div class="stat"><div class="v">1.93 ms</div><div class="l">bi-temporal + two-hop graph recall</div><div class="method">p50 at 1M · Qdrant needs multiple calls for the same query</div></div>
+    <div class="stat"><div class="v">1.00</div><div class="l">recall@5 parity</div><div class="method">vs exact float32 ground truth · real 10k · also the cutover gate vs the previous stack</div></div>
+    <div class="stat"><div class="v">32×</div><div class="l">vector compression</div><div class="method">PQ M=128/K=256 · 100% recall@10 overlap with exact rescore (pure ADC: 79.3%)</div></div>
+    <div class="stat"><div class="v">7.5×</div><div class="l">smaller storage per memory</div><div class="method">~600 B vs ~4,500 B for Qdrant with int8</div></div>
+    <div class="stat"><div class="v">99.8%</div><div class="l">production shadow agreement</div><div class="method">top-10 overlap with live Qdrant · 200 queries · 8,682 live vectors · top-1 98.0%</div></div>
+    <div class="stat"><div class="v">54.75 µs</div><div class="l">write p99 during index rebuild</div><div class="method">insert p50 3.79 µs · concurrent rebuild</div></div>
+    <div class="stat"><div class="v">87.2%</div><div class="l">LongMemEval accuracy (HIVEMIND)</div><div class="method">full-set average · naive vector RAG 68.9% · keyword 41.3% · recall &lt;50 ms p50 in production</div></div>
+    <div class="stat"><div class="v">30,000+</div><div class="l">live post-quantum signed memories</div><div class="method">ML-DSA-65 signatures on managed hosting at v2 publication</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>ICARUS vs Qdrant</h2>
+  <p class="intro">Same embeddings, queries, machine and run. Qdrant 1.18.2 over REST with int8 quantization, its recommended production setting.</p>
+  <div class="scroll"><table class="small">
+    <thead><tr><th>Measure</th><th>ICARUS</th><th>Qdrant</th><th>Conditions</th></tr></thead>
+    <tbody>
+      <tr><td class="co">Recall latency, top 10</td><td class="price">1.33 ms</td><td class="price">2.06 ms</td><td>1M vectors (perturbed); about 1.5× faster</td></tr>
+      <tr><td class="co">Scan latency</td><td class="price">0.155 ms</td><td class="price">2.057 ms</td><td>Real 10k; the source of the 13× claim</td></tr>
+      <tr><td class="co">Recall@5 vs exact</td><td class="price">1.00</td><td class="price">1.00</td><td>Real 10k</td></tr>
+      <tr><td class="co">Bi-temporal + 2-hop graph</td><td class="price">1.93 ms</td><td>Multiple calls</td><td>1M vectors</td></tr>
+      <tr><td class="co">Storage per memory</td><td class="price">~600 B</td><td class="price">~4,500 B</td><td>Includes shard sidecar files</td></tr>
+      <tr><td class="co">Vector compression</td><td class="price">32× PQ</td><td class="price">4× int8</td><td>With exact rescore</td></tr>
+      <tr><td class="co">Operational footprint</td><td>One file per tenant</td><td>Server cluster</td><td>Embedded, like SQLite vs Postgres</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>The .amr format</h2>
+  <p class="intro">Each memory is one fixed 202-byte slot, frozen since the v1 RFC and unchanged in production. A tenant's shard is one memory-mapped file with sidecars for text (LZ4), the HNSW index, PQ codebooks and graph adjacency.</p>
+  <div class="slot">
+    <div><b>Slot</b><span>202 bytes, fixed width</span></div>
+    <div><b>Vector</b><span>1024-dim → 128 B PQ code at offset 34</span></div>
+    <div><b>Entities</b><span>64-entity bitmap</span></div>
+    <div><b>Time</b><span>Bi-temporal timestamps</span></div>
+    <div><b>Graph</b><span>Neighbour links</span></div>
+  </div>
+  <p class="intro">One <code>recall()</code> call fuses semantic candidates (HNSW or PQ), lexical evidence (native BM25), bi-temporal filters, a two-hop graph walk and exact float32 rescoring. Rust crates: <code>mseg-format</code>, <code>mseg</code>, <code>mnsw-index</code>, <code>mpq</code>, <code>mneme-bm25</code>, <code>mneme-node</code> (N-API, CLI, MCP) and <code>mneme-python</code> (LangChain, LlamaIndex).</p>
+</section>
+
+<section>
+  <h2>Post-quantum security</h2>
+  <div class="scroll"><table class="small">
+    <thead><tr><th>Surface</th><th>Mechanism</th><th>Standard</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="co">Transport</td><td>Hybrid X25519 + ML-KEM-768 key exchange</td><td>FIPS 203</td><td>Shipped; older clients fall back to classical</td></tr>
+      <tr><td class="co">Memory writes</td><td>ML-DSA-65 signature per memory over id, user, org and content</td><td>FIPS 204</td><td>On by default; fail-open if keys are missing</td></tr>
+      <tr><td class="co">Audit trail</td><td>SLH-DSA-SHA2-128s hash-chained log with signed checkpoints</td><td>FIPS 205</td><td>Shipped</td></tr>
+      <tr><td class="co">Verification</td><td><code>/api/security/pqc</code>, <code>/verify-memory</code>, <code>/audit-verify</code></td><td>—</td><td>Public endpoints</td></tr>
+      <tr><td class="co">Roadmap</td><td>Enforce mode, per-tenant keys, customer-held keys (BYOK), PQ encryption at rest</td><td>—</td><td>Planned</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Modules</h2>
+  <div class="scroll"><table class="small">
+    <thead><tr><th>Module</th><th>Status</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td class="co">Agent Memory</td><td><span class="pill t-lo">Default</span></td><td>Durable local memory; no account needed</td></tr>
+      <tr><td class="co">Harness</td><td><span class="pill t-mid">Opt-in</span></td><td>Repository-bound task governance, review and execution contracts</td></tr>
+      <tr><td class="co">Knowledge Space</td><td><span class="pill t-mid">Preview</span></td><td>Local extraction and embedding; public installer is lexical-only</td></tr>
+      <tr><td class="co">Agent Bus</td><td><span class="pill t-hi">Experimental</span></td><td>Agent communication and handoffs; no public installer, bridge not shipped</td></tr>
+      <tr><td class="co">Computer Use</td><td><span class="pill t-hi">Experimental</span></td><td>Computer-action evaluation; separate repository and providers</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Limits stated in the research</h2>
+  <p class="intro">Investors and technical buyers will read these. Know them before you quote the headline numbers.</p>
+  <div class="cols2">
+    <div class="card warn"><h3>Through the Node binding, not yet faster</h3><p>The thesis reports 4.0 ms p50 through the Node binding against 1.5 ms for an in-container Qdrant. The 13× and 1.33 ms results are native engine numbers.</p></div>
+    <div class="card warn"><h3>1M results are latency only</h3><p>The 1M set is a real 10k base expanded by perturbation. Recall quality is measured only on the real 10k corpus. Hardware is not stated, and the raw results file is not linked.</p></div>
+    <div class="card warn"><h3>PQ is not always a win</h3><p>PQ queries are faster at 10k but slower than HNSW at 100k (13.6 ms vs 4.4 ms), so PQ recall is opt-in.</p></div>
+    <div class="card warn"><h3>Signing is fail-open</h3><p>If keys are missing, writes go through unsigned. Enforce mode and customer-held keys are on the roadmap. Long-soak testing under production write rates is pending.</p></div>
+    <div class="card warn"><h3>Format limits</h3><p>64-entity bitmap, float32 HNSW index, single writer per organisation, untyped graph edges, no stemming in lexical search.</p></div>
+    <div class="card warn"><h3>Early open-source footprint</h3><p>364 commits; 3 stars and 2 forks on GitHub at the time of this scan. Developer adoption is still to be built.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Research sources</h2>
+  <ol class="sources">
+    <li><a href="https://github.com/amar3012005/ICARUS">ICARUS repository</a></li>
+    <li><a href="https://github.com/amar3012005/ICARUS/blob/main/THESIS.md">THESIS.md: mneme, A Memory Filesystem for AI Agents</a></li>
+    <li><a href="https://github.com/amar3012005/ICARUS/blob/main/BENCHMARKS.md">BENCHMARKS.md: methodology</a></li>
+    <li><a href="https://github.com/amar3012005/ICARUS/releases">ICARUS releases</a></li>
+    <li><a href="https://icarus.singulancelabs.com">icarus.singulancelabs.com</a></li>
+    <li><a href="https://singulancelabs.com/research">SINGULANCE research index</a></li>
+    <li><a href="https://singulancelabs.com/benchmark">LongMemEval benchmark</a></li>
+    <li><a href="https://singulancelabs.com/research/post-quantum-cryptography">Post-quantum cryptography</a></li>
+    <li><a href="https://singulancelabs.com/research/cognitive-swarm-intelligence">Cognitive Swarm Intelligence</a></li>
+    <li><a href="https://singulancelabs.com/research/runtime">Runtime design note</a></li>
+  </ol>
+</section>
+</div>
+
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+try{if(new URLSearchParams(location.search).has("embed"))document.body.classList.add("embed")}catch(e){}
+(function(){
+  const vm=document.getElementById("view-market"), vr=document.getElementById("view-research");
+  function route(){
+    const h=location.hash.slice(1);
+    const research = h==="research" || (h && vr.querySelector("#"+CSS.escape(h)));
+    vr.hidden=!research; vm.hidden=!!research;
+    document.querySelectorAll(".tabs a").forEach(a=>a.setAttribute("aria-current", (a.dataset.view==="research")===!!research ? "page":"false"));
+  }
+  window.addEventListener("hashchange",route); route();
+})();
+(function(){
+  const rows=[
+    ["Gemini in Workspace","incl. suite",7,22,"c","Bundled into Workspace Business plans; price covers the whole suite."],
+    ["Copilot Business","SMB, ≤300 users",18,25.2,"c","$21 annual list, $18 promo, $25.20 month-to-month."],
+    ["ChatGPT Business","",20,25,"c","$20 annual, $25 monthly; 2-seat minimum."],
+    ["Claude Team","",20,25,"c","$20 annual, $25 monthly; 5-seat minimum."],
+    ["Notion Business","AI incl.",20,24,"c","Agents billed extra at $10 per 1,000 credits."],
+    ["Mistral Le Chat Team","",20,25,"c","~$20 annual, ~$25 monthly (third-party)."],
+    ["Langdock Business","€",23.2,25,"c","€25 list, ~€23 annual; excl. VAT."],
+    ["Dust Pro","",24,30,"c","$24 annual, $30 monthly; includes credits."],
+    ["Copilot Enterprise","",30,30,"c","$30 per user add-on."],
+    ["Sintra","per account",39,97,"c","$39 one helper, $97 all 12 helpers."],
+    ["Glean","100-seat min",45,75,"c","~$45–50+ typical; ~$60K minimum contract."],
+    ["DataSnipper","audit, €",49,64,"c","Third-party estimates; quote only."],
+    ["Langdock Business Max","€",99,99,"c","5× Business capacity."],
+    ["ChatGPT / Claude premium seat","",100,125,"c","Premium seats for heavier usage."],
+    ["Dust Max","",120,150,"c","$120 annual, $150 monthly."],
+    ["Legora","law",250,800,"c","~$3,000/yr typical; $300–800/mo reported for unlimited use."],
+    ["Harvey","law",1200,2000,"c","Reported mid-market range; 25–50 seat minimum."],
+    ["SINGULANCE Plus","recommended",19,24,"u","€24 per month, €19 annual: brain + daily proactive briefing."],
+    ["SINGULANCE Pro","recommended",64,79,"u","€79 per month, €64 annual: brain + HyperAgents."],
+    ["SINGULANCE Team","per person at 5",50,50,"u","€249 per month for 5 people, then €29 each."],
+    ["SINGULANCE Growth","per user at 50 users",90,90,"u","€4,500 per month ÷ 50 users."],
+    ["SINGULANCE Growth","per user at 20 users",225,225,"u","€4,500 per month ÷ 20 users."],
+    ["SINGULANCE Max","recommended",159,199,"u","€199 per month, €159 annual: brain + HyperAgents + TARA voice."]
+  ];
+  const min=Math.log10(5), max=Math.log10(2500);
+  const pos=v=>((Math.log10(v)-min)/(max-min))*100;
+  const el=document.getElementById("ladder-chart"), tip=document.getElementById("tip");
+  const ticks=[5,10,20,50,100,250,500,1000,2500];
+  let html='';
+  rows.forEach(r=>{
+    const l=pos(r[2]), w=Math.max(pos(r[3])-l,0);
+    const price=r[2]===r[3]?r[2]:r[2]+"–"+r[3];
+    html+=`<div class="lrow ${r[4]==="u"?"us":""}"><div class="lb" title="${r[0]}">${r[0]}${r[1]?` <small>${r[1]}</small>`:""}</div><div class="track">${ticks.map(t=>`<span class="grid" style="left:${pos(t)}%;bottom:0"></span>`).join("")}<span class="bar" tabindex="0" style="left:calc(${l}% - 4px);width:calc(${w}% + 8px)" data-tip="${r[0]}: ${price} per month. ${r[5]}"></span></div></div>`;
+  });
+  html+=`<div class="axis">${ticks.map(t=>`<span style="left:${pos(t)}%">${t>=1000?(t/1000)+"K":t}</span>`).join("")}</div>`;
+  el.innerHTML=html;
+  function show(e,b){tip.textContent=b.dataset.tip;tip.hidden=false;const r=b.getBoundingClientRect();const x=e&&e.clientX?e.clientX:r.left+r.width/2;tip.style.left=Math.min(x+12,window.innerWidth-280)+"px";tip.style.top=(r.top-44)+"px";}
+  el.querySelectorAll(".bar").forEach(b=>{
+    b.addEventListener("mousemove",e=>show(e,b));
+    b.addEventListener("focus",()=>show(null,b));
+    b.addEventListener("mouseleave",()=>tip.hidden=true);
+    b.addEventListener("blur",()=>tip.hidden=true);
+  });
+})();
+</script>

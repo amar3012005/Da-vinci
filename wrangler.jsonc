@@ -58,6 +58,10 @@
       "custom_domain": true
     },
     {
+      "pattern": "pitch.singulancelabs.com",
+      "custom_domain": true
+    },
+    {
       "pattern": "runtime-runner.singulancelabs.com",
       "custom_domain": true
     },
