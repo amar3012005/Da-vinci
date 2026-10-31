@@ -9,12 +9,15 @@ import { defaultAuthReturnUrl } from './mobile-routing';
 import { isNativeApp } from '../shared/native-app';
 import { bindNativeTouchFeedback } from '../shared/native-haptics';
 import { bindNativeAuthCallbacks, nativeAuth } from '../shared/native-auth';
+import { nativeWorkspaceAccess } from '../shared/native-room';
 
 const AuthContext = createContext(undefined);
 const ACCESS_CHECK_THROTTLE_MS = 15000;
 
 // One workspace-access read. Shared by the early read started at mount and the read run after bootstrap.
 async function fetchModeAccess(signal) {
+  // The packaged app's origin cannot reach the Worker; the native plugin asks the same endpoint with the stored session.
+  if (isNativeApp()) return nativeWorkspaceAccess();
   const response = await fetch('/__hivemind/account-mode-access', {
     credentials: 'include', cache: 'no-store', signal: AbortSignal.any([signal, AbortSignal.timeout(10000)]),
   });

@@ -3,7 +3,9 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 let mockPath = '/hivemind/app/overview/session/saved';
 jest.mock('react-router-dom', () => ({ useLocation: () => ({ pathname: mockPath, search: '' }), Outlet: () => <div data-testid="native-seat">Existing native chat seat</div> }), { virtual: true });
-jest.mock('../shared/native-app', () => ({ isNativeApp: () => false }));
+let mockNative = false;
+jest.mock('../shared/native-app', () => ({ isNativeApp: () => mockNative }));
+jest.mock('../pages/NativeOpenDotRoom', () => ({ __esModule: true, default: ({ route, active }) => <div data-testid="native-room" data-active={String(active)} data-path={route.pathname}/> }));
 jest.mock('../shared/native-pane-protocol', () => ({ persistentShellEnabled: () => true,
   directRuntimeHost: (mode, origin) => mode === 'runtime' && origin === 'https://runtime-runner.singulancelabs.com',
   paneForPath: path => path.includes('/employee/harness') ? 'runtime' : path.includes('/overview') ? 'brain' : null }));
@@ -22,7 +24,7 @@ const EMPLOYEE = 'c14aaef5-24fb-46c2-806c-c3f6c1d88b07';
 const OTHER = '0f2a4a62-6a1c-4c3e-9d7c-2f0e9d4a5b11';
 const boundEmployee = id => ({ id, name: 'Dot', policy_rules: { open_dot_employee: { version: 1, state: 'bound', dot_id: 'dot_a' } } });
 beforeEach(() => {
-  mockPath = '/hivemind/app/overview/session/saved'; mockDotMounts = 0; mockPeek.mockReset(); localStorage.clear();
+  mockNative = false; mockPath = '/hivemind/app/overview/session/saved'; mockDotMounts = 0; mockPeek.mockReset(); localStorage.clear();
   window.requestIdleCallback = callback => window.setTimeout(callback, 0); window.cancelIdleCallback = id => window.clearTimeout(id);
 });
 afterEach(cleanup);
@@ -90,4 +92,12 @@ test('switching Runtime to an employee and back keeps the same OpenDot document 
   expect(entry).toHaveAttribute('data-active', 'false');
   expect(mockDotMounts).toBe(1);
   expect(localStorage.getItem('hivemind.open-dot.last-route.v1:u1:o1')).toBe(`/hivemind/app/employee/dots/employee/${EMPLOYEE}`);
+});
+
+test('the packaged app shows an employee room natively instead of framing OpenDot', async () => {
+  viewport(false); mockNative = true; mockPath = `/hivemind/app/employee/dots/employee/${EMPLOYEE}`; render(<AgentWorkspaceOutlet/>);
+  const room = await screen.findByTestId('native-room');
+  expect(room).toHaveAttribute('data-active', 'true');
+  expect(room).toHaveAttribute('data-path', mockPath);
+  expect(screen.queryByTestId('dot-entry')).not.toBeInTheDocument();
 });
