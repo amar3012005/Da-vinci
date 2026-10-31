@@ -1,3 +1,4 @@
+import { useBrandIntroReady } from './hooks/useBrandIntroReady';
 import { normalizeBrainEntry } from './components/hivemind/app/shared/brain-landing';
 import Seo from './components/Seo';
 import PublicProduct from './components/PublicProduct';
@@ -77,6 +78,7 @@ const ReturningUserMarketingHomepage = MarketingHomepage;
 normalizeBrainEntry();
 
 function App() {
+  useBrandIntroReady();
   const isPublicProductHost = typeof window !== 'undefined' && ['singulancelabs.com', 'www.singulancelabs.com', 'next.singulancelabs.com'].includes(window.location.hostname);
   const isPlatformAdminHost =
     typeof window !== 'undefined' && window.location.hostname === PLATFORM_ADMIN_HOST;
