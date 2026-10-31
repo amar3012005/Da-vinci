@@ -9,7 +9,11 @@ const mockOpen = jest.fn();
 const mockClose = jest.fn();
 let mockClosed;
 const mockRemove = jest.fn();
+const mockUnavailable = jest.fn();
+var mockIos = true;
+jest.mock('../../shared/native-app', () => ({ isNativeApp: () => mockIos }));
 jest.mock('../../shared/native-room', () => ({
+  markDesktopRoomsUnavailable: () => mockUnavailable(),
   openNativeRoom: (...args) => mockOpen(...args),
   closeNativeRoom: () => mockClose(),
   onNativeRoomClosed: listener => { mockClosed = listener; return Promise.resolve({ remove: mockRemove }); },
@@ -17,7 +21,7 @@ jest.mock('../../shared/native-room', () => ({
 import NativeOpenDotRoom from '../NativeOpenDotRoom';
 
 const EMPLOYEE = 'c14aaef5-24fb-46c2-806c-c3f6c1d88b07';
-beforeEach(() => { mockOpen.mockReset().mockResolvedValue(undefined); mockClose.mockReset().mockResolvedValue(undefined); mockRemove.mockReset(); mockClosed = undefined; });
+beforeEach(() => { mockIos = true; mockUnavailable.mockReset(); mockOpen.mockReset().mockResolvedValue(undefined); mockClose.mockReset().mockResolvedValue(undefined); mockRemove.mockReset(); mockClosed = undefined; });
 afterEach(cleanup);
 
 test('opens the native room of the route employee and closes it on leaving', async () => {
@@ -48,4 +52,12 @@ test('a room that cannot open offers another try instead of a blank screen', asy
   mockOpen.mockRejectedValueOnce(new Error('denied'));
   render(<NativeOpenDotRoom active />);
   expect(await screen.findByRole('button', { name: 'Try again' })).toBeInTheDocument();
+});
+
+test('on macOS a failed open hands the room to the web room instead of offering Try again', async () => {
+  mockIos = false;
+  mockOpen.mockRejectedValueOnce(new Error('denied'));
+  render(<NativeOpenDotRoom active />);
+  await waitFor(() => expect(mockUnavailable).toHaveBeenCalledTimes(1));
+  expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
 });

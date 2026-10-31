@@ -1,4 +1,4 @@
-import { closeNativeRoom, desktopRoomPlugin, hasNativeRooms, nativeWorkspaceAccess, onNativeRoomClosed, openNativeRoom, roomPlugin } from '../native-room';
+import { markDesktopRoomsUnavailable, closeNativeRoom, desktopRoomPlugin, hasNativeRooms, nativeWorkspaceAccess, onNativeRoomClosed, openNativeRoom, roomPlugin } from '../native-room';
 
 jest.mock('../native-auth', () => ({ nativePlugin: {} }));
 
@@ -42,7 +42,7 @@ describe('native room', () => {
 });
 
 describe('macOS desktop rooms', () => {
-  const bridge = () => ({ openRoom: jest.fn().mockResolvedValue(undefined), closeRoom: jest.fn().mockResolvedValue(undefined), onRoomClosed: jest.fn(() => jest.fn()) });
+  const bridge = () => ({ version: 1, openRoom: jest.fn().mockResolvedValue(undefined), closeRoom: jest.fn().mockResolvedValue(undefined), onRoomClosed: jest.fn(() => jest.fn()) });
   test('a browser has no native rooms; the Electron bridge or the iOS app does', () => {
     expect(hasNativeRooms({})).toBe(false);
     expect(hasNativeRooms({ singulanceDesktop: bridge() })).toBe(true);
@@ -75,5 +75,28 @@ describe('macOS desktop rooms', () => {
     expect(listener).toHaveBeenCalled();
     handle.remove();
     expect(off).toHaveBeenCalled();
+  });
+});
+
+describe('macOS apps without a usable room bridge', () => {
+  const full = () => ({ version: 1, openRoom: jest.fn(), closeRoom: jest.fn(), onRoomClosed: jest.fn() });
+  test('SINGULANCE 2.2.0 exposes no singulanceDesktop, so the web room is used', () => {
+    expect(hasNativeRooms({ electron: { isElectron: true, platform: 'darwin' } })).toBe(false);
+  });
+  test.each([
+    ['no version', { ...full(), version: undefined }],
+    ['version 0', { ...full(), version: 0 }],
+    ['no closeRoom', { ...full(), closeRoom: undefined }],
+    ['no onRoomClosed', { ...full(), onRoomClosed: undefined }],
+    ['no openRoom', { ...full(), openRoom: undefined }],
+  ])('a bridge with %s is not used', (_name, singulanceDesktop) => {
+    expect(hasNativeRooms({ singulanceDesktop })).toBe(false);
+    expect(roomPlugin({ singulanceDesktop })).toEqual({});
+  });
+  test('after the bridge fails to open a room the web room takes over for the session', () => {
+    const win = { singulanceDesktop: full() };
+    expect(hasNativeRooms(win)).toBe(true);
+    markDesktopRoomsUnavailable();
+    expect(hasNativeRooms(win)).toBe(false);
   });
 });

@@ -64,7 +64,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
 import AccountRowTools from './AccountRowTools';
-import { hasNativeRooms, openNativeRoom } from '../shared/native-room';
+import { isNativeApp } from '../shared/native-app';
+import { hasNativeRooms, markDesktopRoomsUnavailable, openNativeRoom } from '../shared/native-room';
 import apiClient from '../shared/api-client';
 import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
@@ -442,7 +443,7 @@ export default function Sidebar({
       setTeamError('');
       setSelectedAgent(agent.id);
       // The iOS and macOS apps show the room natively: ask for it on the tap itself, not after the route's page has loaded.
-      if (hasNativeRooms()) openNativeRoom(agent.id, { scope: org?.id && user?.id ? `${org.id}:${user.id}` : undefined }).catch(() => { /* The route's page offers Try again. */ });
+      if (hasNativeRooms()) openNativeRoom(agent.id, { scope: org?.id && user?.id ? `${org.id}:${user.id}` : undefined }).catch(() => { if (!isNativeApp()) markDesktopRoomsUnavailable(); /* iOS: the route's page offers Try again; macOS: the web room takes over. */ });
       navigate(openDotPath);
       return true;
     }

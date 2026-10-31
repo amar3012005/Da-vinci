@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { openDotEmployeeIdFromPath } from '../shared/open-dot-employee-route';
-import { closeNativeRoom, onNativeRoomClosed, openNativeRoom } from '../shared/native-room';
+import { isNativeApp } from '../shared/native-app';
+import { closeNativeRoom, markDesktopRoomsUnavailable, onNativeRoomClosed, openNativeRoom } from '../shared/native-room';
 import { useSidebarCopy } from '../layout/sidebar-copy';
 import { useOptionalAuth } from '../auth/AuthProvider';
 
@@ -22,7 +23,7 @@ export default function NativeOpenDotRoom({ route, active = true }) {
   const [state, setState] = useState('opening');
   const open = useCallback(() => {
     setState('opening');
-    return openNativeRoom(employeeId, { scope }).catch(() => setState('failed'));
+    return openNativeRoom(employeeId, { scope }).catch(() => { if (isNativeApp()) setState('failed'); else markDesktopRoomsUnavailable(); });
   }, [employeeId, scope]);
   useEffect(() => {
     if (!active || !employeeId) return undefined;
