@@ -63,6 +63,7 @@ import EntityProfileModalHost from '../shared/EntityProfileModalHost';
 import { RETURNING_USER_LANDING } from '../shared/routes';
 import { newWorkspaceLanding } from '../auth/mobile-routing';
 import { isNativeApp } from '../shared/native-app';
+import { useHasNativeRooms } from '../shared/native-room';
 import { buildOpenDotEmbedTarget } from '../shared/open-dot-embed-target';
 const HyperAgentsWelcome = React.lazy(() => import('../shared/HyperAgentsWelcome'));
 const HyperOnboarding = React.lazy(() => import('../hyperagents/HyperOnboarding'));
@@ -412,6 +413,19 @@ function AppShellContent() {
   const glassRoomPhone = nativeChatRoom && brainPhone;
   // A HyperAgent room on a phone draws its own room bar; its back button opens the existing team drawer.
   const dotRoomPhone = brainPhone && /^\/hivemind\/app\/employee\/dots\/[^/]/u.test(location.pathname);
+  // While the native room is pushed over the app, the team stays rendered underneath so the swipe back reveals it at
+  // once (the route's own page is only a loading placeholder). If opening fails the route's retry page must show.
+  const nativeRooms = useHasNativeRooms();
+  const [nativeRoomFailed, setNativeRoomFailed] = useState(false);
+  useEffect(() => { setNativeRoomFailed(false); }, [location.pathname]);
+  useEffect(() => {
+    const failed = () => setNativeRoomFailed(true);
+    const opening = () => setNativeRoomFailed(false);
+    window.addEventListener('hivemind:native-room-failed', failed);
+    window.addEventListener('hivemind:native-room-opening', opening);
+    return () => { window.removeEventListener('hivemind:native-room-failed', failed); window.removeEventListener('hivemind:native-room-opening', opening); };
+  }, []);
+  const teamUnderNativeRoom = dotRoomPhone && nativeRooms && !nativeRoomFailed;
   useEffect(() => {
     if (!dotRoomPhone) return undefined;
     const openTeam = () => setMobileTeamOpen(true);
@@ -651,7 +665,7 @@ function AppShellContent() {
           }}
         >
           {!companyEntry && !crmFullscreen && !dotRoomPhone && <TopBar floatingMobile={glassRoomPhone} roomIdentity={brainChat ? 'brain' : 'runtime'} activeSection={activeSection} onSectionChange={handleSectionChange} mobileTeamToggle={nativeChatRoom && overlayNavigation ? () => setMobileTeamOpen(true) : null} mobileBack={overlayNavigation && !nativeChatRoom ? () => setMobileTeamOpen(true) : null} />}
-          {(overlayNavigation || dotRoomPhone) && mobileTeamOpen && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
+          {(overlayNavigation || dotRoomPhone) && (mobileTeamOpen || teamUnderNativeRoom) && <EmployeeMobileNavigation activeSection={activeSection} onClose={() => setMobileTeamOpen(false)} />}
           {nativeChatRoom && overlayNavigation && mobileAppsOpen && <NativeMobileAppsSheet onClose={closeMobileApps} legacy={brainPhone} />}
           {nativeChatRoom && brainPhone && <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />}
           <div className={!initialNativePane && !hyperFullscreen && !crmFullscreen && !graphFullscreen && (workspaceModeForPath(location.pathname) === 'hyperagents' || onOverview) ? 'hm-runtime-workspace' : 'contents'}>
