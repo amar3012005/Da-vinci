@@ -226,7 +226,6 @@ export default function Sidebar({
   const [profileImageFailed, setProfileImageFailed] = useState(false);
   useEffect(() => setProfileImageFailed(false), [profileImage]);
   useEffect(() => setRosterPage(page => Math.min(page, Math.max(0, Math.ceil(team.length / 5) - 1))), [team.length]);
-  const [rosterProfileOpen, setRosterProfileOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const teamMode = workspaceModeForPath(location.pathname) === 'hyperagents';
   const [desktopRosterViewport, setDesktopRosterViewport] = useState(() => window.matchMedia('(min-width: 901px)').matches);
@@ -668,12 +667,12 @@ export default function Sidebar({
         <div className="ha-autonomy-seat is-drawer mobile-roster-autonomy" data-drawer-autonomy-seat><AutonomyDial orgId={org?.id} runtimeEnabled={runtimeEnabled}/></div>
         <AnatomyModeToggle />
         <div className="mobile-roster-account">
-          <button type="button" className="mobile-roster-account-identity" onClick={() => setRosterProfileOpen(true)}>
+          <button type="button" className="mobile-roster-account-identity" data-open-account-settings onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))}>
             {profileImage && !profileImageFailed ? <img src={profileImage} alt="" referrerPolicy="no-referrer" onError={() => setProfileImageFailed(true)}/> : <User size={24}/>}
             <span>{tt('accountAndSecurity', 'Account and security')}</span>
           </button>
           <AccountRowTools/>
-          <NavLink to="/hivemind/m/settings" aria-label={tt('settingsAria', 'Settings')} className="mobile-roster-settings"><Settings size={21}/></NavLink>
+          <button type="button" data-open-account-settings aria-label={tt('settingsAria', 'Settings')} className="mobile-roster-settings" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))}><Settings size={21}/></button>
         </div>
       </div>}
       <div className="mobile-roster-legacy shrink-0 px-4 pt-2 pb-3 border-b border-[#e3e0db]">
@@ -867,7 +866,6 @@ export default function Sidebar({
           </button>
         </div>
       </div>}
-      {mobileRoster && rosterProfileOpen && <div className="mobile-roster-profile fixed inset-0 z-[95] flex items-end bg-black/25 p-2" onClick={() => setRosterProfileOpen(false)}><section data-mobile-roster-profile role="dialog" aria-modal="true" aria-label={tt('yourProfile', 'Your profile')} onClick={event => event.stopPropagation()} className="w-full rounded-[32px] bg-white p-6" style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))' }}><button type="button" autoFocus aria-label={tt('closeProfile', 'Close profile')} onClick={() => setRosterProfileOpen(false)} className="mb-6 h-11 w-11 rounded-full bg-[#f3f1ec]">×</button><div className="overflow-hidden rounded-3xl bg-[#f3f1ec]">{[{to:'/hivemind/m/profile',label:user?.display_name || user?.name || 'Profile'}, {to:'/hivemind/m/usage',label:tt('usage', 'Usage')}, {to:'/hivemind/m/billing',label:tt('billing', 'Billing')}, {to:'/hivemind/m/settings',label:tt('settings', 'Settings')}, {to:'/hivemind/m/connectors',label:tt('appsConnectors', 'Apps & connectors')}].map(item => <NavLink key={item.to} to={item.to} className="block border-b border-[#e3e0db] p-5 text-[17px]">{item.label}</NavLink>)}<button type="button" onClick={logout} className="block w-full p-5 text-left text-[17px]">{tt('signOutShort', 'Sign out')}</button></div></section></div>}
       {needsYouOpen ? <React.Suspense fallback={<div role="status" className="sr-only">{tt('openingNeedsYou', 'Opening Needs you…')}</div>}><NeedsYouPanel team={team} refreshKey={waitingKey} onClose={closeNeedsYou} onOpenCard={openNeedsYouCard} portalContainer={portalContainer} /></React.Suspense> : null}
       {companyOpen ? <React.Suspense fallback={<div role="status" className="sr-only">{tt('openingCompany', 'Opening Company HQ…')}</div>}><CompanyWorkspaceOverlay onClose={closeCompany} portalContainer={portalContainer} team={team} rooms={rooms} onOpenTeammate={openAgent} /></React.Suspense> : null}
       {createEmployeeOpen && <React.Suspense fallback={<div role="status">{tt('openingEmployeeSetup', 'Opening employee setup…')}</div>}><CreateEmployeeDialog onClose={closeCreateEmployee} onCreated={employeeCreated} portalContainer={portalContainer} /></React.Suspense>}
