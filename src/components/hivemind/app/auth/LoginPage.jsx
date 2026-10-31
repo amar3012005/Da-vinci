@@ -86,7 +86,7 @@ const PERSONAL_PLANS = [
     features: ['Grounded recall from your own sources', 'Limited HyperAgent and VOICE access', 'PDF, DOCX and XLSX ingestion', 'Up to 3 connected sources'],
   },
   {
-    id: 'plus', name: 'Plus', product: 'BRAIN', price: '€39', cadence: '/mo',
+    id: 'plus', name: 'Plus', product: 'BRAIN', price: '€24', cadence: '/mo',
     eyebrow: 'Your permanent personal memory', capacity: '1,000 pages included',
     summary: 'Keep your work history permanently and recall it without per-query credits.',
     features: ['Everything in Free for BRAIN', 'Permanent personal history', 'More source types and connectors', 'Deeper recall across your own work'],
@@ -98,7 +98,7 @@ const PERSONAL_PLANS = [
     features: ['Everything in Plus', 'Included HyperAgent runs each month', 'Deep Research and Web Intelligence', 'Connected-app actions with your approval'],
   },
   {
-    id: 'scale', name: 'Scale', product: 'BRAIN + OS + VOICE', price: '€239', cadence: '/mo',
+    id: 'scale', name: 'Max', product: 'BRAIN + OS + VOICE', price: '€199', cadence: '/mo',
     eyebrow: 'Operate with a small AI team', capacity: '10,000 pages included',
     summary: 'Combine memory, autonomous work and TARA voice for a trusted private circle.',
     features: ['Everything in Pro', 'Larger HyperAgent allowance', 'TARA voice with included talk time', 'Up to 3 trusted collaborators'],

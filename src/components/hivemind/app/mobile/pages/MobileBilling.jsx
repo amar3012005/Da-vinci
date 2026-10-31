@@ -29,7 +29,7 @@ const PLANS = [
     ],
   },
   {
-    id: 'plus', name: 'BRAIN+', price: '€39', period: '/month',
+    id: 'plus', name: 'BRAIN+', price: '€24', period: '/month',
     description: 'Permanent personal history with 1,000 pages included.',
     features: [
       { label: '2,000 monthly credits', icon: Zap }, { label: '1,000 pages/month', icon: HardDrive },
@@ -48,7 +48,7 @@ const PLANS = [
     ],
   },
   {
-    id: 'scale', name: 'Scale', price: '€239', period: '/month',
+    id: 'scale', name: 'Max', price: '€199', period: '/month',
     description: 'Mid-size regulated organisations. 10,000 pages/month, 25 seats.',
     features: [
       { label: '10,000 monthly credits', icon: Zap }, { label: '10,000 pages/month', icon: HardDrive }, { label: '250,000 memories', icon: HardDrive },
