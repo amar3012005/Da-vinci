@@ -10,6 +10,7 @@ import { isNativeApp } from '../shared/native-app';
 import { bindNativeTouchFeedback } from '../shared/native-haptics';
 import { bindNativeAuthCallbacks, nativeAuth } from '../shared/native-auth';
 import { nativeWorkspaceAccess } from '../shared/native-room';
+import { adoptScope, wipeAllScopes } from '../shared/sync';
 
 const AuthContext = createContext(undefined);
 const ACCESS_CHECK_THROTTLE_MS = 15000;
@@ -141,6 +142,8 @@ export function AuthProvider({ children }) {
 
       if (data.authenticated === false || !data.user) {
         clearBootCache();
+        // A session that ended without a sign-out on this device leaves no cached rows behind.
+        void wipeAllScopes();
         if (activeTenantRef.current) window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
         activeTenantRef.current = null;
         setUser(null);
@@ -163,6 +166,8 @@ export function AuthProvider({ children }) {
         const nextTenant = `${data.organization?.id || ''}:${data.user?.id || ''}`;
         if (activeTenantRef.current && activeTenantRef.current !== nextTenant) window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
         activeTenantRef.current = nextTenant;
+        // Rows of any other person or company on this device are removed before a screen reads from the local store.
+        void adoptScope(data.organization?.id, data.user?.id);
         rememberTenant(data.organization?.id, data.user?.id, undefined, { displayName: data.user?.display_name || data.user?.name, orgName: data.organization?.name });
         // Display-only: lets the restoring frame omit Runtime's card for a company that switched Runtime off.
         writeBootCache(data.organization?.id, data.user?.id, 'runtime-enabled', { enabled: data.organization?.runtime_enabled !== false });
