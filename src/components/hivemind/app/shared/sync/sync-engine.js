@@ -136,6 +136,35 @@ export function createSyncEngine({ store, scope, adapter = null }) {
       return memory.get(memoryKey(entity, key));
     },
     /**
+     * Replace one list with a complete copy the caller fetched itself and persist it.
+     * @param {string} entity - entity name.
+     * @param {string} key - list key.
+     * @param {{ items: object[], cursor?: unknown, meta?: unknown }} snapshot - the new list.
+     * @returns {Promise<void>} resolves once the copy is stored.
+     */
+    async put(entity, key, snapshot) {
+      definition(entity);
+      await save(entity, key, { items: snapshot.items, cursor: snapshot.cursor ?? null, meta: snapshot.meta ?? null });
+    },
+    /**
+     * Load stored snapshots of the named entities into memory so the next first render can use `peek`.
+     * Works for entities that no screen has registered yet; rows of another format version are skipped.
+     * @param {string[]} names - entity names to load.
+     * @returns {Promise<void>} resolves once every named entity has been read.
+     */
+    async preload(names) {
+      await Promise.all((names || []).map(async (entity) => {
+        let rows = [];
+        try { rows = await store.list(scope, entity); } catch { return; /* An unreadable store leaves the first paint to the network. */ }
+        if (closed) return;
+        for (const row of rows) {
+          if (row?.value?.v !== SNAPSHOT_VERSION || !Array.isArray(row.value.items)) continue;
+          const id = memoryKey(entity, row.id);
+          if (!memory.has(id)) memory.set(id, { items: row.value.items, cursor: row.value.cursor ?? null, meta: row.value.meta ?? null });
+        }
+      }));
+    },
+    /**
      * Ask the server for changes since the stored cursor and merge them. Concurrent calls for one list share one request.
      * @param {string} entity - entity name.
      * @param {string} key - list key.

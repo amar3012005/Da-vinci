@@ -7,6 +7,8 @@ import {
   resumeCalendarItem, runMessageHref, stopCalendarItem, weekWindow,
 } from '../shared/runtime-calendar';
 import { useRuntimeEnabled } from '../shared/runtime-enabled';
+import { LOCAL_FIRST } from '../shared/sync/catalog';
+import { useLocalCopy } from '../shared/sync/use-local-first';
 import '../shared/skeleton.css';
 
 const FOCUS = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3484ff]';
@@ -236,7 +238,9 @@ export default function RuntimeCalendar({ fetcher, localFetcher }) {
   const [view, setView] = useState('list');
   const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');
-  const [state, setState] = useState({ status: 'loading', value: null });
+  const [fetched, setState] = useState({ status: 'loading', value: null });
+  const refreshHook = useRef(() => {});
+  const saveHook = useRef(() => {});
   const [confirm, setConfirm] = useState(null);
   const [outcome, setOutcome] = useState({ busy: false, error: '' });
   const [notice, setNotice] = useState('');
@@ -253,12 +257,26 @@ export default function RuntimeCalendar({ fetcher, localFetcher }) {
     if (!silent) setState(before => ({ status: before.value ? 'refreshing' : 'loading', value: before.value }));
     try {
       const result = await fetchMergedCalendar(window_, { signal: controller.current.signal, ...(fetcher ? { fetcher } : {}), ...(localFetcher ? { localFetcher } : {}) });
-      if (generation.current === current) setState({ status: 'ready', value: result.value ?? null, runtimeDown: result.runtimeDown === true });
+      if (generation.current === current) {
+        setState({ status: 'ready', value: result.value ?? null, runtimeDown: result.runtimeDown === true });
+        // Saved after the state update so the paint never waits for the device write.
+        saveHook.current({ value: result.value ?? null, runtimeDown: result.runtimeDown === true });
+      }
     } catch (error) {
       if (generation.current !== current) return;
       setState(before => (error instanceof CalendarUnavailableError ? { status: 'unavailable', value: null } : { status: before.value ? 'ready' : 'error', value: before.value, runtimeDown: before.runtimeDown }));
     }
   }, [window_, fetcher, localFetcher]);
+
+  refreshHook.current = () => { void load(true); };
+  // The last calendar of this week paints from the device at once; the read above replaces it.
+  const local = useLocalCopy({ spec: LOCAL_FIRST.calendar, key: `week:${offset}`, onForeground: () => refreshHook.current() });
+  saveHook.current = local.save;
+  const cachedValue = local.cached?.data;
+  const fromDevice = (fetched.status === 'loading' || fetched.status === 'error') && cachedValue && typeof cachedValue === 'object' && 'value' in cachedValue;
+  const state = fromDevice
+    ? { status: fetched.status === 'loading' ? 'refreshing' : 'ready', value: cachedValue.value, runtimeDown: cachedValue.runtimeDown === true }
+    : fetched;
 
   useEffect(() => {
     void load();
@@ -312,7 +330,7 @@ export default function RuntimeCalendar({ fetcher, localFetcher }) {
   const empty = state.status === 'ready' && !state.value;
   const tab = active => `rounded-md px-3 py-1.5 text-[12.5px] ${active ? 'bg-[#ebe8df] font-medium text-[#1f2328]' : 'text-[#5f646b] hover:bg-[#f1efe9]'} ${FOCUS}`;
 
-  return <div className="h-full min-h-0 overflow-y-auto bg-[#faf9f4]" data-runtime-calendar>
+  return <div className="h-full min-h-0 overflow-y-auto bg-[#faf9f4]" data-runtime-calendar data-local-copy={fromDevice ? (local.cached.stale ? 'stale' : 'fresh') : undefined}>
     <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6">
       <header className="mb-4 flex flex-wrap items-center gap-3">
         <CalendarDays size={20} className="text-[#41608f]" aria-hidden="true" />

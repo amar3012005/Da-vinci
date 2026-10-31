@@ -1,3 +1,5 @@
+/** The last known team is kept for a week and shown at once; the authenticated catalog replaces it as soon as it answers. */
+export const ROSTER_KEPT_MS = 7 * 24 * 60 * 60_000;
 /** A bounded presentation hint. The authenticated catalog remains authoritative. */
 export function createAgentRosterCache(fetchProfiles, now = Date.now, storage = null, observe = () => {}) {
   const entries = new Map();
@@ -6,7 +8,7 @@ export function createAgentRosterCache(fetchProfiles, now = Date.now, storage = 
     if (!storage) return undefined;
     try {
       const saved = JSON.parse(storage.getItem(cacheKey(scope)) || 'null');
-      if (saved?.version !== 1 || now() - saved.at > 10 * 60_000 || !Array.isArray(saved.profiles)) return undefined;
+      if (saved?.version !== 1 || now() - saved.at > ROSTER_KEPT_MS || !Array.isArray(saved.profiles)) return undefined;
       if (!(saved.profiles.length <= 32 && saved.profiles.every(row => typeof row.id === 'string' && typeof row.name === 'string'))) return undefined;
       observe(saved.profiles);
       return saved.profiles;

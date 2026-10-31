@@ -15,14 +15,39 @@ import { createLocalStore, storeScope } from './local-store';
 import { createSyncEngine } from './sync-engine';
 import { createOutbox } from './outbox';
 import { getPlatformAdapter } from './platform-adapter';
+import { bindPersistentCache } from './page-cache-persistence';
+import { PRELOAD_ENTITIES } from './catalog';
+import { pageCache } from '../resource-cache';
+import { readLastTenant } from '../boot-cache';
 
 export { createLocalStore, createIndexedDbBackend, createMemoryBackend, storeScope, rowKey } from './local-store';
 export { createSyncEngine, reconcile } from './sync-engine';
 export { createOutbox, isTransientFailure, retryDelay } from './outbox';
+export { LOCAL_FIRST, PRELOAD_ENTITIES } from './catalog';
 export { capacitorPlatformAdapter, getPlatformAdapter, setPlatformAdapter, webPlatformAdapter, NATIVE_PREFERENCE_KEYS } from './platform-adapter';
 
 let sharedStore = null;
+let confirmed = null;
+const scopeListeners = new Set();
+function setConfirmed(next) {
+  confirmed = next;
+  for (const listener of scopeListeners) listener();
+}
+
+/**
+ * Person and company confirmed by bootstrap, or null while signed out.
+ * @returns {{ orgId: string, userId: string }|null} the confirmed identity. The object changes only when the identity does.
+ */
+export function confirmedIdentity() { return confirmed; }
+
+/**
+ * Listen for sign-in, switch and sign-out.
+ * @param {() => void} listener - called after the confirmed identity changed.
+ * @returns {() => void} unsubscribe.
+ */
+export function onIdentityChange(listener) { scopeListeners.add(listener); return () => { scopeListeners.delete(listener); }; }
 const scopes = new Map();
+const pagePersistence = bindPersistentCache(pageCache, { store: () => localStore() });
 
 /**
  * Process-wide LocalStore.
@@ -51,10 +76,15 @@ export function syncScope(orgId, userId, { senders = {} } = {}) {
     const stopOutboxForeground = getPlatformAdapter().onForeground(() => { void outbox.flush(); });
     scopes.set(id, { scope, engine, outbox, senders: allSenders, stop: () => { stopForeground(); stopOutboxForeground(); } });
     if (scope) void outbox.resume();
+    if (scope) void preloadEngine(engine);
   }
   const bundle = scopes.get(id);
   Object.assign(bundle.senders, senders);
   return { scope: bundle.scope, engine: bundle.engine, outbox: bundle.outbox };
+}
+
+function preloadEngine(engine) {
+  return engine.preload(PRELOAD_ENTITIES).catch(() => { /* The first paint then waits for the local read or the network. */ });
 }
 
 /**
@@ -64,6 +94,8 @@ export function syncScope(orgId, userId, { senders = {} } = {}) {
 export async function wipeAllScopes() {
   for (const bundle of scopes.values()) { bundle.stop(); bundle.engine.close(); bundle.outbox.close(); }
   scopes.clear();
+  setConfirmed(null);
+  void pagePersistence.adopt(null);
   await localStore().wipeAll();
 }
 
@@ -77,14 +109,31 @@ export async function wipeAllScopes() {
 export async function adoptScope(orgId, userId) {
   const scope = storeScope(orgId, userId);
   if (!scope) return;
+  if (!confirmed || confirmed.orgId !== orgId || confirmed.userId !== userId) setConfirmed({ orgId, userId });
   for (const [id, bundle] of scopes) {
     if (id === scope) continue;
     bundle.stop(); bundle.engine.close(); bundle.outbox.close();
     scopes.delete(id);
   }
   await localStore().retainOnly(scope);
+  syncScope(orgId, userId);
+  await pagePersistence.adopt(scope);
+}
+
+/**
+ * Start reading the device copy of the last signed-in person before bootstrap answers, so screens opened right after
+ * it paint their last known data. {@link adoptScope} discards it when bootstrap names another person or company.
+ * @returns {void}
+ */
+function warmFromLastTenant() {
+  const hint = readLastTenant();
+  const scope = hint ? storeScope(hint.orgId, hint.userId) : null;
+  if (!scope) return;
+  syncScope(hint.orgId, hint.userId);
+  void pagePersistence.adopt(scope);
 }
 
 if (typeof window !== 'undefined') {
+  try { warmFromLastTenant(); } catch { /* A blocked store leaves every screen on the network read. */ }
   window.addEventListener('hm:tenant-changed', () => { void wipeAllScopes(); });
 }

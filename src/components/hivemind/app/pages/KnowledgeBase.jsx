@@ -35,6 +35,8 @@ import {
 import apiClient from '../shared/api-client';
 import { isSystemTag } from '../shared/documentTags.mjs';
 import { useApiQuery } from '../shared/hooks';
+import { LOCAL_FIRST } from '../shared/sync/catalog';
+import { useLocalFirst } from '../shared/sync/use-local-first';
 import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
 import { PageIndexViewer } from '../PageIndexViewer';
@@ -1132,7 +1134,12 @@ export default function KnowledgeBase() {
   // Per-document relationship summaries: { <docId>: { total, byType, cluster_size } }
   const [relSummaries, setRelSummaries] = useState({});
 
-  const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
+  const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useLocalFirst({
+    spec: LOCAL_FIRST.uploads,
+    key: 'knowledge-base',
+    // The screen shows every document; the device keeps the newest first page of them.
+    persistTrim: (list) => (Array.isArray(list) ? list.slice(0, 50) : list),
+    load: async () => {
     // The canonical documents endpoint applies the same visibility predicate as
     // evidence recall: organization documents, authorized projects/teams, and
     // only the caller's personal documents. A document list must not be derived
@@ -1156,7 +1163,7 @@ export default function KnowledgeBase() {
         source_url: doc.sourceUrl,
       },
     }));
-  }, [org?.id, user?.id]);
+  }});
 
   // Fetch per-doc relationship summaries in batch whenever the doc list changes.
   // Backend resolves doc+chunk cluster then groups by relationship type so we

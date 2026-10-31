@@ -44,6 +44,8 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
+import { LOCAL_FIRST } from '../shared/sync/catalog';
+import { useLocalFirst } from '../shared/sync/use-local-first';
 import ApiKeyPrompt from '../shared/ApiKeyPrompt';
 import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
@@ -2840,26 +2842,26 @@ export default function Connectors() {
     data: connectorStatus,
     loading: statusLoading,
     refetch: refetchStatus,
-  } = useApiQuery(() => apiClient.getConnectorStatus(), []);
+  } = useLocalFirst({ spec: LOCAL_FIRST.connectors, key: 'status', load: () => apiClient.getConnectorStatus() });
 
   const {
     data: jobs,
     // eslint-disable-next-line no-unused-vars
     refetch: refetchJobs,
-  } = useApiQuery(() => apiClient.listConnectorJobs(), []);
+  } = useLocalFirst({ spec: LOCAL_FIRST.connectors, key: 'jobs', load: () => apiClient.listConnectorJobs() });
 
   // Fetch live OAuth connector statuses from control plane
   const {
     data: oauthConnectors,
     refetch: refetchOAuth,
-  } = useApiQuery(() => apiClient.listOAuthConnectors().catch(() => null), []);
+  } = useLocalFirst({ spec: LOCAL_FIRST.connectors, key: 'oauth', load: () => apiClient.listOAuthConnectors().catch(() => null) });
 
   // Claude.ai remote-MCP connector status — separate poll because it lives
   // in the apiKey/oauth_access_token registry, not the Nango oauth list.
   const {
     data: claudeWebStatus,
     refetch: refetchClaudeWeb,
-  } = useApiQuery(() => apiClient.claudeWebStatus().catch(() => null), []);
+  } = useLocalFirst({ spec: LOCAL_FIRST.connectors, key: 'claude-web', load: () => apiClient.claudeWebStatus().catch(() => null) });
   const [claudeDisconnectOpen, setClaudeDisconnectOpen] = useState(false);
   const [deepLinkConnectStarted, setDeepLinkConnectStarted] = useState(false);
 

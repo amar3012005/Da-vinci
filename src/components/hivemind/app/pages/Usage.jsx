@@ -9,6 +9,9 @@ import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
 import CreditBalance from '../shared/CreditBalance';
 import CreditUsageBreakdown from '../shared/CreditUsageBreakdown';
+import { LOCAL_FIRST } from '../shared/sync/catalog';
+import { maskMeterKeys, unmaskMeterKeys } from '../shared/sync/trim';
+import { useLocalFirst } from '../shared/sync/use-local-first';
 import WorkspaceAccessCard from '../shared/WorkspaceAccessCard';
 import { useCopy, useLocaleFormat, usePlanLabel } from '../layout/sidebar-copy';
 
@@ -213,8 +216,9 @@ export default function Usage() {
   const [days, setDays] = useState(30);
   const [usageView, setUsageView] = useState('organization');
 
-  const { data, loading, refetch } = useApiQuery(() => apiClient.getUsage().catch(() => null), []);
-  const { data: billing, refetch: refetchBilling } = useApiQuery(() => apiClient.getBillingPlan().catch(() => null), []);
+  // Usage and plan paint from the device copy at once; the reads replace them.
+  const { data, loading, refetch } = useLocalFirst({ spec: LOCAL_FIRST.usage, key: 'page', persistTrim: maskMeterKeys, restore: unmaskMeterKeys, load: () => apiClient.getUsage().catch(() => null) });
+  const { data: billing, refetch: refetchBilling } = useLocalFirst({ spec: LOCAL_FIRST.usage, key: 'plan', persistTrim: maskMeterKeys, restore: unmaskMeterKeys, load: () => apiClient.getBillingPlan().catch(() => null) });
   const { data: daily, refetch: refetchDaily } = useApiQuery(() => apiClient.getDailyUsage(days).catch(() => null), [days]);
 
   const planName = data?.planName || data?.plan ? planLabelFor(data?.planName || data?.plan) : '—';
