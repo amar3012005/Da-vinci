@@ -1,4 +1,4 @@
-import { LOCAL_DUTIES_ENDPOINT, fetchLocalCalendar, fetchMergedCalendar, isLocalItem, mergeCalendars, CALENDAR_ENDPOINT, CalendarActionError, CalendarUnavailableError, boardRows, calendarUrl, deleteCalendarItem, fetchCalendar, groupByDay, nextRunText, ownerAgent, ownerLabel, rangeEntries, repeatLabel, stopCalendarItem, weekWindow } from '../runtime-calendar';
+import { LOCAL_DUTIES_ENDPOINT, fetchLocalCalendar, fetchMergedCalendar, isLocalItem, mergeCalendars, CALENDAR_ENDPOINT, CalendarActionError, CalendarUnavailableError, boardRows, calendarUrl, deleteCalendarItem, fetchCalendar, groupByDay, nextRunText, ownerAgent, ownerLabel, rangeEntries, repeatLabel, stopCalendarItem, weekWindow, pauseCalendarItem, resumeCalendarItem, fetchDutyHistory, runMessageHref } from '../runtime-calendar';
 
 jest.mock('../runtime-admission', () => ({ fetchWithRuntimeAdmission: jest.fn() }));
 
@@ -157,4 +157,27 @@ test('stop and delete of an OpenDot item go to OpenDot, those of a Runtime item 
   expect(fetcher).toHaveBeenNthCalledWith(2, LOCAL_DUTIES_ENDPOINT, expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'delete', id: localItem.id }) }));
   await stopCalendarItem('duty-a', { fetcher });
   expect(fetcher).toHaveBeenLastCalledWith('/api/hivemindHq/calendar/duty-a/stop', expect.objectContaining({ method: 'POST' }));
+});
+
+test('pause and resume go to OpenDot only, and the history is read per item with the run message link', async () => {
+  const fetcher = jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, value: { id: localItem.id, dotId: 'dot_a', paused: false, runs: [{ at: '2026-11-02T08:00:00.000Z', outcome: 'done', note: 'Two leads.', messageId: 'msg_1', conversationId: 'conv_1' }] } }) }));
+  await pauseCalendarItem(localItem.id, { fetcher });
+  await resumeCalendarItem(localItem.id, { fetcher });
+  expect(fetcher).toHaveBeenNthCalledWith(1, LOCAL_DUTIES_ENDPOINT, expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'pause', id: localItem.id }) }));
+  expect(fetcher).toHaveBeenNthCalledWith(2, LOCAL_DUTIES_ENDPOINT, expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'resume', id: localItem.id }) }));
+  const history = await fetchDutyHistory(localItem.id, { fetcher });
+  expect(fetcher).toHaveBeenLastCalledWith(`${LOCAL_DUTIES_ENDPOINT}?history=${encodeURIComponent(localItem.id)}`, expect.objectContaining({ cache: 'no-store' }));
+  expect(history.runs[0].outcome).toBe('done');
+  expect(runMessageHref(history.dotId, history.runs[0])).toBe('/hivemind/app/employee/dots/dot_a?c=conv_1&m=msg_1');
+  expect(runMessageHref('dot_a', { conversationId: null })).toBeNull();
+  await expect(fetchDutyHistory(localItem.id, { fetcher: () => Promise.resolve({ ok: false, status: 404 }) })).rejects.toThrow('duty_history_failed');
+  await expect(fetchDutyHistory(localItem.id, { fetcher: () => Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) }) })).rejects.toThrow('duty_history_failed');
+  await expect(pauseCalendarItem(localItem.id, { fetcher: () => Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({ error: 'calendar_item_not_found' }) }) })).rejects.toMatchObject({ code: 'calendar_item_not_found', status: 404 });
+});
+
+test('a paused item is inactive with its own state, and rows say whether OpenDot keeps them', () => {
+  const paused = { ...localItem, status: 'paused', active: false, paused: true };
+  const [row] = boardRows({ items: [paused] });
+  expect([row.status, row.state, row.statusText, row.local, row.dotId]).toEqual(['inactive', 'paused', 'Paused', true, paused.dotId || '']);
+  expect(boardRows({ items: [duty] })[0].local).toBe(false);
 });

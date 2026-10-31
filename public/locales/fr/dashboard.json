@@ -2143,7 +2143,41 @@
     "summary": "Premiers pas, {{count}} sur {{total}}"
   },
   "runtimeCalendar": {
-    "localOnly": "Le calendrier de Runtime ne répond pas pour le moment. Voici les tâches que vos employés gardent eux-mêmes ; le reste revient avec Runtime."
+    "localOnly": "Le calendrier de Runtime ne répond pas pour le moment. Voici les tâches que vos employés gardent eux-mêmes ; le reste revient avec Runtime.",
+    "drawer": {
+      "label": "Détails de la tâche",
+      "close": "Fermer",
+      "nextRun": "Prochaine exécution",
+      "nextRunPaused": "Prochaine exécution à la reprise",
+      "nextRunNone": "Aucune exécution restante",
+      "repeats": "Répétition",
+      "once": "Une seule fois",
+      "ends": "Fin",
+      "noEnd": "Sans date de fin",
+      "lastRuns": "Dernières exécutions",
+      "loading": "Chargement des exécutions…",
+      "empty": "Aucune exécution pour l’instant.",
+      "error": "Impossible de charger les exécutions.",
+      "retry": "Réessayer",
+      "runtimeHistory": "Historique disponible pour les tâches que l’employé garde dans HIVEMIND",
+      "openMessage": "Ouvrir le message du chat",
+      "pause": "Mettre en pause",
+      "resume": "Reprendre",
+      "pausedBadge": "En pause"
+    },
+    "outcome": {
+      "done": "Terminé",
+      "noChange": "Aucun changement",
+      "blocked": "Bloqué",
+      "failed": "Échec",
+      "skipped": "Ignorée (en pause)",
+      "missed": "Manquée",
+      "running": "En cours"
+    },
+    "notice": {
+      "paused": "« {{name}} » est en pause. Ses exécutions sont ignorées jusqu’à la reprise.",
+      "resumed": "« {{name}} » a repris."
+    }
   },
   "outerApp": {
     "usage": {

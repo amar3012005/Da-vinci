@@ -2159,7 +2159,41 @@
     "tryAsking": "Try asking an employee"
   },
   "runtimeCalendar": {
-    "localOnly": "Runtime’s calendar is not answering right now. These are the tasks your employees keep themselves; the rest returns with Runtime."
+    "localOnly": "Runtime’s calendar is not answering right now. These are the tasks your employees keep themselves; the rest returns with Runtime.",
+    "drawer": {
+      "label": "Task details",
+      "close": "Close",
+      "nextRun": "Next run",
+      "nextRunPaused": "Next run once resumed",
+      "nextRunNone": "No run left",
+      "repeats": "Repeats",
+      "once": "Once",
+      "ends": "Ends",
+      "noEnd": "No end date",
+      "lastRuns": "Last runs",
+      "loading": "Loading the runs…",
+      "empty": "No runs yet.",
+      "error": "The runs could not be loaded.",
+      "retry": "Try again",
+      "runtimeHistory": "History available for duties the employee keeps in HIVEMIND",
+      "openMessage": "Open the chat message",
+      "pause": "Pause",
+      "resume": "Resume",
+      "pausedBadge": "Paused"
+    },
+    "outcome": {
+      "done": "Done",
+      "noChange": "No change",
+      "blocked": "Blocked",
+      "failed": "Failed",
+      "skipped": "Skipped (paused)",
+      "missed": "Missed",
+      "running": "Running"
+    },
+    "notice": {
+      "paused": "Paused “{{name}}”. Its runs are skipped until you resume it.",
+      "resumed": "Resumed “{{name}}”."
+    }
   },
   "chat": {
     "messageBrain": "Message Brain",

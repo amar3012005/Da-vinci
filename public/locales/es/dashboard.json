@@ -2143,7 +2143,41 @@
     "summary": "Primeros pasos, {{count}} de {{total}}"
   },
   "runtimeCalendar": {
-    "localOnly": "El calendario de Runtime no responde en este momento. Estas son las tareas que tus empleados guardan por sí mismos; el resto vuelve con Runtime."
+    "localOnly": "El calendario de Runtime no responde en este momento. Estas son las tareas que tus empleados guardan por sí mismos; el resto vuelve con Runtime.",
+    "drawer": {
+      "label": "Detalles de la tarea",
+      "close": "Cerrar",
+      "nextRun": "Próxima ejecución",
+      "nextRunPaused": "Próxima ejecución al reanudar",
+      "nextRunNone": "No quedan ejecuciones",
+      "repeats": "Repetición",
+      "once": "Una vez",
+      "ends": "Termina",
+      "noEnd": "Sin fecha de fin",
+      "lastRuns": "Últimas ejecuciones",
+      "loading": "Cargando las ejecuciones…",
+      "empty": "Aún no hay ejecuciones.",
+      "error": "No se pudieron cargar las ejecuciones.",
+      "retry": "Reintentar",
+      "runtimeHistory": "Historial disponible para las tareas que el empleado mantiene en HIVEMIND",
+      "openMessage": "Abrir el mensaje del chat",
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "pausedBadge": "En pausa"
+    },
+    "outcome": {
+      "done": "Hecho",
+      "noChange": "Sin cambios",
+      "blocked": "Bloqueada",
+      "failed": "Fallida",
+      "skipped": "Omitida (en pausa)",
+      "missed": "Perdida",
+      "running": "En curso"
+    },
+    "notice": {
+      "paused": "«{{name}}» en pausa. Sus ejecuciones se omiten hasta que la reanudes.",
+      "resumed": "«{{name}}» reanudada."
+    }
   },
   "outerApp": {
     "usage": {

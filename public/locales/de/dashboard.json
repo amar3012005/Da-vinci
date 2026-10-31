@@ -2162,7 +2162,41 @@
     "summary": "Erste Schritte, {{count}} von {{total}}"
   },
   "runtimeCalendar": {
-    "localOnly": "Der Kalender von Runtime antwortet gerade nicht. Das sind die Aufgaben, die deine Mitarbeiter selbst verwalten; der Rest kommt mit Runtime zurück."
+    "localOnly": "Der Kalender von Runtime antwortet gerade nicht. Das sind die Aufgaben, die deine Mitarbeiter selbst verwalten; der Rest kommt mit Runtime zurück.",
+    "drawer": {
+      "label": "Aufgabendetails",
+      "close": "Schließen",
+      "nextRun": "Nächster Lauf",
+      "nextRunPaused": "Nächster Lauf nach dem Fortsetzen",
+      "nextRunNone": "Kein Lauf mehr",
+      "repeats": "Wiederholung",
+      "once": "Einmalig",
+      "ends": "Endet",
+      "noEnd": "Kein Enddatum",
+      "lastRuns": "Letzte Läufe",
+      "loading": "Läufe werden geladen …",
+      "empty": "Noch keine Läufe.",
+      "error": "Die Läufe konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "runtimeHistory": "Der Verlauf ist für Aufgaben verfügbar, die der Mitarbeiter in HIVEMIND verwaltet",
+      "openMessage": "Chat-Nachricht öffnen",
+      "pause": "Pausieren",
+      "resume": "Fortsetzen",
+      "pausedBadge": "Pausiert"
+    },
+    "outcome": {
+      "done": "Erledigt",
+      "noChange": "Keine Änderung",
+      "blocked": "Blockiert",
+      "failed": "Fehlgeschlagen",
+      "skipped": "Übersprungen (pausiert)",
+      "missed": "Verpasst",
+      "running": "Läuft"
+    },
+    "notice": {
+      "paused": "„{{name}}“ pausiert. Die Läufe werden übersprungen, bis du sie fortsetzt.",
+      "resumed": "„{{name}}“ fortgesetzt."
+    }
   },
   "outerApp": {
     "usage": {

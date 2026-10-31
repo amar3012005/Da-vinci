@@ -2168,7 +2168,41 @@
     "waitingToSend": "送信待ち"
   },
   "runtimeCalendar": {
-    "localOnly": "Runtime のカレンダーは現在応答していません。ここには従業員が自分で保持しているタスクを表示しています。残りは Runtime の復旧後に戻ります。"
+    "localOnly": "Runtime のカレンダーは現在応答していません。ここには従業員が自分で保持しているタスクを表示しています。残りは Runtime の復旧後に戻ります。",
+    "drawer": {
+      "label": "タスクの詳細",
+      "close": "閉じる",
+      "nextRun": "次回の実行",
+      "nextRunPaused": "再開後の次回の実行",
+      "nextRunNone": "残りの実行はありません",
+      "repeats": "繰り返し",
+      "once": "1回のみ",
+      "ends": "終了",
+      "noEnd": "終了日なし",
+      "lastRuns": "最近の実行",
+      "loading": "実行履歴を読み込み中…",
+      "empty": "まだ実行はありません。",
+      "error": "実行履歴を読み込めませんでした。",
+      "retry": "再試行",
+      "runtimeHistory": "履歴は、社員が HIVEMIND で管理しているタスクで利用できます",
+      "openMessage": "チャットのメッセージを開く",
+      "pause": "一時停止",
+      "resume": "再開",
+      "pausedBadge": "一時停止中"
+    },
+    "outcome": {
+      "done": "完了",
+      "noChange": "変更なし",
+      "blocked": "停止中",
+      "failed": "失敗",
+      "skipped": "スキップ(一時停止中)",
+      "missed": "実行されず",
+      "running": "実行中"
+    },
+    "notice": {
+      "paused": "「{{name}}」を一時停止しました。再開するまで実行はスキップされます。",
+      "resumed": "「{{name}}」を再開しました。"
+    }
   },
   "outerApp": {
     "usage": {
