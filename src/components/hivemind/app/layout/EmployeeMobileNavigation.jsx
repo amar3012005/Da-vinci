@@ -45,7 +45,7 @@ export default function EmployeeMobileNavigation({ activeSection, onClose }) {
       event.preventDefault(); event.stopPropagation(); onClose();
       window.location.assign(destination);
     }} onClick={event => {
-      if (event.target.closest('a[href], button[data-agent-room-link], button[data-brain-chat-link]')) onClose();
+      if (event.target.closest('a[href], button[data-agent-room-link], button[data-brain-chat-link], button[data-open-account-settings]')) onClose();
     }}>
       <Sidebar activeSection={activeSection} collapsed={false} mobileDrawer mobileRoster={phone} />
       <button type="button" aria-label={s('closeTeamNavigation', 'Close team navigation')} onClick={onClose} style={{ top: 'calc(env(safe-area-inset-top, 0px) + 8px)', fontSize: 24 }} className="employee-mobile-roster-close absolute right-2 z-50 min-w-[44px] min-h-[44px] rounded-full bg-[#faf9f4] text-[#525252]">×</button>
