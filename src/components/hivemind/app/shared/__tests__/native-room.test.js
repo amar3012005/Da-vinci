@@ -1,4 +1,4 @@
-import { closeNativeRoom, nativeWorkspaceAccess, onNativeRoomClosed, openNativeRoom } from '../native-room';
+import { closeNativeRoom, desktopRoomPlugin, hasNativeRooms, nativeWorkspaceAccess, onNativeRoomClosed, openNativeRoom, roomPlugin } from '../native-room';
 
 jest.mock('../native-auth', () => ({ nativePlugin: {} }));
 
@@ -38,5 +38,42 @@ describe('native room', () => {
     expect(plugin.addListener).toHaveBeenCalledWith('roomClosed', listener);
     await closeNativeRoom(undefined, plugin);
     expect(plugin.closeRoom).toHaveBeenCalled();
+  });
+});
+
+describe('macOS desktop rooms', () => {
+  const bridge = () => ({ openRoom: jest.fn().mockResolvedValue(undefined), closeRoom: jest.fn().mockResolvedValue(undefined), onRoomClosed: jest.fn(() => jest.fn()) });
+  test('a browser has no native rooms; the Electron bridge or the iOS app does', () => {
+    expect(hasNativeRooms({})).toBe(false);
+    expect(hasNativeRooms({ singulanceDesktop: bridge() })).toBe(true);
+    expect(hasNativeRooms({ Capacitor: { isNativePlatform: () => true } })).toBe(true);
+  });
+  test('the desktop plugin is chosen only when the bridge exists and the iOS app is absent', () => {
+    expect(roomPlugin({})).toEqual({});
+    expect(roomPlugin({ singulanceDesktop: bridge() })).not.toEqual({});
+  });
+  test('opens on tap with path and scope and closes only its own room', async () => {
+    const b = bridge();
+    const plugin = desktopRoomPlugin(b);
+    await openNativeRoom(EMPLOYEE, { plugin, scope: 'org-a:user-1' });
+    expect(b.openRoom).toHaveBeenCalledWith({ path: `/employees/${EMPLOYEE}`, scope: 'org-a:user-1' });
+    await closeNativeRoom('someone-else', plugin);
+    expect(b.closeRoom).not.toHaveBeenCalled();
+    await closeNativeRoom(EMPLOYEE, plugin);
+    expect(b.closeRoom).toHaveBeenCalledTimes(1);
+    await closeNativeRoom(EMPLOYEE, plugin);
+    expect(b.closeRoom).toHaveBeenCalledTimes(1);
+  });
+  test('Done in the room reaches the listener and can be unsubscribed', async () => {
+    const b = bridge();
+    const off = jest.fn();
+    b.onRoomClosed.mockImplementation(cb => { b.fire = cb; return off; });
+    const plugin = desktopRoomPlugin(b);
+    const listener = jest.fn();
+    const handle = await onNativeRoomClosed(listener, plugin);
+    b.fire();
+    expect(listener).toHaveBeenCalled();
+    handle.remove();
+    expect(off).toHaveBeenCalled();
   });
 });

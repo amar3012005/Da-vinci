@@ -63,8 +63,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
-import { isNativeApp } from '../shared/native-app';
-import { openNativeRoom } from '../shared/native-room';
+import AccountRowTools from './AccountRowTools';
+import { hasNativeRooms, openNativeRoom } from '../shared/native-room';
 import apiClient from '../shared/api-client';
 import { useUsage } from '../shared/useUsage';
 import CreditBalance from '../shared/CreditBalance';
@@ -442,8 +442,8 @@ export default function Sidebar({
       selectionPending.current = null;
       setTeamError('');
       setSelectedAgent(agent.id);
-      // The packaged app shows the room natively: ask for it on the tap itself, not after the route's page has loaded.
-      if (isNativeApp()) openNativeRoom(agent.id, { scope: org?.id && user?.id ? `${org.id}:${user.id}` : undefined }).catch(() => { /* The route's page offers Try again. */ });
+      // The iOS and macOS apps show the room natively: ask for it on the tap itself, not after the route's page has loaded.
+      if (hasNativeRooms()) openNativeRoom(agent.id, { scope: org?.id && user?.id ? `${org.id}:${user.id}` : undefined }).catch(() => { /* The route's page offers Try again. */ });
       navigate(openDotPath);
       return true;
     }
@@ -667,6 +667,7 @@ export default function Sidebar({
             {profileImage && !profileImageFailed ? <img src={profileImage} alt="" referrerPolicy="no-referrer" onError={() => setProfileImageFailed(true)}/> : <User size={24}/>}
             <span>{tt('accountAndSecurity', 'Account and security')}</span>
           </button>
+          <AccountRowTools/>
           <NavLink to="/hivemind/m/settings" aria-label={tt('settingsAria', 'Settings')} className="mobile-roster-settings"><Settings size={21}/></NavLink>
         </div>
       </div>}
@@ -823,9 +824,12 @@ export default function Sidebar({
         )}
         <div className="px-3 py-3">
           {activeSection === 'hyperagents' && runtimeEnabled && <button type="button" title={t('hyperagentsTour:replay', { defaultValue:'Explore your team' })} onClick={() => window.dispatchEvent(new Event('hm:replay-hyperagents-tour'))} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] text-[#333333] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''}`}><BookOpen size={18}/>{!collapsed && <span>{t('hyperagentsTour:replay', { defaultValue:'Explore your team' })}</span>}</button>}
-          <button type="button" title={tt('accountSettings', 'Account & Settings')} onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] text-[#333333] hover:bg-[#f3f1ec] ${collapsed ? 'justify-center' : ''}`}>
-            <Settings size={18}/>{!collapsed && <span>{tt('accountSettings', 'Account & Settings')}</span>}
-          </button>
+          <div className={`flex w-full items-center ${collapsed ? 'flex-col gap-1' : 'gap-1'}`}>
+            <button type="button" title={tt('accountSettings', 'Account & Settings')} onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))} className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] text-[#333333] hover:bg-[#f3f1ec] ${collapsed ? 'w-full justify-center' : ''}`}>
+              <Settings size={18}/>{!collapsed && <span className="truncate">{tt('accountSettings', 'Account & Settings')}</span>}
+            </button>
+            <AccountRowTools vertical={collapsed}/>
+          </div>
         </div>
 
         {/* User + Logout */}

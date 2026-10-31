@@ -1,5 +1,6 @@
 import RuntimeAvatar from '../shared/RuntimeAvatar';
 import AutonomyDial from './AutonomyDial';
+import AccountRowTools from './AccountRowTools';
 import { employeeAppsPath } from '../shared/workspace-mode';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -109,7 +110,7 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
       {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm" title={collapsed ? 'CRM' : undefined}><FolderKanban size={18}/>{!collapsed && <span>CRM</span>}</NavLink>}
     </nav>
     <div className="ha-account-area">
-      <button type="button" className="ha-account-settings" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))} title={accountLabel}><Settings size={18}/>{!collapsed && <span>{accountLabel}</span>}</button>
+      <div className="ha-account-row"><button type="button" className="ha-account-settings" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))} title={accountLabel}><Settings size={18}/>{!collapsed && <span>{accountLabel}</span>}</button><AccountRowTools vertical={collapsed}/></div>
       {user && !collapsed && <div className="ha-account-identity"><span className="ha-account-initial">{(user.display_name || user.email || 'U')[0].toUpperCase()}</span><div><strong>{user.display_name || user.email}</strong><small>{planLabel}</small><CreditBalance credits={credits} inline/></div></div>}
       {collapsed && <CreditBalance credits={credits} compact collapsed/>}
       <button type="button" className="ha-sign-out" onClick={logout} title={s('signOutShort', 'Sign out')}><LogOut size={16}/>{!collapsed && <span>{s('signOutShort', 'Sign out')}</span>}</button>
