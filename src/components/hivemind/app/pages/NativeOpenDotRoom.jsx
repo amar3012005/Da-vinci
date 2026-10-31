@@ -23,7 +23,8 @@ export default function NativeOpenDotRoom({ route, active = true }) {
   const [state, setState] = useState('opening');
   const open = useCallback(() => {
     setState('opening');
-    return openNativeRoom(employeeId, { scope }).catch(() => { if (isNativeApp()) setState('failed'); else markDesktopRoomsUnavailable(); });
+    window.dispatchEvent(new CustomEvent('hivemind:native-room-opening'));
+    return openNativeRoom(employeeId, { scope }).catch(() => { if (isNativeApp()) { setState('failed'); window.dispatchEvent(new CustomEvent('hivemind:native-room-failed')); } else markDesktopRoomsUnavailable(); });
   }, [employeeId, scope]);
   useEffect(() => {
     if (!active || !employeeId) return undefined;
