@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { haptic } from '../shared/platform-haptics';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X } from 'lucide-react';
 import { SERVICE_ERROR_EVENT } from '../shared/serviceError';
@@ -21,6 +22,7 @@ export default function ServiceErrorToast() {
   useEffect(() => {
     let hideTimer;
     const onError = (e) => {
+      haptic('error');
       setToast(e.detail || { status: null, message: 'The service is temporarily unavailable.' });
       clearTimeout(hideTimer);
       hideTimer = setTimeout(() => setToast(null), AUTO_HIDE_MS);

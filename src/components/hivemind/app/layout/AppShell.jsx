@@ -54,6 +54,7 @@ import AccountSettingsDialog from '../shared/AccountSettingsDialog';
 import PlanLimitModal from '../components/PlanLimitModal';
 import RunwayEstimatorModal from '../components/RunwayEstimatorModal';
 import { PLAN_LIMIT_CODE, PLAN_LIMIT_EVENT } from '../shared/planLimit';
+import NotificationBannerHost from './NotificationBannerHost';
 import ServiceErrorToast from '../components/ServiceErrorToast';
 import CallContractModal from '../components/CallContractModal';
 import ProductAccessModal from '../components/ProductAccessModal';
@@ -612,6 +613,7 @@ function AppShellContent() {
             <MobileBrainAddSheet open={mobileBrainAddOpen} onClose={closeMobileBrainAdd} onConnectors={() => { setMobileBrainAddOpen(false); setMobileAppsOpen(true); }} />
             <GlobalUploadStrip />
             <PlanLimitGate />
+            <NotificationBannerHost />
             <ServiceErrorToast />
             <CallContractModal />
             <ProductAccessModal open={Boolean(productUpgrade)} product={productUpgrade?.product} currentPlan={org?.plan} onClose={() => setProductUpgrade(null)} onUpgrade={plan => { setProductUpgrade(null); navigate(`/hivemind/m/billing?upgrade=${plan}`); }} />
@@ -677,6 +679,7 @@ function AppShellContent() {
 
         {/* Global plan-limit upgrade prompt — reacts to 'hm:plan-limit' */}
         <PlanLimitGate />
+        <NotificationBannerHost />
 
         {/* Global 5xx / network outage notice — reacts to 'hm:service-error'
             so a service failure never fails silently (e.g. mycompany 503). */}

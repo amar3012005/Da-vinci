@@ -565,6 +565,11 @@ export default function Sidebar({
     await openAgent({ preventDefault() {} }, agent);
     cancelFocus.current = focusCardInRoom(card);
   };
+  useEffect(() => {
+    const open = event => { const ref = event.detail; if (ref?.cardId) openNeedsYouCard({ id: ref.cardId, dotId: ref.dotId, conversationId: ref.conversationId, employeeId: String(ref.employeeId || '') }); };
+    window.addEventListener('hivemind:open-notification-card', open);
+    return () => window.removeEventListener('hivemind:open-notification-card', open);
+  });
   const [companyOpen, setCompanyOpen] = useState(false);
   const closeCompany = useCallback(() => setCompanyOpen(false), []);
   useEffect(() => { setCompanyOpen(false); }, [org?.id, user?.id]);

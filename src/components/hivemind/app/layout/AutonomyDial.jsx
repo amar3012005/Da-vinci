@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { fetchWithRuntimeAdmission } from '../shared/runtime-admission';
 import { HYPERAGENTS_WORKSPACE, RUNTIME_WORKSPACE } from '../shared/runtime-workspace';
 import { openProductPage } from '../shared/native-in-app-links';
+import { haptic } from '../shared/platform-haptics';
 import { useSidebarCopy } from './sidebar-copy';
 
 /** One autonomy dial for Runtime and HyperAgents; it lives in the HyperAgents sidebar on every page. */
@@ -44,14 +45,14 @@ const defaultFetcher = (...args) => fetchWithRuntimeAdmission(...args);
 /* The company's last confirmed level on this device: the dial draws at once on every page, and on
    Brain's host (which has no autonomy API) it stays visible read-only, opening Runtime to change it. */
 const cacheKey = orgId => `hivemind.autonomy.v1:${orgId || 'unknown'}`;
-function readCachedAutonomy(orgId) {
+export function readCachedAutonomy(orgId) {
   try {
     const saved = JSON.parse(window.localStorage.getItem(cacheKey(orgId)) || 'null');
     return saved && Number.isInteger(saved.revision) && Number.isInteger(saved.maxSelectable) ? saved : undefined;
   } catch { return undefined; }
 }
 function writeCachedAutonomy(orgId, value) {
-  try { window.localStorage.setItem(cacheKey(orgId), JSON.stringify({ level: value.level, revision: value.revision, maxSelectable: value.maxSelectable })); } catch { /* Optional cache: only the instant first paint is lost. */ }
+  try { window.localStorage.setItem(cacheKey(orgId), JSON.stringify({ level: value.level, revision: value.revision, maxSelectable: value.maxSelectable })); window.dispatchEvent(new Event('hivemind:autonomy-changed')); } catch { /* Optional cache: only the instant first paint is lost. */ }
 }
 
 let authorityReported = false;
@@ -196,7 +197,7 @@ export default function AutonomyDial({ collapsed = false, fetcher = defaultFetch
           <i key={index} data-filled={index < filled || undefined} data-locked={index >= lockedFrom || undefined}/>)}</span>
         <input type="range" className="ha-autonomy-range" min={0} max={MAX} step={1} value={shown}
           disabled={!available || saving || pending !== null} aria-label={a('levelFor', 'Autonomy level for {{subject}}', { subject })} aria-valuetext={currentName}
-          onChange={event => { setNotice(null); setDraft(Number(event.target.value)); }}
+          onChange={event => { setNotice(null); setDraft(Number(event.target.value)); haptic('selection'); }}
           onPointerUp={event => release(event.currentTarget.value)}
           onKeyUp={event => { if (draft !== null) release(event.currentTarget.value); }}
           onBlur={event => { if (draft !== null) release(event.currentTarget.value); }}/>

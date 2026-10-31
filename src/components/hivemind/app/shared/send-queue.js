@@ -1,3 +1,4 @@
+import { haptic } from './platform-haptics';
 /**
  * In-memory send queue for chat messages.
  *
@@ -54,6 +55,7 @@ export function createSendQueue({ transport, onChange = () => {} }) {
   return {
     enqueue(payload) {
       sequence += 1;
+      haptic('light');
       const entry = { id: `send-${sequence}`, payload, state: 'queued' };
       entries.set(entry.id, entry);
       onChange({ ...entry });
