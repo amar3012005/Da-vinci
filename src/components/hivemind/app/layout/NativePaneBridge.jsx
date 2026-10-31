@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { fetchRuntime } from '../shared/runtime-admission';
 import { useNavigate } from 'react-router-dom';
 import { initialNativePane, PANE_ORIGINS, PANE_EVENTS, PANE_REQUESTS, panePath } from '../shared/native-pane-protocol';
 
@@ -16,7 +17,7 @@ export default function NativePaneBridge({ scope }) {
       if (initialNativePane !== 'runtime' || rosterPending) return;
       rosterPending = true;
       try {
-        const response = await fetch('/api/hivemind/employees', {credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(10000)});
+        const response = await fetchRuntime('/api/hivemind/employees', {credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(10000)});
         if (!response.ok) return;
         const value = await response.json();
         if (!stopped && Array.isArray(value.profiles)) send({kind:'roster',profiles:value.profiles});

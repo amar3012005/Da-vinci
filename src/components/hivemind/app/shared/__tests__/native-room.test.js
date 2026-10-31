@@ -22,8 +22,13 @@ describe('native workspace access', () => {
 describe('native room', () => {
   test('opens one employee room by its path under the Runtime host', async () => {
     const plugin = { openRoom: jest.fn().mockResolvedValue(undefined) };
-    await openNativeRoom(EMPLOYEE, plugin);
+    await openNativeRoom(EMPLOYEE, { plugin });
     expect(plugin.openRoom).toHaveBeenCalledWith({ path: `/employees/${EMPLOYEE}` });
+  });
+  test('names the signed-in company and person so the room keeps its own history store for that scope only', async () => {
+    const plugin = { openRoom: jest.fn().mockResolvedValue(undefined) };
+    await openNativeRoom(EMPLOYEE, { plugin, scope: 'org-a:user-1' });
+    expect(plugin.openRoom).toHaveBeenCalledWith({ path: `/employees/${EMPLOYEE}`, scope: 'org-a:user-1' });
   });
   test('closing and the close listener go through the plugin', async () => {
     const handle = { remove: jest.fn() };

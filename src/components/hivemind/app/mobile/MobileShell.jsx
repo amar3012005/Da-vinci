@@ -62,7 +62,8 @@ export default function MobileShell({ children, rightAction = null, title = null
   const navigate = useNavigate();
   const location = useLocation();
   const { user, org, logout, needsOnboarding } = useAuth() || {};
-  const [drawer, setDrawer] = useState(() => isNativeApp() && (
+  // The packaged app opens on the team; Brain chat chosen from the team opens on the chat.
+  const [drawer, setDrawer] = useState(() => isNativeApp() && !location.state?.fromTeam && (
     location.pathname === '/hivemind/m/chat' || location.pathname.startsWith('/hivemind/app/overview')
   ));
   const [reminderDismissed, setReminderDismissed] = useState(false);

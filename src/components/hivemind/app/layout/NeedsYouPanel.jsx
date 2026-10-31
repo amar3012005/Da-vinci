@@ -1,8 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import WorkspacePopupSurface from '../shared/WorkspacePopupSurface';
 import { answerNeedsYouCard, fetchNeedsYou } from '../shared/needs-you';
+import { useOptionalAuth } from '../auth/AuthProvider';
+import { syncScope } from '../shared/sync';
+import { NEEDS_YOU, registerNeedsYou } from '../shared/sync/entities';
 import { useCopy, useLocaleFormat } from './sidebar-copy';
 import './needs-you.css';
 
@@ -21,7 +24,18 @@ export default function NeedsYouPanel({ team, refreshKey, onClose, onOpenCard, p
   const cr = useCopy('needsYou');
   const format = useLocaleFormat();
   const container = useRef(null);
-  const [cards, setCards] = useState(null);
+  const { user, org } = useOptionalAuth() || {};
+  // Open cards paint from this person's local copy at once; answering still goes to the server, which re-checks the card.
+  const engine = useMemo(() => {
+    if (!org?.id || !user?.id) return null;
+    const { engine: scoped } = syncScope(org.id, user.id);
+    registerNeedsYou(scoped, fetchNeedsYou);
+    return scoped;
+  }, [org?.id, user?.id]);
+  const [cards, setCards] = useState(() => {
+    const cached = engine?.peek(NEEDS_YOU, 'open')?.items;
+    return cached ? [...cached].reverse() : null;
+  });
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState({});
   const [errors, setErrors] = useState({});
@@ -31,10 +45,14 @@ export default function NeedsYouPanel({ team, refreshKey, onClose, onOpenCard, p
   const load = useCallback(async () => {
     const mine = ++generation.current;
     try {
-      const next = await fetchNeedsYou();
+      const next = engine ? [...(await engine.refresh(NEEDS_YOU, 'open')).items].reverse() : await fetchNeedsYou();
       if (alive.current && mine === generation.current) { setCards(next); setFailed(false); }
     } catch { if (alive.current && mine === generation.current) setFailed(true); }
-  }, []);
+  }, [engine]);
+  useEffect(() => {
+    if (!engine) return;
+    engine.read(NEEDS_YOU, 'open').then((snapshot) => { if (alive.current && snapshot) setCards((current) => current ?? [...snapshot.items].reverse()); }).catch(() => { /* The network read paints the list. */ });
+  }, [engine]);
   useEffect(() => { load(); }, [load, refreshKey]);
   useEffect(() => {
     window.addEventListener('hivemind:employee-status-changed', load);

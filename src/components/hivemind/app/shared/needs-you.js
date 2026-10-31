@@ -1,4 +1,5 @@
 import { postOpenDotFocusCard } from './open-dot-frames';
+import { fetchRuntime } from './runtime-admission';
 
 const KINDS = new Set(['approval', 'question', 'secure', 'connect', 'schedule']);
 const CARD_ID = /^(?:msg|card)_[A-Za-z0-9_-]{1,160}$/;
@@ -34,7 +35,7 @@ export function parseNeedsYou(body) {
  * @throws When the server cannot answer.
  */
 export async function fetchNeedsYou(signal) {
-  const response = await fetch('/api/hivemind/needs-you', { credentials: 'same-origin', cache: 'no-store', signal });
+  const response = await fetchRuntime('/api/hivemind/needs-you', { credentials: 'same-origin', cache: 'no-store', signal });
   if (!response.ok) throw new Error('Needs you unavailable');
   return parseNeedsYou(await response.json());
 }
@@ -48,7 +49,7 @@ export async function fetchNeedsYou(signal) {
 export async function answerNeedsYouCard(cardId, choice) {
   if (!CARD_ID.test(cardId) || (choice !== 'approve' && choice !== 'deny')) return false;
   try {
-    const response = await fetch(`/api/cards/${encodeURIComponent(cardId)}`, { method: 'POST', credentials: 'same-origin', cache: 'no-store',
+    const response = await fetchRuntime(`/api/cards/${encodeURIComponent(cardId)}`, { method: 'POST', credentials: 'same-origin', cache: 'no-store',
       headers: { 'content-type': 'application/json' }, body: JSON.stringify({ choice }) });
     const body = await response.json().catch(() => null);
     return response.ok && body?.ok === true;

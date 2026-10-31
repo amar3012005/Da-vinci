@@ -161,7 +161,7 @@ const PAGE_PREFIXES = [
   ['/hivemind/app/team/projects', '/hivemind/app/team/projects'],
 ];
 
-export default function TopBar({ activeSection = 'hivemind', onSectionChange, mobileTeamToggle = null, floatingMobile = false, roomIdentity = 'runtime', startSlot = null }) {
+export default function TopBar({ activeSection = 'hivemind', onSectionChange, mobileTeamToggle = null, mobileBack = null, floatingMobile = false, roomIdentity = 'runtime', startSlot = null }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { org, user } = useAuth();
@@ -215,10 +215,11 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
   </div>;
 
   return (
-    <header className={`pointer-events-none sticky top-0 z-30 grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-[#faf9f4] md:bg-white' : 'bg-transparent'}`}>
+    // On a phone the bar sits below the status bar (the packaged app draws edge to edge) and leads with the way back to the team.
+    <header className={`pointer-events-none sticky top-0 z-30 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-[#faf9f4] md:bg-white' : mobileBack ? 'bg-[#faf9f4]' : 'bg-transparent'}`} style={{ paddingTop: 'env(safe-area-inset-top, 0px)', height: 'calc(56px + env(safe-area-inset-top, 0px))', boxSizing: 'border-box' }}>
       {/* Branding and team selection live in the persistent HIVE sidebar. */}
       <div className="pointer-events-auto min-w-0 justify-self-start flex items-center gap-2">
-        <>{mobileTeamToggle && <button type="button" aria-label={s('openYourTeam', 'Open your team')} aria-haspopup="dialog" onClick={mobileTeamToggle} className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full text-[#292929] hover:bg-[#f3f2ee]"><Menu size={22} /></button>}</><h1 className="flex items-center gap-2 min-w-0 text-[#292929] text-[16px] font-semibold tracking-tight leading-none" title={org?.name || org?.slug || 'Workspace'}>
+        <>{mobileBack && !mobileTeamToggle && <button type="button" data-mobile-back aria-label={s('openYourTeam', 'Open your team')} aria-haspopup="dialog" onClick={mobileBack} className="-ml-1 flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full text-[#292929] active:bg-[#f3f2ee]"><ChevronLeft size={24} strokeWidth={2} /></button>}{mobileTeamToggle && <button type="button" aria-label={s('openYourTeam', 'Open your team')} aria-haspopup="dialog" onClick={mobileTeamToggle} className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full text-[#292929] hover:bg-[#f3f2ee]"><Menu size={22} /></button>}</><h1 className="flex items-center gap-2 min-w-0 text-[#292929] text-[16px] font-semibold tracking-tight leading-none" title={org?.name || org?.slug || 'Workspace'}>
           <Building2 size={18} strokeWidth={1.75} className="shrink-0 text-[#626262]" />
           <span className="truncate">{org?.name || org?.slug || t('sidebar.workspace', { defaultValue: 'Workspace' })}</span>
         </h1>

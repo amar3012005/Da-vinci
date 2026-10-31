@@ -2,6 +2,20 @@ import { parse } from 'es-module-lexer/js';
 import { trustedHarnessUrl } from './native-harness-transport';
 import { bytesToBase64 } from './native-body';
 
+/**
+ * Keep only the WOFF2 sources of each `@font-face` that offers one. WebKit on every supported iOS and Android WebView reads
+ * WOFF2, so fetching the WOFF and TrueType fallbacks through the native bridge (and inlining them) only costs time.
+ * @param {string} css - stylesheet text.
+ * @returns {string} stylesheet with fallback font sources removed.
+ */
+export function preferWoff2(css) {
+  return css.replace(/(src\s*:\s*)([^;}]+)/g, (declaration, prefix, value) => {
+    const sources = value.split(/,(?![^()]*\))/);
+    const woff2 = sources.filter(source => /format\(\s*['"]?woff2['"]?\s*\)/i.test(source));
+    return woff2.length && woff2.length < sources.length ? `${prefix}${woff2.join(',').trim()}` : declaration;
+  });
+}
+
 /** URL rewriting is limited to the authenticated, release-owned DSH module graph. */
 export function createNativeHarnessLoader(fetchRunner) {
   const modules = new Map(); const classic = new Map(); const styles = new Map(); const assets = new Map();
@@ -73,7 +87,7 @@ export function createNativeHarnessLoader(fetchRunner) {
     const url = trustedHarnessUrl(input);
     if (styles.has(url)) return styles.get(url);
     const pending = (async () => {
-      let text = await source(url);
+      let text = preferWoff2(await source(url));
       const references = [...text.matchAll(/url\(\s*(['"]?)([^'"()]+)\1\s*\)/g)];
       const replacements = new Map();
       let next = 0;

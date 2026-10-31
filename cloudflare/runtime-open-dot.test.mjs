@@ -8,7 +8,7 @@ import { isRuntimeOpenDotRequest } from './runtime-open-dot.mjs';
  * or the Worker serves the SPA for it and the browser sees a 405/404.
  */
 const FORWARDED_TO_OPEN_DOT = [
-  '/api/cards/msg_example', '/api/conversations/conv_example', '/api/files/file_example',
+  '/api/cards/msg_example', '/api/conversations', '/api/conversations/conv_example', '/api/files/file_example',
   '/api/dots/autonomy', '/api/dots/company-glance', '/api/dots/local-duties', '/api/dots/team-board', '/api/dots/team-week',
   ...['agenda', 'control', 'conversations', 'event-watches', 'files', 'frames', 'input', 'library', 'live', 'results', 'screen', 'stream', 'warm', 'workspace']
     .map(name => `/api/dots/dot_2c1a636bd2ac7f18/${name}`),
@@ -29,6 +29,13 @@ test('the local duty history read and the pause and resume actions use the allow
   const history = new URL('/api/dots/local-duties?history=local-duty%3Adot_a%3Abrief', 'https://runtime-runner.singulancelabs.com');
   assert.equal(isRuntimeOpenDotRequest(history), true);
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/local-duties/history', 'https://runtime-runner.singulancelabs.com')), false, 'no second path is exposed');
+});
+
+test('the local-first sync feeds keep their since and limit query and expose no nested path', () => {
+  for (const path of ['/api/conversations?since=start&limit=100', '/api/conversations/conv_a?since=12', '/api/hivemind/needs-you?since=now']) {
+    assert.equal(isRuntimeOpenDotRequest(new URL(path, 'https://runtime-runner.singulancelabs.com')), true, path);
+  }
+  assert.equal(isRuntimeOpenDotRequest(new URL('/api/conversations/other', 'https://runtime-runner.singulancelabs.com')), false);
 });
 
 test('the Needs you path is forwarded on the Runtime origin only, and not when nested', () => {

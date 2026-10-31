@@ -3,10 +3,11 @@ import { RoomLoading } from './layout/PhoneRoomFrame';
 import React, { useEffect } from 'react';
 import { workspaceDocumentRedirect } from './shared/workspace-authority.mjs';
 import { importPage } from './shared/import-page';
+import { bindNativeInAppLinks } from './shared/native-in-app-links';
 import { bindConnectReturnLinks } from './shared/connect-return';
 import { isNativeApp } from './shared/native-app';
 import { App as CapacitorApp } from '@capacitor/app';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
 import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './auth/LoginPage';
@@ -138,7 +139,9 @@ function CanonicalCRMRoute() {
 
 /** Loads the page a person started from when the desktop or mobile app is reopened by a connect-return link. */
 function ConnectReturnLinks() {
+  const navigate = useNavigate();
   useEffect(() => bindConnectReturnLinks({ capacitorApp: isNativeApp() ? CapacitorApp : null }), []);
+  useEffect(() => bindNativeInAppLinks(navigate), [navigate]);
   return null;
 }
 

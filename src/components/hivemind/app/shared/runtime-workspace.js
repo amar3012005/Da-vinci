@@ -1,3 +1,5 @@
+import { isNativeApp } from './native-app';
+
 /** Runtime's room lives on the Runtime host; Brain's host links there. */
 export const RUNTIME_WORKSPACE = 'https://runtime-runner.singulancelabs.com/hivemind/app/employee/harness';
 
@@ -8,10 +10,10 @@ export const HYPERAGENTS_WORKSPACE = 'https://runtime-runner.singulancelabs.com/
 export const BRAIN_CHAT = 'https://next.singulancelabs.com/hivemind/app/overview/new';
 
 /**
- * Open Brain chat: in place on Brain's host, otherwise on Brain's host.
+ * Open Brain chat: in place on Brain's host and in the packaged app (which hosts every page itself), otherwise on Brain's host.
  * @param {(path: string) => void} navigate - Router navigation for the current host.
  */
 export function openBrainChat(navigate) {
-  if (window.location.hostname === 'next.singulancelabs.com') navigate('/hivemind/app/overview/new');
+  if (window.location.hostname === 'next.singulancelabs.com' || isNativeApp()) navigate('/hivemind/app/overview/new', { state: { fromTeam: true } });
   else window.location.assign(BRAIN_CHAT);
 }

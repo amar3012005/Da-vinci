@@ -48,3 +48,9 @@ test('SPA fallback HTML is rejected and a corrected asset can be retried', async
   const style = await loader.loadStyle('https://next.singulancelabs.com/assets/main.css');
   expect(style.textContent).toContain('data:font/woff2'); style.remove();
 });
+
+test('font faces keep only their WOFF2 source when one is offered', () => {
+  const { preferWoff2 } = require('./native-harness-loader');
+  const css = '@font-face{font-family:K;src:url(a.woff2) format("woff2"),url(a.woff) format("woff"),url(a.ttf) format("truetype")}@font-face{font-family:L;src:url(b.woff) format("woff")}';
+  expect(preferWoff2(css)).toBe('@font-face{font-family:K;src:url(a.woff2) format("woff2")}@font-face{font-family:L;src:url(b.woff) format("woff")}');
+});

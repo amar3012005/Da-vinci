@@ -52,7 +52,7 @@ export function calendarUrl({ from, to }) {
 export async function fetchCalendar(window, { signal, fetcher = (...args) => fetchWithRuntimeAdmission(...args) } = {}) {
   const response = await fetcher(calendarUrl(window), { credentials: 'same-origin', cache: 'no-store', signal });
   if (response.status === 404) throw new CalendarUnavailableError();
-  if (!response.ok) throw new Error('calendar_failed');
+  if (!response.ok) throw Object.assign(new Error('calendar_failed'), { status: response.status });
   return response.json();
 }
 
@@ -112,6 +112,8 @@ export async function fetchMergedCalendar(window, { signal, fetcher, localFetche
   const own = local.status === 'fulfilled' ? local.value : null;
   if (runtime.status === 'fulfilled') return { ...runtime.value, value: mergeCalendars(runtime.value?.value ?? null, own) };
   if (!signal?.aborted && own?.items?.length) return { value: own, runtimeDown: true };
+  // Runtime refusing this session (a company without Runtime, or a client it does not admit) leaves OpenDot's calendar, even an empty one.
+  if (!signal?.aborted && own && [401, 403].includes(runtime.reason?.status)) return { value: own };
   throw runtime.reason;
 }
 

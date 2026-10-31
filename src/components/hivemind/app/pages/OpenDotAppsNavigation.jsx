@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { fetchRuntime } from '../shared/runtime-admission';
 import { createPortal } from 'react-dom';
 import AppsDirectory from './runtime-apps/AppsDirectory';
 
@@ -12,7 +13,7 @@ export default function OpenDotAppsNavigation() {
   useEffect(() => {
     const controller = new AbortController();
     setError('');
-    fetch('/api/hivemind/apps/catalog', { signal: controller.signal }).then(async response => {
+    fetchRuntime('/api/hivemind/apps/catalog', { signal: controller.signal }).then(async response => {
       if (!response.ok) throw new Error('Apps could not load. Please try again.');
       const value = await response.json();
       if (!Array.isArray(value.apps)) throw new Error('Apps could not load. Please try again.');
