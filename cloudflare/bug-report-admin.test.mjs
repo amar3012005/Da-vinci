@@ -141,5 +141,3 @@ test('subject cannot carry line breaks from report text', () => {
   const { subject } = bugReportMessage({ id: 'i', platform: 'web', text: 'hi\r\nBcc: evil@example.com', at: 't', userId: 'u' });
   assert.doesNotMatch(subject, /[\r\n]/);
 });
-  assert.doesNotMatch(mime.split('\r\n\r\n')[0], /^Bcc:/m);
-});
