@@ -49,6 +49,9 @@ export async function evaluateModeAccess(env, email, userId = '') {
 function cookies(request, name) {
   return (request.headers.get('cookie') || '').split(';').map(v => v.trim()).find(v => v.startsWith(`${name}=`));
 }
+function allCookies(request, name) {
+  return (request.headers.get('cookie') || '').split(';').map(v => v.trim()).filter(v => v.startsWith(`${name}=`));
+}
 // Accepted identities are reused per isolate for SESSION_CACHE_MS, keyed by a SHA-256 of the
 // session cookie; rejections and outages are never cached, and concurrent lookups share one fetch.
 const SESSION_CACHE_MS = 20000;
@@ -57,9 +60,15 @@ const sessions = new Map();
 const pendingSessions = new Map();
 /** Drops cached identities; tests only. */
 export function clearSessionCache() { sessions.clear(); pendingSessions.clear(); }
+/** Resolves the signed-in user. A request may carry several hm_cp_session cookies (host-only and domain-wide, or a stale one first); each is tried in order. */
 export async function sessionUser(request) {
-  const cookie = cookies(request, 'hm_cp_session');
-  if (!cookie) return null;
+  for (const cookie of allCookies(request, 'hm_cp_session').slice(0, 3)) {
+    const user = await sessionUserForCookie(cookie);
+    if (user) return user;
+  }
+  return null;
+}
+async function sessionUserForCookie(cookie) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(cookie));
   const key = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('');
   const cached = sessions.get(key);

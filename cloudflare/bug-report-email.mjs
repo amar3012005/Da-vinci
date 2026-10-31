@@ -26,8 +26,14 @@ export function bugReportMessage(report) {
 export async function sendBugReportEmail(env, report) {
   if (!env?.BUG_REPORT_EMAIL) return false;
   const { subject, body } = bugReportMessage(report);
-  await env.BUG_REPORT_EMAIL.send({
-    to: BUG_REPORT_TO, from: { email: env.BUG_REPORT_FROM || BUG_REPORT_FROM, name: 'HIVEMIND bug reports' }, subject, text: body,
-  });
+  const from = env.BUG_REPORT_FROM || BUG_REPORT_FROM;
+  try {
+    const result = await env.BUG_REPORT_EMAIL.send({ to: BUG_REPORT_TO, from: { email: from, name: 'HIVEMIND bug reports' }, subject, text: body });
+    console.log(`[bug-report-email] accepted report=${report.id} messageId=${result?.messageId ?? 'none'}`);
+  } catch (error) {
+    // The Email Service rejects with an Error carrying a `code` such as E_SENDER_NOT_VERIFIED or E_RECIPIENT_NOT_ALLOWED.
+    console.error(`[bug-report-email] send failed report=${report.id} code=${error?.code ?? 'none'} message=${error?.message ?? error}`);
+    throw error;
+  }
   return true;
 }
