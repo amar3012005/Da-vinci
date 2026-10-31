@@ -85,7 +85,7 @@ async function fetchSessionUser(cookie) {
   const data = await response.json();
   return data.authenticated === true && data.user?.id && normalizeAccessEmail(data.user.email) ? data.user : null;
 }
-async function verifiedAdmin(request) {
+export async function verifiedAdmin(request) {
   if (new URL(request.url).hostname !== ADMIN_HOST) return null;
   const cookie = cookies(request, 'hm_platform_admin');
   if (!cookie) return null;

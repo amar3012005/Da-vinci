@@ -70,6 +70,9 @@
       "custom_domain": true
     }
   ],
+  "send_email": [
+    { "name": "BUG_REPORT_EMAIL", "destination_address": "support@singulancelabs.com" }
+  ],
   "durable_objects": {
     "bindings": [
       { "name": "COMPOSIO_ACCOUNTS", "class_name": "ComposioAccount" },

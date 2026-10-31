@@ -1,6 +1,7 @@
 import AllUsersSection from './AllUsersSection';
+import BugReportsSection from './BugReportsSection';
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, BarChart3, ChevronRight, Eye, EyeOff, FileText, Gift, LayoutDashboard, Mail, Megaphone, Menu, MessageCircle, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
+import { Activity, BarChart3, Bug, ChevronRight, Eye, EyeOff, FileText, Gift, LayoutDashboard, Mail, Megaphone, Menu, MessageCircle, Send, ShieldCheck, Tags, Users, X } from "lucide-react";
 import apiClient from "../shared/api-client";
 import OrganizationSettingsPanel from './OrganizationSettingsPanel';
 import AccessApplicationsPanel from "./AccessApplicationsPanel";
@@ -1957,10 +1958,11 @@ const ADMIN_NAV_ITEMS = [
   { id: "email", label: "Email", icon: FileText },
   { id: "models", label: "AI policies", icon: Activity },
   { id: "chat", label: "HIVE Chat", icon: MessageCircle },
+  { id: "bugs", label: "Bug reports", icon: Bug },
   { id: "logs", label: "Live logs", icon: ShieldCheck },
 ];
 
-function AdminNavigation({ activeItem, mobileOpen, onClose, onNavigate }) {
+function AdminNavigation({ activeItem, mobileOpen, onClose, onNavigate, newBugReports = 0 }) {
   const content = (
     <>
       <div className="flex h-14 items-center justify-between border-b border-[#e3e0db] px-4">
@@ -1976,7 +1978,8 @@ function AdminNavigation({ activeItem, mobileOpen, onClose, onNavigate }) {
           <button key={id} type="button" onClick={() => onNavigate(id)} className={`flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-2 text-left text-[13px] transition-colors ${activeItem === id ? "bg-[#f3f1ec] font-medium text-[#0a0a0a]" : "text-[#525252] hover:bg-[#f3f1ec] hover:text-[#0a0a0a]"}`}>
             <Icon size={16} className={activeItem === id ? "text-[#117dff]" : "text-[#a3a3a3]"} />
             {label}
-            <ChevronRight size={13} className="ml-auto text-[#a3a3a3]" />
+            {id === "bugs" && newBugReports > 0 && <span aria-label={`${newBugReports} new bug reports`} className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">{newBugReports}</span>}
+            <ChevronRight size={13} className={`${id === "bugs" && newBugReports > 0 ? "" : "ml-auto "}text-[#a3a3a3]`} />
           </button>
         ))}
       </nav>
@@ -2013,7 +2016,9 @@ export default function PlatformAdmin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [activeItem, setActiveItem] = useState(() => new URLSearchParams(window.location.search).get('section') === 'users' ? 'users' : 'overview');
+  const [activeItem, setActiveItem] = useState(() => { const section = new URLSearchParams(window.location.search).get('section'); return section === 'users' ? 'users' : section === 'bug-reports' ? 'bugs' : 'overview'; });
+  const [newBugReports, setNewBugReports] = useState(0);
+  const updateBugCounts = useCallback((counts) => setNewBugReports(counts?.new || 0), []);
 
   const changeEnvironment = (next) => {
     if (next === environment) return;
@@ -2069,6 +2074,11 @@ export default function PlatformAdmin() {
   };
 
   useEffect(() => {
+    if (!data) return;
+    apiClient.listBugReports({ status: 'new', limit: 1 }).then((value) => updateBugCounts(value.counts)).catch(() => {});
+  }, [data, updateBugCounts]);
+
+  useEffect(() => {
     if (!data || !logsOpen) return undefined;
     const timer = setInterval(
       () =>
@@ -2084,13 +2094,14 @@ export default function PlatformAdmin() {
   const navigateAdmin = useCallback((target) => {
     setActiveItem(target);
     const url = new URL(window.location.href);
-    if (target === 'users') url.searchParams.set('section', 'users');else url.searchParams.delete('section');
+    if (target === 'users') url.searchParams.set('section', 'users');else if (target === 'bugs') url.searchParams.set('section', 'bug-reports');else url.searchParams.delete('section');
     window.history.replaceState(null, '', url);
     setMobileNavOpen(false);
     if (target === "overview") {
       window.requestAnimationFrame(() => document.getElementById("admin-overview")?.scrollIntoView({ behavior: "smooth", block: "start" }));
       return;
     }
+    if (target === "bugs") return;
     if (target === "organizations") {
       document.getElementById("admin-organizations")?.scrollIntoView({behavior:"smooth",block:"start"});
       return;
@@ -2152,14 +2163,14 @@ export default function PlatformAdmin() {
   const activeLogs = logs[logView] || [];
   return (
     <div className="min-h-screen bg-[#faf9f4] lg:pl-[232px]">
-      <AdminNavigation activeItem={activeItem} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onNavigate={navigateAdmin} />
+      <AdminNavigation activeItem={activeItem} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onNavigate={navigateAdmin} newBugReports={newBugReports} />
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[#e3e0db] bg-[#faf9f4]/95 px-4 backdrop-blur lg:hidden">
         <button type="button" onClick={() => setMobileNavOpen(true)} className="rounded-[6px] p-1.5 text-[#525252] hover:bg-[#f3f1ec]" aria-label="Open admin navigation"><Menu size={20} /></button>
         <p className="font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">HIVEMIND Admin</p>
         <EnvironmentToggle environment={environment} onChange={changeEnvironment} compact />
       </header>
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-8 lg:px-8">
-      {activeItem === 'users' ? <AllUsersSection environment={environment} onLifecycle={openLifecycle} /> : <>
+      {activeItem === 'users' ? <AllUsersSection environment={environment} onLifecycle={openLifecycle} /> : activeItem === 'bugs' ? <BugReportsSection onCounts={updateBugCounts} /> : <>
       <div id="admin-overview" className="mb-6 flex flex-col gap-3 scroll-mt-20 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Platform Admin</h1>
