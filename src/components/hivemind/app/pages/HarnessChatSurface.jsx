@@ -1,3 +1,4 @@
+import { rememberBrainMode } from '../shared/brain-landing';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
 import { fetchHarness } from '../shared/harness-fetch';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -98,6 +99,7 @@ export default function HarnessChatSurface({ legacy }) {
       if (!mountedRef.current) return;
       const next = validBootstrap(response?.data);
       setMode(next.mode);
+      rememberBrainMode(next.mode === 'legacy');
       if (next.mode === 'harness') {
         await openHarness(next.ticket);
       }

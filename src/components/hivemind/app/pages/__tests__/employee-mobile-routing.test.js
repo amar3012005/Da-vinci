@@ -18,6 +18,6 @@ test('native Brain and employee routes never divert to legacy mobile chat', () =
   expect(source).not.toContain('shouldUseMobileChat');
   expect(source).not.toContain('MobileChatRedirect');
   const router = fs.readFileSync(path.resolve(__dirname, '../../HiveMindApp.jsx'), 'utf8');
-  expect(router).toContain('<Navigate to="/hivemind/app/overview" replace />');
+  expect(router).toContain('<BrainEntry />');
   expect(router).not.toContain('<TalkToHiveMobile');
 });

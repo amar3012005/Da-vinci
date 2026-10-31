@@ -17,10 +17,10 @@ const compiled = babel.transformSync(selector.replace('export default ', ''), {
   babelrc: false, configFile: false, plugins: ['@babel/plugin-transform-react-jsx'],
 }).code;
 const Overview = new Function('React', 'useLocation', 'shouldUseMobileChat', 'MobileChatRedirect',
-  'rememberHarnessSessionPath', 'HarnessSurface', 'cachedHarnessSessionPath', 'ResumeHarnessSession',
+  'rememberHarnessSessionPath', 'HarnessSurface', 'brainLandingPath', 'ResumeHarnessSession',
   'HarnessChatSurface', 'LegacyOverview', `${compiled}; return Overview;`)(
   React, useLocation, () => false, () => null, () => {},
-  () => React.createElement('div', null, 'Native chat'), () => null, () => null,
+  () => React.createElement('div', null, 'Native chat'), () => null, ({ path }) => React.createElement('div', null, `Resume ${path}`),
   () => React.createElement('div', null, 'Admission'), () => null,
 );
 
@@ -37,6 +37,22 @@ it('renders native chat after SPA admission and returns to admission on back nav
   expect(container.textContent).toBe('Native chat');
   act(() => navigate(-1));
   expect(container.textContent).toBe('Admission');
+  act(() => root.unmount());
+  container.remove();
+});
+
+it('a company on Harness resolves the bare overview to its final route without the admission page', () => {
+  const landing = new Function('React', 'useLocation', 'shouldUseMobileChat', 'MobileChatRedirect',
+    'rememberHarnessSessionPath', 'HarnessSurface', 'brainLandingPath', 'ResumeHarnessSession',
+    'HarnessChatSurface', 'LegacyOverview', `${compiled}; return Overview;`)(
+    React, useLocation, () => false, () => null, () => {},
+    () => null, () => '/hivemind/app/overview/new', ({ path }) => React.createElement('div', null, `Resume ${path}`),
+    () => React.createElement('div', null, 'Admission'), () => null);
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  act(() => root.render(React.createElement(MemoryRouter, { initialEntries: ['/hivemind/app/overview'] }, React.createElement(landing))));
+  expect(container.textContent).toBe('Resume /hivemind/app/overview/new');
   act(() => root.unmount());
   container.remove();
 });

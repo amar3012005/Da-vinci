@@ -8,6 +8,6 @@ test('CRM owns its subtree and canonicalizes damaged paths preserving search/has
 });
 test('all app fallbacks use absolute overview routes and cannot append recursively', () => {
   expect(app).not.toMatch(/<Navigate\s+to="overview"/);
-  expect(app).toContain('<Route path="*" element={<Navigate to="/hivemind/app/overview" replace />}');
-  expect(app).toContain('<Route index element={<Navigate to="/hivemind/app/overview" replace />}');
+  expect(app).toContain('<Route path="*" element={<BrainEntry />}');
+  expect(app).toContain('<Route index element={<BrainEntry />}');
 });

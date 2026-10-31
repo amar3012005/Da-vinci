@@ -1,3 +1,4 @@
+import { openFinalLink } from '../shared/open-final-link';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -208,8 +209,8 @@ export default function WorkspaceNotifications() {
       setItems((current) => current.map((item) => item.id === notice.id ? { ...item, readAt: new Date().toISOString() } : item));
       setUnread((count) => Math.max(0, count - 1));
     }
-    if (navigate && notice?.data?.href) window.location.assign(notice.data.href);
-    else if (navigate && notice?.href) window.location.assign(notice.href);
+    if (navigate && notice?.data?.href) openFinalLink(notice.data.href);
+    else if (navigate && notice?.href) openFinalLink(notice.href);
   };
 
   const dismissToast = async () => {
@@ -234,7 +235,7 @@ export default function WorkspaceNotifications() {
     await apiClient.recordWorkspaceAnnouncementEvent(current.id, 'action').catch(() => null);
     const href = current?.content?.cta?.href;
     setAnnouncement(null);
-    if (href) window.location.assign(href);
+    if (href) openFinalLink(href);
   };
 
   return <>

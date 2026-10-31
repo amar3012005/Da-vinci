@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
@@ -48,21 +48,11 @@ import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/up
 // modal + save-to-HIVEMIND flow, same job-title derivation.
 import { openResearchReportTab, ResearchPreviewModal, deriveJobTitle } from './WebStudio';
 import HarnessChatSurface from './HarnessChatSurface';
-import HarnessSurface, { LoadingSurface } from './HarnessSurface';
+import HarnessSurface from './HarnessSurface';
 import DreamingPage from './DreamingPage';
+import { LAST_HARNESS_SESSION_KEY, HARNESS_SESSION_ROUTE, brainLandingPath } from '../shared/brain-landing';
 import { isTrustedReportMessage } from '../shared/research-save-bridge.mjs';
 
-const LAST_HARNESS_SESSION_KEY = 'hm.lastHarnessSession';
-const HARNESS_SESSION_ROUTE = /^\/hivemind\/app\/overview\/session\/[^/]+$/u;
-
-function cachedHarnessSessionPath() {
-  try {
-    const value = window.sessionStorage.getItem(LAST_HARNESS_SESSION_KEY) || '';
-    return HARNESS_SESSION_ROUTE.test(value) ? value : null;
-  } catch {
-    return null;
-  }
-}
 
 function rememberHarnessSessionPath(pathname) {
   if (!HARNESS_SESSION_ROUTE.test(pathname)) return;
@@ -70,9 +60,7 @@ function rememberHarnessSessionPath(pathname) {
 }
 
 function ResumeHarnessSession({ path }) {
-  const navigate = useNavigate();
-  useEffect(() => { navigate(path, { replace: true }); }, [path, navigate]);
-  return <section className="h-full min-h-0 w-full overflow-hidden"><LoadingSurface /></section>;
+  return <Navigate to={path} replace />;
 }
 
 // ─── Animation variants ──────────────────────────────────────────
@@ -1490,8 +1478,9 @@ export default function Overview() {
     const employeeHarness = /^\/hivemind\/app\/employee\/harness(?:\/|$)/u.test(pathname);
     return <section className="h-full min-h-0 w-full overflow-hidden" data-os-harness-rooms={employeeHarness ? '' : undefined}><HarnessSurface brain={!employeeHarness} /></section>;
   }
-  const cachedSession = cachedHarnessSessionPath();
-  if (cachedSession) return <ResumeHarnessSession path={cachedSession} />;
+  // The bare overview resolves to its final route here, with no admission request in between; only a legacy company stays.
+  const landing = brainLandingPath();
+  if (landing) return <ResumeHarnessSession path={landing} />;
   return <HarnessChatSurface legacy={<LegacyOverview />} />;
 }
 
