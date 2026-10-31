@@ -43,7 +43,7 @@ export const agentRoster = createAgentRosterCache(async scope => {
   const deadline = setTimeout(() => controller.abort(), 15000);
   const read = async url => {
     const response = await fetchWithRuntimeAdmission(url, { credentials: 'same-origin', signal: controller.signal });
-    if (!response.ok) throw new Error('team unavailable');
+    if (!response.ok) throw Object.assign(new Error('team unavailable'), { status: response.status });
     if (!(response.headers.get('content-type') || '').includes('json')) throw new Error('team response is not JSON');
     const value = await response.json();
     if (!Array.isArray(value.profiles)) throw new Error('invalid team response');
