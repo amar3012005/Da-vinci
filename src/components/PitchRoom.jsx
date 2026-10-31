@@ -71,7 +71,13 @@ const css = `
 .pr-foot{border-top:1px solid var(--rule);padding:28px 0 calc(40px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between;font-size:12.5px;color:var(--muted)}
 .pr-foot a{color:var(--body)}
 @media (max-width:720px){
-  .pr-hero{padding:40px 0 26px}
+  .pr-top{padding-top:16px}
+  .pr-hero{padding:22px 0 16px;gap:10px}
+  .pr-copy{gap:8px}
+  .pr-eyebrow{font-size:10px}
+  .pr-name{font-size:36px;letter-spacing:-.03em}
+  .pr-tag{font-size:18px;line-height:1.2}
+  .pr-sub{font-size:13px;line-height:1.5}
   .pr-full{margin-left:calc(-1 * max(20px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(20px,env(safe-area-inset-right,0px)))}
   .pr-slides{gap:8px}
   .pr-slide{border-radius:0;box-shadow:none}
