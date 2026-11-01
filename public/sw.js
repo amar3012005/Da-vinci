@@ -7,7 +7,7 @@
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v13';
+const CACHE = 'hive-shell-v14';
 const RUNTIME_HOST = self.location.origin === 'https://runtime-runner.singulancelabs.com';
 const SHELL = RUNTIME_HOST ? [] : ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
 
@@ -51,6 +51,9 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/v1')
     || url.pathname.startsWith('/hivemind/dreamer/')
     || url.pathname.startsWith('/__hivemind/')
+    // The pinned sidebar shell is fetched by the page's own preload and script/link elements; routing those through this worker made the
+    // preload and the element two separate downloads.
+    || url.pathname.startsWith('/shared-hyperagent-shell/')
     || (url.pathname.startsWith('/plugins/') && !nativeCombo)) return;
 
   // SPA navigations → network-first, offline fallback to the cached shell.
