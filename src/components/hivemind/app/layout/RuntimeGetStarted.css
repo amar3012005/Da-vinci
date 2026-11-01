@@ -19,7 +19,7 @@
 .hm-runtime-start-progress { display:block; flex-basis:100%; height:5px; background:#e9e9e7; border-radius:8px; overflow:hidden; margin:3px 0 8px; }
 .hm-runtime-start-progress > span { display:block; height:100%; background:#242928; border-radius:inherit; transition:width .2s; }
 .hm-runtime-start-card ol { list-style:none; padding:0; margin:12px 0 10px; display:grid; gap:3px; }
-.hm-runtime-start-card li button { width:100%; display:flex; align-items:flex-start; gap:10px; padding:10px 0; border:0; background:none; text-align:left; cursor:pointer; color:inherit; font:inherit; font-size:14px; line-height:1.45; border-radius:5px; }
+.hm-runtime-start-card li button { width:100%; display:flex; align-items:flex-start; gap:10px; padding:10px 0; border:0; background:none; text-align:start; cursor:pointer; color:inherit; font:inherit; font-size:14px; line-height:1.45; border-radius:5px; }
 .hm-runtime-start-card li button:hover { color:#000; background:#fafaf8; }
 .hm-runtime-start-card button:focus-visible,.hm-runtime-start-card summary:focus-visible { outline:2px solid #375c90; outline-offset:4px; }
 .hm-runtime-start-check { flex:0 0 17px; width:17px; height:17px; margin-top:2px; border:1.5px solid #a6aaa8; border-radius:50%; display:grid; place-items:center; box-sizing:border-box; }
@@ -54,7 +54,7 @@
 .hm-runtime-start.hm-runtime-start--chip .hm-runtime-start-card:not([open]) .hm-runtime-start-short { display:block; grid-area:1/1; font-size:11px; font-weight:600; line-height:1; color:#242728; font-variant-numeric:tabular-nums; }
 .hm-runtime-start.hm-runtime-start--chip .hm-runtime-start-card:not([open]) .hm-runtime-start-title,
 .hm-runtime-start.hm-runtime-start--chip .hm-runtime-start-card:not([open]) .hm-runtime-start-count { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-.hm-runtime-start.hm-runtime-start--chip .hm-runtime-start-card[open] { position:absolute; top:calc(100% + 8px); right:0; width:min(264px, calc(100vw - 24px)); box-sizing:border-box; padding:14px 14px 10px; background:#fff; box-shadow:0 10px 28px -10px rgb(15 23 42 / .28); }
+.hm-runtime-start.hm-runtime-start--chip .hm-runtime-start-card[open] { position:absolute; top:calc(100% + 8px); inset-inline-end:0; width:min(264px, calc(100vw - 24px)); box-sizing:border-box; padding:14px 14px 10px; background:#fff; box-shadow:0 10px 28px -10px rgb(15 23 42 / .28); }
 .hm-runtime-start.hm-runtime-start--chip .hm-runtime-start-card[open] summary { position:static; }
 .hm-runtime-start.hm-runtime-start--chip .hm-runtime-start-card[open] .hm-runtime-start-progress { display:block; }
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more) { .hm-runtime-start.hm-runtime-start--chip .hm-runtime-start-card:not([open]) { background:#faf9f4; -webkit-backdrop-filter:none; backdrop-filter:none; } }

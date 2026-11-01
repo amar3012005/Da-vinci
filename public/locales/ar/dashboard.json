@@ -2746,5 +2746,20 @@
   "companyBrain": {
     "connecting": "Opening Brain…",
     "title": "Company Brain"
+  },
+  "brainGetStarted": {
+    "title": "البدء",
+    "count": "{{count}} من {{total}}",
+    "ariaLabel": "البدء مع Brain",
+    "progressLabel": "تقدّم البدء مع Brain",
+    "steps": {
+      "chat": "ابدأ محادثة مع Brain",
+      "source": "أضف مصدرك الأول",
+      "memory": "احفظ ما يستحق التذكّر",
+      "connected": "اربط تطبيقاتك",
+      "explored": "استكشف ذكرياتك",
+      "library": "افتح مكتبة معارفك"
+    },
+    "hint": "معرفتك، مترابطة وجاهزة للاستخدام."
   }
 }

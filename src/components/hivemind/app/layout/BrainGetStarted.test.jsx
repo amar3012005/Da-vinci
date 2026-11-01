@@ -23,3 +23,40 @@ it('isolates Brain progress from Runtime and other accounts', async () => {
   render(<BrainGetStarted scope="other:org" />); await act(async () => {});
   expect(screen.getByRole('checkbox', { name: 'Start a Brain conversation', hidden: true }).getAttribute('aria-checked')).toBe('false');
 });
+describe('translated card', () => {
+  const { createInstance } = require('i18next');
+  const { I18nextProvider, initReactI18next } = require('react-i18next');
+  const locales = ['en', 'de', 'hi', 'ja', 'ar'];
+  const make = async lng => {
+    const i18n = createInstance();
+    await i18n.use(initReactI18next).init({
+      lng, fallbackLng: 'en', ns: ['dashboard'], defaultNS: 'dashboard', interpolation: { escapeValue: false },
+      resources: Object.fromEntries(locales.map(locale => [locale, { dashboard: require(`../../../../../public/locales/${locale}/dashboard.json`) }])),
+    });
+    return i18n;
+  };
+
+  it('shows the checklist in the chosen language and switches without a reload', async () => {
+    const i18n = await make('de');
+    render(<I18nextProvider i18n={i18n}><BrainGetStarted scope="user:org" /></I18nextProvider>); await act(async () => {});
+    expect(screen.getByText('Erste Schritte')).toBeTruthy();
+    expect(screen.getByText('Verbinde deine Apps')).toBeTruthy();
+    expect(screen.queryByText('Connect your apps')).toBeNull();
+    expect(screen.getByRole('progressbar', { hidden: true }).getAttribute('aria-label')).toBe('Fortschritt der ersten Schritte mit Brain');
+    await act(async () => { await i18n.changeLanguage('hi'); });
+    expect(screen.getByText('अपने ऐप्स कनेक्ट करें')).toBeTruthy();
+    await act(async () => { await i18n.changeLanguage('ar'); });
+    expect(screen.getByText('اربط تطبيقاتك')).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'اربط تطبيقاتك', hidden: true })).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/Getting Started|Connect your apps|of 6/);
+    expect(document.body.textContent).toContain(new Intl.NumberFormat('ar').format(6));
+    await act(async () => { await i18n.changeLanguage('ja'); });
+    expect(screen.getByText('はじめに')).toBeTruthy();
+  });
+
+  it('uses logical alignment so Arabic text and the open chip card follow the reading direction', () => {
+    const css = require('fs').readFileSync(require('path').join(__dirname, 'RuntimeGetStarted.css'), 'utf8');
+    expect(css).not.toMatch(/text-align:\s*left/);
+    expect(css).toMatch(/hm-runtime-start-card\[open\][^}]*inset-inline-end:0/);
+  });
+});

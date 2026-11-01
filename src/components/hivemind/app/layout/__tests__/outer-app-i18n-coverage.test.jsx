@@ -53,6 +53,8 @@ const COMPONENTS = {
 };
 /** Components that are JSX and must carry no English text; the draft module only returns strings. */
 const JSX_COMPONENTS = Object.keys(COMPONENTS).filter(file => file.endsWith('.jsx'));
+/** Brain first-run files that also carry no English in JSX; their keys are read through `useCopy` and checked in the Brain first-run block below. */
+const BRAIN_FIRST_RUN_JSX = ['layout/BrainGetStarted.jsx'];
 const SAME_EVERYWHERE = new Set(['OpenRouter', 'ChatGPT', 'HIVEMIND', 'Runtime', 'TARA', 'Gmail']);
 
 const load = locale => JSON.parse(fs.readFileSync(path.join(ROOT, 'public', 'locales', locale, 'dashboard.json'), 'utf8'));
@@ -149,6 +151,49 @@ describe('Brain empty state', () => {
   });
 });
 
+describe('Brain first-run checklist and composer', () => {
+  const STEP_IDS = ['chat', 'source', 'memory', 'connected', 'explored', 'library'];
+  const source = read('layout/BrainGetStarted.jsx');
+  const KEYS = ['title', 'count', 'ariaLabel', 'progressLabel', 'hint', ...STEP_IDS.map(id => `steps.${id}`)];
+
+  test('the card source lists the six steps and reads each label from the dictionary', () => {
+    for (const id of STEP_IDS) expect(source).toContain(`['${id}', '${dictionaries.en[`brainGetStarted.steps.${id}`]}'`);
+    expect(source).toMatch(/copy\(`steps\.\$\{key\}`/);
+    for (const key of ['title', 'count', 'ariaLabel', 'progressLabel', 'hint']) expect(source).toContain(`copy('${key}', '${dictionaries.en[`brainGetStarted.${key}`]}'`);
+    expect(source).not.toMatch(/\bof 6\b|\/ 6\b|\* 100\b.*\/ 6/);
+  });
+
+  test.each(LOCALES)('%s has every Brain checklist key with the same placeholders as en', locale => {
+    const problems = [];
+    for (const key of KEYS) {
+      const value = dictionaries[locale][`brainGetStarted.${key}`];
+      if (typeof value !== 'string' || !value.trim()) problems.push(key);
+      else if (placeholders(value) !== placeholders(dictionaries.en[`brainGetStarted.${key}`])) problems.push(`${key} placeholders`);
+    }
+    expect(problems).toEqual([]);
+  });
+
+  test('de, fr, es, hi, ja and ar translate the checklist and the machine translation record lists it', () => {
+    for (const locale of ['de', 'fr', 'es', 'hi', 'ja', 'ar']) {
+      const repeated = KEYS.filter(key => dictionaries[locale][`brainGetStarted.${key}`] === dictionaries.en[`brainGetStarted.${key}`]);
+      expect(repeated).toEqual([]);
+    }
+    const record = JSON.parse(fs.readFileSync(path.join(ROOT, 'public', 'locales', 'machine-translated.json'), 'utf8'));
+    expect(record.note).toContain('dashboard.brainGetStarted.*');
+  });
+
+  test('the Brain composer placeholder is short enough for a 375 px phone in every language', () => {
+    // About 280 px of input width at 16 px type holds roughly 28 characters; a longer placeholder clips.
+    for (const locale of LOCALES) expect(Array.from(dictionaries[locale]['brainHero.composerPlaceholder']).length).toBeLessThanOrEqual(28);
+  });
+
+  test('every Brain first-run string used by the empty state and connect row exists in all seven languages', () => {
+    for (const locale of LOCALES) {
+      for (const key of ['connect', 'title', 'intro', 'close', 'connectNow', 'back']) expect(dictionaries[locale][`chatModelConnection.${key}`]).toBeTruthy();
+    }
+  });
+});
+
 describe('outer app components', () => {
   /** Finds JSX text between tags and visible attribute values that are English literals. */
   function englishLiterals(source) {
@@ -162,7 +207,7 @@ describe('outer app components', () => {
     return hits.filter(([, text]) => !SAME_EVERYWHERE.has(text.trim()) && /\s|^[A-Z][a-z]/.test(text.trim()) && !/^[a-z]+(\.|\()/.test(text.trim()) && !/[()=>|?]/.test(text));
   }
 
-  test.each(JSX_COMPONENTS)('%s has no hardcoded English in JSX', file => {
+  test.each([...JSX_COMPONENTS, ...BRAIN_FIRST_RUN_JSX])('%s has no hardcoded English in JSX', file => {
     expect(englishLiterals(scanned(file))).toEqual([]);
   });
 

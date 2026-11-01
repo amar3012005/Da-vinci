@@ -2746,5 +2746,20 @@
   "companyBrain": {
     "connecting": "Opening Brain…",
     "title": "Company Brain"
+  },
+  "brainGetStarted": {
+    "title": "शुरुआत करें",
+    "count": "{{total}} में से {{count}}",
+    "ariaLabel": "Brain के साथ शुरुआत",
+    "progressLabel": "Brain की शुरुआत की प्रगति",
+    "steps": {
+      "chat": "Brain के साथ बातचीत शुरू करें",
+      "source": "अपना पहला स्रोत जोड़ें",
+      "memory": "याद रखने लायक कुछ सहेजें",
+      "connected": "अपने ऐप्स कनेक्ट करें",
+      "explored": "अपनी यादें देखें",
+      "library": "अपनी ज्ञान लाइब्रेरी खोलें"
+    },
+    "hint": "आपका ज्ञान, जुड़ा हुआ और इस्तेमाल के लिए तैयार।"
   }
 }
