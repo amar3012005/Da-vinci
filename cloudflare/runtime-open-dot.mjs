@@ -6,7 +6,7 @@ const NEXT_HOST = 'next.singulancelabs.com';
 const UPSTREAM = 'https://dots.singulancelabs.com';
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 const DOCUMENT = new RegExp(`^/(?:employees/${UUID}|dots/dot_[a-zA-Z0-9_-]+|settings)/?$`, 'i');
-const API = /^\/api\/(?:cards\/(?:msg|card)_[a-zA-Z0-9_-]+|conversations(?:\/conv_[a-zA-Z0-9_-]+)?|dots\/(?:autonomy|company-glance|local-duties|team-board|team-week)|dots\/dot_[a-zA-Z0-9_-]+\/(?:agenda|control|conversations|event-watches|files|frames|input|library|live|results|screen|stream|warm|workspace)|files\/file_[a-zA-Z0-9_-]+|hivemind\/(?:setup|needs-you|voice\/(?:context|events)|employees\/(?:materialize|[0-9a-f-]+\/binding))|locale|desktop\/entry|models|organization|settings\/open-dot-recovery|composio\/oauth)$/;
+const API = /^\/api\/(?:cards\/(?:msg|card)_[a-zA-Z0-9_-]+|conversations(?:\/conv_[a-zA-Z0-9_-]+(?:\/reply-language)?)?|dots\/(?:autonomy|company-glance|local-duties|team-board|team-week)|dots\/dot_[a-zA-Z0-9_-]+\/(?:agenda|control|conversations|event-watches|files|frames|input|library|live|results|screen|stream|warm|workspace)|files\/file_[a-zA-Z0-9_-]+|hivemind\/(?:setup|needs-you|voice\/(?:context|events)|employees\/(?:materialize|[0-9a-f-]+\/binding))|locale|desktop\/entry|models|organization|settings\/open-dot-recovery|composio\/oauth)$/;
 
 /** The only OpenDot API paths the signed-in web user's shared sync code calls on the app host (next.singulancelabs.com). */
 const APP_HOST_API = /^\/api\/(?:conversations(?:\/conv_[a-zA-Z0-9_-]+)?|dots\/dot_[a-zA-Z0-9_-]+\/conversations|hivemind\/needs-you)$/;
