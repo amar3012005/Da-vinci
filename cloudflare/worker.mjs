@@ -1,3 +1,4 @@
+import { withSecurityHeaders } from './security-headers.mjs';
 import { proxyRuntimeBootstrap } from './runtime-bootstrap.mjs';
 import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot } from './runtime-open-dot.mjs';
 import { proxyOnboarding } from './onboarding-proxy.mjs';
@@ -528,7 +529,7 @@ async function proxyRuntimeApps(request, ctx) {
   } catch { return reply('apps_temporarily_unavailable',502); }
 }
 
-export default {
+const worker = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
@@ -900,3 +901,11 @@ export default {
     return publicHost && !privatePath ? response : noIndex(response);
   },
 };
+
+const securedWorker = {
+  async fetch(request, env, ctx) {
+    return withSecurityHeaders(await worker.fetch(request, env, ctx));
+  },
+};
+
+export default securedWorker;
