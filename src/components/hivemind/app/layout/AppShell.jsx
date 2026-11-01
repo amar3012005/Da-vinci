@@ -393,8 +393,9 @@ function AppShellContent() {
   const closeMobileBrainAdd = useCallback(() => setMobileBrainAddOpen(false), []);
   const closeMobileApps = useCallback(() => setMobileAppsOpen(false), []);
   // The packaged app opens on the team; a page opened from the team (which may mount a new shell) starts with it closed.
+  // The Company Brain room's back button on a phone opens the Runtime host with `team=1` so the shared team list shows first.
   const [mobileTeamOpen, setMobileTeamOpen] = useState(() => (
-    isNativeApp() && window.matchMedia('(max-width: 600px)').matches && isNativeChatRoute(window.location.pathname)
+    (isNativeApp() || new URLSearchParams(window.location.search).get('team') === '1') && window.matchMedia('(max-width: 600px)').matches && isNativeChatRoute(window.location.pathname)
   ));
   const employeeRoom = location.pathname.startsWith('/hivemind/app/employee/harness');
   const nativeChatRoom = isNativeChatRoute(location.pathname);

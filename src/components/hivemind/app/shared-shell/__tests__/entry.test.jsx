@@ -69,6 +69,15 @@ describe('Company Brain mode',()=>{
   routerProps.navigator.push('/hivemind/app/overview/new');
   expect(window.location.assign).not.toHaveBeenCalled();
  });
+ test('a router replace to the page already showing (clicking the active Chat link) does not reload the page',()=>{
+  window.localStorage.setItem('hm:o:u:brain-room:dot_company_brain','conv_abc123');
+  mountBrain();
+  window.location.href='https://brain-runner.singulancelabs.com/dots/dot_company_brain?c=conv_abc123';
+  routerProps.navigator.replace('/hivemind/app/overview/new');
+  expect(window.location.replace).not.toHaveBeenCalled();
+  routerProps.navigator.replace('/hivemind/app/graph');
+  expect(window.location.replace).toHaveBeenCalledWith('https://next.singulancelabs.com/hivemind/app/graph');
+ });
  test('account settings open the Brain host profile',()=>{
   mountBrain();
   window.dispatchEvent(new Event('hm:open-account-settings'));
