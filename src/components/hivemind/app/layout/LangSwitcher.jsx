@@ -6,15 +6,42 @@
  * to localStorage (hivemind:lang).
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Globe, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '../../../../i18n';
+
+const MENU_WIDTH = 220;
+const VIEWPORT_GUTTER = 16;
+
+/**
+ * Where the menu sits so it is right-aligned to its button and never leaves the viewport.
+ * @param {{left: number, right: number}} anchor - The button's viewport rectangle.
+ * @param {number} viewportWidth - Width of the viewport in CSS pixels.
+ * @returns {{width: number, left: number}} Menu width, and its left edge relative to the button's left edge.
+ */
+export function menuPlacement(anchor, viewportWidth) {
+  const width = Math.max(0, Math.min(MENU_WIDTH, viewportWidth - 2 * VIEWPORT_GUTTER));
+  const edge = Math.max(VIEWPORT_GUTTER, Math.min(anchor.right - width, viewportWidth - VIEWPORT_GUTTER - width));
+  return { width, left: edge - anchor.left };
+}
 
 export default function LangSwitcher({ compact = false, theme = 'light', variant = 'button', linkLabel = null, includeAutoDetect = false, onLanguageChange = null, onAutoDetect = null }) {
   const { i18n, t } = useTranslation();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
+  const [placement, setPlacement] = useState(null);
+
+  // Keep the open menu inside the viewport: right-aligned to the button, narrower than the screen minus a gutter.
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const place = () => {
+      if (wrapRef.current) setPlacement(menuPlacement(wrapRef.current.getBoundingClientRect(), document.documentElement.clientWidth || window.innerWidth));
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [open]);
 
   // Close on outside click / Escape.
   useEffect(() => {
@@ -81,7 +108,8 @@ export default function LangSwitcher({ compact = false, theme = 'light', variant
       {open && (
         <div
           role="menu"
-          className={`absolute right-0 mt-2 w-[220px] max-h-[360px] overflow-y-auto rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-1.5 z-[100] ${
+          style={placement ? { left: placement.left, right: 'auto', width: placement.width } : undefined}
+          className={`absolute right-0 mt-2 w-[220px] max-w-[calc(100vw-32px)] max-h-[360px] overflow-y-auto rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-1.5 z-[100] ${
             dark
               ? 'border-[#2f2925] bg-[#080808] shadow-[0_18px_48px_rgba(0,0,0,0.46)]'
               : 'border-[#e3e0db] bg-white'

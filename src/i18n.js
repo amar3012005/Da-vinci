@@ -2,7 +2,7 @@
  * HIVEMIND i18n bootstrap.
  *
  *   • react-i18next + http-backend lazy-loads /locales/<lng>/<ns>.json
- *   • language detector orders: localStorage → navigator → fallback en
+ *   • language detector orders: parent-domain cookie → localStorage → navigator → fallback en
  *   • supportedLngs gates anything else to fallback
  *
  * Namespaces:
@@ -15,6 +15,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import HttpBackend from 'i18next-http-backend';
+import { languageDetection } from './i18n-detection';
 
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English',    native: 'English' },
@@ -193,11 +194,7 @@ i18n
     backend: {
       loadPath: process.env.REACT_APP_SHARED_SHELL_LOCALES || '/locales/{{lng}}/{{ns}}.json',
     },
-    detection: {
-      order: ['localStorage', 'navigator', 'htmlTag'],
-      caches: ['localStorage'],
-      lookupLocalStorage: 'hivemind:lang',
-    },
+    detection: languageDetection(typeof window === 'undefined' ? '' : window.location.hostname, typeof window === 'undefined' ? '' : window.location.protocol),
     interpolation: { escapeValue: false },
     react: { useSuspense: false },
   });
