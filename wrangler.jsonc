@@ -74,6 +74,10 @@
   "send_email": [
     { "name": "BUG_REPORT_EMAIL", "allowed_destination_addresses": ["support@singulancelabs.com"] }
   ],
+  // Private founder files for pitch.singulancelabs.com; served only through the founder session in cloudflare/pitch-public.mjs.
+  "r2_buckets": [
+    { "binding": "FOUNDER_VAULT", "bucket_name": "singulance-founder-vault", "jurisdiction": "eu" }
+  ],
   "durable_objects": {
     "bindings": [
       { "name": "COMPOSIO_ACCOUNTS", "class_name": "ComposioAccount" },

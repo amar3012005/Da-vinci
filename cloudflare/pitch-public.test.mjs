@@ -33,6 +33,23 @@ test('founder notes need the passcode; guests never receive them',async()=>{
  assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/founder/notes'),env)).status,503);
  assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/founder/logout',{method:'POST',headers:origin}),founderEnv)).headers.get('set-cookie').includes('Max-Age=0'),true);
 });
+test('founder vault files come from private R2 only inside a founder session',async()=>{
+ const objects={'_manifest.json':JSON.stringify({rooms:[{id:'partners'}],items:[{key:'partners/sla.pdf'}]}),'partners/sla.pdf':'%PDF','partners/page.html':'<script>'};
+ const r2=(k)=>k in objects?{size:objects[k].length,httpMetadata:{contentType:k.endsWith('.pdf')?'application/pdf':k.endsWith('.html')?'text/html':'application/json'},body:objects[k],json:async()=>JSON.parse(objects[k])}:null;
+ const vaultEnv={...env,PITCH_FOUNDER_PASSCODE:'test-passcode',FOUNDER_VAULT:{get:async(k)=>r2(k)}};
+ const login=await pitchPublic(new Request('https://pitch.singulancelabs.com/founder/session',{method:'POST',headers:{origin:'https://pitch.singulancelabs.com','content-type':'application/json'},body:JSON.stringify({passcode:'test-passcode'})}),vaultEnv);
+ const cookie={cookie:login.headers.get('set-cookie').split(';')[0]};
+ const get=(p,h={})=>pitchPublic(new Request('https://pitch.singulancelabs.com'+p,{headers:h}),vaultEnv);
+ assert.equal((await get('/founder/vault')).status,401);
+ assert.equal((await get('/founder/files/partners/sla.pdf')).status,401);
+ assert.equal((await(await get('/founder/vault',cookie)).json()).rooms[0].id,'partners');
+ const pdf=await get('/founder/files/partners/sla.pdf',cookie);
+ assert.equal(pdf.status,200); assert.equal(pdf.headers.get('cache-control'),'private, no-store'); assert.match(pdf.headers.get('content-disposition'),/^inline/);
+ assert.match((await get('/founder/files/partners/page.html',cookie)).headers.get('content-disposition'),/^attachment/);
+ assert.match((await get('/founder/files/partners/sla.pdf?download=1',cookie)).headers.get('content-disposition'),/^attachment/);
+ for(const p of ['/founder/files/_manifest.json','/founder/files/..%2Fsecret','/founder/files/missing.pdf'])assert.equal((await get(p,cookie)).status,404);
+ assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/founder/vault',{headers:cookie}),{...vaultEnv,FOUNDER_VAULT:undefined})).status,503);
+});
 test('pitch room cannot expose private app or missing asset routes',async()=>{
  for(const path of ['/hivemind/app','/api/session','/static/js/missing.js','/pitch/secret.html','/pitch/sales/1.jpg'])assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com'+path),env)).status,404);
  assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/',{method:'POST'}),env)).status,405);

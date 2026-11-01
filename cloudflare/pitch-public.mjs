@@ -28,13 +28,44 @@ async function hasFounderSession(request, passcode) {
   return sameString(match[2], await sign(passcode, match[1]));
 }
 
+// The vault index lives in the private R2 bucket as _manifest.json, so files are added by uploading, without a deploy.
+const VAULT_MANIFEST = '_manifest.json';
+const VAULT_KEY = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,300}$/;
+
+async function vaultRoute(request, env, url) {
+  if (!env.FOUNDER_VAULT) return json({ error: 'founder_vault_not_configured' }, 503);
+  if (url.pathname === '/founder/vault') {
+    const manifest = await env.FOUNDER_VAULT.get(VAULT_MANIFEST);
+    return manifest ? json(await manifest.json()) : json({ rooms: [], items: [] });
+  }
+  const key = decodeURIComponent(url.pathname.slice('/founder/files/'.length));
+  if (!VAULT_KEY.test(key) || key.includes('..')) return json({ error: 'not_found' }, 404);
+  const object = await env.FOUNDER_VAULT.get(key);
+  if (!object) return json({ error: 'not_found' }, 404);
+  const name = key.split('/').pop().replace(/"/g, '');
+  const type = object.httpMetadata?.contentType || 'application/octet-stream';
+  // Script-capable types are always downloaded; PDFs, images and Office files may open inline.
+  const scriptable = /html|svg|xml|javascript/i.test(type);
+  const disposition = url.searchParams.has('download') || scriptable ? 'attachment' : 'inline';
+  return new Response(request.method === 'HEAD' ? null : object.body, { headers: {
+    'content-type': type,
+    'content-length': String(object.size),
+    'content-disposition': `${disposition}; filename="${name}"`,
+    'cache-control': 'private, no-store',
+    'x-robots-tag': NOINDEX,
+    'x-content-type-options': 'nosniff',
+  } });
+}
+
 // The founder passcode lives only in the PITCH_FOUNDER_PASSCODE Worker secret; a session is an HMAC-signed expiry in an HttpOnly cookie.
 async function founderRoute(request, env, url) {
   const passcode = env.PITCH_FOUNDER_PASSCODE;
   if (!passcode) return json({ error: 'founder_access_not_configured' }, 503);
-  if (url.pathname === '/founder/notes') {
-    if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405, { allow: 'GET' });
-    return (await hasFounderSession(request, passcode)) ? json(FOUNDER_NOTES) : json({ error: 'founder_session_required' }, 401);
+  const isVault = url.pathname === '/founder/vault' || url.pathname.startsWith('/founder/files/');
+  if (url.pathname === '/founder/notes' || isVault) {
+    if (!['GET', 'HEAD'].includes(request.method)) return json({ error: 'method_not_allowed' }, 405, { allow: 'GET, HEAD' });
+    if (!(await hasFounderSession(request, passcode))) return json({ error: 'founder_session_required' }, 401);
+    return isVault ? vaultRoute(request, env, url) : json(FOUNDER_NOTES);
   }
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, { allow: 'POST' });
   if (request.headers.get('origin') !== `https://${HOST}` && env.ENVIRONMENT !== 'development') return json({ error: 'origin_not_allowed' }, 403);
@@ -54,7 +85,7 @@ async function founderRoute(request, env, url) {
 export async function pitchPublic(request, env) {
   const url = new URL(request.url);
   if (url.hostname !== HOST) return null;
-  if (['/founder/session', '/founder/notes', '/founder/logout'].includes(url.pathname)) return founderRoute(request, env, url);
+  if (['/founder/session', '/founder/notes', '/founder/logout', '/founder/vault'].includes(url.pathname) || url.pathname.startsWith('/founder/files/')) return founderRoute(request, env, url);
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD', 'cache-control': 'no-store' } });
   if (url.protocol !== 'https:' && env.ENVIRONMENT !== 'development') { url.protocol = 'https:'; return Response.redirect(url.href, 308); }
   if (['/privacy', '/cookies', '/security'].includes(url.pathname)) return Response.redirect(`https://singulancelabs.com${url.pathname}`, 308);
