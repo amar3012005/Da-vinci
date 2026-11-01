@@ -1,6 +1,6 @@
 import { withSecurityHeaders } from './security-headers.mjs';
 import { proxyRuntimeBootstrap } from './runtime-bootstrap.mjs';
-import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot, openDotSurfaceRedirect, applyOpenDotSurface } from './runtime-open-dot.mjs';
+import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot, openDotSurfaceRedirect, applyOpenDotSurface, brainInstantRedirect } from './runtime-open-dot.mjs';
 import { proxyOnboarding } from './onboarding-proxy.mjs';
 import { edgeCachedNativeCode, runtimeNativeAsset } from './runtime-native-assets.mjs';
 import { handleComposioAccount } from './composio-account.mjs';
@@ -556,6 +556,8 @@ const worker = {
     if (accountAccessResponse) return accountAccessResponse;
     const accountRouteGate = await gateWorkspaceDocument(request, env);
     if (accountRouteGate) return accountRouteGate;
+    const brainRedirect = brainInstantRedirect(request);
+    if (brainRedirect) return brainRedirect;
     if (isRuntimeOpenDotRequest(url) && ['GET','HEAD'].includes(request.method)
       && !pathname.startsWith('/api/') && !pathname.startsWith('/images/')) {
       const employeeGate = await gateWorkspaceDocument(new Request(new URL(OPEN_DOT_ENTRY_PATH,url),request),env);

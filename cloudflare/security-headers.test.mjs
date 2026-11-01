@@ -39,7 +39,7 @@ test('HTML documents on every served host carry the baseline and a report-only C
       assert.equal(response.headers.get('content-security-policy-report-only'), CONTENT_SECURITY_POLICY_REPORT_ONLY, host);
     }
   }
-  const app = await go('https://next.singulancelabs.com/hivemind/app/overview');
+  const app = await go('https://next.singulancelabs.com/hivemind/app/overview/dreaming');
   assert.equal(app.headers.get('content-security-policy-report-only'), CONTENT_SECURITY_POLICY_REPORT_ONLY);
 });
 
@@ -57,7 +57,7 @@ test('the wrapper never adds an enforced CSP or X-Frame-Options', () => {
 });
 
 test('existing app-document framing policy is preserved', async () => {
-  const response = await go('https://next.singulancelabs.com/hivemind/app/overview');
+  const response = await go('https://next.singulancelabs.com/hivemind/app/overview/dreaming');
   assert.equal(response.headers.get('x-frame-options'), 'SAMEORIGIN');
   assert.equal(response.headers.get('content-security-policy'), "frame-ancestors 'self'");
   const pane = await go('https://next.singulancelabs.com/hivemind/app/overview?native_pane=1');

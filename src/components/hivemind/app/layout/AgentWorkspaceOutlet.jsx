@@ -2,15 +2,16 @@ import PersistentHarnessPanes from './PersistentHarnessPanes';
 import { directRuntimeHost, paneForPath, persistentShellEnabled } from '../shared/native-pane-protocol';
 import { useHasNativeRooms } from '../shared/native-room';
 import AsciiWorkspaceLoading from '../components/AsciiWorkspaceLoading';
-import React, { Suspense, useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import React, { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { agentRoster } from '../shared/agent-roster';
-import { isCompanyBrainRoute } from '../shared/company-brain-room';
+import { useTranslation } from 'react-i18next';
+import { isBrainChatLinkClick, isCompanyBrainRoute, navigateToCompanyBrain } from '../shared/company-brain-room';
 import { openDotPreloadRoute, preloadAllowed, rememberOpenDotRoute, whenIdle } from '../shared/open-dot-preload';
 const Apps = React.lazy(() => import('../pages/OpenDotAppsNavigation'));
 const OpenDotEntry = React.lazy(() => import('../pages/OpenDotEntry'));
-const CompanyBrainRoom = React.lazy(() => import('../pages/CompanyBrainRoom'));
+const CompanyBrainWarmup = React.lazy(() => import('../pages/CompanyBrainWarmup'));
 const NativeOpenDotRoom = React.lazy(() => import('../pages/NativeOpenDotRoom'));
 
 // Retain the employee application while the outer sidebar changes routes.
@@ -63,26 +64,29 @@ export default function AgentWorkspaceOutlet() {
       if (pathname) setDotEntry(current => current || { pathname, search: '' });
     }, 5000);
   }, [mode, dotEntry, scope, rosterSeen]);
-  // Brain chat is the Company Brain OpenDot room. The packaged apps cannot frame it (OpenDot refuses capacitor://), so they keep
-  // the harness chat; so does any browser whose room did not load. The room mounts on idle in the Brain area, so the click finds it booted.
+  // Brain chat is the Company Brain OpenDot room, a top-level page on the brain-runner origin (the Worker redirects the
+  // address too). The packaged apps keep the harness chat. Links leave on click so the shell never paints first.
+  const { i18n } = useTranslation('dashboard');
+  const languageRef = React.useRef(i18n.language);
+  languageRef.current = i18n.language;
   const brainRoute = isCompanyBrainRoute(location.pathname);
-  const brainArea = mode === 'brain' || /^\/hivemind\/app\/(?:memories|connectors|meeting-notes|graph|knowledge)(?:\/|$)/.test(location.pathname);
   const brainEligible = !nativeRooms && Boolean(user?.id && org?.id);
-  const [brainStarted, setBrainStarted] = useState(false);
-  const [brainFailed, setBrainFailed] = useState(false);
+  const brainLeaving = brainEligible && brainRoute;
   useEffect(() => {
-    if (brainStarted || !brainEligible || !brainArea || (!brainRoute && !preloadAllowed())) return undefined;
-    if (brainRoute) { setBrainStarted(true); return undefined; }
-    return whenIdle(() => setBrainStarted(true), 1500);
-  }, [brainStarted, brainEligible, brainArea, brainRoute]);
-  const brainShown = brainEligible && brainRoute && !brainFailed;
-  const onBrainStatus = useCallback(status => setBrainFailed(status === 'failed'), []);
+    if (!brainEligible) return undefined;
+    const onClick = event => {
+      if (!isBrainChatLinkClick(event)) return;
+      event.preventDefault(); event.stopPropagation();
+      navigateToCompanyBrain(languageRef.current);
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [brainEligible]);
+  useEffect(() => { if (brainLeaving) navigateToCompanyBrain(languageRef.current); }, [brainLeaving]);
   return <>
-    {!dot && !apps && !nativeChat && !brainShown && <Outlet />}
-    {persistent && <PersistentHarnessPanes retainBrain={!desktop} suppressBrain={brainShown} />}
-    {brainEligible && brainStarted && <div hidden={!brainShown} className="h-full min-h-0" style={{ display: brainShown ? 'block' : 'none' }}>
-      <Suspense fallback={<AsciiWorkspaceLoading label="Opening Brain…" />}><CompanyBrainRoom active={brainShown} onStatus={onBrainStatus} /></Suspense>
-    </div>}
+    {!dot && !apps && !nativeChat && !brainLeaving && <Outlet />}
+    {persistent && <PersistentHarnessPanes retainBrain={!desktop} suppressBrain={brainLeaving} />}
+    {brainEligible && <Suspense fallback={null}><CompanyBrainWarmup language={i18n.language} /></Suspense>}
     {appsVisited && <div hidden={!apps} className="h-full min-h-0" style={{ display: apps ? 'block' : 'none' }}>
       <Suspense fallback={<AsciiWorkspaceLoading label="Opening Apps…" />}><Apps /></Suspense>
     </div>}

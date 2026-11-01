@@ -131,3 +131,46 @@ test('the embedded Company Brain document is served without a Worker frame restr
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('x-frame-options'), null);
 });
+
+test('Overview and New chat on the app host go straight to the Company Brain, keeping the query', async () => {
+  const { brainInstantRedirect } = await import('./runtime-open-dot.mjs');
+  const room = 'https://brain-runner.singulancelabs.com/dots/dot_company_brain';
+  for (const path of ['/hivemind/app/overview', '/hivemind/app/overview/', '/hivemind/app/overview/new', '/hivemind/app/overview/new/']) {
+    for (const method of ['GET', 'HEAD']) {
+      const res = brainInstantRedirect(new Request(`https://next.singulancelabs.com${path}`, { method }));
+      assert.equal(res.status, 302, path);
+      assert.equal(res.headers.get('location'), room);
+    }
+  }
+  assert.equal(brainInstantRedirect(new Request('https://next.singulancelabs.com/hivemind/app/overview/new?hm_locale=de')).headers.get('location'), `${room}?hm_locale=de`);
+});
+
+test('the Brain redirect leaves sessions, dreaming, native panes, iframes, writes and other hosts alone', async () => {
+  const { brainInstantRedirect } = await import('./runtime-open-dot.mjs');
+  const next = 'https://next.singulancelabs.com';
+  for (const path of ['/hivemind/app/overview/session/abc', '/hivemind/app/overview/dreaming', '/hivemind/app/overview/memories', '/hivemind/app/overview/new/x']) {
+    assert.equal(brainInstantRedirect(new Request(next + path)), null, path);
+  }
+  assert.equal(brainInstantRedirect(new Request(`${next}/hivemind/app/overview/new?native_pane=1`)), null);
+  assert.equal(brainInstantRedirect(new Request(`${next}/hivemind/app/overview/new`, { headers: { 'sec-fetch-dest': 'iframe' } })), null);
+  assert.equal(brainInstantRedirect(new Request(`${next}/hivemind/app/overview/new`, { method: 'POST' })), null);
+  assert.equal(brainInstantRedirect(new Request('https://runtime-runner.singulancelabs.com/hivemind/app/overview/new')), null);
+});
+
+test('the legacy autonomy read on the Brain origin is answered from OpenDot, and an empty Needs you list replaces a 404', async () => {
+  const seen = [];
+  const fetcher = async request => {
+    seen.push(new URL(request.url).pathname);
+    return new URL(request.url).pathname === '/api/dots/autonomy' ? Response.json({ value: { level: 2, revision: 3 } }) : new Response('nope', { status: 404 });
+  };
+  const get = path => new Request(`https://brain-runner.singulancelabs.com${path}`, { headers: { cookie: 'hm_cp_session=x' } });
+  const dial = await proxyRuntimeOpenDot(get('/api/hivemindHq/autonomyLevel'), fetcher);
+  assert.deepEqual(await dial.json(), { ok: true, value: { level: 2, revision: 3 } });
+  assert.deepEqual(seen, ['/api/dots/autonomy']);
+  const needs = await proxyRuntimeOpenDot(get('/api/hivemind/needs-you'), fetcher);
+  assert.equal(needs.status, 200);
+  assert.deepEqual(await needs.json(), { version: 1, cards: [] });
+  assert.equal(isRuntimeOpenDotRequest(new URL('/api/hivemindHq/autonomyLevel', 'https://runtime-runner.singulancelabs.com')), false);
+  const post = await proxyRuntimeOpenDot(new Request('https://brain-runner.singulancelabs.com/api/hivemindHq/autonomyLevel', { method: 'POST', headers: { cookie: 'hm_cp_session=x', origin: 'https://brain-runner.singulancelabs.com' } }), fetcher);
+  assert.equal(post.status, 405);
+});

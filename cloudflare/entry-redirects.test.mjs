@@ -20,9 +20,12 @@ test('repeated overview segments redirect once to the final new-chat route', asy
   }
 });
 
-test('the Brain host serves its own overview and new-chat documents without a redirect', async () => {
+test('the app host sends Overview and New chat to the Company Brain page and serves saved sessions itself', async () => {
   for (const path of ['/hivemind/app/overview', '/hivemind/app/overview/new']) {
     const response = await go(`https://next.singulancelabs.com${path}`);
-    assert.ok(response.status < 300 || response.status >= 400, `${path} ${response.status}`);
+    assert.equal(response.status, 302, path);
+    assert.equal(response.headers.get('location'), 'https://brain-runner.singulancelabs.com/dots/dot_company_brain');
   }
+  const session = await go('https://next.singulancelabs.com/hivemind/app/overview/session/abc');
+  assert.ok(session.status < 300 || session.status >= 400, `session ${session.status}`);
 });
