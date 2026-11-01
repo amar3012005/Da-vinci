@@ -2726,6 +2726,7 @@
     "count": "{{count}} sur {{total}}",
     "ariaLabel": "Premiers pas avec Brain",
     "progressLabel": "Progression des premiers pas avec Brain",
+    "stepDone": "Terminé",
     "steps": {
       "chat": "Démarrez une conversation avec Brain",
       "source": "Ajoutez votre première source",

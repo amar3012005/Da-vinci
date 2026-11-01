@@ -154,12 +154,12 @@ describe('Brain empty state', () => {
 describe('Brain first-run checklist and composer', () => {
   const STEP_IDS = ['chat', 'source', 'memory', 'connected', 'explored', 'library'];
   const source = read('layout/BrainGetStarted.jsx');
-  const KEYS = ['title', 'count', 'ariaLabel', 'progressLabel', 'hint', ...STEP_IDS.map(id => `steps.${id}`)];
+  const KEYS = ['title', 'count', 'ariaLabel', 'progressLabel', 'stepDone', 'hint', ...STEP_IDS.map(id => `steps.${id}`)];
 
   test('the card source lists the six steps and reads each label from the dictionary', () => {
     for (const id of STEP_IDS) expect(source).toContain(`['${id}', '${dictionaries.en[`brainGetStarted.steps.${id}`]}'`);
     expect(source).toMatch(/copy\(`steps\.\$\{key\}`/);
-    for (const key of ['title', 'count', 'ariaLabel', 'progressLabel', 'hint']) expect(source).toContain(`copy('${key}', '${dictionaries.en[`brainGetStarted.${key}`]}'`);
+    for (const key of ['title', 'count', 'ariaLabel', 'progressLabel', 'stepDone', 'hint']) expect(source).toContain(`copy('${key}', '${dictionaries.en[`brainGetStarted.${key}`]}'`);
     expect(source).not.toMatch(/\bof 6\b|\/ 6\b|\* 100\b.*\/ 6/);
   });
 

@@ -2752,6 +2752,7 @@
     "count": "{{count}} of {{total}}",
     "ariaLabel": "Getting started with Brain",
     "progressLabel": "Brain getting started progress",
+    "stepDone": "Done",
     "steps": {
       "chat": "Start a Brain conversation",
       "source": "Add your first source",

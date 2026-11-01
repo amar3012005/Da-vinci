@@ -1,6 +1,6 @@
 import locales from './onboarding-locales.json';
 import { STEPS, STEP_IDS, STEP_TILE, LEGACY_SURFACES, completedCount, nextStepId } from './registry';
-import { onboardingStore, migrateLegacyProgress, adoptServerLocale, resetOnboardingStores, EXPLICIT_LANGUAGE_KEY, ONBOARDING_ENDPOINT } from './onboarding-store';
+import { currentPlatform, onboardingStore, migrateLegacyProgress, adoptServerLocale, resetOnboardingStores, EXPLICIT_LANGUAGE_KEY, ONBOARDING_ENDPOINT } from './onboarding-store';
 import i18n from '../../../../../i18n';
 
 jest.mock('../../../../../i18n', () => ({ __esModule: true, default: { language: 'en', t: (key, options) => options?.defaultValue || key, changeLanguage: jest.fn(), addResourceBundle: jest.fn() } }));
@@ -67,7 +67,7 @@ test('reads the server record, caches it per person, and batches events into one
   const posts = fetch.calls.filter(call => call.method === 'POST');
   expect(posts).toHaveLength(1);
   expect(posts[0].url).toBe(ONBOARDING_ENDPOINT);
-  expect(posts[0].body.events.map(event => [event.type, event.step, event.device, event.version])).toEqual([['onb_step_view', 'meet', 'desktop', 1], ['onb_step_skip', 'meet', 'desktop', 1]]);
+  expect(posts[0].body.events.map(event => [event.type, event.step, event.device, event.version, event.platform])).toEqual([['onb_step_view', 'meet', 'desktop', 1, 'web'], ['onb_step_skip', 'meet', 'desktop', 1, 'web']]);
 });
 
 test('a failed save keeps the batch for the next flush and says progress is saved', async () => {
@@ -104,4 +104,15 @@ test('a language confirmed on another device applies here unless the person pick
   i18n.changeLanguage.mockClear();
   expect(adoptServerLocale('ja')).toBe(false);
   expect(i18n.changeLanguage).not.toHaveBeenCalled();
+});
+
+test('the funnel client class is web in a browser, ios in the iOS app and macos in the macOS app', () => {
+  expect(currentPlatform()).toBe('web');
+  window.Capacitor = { getPlatform: () => 'ios' };
+  expect(currentPlatform()).toBe('ios');
+  window.Capacitor = { getPlatform: () => 'electron' };
+  expect(currentPlatform()).toBe('macos');
+  window.Capacitor = { getPlatform: () => 'web' };
+  expect(currentPlatform()).toBe('web');
+  delete window.Capacitor;
 });
