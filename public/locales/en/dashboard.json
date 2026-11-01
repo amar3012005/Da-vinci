@@ -1486,6 +1486,7 @@
     "accountAndSecurity": "Account and security",
     "settingsAria": "Settings",
     "collapseSidebar": "Collapse sidebar",
+    "closeMenu": "Close menu",
     "expandSidebar": "Expand sidebar",
     "teamRefreshFailed": "Could not refresh our team.",
     "retry": "Retry",
