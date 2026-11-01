@@ -1,6 +1,8 @@
 {
   "language": "Idioma",
   "languageHeader": "Selecciona idioma",
+  "beta": "Beta",
+  "betaHint": "Traducción automática, aún sin revisión de un hablante nativo",
   "brand": "HIVEMIND",
   "tagline": "Memoria persistente para IA",
   "actions": {

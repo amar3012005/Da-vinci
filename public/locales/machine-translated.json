@@ -1,5 +1,5 @@
 {
-  "note": "Strings machine-translated on 2026-10-30 (first pass). Needs native review; keys that were already present before are not counted. 2026-10-31 pass: the sidebar, dock, account dialog, autonomy dial and shell chrome strings (dashboard.sidebar.*, plus chat.*, topbar.companyBrain/inviteTeam, getStarted.summary) were added in de, fr, es (German, French, Spanish: also machine-translated, no native review yet), hi, ja and ar by machine translation; they also need native review. 2026-10-31 outer-app pass: the sidebar credit meter and plan label, the Usage and AI Models pages of Account & Settings, the notifications panel, the upload strip and the mobile apps sheet (dashboard.outerApp.*, dashboard.sidebar.credits.*, dashboard.sidebar.planLabelGeneric) were added in de, fr, es, hi, ja and ar by machine translation; they need native review. 2026-10-31 Needs you pass: the Needs you sidebar entry and panel (dashboard.needsYou.*, dashboard.sidebar.needsYou*) were added in de, fr, es, hi, ja and ar by machine translation; they need native review. 2026-10-31 Team board pass: the Team view of Company HQ (dashboard.teamBoard.*) was added in de, fr, es, hi, ja and ar by machine translation; they need native review. 2026-11-01 Brain empty-state pass: the Connect to your ChatGPT button and dialog (dashboard.chatModelConnection.*) and the Brain hero greeting, tagline and composer placeholder (dashboard.brainHero.*) were added in de, fr, es, hi, ja and ar by machine translation; they need native review. 2026-11-01: chat.sending and chat.sendFailedRetry (the room cover shows the stored send state) were added in de, fr, es, hi, ja and ar by machine translation; they need native review. 2026-11-01 Brain Getting Started pass: the Brain first-run checklist card (dashboard.brainGetStarted.*) was added in de, fr, es, hi, ja and ar by machine translation; they need native review.",
+  "note": "Strings machine-translated on 2026-10-30 (first pass). Needs native review; keys that were already present before are not counted. 2026-10-31 pass: the sidebar, dock, account dialog, autonomy dial and shell chrome strings (dashboard.sidebar.*, plus chat.*, topbar.companyBrain/inviteTeam, getStarted.summary) were added in de, fr, es (German, French, Spanish: also machine-translated, no native review yet), hi, ja and ar by machine translation; they also need native review. 2026-10-31 outer-app pass: the sidebar credit meter and plan label, the Usage and AI Models pages of Account & Settings, the notifications panel, the upload strip and the mobile apps sheet (dashboard.outerApp.*, dashboard.sidebar.credits.*, dashboard.sidebar.planLabelGeneric) were added in de, fr, es, hi, ja and ar by machine translation; they need native review. 2026-10-31 Needs you pass: the Needs you sidebar entry and panel (dashboard.needsYou.*, dashboard.sidebar.needsYou*) were added in de, fr, es, hi, ja and ar by machine translation; they need native review. 2026-10-31 Team board pass: the Team view of Company HQ (dashboard.teamBoard.*) was added in de, fr, es, hi, ja and ar by machine translation; they need native review. 2026-11-01 Brain empty-state pass: the Connect to your ChatGPT button and dialog (dashboard.chatModelConnection.*) and the Brain hero greeting, tagline and composer placeholder (dashboard.brainHero.*) were added in de, fr, es, hi, ja and ar by machine translation; they need native review. 2026-11-01: chat.sending and chat.sendFailedRetry (the room cover shows the stored send state) were added in de, fr, es, hi, ja and ar by machine translation; they need native review. 2026-11-01 Brain Getting Started pass: the Brain first-run checklist card (dashboard.brainGetStarted.*) was added in de, fr, es, hi, ja and ar by machine translation; they need native review. 2026-11-02 Beta pass: this file is the source of truth for the Beta tag. Every language folder except en is listed under locales, because none has a native review sign-off; remove a language here only with that sign-off, and the Beta tag leaves the language chooser (src/locale-status.js mirrors this list and CI fails if they differ). The Arabic first-run walkthrough (onboarding-locales.json, 36 strings) and the Arabic plural forms zero/one/two/few/many/other for 34 counted strings (dashboard.* and common.time.*) were written by machine translation; they need native review.",
   "locales": {
     "hi": {
       "dashboard": {
@@ -64,8 +64,103 @@
         "brainGetStartedPass20261101": {
           "machineTranslatedKeys": 12,
           "note": "brainGetStarted.* (title, count, labels, six steps, hint). Needs native review."
+        },
+        "arabicPluralFormsPass20261102": {
+          "machineTranslatedKeys": 204,
+          "note": "34 counted strings now carry all six plural forms (dashboard.* 29, common.time.* 5). Needs native review."
         }
+      },
+      "onboarding": {
+        "machineTranslatedKeys": 36,
+        "note": "onboarding-locales.json (first-run walkthrough). Needs native review."
       }
+    },
+    "bn": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "cs": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "da": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "de": {
+      "dashboard": {
+        "note": "Machine-translated per the top-level note; no native review yet. Some keys fall back to English."
+      }
+    },
+    "el": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "es": {
+      "dashboard": {
+        "note": "Machine-translated per the top-level note; no native review yet. Some keys fall back to English."
+      }
+    },
+    "fa": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "fi": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "fr": {
+      "dashboard": {
+        "note": "Machine-translated per the top-level note; no native review yet. Some keys fall back to English."
+      }
+    },
+    "he": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "hu": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "id": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "it": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "ko": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "nl": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "no": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "pl": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "pt": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "ro": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "ru": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "sk": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "sv": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "th": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "tr": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "uk": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "vi": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
+    },
+    "zh": {
+      "note": "Partial legacy dictionaries; strings not in them are translated at runtime. No native review yet."
     }
   }
 }

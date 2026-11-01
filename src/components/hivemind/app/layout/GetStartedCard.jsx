@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '../../../../i18n';
+import { isBetaLocale } from '../../../../locale-status';
 import { agentRoster } from '../shared/agent-roster';
 import { useOnboarding } from '../shared/onboarding/onboarding-store';
 import { STEPS, STEP_TILE, completedCount, nextStepId } from '../shared/onboarding/registry';
@@ -200,7 +201,7 @@ function LanguageRow({ t, i18n, onPick }) {
   return <div className="hm-onb-actions">
     <label className="hm-onb-lang"><span className="sr-only">{t('language.label')}</span>
       <select value={choice} onChange={event => setChoice(event.target.value)} aria-label={t('language.question')}>
-        {options.map(language => <option key={language.code} value={language.code}>{language.native}</option>)}
+        {options.map(language => <option key={language.code} value={language.code}>{isBetaLocale(language.code) ? `${language.native} (${t('beta')})` : language.native}</option>)}
       </select>
     </label>
     <button type="button" className="hm-onb-primary" onClick={() => onPick(choice)}>{t('continue')}</button>

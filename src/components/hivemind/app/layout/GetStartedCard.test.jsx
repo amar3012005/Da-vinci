@@ -12,7 +12,7 @@ const english = require('../shared/onboarding/onboarding-locales.json').en;
 const lookup = (key, options = {}) => key.split('.').reduce((value, part) => value?.[part], english)?.replace(/{{(\w+)}}/g, (_, name) => options[name]) ?? key;
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: lookup, i18n: { language: 'en', dir: () => 'ltr', changeLanguage: jest.fn() } }) }));
 jest.mock('../../../../i18n', () => ({ __esModule: true, SUPPORTED_LANGUAGES: [{ code: 'en', native: 'English' }, { code: 'de', native: 'Deutsch' }, { code: 'ar', native: 'العربية' }, { code: 'ja', native: '日本語' }] }));
-jest.mock('../shared/onboarding/onboarding-i18n', () => ({ ONBOARDING_LANGUAGES: ['en', 'de', 'es', 'fr', 'hi', 'ja'] }));
+jest.mock('../shared/onboarding/onboarding-i18n', () => ({ ONBOARDING_LANGUAGES: ['en', 'de', 'es', 'fr', 'hi', 'ja', 'ar'] }));
 jest.mock('../shared/agent-roster', () => ({ agentRoster: { peek: () => [] } }));
 const mockState = { view: null, store: null, error: '' };
 jest.mock('../shared/onboarding/onboarding-store', () => ({ useOnboarding: () => mockState }));
@@ -43,6 +43,12 @@ test('the language step confirms the chosen language through the shared language
   fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
   expect(heard.mock.calls[0][0].detail).toEqual({ language: 'de' });
   window.removeEventListener('hivemind:ui-language', heard);
+});
+
+test('the language list offers Arabic and tags machine-translated languages Beta, English untagged', () => {
+  mount();
+  const options = Object.fromEntries(screen.getAllByRole('option').map(option => [option.value, option.textContent]));
+  expect(options).toEqual({ en: 'English', de: 'Deutsch (Beta)', ar: 'العربية (Beta)', ja: '日本語 (Beta)' });
 });
 
 test('steps are skippable inline and open their place in the product', () => {

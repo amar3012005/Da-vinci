@@ -1,6 +1,8 @@
 {
   "language": "言語",
   "languageHeader": "言語を選択",
+  "beta": "ベータ",
+  "betaHint": "機械翻訳です。ネイティブスピーカーによる確認はまだです",
   "brand": "HIVEMIND",
   "tagline": "AI の永続メモリ",
   "actions": {

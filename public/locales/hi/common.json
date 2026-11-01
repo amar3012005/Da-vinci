@@ -1,6 +1,8 @@
 {
   "language": "भाषा",
   "languageHeader": "भाषा चुनें",
+  "beta": "बीटा",
+  "betaHint": "मशीन अनुवाद, अभी किसी मूल वक्ता ने जाँचा नहीं है",
   "brand": "HIVEMIND",
   "tagline": "एआई के लिए स्थायी स्मृति",
   "actions": {
