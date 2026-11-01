@@ -8,7 +8,7 @@ import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot, openDotSurfaceRedirect } 
  * or the Worker serves the SPA for it and the browser sees a 405/404.
  */
 const FORWARDED_TO_OPEN_DOT = [
-  '/api/cards/msg_example', '/api/conversations', '/api/conversations/conv_example', '/api/files/file_example',
+  '/api/cards/msg_example', '/api/conversations', '/api/conversations/conv_example', '/api/conversations/conv_example/reply-language', '/api/files/file_example',
   '/api/dots/autonomy', '/api/dots/company-glance', '/api/dots/local-duties', '/api/dots/team-board', '/api/dots/team-week',
   ...['agenda', 'control', 'conversations', 'event-watches', 'files', 'frames', 'input', 'library', 'live', 'results', 'screen', 'stream', 'warm', 'workspace']
     .map(name => `/api/dots/dot_2c1a636bd2ac7f18/${name}`),
