@@ -17,6 +17,12 @@ const EMBEDS = {
   research: { label: 'Research', title: 'ICARUS research', hash: 'research', intro: 'Every published ICARUS result, with the method and the stated limits beside each number.' },
 };
 const ORDER = ['product', 'sales', 'investor', 'market', 'research'];
+const FOUNDER_TAB = { label: 'Founder notes', title: 'Founder notes', intro: 'Private to founders: meeting checklists, fundraising terms, claims to verify and open decisions. Ticks are saved in this browser.' };
+const ROLE_KEY = 'singulance-pitch-role';
+
+function storage(kind) {
+  try { return window[kind]; } catch (error) { return null; } // private windows can block storage; the room still works without it
+}
 
 const css = `
 .pr{--bg:#FAFAF7;--surface:#FFFFFF;--ink:#0E1D32;--body:#4F5C6B;--muted:#7A8592;--rule:#E3E6E4;--accent:#117DFF;--accent-soft:#E6F0FF;
@@ -70,7 +76,49 @@ const css = `
 .pr-embed{padding-bottom:56px}
 .pr-foot{border-top:1px solid var(--rule);padding:28px 0 calc(40px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between;font-size:12.5px;color:var(--muted)}
 .pr-foot a{color:var(--body)}
+.pr-gate{min-height:calc(100vh - 80px);display:flex;flex-direction:column;justify-content:center;gap:14px;padding:40px 0 64px}
+.pr-roles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:22px;max-width:760px}
+.pr-role{appearance:none;text-align:left;font:inherit;cursor:pointer;display:grid;gap:8px;align-content:start;padding:22px;border-radius:16px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);min-height:190px;transition:transform .2s cubic-bezier(.16,1,.3,1),border-color .2s}
+.pr-role:hover,.pr-role:focus-visible{transform:translateY(-3px);border-color:var(--accent);outline:none}
+.pr-role strong{font-size:22px;font-weight:600;letter-spacing:-.01em}
+.pr-role span{font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5;color:var(--body)}
+.pr-role .pr-role-k{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.pr-role .pr-role-go{margin-top:auto;font-family:'Space Grotesk',sans-serif;font-weight:500;color:var(--ink)}
+.pr-role.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+.pr-role.dark span{color:#B8C2CE}.pr-role.dark .pr-role-k{color:#7FB6FF}.pr-role.dark .pr-role-go{color:#fff}
+.pr-pass{display:grid;gap:10px;margin-top:22px;max-width:440px}
+.pr-pass label{font-size:13px;font-weight:500}
+.pr-pass-row{display:flex;gap:8px}
+.pr-pass input{flex:1;min-width:0;height:44px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);padding:0 18px;font:inherit;font-size:16px;color:var(--ink)}
+.pr-pass input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.pr-pass .pr-btn{height:44px}
+.pr-pass-err{margin:0;font-size:13px;color:#B42318}
+.pr-link{appearance:none;border:0;background:none;padding:0;font:inherit;font-size:13px;color:var(--muted);cursor:pointer;justify-self:start}
+.pr-link:hover{color:var(--accent)}
+.pr-btn:disabled{opacity:.55;cursor:default}
+.pr-notes{display:grid;gap:18px;padding-bottom:56px}
+.pr-note{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:22px 24px}
+.pr-note h3{margin:0 0 6px;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.pr-note-intro{margin:0 0 14px;font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.55;color:var(--body);max-width:78ch}
+.pr-check{list-style:none;margin:0;padding:0;display:grid}
+.pr-check li{border-top:1px solid var(--rule)}
+.pr-check label{display:grid;grid-template-columns:20px 1fr;gap:12px;padding:11px 0;cursor:pointer;font-family:'Inter',system-ui,sans-serif;font-size:14.5px;line-height:1.5;color:var(--ink)}
+.pr-check input{width:17px;height:17px;margin:2px 0 0;accent-color:var(--accent)}
+.pr-check li.done span{color:var(--muted);text-decoration:line-through}
+.pr-terms{border-top:1px solid var(--rule);padding-top:12px;margin-top:12px}
+.pr-level{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.pr-terms dl{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px}
+.pr-terms dt{font-weight:600;font-size:14.5px}
+.pr-terms dd{margin:2px 0 0;font-family:'Inter',system-ui,sans-serif;font-size:13.5px;line-height:1.5;color:var(--body)}
+.pr-note-foot{font-size:11px;color:var(--muted);margin:0}
+.pr-top-actions{display:flex;align-items:center;gap:14px}
 @media (max-width:720px){
+  .pr-gate{min-height:calc(100svh - 60px);padding:24px 0 40px;gap:8px}
+  .pr-roles{grid-template-columns:1fr;gap:12px;margin-top:16px}
+  .pr-role{min-height:0;padding:18px}
+  .pr-role strong{font-size:19px}
+  .pr-note{padding:18px 16px;border-radius:12px}
+  .pr-terms dl{grid-template-columns:1fr}
   .pr-top{padding-top:16px}
   .pr-hero{padding:22px 0 16px;gap:10px}
   .pr-copy{gap:8px}
@@ -88,9 +136,103 @@ const css = `
 }
 `;
 
-function readTab() {
+function readTab(order) {
   const h = (typeof window !== 'undefined' ? window.location.hash : '').replace('#', '');
-  return ORDER.includes(h) ? h : 'product';
+  return order.includes(h) ? h : order[0];
+}
+
+function Gate({ onGuest, onFounder }) {
+  const [mode, setMode] = React.useState('choose');
+  const [passcode, setPasscode] = React.useState('');
+  const [state, setState] = React.useState({ busy: false, error: '' });
+  const submit = async (event) => {
+    event.preventDefault();
+    setState({ busy: true, error: '' });
+    try {
+      const response = await fetch('/founder/session', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ passcode }) });
+      if (response.ok) { setPasscode(''); await onFounder(); return; }
+      setState({ busy: false, error: response.status === 401 ? 'That passcode is not right.' : 'Founder access is unavailable right now.' });
+    } catch (error) {
+      setState({ busy: false, error: 'Could not reach the server. Check your connection.' });
+    }
+  };
+  return (
+    <div className="pr-gate">
+      <div className="pr-eyebrow pr-mono">Pitch room · 2026</div>
+      <h1 className="pr-name">SINGULANCE</h1>
+      <p className="pr-tag">Proactive intelligence, <span>inside your own walls.</span></p>
+      {mode === 'choose' ? (
+        <div className="pr-roles" role="group" aria-label="Who is visiting">
+          <button type="button" className="pr-role" onClick={onGuest}>
+            <span className="pr-role-k pr-mono">Guest</span>
+            <strong>See the pitch</strong>
+            <span>Product, sales and investor decks, the market map and our research.</span>
+            <span className="pr-role-go">Enter →</span>
+          </button>
+          <button type="button" className="pr-role dark" onClick={() => setMode('founder')}>
+            <span className="pr-role-k pr-mono">Founder</span>
+            <strong>Founder notes</strong>
+            <span>Checklists, fundraising terms and open decisions. Passcode required.</span>
+            <span className="pr-role-go">Unlock →</span>
+          </button>
+        </div>
+      ) : (
+        <form className="pr-pass" onSubmit={submit}>
+          <label htmlFor="pr-passcode">Founder passcode</label>
+          <div className="pr-pass-row">
+            <input id="pr-passcode" type="password" autoComplete="current-password" autoFocus value={passcode} onChange={(e) => setPasscode(e.target.value)} disabled={state.busy} />
+            <button type="submit" className="pr-btn primary" disabled={state.busy || !passcode}>{state.busy ? 'Checking…' : 'Unlock'}</button>
+          </div>
+          {state.error && <p className="pr-pass-err" role="alert">{state.error}</p>}
+          <button type="button" className="pr-link" onClick={() => { setMode('choose'); setState({ busy: false, error: '' }); }}>← Back</button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+function Check({ id, text }) {
+  const key = `singulance-founder-check:${id}`;
+  const [done, setDone] = React.useState(() => storage('localStorage')?.getItem(key) === '1');
+  const toggle = () => {
+    const next = !done;
+    setDone(next);
+    try { if (next) storage('localStorage')?.setItem(key, '1'); else storage('localStorage')?.removeItem(key); } catch (error) { /* storage blocked: the tick lasts for this visit only */ }
+  };
+  return (
+    <li className={done ? 'done' : undefined}>
+      <label><input type="checkbox" checked={done} onChange={toggle} /><span>{text}</span></label>
+    </li>
+  );
+}
+
+function FounderNotes({ notes }) {
+  return (
+    <div className="pr-notes">
+      {notes.sections.map((section) => (
+        <section key={section.id} className="pr-note">
+          <h3>{section.title}</h3>
+          {section.intro && <p className="pr-note-intro">{section.intro}</p>}
+          {section.checklist && (
+            <ul className="pr-check">
+              {section.checklist.map((text, index) => <Check key={index} id={`${section.id}:${index}`} text={text} />)}
+            </ul>
+          )}
+          {section.terms && [1, 2, 3].map((level) => (
+            <div key={level} className="pr-terms">
+              <div className="pr-level pr-mono">Level {level}</div>
+              <dl>
+                {section.terms.filter((t) => t.level === level).map((t) => (
+                  <div key={t.term}><dt>{t.term}</dt><dd>{t.meaning}</dd></div>
+                ))}
+              </dl>
+            </div>
+          ))}
+        </section>
+      ))}
+      <p className="pr-note-foot pr-mono">Updated {notes.updated}</p>
+    </div>
+  );
 }
 
 function Deck({ id }) {
@@ -141,18 +283,39 @@ function Embed({ id }) {
 }
 
 export default function PitchRoom() {
-  const [tab, setTab] = React.useState(readTab);
+  const [role, setRole] = React.useState(() => storage('sessionStorage')?.getItem(ROLE_KEY) || null);
+  const [notes, setNotes] = React.useState(null);
+  const order = notes ? ['founder', ...ORDER] : ORDER;
+  const [tab, setTab] = React.useState(() => readTab(ORDER));
   const tabsRef = React.useRef(null);
+
+  const saveRole = (next) => {
+    try { if (next) storage('sessionStorage')?.setItem(ROLE_KEY, next); else storage('sessionStorage')?.removeItem(ROLE_KEY); } catch (error) { /* storage blocked: the visitor chooses again next visit */ }
+    setRole(next);
+  };
+
+  const loadNotes = React.useCallback(async () => {
+    const response = await fetch('/founder/notes', { credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) throw new Error(`founder notes ${response.status}`);
+    setNotes(await response.json());
+  }, []);
+
+  React.useEffect(() => {
+    if (role !== 'founder' || notes) return;
+    loadNotes().catch(() => saveRole(null));
+  }, [role, notes, loadNotes]);
+
+  React.useEffect(() => { setTab(readTab(order)); }, [notes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   React.useEffect(() => {
     document.title = 'SINGULANCE Pitch Room — Proactive intelligence, inside your own walls';
     let robots = document.querySelector('meta[name="robots"]');
     if (!robots) { robots = document.createElement('meta'); robots.setAttribute('name', 'robots'); document.head.appendChild(robots); }
     robots.setAttribute('content', 'noindex, nofollow');
-    const onHash = () => setTab(readTab());
+    const onHash = () => setTab(readTab(order));
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
-  }, []);
+  }, [notes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const choose = (id) => {
     window.history.replaceState(null, '', `#${id}`);
@@ -161,17 +324,52 @@ export default function PitchRoom() {
     if (bar) bar.scrollIntoView({ block: 'start', behavior: 'smooth' });
   };
 
+  const unlock = async () => {
+    await loadNotes();
+    saveRole('founder');
+    window.history.replaceState(null, '', '#founder');
+    setTab('founder');
+  };
+
+  const leave = async () => {
+    if (notes) await fetch('/founder/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => null);
+    setNotes(null);
+    saveRole(null);
+    window.history.replaceState(null, '', window.location.pathname);
+    setTab('product');
+  };
+
+  const top = (
+    <header className="pr-top">
+      <a className="pr-brand" href="https://singulancelabs.com"><img src="/singulance-mark.svg" alt="" />SINGULANCE</a>
+      <div className="pr-top-actions">
+        {role && <button type="button" className="pr-link pr-mono" onClick={leave}>{notes ? 'Lock founder notes' : 'Switch to founder'}</button>}
+        <a className="pr-site pr-mono" href="https://singulancelabs.com">singulancelabs.com ↗</a>
+      </div>
+    </header>
+  );
+
+  if (!role || (role === 'founder' && !notes)) {
+    return (
+      <div className="pr">
+        <style>{css}</style>
+        <div className="pr-wrap">
+          {top}
+          {role === 'founder' ? <div className="pr-gate"><p className="pr-sub">Opening founder notes…</p></div> : <Gate onGuest={() => saveRole('guest')} onFounder={unlock} />}
+        </div>
+      </div>
+    );
+  }
+
+  const isFounder = tab === 'founder' && notes;
   const isDeck = Boolean(DECKS[tab]);
-  const meta = isDeck ? DECKS[tab] : EMBEDS[tab];
+  const meta = isFounder ? FOUNDER_TAB : isDeck ? DECKS[tab] : EMBEDS[tab];
 
   return (
     <div className="pr">
       <style>{css}</style>
       <div className="pr-wrap">
-        <header className="pr-top">
-          <a className="pr-brand" href="https://singulancelabs.com"><img src="/singulance-mark.svg" alt="" />SINGULANCE</a>
-          <a className="pr-site pr-mono" href="https://singulancelabs.com">singulancelabs.com ↗</a>
-        </header>
+        {top}
         <section className="pr-hero" aria-labelledby="pr-name">
           <div className="pr-copy">
           <div className="pr-eyebrow pr-mono">Pitch room · 2026</div>
@@ -190,8 +388,8 @@ export default function PitchRoom() {
       <div className="pr-tabs-bar" ref={tabsRef}>
         <div className="pr-wrap">
           <nav className="pr-tabs" role="tablist" aria-label="Pitch materials">
-            {ORDER.map((id) => {
-              const item = DECKS[id] || EMBEDS[id];
+            {order.map((id) => {
+              const item = id === 'founder' ? FOUNDER_TAB : DECKS[id] || EMBEDS[id];
               return (
                 <button key={id} type="button" role="tab" id={`tab-${id}`} aria-controls="pr-panel" aria-selected={tab === id} className="pr-tab" onClick={() => choose(id)}>
                   {item.label}{DECKS[id] && <small>{DECKS[id].slides}</small>}
@@ -208,13 +406,13 @@ export default function PitchRoom() {
             <h2>{meta.title}</h2>
             <p>{meta.intro}</p>
           </div>
-          <div className="pr-actions">
+          {!isFounder && <div className="pr-actions">
             {isDeck
               ? <a className="pr-btn primary" href={meta.pdf} download>Download PDF</a>
               : <a className="pr-btn" href={`/pitch/market-map#${meta.hash}`} target="_blank" rel="noreferrer">Open full page ↗</a>}
-          </div>
+          </div>}
         </div>
-        {isDeck ? <Deck id={tab} /> : <Embed id={tab} />}
+        {isFounder ? <FounderNotes notes={notes} /> : isDeck ? <Deck id={tab} /> : <Embed id={tab} />}
       </main>
 
       <div className="pr-wrap">

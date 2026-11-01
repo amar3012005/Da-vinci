@@ -12,6 +12,27 @@ test('pitch room serves the app shell and deck assets, never indexed',async()=>{
  assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/pitch/market-map'),env)).status,200);
  assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/pitch/market-map.html?embed=1'),env)).headers.get('location'),'https://pitch.singulancelabs.com/pitch/market-map?embed=1');
 });
+test('founder notes need the passcode; guests never receive them',async()=>{
+ const founderEnv={...env,PITCH_FOUNDER_PASSCODE:'test-passcode'};
+ const origin={origin:'https://pitch.singulancelabs.com','content-type':'application/json'};
+ const login=(passcode,headers=origin)=>pitchPublic(new Request('https://pitch.singulancelabs.com/founder/session',{method:'POST',headers,body:JSON.stringify({passcode})}),founderEnv);
+ assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/founder/notes'),founderEnv)).status,401);
+ assert.equal((await login('wrong')).status,401);
+ assert.equal((await login('test-passcode',{'content-type':'application/json',origin:'https://evil.example'})).status,403);
+ const ok=await login('test-passcode');
+ assert.equal(ok.status,200);
+ const cookie=ok.headers.get('set-cookie');
+ assert.match(cookie,/^pitch_founder=\d+\.[\w-]+; Path=\/founder; Max-Age=43200; HttpOnly; Secure; SameSite=Strict$/);
+ const notes=await pitchPublic(new Request('https://pitch.singulancelabs.com/founder/notes',{headers:{cookie:cookie.split(';')[0]}}),founderEnv);
+ assert.equal(notes.status,200); assert.equal(notes.headers.get('cache-control'),'no-store');
+ assert.ok((await notes.json()).sections.some((s)=>s.id==='fundraising-iq'));
+ const forged=cookie.split(';')[0].replace(/\.[\w-]+$/,'.AAAA');
+ assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/founder/notes',{headers:{cookie:forged}}),founderEnv)).status,401);
+ const expired=`pitch_founder=1.${cookie.split(';')[0].split('.')[1]}`;
+ assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/founder/notes',{headers:{cookie:expired}}),founderEnv)).status,401);
+ assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/founder/notes'),env)).status,503);
+ assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/founder/logout',{method:'POST',headers:origin}),founderEnv)).headers.get('set-cookie').includes('Max-Age=0'),true);
+});
 test('pitch room cannot expose private app or missing asset routes',async()=>{
  for(const path of ['/hivemind/app','/api/session','/static/js/missing.js','/pitch/secret.html','/pitch/sales/1.jpg'])assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com'+path),env)).status,404);
  assert.equal((await pitchPublic(new Request('https://pitch.singulancelabs.com/',{method:'POST'}),env)).status,405);
