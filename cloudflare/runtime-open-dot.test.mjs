@@ -38,13 +38,14 @@ test('the local-first sync feeds keep their since and limit query and expose no 
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/conversations/other', 'https://runtime-runner.singulancelabs.com')), false);
 });
 
-test('the Needs you path is forwarded on the Runtime origin only, and not when nested', () => {
+test('the Needs you path is not forwarded when nested', () => {
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/hivemind/needs-you/extra', 'https://runtime-runner.singulancelabs.com')), false);
-  assert.equal(isRuntimeOpenDotRequest(new URL('/api/hivemind/needs-you', 'https://next.singulancelabs.com')), false);
+  assert.equal(isRuntimeOpenDotRequest(new URL('/api/hivemind/needs-you/extra', 'https://next.singulancelabs.com')), false);
 });
 
 test('the allowlist does not forward other origins or unlisted paths', () => {
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/autonomy', 'https://next.singulancelabs.com')), false);
+  assert.equal(isRuntimeOpenDotRequest(new URL('/api/organization', 'https://next.singulancelabs.com')), false);
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/dot_x/secret', 'https://runtime-runner.singulancelabs.com')), false);
   assert.equal(HANDLED_ELSEWHERE.length > 0, true);
 });
@@ -173,4 +174,31 @@ test('the legacy autonomy read on the Brain origin is answered from OpenDot, and
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/hivemindHq/autonomyLevel', 'https://runtime-runner.singulancelabs.com')), false);
   const post = await proxyRuntimeOpenDot(new Request('https://brain-runner.singulancelabs.com/api/hivemindHq/autonomyLevel', { method: 'POST', headers: { cookie: 'hm_cp_session=x', origin: 'https://brain-runner.singulancelabs.com' } }), fetcher);
   assert.equal(post.status, 405);
+});
+
+test('the app host forwards exactly the web sync paths to OpenDot with the session cookie and no surface header', async () => {
+  for (const [method, path] of [['GET', '/api/conversations?since=start&limit=100'], ['GET', '/api/conversations/conv_a?since=2'], ['POST', '/api/conversations/conv_a'],
+    ['POST', '/api/dots/dot_abc/conversations'], ['GET', '/api/hivemind/needs-you?since=now']]) {
+    let seen;
+    const init = { method, headers: { cookie: 'hm_cp_session=s; other=x', 'x-open-dot-surface': 'brain', ...(method === 'POST' ? { origin: 'https://next.singulancelabs.com', 'content-type': 'application/json' } : {}) } };
+    if (method === 'POST') init.body = '{}';
+    const response = await proxyRuntimeOpenDot(new Request(`https://next.singulancelabs.com${path}`, init), async (req) => { seen = req; return Response.json({ ok: true }); });
+    assert.equal(response.status, 200, path);
+    assert.equal(seen.url, `https://dots.singulancelabs.com${path}`);
+    assert.equal(seen.headers.get('cookie'), 'hm_cp_session=s');
+    assert.equal(seen.headers.get('x-open-dot-surface'), null);
+  }
+});
+
+test('the app host keeps auth and origin checks and does not forward other API paths', async () => {
+  const never = async () => { throw new Error('must not reach upstream'); };
+  const noCookie = await proxyRuntimeOpenDot(new Request('https://next.singulancelabs.com/api/hivemind/needs-you'), never);
+  assert.equal(noCookie.status, 401);
+  const cross = await proxyRuntimeOpenDot(new Request('https://next.singulancelabs.com/api/conversations', { headers: { origin: 'https://evil.example', cookie: 'hm_cp_session=s' } }), never);
+  assert.equal(cross.status, 403);
+  const noOrigin = await proxyRuntimeOpenDot(new Request('https://next.singulancelabs.com/api/conversations/conv_a', { method: 'POST', headers: { cookie: 'hm_cp_session=s' }, body: '{}' }), never);
+  assert.equal(noOrigin.status, 403);
+  for (const path of ['/api/dots/dot_a/files', '/api/conversations/other', '/api/hivemind/setup', '/api/files/file_a']) {
+    assert.equal(await proxyRuntimeOpenDot(new Request(`https://next.singulancelabs.com${path}`, { headers: { cookie: 'hm_cp_session=s' } }), never), null, path);
+  }
 });
