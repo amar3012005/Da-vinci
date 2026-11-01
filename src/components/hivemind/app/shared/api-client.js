@@ -1,6 +1,7 @@
 import { awaitAccountErasure } from './account-erasure';
 import axios from 'axios';
 import { isNativeApp } from './native-app';
+import { isRunnerHost } from './runner-hosts';
 import { createNativeApiAdapter } from './native-api-adapter';
 import { nativePlugin } from './native-auth';
 import { API_DEFAULTS } from './theme';
@@ -434,7 +435,7 @@ class HiveMindApiClient {
    * }
    */
   async bootstrap() {
-    const runtimeBrowser = !isNativeApp() && typeof window !== 'undefined' && window.location.hostname === 'runtime-runner.singulancelabs.com';
+    const runtimeBrowser = !isNativeApp() && typeof window !== 'undefined' && isRunnerHost(window.location.hostname);
     const { data } = await this.controlPlane.get(runtimeBrowser ? '/__hivemind/bootstrap' : '/v1/bootstrap',
       runtimeBrowser ? { baseURL: window.location.origin, timeout: 20000 } : undefined);
     // Set core API base from bootstrap connectivity
