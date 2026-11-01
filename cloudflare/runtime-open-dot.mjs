@@ -2,11 +2,14 @@ const RUNTIME = 'https://runtime-runner.singulancelabs.com';
 export const BRAIN = 'https://brain-runner.singulancelabs.com';
 const COMPANY_BRAIN_PATH = '/dots/dot_company_brain';
 const SURFACE_HEADER = 'x-open-dot-surface';
+const NEXT_HOST = 'next.singulancelabs.com';
 const UPSTREAM = 'https://dots.singulancelabs.com';
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 const DOCUMENT = new RegExp(`^/(?:employees/${UUID}|dots/dot_[a-zA-Z0-9_-]+|settings)/?$`, 'i');
 const API = /^\/api\/(?:cards\/(?:msg|card)_[a-zA-Z0-9_-]+|conversations(?:\/conv_[a-zA-Z0-9_-]+)?|dots\/(?:autonomy|company-glance|local-duties|team-board|team-week)|dots\/dot_[a-zA-Z0-9_-]+\/(?:agenda|control|conversations|event-watches|files|frames|input|library|live|results|screen|stream|warm|workspace)|files\/file_[a-zA-Z0-9_-]+|hivemind\/(?:setup|needs-you|voice\/(?:context|events)|employees\/(?:materialize|[0-9a-f-]+\/binding))|locale|desktop\/entry|models|organization|settings\/open-dot-recovery|composio\/oauth)$/;
 
+/** The only OpenDot API paths the signed-in web user's shared sync code calls on the app host (next.singulancelabs.com). */
+const APP_HOST_API = /^\/api\/(?:conversations(?:\/conv_[a-zA-Z0-9_-]+)?|dots\/dot_[a-zA-Z0-9_-]+\/conversations|hivemind\/needs-you)$/;
 const LEGACY_AUTONOMY = '/api/hivemindHq/autonomyLevel';
 
 /** The legacy Runtime dial read on the Brain origin, answered from OpenDot's own autonomy copy. */
@@ -15,7 +18,7 @@ function isBrainLegacyAutonomy(url) {
 }
 
 export function isRuntimeOpenDotRequest(url) {
-  return isBrainLegacyAutonomy(url) || (url.origin === RUNTIME || url.origin === BRAIN) && (DOCUMENT.test(url.pathname) || API.test(url.pathname)
+  return isBrainLegacyAutonomy(url) || (url.origin === `https://${NEXT_HOST}` && APP_HOST_API.test(url.pathname)) || (url.origin === RUNTIME || url.origin === BRAIN) && (DOCUMENT.test(url.pathname) || API.test(url.pathname)
     || (['/', '/apps'].includes(url.pathname) && url.searchParams.get('embed') === 'hivemind')
     || url.pathname === '/images/runtime-computer.webp' || url.pathname === '/images/idle-desktop.webp' || url.pathname === '/images/company-brain.svg');
 }
@@ -44,7 +47,6 @@ export function openDotSurfaceRedirect(request) {
   return target ? new Response(null, { status: 302, headers: { location: target.href, 'cache-control': 'private, no-store' } }) : null;
 }
 
-const NEXT_HOST = 'next.singulancelabs.com';
 const BRAIN_ENTRY = /^\/hivemind\/app\/overview(?:\/new)?\/?$/;
 
 /**
