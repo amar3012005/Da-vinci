@@ -225,6 +225,13 @@ function isHarnessRunnerRoute(pathname) {
     || isHarnessViteAsset(pathname);
 }
 
+// Public screens manifest (version plus hashed files) the macOS app prefetches. Its listed files are /plugins/* and
+// top-level /assets/*, which isHarnessRunnerRoute already forwards on these hosts. Carries no principal or cookies.
+function isRunnerUiManifest(request, pathname) {
+  return pathname === '/ui-manifest.json' && ['GET', 'HEAD'].includes(request.method)
+    && ['runtime-runner.singulancelabs.com', 'brain-runner.singulancelabs.com'].includes(hostname(request));
+}
+
 function nativeRunnerHandoff(destination) {
   // Let the browser navigate; old service workers cannot return foreign
   // responses from their same-origin navigation fetch handlers.
@@ -770,6 +777,7 @@ const worker = {
       || pathname === '/api/hivemind/session/establish'
       || pathname === '/api/hivemind/boot'
       || isHarnessDocumentOrAsset(request, pathname)
+      || (isRunnerUiManifest(request, pathname))
       || ((hasHarnessAdmission(request) || hasHarnessSession(request) || ['runtime-runner.singulancelabs.com', 'brain-runner.singulancelabs.com'].includes(hostname(request)))
         && isHarnessRunnerRoute(pathname))) {
       return noIndex(await edgeCachedNativeCode(request, ctx, () => harnessResponse(request, env)));
