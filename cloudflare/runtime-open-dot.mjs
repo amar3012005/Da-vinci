@@ -7,8 +7,15 @@ const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 const DOCUMENT = new RegExp(`^/(?:employees/${UUID}|dots/dot_[a-zA-Z0-9_-]+|settings)/?$`, 'i');
 const API = /^\/api\/(?:cards\/(?:msg|card)_[a-zA-Z0-9_-]+|conversations(?:\/conv_[a-zA-Z0-9_-]+)?|dots\/(?:autonomy|company-glance|local-duties|team-board|team-week)|dots\/dot_[a-zA-Z0-9_-]+\/(?:agenda|control|conversations|event-watches|files|frames|input|library|live|results|screen|stream|warm|workspace)|files\/file_[a-zA-Z0-9_-]+|hivemind\/(?:setup|needs-you|voice\/(?:context|events)|employees\/(?:materialize|[0-9a-f-]+\/binding))|locale|desktop\/entry|models|organization|settings\/open-dot-recovery|composio\/oauth)$/;
 
+const LEGACY_AUTONOMY = '/api/hivemindHq/autonomyLevel';
+
+/** The legacy Runtime dial read on the Brain origin, answered from OpenDot's own autonomy copy. */
+function isBrainLegacyAutonomy(url) {
+  return url.origin === BRAIN && url.pathname === LEGACY_AUTONOMY;
+}
+
 export function isRuntimeOpenDotRequest(url) {
-  return (url.origin === RUNTIME || url.origin === BRAIN) && (DOCUMENT.test(url.pathname) || API.test(url.pathname)
+  return isBrainLegacyAutonomy(url) || (url.origin === RUNTIME || url.origin === BRAIN) && (DOCUMENT.test(url.pathname) || API.test(url.pathname)
     || (['/', '/apps'].includes(url.pathname) && url.searchParams.get('embed') === 'hivemind')
     || url.pathname === '/images/runtime-computer.webp' || url.pathname === '/images/idle-desktop.webp' || url.pathname === '/images/company-brain.svg');
 }
@@ -37,6 +44,21 @@ export function openDotSurfaceRedirect(request) {
   return target ? new Response(null, { status: 302, headers: { location: target.href, 'cache-control': 'private, no-store' } }) : null;
 }
 
+const NEXT_HOST = 'next.singulancelabs.com';
+const BRAIN_ENTRY = /^\/hivemind\/app\/overview(?:\/new)?\/?$/;
+
+/**
+ * Brain chat is the Company Brain room, a top-level page. Returns a 302 to it for GET/HEAD document
+ * navigations to the Overview and New chat entries on the app host (query kept), otherwise null.
+ * Saved sessions, dreaming and the native pane/iframe seats are not redirected.
+ */
+export function brainInstantRedirect(request) {
+  const url = new URL(request.url);
+  if (url.hostname !== NEXT_HOST || !['GET', 'HEAD'].includes(request.method) || !BRAIN_ENTRY.test(url.pathname)) return null;
+  if (url.searchParams.get('native_pane') === '1' || request.headers.get('sec-fetch-dest') === 'iframe') return null;
+  return new Response(null, { status: 302, headers: { location: new URL(COMPANY_BRAIN_PATH + url.search, BRAIN).href, 'cache-control': 'private, no-store' } });
+}
+
 /** Fixed app transport, not an arbitrary URL proxy. Browser origin remains Runtime.
  * The existing OpenDot app authenticates the same company session and retains
  * all tenant, action, model, file and native execution ownership.
@@ -60,10 +82,20 @@ export async function proxyRuntimeOpenDot(request, fetcher = fetch) {
     if (request.headers.has(key)) headers.set(key,request.headers.get(key));
   }
   applyOpenDotSurface(headers,url);
-  const target = new URL(url.pathname + url.search,UPSTREAM);
+  const legacyAutonomy = isBrainLegacyAutonomy(url);
+  if (legacyAutonomy && !read) return reply('method_not_allowed',405);
+  const target = new URL((legacyAutonomy ? '/api/dots/autonomy' : url.pathname) + url.search,UPSTREAM);
   try {
     const response = await fetcher(new Request(target,{method:request.method,headers,
       ...(!read ? {body:request.body,duplex:'half'} : {}),redirect:'manual'}));
+    if (legacyAutonomy) {
+      // The Brain has no Runtime dial: same `{ok,value}` answer as Runtime, from OpenDot's copy, never a 401 or 404 in the console.
+      const body = response.ok ? await response.json().catch(() => null) : null;
+      return Response.json(body?.value ? { ok: true, value: body.value } : { ok: false }, { headers: { 'cache-control': 'private, no-store' } });
+    }
+    if (url.origin === BRAIN && url.pathname === '/api/hivemind/needs-you' && response.status === 404) {
+      return Response.json({ version: 1, cards: [] }, { headers: { 'cache-control': 'private, no-store' } });
+    }
     const output = new Headers(response.headers);
     output.delete('set-cookie');
     output.set('cache-control','private, no-store');

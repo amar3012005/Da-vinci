@@ -26,19 +26,37 @@ export function buildCompanyBrainTarget(language) {
 }
 
 /**
- * Post a host message into the Company Brain frame, only while it shows the Company Brain document.
- * @param {{ contentWindow: Window | null } | null} frame - iframe element.
- * @param {object} message - protocol message.
+ * Top-level address of the Company Brain room: the page the Worker redirects Overview and New chat to.
+ * @param {string|null|undefined} language - i18next language, carried so the first paint is in it.
+ * @returns {string} room address on the brain-runner origin without the embed marker.
+ */
+export function buildCompanyBrainPage(language) {
+  return withOpenDotLocale(new URL(`/dots/${COMPANY_BRAIN_DOT_ID}`, COMPANY_BRAIN_ORIGIN).href, language);
+}
+
+/**
+ * Leave this document for the Company Brain room (top-level, no iframe).
+ * @param {string|null|undefined} language - i18next language.
  * @returns {void}
  */
-export function postToCompanyBrainFrame(frame, message) {
-  const target = frame?.contentWindow;
-  if (!target) return;
+export function navigateToCompanyBrain(language) {
+  window.location.assign(buildCompanyBrainPage(language));
+}
+
+/**
+ * Whether a click on an in-app link should leave for the Company Brain: a plain primary click on a same-origin
+ * anchor whose address is a Brain chat entry. Modified clicks, new-tab targets and downloads keep the browser default.
+ * @param {MouseEvent} event - click event (capture phase).
+ * @returns {boolean} true when the click is a Brain chat link.
+ */
+export function isBrainChatLinkClick(event) {
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
+  const anchor = event.target?.closest?.('a[href]');
+  if (!anchor || (anchor.target && anchor.target !== '_self') || anchor.hasAttribute('download')) return false;
   try {
-    // The initial about:blank document and login redirects are not the room; never send the handshake into them.
-    if (target.location.origin !== COMPANY_BRAIN_ORIGIN || !/^\/dots\//.test(target.location.pathname)) return;
-  } catch { /* Cross-origin window: the exact targetOrigin below enforces delivery. */ }
-  target.postMessage(message, COMPANY_BRAIN_ORIGIN);
+    const url = new URL(anchor.getAttribute('href'), window.location.href);
+    return url.origin === window.location.origin && isCompanyBrainRoute(url.pathname);
+  } catch { return false; }
 }
 
 export { openDotLocale };
