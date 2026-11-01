@@ -1,6 +1,7 @@
 import { withSecurityHeaders } from './security-headers.mjs';
+import { BRAIN_PRIMARY_PATH, brainPrimaryResponse, readBrainPrimary } from './brain-primary.mjs';
 import { proxyRuntimeBootstrap } from './runtime-bootstrap.mjs';
-import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot, openDotSurfaceRedirect, applyOpenDotSurface, brainInstantRedirect } from './runtime-open-dot.mjs';
+import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot, openDotSurfaceRedirect, applyOpenDotSurface, brainInstantRedirect, isBrainEntryRequest } from './runtime-open-dot.mjs';
 import { proxyOnboarding } from './onboarding-proxy.mjs';
 import { edgeCachedNativeCode, runtimeNativeAsset } from './runtime-native-assets.mjs';
 import { handleComposioAccount } from './composio-account.mjs';
@@ -563,7 +564,7 @@ const worker = {
     if (accountAccessResponse) return accountAccessResponse;
     const accountRouteGate = await gateWorkspaceDocument(request, env);
     if (accountRouteGate) return accountRouteGate;
-    const brainRedirect = brainInstantRedirect(request);
+    const brainRedirect = brainInstantRedirect(request, isBrainEntryRequest(request) ? await readBrainPrimary(env) : 'company');
     if (brainRedirect) return brainRedirect;
     if (isRuntimeOpenDotRequest(url) && ['GET','HEAD'].includes(request.method)
       && !pathname.startsWith('/api/') && !pathname.startsWith('/images/')) {
@@ -692,6 +693,8 @@ const worker = {
     if (pathname === '/hivemind/app/v1/overview') {
       return Response.redirect(new URL(`${HARNESS_OVERVIEW_PATH}/new`, request.url), 302);
     }
+
+    if (pathname === BRAIN_PRIMARY_PATH) return brainPrimaryResponse(request, env);
 
     if (pathname === '/__hivemind/feature-flags/product-experience') {
       if (request.method !== 'GET') return new Response(null, { status: 405, headers: { allow: 'GET' } });
