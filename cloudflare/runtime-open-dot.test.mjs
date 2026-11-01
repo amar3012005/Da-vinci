@@ -245,3 +245,13 @@ test('the segment-prefetch header reaches OpenDot, so its _rsc hash check does n
   assert.equal(seen.headers.get('next-router-state-tree'), '%5B%22%22%5D');
   assert.equal(seen.headers.get('next-url'), '/dots/dot_a');
 });
+
+test('the return from sign-in loads the Company Brain even when the browser marks it cross-site; cross-site API reads, frames and writes stay refused', async () => {
+  const upstream = async () => new Response('room');
+  const nav = (path, headers) => proxyRuntimeOpenDot(new Request(BRAIN + path, { headers: { cookie: 'hm_cp_session=a', 'sec-fetch-site': 'cross-site', ...headers } }), upstream);
+  assert.equal((await nav('/dots/dot_company_brain?auth=callback', { 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document' })).status, 200);
+  assert.equal((await nav('/api/conversations/conv_a', { 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty' })).status, 403);
+  assert.equal((await nav('/dots/dot_company_brain', { 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'iframe' })).status, 403);
+  const write = await proxyRuntimeOpenDot(new Request(BRAIN + '/api/conversations', { method: 'POST', headers: { cookie: 'hm_cp_session=a', 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document', origin: 'https://evil.example' }, body: '{}' }), upstream);
+  assert.equal(write.status, 403);
+});
