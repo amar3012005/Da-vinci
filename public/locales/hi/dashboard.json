@@ -2737,6 +2737,7 @@
     "greeting": "नमस्ते, {{name}}",
     "greetingAnon": "नमस्ते",
     "tagline": "Brain: आइए जो मायने रखता है उसे याद रखें",
-    "taglineShort": "आइए जो मायने रखता है उसे याद रखें"
+    "taglineShort": "आइए जो मायने रखता है उसे याद रखें",
+    "composerPlaceholder": "Brain को संदेश"
   }
 }

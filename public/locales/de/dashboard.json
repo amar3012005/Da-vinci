@@ -2731,6 +2731,7 @@
     "greeting": "Hallo, {{name}}",
     "greetingAnon": "Hallo",
     "tagline": "Brain: Erinnern wir uns an das, was zählt",
-    "taglineShort": "Erinnern wir uns an das, was zählt"
+    "taglineShort": "Erinnern wir uns an das, was zählt",
+    "composerPlaceholder": "Nachricht an Brain"
   }
 }

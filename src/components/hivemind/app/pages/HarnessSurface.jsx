@@ -569,7 +569,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
     </div>;
   }
 
-  return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface data-brain-chat={brain ? '' : undefined} data-viewer-first-name={brain ? viewerFirstName : undefined} data-brain-greeting={brain ? brainGreeting : undefined} data-brain-tagline={brain ? brainCopy('tagline', 'Brain: Let’s remember what matters') : undefined} data-brain-tagline-short={brain ? brainCopy('taglineShort', 'Let’s remember what matters') : undefined}>
+  return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface data-brain-chat={brain ? '' : undefined} data-viewer-first-name={brain ? viewerFirstName : undefined} data-brain-greeting={brain ? brainGreeting : undefined} data-brain-tagline={brain ? brainCopy('tagline', 'Brain: Let’s remember what matters') : undefined} data-brain-tagline-short={brain ? brainCopy('taglineShort', 'Let’s remember what matters') : undefined} data-brain-placeholder={brain ? brainCopy('composerPlaceholder', 'Message Brain') : undefined}>
     {(state.phase === 'loading' || state.phase === 'reconnecting') && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} reconnecting={state.phase === 'reconnecting'} dreaming={window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`} /></div>}
     <div ref={mountRef} className="h-full min-h-0 hm-harness-composer-reserve" style={{ visibility: state.phase === 'ready' ? 'visible' : 'hidden' }} />
     {brain && <ChatModelConnection />}
