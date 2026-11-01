@@ -120,7 +120,7 @@ export class ComposioAccount {
 export async function handleComposioAccount(request,env) {
   const url=new URL(request.url); if(!url.pathname.startsWith(BASE)) return null;
   const action=url.pathname.slice(BASE.length);
-  if(!['https://next.singulancelabs.com','https://runtime-runner.singulancelabs.com'].includes(url.origin)) return reply({error:'origin_denied'},403);
+  if(!['https://next.singulancelabs.com','https://runtime-runner.singulancelabs.com','https://brain-runner.singulancelabs.com'].includes(url.origin)) return reply({error:'origin_denied'},403);
   if(!['start','status','callback','disconnect'].includes(action)) return reply({error:'not_found'},404);
   const callback=action==='callback';
   if(request.method!==(callback || action==='status'?'GET':'POST')) return reply({error:'method_not_allowed'},405);

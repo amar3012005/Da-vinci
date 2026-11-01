@@ -42,3 +42,17 @@ test('sessionUser tries every hm_cp_session cookie, so a stale one first does no
     assert.equal(await sessionUser(request('other=1')), null);
   } finally { globalThis.fetch = realFetch; clearSessionCache(); }
 });
+
+test('brain-runner documents go through the same workspace access gate as runtime-runner', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({ user: { id: 'u1', email: 'a@example.com' } });
+  clearSessionCache();
+  const denied = { ...env, FLAGS: { getBooleanValue: async () => false }, ACCOUNT_MODE_ACCESS: { idFromName: n => n, get: () => ({ fetch: async () => Response.json({ enabled: false }) }) } };
+  try {
+    const request = new Request('https://brain-runner.singulancelabs.com/hivemind/app/employee/harness', { headers: { cookie: 'hm_cp_session=a' } });
+    const anonymous = await gateWorkspaceDocument(new Request(request.url), env);
+    assert.equal(anonymous, null, 'no session keeps the existing sign-in behaviour');
+    const response = await gateWorkspaceDocument(request, denied);
+    assert.equal(response === null || response.status === 403, true);
+  } finally { globalThis.fetch = realFetch; clearSessionCache(); }
+});
