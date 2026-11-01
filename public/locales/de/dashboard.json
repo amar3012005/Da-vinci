@@ -2758,7 +2758,13 @@
       "memory": "Speichere etwas Merkenswertes",
       "connected": "Verbinde deine Apps",
       "explored": "Entdecke deine Erinnerungen",
-      "library": "Öffne deine Wissensbibliothek"
+      "library": "Öffne deine Wissensbibliothek",
+      "language": "Wähle deine Sprache",
+      "company": "Erzähle Brain von deinem Unternehmen",
+      "ask": "Stelle eine Frage und erhalte eine Antwort mit Quelle",
+      "remember": "Speichere etwas Merkenswertes",
+      "connect": "Verbinde deine Apps",
+      "invite": "Lade jemanden zu deinem Brain ein"
     },
     "hint": "Dein Wissen, verbunden und einsatzbereit."
   }

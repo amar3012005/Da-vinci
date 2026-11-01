@@ -2764,7 +2764,13 @@
       "memory": "Save something worth remembering",
       "connected": "Connect your apps",
       "explored": "Explore your memories",
-      "library": "Open your knowledge library"
+      "library": "Open your knowledge library",
+      "language": "Choose your language",
+      "company": "Tell Brain about your company",
+      "ask": "Ask a question and get an answer with its source",
+      "remember": "Save something worth remembering",
+      "connect": "Connect your apps",
+      "invite": "Invite someone to your Brain"
     },
     "hint": "Your knowledge, connected and ready to use."
   }

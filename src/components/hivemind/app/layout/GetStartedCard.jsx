@@ -6,7 +6,7 @@ import { SUPPORTED_LANGUAGES } from '../../../../i18n';
 import { isBetaLocale } from '../../../../locale-status';
 import { agentRoster } from '../shared/agent-roster';
 import { useOnboarding } from '../shared/onboarding/onboarding-store';
-import { STEPS, STEP_TILE, completedCount, nextStepId } from '../shared/onboarding/registry';
+import { STEPS, STEP_TILE, completedCount, isBrainOnly, nextStepId } from '../shared/onboarding/registry';
 import { ONBOARDING_LANGUAGES } from '../shared/onboarding/onboarding-i18n';
 import { isComposerRoute } from './get-started-placement';
 import './GetStartedCard.css';
@@ -114,7 +114,8 @@ export default function GetStartedCard({ userId, orgId, variant = 'float' }) {
   }, [sheetOpen, closeSheet]);
 
   // Nothing shows until the server record (or its cached copy) exists: a card that cannot save progress would mislead.
-  if (!store || !view) return null;
+  // A company with only the Company Brain has no team to get started with: the Brain card in the Brain workspace covers it.
+  if (!store || !view || isBrainOnly(view)) return null;
   if (count === total) return wasIncomplete.current ? <div className="sr-only" role="status">{t('progress', { count, total })}</div> : null;
 
   const scope = `${userId}:${orgId}`;

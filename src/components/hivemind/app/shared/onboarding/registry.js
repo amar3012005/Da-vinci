@@ -32,6 +32,33 @@ export const STEPS = Object.freeze([
 
 export const STEP_IDS = Object.freeze(STEPS.map(step => step.id));
 
+/**
+ * The first-run steps of a company that has only the Company Brain (tier `brain_only`), in card order. Copy lives in
+ * `dashboard.brainGetStarted.steps.<id>` and never names employees or colleagues. `ask` and every step but `language` complete from a
+ * real event on the server record (a cited answer, a saved source, a saved memory, a connected app, a sent invite), never from a click.
+ * `team` marks nothing: a company that adds an employee gets the team steps above while these stay finished.
+ */
+export const BRAIN_STEPS = Object.freeze([
+  { id: 'language', to: '/hivemind/app/overview', action: 'language' },
+  { id: 'company', to: '/hivemind/app/profile' },
+  { id: 'source', to: '/hivemind/app/knowledge' },
+  { id: 'ask', to: '/hivemind/app/overview' },
+  { id: 'remember', to: '/hivemind/app/memories' },
+  { id: 'connect', to: '/hivemind/app/connectors' },
+  { id: 'invite', to: '/hivemind/app/team/members' },
+]);
+export const BRAIN_STEP_IDS = Object.freeze(BRAIN_STEPS.map(step => step.id));
+
+/** The Brain-only step each browser-reported milestone completes (the server holds the same map). */
+export const MILESTONE_BRAIN_STEP = Object.freeze({ company_saved: 'company', source_added: 'source', answer_cited: 'ask', memory_saved: 'remember', app_connected: 'connect', invite_sent: 'invite' });
+
+/**
+ * Whether the server view says the company has no employee besides the Company Brain. The team checklist shows only when this is false;
+ * a view without a tier (an older server, or none yet) keeps the team card as before, and the Brain card never names employees.
+ * @param {{ tier?: string }|null} view
+ */
+export function isBrainOnly(view) { return view?.tier === 'brain_only'; }
+
 /** Pastel tile per step group; neighbours never share a colour. */
 export const STEP_TILE = Object.freeze({
   language: 'butter', awaken: 'aqua', meet: 'lilac', first_task: 'butter', authority: 'mint',

@@ -804,6 +804,7 @@ class HiveMindApiClient {
     const { data } = await this.controlPlane.patch(`/v1/orgs/${orgId}/profile`, {
       company_profile: companyProfile,
     });
+    reportOnboarding('company_saved');
     return data;
   }
 
@@ -850,6 +851,7 @@ class HiveMindApiClient {
 
   async createInvite(orgId, payload = {}) {
     const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/invites`, payload);
+    reportOnboarding('invite_sent');
     return data;
   }
 
@@ -2042,6 +2044,7 @@ class HiveMindApiClient {
 
   async createMemory(memory) {
     const { data } = await this.controlPlane.post('/v1/proxy/memories', memory);
+    reportOnboarding('memory_saved');
     return data;
   }
 
@@ -3913,6 +3916,11 @@ class HiveMindApiClient {
     return data;
   }
 
+}
+
+/** Tell the first-run walkthrough (shared/onboarding/onboarding-store) that a real event happened; harmless when no card is mounted. */
+function reportOnboarding(milestone) {
+  try { window.dispatchEvent(new CustomEvent('hm:onboarding', { detail: { milestone } })); } catch { /* Not in a browser: nothing listens. */ }
 }
 
 const apiClient = new HiveMindApiClient();

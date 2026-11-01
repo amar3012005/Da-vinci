@@ -2733,7 +2733,13 @@
       "memory": "Guarda algo que valga la pena recordar",
       "connected": "Conecta tus apps",
       "explored": "Explora tus recuerdos",
-      "library": "Abre tu biblioteca de conocimiento"
+      "library": "Abre tu biblioteca de conocimiento",
+      "language": "Elige tu idioma",
+      "company": "Cuéntale a Brain sobre tu empresa",
+      "ask": "Haz una pregunta y recibe una respuesta con su fuente",
+      "remember": "Guarda algo que valga la pena recordar",
+      "connect": "Conecta tus apps",
+      "invite": "Invita a alguien a tu Brain"
     },
     "hint": "Tu conocimiento, conectado y listo para usar."
   }

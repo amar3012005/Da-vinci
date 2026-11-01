@@ -939,6 +939,11 @@ export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFol
   const [vote, setVote] = useState(null);
   const hasSteps = Array.isArray(msg.steps) && msg.steps.length > 0;
   const hasSources = Array.isArray(msg.sources) && msg.sources.length > 0;
+  // A Brain answer that shows its sources is the first-run "ask" step; the server record ignores repeats.
+  const citedAnswer = hasSources && typeof msg.content === 'string' && msg.content.trim().length > 0;
+  useEffect(() => {
+    if (citedAnswer) { try { window.dispatchEvent(new CustomEvent('hm:onboarding', { detail: { milestone: 'answer_cited' } })); } catch { /* Not in a browser: nothing listens. */ } }
+  }, [citedAnswer, msg.id]);
   const followUps = [...new Set((Array.isArray(msg.follow_ups) ? msg.follow_ups : [])
     .filter((item) => typeof item === 'string')
     .map((item) => item.trim())

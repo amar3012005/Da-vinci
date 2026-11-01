@@ -3,7 +3,7 @@ import i18n from '../../../../../i18n';
 import { isNativeApp } from '../native-app';
 import './onboarding-i18n';
 import {
-  LEGACY_RUNTIME_RAIL_KEY, LEGACY_SURFACES, ONBOARDING_VERSION, RUNTIME_CHECKPOINT_STEPS, STEP_IDS,
+  BRAIN_STEP_IDS, LEGACY_RUNTIME_RAIL_KEY, LEGACY_SURFACES, MILESTONE_BRAIN_STEP, ONBOARDING_VERSION, RUNTIME_CHECKPOINT_STEPS, STEP_IDS,
 } from './registry';
 
 /**
@@ -73,7 +73,8 @@ export function onboardingStore(scope, { fetcher, delay = 400 } = {}) {
   const optimistic = (step, status) => {
     if (!view) return;
     const rank = { todo: 0, seen: 1, skipped: 2, done: 3 };
-    view = { ...view, steps: view.steps.map(item => item.id === step && rank[status] > rank[item.status] ? { ...item, status, at: Date.now() } : item) };
+    const move = item => item.id === step && rank[status] > rank[item.status] ? { ...item, status, at: Date.now() } : item;
+    view = { ...view, steps: view.steps.map(move), ...(Array.isArray(view.brainSteps) ? { brainSteps: view.brainSteps.map(move) } : {}) };
     emit();
   };
   const post = async body => {
@@ -121,7 +122,9 @@ export function onboardingStore(scope, { fetcher, delay = 400 } = {}) {
      * @param {string|null} [step]
      */
     track(type, step = null) {
-      if (step && !STEP_IDS.includes(step)) return;
+      if (step && !STEP_IDS.includes(step) && !BRAIN_STEP_IDS.includes(step)) return;
+      // A Brain-only step finishes from the real event the server sees (a cited answer, a saved source, ...), never from a click or a done event.
+      if (type === 'onb_step_done' && step && !STEP_IDS.includes(step)) return;
       queue.push({ type, step, version: ONBOARDING_VERSION, locale: (i18n.language || 'en').split('-')[0], device: currentDevice(), platform: currentPlatform(), at: Date.now() });
       if (type === 'onb_step_done') optimistic(step, 'done');
       if (type === 'onb_step_skip') optimistic(step, 'skipped');
@@ -133,8 +136,14 @@ export function onboardingStore(scope, { fetcher, delay = 400 } = {}) {
     confirmLocale(locale) { extra.locale = locale; optimistic('language', 'done'); schedule(); },
     /** Older first-run surfaces the person closed. */
     closeSurfaces(ids) { extra.surfaces = [...new Set([...(extra.surfaces || []), ...ids])]; if (view) { view = { ...view, surfaces: { ...view.surfaces, ...Object.fromEntries(ids.map(id => [id, Date.now()])) } }; emit(); } schedule(); },
-    /** Milestones only the browser sees: `authority_set`, `proactive_opened`, `company_awake`. */
-    milestone(id) { extra.milestones = [...new Set([...(extra.milestones || []), id])]; schedule(); },
+    /** Milestones only the browser sees: `authority_set`, `proactive_opened`, `company_awake`, and the Brain-only `company_saved`, `source_added`, `answer_cited`, `memory_saved`, `invite_sent`. */
+    milestone(id) {
+      // A Brain-only step the server already shows as done needs no second report.
+      const brainStep = MILESTONE_BRAIN_STEP[id];
+      if (brainStep && view?.brainSteps?.find(item => item.id === brainStep)?.status === 'done') return;
+      if (brainStep) optimistic(brainStep, 'done');
+      extra.milestones = [...new Set([...(extra.milestones || []), id])]; schedule();
+    },
     flush,
   };
   stores.set(scope, store);
