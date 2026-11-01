@@ -4,6 +4,8 @@ import { fetchWithRuntimeAdmission } from '../shared/runtime-admission';
 import { useSidebarCopy } from './sidebar-copy';
 
 export const ANATOMY_ENDPOINT = '/api/hivemindHq/anatomyMode';
+/** Waits before re-reading the setting after a launch-time 401 or a Runtime restart. */
+export const ANATOMY_RETRY_MS = [1500, 4000, 10000];
 
 /**
  * Company Anatomy mode switch for the phone sidebar. Runtime owns the saved value; the row stays hidden
@@ -16,10 +18,16 @@ export default function AnatomyModeToggle({ fetcher = fetchWithRuntimeAdmission 
   const [error, setError] = useState('');
   useEffect(() => {
     const controller = new AbortController();
-    fetcher(ANATOMY_ENDPOINT, { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
-      .then(async response => { if (response.ok) { const body = await response.json(); if (body?.value) setState(body.value); } })
+    let timer;
+    // At app launch the Runtime session may not be admitted yet (401) or Runtime may be restarting (502/503): retry a few times.
+    const read = attempt => fetcher(ANATOMY_ENDPOINT, { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
+      .then(async response => {
+        if (response.ok) { const body = await response.json(); if (body?.value) setState(body.value); return; }
+        if ([401, 502, 503].includes(response.status) && attempt < ANATOMY_RETRY_MS.length) timer = setTimeout(() => read(attempt + 1), ANATOMY_RETRY_MS[attempt]);
+      })
       .catch(() => { /* Runtime without Anatomy mode: the row stays hidden. */ });
-    return () => controller.abort();
+    read(0);
+    return () => { controller.abort(); clearTimeout(timer); };
   }, [fetcher]);
   if (!state) return null;
   const toggle = async () => {
