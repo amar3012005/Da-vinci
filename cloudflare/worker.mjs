@@ -527,7 +527,7 @@ async function proxyRuntimeApps(request, ctx) {
   const headers = new Headers({cookie, accept:request.headers.get('accept') || '*/*'});
   if(origin) headers.set('origin',origin);
   applyOpenDotSurface(headers,url);
-  for(const key of ['content-type','rsc','next-router-state-tree','next-router-prefetch','next-url','last-event-id']) if(request.headers.has(key)) headers.set(key,request.headers.get(key));
+  for(const key of ['content-type','rsc','next-router-state-tree','next-router-prefetch','next-router-segment-prefetch','next-url','last-event-id']) if(request.headers.has(key)) headers.set(key,request.headers.get(key));
   try {
     let body;
     if(request.method === 'POST') {body=await request.arrayBuffer(); if(body.byteLength>64000)return reply('request_too_large',413);}
