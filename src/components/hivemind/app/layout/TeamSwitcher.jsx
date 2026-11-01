@@ -72,7 +72,7 @@ export default function TeamSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute top-10 left-0 w-[280px] bg-white border border-[#e3e0db] rounded-[8px] shadow-lg z-50 overflow-hidden">
+        <div className="absolute top-10 start-0 w-[280px] bg-white border border-[#e3e0db] rounded-[8px] shadow-lg z-50 overflow-hidden">
           {/* Teams section */}
           <div className="px-3 py-2 border-b border-[#eae7e1] bg-[#faf9f4]">
             <div className="text-[10px] uppercase tracking-wide text-[#a3a3a3] font-semibold">
@@ -89,7 +89,7 @@ export default function TeamSwitcher() {
                 onClick={() => {
                   setActiveTeamId(t.id);
                 }}
-                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[#f3f1ec] transition-colors text-xs"
+                className="w-full flex items-center justify-between px-3 py-2 text-start hover:bg-[#f3f1ec] transition-colors text-xs"
               >
                 <span className="flex items-center gap-2 min-w-0">
                   <Users size={12} className="text-[#525252] flex-shrink-0" />
@@ -144,7 +144,7 @@ export default function TeamSwitcher() {
               <div className="max-h-[180px] overflow-y-auto">
                 <button
                   onClick={() => setActiveProjectId(null)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[#f3f1ec] transition-colors text-xs"
+                  className="w-full flex items-center justify-between px-3 py-2 text-start hover:bg-[#f3f1ec] transition-colors text-xs"
                 >
                   <span className="flex items-center gap-2 text-[#525252]">
                     <span className="text-[10px] uppercase tracking-wide">{s('all', 'All')}</span>
@@ -158,7 +158,7 @@ export default function TeamSwitcher() {
                   <button
                     key={p.id}
                     onClick={() => setActiveProjectId(p.id)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[#f3f1ec] transition-colors text-xs"
+                    className="w-full flex items-center justify-between px-3 py-2 text-start hover:bg-[#f3f1ec] transition-colors text-xs"
                   >
                     <span className="flex items-center gap-2 min-w-0">
                       <Folder size={12} className="text-[#525252] flex-shrink-0" />

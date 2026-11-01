@@ -6,7 +6,7 @@
  .ha-team-heading { display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px; }
  .ha-team-heading h2 { margin:0;font-size:16px;font-weight:600; }
  .ha-team-heading>span { font-size:11px;color:#777c84; }
- .ha-runtime-card { display:flex;align-items:center;gap:14px;width:100%;padding:12px;margin-bottom:16px;border-radius:10px;text-align:left;min-height:108px;position:relative; }
+ .ha-runtime-card { display:flex;align-items:center;gap:14px;width:100%;padding:12px;margin-bottom:16px;border-radius:10px;text-align:start;min-height:108px;position:relative; }
  .ha-runtime-card:hover,.ha-runtime-card.is-selected { background:#f0eee7; }
  .ha-runtime-card>img { width:82px;height:82px;object-fit:contain;mix-blend-mode:multiply;flex-shrink:0; }
 /* Reserves the Runtime avatar box until the saved character is known (RuntimeAvatar renders this span while pending). */
@@ -22,7 +22,7 @@
  .ha-team-groups { display:flex;flex-direction:column;gap:14px; }
  .ha-team-group h3 { display:flex;align-items:center;gap:6px;margin:0 0 4px;padding:0 8px;font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:#7a7f86; }
  .ha-team-group h3>span { font-weight:500;color:#a0a4aa; }
- .ha-team-row { display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:8px;border-radius:9px;text-align:left; }
+ .ha-team-row { display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:8px;border-radius:9px;text-align:start; }
  .ha-team-row:hover { background:#f0eee7; }
  .ha-team-row.is-selected { background:#e9eef7; }
  .ha-team-row-identity { display:flex;flex-direction:column;min-width:0;flex:1; }
@@ -35,9 +35,9 @@
  .ha-employee-tile:hover { background:#f0eee7; }
  .ha-employee-tile.is-selected { background:#e9eef7; }
  .ha-avatar-wrap { position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:72px;height:72px;margin-bottom:9px; }
- .ha-profession { position:absolute;z-index:5;top:-4px;left:50%;transform:translateX(-50%);width:124px;min-height:80px;display:flex;align-items:center;justify-content:center;padding:6px 30px 6px 6px;border-radius:12px;background:#faf9f4f5;color:#344a63;box-shadow:0 2px 12px #24324412;font-size:11px;line-height:1.45;overflow-wrap:anywhere;visibility:hidden;opacity:0;pointer-events:none; }
+ .ha-profession { position:absolute;z-index:5;top:-4px;left:50%;transform:translateX(-50%);width:124px;min-height:80px;display:flex;align-items:center;justify-content:center;padding:6px; padding-inline-end:30px;border-radius:12px;background:#faf9f4f5;color:#344a63;box-shadow:0 2px 12px #24324412;font-size:11px;line-height:1.45;overflow-wrap:anywhere;visibility:hidden;opacity:0;pointer-events:none; }
  .ha-employee-tile:hover .ha-profession,.ha-employee-tile:focus-visible .ha-profession { visibility:visible;opacity:1; }
- .ha-dot-marker { position:absolute;right:-2px;bottom:0;background:#faf9f4;color:#7b8087;padding:1px;box-sizing:content-box;border-radius:3px; }
+ .ha-dot-marker { position:absolute;inset-inline-end:-2px;bottom:0;background:#faf9f4;color:#7b8087;padding:1px;box-sizing:content-box;border-radius:3px; }
  .ha-employee-name { font-size:14px;line-height:1.4;max-width:100%;overflow-wrap:anywhere;color:#2b3037; }
  .ha-live-status { position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px 5px;min-width:0;max-width:100%;min-height:18px; }
 /* The status row keeps its height before the first room read so cards never shift. */
@@ -50,7 +50,7 @@
  .ha-create-employee.full-row { min-height:48px;margin-top:3px; }
  .ha-create-employee:hover { background:#e6eef9; }
  .ha-workspace-shortcuts { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;flex-shrink:0;border-top:1px solid #e7e4dd;padding:14px 20px 10px; }
- .ha-workspace-shortcuts>a,.ha-workspace-shortcuts>button { display:flex;align-items:center;gap:8px;min-height:37px;width:100%;min-width:0;padding:7px 9px;border-radius:7px;background:#f1f0eb;text-align:left;font-size:12px; }
+ .ha-workspace-shortcuts>a,.ha-workspace-shortcuts>button { display:flex;align-items:center;gap:8px;min-height:37px;width:100%;min-width:0;padding:7px 9px;border-radius:7px;background:#f1f0eb;text-align:start;font-size:12px; }
  .ha-workspace-shortcuts svg { flex-shrink:0;color:#747970; }
  .ha-workspace-shortcuts>a:hover,.ha-workspace-shortcuts>button:hover { background:#e8edf3; }
  .ha-account-area { flex-shrink:0;margin:0 20px;padding:11px 0 10px;border-top:1px solid #e7e4dd; }
@@ -63,7 +63,7 @@
  .ha-account-identity small { display:block;font-size:10px;color:#7c828b; }
  .ha-sign-out { display:flex;align-items:center;gap:8px;margin-top:8px;color:#7c828b;font-size:12px; }
  .desktop-hyperagents-navigation button:focus-visible,.desktop-hyperagents-navigation a:focus-visible { outline:2px solid #3484ff;outline-offset:3px; }
- .ha-resize-grip { position:absolute;z-index:50;right:-5px;top:0;bottom:0;width:10px;cursor:ew-resize;touch-action:none;display:flex;align-items:center;justify-content:center; }
+ .ha-resize-grip { position:absolute;z-index:50;inset-inline-end:-5px;top:0;bottom:0;width:10px;cursor:ew-resize;touch-action:none;display:flex;align-items:center;justify-content:center; }
  .ha-resize-grip>span { height:46px;width:3px;background:#c2c7cd;border-radius:3px; }
  .ha-resize-grip:focus-visible { outline:2px solid #3484ff;outline-offset:0; }
  .desktop-hyperagents-navigation[data-columns="1"] .ha-runtime-card { gap:9px;padding:10px;min-height:94px; }
@@ -76,7 +76,7 @@
  .desktop-hyperagents-navigation.is-collapsed .ha-employee-tile { min-height:54px;padding:8px 2px; }
  .desktop-hyperagents-navigation.is-collapsed .ha-avatar-wrap { width:34px;height:34px;margin:0; }
  .desktop-hyperagents-navigation.is-collapsed .ha-live-status { position:absolute;inset:0;pointer-events:none; }
- .desktop-hyperagents-navigation.is-collapsed .ha-live-status>span { right:0;top:0;max-width:48px;flex-wrap:wrap;background:#faf9f4cc;border-radius:3px; }
+ .desktop-hyperagents-navigation.is-collapsed .ha-live-status>span { inset-inline-end:0;top:0;max-width:48px;flex-wrap:wrap;background:#faf9f4cc;border-radius:3px; }
  .desktop-hyperagents-navigation.is-collapsed .ha-create-employee { min-height:34px;padding:5px; }
  .desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts { grid-template-columns:1fr;padding:10px 12px; }
  .desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts>a,.desktop-hyperagents-navigation.is-collapsed .ha-workspace-shortcuts>button { justify-content:center;padding:7px; }
@@ -142,7 +142,7 @@ nav .ha-autonomy-seat.is-drawer { padding:4px 10px 12px; }
 @media (prefers-reduced-motion: reduce) { .ha-autonomy-cells i { transition:none; } }
  .ha-employee-cell { position:relative;display:flex;min-width:0; }
  .ha-employee-cell>.ha-employee-tile { width:100%; }
- .ha-employee-delete { position:absolute;top:6px;right:6px;z-index:9;box-shadow:0 0 0 1px #e3e0db;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:9999px;color:#7a7f86;background:#faf9f4;opacity:0; }
+ .ha-employee-delete { position:absolute;top:6px;inset-inline-end:6px;z-index:9;box-shadow:0 0 0 1px #e3e0db;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:9999px;color:#7a7f86;background:#faf9f4;opacity:0; }
  .ha-employee-cell:hover .ha-employee-delete,.ha-employee-cell:focus-within .ha-employee-delete,.ha-employee-delete:focus-visible { opacity:1; }
  .ha-employee-delete:hover { color:#b42318; }
  .ha-employee-confirm { position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:10px;background:#faf9f4;box-shadow:0 2px 12px #24324420;text-align:center;font-size:11px;line-height:1.35;color:#344a63; }

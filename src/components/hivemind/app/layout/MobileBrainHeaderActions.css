@@ -2,8 +2,8 @@
 .hm-mobile-brain-header-identity {
   position:absolute;
   top:calc(env(safe-area-inset-top, 0px) + 9px);
-  left:56px;
-  right:118px;
+  inset-inline-start:56px;
+  inset-inline-end:118px;
   min-height:44px;
   z-index:40;
   display:grid;

@@ -34,6 +34,6 @@ export default function HyperAgentActivation() {
   }, [entering, user?.id, org?.id, attempt]);
   if (!message) return null;
   return <div role="status" className="pointer-events-auto absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-full border border-[#e3e0db] bg-white/95 px-4 py-1.5 text-xs text-[#525252] shadow-sm">
-    {message} <button type="button" className="ml-2 underline" onClick={() => setAttempt(n => n + 1)}>{s('retry', 'Retry')}</button>
+    {message} <button type="button" className="ms-2 underline" onClick={() => setAttempt(n => n + 1)}>{s('retry', 'Retry')}</button>
   </div>;
 }

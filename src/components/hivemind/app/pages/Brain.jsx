@@ -124,7 +124,7 @@ function NodeDetail({ node, edges, onClose, onNavigate }) {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 360, opacity: 0 }}
       transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-      className="absolute top-0 right-0 w-[340px] h-full bg-[#0d1117] border-l border-white/10 shadow-[-8px_0_30px_rgba(0,0,0,0.4)] z-20 overflow-y-auto"
+      className="absolute top-0 end-0 w-[340px] h-full bg-[#0d1117] border-s border-white/10 shadow-[-8px_0_30px_rgba(0,0,0,0.4)] z-20 overflow-y-auto"
     >
       <div className="sticky top-0 bg-[#0d1117]/95 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
         <span className="text-xs font-mono text-white/40 uppercase tracking-wider">{t('brain.memoryDetail', 'Memory Detail')}</span>
@@ -199,7 +199,7 @@ function NodeDetail({ node, edges, onClose, onNavigate }) {
         <div className="flex items-center gap-2 text-[11px] text-white/40 font-['Space_Grotesk']">
           <Clock size={12} />
           <span>{node.daysSinceUpdate != null ? t('brain.daysAgo', '{{n}} days ago', { n: node.daysSinceUpdate.toFixed(1) }) : '--'}</span>
-          <span className="ml-auto">{t('brain.glow', 'Glow: {{pct}}%', { pct: ((node.temporalWeight || 0) * 100).toFixed(0) })}</span>
+          <span className="ms-auto">{t('brain.glow', 'Glow: {{pct}}%', { pct: ((node.temporalWeight || 0) * 100).toFixed(0) })}</span>
         </div>
 
         {/* Relationships */}
@@ -213,7 +213,7 @@ function NodeDetail({ node, edges, onClose, onNavigate }) {
                   <button
                     key={`out-${i}`}
                     onClick={() => onNavigate(targetId)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-left transition-colors"
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-start transition-colors"
                   >
                     <GitBranch size={10} style={{ color: DARK_EDGE_COLORS[e.type] || '#94a3b8' }} />
                     <span className="text-[10px] font-mono" style={{ color: DARK_EDGE_COLORS[e.type] }}>
@@ -231,7 +231,7 @@ function NodeDetail({ node, edges, onClose, onNavigate }) {
                   <button
                     key={`in-${i}`}
                     onClick={() => onNavigate(sourceId)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-left transition-colors"
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-start transition-colors"
                   >
                     <GitBranch size={10} className="rotate-180" style={{ color: DARK_EDGE_COLORS[e.type] || '#94a3b8' }} />
                     <span className="text-[10px] font-mono opacity-50" style={{ color: DARK_EDGE_COLORS[e.type] }}>
@@ -603,16 +603,16 @@ export default function Brain() {
       />
 
       {/* ─── Top bar overlay ───────────────────────────────────────── */}
-      <div className="absolute top-0 left-0 right-0 z-10 px-4 py-3 flex items-center gap-3">
+      <div className="absolute top-0 start-0 end-0 z-10 px-4 py-3 flex items-center gap-3">
         {/* Search */}
         <div className="relative flex-1 max-w-sm">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-white/30" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder={t('brain.searchPlaceholder', 'Search memories...')}
-            className="w-full pl-8 pr-3 py-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl text-xs font-['Space_Grotesk'] text-white/90 placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-colors"
+            className="w-full ps-8 pe-3 py-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl text-xs font-['Space_Grotesk'] text-white/90 placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-colors"
           />
         </div>
 
@@ -631,7 +631,7 @@ export default function Brain() {
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="absolute top-full mt-1 left-0 bg-[#0d1117]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-lg z-30 py-1 min-w-[120px]"
+                className="absolute top-full mt-1 start-0 bg-[#0d1117]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-lg z-30 py-1 min-w-[120px]"
               >
                 {[
                   { key: 'personal', label: t('brain.scopePersonal', 'Personal') },
@@ -642,7 +642,7 @@ export default function Brain() {
                     key={option.key}
                     disabled={option.disabled}
                     onClick={() => { if (!option.disabled) { setScope(option.key); setShowScopeMenu(false); } }}
-                    className={`w-full text-left px-3 py-1.5 text-xs font-['Space_Grotesk'] hover:bg-white/5 transition-colors ${
+                    className={`w-full text-start px-3 py-1.5 text-xs font-['Space_Grotesk'] hover:bg-white/5 transition-colors ${
                       scope === option.key ? 'text-[#60a5fa]' : 'text-white/60'
                     } ${option.disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
                   >
@@ -669,11 +669,11 @@ export default function Brain() {
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="absolute top-full mt-1 left-0 bg-[#0d1117]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-lg z-30 py-1 min-w-[160px]"
+                className="absolute top-full mt-1 start-0 bg-[#0d1117]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-lg z-30 py-1 min-w-[160px]"
               >
                 <button
                   onClick={() => { setProjectFilter(''); setShowProjectMenu(false); }}
-                  className="w-full text-left px-3 py-1.5 text-xs font-['Space_Grotesk'] text-white/60 hover:bg-white/5"
+                  className="w-full text-start px-3 py-1.5 text-xs font-['Space_Grotesk'] text-white/60 hover:bg-white/5"
                 >
                   {t('brain.allProjects', 'All Projects')}
                 </button>
@@ -681,7 +681,7 @@ export default function Brain() {
                   <button
                     key={p}
                     onClick={() => { setProjectFilter(p); setShowProjectMenu(false); }}
-                    className={`w-full text-left px-3 py-1.5 text-xs font-['Space_Grotesk'] hover:bg-white/5 ${
+                    className={`w-full text-start px-3 py-1.5 text-xs font-['Space_Grotesk'] hover:bg-white/5 ${
                       projectFilter === p ? 'text-[#60a5fa] font-semibold' : 'text-white/60'
                     }`}
                   >

@@ -84,13 +84,13 @@ export default function DesktopBrainNavigation({ sections, user, planLabel, cred
           return item ? <NavLink key={kind} to={item.to} className={({ isActive }) => `brain-icon-link brain-key brain-key-${kind}${isActive ? ' is-current' : ''}`}><BrainKeyboardFace kind={kind} label={item.label}/></NavLink> : null;
         })}
         <NavLink to="/hivemind/app/overview/new" className="brain-key brain-key-return" aria-label={s('openBrainChat', 'Open Brain chat')}><span className="brain-key-face"><CornerDownLeft size={20} aria-hidden="true"/></span></NavLink>
-        {previous && <NavLink to={previous.to} className="brain-key brain-key-arrow brain-key-previous" aria-label={s('previousBrainPage', 'Previous Brain page: {{label}}', { label: previous.label })}><span className="brain-key-face"><ArrowLeft size={22} aria-hidden="true"/></span></NavLink>}
+        {previous && <NavLink to={previous.to} className="brain-key brain-key-arrow brain-key-previous" aria-label={s('previousBrainPage', 'Previous Brain page: {{label}}', { label: previous.label })}><span className="brain-key-face"><ArrowLeft size={22} aria-hidden="true" className="rtl:-scale-x-100"/></span></NavLink>}
         <button type="button" className="brain-key brain-key-arrow brain-key-top" aria-label={s('scrollBrainTop', 'Scroll Brain navigation to top')} onClick={() => destinationsScroll.current?.scrollTo({ top: 0, behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}><span className="brain-key-face"><ArrowUp size={22} aria-hidden="true"/></span></button>
-        {next && <NavLink to={next.to} className="brain-key brain-key-arrow brain-key-next" aria-label={s('nextBrainPage', 'Next Brain page: {{label}}', { label: next.label })}><span className="brain-key-face"><ArrowRight size={22} aria-hidden="true"/></span></NavLink>}
+        {next && <NavLink to={next.to} className="brain-key brain-key-arrow brain-key-next" aria-label={s('nextBrainPage', 'Next Brain page: {{label}}', { label: next.label })}><span className="brain-key-face"><ArrowRight size={22} aria-hidden="true" className="rtl:-scale-x-100"/></span></NavLink>}
       </div>
       </div>
       {advancedOpen && createPortal(<div ref={flyout} role="dialog" aria-label={s('advancedFeatures', 'Advanced features')} id={advancedId} className="brain-advanced-flyout" style={{ ...flyoutPosition, visibility: flyoutPosition ? 'visible' : 'hidden' }}>
-        <nav aria-label={s('advancedDestinations', 'Advanced destinations')}>{advanced.map(item => <NavLink key={item.to} to={item.to} onClick={() => setAdvancedOpen(false)}><item.icon size={17}/><span>{item.label}</span><ChevronRight size={14}/></NavLink>)}</nav>
+        <nav aria-label={s('advancedDestinations', 'Advanced destinations')}>{advanced.map(item => <NavLink key={item.to} to={item.to} onClick={() => setAdvancedOpen(false)}><item.icon size={17}/><span>{item.label}</span><ChevronRight size={14} className="rtl:-scale-x-100"/></NavLink>)}</nav>
       </div>, document.body)}
     </nav>
     <footer className="brain-bottom">
@@ -99,7 +99,7 @@ export default function DesktopBrainNavigation({ sections, user, planLabel, cred
       </div>
       <BrainUpdateBanner slides={banner}/>
       {user && <div className="brain-account-usage"><div className="brain-account-name"><span className="brain-account-initial" aria-hidden="true">{(user.display_name || user.email || 'U')[0].toUpperCase()}</span><div><strong>{user.display_name || user.email || 'User'}</strong><span>{planLabel}</span></div></div><CreditBalance credits={credits} inline/></div>}
-      <button type="button" onClick={logout} className="brain-footer-link brain-sign-out"><LogOut size={17}/><span>{s('signOutShort', 'Sign out')}</span></button>
+      <button type="button" onClick={logout} className="brain-footer-link brain-sign-out"><LogOut size={17} className="rtl:-scale-x-100" /><span>{s('signOutShort', 'Sign out')}</span></button>
     </footer>
   </div>;
 }

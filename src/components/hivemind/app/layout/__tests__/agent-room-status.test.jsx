@@ -22,7 +22,7 @@ test('action and schedule indicators require explicit native facts', () => {
 
 test('collapsed sidebar retains accessible status without a long label', () => {
   const value = output({ running: true, unread: true, actionRequired: true, scheduled: true }, true);
-  expect(value).toContain('absolute right-1 top-1');
+  expect(value).toContain('absolute end-1 top-1');
   expect(value).toContain('sr-only');
   expect(value).toContain('Action required');
   expect(value).toContain('aria-label="Working"');

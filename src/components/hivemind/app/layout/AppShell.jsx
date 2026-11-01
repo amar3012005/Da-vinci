@@ -176,7 +176,7 @@ function TalkToHiveFAB({ onOpen, hidden }) {
           transition={{ type: 'spring', stiffness: 340, damping: 26, delay: 0.15 }}
           whileTap={{ scale: 0.94 }}
           whileHover={{ y: -1 }}
-          className="group fixed bottom-6 right-6 z-40 flex items-center gap-2.5 pl-3.5 pr-5 py-3 rounded-xl border border-white/30 text-white font-semibold tracking-tight overflow-hidden"
+          className="group fixed bottom-6 end-6 z-40 flex items-center gap-2.5 ps-3.5 pe-5 py-3 rounded-xl border border-white/30 text-white font-semibold tracking-tight overflow-hidden"
           style={{
             background:
               'linear-gradient(135deg, rgba(17,125,255,0.94) 0%, rgba(8,98,222,0.94) 100%)',
@@ -595,7 +595,7 @@ function AppShellContent() {
     {companyStatus === 'checking' ? <RoomLoading pathname={location.pathname} fallback={<AsciiWorkspaceLoading label={s('shellStatus.connecting', 'Connecting…')} />} />
       : companyStatus === 'error' ? <div role="alert" className="mx-auto max-w-lg p-8"><p>{s('shellStatus.companyCheckFailed', 'We couldn’t check your company setup. Your progress is saved.')}</p><button type="button" onClick={() => (clearCompanyRead(`${user?.id}:${org?.id}`), setCompanyRetry(value => value + 1))} className="mt-4 text-[#117dff] underline">{s('shellStatus.tryAgain', 'Try again')}</button></div>
       : <React.Suspense fallback={<p role="status">{s('shellStatus.openingOnboarding', 'Opening company onboarding…')}</p>}><HyperOnboarding onComplete={completeCompany} /></React.Suspense>}
-    {companyStatus !== 'required' && <button type="button" onClick={() => setAccountOpen(true)} className="fixed bottom-6 right-6 rounded-lg border bg-white px-4 py-2 text-sm">{s('accountSettings', 'Account & Settings')}</button>}
+    {companyStatus !== 'required' && <button type="button" onClick={() => setAccountOpen(true)} className="fixed bottom-6 end-6 rounded-lg border bg-white px-4 py-2 text-sm">{s('accountSettings', 'Account & Settings')}</button>}
     {accountOpen && <AccountSettingsDialog onClose={closeAccount} />}
   </div>;
 
@@ -660,7 +660,7 @@ function AppShellContent() {
           data-native-chat-frame={nativeChatRoom || undefined}
           className={`min-w-0 transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen || crmFullscreen ? 'sidebar-content-expanded' : ''}`}
           style={{
-            marginLeft: (overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? '0px' : desktopTeamNavigation ? `${desktopTeamWidth}px` : sidebarCollapsed ? '68px' : '300px',
+            marginInlineStart: (overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? '0px' : desktopTeamNavigation ? `${desktopTeamWidth}px` : sidebarCollapsed ? '68px' : '300px',
             ...(nativeChatRoom && employeeCompact ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : {}),
             '--hm-harness-center-offset': `${-((overlayNavigation || graphFullscreen || hyperFullscreen || crmFullscreen) ? 0 : desktopTeamNavigation ? desktopTeamWidth / 2 : sidebarCollapsed ? 34 : 150)}px`,
           }}

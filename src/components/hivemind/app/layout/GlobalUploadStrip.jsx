@@ -90,7 +90,7 @@ export default function GlobalUploadStrip() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.95 }}
         transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-        className="fixed bottom-6 left-6 z-40 w-[320px] rounded-2xl border border-[#ece9e2] bg-white shadow-[0_14px_40px_-12px_rgba(0,0,0,0.18),0_4px_14px_-4px_rgba(0,0,0,0.08)] overflow-hidden"
+        className="fixed bottom-6 start-6 z-40 w-[320px] rounded-2xl border border-[#ece9e2] bg-white shadow-[0_14px_40px_-12px_rgba(0,0,0,0.18),0_4px_14px_-4px_rgba(0,0,0,0.08)] overflow-hidden"
       >
         {/* Header */}
         <button
@@ -100,7 +100,7 @@ export default function GlobalUploadStrip() {
           <div className="w-7 h-7 rounded-lg bg-[#117dff]/8 border border-[#117dff]/18 flex items-center justify-center flex-shrink-0">
             <Upload size={13} className="text-[#117dff]" strokeWidth={2.2} />
           </div>
-          <div className="flex-1 min-w-0 text-left">
+          <div className="flex-1 min-w-0 text-start">
             <div className="text-[12.5px] font-semibold text-[#0a0a0a] leading-tight">
               {inFlight > 0
                 ? plural('uploadingFiles', 'Uploading {{n}} file…', 'Uploading {{n}} files…', inFlight)

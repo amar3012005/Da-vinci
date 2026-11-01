@@ -110,7 +110,7 @@ export default function LangSwitcher({ compact = false, theme = 'light', variant
         <div
           role="menu"
           style={placement ? { left: placement.left, right: 'auto', width: placement.width } : undefined}
-          className={`absolute right-0 mt-2 w-[220px] max-w-[calc(100vw-32px)] max-h-[360px] overflow-y-auto rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-1.5 z-[100] ${
+          className={`absolute end-0 mt-2 w-[220px] max-w-[calc(100vw-32px)] max-h-[360px] overflow-y-auto rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-1.5 z-[100] ${
             dark
               ? 'border-[#2f2925] bg-[#080808] shadow-[0_18px_48px_rgba(0,0,0,0.46)]'
               : 'border-[#e3e0db] bg-white'
@@ -124,7 +124,7 @@ export default function LangSwitcher({ compact = false, theme = 'light', variant
               type="button"
               role="menuitem"
               onClick={(event) => { event.preventDefault(); event.stopPropagation(); pickAutoDetect(); }}
-              className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${dark ? 'text-[#d5c8bc] hover:bg-[#151312]' : 'text-[#0a0a0a] hover:bg-[#f5f3ee]'}`}
+              className={`w-full text-start px-3 py-2 text-[13px] transition-colors ${dark ? 'text-[#d5c8bc] hover:bg-[#151312]' : 'text-[#0a0a0a] hover:bg-[#f5f3ee]'}`}
             >
               Company language: auto-detect from website
             </button>
@@ -142,7 +142,7 @@ export default function LangSwitcher({ compact = false, theme = 'light', variant
                   event.stopPropagation();
                   pickLanguage(lng.code);
                 }}
-                className={`w-full text-left flex items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
+                className={`w-full text-start flex items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
                   dark ? 'hover:bg-[#151312]' : 'hover:bg-[#f5f3ee]'
                 } ${
                   active
@@ -152,14 +152,14 @@ export default function LangSwitcher({ compact = false, theme = 'light', variant
               >
                 <span className="flex-1">
                   <span>{lng.native}</span>
-                  <span className={`ml-2 text-[10px] font-mono uppercase ${dark ? 'text-[#8f8378]' : 'text-[#8a8a8a]'}`}>
+                  <span className={`ms-2 text-[10px] font-mono uppercase ${dark ? 'text-[#8f8378]' : 'text-[#8a8a8a]'}`}>
                     {lng.code}
                   </span>
                   {isBetaLocale(lng.code) && (
                     <span
                       data-testid={`beta-${lng.code}`}
                       title={t('common.betaHint', 'Machine translation, not yet reviewed by a native speaker')}
-                      className={`ml-2 rounded px-1 text-[10px] font-semibold ${dark ? 'bg-[#2f2925] text-[#d5c8bc]' : 'bg-[#eef4ff] text-[#117dff]'}`}
+                      className={`ms-2 rounded px-1 text-[10px] font-semibold ${dark ? 'bg-[#2f2925] text-[#d5c8bc]' : 'bg-[#eef4ff] text-[#117dff]'}`}
                     >
                       {t('common.beta', 'Beta')}
                     </span>

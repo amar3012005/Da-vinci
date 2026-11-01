@@ -239,13 +239,13 @@ function StageRow({ row }) {
           {hasDetails && (
             <button type="button" onClick={() => setExpanded(value => !value)} aria-expanded={expanded}
               className="inline-flex items-center gap-0.5 text-[11px] text-[#737373] hover:text-[#117dff] transition-colors">
-              {expanded ? 'Hide details' : 'Details'}<ChevronRight size={11} className={expanded ? 'rotate-90 transition-transform' : 'transition-transform'} />
+              {expanded ? 'Hide details' : 'Details'}<ChevronRight size={11} className={expanded ? 'rotate-90 transition-transform' : 'transition-transform rtl:-scale-x-100'} />
             </button>
           )}
         </div>
       </div>
       {expanded && hasDetails && (
-        <div className="ml-6 mt-1.5 border-l border-[#eae7e1] pl-2.5 space-y-0.5 text-[11px] text-[#737373]">
+        <div className="ms-6 mt-1.5 border-s border-[#eae7e1] ps-2.5 space-y-0.5 text-[11px] text-[#737373]">
           {details.input.map(item => <div key={item.label}><span className="text-[#a3a3a3] capitalize">{item.label}: </span>{item.value}</div>)}
           {details.output && <div><span className="text-[#a3a3a3]">Result: </span>{details.output}</div>}
         </div>
@@ -259,15 +259,15 @@ export function OrchestrationReasoning({ events = [], steps = [], sealed = true,
   const rows = reasoningRows(events, steps);
   if (!rows.length) return null;
   return (
-    <div className="max-w-4xl py-2 pr-2">
+    <div className="max-w-4xl py-2 pe-2">
       <button type="button" onClick={() => setOpen((value) => !value)}
-        className="inline-flex items-center gap-2 text-left text-[#8b877f] hover:text-[#5f5b54] transition-colors" aria-expanded={open}>
+        className="inline-flex items-center gap-2 text-start text-[#8b877f] hover:text-[#5f5b54] transition-colors" aria-expanded={open}>
         {sealed ? <Clock size={15} /> : <Loader2 size={15} className="animate-spin text-[#117dff]" />}
         <span className="text-[13px] font-medium">{label}</span>
         <ChevronDown size={14} className={`transition-transform ${open ? '' : '-rotate-90'}`} />
       </button>
       {open && (
-        <div className="mt-2.5 ml-[7px] border-l border-[#e5dfd6] pl-4 space-y-1.5">
+        <div className="mt-2.5 ms-[7px] border-s border-[#e5dfd6] ps-4 space-y-1.5">
           {rows.map((row) => <StageRow key={row.step_id || `${row.type || 'row'}:${row.state || row.tool || row.index}`} row={row} />)}
         </div>
       )}
@@ -521,7 +521,7 @@ export function renderMarkdownMobile(raw) {
             <thead>
               <tr className="bg-[#f3f1ec]">
                 {header.map((h, hx) => (
-                  <th key={hx} className="text-left font-semibold px-2.5 py-1.5 border border-[#e3e0db]">{inlineMd(h, `th-${hx}`)}</th>
+                  <th key={hx} className="text-start font-semibold px-2.5 py-1.5 border border-[#e3e0db]">{inlineMd(h, `th-${hx}`)}</th>
                 ))}
               </tr>
             </thead>
@@ -562,7 +562,7 @@ export function renderMarkdownMobile(raw) {
       }
       const myKey = key++;
       blocks.push(
-        <ul key={myKey} className="list-disc pl-5 space-y-0.5 my-1">
+        <ul key={myKey} className="list-disc ps-5 space-y-0.5 my-1">
           {items.map((it, ix) => <li key={ix}>{inlineMd(it, `li-${myKey}-${ix}`)}</li>)}
         </ul>
       );
@@ -578,7 +578,7 @@ export function renderMarkdownMobile(raw) {
       }
       const myKey = key++;
       blocks.push(
-        <ol key={myKey} className="list-decimal pl-5 space-y-0.5 my-1">
+        <ol key={myKey} className="list-decimal ps-5 space-y-0.5 my-1">
           {items.map((it, ix) => <li key={ix}>{inlineMd(it, `ol-${myKey}-${ix}`)}</li>)}
         </ol>
       );
@@ -593,7 +593,7 @@ export function renderMarkdownMobile(raw) {
         i++;
       }
       blocks.push(
-        <blockquote key={key++} className="my-1.5 border-l-2 border-[#117dff]/40 pl-3 text-[#525252] italic">
+        <blockquote key={key++} className="my-1.5 border-s-2 border-[#117dff]/40 ps-3 text-[#525252] italic">
           {inlineMd(buf.join(' '), `bq-${key}`)}
         </blockquote>
       );
@@ -900,7 +900,7 @@ export function StepsDisclosure({ steps }) {
       >
         <Clock size={14} className="flex-shrink-0" />
         <span className="text-[14px] truncate">{open ? 'Reasoning' : summary}</span>
-        <ChevronRight size={15} className={`flex-shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+        <ChevronRight size={15} className={`flex-shrink-0 transition-transform ${open ? 'rotate-90' : 'rtl:-scale-x-100'}`} />
       </button>
       <AnimatePresence>
         {open && (
@@ -910,7 +910,7 @@ export function StepsDisclosure({ steps }) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden mt-2"
           >
-            <div className="flex flex-col gap-1 border-l-2 border-[#ece9e2] pl-3">
+            <div className="flex flex-col gap-1 border-s-2 border-[#ece9e2] ps-3">
               {steps.map((s, i) => (
                 <div key={i} className="text-[12px] text-[#7b766e] flex items-baseline gap-1.5 flex-wrap">
                   <code className="bg-[#117dff]/10 text-[#0066e0] px-1.5 py-0.5 rounded text-[10.5px] font-mono">{s.tool}</code>
@@ -1004,7 +1004,7 @@ export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFol
             <FileText size={13} className="text-[#8a8577]" />
             Sources
             <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#f0eee6] text-[11px] font-medium text-[#5f5c55]">{msg.sources.length}</span>
-            <ChevronRight size={14} className={`text-[#a3a3a3] transition-transform ${showSources ? 'rotate-90' : ''}`} />
+            <ChevronRight size={14} className={`text-[#a3a3a3] transition-transform ${showSources ? 'rotate-90' : 'rtl:-scale-x-100'}`} />
           </button>
           <AnimatePresence>
             {showSources && (
@@ -1054,7 +1054,7 @@ export function AiBubble({ msg, onRetry, onContinue, onProjectChoiceSaved, onFol
               key={question}
               type="button"
               onClick={() => onFollowUp?.(question)}
-              className="group flex w-full items-start gap-3 border-b border-[#ece9e2] px-1 py-3 text-left text-[13.5px] leading-5 text-[#3d3d3a] transition-colors hover:bg-[#faf9f4] active:bg-[#f3f1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#117dff]/40"
+              className="group flex w-full items-start gap-3 border-b border-[#ece9e2] px-1 py-3 text-start text-[13.5px] leading-5 text-[#3d3d3a] transition-colors hover:bg-[#faf9f4] active:bg-[#f3f1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#117dff]/40"
             >
               <CornerDownRight size={16} className="mt-0.5 shrink-0 text-[#8a8577] transition-colors group-hover:text-[#117dff]" />
               <span>{question}</span>
@@ -1181,8 +1181,8 @@ export function Thinking({ events = [] }) {
           </div>}
       {!rows.length && (
         <motion.div key={thought} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="ml-6 mt-1 min-h-[20px] text-[12.5px] italic text-[#737373]" aria-live="polite">
-          {typed}<span className="ml-0.5 inline-block h-3.5 w-px translate-y-0.5 bg-[#a3a3a3] animate-pulse" />
+          className="ms-6 mt-1 min-h-[20px] text-[12.5px] italic text-[#737373]" aria-live="polite">
+          {typed}<span className="ms-0.5 inline-block h-3.5 w-px translate-y-0.5 bg-[#a3a3a3] animate-pulse" />
         </motion.div>
       )}
     </div>

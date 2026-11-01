@@ -2,7 +2,7 @@
 .hm-runtime-workspace > main { flex:1; min-width:0; min-height:0; }
 /* Float in the native chat gutter; never reserve a second sidebar column. */
 .hm-runtime-workspace { position:relative; }
-.hm-runtime-start { position:absolute; z-index:20; left:16px; bottom:16px; width:248px; max-width:calc(100% - 32px); max-height:calc(100% - 32px); overflow-y:auto; box-sizing:border-box; }
+.hm-runtime-start { position:absolute; z-index:20; inset-inline-start:16px; bottom:16px; width:248px; max-width:calc(100% - 32px); max-height:calc(100% - 32px); overflow-y:auto; box-sizing:border-box; }
 .hm-runtime-start-card { border:1px solid #e5e5e3; border-radius:18px; background:#fff; box-shadow:0 4px 14px #1a1a1a08; padding:18px 16px 12px; color:#242728; }
 .hm-runtime-start-card summary { cursor:pointer; display:flex; flex-wrap:wrap; align-items:flex-start; gap:12px 4px; list-style:none; }
 .hm-runtime-start-card summary::-webkit-details-marker { display:none; }
@@ -27,7 +27,7 @@
 .hm-runtime-start-card li[data-complete=true] button > span:last-child { text-decoration:line-through; color:#8a8d8c; }
 .hm-runtime-start-hint { font-size:11px; line-height:1.6; color:#8a8d8c; margin:14px 0 2px; }
 .hm-runtime-start-error { font-size:12px; line-height:1.5; color:#8f3e23; }
-@media (max-width:1200px) { .hm-runtime-start { width:216px; left:12px; bottom:12px; } .hm-runtime-start-card { padding:14px 12px 10px; } .hm-runtime-start-title { font-size:14px; } .hm-runtime-start-card li button { font-size:13px; padding:8px 0; } }
+@media (max-width:1200px) { .hm-runtime-start { width:216px; inset-inline-start:12px; bottom:12px; } .hm-runtime-start-card { padding:14px 12px 10px; } .hm-runtime-start-title { font-size:14px; } .hm-runtime-start-card li button { font-size:13px; padding:8px 0; } }
 @media (max-width:1000px) { .hm-runtime-start { width:224px; bottom:calc(88px + env(safe-area-inset-bottom, 0px)); max-height:60%; } .hm-runtime-start-card ol { gap:0; } }
 @media (prefers-reduced-motion:reduce) { .hm-runtime-start-progress > span,.hm-runtime-start-count svg { transition:none; } }
 
@@ -47,7 +47,7 @@
 /* Phone chat: a 44px glass chip docked in the top bar (variant="chip"); the card opens as a dropdown beneath it. */
 .hm-runtime-start-card summary, .hm-runtime-start-card li button { min-height:44px; box-sizing:border-box; }
 .hm-runtime-start-short { display:none; }
-.hm-runtime-start.hm-runtime-start--chip { position:relative; left:auto; right:auto; bottom:auto; z-index:auto; width:auto; max-width:none; max-height:none; overflow:visible; }
+.hm-runtime-start.hm-runtime-start--chip { position:relative; inset-inline-start:auto; inset-inline-end:auto; bottom:auto; z-index:auto; width:auto; max-width:none; max-height:none; overflow:visible; }
 .hm-runtime-start.hm-runtime-start--chip .hm-runtime-start-card:not([open]) { width:44px; height:44px; padding:0; border:0; border-radius:50%; overflow:hidden; background:rgb(255 255 255 / .56); box-shadow:inset 0 1px 0 rgb(255 255 255 / .95), 0 10px 28px -10px rgb(15 23 42 / .28); -webkit-backdrop-filter:blur(22px) saturate(190%); backdrop-filter:blur(22px) saturate(190%); }
 .hm-runtime-start.hm-runtime-start--chip .hm-runtime-start-card:not([open]) summary { position:relative; width:44px; height:44px; min-height:44px; display:grid; place-items:center; padding:0; gap:0; }
 .hm-runtime-start.hm-runtime-start--chip .hm-runtime-start-card:not([open]) .hm-runtime-start-ring { display:block; position:absolute; inset:0; width:auto; height:auto; flex:none; border-radius:50%; background:conic-gradient(#242928 var(--hm-start-progress),#d9d9d6 0); mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 0); -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 0); }

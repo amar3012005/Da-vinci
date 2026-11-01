@@ -194,7 +194,7 @@ describe('optimistic frame geometry and scope', () => {
 
     const aside = container.querySelector('aside');
     expect(aside.style.width).toBe(`${HYPERAGENT_WIDTHS[3]}px`);
-    expect(container.querySelector('[data-optimistic-shell] > div.min-w-0').style.marginLeft).toBe(`${HYPERAGENT_WIDTHS[3]}px`);
+    expect(container.querySelector('[data-optimistic-shell] > div.min-w-0').style.marginInlineStart).toBe(`${HYPERAGENT_WIDTHS[3]}px`);
     expect(container.querySelector('.ha-employee-grid').style.gridTemplateColumns).toBe('repeat(3, minmax(0, 1fr))');
     expect(screen.getByText('1 employee')).toBeInTheDocument();
     expect(screen.getByText('Priya')).toBeInTheDocument();
@@ -293,7 +293,7 @@ describe('identity stays hidden until bootstrap confirms it', () => {
     const hidden = renderShell().container;
     const hiddenBoxes = {
       aside: hidden.querySelector('aside').style.width,
-      content: hidden.querySelector('[data-optimistic-shell] > div.min-w-0').style.marginLeft,
+      content: hidden.querySelector('[data-optimistic-shell] > div.min-w-0').style.marginInlineStart,
       grid: hidden.querySelector('.ha-employee-grid').style.gridTemplateColumns,
       avatarSlot: hidden.querySelector('[data-runtime-avatar-pending]').style.width,
       headerHeightClass: hidden.querySelector('.optimistic-shell-header').className,
