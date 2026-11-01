@@ -30,6 +30,10 @@ export const USAGE_CHANGED_EVENT = 'hm:usage-changed';
 let cache = null; // last successful usage payload (or null)
 let loading = false; // an in-flight fetch is running
 let inflight = null; // the in-flight promise (dedupes concurrent callers)
+let failures = 0; // consecutive failed fetches
+let retryAfter = 0; // epoch ms before which no new fetch starts after a failure
+const BACKOFF_BASE_MS = 15000;
+const BACKOFF_MAX_MS = 300000;
 const subscribers = new Set(); // Set<() => void>
 let persistUsage = null; // writes the settled summary to the device copy of the mounted tracker
 
@@ -50,15 +54,20 @@ function notify() {
  */
 export async function fetchUsage(force = false) {
   if (inflight && !force) return inflight;
+  // A failing endpoint is not retried by every event or foreground; wait out the backoff.
+  if (Date.now() < retryAfter) return cache;
   loading = true;
   notify();
   inflight = (async () => {
     try {
       const data = await apiClient.getUsage();
       cache = data || null;
+      failures = 0; retryAfter = 0;
       if (cache) persistUsage?.(cache);
       return cache;
     } catch {
+      failures += 1;
+      retryAfter = Date.now() + Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * 2 ** (failures - 1));
       // Keep the last-known-good cache on failure; a tracker just shows stale
       // or a skeleton. Usage display must never throw into the page.
       return cache;
@@ -83,7 +92,7 @@ function wireGlobalEvents() {
   window.addEventListener(PLAN_LIMIT_EVENT, onChanged);
   window.addEventListener('hm:tenant-changed', () => {
     // Never retain an organization-scoped meter across account/org switches.
-    cache = null; inflight = null; loading = false; persistUsage = null; notify();
+    cache = null; inflight = null; loading = false; persistUsage = null; failures = 0; retryAfter = 0; notify();
   });
 }
 
