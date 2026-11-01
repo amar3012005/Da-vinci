@@ -68,6 +68,7 @@ import { isNativeApp } from '../shared/native-app';
 import { hasNativeRooms, markDesktopRoomsUnavailable, openNativeRoom } from '../shared/native-room';
 import apiClient from '../shared/api-client';
 import { useUsage } from '../shared/useUsage';
+import { probeWebAdmin } from '../shared/web-admin-probe';
 import CreditBalance from '../shared/CreditBalance';
 import AgentAvatar from '../hyperagents/AgentAvatar';
 import { fillCopy, usePlanLabel } from './sidebar-copy';
@@ -578,11 +579,11 @@ export default function Sidebar({
   const [showWebAdmin, setShowWebAdmin] = useState(false);
   const { usage } = useUsage();
 
-  // Probe admin access once on mount
+  // Probe admin access once per page load (a remounted sidebar reuses the answer; a failure is retried after a pause).
   useEffect(() => {
-    apiClient.getWebAdminMetrics()
-      .then(() => setShowWebAdmin(true))
-      .catch(() => setShowWebAdmin(false));
+    let live = true;
+    probeWebAdmin().then(ok => { if (live) setShowWebAdmin(ok); });
+    return () => { live = false; };
   }, []);
 
   useEffect(() => {

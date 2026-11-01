@@ -1,7 +1,7 @@
 import { awaitAccountErasure } from './account-erasure';
 import axios from 'axios';
 import { isNativeApp } from './native-app';
-import { isRunnerHost } from './runner-hosts';
+import { isRunnerHost, proxyReadsBlocked } from './runner-hosts';
 import { createNativeApiAdapter } from './native-api-adapter';
 import { nativePlugin } from './native-auth';
 import { API_DEFAULTS } from './theme';
@@ -1633,6 +1633,8 @@ class HiveMindApiClient {
    *     memories, deepResearch, webIntel:{...,isDaily}, graphQueries, tara, ... }
    */
   async getUsage() {
+    // brain-runner's Worker has no /v1/proxy path and the control plane refuses its origin: no request can succeed.
+    if (!isNativeApp() && typeof window !== 'undefined' && proxyReadsBlocked(window.location.hostname)) return null;
     const { data } = await this.controlPlane.get('/v1/proxy/billing/usage');
     return data;
   }
@@ -3255,6 +3257,7 @@ class HiveMindApiClient {
   }
 
   async getWebAdminMetrics() {
+    if (!isNativeApp() && typeof window !== 'undefined' && proxyReadsBlocked(window.location.hostname)) throw new Error('admin_metrics_unavailable_on_this_host');
     const { data } = await this.controlPlane.get('/v1/proxy/web/admin/metrics');
     return data;
   }
