@@ -3,6 +3,8 @@ import { openDotLocale, withOpenDotLocale } from './open-dot-embed-target';
 /** Origin that serves the Company Brain OpenDot employee; the Worker redirects every other room there to it. */
 export const COMPANY_BRAIN_ORIGIN = 'https://brain-runner.singulancelabs.com';
 export const COMPANY_BRAIN_DOT_ID = 'dot_company_brain';
+/** Path of the Company Brain room: the one non-employee room the iOS plugin accepts. */
+export const COMPANY_BRAIN_PATH = `/dots/${COMPANY_BRAIN_DOT_ID}`;
 
 /**
  * Whether the in-app address is a Brain chat entry that opens the Company Brain room: the bare overview and

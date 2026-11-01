@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { nativePlugin } from './native-auth';
 import { isNativeApp } from './native-app';
+import { COMPANY_BRAIN_PATH } from './company-brain-room';
 
 let desktopRoomsFailed = false;
 const failureListeners = new Set();
@@ -90,6 +91,16 @@ export async function nativeWorkspaceAccess(plugin = nativePlugin) {
  */
 export function openNativeRoom(employeeId, { scope, plugin = roomPlugin() } = {}) {
   return plugin.openRoom({ path: `/employees/${employeeId}`, ...(scope ? { scope } : {}) });
+}
+
+/**
+ * Opens the Company Brain OpenDot room (brain-runner origin) as the native full-screen room. Only the iOS app does:
+ * the macOS bridge opens employee rooms of the Runtime host only.
+ * @param {{ scope?: string, plugin?: object }} [options] - as for `openNativeRoom`.
+ * @returns {Promise<void>} resolves when the room is shown; rejects when the app's plugin does not accept the room.
+ */
+export function openNativeCompanyBrainRoom({ scope, plugin = nativePlugin } = {}) {
+  return plugin.openRoom({ path: COMPANY_BRAIN_PATH, ...(scope ? { scope } : {}) });
 }
 
 /**
