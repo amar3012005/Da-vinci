@@ -7,6 +7,8 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { agentRoster } from '../shared/agent-roster';
 import { useTranslation } from 'react-i18next';
+import { companyBrainIsPrimary, brainPrimary, useBrainPrimary } from '../shared/brain-primary';
+import { openNativeCompanyBrainRoom } from '../shared/native-room';
 import { isBrainChatLinkClick, isCompanyBrainRoute, navigateToCompanyBrain } from '../shared/company-brain-room';
 import { openDotPreloadRoute, preloadAllowed, rememberOpenDotRoute, whenIdle } from '../shared/open-dot-preload';
 const Apps = React.lazy(() => import('../pages/OpenDotAppsNavigation'));
@@ -65,12 +67,15 @@ export default function AgentWorkspaceOutlet() {
     }, 5000);
   }, [mode, dotEntry, scope, rosterSeen]);
   // Brain chat is the Company Brain OpenDot room, a top-level page on the brain-runner origin (the Worker redirects the
-  // address too). The packaged apps keep the harness chat. Links leave on click so the shell never paints first.
+  // address too) while the `brain-primary` flag is "company"; with "harness" the old harness chat stays in this shell.
+  // Links leave on click so the shell never paints first.
+  const primary = useBrainPrimary();
+  const companyPrimary = companyBrainIsPrimary(primary);
   const { i18n } = useTranslation('dashboard');
   const languageRef = React.useRef(i18n.language);
   languageRef.current = i18n.language;
   const brainRoute = isCompanyBrainRoute(location.pathname);
-  const brainEligible = !nativeRooms && Boolean(user?.id && org?.id);
+  const brainEligible = companyPrimary && !nativeRooms && Boolean(user?.id && org?.id);
   const brainLeaving = brainEligible && brainRoute;
   useEffect(() => {
     if (!brainEligible) return undefined;
@@ -83,6 +88,18 @@ export default function AgentWorkspaceOutlet() {
     return () => document.removeEventListener('click', onClick, true);
   }, [brainEligible]);
   useEffect(() => { if (brainLeaving) navigateToCompanyBrain(languageRef.current); }, [brainLeaving]);
+  // Packaged apps open the Company Brain as the native room when the person lands on a Brain chat entry (cold start
+  // included) and the flag, read fresh, says "company". A refused room leaves the harness chat page in place.
+  const nativeBrainRefused = React.useRef(false);
+  useEffect(() => {
+    if (!nativeRooms || !brainRoute || !user?.id || !org?.id || nativeBrainRefused.current) return undefined;
+    let live = true;
+    brainPrimary().then(next => {
+      if (!live || !companyBrainIsPrimary(next)) return;
+      openNativeCompanyBrainRoom({ scope: `${org.id}:${user.id}` }).catch(() => { nativeBrainRefused.current = true; });
+    });
+    return () => { live = false; };
+  }, [nativeRooms, brainRoute, user?.id, org?.id]);
   return <>
     {!dot && !apps && !nativeChat && !brainLeaving && <Outlet />}
     {persistent && <PersistentHarnessPanes retainBrain={!desktop} suppressBrain={brainLeaving} />}

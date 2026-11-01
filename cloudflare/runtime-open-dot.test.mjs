@@ -202,3 +202,11 @@ test('the app host keeps auth and origin checks and does not forward other API p
     assert.equal(await proxyRuntimeOpenDot(new Request(`https://next.singulancelabs.com${path}`, { headers: { cookie: 'hm_cp_session=s' } }), never), null, path);
   }
 });
+
+test('brain-primary flag: harness serves the old SPA Brain chat, company (default) redirects', async () => {
+  const { brainInstantRedirect } = await import('./runtime-open-dot.mjs');
+  const request = new Request('https://next.singulancelabs.com/hivemind/app/overview/new');
+  assert.equal(brainInstantRedirect(request, 'harness'), null);
+  assert.equal(brainInstantRedirect(request, 'company').status, 302);
+  assert.equal(brainInstantRedirect(request).status, 302);
+});

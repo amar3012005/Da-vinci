@@ -54,9 +54,15 @@ const BRAIN_ENTRY = /^\/hivemind\/app\/overview(?:\/new)?\/?$/;
  * navigations to the Overview and New chat entries on the app host (query kept), otherwise null.
  * Saved sessions, dreaming and the native pane/iframe seats are not redirected.
  */
-export function brainInstantRedirect(request) {
+export function isBrainEntryRequest(request) {
   const url = new URL(request.url);
-  if (url.hostname !== NEXT_HOST || !['GET', 'HEAD'].includes(request.method) || !BRAIN_ENTRY.test(url.pathname)) return null;
+  return url.hostname === NEXT_HOST && ['GET', 'HEAD'].includes(request.method) && BRAIN_ENTRY.test(url.pathname);
+}
+
+/** @param {Request} request - incoming request. @param {'company'|'harness'} [primary] - the brain-primary flag; "harness" serves the old SPA Brain chat. */
+export function brainInstantRedirect(request, primary = 'company') {
+  if (primary === 'harness' || !isBrainEntryRequest(request)) return null;
+  const url = new URL(request.url);
   if (url.searchParams.get('native_pane') === '1' || request.headers.get('sec-fetch-dest') === 'iframe') return null;
   return new Response(null, { status: 302, headers: { location: new URL(COMPANY_BRAIN_PATH + url.search, BRAIN).href, 'cache-control': 'private, no-store' } });
 }

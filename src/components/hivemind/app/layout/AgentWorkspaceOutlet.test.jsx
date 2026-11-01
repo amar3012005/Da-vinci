@@ -11,6 +11,10 @@ jest.mock('../shared/native-pane-protocol', () => ({ persistentShellEnabled: () 
   paneForPath: path => path.includes('/employee/harness') ? 'runtime' : path.includes('/overview') ? 'brain' : null }));
 jest.mock('./PersistentHarnessPanes', () => ({ __esModule: true, default: ({ retainBrain, suppressBrain }) => <div data-testid="panes" data-retain-brain={String(retainBrain)} data-suppress-brain={String(Boolean(suppressBrain))}/> }));
 jest.mock('../pages/CompanyBrainWarmup', () => ({ __esModule: true, default: ({ language }) => <div data-testid="warmup" data-language={language}/> }));
+let mockRooms = null;
+const mockOpenNativeBrain = jest.fn();
+jest.mock('../shared/native-room', () => { const actual = jest.requireActual('../shared/native-room');
+  return { ...actual, useHasNativeRooms: () => (mockRooms === null ? actual.useHasNativeRooms() : mockRooms), openNativeCompanyBrainRoom: (...args) => mockOpenNativeBrain(...args) }; });
 const mockLeave = jest.fn();
 jest.mock('../shared/company-brain-room', () => ({ ...jest.requireActual('../shared/company-brain-room'), navigateToCompanyBrain: (...args) => mockLeave(...args) }));
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'u1' }, org: { id: 'o1' } }) }));
@@ -23,6 +27,7 @@ jest.mock('../pages/OpenDotEntry', () => {
   return { __esModule: true, default: ({ route, active }) => { React.useEffect(() => { mockDotMounts += 1; }, []); return <div data-testid="dot-entry" data-active={String(active)} data-path={route.pathname}/>; } };
 });
 import AgentWorkspaceOutlet from './AgentWorkspaceOutlet';
+import { resetBrainPrimary } from '../shared/brain-primary';
 const EMPLOYEE = 'c14aaef5-24fb-46c2-806c-c3f6c1d88b07';
 const OTHER = '0f2a4a62-6a1c-4c3e-9d7c-2f0e9d4a5b11';
 const boundEmployee = id => ({ id, name: 'Dot', policy_rules: { open_dot_employee: { version: 1, state: 'bound', dot_id: 'dot_a' } } });
@@ -143,5 +148,48 @@ describe('Company Brain chat', () => {
     mockNative = true; viewport(false); mockPath = '/hivemind/app/overview/new'; render(<AgentWorkspaceOutlet/>);
     expect(mockLeave).not.toHaveBeenCalled();
     expect(screen.queryByTestId('warmup')).not.toBeInTheDocument();
+  });
+  describe('brain-primary flag', () => {
+    const flag = primary => { global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ primary }) }); };
+    beforeEach(() => { resetBrainPrimary(); mockRooms = null; mockOpenNativeBrain.mockReset().mockResolvedValue(undefined); });
+    afterEach(() => { delete global.fetch; mockRooms = null; resetBrainPrimary(); });
+    test('harness keeps the old chat in the shell: no leave, no click interception, no warm-up', async () => {
+      localStorage.setItem('hm:brain-primary', 'harness'); flag('harness');
+      viewport(true); mockPath = '/hivemind/app/overview/new'; render(<AgentWorkspaceOutlet/>);
+      await act(async () => { await Promise.resolve(); });
+      expect(mockLeave).not.toHaveBeenCalled();
+      expect(screen.getByTestId('native-seat')).toBeInTheDocument();
+      expect(screen.queryByTestId('warmup')).not.toBeInTheDocument();
+      const link = document.createElement('a'); link.href = '/hivemind/app/overview/new'; document.body.appendChild(link);
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+      link.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+      link.remove();
+    });
+    test('a flip to harness while the shell is open stops the leave from the next click', async () => {
+      flag('harness'); viewport(true); mockPath = '/hivemind/app/memories'; render(<AgentWorkspaceOutlet/>);
+      await waitFor(() => expect(screen.queryByTestId('warmup')).not.toBeInTheDocument());
+    });
+    test('an unreachable flag keeps the Company Brain primary', async () => {
+      global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+      viewport(true); mockPath = '/hivemind/app/overview/new'; render(<AgentWorkspaceOutlet/>);
+      await act(async () => { await Promise.resolve(); });
+      expect(mockLeave).toHaveBeenCalled();
+    });
+    test('packaged app cold start on /overview/new opens the Company Brain room when company is primary', async () => {
+      mockRooms = true; flag('company'); viewport(false); mockPath = '/hivemind/app/overview/new'; render(<AgentWorkspaceOutlet/>);
+      await waitFor(() => expect(mockOpenNativeBrain).toHaveBeenCalledWith({ scope: 'o1:u1' }));
+      expect(mockLeave).not.toHaveBeenCalled();
+    });
+    test('packaged app keeps the harness chat when harness is primary, and when the room is refused it stops retrying', async () => {
+      mockRooms = true; flag('harness'); viewport(false); mockPath = '/hivemind/app/overview/new';
+      const first = render(<AgentWorkspaceOutlet/>);
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+      expect(mockOpenNativeBrain).not.toHaveBeenCalled();
+      first.unmount(); resetBrainPrimary(); flag('company'); mockOpenNativeBrain.mockRejectedValue(new Error('Room is not allowed.'));
+      render(<AgentWorkspaceOutlet/>);
+      await waitFor(() => expect(mockOpenNativeBrain).toHaveBeenCalledTimes(1));
+      expect(screen.getByTestId('native-seat')).toBeInTheDocument();
+    });
   });
 });
