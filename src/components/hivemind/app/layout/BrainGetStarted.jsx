@@ -3,8 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Check, Minus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
+import { useCopy, useLocaleFormat } from './sidebar-copy';
 import './RuntimeGetStarted.css';
 
+/** [id, English default of `dashboard.brainGetStarted.steps.<id>`, route]. The English text is the fallback only; the visible label comes from the dictionary. */
 const STEPS = [
   ['chat', 'Start a Brain conversation', '/hivemind/app/overview'],
   ['source', 'Add your first source', '/hivemind/app/knowledge'],
@@ -20,6 +22,8 @@ function read(scope) { try { return JSON.parse(localStorage.getItem(keyFor(scope
 export default function BrainGetStarted({ scope, variant = 'float' }) {
   const navigate = useNavigate(); const location = useLocation();
   const { t } = useTranslation('dashboard');
+  const copy = useCopy('brainGetStarted');
+  const format = useLocaleFormat();
   const chip = variant === 'chip';
   const [progress, setProgress] = useState(() => read(scope));
   const [expanded, setExpanded] = useState(false);
@@ -60,13 +64,16 @@ export default function BrainGetStarted({ scope, variant = 'float' }) {
   }, [scope, location.pathname]);
   if (!/^\/hivemind\/app\/overview(?:\/|$)/.test(location.pathname)) return null;
   const count = STEPS.filter(([key]) => progress[key] === true).length;
-  return <aside className={chip ? 'hm-runtime-start hm-runtime-start--chip' : 'hm-runtime-start'} aria-label="Getting started with Brain">
+  const total = STEPS.length;
+  const percent = `${count / total * 100}%`;
+  const countText = copy('count', '{{count}} of {{total}}', { count: format.number(count), total: format.number(total) });
+  return <aside className={chip ? 'hm-runtime-start hm-runtime-start--chip' : 'hm-runtime-start'} aria-label={copy('ariaLabel', 'Getting started with Brain')}>
     <details className="hm-runtime-start-card" open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}>
-      <summary aria-label={chip ? t('getStarted.summary', { count, total: STEPS.length, defaultValue: `Getting Started, ${count} of ${STEPS.length}` }) : undefined}><span className="hm-runtime-start-ring" style={{ '--hm-start-progress': `${count / 6 * 100}%` }} aria-hidden="true" />{chip && <span className="hm-runtime-start-short" aria-hidden="true">{count}/{STEPS.length}</span>}<span className="hm-runtime-start-title">Getting Started</span><span className="hm-runtime-start-count">{count} of 6 <Minus size={16} aria-hidden="true" /></span>
-        <span className="hm-runtime-start-progress" role="progressbar" aria-label="Brain getting started progress" aria-valuemin={0} aria-valuemax={6} aria-valuenow={count}><span style={{ width: `${count / 6 * 100}%` }} /></span>
+      <summary aria-label={chip ? t('getStarted.summary', { count, total, defaultValue: `Getting Started, ${count} of ${total}` }) : undefined}><span className="hm-runtime-start-ring" style={{ '--hm-start-progress': percent }} aria-hidden="true" />{chip && <span className="hm-runtime-start-short" aria-hidden="true">{format.number(count)}/{format.number(total)}</span>}<span className="hm-runtime-start-title">{copy('title', 'Getting Started')}</span><span className="hm-runtime-start-count">{countText} <Minus size={16} aria-hidden="true" /></span>
+        <span className="hm-runtime-start-progress" role="progressbar" aria-label={copy('progressLabel', 'Brain getting started progress')} aria-valuemin={0} aria-valuemax={total} aria-valuenow={count}><span style={{ width: percent }} /></span>
       </summary>
-      <ol>{STEPS.map(([key, label, path]) => <li key={key} data-complete={progress[key] === true}><button type="button" onClick={() => navigate(path)}><span className="hm-runtime-start-check" role="checkbox" aria-readonly="true" aria-checked={progress[key] === true} aria-label={label}>{progress[key] === true && <Check size={12} strokeWidth={3} aria-hidden="true" />}</span><span>{label}</span></button></li>)}</ol>
-      <p className="hm-runtime-start-hint">Your knowledge, connected and ready to use.</p>
+      <ol>{STEPS.map(([key, fallback, path]) => { const label = copy(`steps.${key}`, fallback); return <li key={key} data-complete={progress[key] === true}><button type="button" onClick={() => navigate(path)}><span className="hm-runtime-start-check" role="checkbox" aria-readonly="true" aria-checked={progress[key] === true} aria-label={label}>{progress[key] === true && <Check size={12} strokeWidth={3} aria-hidden="true" />}</span><span>{label}</span></button></li>; })}</ol>
+      <p className="hm-runtime-start-hint">{copy('hint', 'Your knowledge, connected and ready to use.')}</p>
     </details>
   </aside>;
 }

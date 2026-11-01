@@ -2720,5 +2720,20 @@
   "companyBrain": {
     "connecting": "Abriendo Brain…",
     "title": "Company Brain"
+  },
+  "brainGetStarted": {
+    "title": "Primeros pasos",
+    "count": "{{count}} de {{total}}",
+    "ariaLabel": "Primeros pasos con Brain",
+    "progressLabel": "Progreso de los primeros pasos con Brain",
+    "steps": {
+      "chat": "Inicia una conversación con Brain",
+      "source": "Añade tu primera fuente",
+      "memory": "Guarda algo que valga la pena recordar",
+      "connected": "Conecta tus apps",
+      "explored": "Explora tus recuerdos",
+      "library": "Abre tu biblioteca de conocimiento"
+    },
+    "hint": "Tu conocimiento, conectado y listo para usar."
   }
 }

@@ -2746,5 +2746,20 @@
   "companyBrain": {
     "connecting": "Opening Brain…",
     "title": "Company Brain"
+  },
+  "brainGetStarted": {
+    "title": "はじめに",
+    "count": "{{total}}件中{{count}}件",
+    "ariaLabel": "Brain をはじめる",
+    "progressLabel": "Brain のはじめかたの進捗",
+    "steps": {
+      "chat": "Brain との会話を始める",
+      "source": "最初のソースを追加する",
+      "memory": "覚えておく価値のあることを保存する",
+      "connected": "アプリを接続する",
+      "explored": "記憶を見てみる",
+      "library": "ナレッジライブラリを開く"
+    },
+    "hint": "あなたの知識を接続して、すぐに使えます。"
   }
 }
