@@ -1,9 +1,60 @@
+import { FOUNDER_NOTES } from './pitch-founder-notes.mjs';
+
 const HOST = 'pitch.singulancelabs.com';
 const NOINDEX = 'noindex, nofollow';
-// This origin is the public pitch room. It never serves app APIs or sessions and is not indexed.
+const FOUNDER_COOKIE = 'pitch_founder';
+const FOUNDER_SESSION_SECONDS = 12 * 60 * 60;
+const encoder = new TextEncoder();
+
+function json(body, status = 200, extra = {}) {
+  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': NOINDEX, ...extra } });
+}
+
+function sameString(left, right) {
+  let mismatch = left.length ^ right.length;
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) mismatch |= (left.charCodeAt(index) || 0) ^ (right.charCodeAt(index) || 0);
+  return mismatch === 0;
+}
+
+async function sign(passcode, expiry) {
+  const key = await crypto.subtle.importKey('raw', encoder.encode(passcode), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(`pitch-founder:${expiry}`)));
+  return btoa(String.fromCharCode(...mac)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function hasFounderSession(request, passcode) {
+  const match = (request.headers.get('cookie') || '').match(new RegExp(`(?:^|;\\s*)${FOUNDER_COOKIE}=(\\d+)\\.([A-Za-z0-9_-]+)`));
+  if (!match || Number(match[1]) * 1000 < Date.now()) return false;
+  return sameString(match[2], await sign(passcode, match[1]));
+}
+
+// The founder passcode lives only in the PITCH_FOUNDER_PASSCODE Worker secret; a session is an HMAC-signed expiry in an HttpOnly cookie.
+async function founderRoute(request, env, url) {
+  const passcode = env.PITCH_FOUNDER_PASSCODE;
+  if (!passcode) return json({ error: 'founder_access_not_configured' }, 503);
+  if (url.pathname === '/founder/notes') {
+    if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405, { allow: 'GET' });
+    return (await hasFounderSession(request, passcode)) ? json(FOUNDER_NOTES) : json({ error: 'founder_session_required' }, 401);
+  }
+  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, { allow: 'POST' });
+  if (request.headers.get('origin') !== `https://${HOST}` && env.ENVIRONMENT !== 'development') return json({ error: 'origin_not_allowed' }, 403);
+  if (url.pathname === '/founder/logout') return json({ ok: true }, 200, { 'set-cookie': `${FOUNDER_COOKIE}=; Path=/founder; Max-Age=0; HttpOnly; Secure; SameSite=Strict` });
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+  const supplied = typeof body?.passcode === 'string' ? body.passcode.slice(0, 200) : '';
+  if (!sameString(supplied, passcode)) {
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    return json({ error: 'wrong_passcode' }, 401);
+  }
+  const expiry = String(Math.floor(Date.now() / 1000) + FOUNDER_SESSION_SECONDS);
+  return json({ ok: true }, 200, { 'set-cookie': `${FOUNDER_COOKIE}=${expiry}.${await sign(passcode, expiry)}; Path=/founder; Max-Age=${FOUNDER_SESSION_SECONDS}; HttpOnly; Secure; SameSite=Strict` });
+}
+
+// This origin is the public pitch room. It never serves app APIs or app sessions and is not indexed.
 export async function pitchPublic(request, env) {
   const url = new URL(request.url);
   if (url.hostname !== HOST) return null;
+  if (['/founder/session', '/founder/notes', '/founder/logout'].includes(url.pathname)) return founderRoute(request, env, url);
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD', 'cache-control': 'no-store' } });
   if (url.protocol !== 'https:' && env.ENVIRONMENT !== 'development') { url.protocol = 'https:'; return Response.redirect(url.href, 308); }
   if (['/privacy', '/cookies', '/security'].includes(url.pathname)) return Response.redirect(`https://singulancelabs.com${url.pathname}`, 308);
