@@ -10,6 +10,8 @@ import { useSidebarCopy } from './sidebar-copy';
 
 /** English defaults for the character slot names; the visible text is read from `sidebar.createEmployeeDialog.slot<Name>`. */
 const SLOT_COPY = { head: ['slotHead', 'Hair'], body: ['slotBody', 'Top'], bottom: ['slotBottom', 'Bottom'], item: ['slotItem', 'Accessory'], glasses: ['slotGlasses', 'Glasses'], clothes: ['slotClothes', 'Clothes'], skin: ['slotSkin', 'Skin'], stroke: ['slotStroke', 'Outline'] };
+/** Role templates: the chip text comes from `sidebar.createEmployeeDialog.<key>`; the chosen chip's text becomes the employee's role. */
+const ROLE_TEMPLATES = [['research', 'roleResearch', 'Research analyst'], ['sales', 'roleSales', 'Sales follow-up'], ['support', 'roleSupport', 'Support triage'], ['finance', 'roleFinance', 'Finance operator']];
 const accents = ['117dff', '8755d8', 'e9a23b', 'e56c8b', '3f9d82', '667383'];
 
 function Character({ appearance, size, title, selections }) {
@@ -22,6 +24,7 @@ export default function CreateEmployeeDialog({ onClose, onCreated, portalContain
   const labels = Object.fromEntries(Object.entries(SLOT_COPY).map(([id, [key, defaultValue]]) => [id, c(key, defaultValue)]));
   const [creationKey] = useState(() => window.crypto.randomUUID());
   const [name, setName] = useState('');
+  const [template, setTemplate] = useState(null);
   const [needsComputerAccess, setNeedsComputerAccess] = useState(false);
   const [appearance, setAppearance] = useState(() => createEmployeeAppearance(creationKey, { colors: { clothes: LANE_META.Communicator.color } }));
   const [customizing, setCustomizing] = useState(false);
@@ -47,10 +50,12 @@ export default function CreateEmployeeDialog({ onClose, onCreated, portalContain
       let employee = created;
       if (!employee) {
         // Retry the exact submitted draft after an unknown connection outcome.
-        submitted.current ||= { needsComputerAccess, request: { operation: 'create', creation_key: creationKey, name: name.trim(), lifecycle: 'durable', appearance } };
+        // A chosen role template is the employee's role; the OpenDot employee form is the only one that takes a role, so it is sent only there.
+        const role = template ? c(ROLE_TEMPLATES.find(([id]) => id === template)[1], ROLE_TEMPLATES.find(([id]) => id === template)[2]) : '';
+        submitted.current ||= { needsComputerAccess, role, request: { operation: 'create', creation_key: creationKey, name: name.trim(), lifecycle: 'durable', appearance } };
         const request = submitted.current.request;
         const result = submitted.current.needsComputerAccess
-          ? await apiClient.createRegisteredOpenDotEmployee({ creation_key: request.creation_key, name: request.name, appearance: request.appearance })
+          ? await apiClient.createRegisteredOpenDotEmployee({ creation_key: request.creation_key, name: request.name, appearance: request.appearance, ...(submitted.current.role ? { role: submitted.current.role } : {}) })
           : await apiClient.manageNativeEmployeeLifecycle(request);
         if (!result?.employee?.id) throw new Error(result?.message || result?.error || c('errNotConfirmed', 'Employee creation was not confirmed.'));
         employee = result.employee;
@@ -94,6 +99,11 @@ export default function CreateEmployeeDialog({ onClose, onCreated, portalContain
               return <button key={accent} type="button" disabled={locked} onClick={() => setAppearance(candidate)} aria-label={c('character', 'Character {{n}}', { n: index + 1 })} aria-pressed={selected}
                 className={`aspect-square overflow-hidden rounded-[14px] border-2 bg-white ${selected ? 'border-[#6693d9]' : 'border-transparent'} disabled:opacity-50`}><Character appearance={candidate} size="100%" /></button>;
             })}
+          </div>
+          <div className="mt-4 flex flex-wrap justify-center gap-2" role="group" aria-label={c('chooseRole', 'Start from a role')}>
+            {ROLE_TEMPLATES.map(([id, key, english]) => <button key={id} type="button" disabled={locked} aria-pressed={template === id} data-role-template={id}
+              onClick={() => { const next = template === id ? null : id; setTemplate(next); if (next) setNeedsComputerAccess(true); }}
+              className={`rounded-full px-3 py-2 text-[12px] font-medium ${template === id ? 'bg-[#141414] text-white' : 'bg-[#efefed] text-[#292929]'} disabled:opacity-50`}>{c(key, english)}</button>)}
           </div>
           <label className="mt-4 flex items-center justify-center gap-2 text-[13px] text-[#484848]">
             <input type="checkbox" checked={needsComputerAccess} disabled={locked} onChange={event => setNeedsComputerAccess(event.target.checked)} className="h-4 w-4 accent-[#141414]" />
