@@ -226,3 +226,13 @@ describe('accessibility', () => {
     expect(css).toMatch(/prefers-reduced-motion:reduce\)[^}]*animation:none/);
   });
 });
+
+test('the team checklist shows only for a team; a Brain-only company sees no team card', () => {
+  mockState.view = view({}, { tier: 'brain_only' });
+  const brainOnly = mount();
+  expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+  brainOnly.unmount();
+  mockState.view = view({}, { tier: 'team' });
+  mount();
+  expect(screen.getAllByRole('listitem')).toHaveLength(9);
+});

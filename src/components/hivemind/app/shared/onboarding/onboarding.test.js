@@ -1,5 +1,5 @@
 import locales from './onboarding-locales.json';
-import { STEPS, STEP_IDS, STEP_TILE, LEGACY_SURFACES, completedCount, nextStepId } from './registry';
+import { STEPS, STEP_IDS, STEP_TILE, LEGACY_SURFACES, BRAIN_STEPS, BRAIN_STEP_IDS, MILESTONE_BRAIN_STEP, isBrainOnly, completedCount, nextStepId } from './registry';
 import { currentPlatform, onboardingStore, migrateLegacyProgress, adoptServerLocale, resetOnboardingStores, EXPLICIT_LANGUAGE_KEY, ONBOARDING_ENDPOINT } from './onboarding-store';
 import i18n from '../../../../../i18n';
 
@@ -115,4 +115,46 @@ test('the funnel client class is web in a browser, ios in the iOS app and macos 
   window.Capacitor = { getPlatform: () => 'web' };
   expect(currentPlatform()).toBe('web');
   delete window.Capacitor;
+});
+
+describe('Brain-only steps on the server record', () => {
+  const brainView = (statuses = {}, extra = {}) => ({ ...view({}, { tier: 'brain_only' }), brainSteps: BRAIN_STEP_IDS.map(id => ({ id, status: statuses[id] || 'todo', at: null })), ...extra });
+
+  test('seven Brain steps in order, each with a route, and the team card hides only when the server says Brain-only', () => {
+    expect(BRAIN_STEP_IDS).toEqual(['language', 'company', 'source', 'ask', 'remember', 'connect', 'invite']);
+    expect(BRAIN_STEPS.every(step => step.to.startsWith('/hivemind/app/'))).toBe(true);
+    expect(isBrainOnly({ tier: 'brain_only' })).toBe(true);
+    expect(isBrainOnly({ tier: 'team' })).toBe(false);
+    expect(isBrainOnly(null)).toBe(false);
+  });
+
+  test('a cited answer is reported once, ticks ask at once, and is not sent again after the server shows it done', async () => {
+    const fetch = fetcher([brainView(), brainView({ ask: 'done' })]);
+    const store = onboardingStore('u:o', { fetcher: fetch, delay: 1 });
+    await store.refresh();
+    store.milestone('answer_cited');
+    expect(store.get().brainSteps.find(step => step.id === 'ask').status).toBe('done');
+    await store.flush();
+    const post = fetch.calls.find(call => call.method === 'POST');
+    expect(post.body.milestones).toEqual(['answer_cited']);
+    const calls = fetch.calls.length;
+    store.milestone('answer_cited');
+    await store.flush();
+    expect(fetch.calls.length).toBe(calls);
+  });
+
+  test('the ask step cannot be completed by a done event or a click, only by its milestone', async () => {
+    const fetch = fetcher([brainView()]);
+    const store = onboardingStore('u:o', { fetcher: fetch, delay: 1 });
+    await store.refresh();
+    store.track('onb_step_done', 'ask');
+    store.track('onb_step_done', 'source');
+    await store.flush();
+    expect(store.get().brainSteps.every(step => step.status === 'todo')).toBe(true);
+    expect(fetch.calls.some(call => call.method === 'POST')).toBe(false);
+    store.track('onb_step_view', 'ask');
+    await store.flush();
+    expect(fetch.calls.find(call => call.method === 'POST').body.events).toEqual([expect.objectContaining({ type: 'onb_step_view', step: 'ask' })]);
+    expect(Object.keys(MILESTONE_BRAIN_STEP).sort()).toEqual(['answer_cited', 'app_connected', 'company_saved', 'invite_sent', 'memory_saved', 'source_added']);
+  });
 });

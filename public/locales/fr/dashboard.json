@@ -2733,7 +2733,13 @@
       "memory": "Enregistrez quelque chose à retenir",
       "connected": "Connectez vos applications",
       "explored": "Explorez vos souvenirs",
-      "library": "Ouvrez votre bibliothèque de connaissances"
+      "library": "Ouvrez votre bibliothèque de connaissances",
+      "language": "Choisissez votre langue",
+      "company": "Présentez votre entreprise à Brain",
+      "ask": "Posez une question et obtenez une réponse avec sa source",
+      "remember": "Enregistrez quelque chose à retenir",
+      "connect": "Connectez vos applications",
+      "invite": "Invitez quelqu’un dans votre Brain"
     },
     "hint": "Vos connaissances, connectées et prêtes à l’emploi."
   }
