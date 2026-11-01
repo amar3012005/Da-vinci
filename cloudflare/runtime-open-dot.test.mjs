@@ -230,3 +230,18 @@ test('brain-primary flag: harness serves the old SPA Brain chat, company (defaul
   assert.equal(brainInstantRedirect(request, 'company').status, 302);
   assert.equal(brainInstantRedirect(request).status, 302);
 });
+
+test('the segment-prefetch header reaches OpenDot, so its _rsc hash check does not 307 every prefetch', async () => {
+  // Next 16 validates `_rsc` against the headers it receives (prefetch, segment prefetch, router state tree, next-url).
+  // The browser hashes all of them; a Worker that drops one makes the server answer 307 to a corrected URL, and the
+  // router repeats the prefetch every 1-2 s (374 `/settings?_rsc` 307s in 3 h of production proxy logs on 1 Nov).
+  let seen;
+  const response = await proxyRuntimeOpenDot(new Request('https://runtime-runner.singulancelabs.com/settings?_rsc=_i_aeImnuN6u1u1r', {
+    headers: { cookie: 'hm_cp_session=a', rsc: '1', 'next-router-prefetch': '1', 'next-router-segment-prefetch': '/_tree', 'next-router-state-tree': '%5B%22%22%5D', 'next-url': '/dots/dot_a' },
+  }), async (request) => { seen = request; return new Response('ok'); });
+  assert.equal(response.status, 200);
+  assert.equal(seen.headers.get('next-router-segment-prefetch'), '/_tree');
+  assert.equal(seen.headers.get('next-router-prefetch'), '1');
+  assert.equal(seen.headers.get('next-router-state-tree'), '%5B%22%22%5D');
+  assert.equal(seen.headers.get('next-url'), '/dots/dot_a');
+});

@@ -86,7 +86,7 @@ export async function proxyRuntimeOpenDot(request, fetcher = fetch) {
   // Validate the browser Origin above, then present one canonical app origin to
   // Next's own action CSRF check. Never forward spoofed tenant/authority headers.
   if (origin) headers.set('origin',UPSTREAM);
-  for (const key of ['content-type','rsc','next-action','next-router-state-tree','next-router-prefetch','next-url','range','if-none-match','last-event-id']) {
+  for (const key of ['content-type','rsc','next-action','next-router-state-tree','next-router-prefetch','next-router-segment-prefetch','next-url','range','if-none-match','last-event-id']) {
     if (request.headers.has(key)) headers.set(key,request.headers.get(key));
   }
   applyOpenDotSurface(headers,url);
