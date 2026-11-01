@@ -94,9 +94,11 @@ export function mount(host, { identity, stylesheet, mode }) {
   const scope = { tenant: identity?.organizationId, user: identity?.userId };
   const resolve = brain ? to => brainNavigation(to, cachedBrainRoomId(scope)) : runtimeNavigation;
   // Reopening the room that is already showing changes nothing, so Chat in the sidebar does not reload the page.
-  const navigate = to => { const target = resolve(to); if (!(brain && target === window.location.href)) window.location.assign(target); };
+  // A link to the page already showing (Chat while the room is open) is also a router replace: it must not reload the page either.
+  const showing = target => brain && target === window.location.href;
+  const navigate = to => { const target = resolve(to); if (!showing(target)) window.location.assign(target); };
   const href = brain ? to => { try { return resolve(to); } catch { return '#'; } } : runtimeNavigation;
-  const navigator = { createHref: href, encodeLocation: to => typeof to === 'string' ? new URL(to, brain ? NEXT_ORIGIN : RUNTIME_ORIGIN) : to, push: navigate, replace: to => window.location.replace(resolve(to)), go: n => window.history.go(n) };
+  const navigator = { createHref: href, encodeLocation: to => typeof to === 'string' ? new URL(to, brain ? NEXT_ORIGIN : RUNTIME_ORIGIN) : to, push: navigate, replace: to => { const target = resolve(to); if (!showing(target)) window.location.replace(target); }, go: n => window.history.go(n) };
   const routerLocation = brain ? { pathname: '/hivemind/app/overview/new', search: '', hash: '' } : { pathname: '/hivemind/app/employee/apps', search: window.location.search, hash: window.location.hash };
   const root = createRoot(container);
   root.render(<Router location={routerLocation} navigator={navigator}><AuthProvider><Shell identity={identity} host={host} portalContainer={portals} mode={mode}/></AuthProvider></Router>);
