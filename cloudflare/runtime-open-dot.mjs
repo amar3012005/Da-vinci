@@ -10,7 +10,7 @@ const API = /^\/api\/(?:cards\/(?:msg|card)_[a-zA-Z0-9_-]+|conversations(?:\/con
 export function isRuntimeOpenDotRequest(url) {
   return (url.origin === RUNTIME || url.origin === BRAIN) && (DOCUMENT.test(url.pathname) || API.test(url.pathname)
     || (['/', '/apps'].includes(url.pathname) && url.searchParams.get('embed') === 'hivemind')
-    || url.pathname === '/images/runtime-computer.webp' || url.pathname === '/images/idle-desktop.webp');
+    || url.pathname === '/images/runtime-computer.webp' || url.pathname === '/images/idle-desktop.webp' || url.pathname === '/images/company-brain.svg');
 }
 
 /** Sets the surface header from the public origin; a client-sent value is never forwarded. */
