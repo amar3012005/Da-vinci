@@ -2739,5 +2739,9 @@
     "tagline": "Brain：大切なことを覚えておきましょう",
     "taglineShort": "大切なことを覚えておきましょう",
     "composerPlaceholder": "Brain にメッセージ"
+  },
+  "companyBrain": {
+    "connecting": "Opening Brain…",
+    "title": "Company Brain"
   }
 }

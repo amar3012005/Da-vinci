@@ -2739,5 +2739,9 @@
     "tagline": "Brain: لنتذكر ما يهم",
     "taglineShort": "لنتذكر ما يهم",
     "composerPlaceholder": "راسل Brain"
+  },
+  "companyBrain": {
+    "connecting": "Opening Brain…",
+    "title": "Company Brain"
   }
 }

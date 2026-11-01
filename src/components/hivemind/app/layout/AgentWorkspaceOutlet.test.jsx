@@ -9,7 +9,9 @@ jest.mock('../pages/NativeOpenDotRoom', () => ({ __esModule: true, default: ({ r
 jest.mock('../shared/native-pane-protocol', () => ({ persistentShellEnabled: () => true,
   directRuntimeHost: (mode, origin) => mode === 'runtime' && origin === 'https://runtime-runner.singulancelabs.com',
   paneForPath: path => path.includes('/employee/harness') ? 'runtime' : path.includes('/overview') ? 'brain' : null }));
-jest.mock('./PersistentHarnessPanes', () => ({ __esModule: true, default: ({ retainBrain }) => <div data-testid="panes" data-retain-brain={String(retainBrain)}/> }));
+jest.mock('./PersistentHarnessPanes', () => ({ __esModule: true, default: ({ retainBrain, suppressBrain }) => <div data-testid="panes" data-retain-brain={String(retainBrain)} data-suppress-brain={String(Boolean(suppressBrain))}/> }));
+let mockBrainStatus = 'ready';
+jest.mock('../pages/CompanyBrainRoom', () => { const React = require('react'); return { __esModule: true, default: ({ active, onStatus }) => { React.useEffect(() => { onStatus(mockBrainStatus); }, [onStatus]); return <div data-testid="company-brain" data-active={String(active)}/>; } }; });
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'u1' }, org: { id: 'o1' } }) }));
 const mockPeek = jest.fn();
 jest.mock('../shared/agent-roster', () => ({ agentRoster: { peek: (...args) => mockPeek(...args) } }));
@@ -100,4 +102,33 @@ test('the packaged app shows an employee room natively instead of framing OpenDo
   expect(room).toHaveAttribute('data-active', 'true');
   expect(room).toHaveAttribute('data-path', mockPath);
   expect(screen.queryByTestId('dot-entry')).not.toBeInTheDocument();
+});
+
+describe('Company Brain chat', () => {
+  beforeEach(() => { mockBrainStatus = 'ready'; });
+  test('the Chat route shows the preloaded Company Brain room instead of the harness chat', async () => {
+    viewport(true); mockPath = '/hivemind/app/overview/new'; render(<AgentWorkspaceOutlet/>);
+    expect(await screen.findByTestId('company-brain')).toHaveAttribute('data-active', 'true');
+    expect(screen.queryByTestId('native-seat')).not.toBeInTheDocument();
+    expect(screen.getByTestId('panes')).toHaveAttribute('data-suppress-brain', 'true');
+  });
+  test('the room is preloaded hidden while the viewer is elsewhere in Brain, and shown by a route change', async () => {
+    viewport(true); mockPath = '/hivemind/app/memories'; const view = render(<AgentWorkspaceOutlet/>);
+    expect(await screen.findByTestId('company-brain')).toHaveAttribute('data-active', 'false');
+    mockPath = '/hivemind/app/overview/new'; view.rerender(<AgentWorkspaceOutlet/>);
+    expect(screen.getByTestId('company-brain')).toHaveAttribute('data-active', 'true');
+  });
+  test('a room that failed to load falls back to the harness chat', async () => {
+    mockBrainStatus = 'failed'; viewport(true); mockPath = '/hivemind/app/overview/new'; render(<AgentWorkspaceOutlet/>);
+    expect(await screen.findByTestId('native-seat')).toBeInTheDocument();
+    expect(screen.getByTestId('company-brain')).toHaveAttribute('data-active', 'false');
+  });
+  test('saved sessions keep the harness chat', () => {
+    viewport(true); mockPath = '/hivemind/app/overview/session/abc'; render(<AgentWorkspaceOutlet/>);
+    expect(screen.getByTestId('native-seat')).toBeInTheDocument();
+  });
+  test('the packaged app never frames the room', () => {
+    mockNative = true; viewport(false); mockPath = '/hivemind/app/overview/new'; render(<AgentWorkspaceOutlet/>);
+    expect(screen.queryByTestId('company-brain')).not.toBeInTheDocument();
+  });
 });

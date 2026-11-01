@@ -113,7 +113,7 @@ function NativePane({ mode, entry, active, route, scope, onRoute }) {
 }
 
 // One shell, at most one native client document per runner, retained until identity changes.
-export default function PersistentHarnessPanes({ retainBrain = true }) {
+export default function PersistentHarnessPanes({ retainBrain = true, suppressBrain = false }) {
   const location = useLocation(); const navigate = useNavigate(); const navigateRef = useRef(navigate); navigateRef.current = navigate; const { user, org } = useAuth();
   const scope = `${user?.id || ''}:${org?.id || ''}`;
   // A company without Runtime never boots Runtime's pane except for a deliberately opened employee room.
@@ -122,7 +122,7 @@ export default function PersistentHarnessPanes({ retainBrain = true }) {
   // The runner owns Runtime directly. Never create a duplicate native client
   // in a same-origin iframe; its direct HarnessSurface retains the native seat.
   const directRuntime = directRuntimeHost(candidate, window.location.origin);
-  const active = directRuntime ? null : retainBrain || candidate !== 'brain' ? candidate : null;
+  const active = directRuntime || (suppressBrain && candidate === 'brain') ? null : retainBrain || candidate !== 'brain' ? candidate : null;
   const path = location.pathname + location.search + location.hash;
   const [visited, setVisited] = useState(() => active ? { [active]: path } : {});
   const lastRoutes = useRef({}); const activePath = useRef(path); activePath.current = path;

@@ -2714,5 +2714,9 @@
     "tagline": "Brain: recordemos lo que importa",
     "taglineShort": "Recordemos lo que importa",
     "composerPlaceholder": "Escribe a Brain"
+  },
+  "companyBrain": {
+    "connecting": "Abriendo Brain…",
+    "title": "Company Brain"
   }
 }

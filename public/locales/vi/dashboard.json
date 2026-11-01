@@ -112,5 +112,9 @@
   },
   "knowledgebase": {
     "chooseFiles": "Chọn tệp"
+  },
+  "companyBrain": {
+    "connecting": "Opening Brain…",
+    "title": "Company Brain"
   }
 }

@@ -2739,5 +2739,9 @@
     "tagline": "Brain: Let’s remember what matters",
     "taglineShort": "Let’s remember what matters",
     "composerPlaceholder": "Message Brain"
+  },
+  "companyBrain": {
+    "connecting": "Opening Brain…",
+    "title": "Company Brain"
   }
 }
