@@ -158,6 +158,26 @@ test('the Brain redirect leaves sessions, dreaming, native panes, iframes, write
   assert.equal(brainInstantRedirect(new Request('https://runtime-runner.singulancelabs.com/hivemind/app/overview/new')), null);
 });
 
+test('a conversation id in the address (?c=) reaches the Company Brain room unchanged and is never redirected away', async () => {
+  const path = '/dots/dot_company_brain?c=conv_abc123&hm_locale=de';
+  assert.equal(isRuntimeOpenDotRequest(new URL(path, BRAIN)), true);
+  assert.equal(openDotSurfaceRedirect(new Request(BRAIN + path)), null);
+  const { response, seen } = await forwarded(BRAIN, path);
+  assert.equal(response.status, 200);
+  assert.equal(new URL(seen.url).pathname + new URL(seen.url).search, path);
+  assert.equal(seen.headers.get('x-open-dot-surface'), 'brain');
+});
+
+test('edge redirects to the Company Brain keep a supplied conversation id and add none of their own', async () => {
+  const { brainInstantRedirect } = await import('./runtime-open-dot.mjs');
+  const room = BRAIN + '/dots/dot_company_brain';
+  assert.equal(brainInstantRedirect(new Request('https://next.singulancelabs.com/hivemind/app/overview/new?c=conv_abc123')).headers.get('location'), `${room}?c=conv_abc123`);
+  assert.equal(brainInstantRedirect(new Request('https://next.singulancelabs.com/hivemind/app/overview/new')).headers.get('location'), room);
+  assert.equal(openDotSurfaceRedirect(new Request(BRAIN + '/?c=conv_abc123')).headers.get('location'), `${room}?c=conv_abc123`);
+  assert.equal(openDotSurfaceRedirect(new Request(BRAIN + '/dots/dot_other?c=conv_abc123')).headers.get('location'), `${room}?c=conv_abc123`);
+  assert.equal(openDotSurfaceRedirect(new Request(RUNTIME_ORIGIN + '/dots/dot_company_brain?c=conv_abc123')).headers.get('location'), `${room}?c=conv_abc123`);
+});
+
 test('the legacy autonomy read on the Brain origin is answered from OpenDot, and an empty Needs you list replaces a 404', async () => {
   const seen = [];
   const fetcher = async request => {
