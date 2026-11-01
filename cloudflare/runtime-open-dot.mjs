@@ -76,8 +76,11 @@ export async function proxyRuntimeOpenDot(request, fetcher = fetch) {
   if (!isRuntimeOpenDotRequest(url)) return null;
   const reply = (error,status) => Response.json({error},{status,headers:{'cache-control':'private, no-store'}});
   const origin = request.headers.get('origin');
-  if ((origin && origin !== url.origin) || request.headers.get('sec-fetch-site') === 'cross-site') return reply('origin_denied',403);
   const read = ['GET','HEAD'].includes(request.method);
+  // A top-level page load (the return from sign-in, which can arrive cross-site after an identity provider's redirect)
+  // reads a document and carries no Origin; cross-site API calls, frames and writes stay refused.
+  const navigation = read && request.headers.get('sec-fetch-mode') === 'navigate' && (request.headers.get('sec-fetch-dest') || 'document') === 'document';
+  if ((origin && origin !== url.origin) || (request.headers.get('sec-fetch-site') === 'cross-site' && !navigation)) return reply('origin_denied',403);
   if (!read && !origin) return reply('origin_required',403);
   if (!['GET','HEAD','POST','DELETE','PATCH','PUT'].includes(request.method)) return reply('method_not_allowed',405);
   const cookie = (request.headers.get('cookie') || '').split(';').map(v=>v.trim()).find(v=>v.startsWith('hm_cp_session='));
