@@ -2724,5 +2724,19 @@
     "weekReturned": "वापस भेजा",
     "weekLessons": "सबक",
     "weekEmpty": "इस हफ़्ते अभी कुछ दर्ज नहीं हुआ।"
+  },
+  "chatModelConnection": {
+    "connect": "अपना ChatGPT कनेक्ट करें",
+    "title": "सबसे अच्छे फ्रंटियर मॉडल के साथ HIVEMIND का उपयोग करें",
+    "intro": "अपना ChatGPT प्लान कनेक्ट करें और यहीं अपना डिफ़ॉल्ट मॉडल चुनें।",
+    "close": "मॉडल कनेक्शन बंद करें",
+    "connectNow": "अभी कनेक्ट करें",
+    "back": "चैट पर वापस जाएं"
+  },
+  "brainHero": {
+    "greeting": "नमस्ते, {{name}}",
+    "greetingAnon": "नमस्ते",
+    "tagline": "Brain: आइए जो मायने रखता है उसे याद रखें",
+    "taglineShort": "आइए जो मायने रखता है उसे याद रखें"
   }
 }

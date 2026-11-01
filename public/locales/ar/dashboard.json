@@ -2724,5 +2724,19 @@
     "weekReturned": "أُعيد",
     "weekLessons": "دروس",
     "weekEmpty": "لم يُسجَّل شيء بعد هذا الأسبوع."
+  },
+  "chatModelConnection": {
+    "connect": "اربط حساب ChatGPT الخاص بك",
+    "title": "استخدم HIVEMIND مع أفضل النماذج المتقدمة",
+    "intro": "اربط خطة ChatGPT الخاصة بك واختر نموذجك الافتراضي من هنا مباشرة.",
+    "close": "إغلاق اتصال النموذج",
+    "connectNow": "اتصل الآن",
+    "back": "العودة إلى الدردشة"
+  },
+  "brainHero": {
+    "greeting": "مرحبًا، {{name}}",
+    "greetingAnon": "مرحبًا",
+    "tagline": "Brain: لنتذكر ما يهم",
+    "taglineShort": "لنتذكر ما يهم"
   }
 }

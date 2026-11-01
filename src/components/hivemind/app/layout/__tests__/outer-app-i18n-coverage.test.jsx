@@ -49,6 +49,7 @@ const COMPONENTS = {
   'layout/NeedsYouPanel.jsx': 'needsYou',
   'hyperagents/TeamBoard.jsx': 'teamBoard',
   'mobile/LegacyChatSheets.jsx': 'outerApp.mobileApps',
+  'shared/ChatModelConnection.jsx': 'chatModelConnection',
 };
 /** Components that are JSX and must carry no English text; the draft module only returns strings. */
 const JSX_COMPONENTS = Object.keys(COMPONENTS).filter(file => file.endsWith('.jsx'));
@@ -134,6 +135,16 @@ describe('outer app dictionary coverage', () => {
     }
     expect(missing).toEqual([]);
     expect(dictionaries.hi['sidebar.planLabel.enterprise_onboarding']).toMatch(/प्लान/);
+  });
+});
+
+describe('Brain empty state', () => {
+  test('the Brain hero greeting and tagline exist in all seven languages with the name placeholder', () => {
+    for (const locale of LOCALES) {
+      for (const key of ['greeting', 'greetingAnon', 'tagline', 'taglineShort']) expect(dictionaries[locale][`brainHero.${key}`]).toBeTruthy();
+      expect(dictionaries[locale]['brainHero.greeting']).toContain('{{name}}');
+    }
+    for (const locale of LOCALES.filter(locale => locale !== 'en')) expect(dictionaries[locale]['brainHero.greeting']).not.toBe(dictionaries.en['brainHero.greeting']);
   });
 });
 

@@ -2724,5 +2724,19 @@
     "weekReturned": "Sent back",
     "weekLessons": "Lessons",
     "weekEmpty": "Nothing recorded yet this week."
+  },
+  "chatModelConnection": {
+    "connect": "Connect to your ChatGPT",
+    "title": "Use HIVEMIND with the best frontier models",
+    "intro": "Connect your ChatGPT plan and choose your default model, right here.",
+    "close": "Close model connection",
+    "connectNow": "Connect now",
+    "back": "Back to chat"
+  },
+  "brainHero": {
+    "greeting": "Hey there, {{name}}",
+    "greetingAnon": "Hey there",
+    "tagline": "Brain: Let’s remember what matters",
+    "taglineShort": "Let’s remember what matters"
   }
 }

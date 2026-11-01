@@ -2724,5 +2724,19 @@
     "weekReturned": "差し戻し",
     "weekLessons": "学び",
     "weekEmpty": "今週はまだ記録がありません。"
+  },
+  "chatModelConnection": {
+    "connect": "ChatGPTに接続",
+    "title": "最先端のモデルでHIVEMINDを使う",
+    "intro": "ChatGPTのプランを接続し、デフォルトのモデルをここで選択します。",
+    "close": "モデル接続を閉じる",
+    "connectNow": "今すぐ接続",
+    "back": "チャットに戻る"
+  },
+  "brainHero": {
+    "greeting": "こんにちは、{{name}}さん",
+    "greetingAnon": "こんにちは",
+    "tagline": "Brain：大切なことを覚えておきましょう",
+    "taglineShort": "大切なことを覚えておきましょう"
   }
 }
