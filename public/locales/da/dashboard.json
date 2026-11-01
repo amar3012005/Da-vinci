@@ -112,5 +112,9 @@
   },
   "knowledgebase": {
     "chooseFiles": "Vælg filer"
+  },
+  "companyBrain": {
+    "connecting": "Opening Brain…",
+    "title": "Company Brain"
   }
 }

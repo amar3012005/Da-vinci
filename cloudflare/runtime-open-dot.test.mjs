@@ -117,3 +117,17 @@ test('the Company Brain on runtime-runner redirects to brain-runner; other dots 
   assert.equal(openDotSurfaceRedirect(new Request(RUNTIME_ORIGIN + '/dots/dot_abc123')), null);
   assert.equal(openDotSurfaceRedirect(new Request(RUNTIME_ORIGIN + '/')), null);
 });
+
+test('the brain-runner redirect keeps the embed query string', () => {
+  const response = openDotSurfaceRedirect(new Request(BRAIN + '/?embed=hivemind&hm_locale=de'));
+  assert.equal(response.headers.get('location'), BRAIN + '/dots/dot_company_brain?embed=hivemind&hm_locale=de');
+  const moved = openDotSurfaceRedirect(new Request(RUNTIME_ORIGIN + '/dots/dot_company_brain?embed=hivemind'));
+  assert.equal(moved.headers.get('location'), BRAIN + '/dots/dot_company_brain?embed=hivemind');
+});
+
+test('the embedded Company Brain document is served without a Worker frame restriction', async () => {
+  const response = await proxyRuntimeOpenDot(new Request(BRAIN + '/dots/dot_company_brain?embed=hivemind', { headers: { cookie: 'hm_cp_session=a', 'sec-fetch-dest': 'iframe' } }),
+    async () => new Response('<html></html>', { headers: { 'content-type': 'text/html' } }));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('x-frame-options'), null);
+});
