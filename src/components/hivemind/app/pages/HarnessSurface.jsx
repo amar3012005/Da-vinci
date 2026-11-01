@@ -12,6 +12,7 @@ import './HarnessSurface.css';
 import './BrainChat.css';
 import QueryStarters from './QueryStarters';
 import ChatModelConnection from '../shared/ChatModelConnection';
+import { useCopy } from '../layout/sidebar-copy';
 import { isNativeApp } from '../shared/native-app';
 import { nativePlugin } from '../shared/native-auth';
 import { createNativeHarnessFetch, createNativeHarnessStream, createNativeSaveFile } from '../shared/native-harness-transport';
@@ -307,6 +308,8 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
     const token = String(raw).replace(/[._-]+/g, ' ').trim().split(' ')[0];
     return token ? token.charAt(0).toUpperCase() + token.slice(1) : undefined;
   })();
+  const brainCopy = useCopy('brainHero');
+  const brainGreeting = viewerFirstName ? brainCopy('greeting', 'Hey there, {{name}}', { name: viewerFirstName }) : brainCopy('greetingAnon', 'Hey there');
   const mountRef = useRef(null);
   // The native conversation renders the latest turns directly. Earlier
   // releases stored a text-only transcript copy; remove it for this owner.
@@ -566,7 +569,7 @@ export default function HarnessSurface({ sessionEstablished = false, brain = fal
     </div>;
   }
 
-  return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface data-brain-chat={brain ? '' : undefined} data-viewer-first-name={brain ? viewerFirstName : undefined}>
+  return <div className="relative h-full min-h-0 bg-[#faf9f4]" data-hivemind-harness-surface data-brain-chat={brain ? '' : undefined} data-viewer-first-name={brain ? viewerFirstName : undefined} data-brain-greeting={brain ? brainGreeting : undefined} data-brain-tagline={brain ? brainCopy('tagline', 'Brain: Let’s remember what matters') : undefined} data-brain-tagline-short={brain ? brainCopy('taglineShort', 'Let’s remember what matters') : undefined}>
     {(state.phase === 'loading' || state.phase === 'reconnecting') && <div className="absolute inset-0 z-10"><LoadingSurface stage={state.stage} reconnecting={state.phase === 'reconnecting'} dreaming={window.location.pathname === `${HARNESS_OVERVIEW_PATH}/dreaming`} /></div>}
     <div ref={mountRef} className="h-full min-h-0 hm-harness-composer-reserve" style={{ visibility: state.phase === 'ready' ? 'visible' : 'hidden' }} />
     {brain && <ChatModelConnection />}

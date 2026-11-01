@@ -2699,5 +2699,19 @@
     "weekReturned": "Devuelto",
     "weekLessons": "Lecciones",
     "weekEmpty": "Aún no hay nada registrado esta semana."
+  },
+  "chatModelConnection": {
+    "connect": "Conecta tu ChatGPT",
+    "title": "Usa HIVEMIND con los mejores modelos de vanguardia",
+    "intro": "Conecta tu plan de ChatGPT y elige tu modelo predeterminado, aquí mismo.",
+    "close": "Cerrar la conexión del modelo",
+    "connectNow": "Conectar ahora",
+    "back": "Volver al chat"
+  },
+  "brainHero": {
+    "greeting": "Hola, {{name}}",
+    "greetingAnon": "Hola",
+    "tagline": "Brain: recordemos lo que importa",
+    "taglineShort": "Recordemos lo que importa"
   }
 }

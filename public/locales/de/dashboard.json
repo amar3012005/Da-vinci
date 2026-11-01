@@ -2718,5 +2718,19 @@
     "weekReturned": "Zurückgegeben",
     "weekLessons": "Lektionen",
     "weekEmpty": "Diese Woche wurde noch nichts erfasst."
+  },
+  "chatModelConnection": {
+    "connect": "Mit deinem ChatGPT verbinden",
+    "title": "Nutze HIVEMIND mit den besten Frontier-Modellen",
+    "intro": "Verbinde deinen ChatGPT-Tarif und wähle direkt hier dein Standardmodell.",
+    "close": "Modellverbindung schließen",
+    "connectNow": "Jetzt verbinden",
+    "back": "Zurück zum Chat"
+  },
+  "brainHero": {
+    "greeting": "Hallo, {{name}}",
+    "greetingAnon": "Hallo",
+    "tagline": "Brain: Erinnern wir uns an das, was zählt",
+    "taglineShort": "Erinnern wir uns an das, was zählt"
   }
 }
