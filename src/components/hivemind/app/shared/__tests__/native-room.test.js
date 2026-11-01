@@ -1,4 +1,4 @@
-import { markDesktopRoomsUnavailable, closeNativeRoom, desktopRoomPlugin, hasNativeRooms, nativeWorkspaceAccess, onNativeRoomClosed, openNativeRoom, roomPlugin } from '../native-room';
+import { markDesktopRoomsUnavailable, closeNativeRoom, desktopRoomPlugin, hasNativeRooms, nativeWorkspaceAccess, onNativeRoomClosed, openNativeCompanyBrainRoom, openNativeRoom, roomPlugin } from '../native-room';
 
 jest.mock('../native-auth', () => ({ nativePlugin: {} }));
 
@@ -98,5 +98,15 @@ describe('macOS apps without a usable room bridge', () => {
     expect(hasNativeRooms(win)).toBe(true);
     markDesktopRoomsUnavailable();
     expect(hasNativeRooms(win)).toBe(false);
+  });
+});
+
+describe('Company Brain native room', () => {
+  test('opens the one non-employee path, with the scope when given', async () => {
+    const plugin = { openRoom: jest.fn().mockResolvedValue(undefined) };
+    await openNativeCompanyBrainRoom({ plugin });
+    expect(plugin.openRoom).toHaveBeenCalledWith({ path: '/dots/dot_company_brain' });
+    await openNativeCompanyBrainRoom({ plugin, scope: 'org-a:user-1' });
+    expect(plugin.openRoom).toHaveBeenLastCalledWith({ path: '/dots/dot_company_brain', scope: 'org-a:user-1' });
   });
 });
