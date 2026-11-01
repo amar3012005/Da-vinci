@@ -2,7 +2,7 @@
 import { hedgedFetch } from './hedged-fetch.mjs';
 export async function proxyRuntimeBootstrap(request) {
   const url = new URL(request.url);
-  if (url.hostname !== 'runtime-runner.singulancelabs.com' || url.pathname !== '/__hivemind/bootstrap') return null;
+  if (!['runtime-runner.singulancelabs.com', 'brain-runner.singulancelabs.com'].includes(url.hostname) || url.pathname !== '/__hivemind/bootstrap') return null;
   const reply = (error, status) => Response.json({error}, {status, headers: {'cache-control':'private, no-store'}});
   if (request.method !== 'GET') return reply('method_not_allowed', 405);
   const origin = request.headers.get('origin');

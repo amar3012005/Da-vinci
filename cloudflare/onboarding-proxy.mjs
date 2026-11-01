@@ -4,7 +4,7 @@
  */
 export const ONBOARDING_PATH = '/api/hivemind/onboarding';
 const UPSTREAM = 'https://dots.singulancelabs.com';
-const ORIGINS = ['https://next.singulancelabs.com', 'https://runtime-runner.singulancelabs.com'];
+const ORIGINS = ['https://next.singulancelabs.com', 'https://runtime-runner.singulancelabs.com', 'https://brain-runner.singulancelabs.com'];
 const MAX_BODY = 16_000;
 
 /**

@@ -3,7 +3,7 @@ export async function proxyConnectorTransport(request) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith('/__hivemind/connectors/')) return null;
   const reply = (error, status) => Response.json({ error }, { status, headers: { 'cache-control': 'private, no-store' } });
-  if (!['https://runtime-runner.singulancelabs.com', 'https://next.singulancelabs.com'].includes(url.origin)) return reply('origin_denied', 403);
+  if (!['https://runtime-runner.singulancelabs.com', 'https://next.singulancelabs.com', 'https://brain-runner.singulancelabs.com'].includes(url.origin)) return reply('origin_denied', 403);
   const tail = url.pathname.slice('/__hivemind/connectors/'.length);
   const read = /^composio\/toolkits(?:\/[a-zA-Z0-9_-]+\/tools)?$/.test(tail);
   const write = /^composio\/[a-zA-Z0-9_-]+\/(connect|connect-api-key|disconnect)$/.test(tail);

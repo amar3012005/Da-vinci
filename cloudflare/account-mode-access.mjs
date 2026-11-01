@@ -141,7 +141,7 @@ export async function handleModeAccess(request, env) {
 }
 export async function gateWorkspaceDocument(request, env) {
   const url = new URL(request.url);
-  if (!['next.singulancelabs.com', 'runtime-runner.singulancelabs.com'].includes(url.hostname) || !['GET', 'HEAD'].includes(request.method)) return null;
+  if (!['next.singulancelabs.com', 'runtime-runner.singulancelabs.com', 'brain-runner.singulancelabs.com'].includes(url.hostname) || !['GET', 'HEAD'].includes(request.method)) return null;
   if (!requiresWorkspaceModeAccess(url.pathname)) return null;
   try {
     const user = await sessionUser(request);

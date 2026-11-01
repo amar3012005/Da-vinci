@@ -25,6 +25,7 @@
     "LANDING_MOBILE_V2": "true",
     "RUNNER_ORIGIN": "https://harness-chat-origin.singulancelabs.com",
     "RUNTIME_RUNNER_PUBLIC_ORIGIN": "https://runtime-runner.singulancelabs.com",
+    "BRAIN_RUNNER_PUBLIC_ORIGIN": "https://brain-runner.singulancelabs.com",
     "RUNTIME_RUNNER_ORIGIN": "https://runtime-runner-origin.singulancelabs.com",
     "DEV_COMMUNITY_ADMINS": "support@singulancelabs.com",
     "BUG_REPORT_FROM": "bugs@admin.singulancelabs.com"
@@ -64,6 +65,10 @@
     },
     {
       "pattern": "runtime-runner.singulancelabs.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "brain-runner.singulancelabs.com",
       "custom_domain": true
     },
     {

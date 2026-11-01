@@ -1,6 +1,6 @@
 import { withSecurityHeaders } from './security-headers.mjs';
 import { proxyRuntimeBootstrap } from './runtime-bootstrap.mjs';
-import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot } from './runtime-open-dot.mjs';
+import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot, openDotSurfaceRedirect, applyOpenDotSurface } from './runtime-open-dot.mjs';
 import { proxyOnboarding } from './onboarding-proxy.mjs';
 import { edgeCachedNativeCode, runtimeNativeAsset } from './runtime-native-assets.mjs';
 import { handleComposioAccount } from './composio-account.mjs';
@@ -236,7 +236,9 @@ function nativeRunnerHandoff(destination) {
 }
 
 async function proxyHarnessRunner(request, env) {
-  if (env.RUNTIME_RUNNER_PUBLIC_ORIGIN && new URL(request.url).origin === env.RUNTIME_RUNNER_PUBLIC_ORIGIN) {
+  const requestOrigin = new URL(request.url).origin;
+  if ((env.RUNTIME_RUNNER_PUBLIC_ORIGIN && requestOrigin === env.RUNTIME_RUNNER_PUBLIC_ORIGIN)
+    || (env.BRAIN_RUNNER_PUBLIC_ORIGIN && requestOrigin === env.BRAIN_RUNNER_PUBLIC_ORIGIN)) {
     env = { ...env, HARNESS_CHAT: undefined, RUNNER_ORIGIN: env.RUNTIME_RUNNER_ORIGIN };
   }
   if (env.HARNESS_CHAT && typeof env.HARNESS_CHAT.fetch === 'function') {
@@ -268,7 +270,7 @@ async function proxyEmployeeRegistry(request) {
   const create = url.pathname === '/api/hivemind/employees/create' || url.pathname === '/api/hivemind/employees/restore';
   const method = create ? 'POST' : 'GET';
   const origin = request.headers.get('origin');
-  const allowed = ['https://next.singulancelabs.com', 'https://runtime-runner.singulancelabs.com'];
+  const allowed = ['https://next.singulancelabs.com', 'https://runtime-runner.singulancelabs.com', 'https://brain-runner.singulancelabs.com'];
   const reply = (error, status) => Response.json({ error }, { status,
     headers: { 'cache-control': 'private, no-store' } });
   if (!allowed.includes(url.origin) || (origin && origin !== url.origin)) return reply('origin_denied', 403);
@@ -516,6 +518,7 @@ async function proxyRuntimeApps(request, ctx) {
   if (!cookie) return reply('authentication_required',401);
   const headers = new Headers({cookie, accept:request.headers.get('accept') || '*/*'});
   if(origin) headers.set('origin',origin);
+  applyOpenDotSurface(headers,url);
   for(const key of ['content-type','rsc','next-router-state-tree','next-router-prefetch','next-url','last-event-id']) if(request.headers.has(key)) headers.set(key,request.headers.get(key));
   try {
     let body;
@@ -533,6 +536,8 @@ const worker = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const surfaceRedirect = openDotSurfaceRedirect(request);
+    if (surfaceRedirect) return surfaceRedirect;
     const devCommunityResponse = await devCommunity(request, env);
     if (devCommunityResponse) return devCommunityResponse;
     const bootstrapResponse = await proxyRuntimeBootstrap(request);
@@ -579,7 +584,7 @@ const worker = {
       const expected = runtimePane ? 'https://runtime-runner.singulancelabs.com' : brainPane ? 'https://next.singulancelabs.com' : null;
       if (!expected || url.origin !== expected || !['GET','HEAD'].includes(request.method)) return new Response('Invalid native pane owner', { status: 400, headers: { 'cache-control': 'private, no-store' } });
     }
-    if (['runtime-runner.singulancelabs.com', 'next.singulancelabs.com'].includes(url.hostname)) {
+    if (['runtime-runner.singulancelabs.com', 'brain-runner.singulancelabs.com', 'next.singulancelabs.com'].includes(url.hostname)) {
       if (pathname === '/api/hivemind/recovery') return proxyRuntimeRecovery(request);
       // OAuth finishes in its own window. Refresh the existing workspace instead
       // of downloading and mounting another copy of the authenticated app shell.
@@ -765,7 +770,7 @@ const worker = {
       || pathname === '/api/hivemind/session/establish'
       || pathname === '/api/hivemind/boot'
       || isHarnessDocumentOrAsset(request, pathname)
-      || ((hasHarnessAdmission(request) || hasHarnessSession(request) || hostname(request) === 'runtime-runner.singulancelabs.com')
+      || ((hasHarnessAdmission(request) || hasHarnessSession(request) || ['runtime-runner.singulancelabs.com', 'brain-runner.singulancelabs.com'].includes(hostname(request)))
         && isHarnessRunnerRoute(pathname))) {
       return noIndex(await edgeCachedNativeCode(request, ctx, () => harnessResponse(request, env)));
     }
@@ -877,7 +882,7 @@ const worker = {
       // Only the native pane is embeddable across the two app origins; every other
       // app document refuses foreign frames.
       if (url.searchParams.get('native_pane') === '1') {
-        headers.set('content-security-policy', "frame-ancestors https://next.singulancelabs.com https://runtime-runner.singulancelabs.com");
+        headers.set('content-security-policy', "frame-ancestors https://next.singulancelabs.com https://runtime-runner.singulancelabs.com https://brain-runner.singulancelabs.com");
       } else {
         headers.set('content-security-policy', "frame-ancestors 'self'");
         headers.set('x-frame-options', 'SAMEORIGIN');

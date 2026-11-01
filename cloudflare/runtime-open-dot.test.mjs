@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isRuntimeOpenDotRequest } from './runtime-open-dot.mjs';
+import { isRuntimeOpenDotRequest, proxyRuntimeOpenDot, openDotSurfaceRedirect } from './runtime-open-dot.mjs';
 
 /**
  * Every /api path the OpenDot client (hivemind-open-dot: src/lib, src/components, src/app) calls on the Runtime origin.
@@ -53,4 +53,67 @@ test('the team board read is forwarded on the Runtime origin only, and not when 
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/team-board', 'https://runtime-runner.singulancelabs.com')), true);
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/team-board/extra', 'https://runtime-runner.singulancelabs.com')), false);
   assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/team-board', 'https://next.singulancelabs.com')), false);
+});
+
+const BRAIN = 'https://brain-runner.singulancelabs.com';
+const RUNTIME_ORIGIN = 'https://runtime-runner.singulancelabs.com';
+
+async function forwarded(origin, path, extra = {}) {
+  let seen;
+  const response = await proxyRuntimeOpenDot(new Request(origin + path, { headers: { cookie: 'hm_cp_session=a', 'last-event-id': '7', ...extra } }),
+    async upstream => { seen = upstream; return new Response('ok'); });
+  return { response, seen };
+}
+
+test('brain-runner serves the same OpenDot allowlist as runtime-runner', () => {
+  for (const path of FORWARDED_TO_OPEN_DOT) assert.equal(isRuntimeOpenDotRequest(new URL(path, BRAIN)), true, path);
+  assert.equal(isRuntimeOpenDotRequest(new URL('/api/dots/dot_x/secret', BRAIN)), false);
+});
+
+test('brain-runner requests carry x-open-dot-surface: brain and keep Last-Event-ID', async () => {
+  const { response, seen } = await forwarded(BRAIN, '/api/dots/dot_company_brain/stream', { 'x-open-dot-surface': 'runtime' });
+  assert.equal(response.status, 200);
+  assert.equal(seen.headers.get('x-open-dot-surface'), 'brain');
+  assert.equal(seen.headers.get('last-event-id'), '7');
+  assert.equal(seen.headers.get('cookie'), 'hm_cp_session=a');
+  assert.equal(new URL(seen.url).origin, 'https://dots.singulancelabs.com');
+});
+
+test('runtime-runner never sends x-open-dot-surface, even when the client does', async () => {
+  const { seen } = await forwarded(RUNTIME_ORIGIN, '/api/dots/dot_company_brain/stream', { 'x-open-dot-surface': 'brain' });
+  assert.equal(seen.headers.has('x-open-dot-surface'), false);
+});
+
+test('brain-runner accepts its own origin and refuses the other, and still needs a session', async () => {
+  const post = (origin, headers) => proxyRuntimeOpenDot(new Request(BRAIN + '/api/conversations', { method: 'POST', headers: { origin, cookie: 'hm_cp_session=a', ...headers } }),
+    async () => new Response('ok'));
+  assert.equal((await post(BRAIN)).status, 200);
+  assert.equal((await post(RUNTIME_ORIGIN)).status, 403);
+  const anonymous = await proxyRuntimeOpenDot(new Request(BRAIN + '/dots/dot_company_brain'), async () => new Response('ok'));
+  assert.equal(anonymous.status, 401);
+});
+
+test('upstream redirects are rewritten to the requesting public host', async () => {
+  const response = await proxyRuntimeOpenDot(new Request(BRAIN + '/settings', { headers: { cookie: 'hm_cp_session=a' } }),
+    async () => new Response(null, { status: 302, headers: { location: 'https://dots.singulancelabs.com/dots/dot_company_brain' } }));
+  assert.equal(response.headers.get('location'), BRAIN + '/dots/dot_company_brain');
+});
+
+test('brain-runner root and other dots redirect to the Company Brain; the Company Brain itself does not', () => {
+  for (const path of ['/', '/dots/dot_abc123', '/dots/dot_abc123/']) {
+    const response = openDotSurfaceRedirect(new Request(BRAIN + path));
+    assert.equal(response.status, 302, path);
+    assert.equal(response.headers.get('location'), BRAIN + '/dots/dot_company_brain');
+  }
+  assert.equal(openDotSurfaceRedirect(new Request(BRAIN + '/dots/dot_company_brain')), null);
+  assert.equal(openDotSurfaceRedirect(new Request(BRAIN + '/api/conversations')), null);
+  assert.equal(openDotSurfaceRedirect(new Request(BRAIN + '/', { method: 'POST' })), null);
+});
+
+test('the Company Brain on runtime-runner redirects to brain-runner; other dots stay', () => {
+  const response = openDotSurfaceRedirect(new Request(RUNTIME_ORIGIN + '/dots/dot_company_brain'));
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.get('location'), BRAIN + '/dots/dot_company_brain');
+  assert.equal(openDotSurfaceRedirect(new Request(RUNTIME_ORIGIN + '/dots/dot_abc123')), null);
+  assert.equal(openDotSurfaceRedirect(new Request(RUNTIME_ORIGIN + '/')), null);
 });

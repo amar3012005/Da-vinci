@@ -2,7 +2,7 @@
 import manifest from './generated/runtime-native-assets.json' with {type:'json'};
 export async function runtimeNativeAsset(request,env) {
   const url=new URL(request.url);
-  if(url.hostname!=='runtime-runner.singulancelabs.com'||!['GET','HEAD'].includes(request.method))return null;
+  if(!['runtime-runner.singulancelabs.com','brain-runner.singulancelabs.com'].includes(url.hostname)||!['GET','HEAD'].includes(request.method))return null;
   const entry=manifest.entries[url.pathname+url.search];
   if(!entry) {
     if(url.pathname.startsWith('/runtime-native/'))return new Response('Asset not found',{status:404,headers:{'content-type':'text/plain','cache-control':'no-store'}});
@@ -18,7 +18,7 @@ const REVISION_QUERY=/(?:^|[?&])rev=[a-f0-9]{12}(?:&|$)/;
 
 /** True for release-pinned public native code: plugin combos and top-level shell bundles carrying a 12-hex `rev`. */
 export function isRevisionedNativeCode(url) {
-  if(url.hostname!=='runtime-runner.singulancelabs.com'||!REVISION_QUERY.test(url.search))return false;
+  if(!['runtime-runner.singulancelabs.com','brain-runner.singulancelabs.com'].includes(url.hostname)||!REVISION_QUERY.test(url.search))return false;
   return (url.pathname.startsWith('/plugins/')&&url.pathname!=='/plugins/events')||/^\/assets\/[^/]+\.(?:js|css)$/.test(url.pathname);
 }
 
