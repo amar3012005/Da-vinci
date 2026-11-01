@@ -11,6 +11,7 @@ import { bindNativeTouchFeedback } from '../shared/native-haptics';
 import { bindNativeAuthCallbacks, nativeAuth } from '../shared/native-auth';
 import { nativeWorkspaceAccess } from '../shared/native-room';
 import { adoptScope, wipeAllScopes } from '../shared/sync';
+import { clearShellBootstrap, readShellBootstrap, writeShellBootstrap } from '../shared/shell-bootstrap-cache';
 
 const AuthContext = createContext(undefined);
 const ACCESS_CHECK_THROTTLE_MS = 15000;
@@ -34,15 +35,18 @@ async function fetchModeAccess(signal) {
   *   signed_in                 → bootstrap returned authenticated user context
  *   control_plane_unreachable → network failure or timeout — the only state that says "unavailable"
  */
-export function AuthProvider({ children }) {
+export function AuthProvider({ children, shellIdentity }) {
+  // The sidebar shell passes the identity its host verified: a bootstrap this tab confirmed earlier for that identity draws at once, and the
+  // live bootstrap below still refreshes it. Nothing else passes it, so the app's own sign-in flow is unchanged.
+  const [seed] = useState(() => (shellIdentity ? readShellBootstrap(shellIdentity) : null));
   useEffect(() => bindNativeTouchFeedback({ document, storage: window.localStorage }), []);
-  const [authState, setAuthState] = useState('loading');
+  const [authState, setAuthState] = useState(seed ? 'signed_in' : 'loading');
   const [connectionFailure, setConnectionFailure] = useState(null);
-  const [user, setUser] = useState(null);
-  const [org, setOrg] = useState(null);
-  const [onboarding, setOnboarding] = useState(null);
-  const [connectivity, setConnectivity] = useState(null);
-  const [clientSupport, setClientSupport] = useState([]);
+  const [user, setUser] = useState(seed?.user ?? null);
+  const [org, setOrg] = useState(seed?.organization ?? null);
+  const [onboarding, setOnboarding] = useState(seed?.onboarding ?? null);
+  const [connectivity, setConnectivity] = useState(seed?.connectivity ?? null);
+  const [clientSupport, setClientSupport] = useState(seed?.client_support ?? []);
   const [modeAccess, setModeAccess] = useState({ userId: null, enabled: false });
   // Shell hint saved by the last confirmed session. It is display-only and is exposed as
   // `optimisticShell` while bootstrap is in flight; no identity reaches `user` or `org` until bootstrap confirms.
@@ -115,7 +119,7 @@ export function AuthProvider({ children }) {
 
   const bootstrapAttempted = useRef(false);
   const activeTenantRef = useRef(null);
-  const authStateRef = useRef('loading');
+  const authStateRef = useRef(seed ? 'signed_in' : 'loading');
   useEffect(() => { authStateRef.current = authState; }, [authState]);
   const location = useLocation();
 
@@ -142,6 +146,7 @@ export function AuthProvider({ children }) {
 
       if (data.authenticated === false || !data.user) {
         clearBootCache();
+        clearShellBootstrap();
         // A session that ended without a sign-out on this device leaves no cached rows behind.
         void wipeAllScopes();
         if (activeTenantRef.current) window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
@@ -163,6 +168,7 @@ export function AuthProvider({ children }) {
         setOrg(data.organization || null);
         setOnboarding(data.onboarding || null);
         setAuthState('signed_in');
+        if (shellIdentity) writeShellBootstrap(data);
         const nextTenant = `${data.organization?.id || ''}:${data.user?.id || ''}`;
         if (activeTenantRef.current && activeTenantRef.current !== nextTenant) window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
         activeTenantRef.current = nextTenant;
@@ -192,12 +198,15 @@ export function AuthProvider({ children }) {
       if (err.response?.status === 401) {
         // A rejected session ends the stale shell hint and cached display data.
         clearBootCache();
+        clearShellBootstrap();
         setUser(null);
         setOrg(null);
         setOnboarding(null);
         setConnectivity(null);
         setClientSupport([]);
         setAuthState('signed_out');
+      } else if (shellIdentity && authStateRef.current === 'signed_in') {
+        // The sidebar already drawn from this tab's confirmed bootstrap stays through a timeout or network failure.
       } else {
         setUser(null);
         setOrg(null);

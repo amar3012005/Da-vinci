@@ -57,24 +57,34 @@ describe('Company Brain mode',()=>{
   routerProps.navigator.push('/hivemind/app/graph');
   expect(window.location.assign).toHaveBeenCalledWith('https://next.singulancelabs.com/hivemind/app/graph');
  });
- test('Chat reopens the cached conversation of this company and user, and does nothing while the room is showing',()=>{
+ test('Chat is the room itself: it never loads a page, and switches the room in place when the cached conversation differs from the address',()=>{
   window.localStorage.setItem('hm:o:u:brain-room:dot_company_brain','conv_abc123');
   window.localStorage.setItem('hm:o:other:brain-room:dot_company_brain','conv_other');
   mountBrain();
   expect(routerProps.navigator.createHref('/hivemind/app/overview/new')).toBe('https://brain-runner.singulancelabs.com/dots/dot_company_brain?c=conv_abc123');
-  routerProps.navigator.push('/hivemind/app/overview/new');
-  expect(window.location.assign).toHaveBeenCalledWith('https://brain-runner.singulancelabs.com/dots/dot_company_brain?c=conv_abc123');
-  window.location.assign.mockClear();
+  const opened=[];const note=event=>opened.push(event.detail.conversationId);window.addEventListener('hivemind:brain-open-conversation',note);
+  const replaceState=jest.spyOn(window.history,'replaceState');
+  for(const method of ['push','replace']){
+   window.location.href='https://brain-runner.singulancelabs.com/dots/dot_company_brain';
+   routerProps.navigator[method]('/hivemind/app/overview/new');
+   window.location.href='https://brain-runner.singulancelabs.com/dots/dot_company_brain?c=conv_old';
+   routerProps.navigator[method]('/hivemind/app/overview/new');
+  }
+  expect(window.location.assign).not.toHaveBeenCalled();expect(window.location.replace).not.toHaveBeenCalled();
+  expect(opened).toEqual(['conv_abc123','conv_abc123','conv_abc123','conv_abc123']);
+  expect(replaceState).toHaveBeenLastCalledWith(null,'','/dots/dot_company_brain?c=conv_abc123');
+  opened.length=0;replaceState.mockClear();
   window.location.href='https://brain-runner.singulancelabs.com/dots/dot_company_brain?c=conv_abc123';
+  routerProps.navigator.push('/hivemind/app/overview/new');routerProps.navigator.replace('/hivemind/app/overview/new');
+  expect(opened).toEqual([]);expect(replaceState).not.toHaveBeenCalled();
+  expect(window.location.assign).not.toHaveBeenCalled();expect(window.location.replace).not.toHaveBeenCalled();
+  window.removeEventListener('hivemind:brain-open-conversation',note);replaceState.mockRestore();
+ });
+ test('a bare room with no cached conversation stays put, and a link to another page still loads it',()=>{
+  mountBrain();
+  window.location.href='https://brain-runner.singulancelabs.com/dots/dot_company_brain';
   routerProps.navigator.push('/hivemind/app/overview/new');
   expect(window.location.assign).not.toHaveBeenCalled();
- });
- test('a router replace to the page already showing (clicking the active Chat link) does not reload the page',()=>{
-  window.localStorage.setItem('hm:o:u:brain-room:dot_company_brain','conv_abc123');
-  mountBrain();
-  window.location.href='https://brain-runner.singulancelabs.com/dots/dot_company_brain?c=conv_abc123';
-  routerProps.navigator.replace('/hivemind/app/overview/new');
-  expect(window.location.replace).not.toHaveBeenCalled();
   routerProps.navigator.replace('/hivemind/app/graph');
   expect(window.location.replace).toHaveBeenCalledWith('https://next.singulancelabs.com/hivemind/app/graph');
  });
