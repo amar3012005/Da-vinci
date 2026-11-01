@@ -21,11 +21,49 @@ export function waitingEmployeeIds(rooms) {
  */
 export function parseNeedsYou(body) {
   if (!body || body.version !== 1 || !Array.isArray(body.cards)) return [];
-  return body.cards
-    .filter(card => card && CARD_ID.test(String(card.id)) && typeof card.employeeId === 'string' && typeof card.dotId === 'string' && typeof card.conversationId === 'string' && KINDS.has(card.kind))
-    .map(card => ({ id: card.id, employeeId: card.employeeId, dotId: card.dotId, conversationId: card.conversationId, createdAt: Number(card.createdAt) || 0,
-      kind: card.kind, title: String(card.title || '').slice(0, 200), quickApprove: card.kind === 'approval' && card.quickApprove === true }))
-    .sort((a, b) => b.createdAt - a.createdAt);
+  return body.cards.map(needsYouCard).filter(Boolean).sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/**
+ * One well-formed card, or null. A feed entry keeps its `revision` so a newer copy replaces an older one.
+ * @param {object} card - Entry of the plain answer or the changes-since feed.
+ * @returns {object|null} Card.
+ */
+function needsYouCard(card) {
+  if (!(card && CARD_ID.test(String(card.id)) && typeof card.employeeId === 'string' && typeof card.dotId === 'string' && typeof card.conversationId === 'string' && KINDS.has(card.kind))) return null;
+  return { id: card.id, employeeId: card.employeeId, dotId: card.dotId, conversationId: card.conversationId, createdAt: Number(card.createdAt) || 0,
+    kind: card.kind, title: String(card.title || '').slice(0, 200), quickApprove: card.kind === 'approval' && card.quickApprove === true,
+    ...(typeof card.revision === 'string' ? { revision: card.revision } : {}) };
+}
+
+/**
+ * Turn the changes-since answer (or the plain answer of a server without the feed) into engine items and removals:
+ * `pending` cards stay, `resolved` ones (answered, or their employee paused or archived) are removed.
+ * @param {{ items: object[], deletes: string[], cursor: unknown, replace: boolean }} page - Page from `readSinceFeed`.
+ * @returns {{ items: object[], deletes: string[], cursor: unknown, replace: boolean }} Page with well-formed pending cards only.
+ */
+export function needsYouFeedPage(page) {
+  const deletes = [...page.deletes];
+  const items = [];
+  for (const row of page.items) {
+    if (row?.state === 'resolved') { if (row.id) deletes.push(String(row.id)); continue; }
+    const card = needsYouCard(row);
+    if (card) items.push(card);
+  }
+  return { ...page, items, deletes };
+}
+
+/**
+ * One request of the Needs you feed.
+ * @param {string} since - Cursor, or `start` for everything.
+ * @param {{ signal?: AbortSignal }} [context] - Cancels the read.
+ * @returns {Promise<object>} Parsed body: `{ items, deleted, next_cursor, has_more }`, or the plain `{ version: 1, cards }` from a server without the feed.
+ * @throws When the server cannot answer.
+ */
+export async function fetchNeedsYouPage(since, { signal } = {}) {
+  const response = await fetchRuntime(`/api/hivemind/needs-you?since=${encodeURIComponent(since)}&limit=200`, { credentials: 'same-origin', cache: 'no-store', signal });
+  if (!response.ok) throw new Error('Needs you unavailable');
+  return response.json();
 }
 
 /**

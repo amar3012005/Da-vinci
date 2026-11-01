@@ -30,7 +30,7 @@ export default function NeedsYouPanel({ team, refreshKey, onClose, onOpenCard, p
   const engine = useMemo(() => {
     if (!org?.id || !user?.id) return null;
     const { engine: scoped } = syncScope(org.id, user.id);
-    registerNeedsYou(scoped, fetchNeedsYou);
+    registerNeedsYou(scoped);
     return scoped;
   }, [org?.id, user?.id]);
   const [cards, setCards] = useState(() => {

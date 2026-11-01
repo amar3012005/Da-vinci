@@ -2137,7 +2137,9 @@
     "send": "Enviar",
     "sendFailed": "No enviado",
     "voice": "Voz",
-    "waitingToSend": "Esperando para enviar"
+    "waitingToSend": "Esperando para enviar",
+    "sending": "Enviando",
+    "sendFailedRetry": "No enviado. Toca para reintentar"
   },
   "getStarted": {
     "summary": "Primeros pasos, {{count}} de {{total}}"

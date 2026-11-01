@@ -63,3 +63,11 @@
   font-size: 11px;
   opacity: 0.8;
 }
+
+/* Last conversation of the room, painted from the device copy while the room loads. */
+.optimistic-phone-room-thread { position: absolute; left: 12px; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 68px); bottom: calc(max(10px, env(safe-area-inset-bottom, 0px)) + 60px); margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+.optimistic-phone-room-thread li { max-width: 85%; border-radius: 14px; padding: 8px 12px; background: #fff; color: #1a1a1a; font-size: 14px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.05); }
+.optimistic-phone-room-thread li[data-role='user'] { align-self: flex-end; background: #117dff; color: #fff; box-shadow: none; }
+.optimistic-phone-room-thread li[data-role='other'] { align-self: flex-start; }
+.optimistic-phone-room-thread li[data-state='failed'] { background: #fde8e8; color: #9b1c1c; }
+.optimistic-phone-room-thread li button { all: unset; cursor: pointer; display: block; white-space: pre-wrap; }

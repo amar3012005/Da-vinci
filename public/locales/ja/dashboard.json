@@ -2165,7 +2165,9 @@
     "send": "送信",
     "sendFailed": "未送信",
     "voice": "ボイス",
-    "waitingToSend": "送信待ち"
+    "waitingToSend": "送信待ち",
+    "sending": "送信中",
+    "sendFailedRetry": "未送信。タップして再試行"
   },
   "runtimeCalendar": {
     "localOnly": "Runtime のカレンダーは現在応答していません。ここには従業員が自分で保持しているタスクを表示しています。残りは Runtime の復旧後に戻ります。",

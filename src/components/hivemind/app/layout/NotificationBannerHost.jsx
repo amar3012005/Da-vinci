@@ -5,7 +5,7 @@ import apiClient from '../shared/api-client';
 import { useOptionalAuth } from '../auth/AuthProvider';
 import { syncScope } from '../shared/sync';
 import { NEEDS_YOU, NOTIFICATIONS, registerNeedsYou, registerNotifications } from '../shared/sync/entities';
-import { answerNeedsYouCard, fetchNeedsYou } from '../shared/needs-you';
+import { answerNeedsYouCard } from '../shared/needs-you';
 import { agentRoster } from '../shared/agent-roster';
 import { openFinalLink } from '../shared/open-final-link';
 import AgentAvatar from '../hyperagents/AgentAvatar';
@@ -63,7 +63,7 @@ export default function NotificationBannerHost() {
     if (!scope) return undefined;
     const { engine } = syncScope(companyId, userId);
     registerNotifications(engine, apiClient);
-    registerNeedsYou(engine, fetchNeedsYou);
+    registerNeedsYou(engine);
     const seen = new Set();
     const seeded = { bell: false, needs: false };
     feeds.current = { bell: [], needs: [] };

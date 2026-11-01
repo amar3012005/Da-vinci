@@ -3,6 +3,8 @@ import { createAgentRosterCache } from './agent-roster-cache';
 import { rememberEmployeeAppearances } from './employee-appearance-cache';
 import { isNativeApp } from './native-app';
 import apiClient from './api-client';
+import { confirmedIdentity, syncScope } from './sync';
+import { ROSTER, registerRoster } from './sync/entities';
 
 /**
  * Sidebar profiles from Control's complete employee list (`GET /v1/employees`), for the packaged app when the
@@ -22,6 +24,27 @@ export function controlTeamProfiles(listing, company) {
       role: roles.get(employee.id) || (typeof employee.roleArchetype === 'string' ? employee.roleArchetype : ''),
       ...(employee.policyRules ? { policyRules: employee.policyRules } : {}),
     }));
+}
+
+const rosterEngines = new WeakSet();
+
+/**
+ * Control's employee list for the signed-in company, read by cursor: the device copy is brought up to date with the
+ * employees that changed (removed and archived ones leave it). Without a confirmed identity, or when the feed fails,
+ * the plain list is read.
+ * @returns {Promise<{ employees: object[] }>} listing for {@link controlTeamProfiles}.
+ */
+async function controlRosterListing() {
+  const who = confirmedIdentity();
+  if (!who) return apiClient.listEmployees();
+  try {
+    const { engine } = syncScope(who.orgId, who.userId);
+    if (!rosterEngines.has(engine)) { rosterEngines.add(engine); registerRoster(engine, apiClient); }
+    return { employees: (await engine.refresh(ROSTER, 'main')).items };
+  } catch {
+    // The feed is unavailable (older Control, 400/503): the plain list is the same data without a cursor.
+    return apiClient.listEmployees();
+  }
 }
 
 function optionalRosterStorage() {
@@ -56,7 +79,7 @@ export const agentRoster = createAgentRosterCache(async scope => {
     try { return await read('/api/hivemind/workspace-shell?resource=roster'); } catch (error) {
       // The packaged app has no runner session until Control admits it; Control still knows the team.
       if (isNativeApp()) {
-        const [listing, company] = await Promise.all([apiClient.listEmployees(), apiClient.hyperCompany().catch(() => null)]);
+        const [listing, company] = await Promise.all([controlRosterListing(), apiClient.hyperCompany().catch(() => null)]);
         const profiles = controlTeamProfiles(listing, company);
         if (profiles.length) return profiles;
         throw error;

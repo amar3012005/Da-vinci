@@ -2202,7 +2202,9 @@
     "send": "Send",
     "sendFailed": "Not sent",
     "voice": "Voice",
-    "waitingToSend": "Waiting to send"
+    "waitingToSend": "Waiting to send",
+    "sending": "Sending",
+    "sendFailedRetry": "Not sent. Tap to retry"
   },
   "outerApp": {
     "usage": {
