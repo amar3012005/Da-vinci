@@ -2712,6 +2712,7 @@
     "greeting": "Salut, {{name}}",
     "greetingAnon": "Salut",
     "tagline": "Brain : souvenons-nous de ce qui compte",
-    "taglineShort": "Souvenons-nous de ce qui compte"
+    "taglineShort": "Souvenons-nous de ce qui compte",
+    "composerPlaceholder": "Écrire à Brain"
   }
 }

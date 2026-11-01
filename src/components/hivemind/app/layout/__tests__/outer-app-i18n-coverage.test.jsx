@@ -141,10 +141,11 @@ describe('outer app dictionary coverage', () => {
 describe('Brain empty state', () => {
   test('the Brain hero greeting and tagline exist in all seven languages with the name placeholder', () => {
     for (const locale of LOCALES) {
-      for (const key of ['greeting', 'greetingAnon', 'tagline', 'taglineShort']) expect(dictionaries[locale][`brainHero.${key}`]).toBeTruthy();
+      for (const key of ['greeting', 'greetingAnon', 'tagline', 'taglineShort', 'composerPlaceholder']) expect(dictionaries[locale][`brainHero.${key}`]).toBeTruthy();
       expect(dictionaries[locale]['brainHero.greeting']).toContain('{{name}}');
     }
     for (const locale of LOCALES.filter(locale => locale !== 'en')) expect(dictionaries[locale]['brainHero.greeting']).not.toBe(dictionaries.en['brainHero.greeting']);
+    expect(dictionaries.de['brainHero.composerPlaceholder']).toBe('Nachricht an Brain');
   });
 });
 

@@ -2737,6 +2737,7 @@
     "greeting": "Hey there, {{name}}",
     "greetingAnon": "Hey there",
     "tagline": "Brain: Let’s remember what matters",
-    "taglineShort": "Let’s remember what matters"
+    "taglineShort": "Let’s remember what matters",
+    "composerPlaceholder": "Message Brain"
   }
 }

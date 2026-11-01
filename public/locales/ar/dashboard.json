@@ -2737,6 +2737,7 @@
     "greeting": "مرحبًا، {{name}}",
     "greetingAnon": "مرحبًا",
     "tagline": "Brain: لنتذكر ما يهم",
-    "taglineShort": "لنتذكر ما يهم"
+    "taglineShort": "لنتذكر ما يهم",
+    "composerPlaceholder": "راسل Brain"
   }
 }

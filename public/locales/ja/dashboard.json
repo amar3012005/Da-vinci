@@ -2737,6 +2737,7 @@
     "greeting": "こんにちは、{{name}}さん",
     "greetingAnon": "こんにちは",
     "tagline": "Brain：大切なことを覚えておきましょう",
-    "taglineShort": "大切なことを覚えておきましょう"
+    "taglineShort": "大切なことを覚えておきましょう",
+    "composerPlaceholder": "Brain にメッセージ"
   }
 }
