@@ -5,6 +5,7 @@ import RuntimeAvatar from '../shared/RuntimeAvatar';
 import { ownedOpenDotRoomStatuses, withEmployeeTaskStatuses, reconnectingOpenDotRoomStatuses, withRuntimeReviewDecisions } from '../shared/open-dot-room-status';
 import { workspaceModeForPath, employeeAppsPath } from '../shared/workspace-mode';
 import { agentRoster } from '../shared/agent-roster';
+import { brainOnlyFor } from '../shared/brain-only';
 import { focusCardInRoom, waitingEmployeeIds } from '../shared/needs-you';
 import { setEmployeeRoomOpen, useRuntimeEnabled } from '../shared/runtime-enabled';
 import { hasOpenDotEmployeeBinding, openDotEmployeeIdFromPath, openDotEmployeePath } from '../shared/open-dot-employee-route';
@@ -214,12 +215,15 @@ export default function Sidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const scope = user?.id && org?.id ? `${user.id}:${org.id}` : null;
-  const [teamData, setTeamData] = useState(() => ({ scope, profiles: agentRoster.peek(scope) || [] }));
+  const [teamData, setTeamData] = useState(() => ({ scope, profiles: agentRoster.peek(scope) || [], known: Array.isArray(agentRoster.peek(scope)) }));
   const team = teamData.scope === scope ? teamData.profiles : agentRoster.peek(scope) || [];
-  const setTeam = useCallback(value => setTeamData(previous => {
+  const rosterKnown = teamData.scope === scope ? teamData.known : Array.isArray(agentRoster.peek(scope));
+  const setTeam = useCallback((value, known = true) => setTeamData(previous => {
     const current = previous.scope === scope ? previous.profiles : agentRoster.peek(scope) || [];
-    return { scope, profiles: typeof value === 'function' ? value(current) : value };
+    return { scope, profiles: typeof value === 'function' ? value(current) : value, known: typeof value === 'function' ? known && previous.scope === scope && previous.known : known };
   }), [scope]);
+  /** Brain-only: no HyperAgent employee and no HyperAgents in the plan. HyperAgent surfaces stay hidden; the Brain surfaces remain. */
+  const brainOnly = brainOnlyFor({ org, roster: team, rosterKnown });
   const [rosterPage, setRosterPage] = useState(0);
   const rosterGesture = useRef(null);
   const rosterSwiped = useRef(false);
@@ -228,7 +232,7 @@ export default function Sidebar({
   useEffect(() => setProfileImageFailed(false), [profileImage]);
   useEffect(() => setRosterPage(page => Math.min(page, Math.max(0, Math.ceil(team.length / 5) - 1))), [team.length]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const teamMode = workspaceModeForPath(location.pathname) === 'hyperagents';
+  const teamMode = !brainOnly && workspaceModeForPath(location.pathname) === 'hyperagents';
   const [desktopRosterViewport, setDesktopRosterViewport] = useState(() => window.matchMedia('(min-width: 901px)').matches);
   const [fallbackColumns, setFallbackColumns] = useState(3);
   const rosterColumns = onDesktopColumnsChange ? desktopColumns : fallbackColumns;
@@ -324,7 +328,7 @@ export default function Sidebar({
     const controller = new AbortController();
     if (teamScope.current !== scope) {
       teamScope.current = scope;
-      setTeam(agentRoster.peek(scope) || []);
+      setTeam(agentRoster.peek(scope) || [], Array.isArray(agentRoster.peek(scope)));
       setTeamLoadError(false);
     }
     let forceRefresh = rosterRefreshRevision.current !== teamRetry;
@@ -607,7 +611,7 @@ export default function Sidebar({
   const planLabel = formatPlanLabel(org?.plan);
   const tt = (k, def, vars) => fillCopy(t(`sidebar.${k}`, { ...vars, defaultValue: def }), vars);
 
-  const workspaceModeSwitcher = <WorkspaceModeSwitcher collapsed={collapsed} />;
+  const workspaceModeSwitcher = brainOnly ? null : <WorkspaceModeSwitcher collapsed={collapsed} />;
 
   const sidebarWidth = collapsed ? 'w-[68px]' : 'w-[300px]';
   const desktopBrain = !collapsed && !mobileDrawer && !mobileRoster && !teamMode && activeSection !== 'tara';
@@ -630,7 +634,7 @@ export default function Sidebar({
         <div className="mobile-roster-org"><Building2 size={18}/><strong>{org?.name || org?.slug || tt('workspaceFallback', 'Workspace')}</strong></div>
         <React.Suspense fallback={null}><GetStartedCard variant="home" userId={user?.id} orgId={org?.id} /></React.Suspense>
         <CreditBalance credits={usage?.credits} inline className="mobile-unified-plan" />
-        <div className="mobile-roster-team">
+        {!brainOnly && <div className="mobile-roster-team">
           <div className="mobile-unified-heading"><h2>{tt('yourTeam', 'Your team')}</h2><div className="mobile-roster-shortcuts">
             <button type="button" onClick={() => setCompanyOpen(true)}><Building2 size={18}/><span>{tt('company', 'Company')}</span></button>
             {process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' && <NavLink to="/hivemind/app/crm"><FolderKanban size={18}/><span>CRM</span></NavLink>}
@@ -656,8 +660,8 @@ export default function Sidebar({
             {team.slice(rosterPage * 5, rosterPage * 5 + 5).map(agent => <button type="button" data-agent-room-link key={agent.id} aria-busy={openingAgent === agent.id || undefined} onClick={event => openAgent(event, agent)}><AgentAvatar agent={agent} size={64}/><span title={agent.name}>{agent.name}</span><AgentRoomStatus room={{ ...aggregateAgentRooms(rooms, agent.id), loading: openingAgent === agent.id }} compact /></button>)}
           </div>
           {team.length > 5 && <div className="mobile-roster-pages"><button type="button" disabled={rosterPage === 0} onClick={() => setRosterPage(value => value - 1)}>{tt('previous', 'Previous')}</button><span>{rosterPage + 1} / {Math.ceil(team.length / 5)}</span><button type="button" disabled={(rosterPage + 1) * 5 >= team.length} onClick={() => setRosterPage(value => value + 1)}>{tt('next', 'Next')}</button></div>}
-        </div>
-        <button type="button" className="mobile-roster-create" onClick={() => setCreateEmployeeOpen(true)}><Plus size={20}/>{tt('createEmployee', 'Create employee')}</button>
+        </div>}
+        {!brainOnly && <button type="button" className="mobile-roster-create" onClick={() => setCreateEmployeeOpen(true)}><Plus size={20}/>{tt('createEmployee', 'Create employee')}</button>}
         <section className="mobile-unified-brain" aria-label={tt('yourBrain', 'Your Brain')}>
           <div className="mobile-unified-heading"><h2 className="mobile-unified-brain-title"><BrainModeIcon size={25}/>{tt('yourBrain', 'Your Brain')}</h2><button type="button" className="mobile-unified-advanced" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(value => !value)}><Sliders size={17}/>{tt('advanced', 'Advanced')}</button></div>
           <div className="mobile-unified-brain-grid">
@@ -667,7 +671,7 @@ export default function Sidebar({
           {advancedOpen && <div className="mobile-unified-advanced-links" aria-label={tt('advancedFeatures', 'Advanced features')}>{[{to:'/hivemind/app/mcp',label:tt('mcps', 'MCPs')},{to:'/hivemind/app/keys',label:tt('apiKeysLower', 'API keys')},{to:'/hivemind/m/projects',label:tt('projects', 'Projects')},{to:'/hivemind/app/evaluation',label:tt('evaluation', 'Evaluation')}].map(item => <NavLink key={item.to} to={item.to}>{item.label}<ChevronRight size={14}/></NavLink>)}</div>}
         </section>
         {/* Company-wide controls sit together at the bottom, above Account. */}
-        <div className="ha-autonomy-seat is-drawer mobile-roster-autonomy" data-drawer-autonomy-seat><AutonomyDial orgId={org?.id} runtimeEnabled={runtimeEnabled}/></div>
+        {!brainOnly && <div className="ha-autonomy-seat is-drawer mobile-roster-autonomy" data-drawer-autonomy-seat><AutonomyDial orgId={org?.id} runtimeEnabled={runtimeEnabled}/></div>}
         <AnatomyModeToggle />
         <div className="mobile-roster-account">
           <button type="button" className="mobile-roster-account-identity" data-open-account-settings onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))}>
@@ -687,7 +691,7 @@ export default function Sidebar({
           {!collapsed && !mobileDrawer && <button type="button" aria-label={tt('collapseSidebar', 'Collapse sidebar')} aria-expanded="true" onClick={() => onCollapsedChange?.(true)} className="p-1 rounded-md hover:bg-[#eeece6] text-[#737373]"><PanelLeft size={18} strokeWidth={1.75} /></button>}
         </div>
         {collapsed && <button type="button" aria-label={tt('expandSidebar', 'Expand sidebar')} aria-expanded="false" onClick={() => onCollapsedChange?.(false)} className="mx-auto block p-1 text-[#737373]"><PanelLeft size={18} /></button>}
-        {!mobileRoster && (desktopBrain ? <div className="desktop-brain-header-controls">{workspaceModeSwitcher}</div> : workspaceModeSwitcher)}
+        {!mobileRoster && workspaceModeSwitcher && (desktopBrain ? <div className="desktop-brain-header-controls">{workspaceModeSwitcher}</div> : workspaceModeSwitcher)}
       </div>
 
       {(teamMode || mobileRoster) && teamLoadError && <p role="status" className="px-4 py-2 text-xs text-[#737373]">{tt('teamRefreshFailed', 'Could not refresh our team.')} <button type="button" className="underline" onClick={() => setTeamRetry(value => value + 1)}>{tt('retry', 'Retry')}</button></p>}
