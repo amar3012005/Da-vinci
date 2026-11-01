@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -45,6 +45,11 @@ export default function GetStartedCard({ userId, orgId, variant = 'float' }) {
   const count = completedCount(steps);
   const total = STEPS.length;
   const next = nextStepId(steps);
+  const panelId = useId();
+  const summaryButton = useRef(null);
+  const [announcement, setAnnouncement] = useState('');
+  const completedIds = useRef(null);
+  const wasIncomplete = useRef(false);
   // In a chat room the card starts folded so it never covers the conversation; the person can open it.
   const [forced, setForced] = useState(null);
   const expanded = home ? sheetOpen : forced ?? (view?.open !== false && !isComposerRoute(pathname));
@@ -69,17 +74,48 @@ export default function GetStartedCard({ userId, orgId, variant = 'float' }) {
     return () => { window.removeEventListener('resize', check); document.removeEventListener('focusin', check); clearInterval(timer); };
   }, [home, pathname, view]);
 
+  // Status changes are spoken: the step that just completed and the new count. The first render only records what is already done.
+  useEffect(() => {
+    const done = new Set(steps.filter(step => step.status === 'done' || step.status === 'skipped').map(step => step.id));
+    const before = completedIds.current;
+    completedIds.current = done;
+    if (!before) return;
+    const added = [...done].filter(id => !before.has(id));
+    if (added.length) setAnnouncement(`${t(`steps.${added[added.length - 1]}.title`)}, ${t('done')}. ${t('progress', { count: done.size, total: STEPS.length })}`);
+  });
+  // When the step the person just finished or skipped removes the button that had focus, focus moves to the next step's primary button.
+  const previousNext = useRef(next);
+  useEffect(() => {
+    const moved = previousNext.current !== next;
+    previousNext.current = next;
+    const root = home ? sheet.current : floating.current;
+    if (!moved || !root || !next || document.activeElement !== document.body) return;
+    root.querySelector('li[data-active] .hm-onb-primary')?.focus({ preventScroll: true });
+  }, [next, home]);
+  useEffect(() => { if (count === total) wasIncomplete.current = false; else wasIncomplete.current = true; }, [count, total]);
+
   const closeSheet = useCallback(() => { setSheetOpen(false); chip.current?.focus(); }, []);
   useEffect(() => {
     if (!sheetOpen) return undefined;
     sheet.current?.focus();
-    const key = event => { if (event.key === 'Escape') { event.preventDefault(); closeSheet(); } };
+    const key = event => {
+      if (event.key === 'Escape') { event.preventDefault(); closeSheet(); return; }
+      if (event.key !== 'Tab' || !sheet.current) return;
+      // The sheet is modal: Tab and Shift+Tab cycle inside it.
+      const items = [...sheet.current.querySelectorAll('button:not([disabled]), select:not([disabled]), a[href], [tabindex="0"]')];
+      if (!items.length) { event.preventDefault(); return; }
+      const first = items[0], last = items[items.length - 1], active = document.activeElement;
+      if (event.shiftKey && (active === first || active === sheet.current)) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && active === last) { event.preventDefault(); first.focus(); }
+      else if (!sheet.current.contains(active)) { event.preventDefault(); first.focus(); }
+    };
     document.addEventListener('keydown', key);
     return () => document.removeEventListener('keydown', key);
   }, [sheetOpen, closeSheet]);
 
   // Nothing shows until the server record (or its cached copy) exists: a card that cannot save progress would mislead.
-  if (!store || !view || count === total) return null;
+  if (!store || !view) return null;
+  if (count === total) return wasIncomplete.current ? <div className="sr-only" role="status">{t('progress', { count, total })}</div> : null;
 
   const scope = `${userId}:${orgId}`;
   const run = (step, secondary) => {
@@ -118,9 +154,11 @@ export default function GetStartedCard({ userId, orgId, variant = 'float' }) {
   const footer = <>
     <p className="hm-onb-hint">{error || t('hint')}</p>
   </>;
-  const progress = <span className="hm-onb-progress" role="progressbar" aria-label={t('title')} aria-valuemin={0} aria-valuemax={total} aria-valuenow={count}><span style={{ width: `${count / total * 100}%` }} /></span>;
+  const progress = <span className="hm-onb-progress" role="progressbar" aria-label={t('title')} aria-valuetext={t('progress', { count, total })} aria-valuemin={0} aria-valuemax={total} aria-valuenow={count}><span style={{ width: `${count / total * 100}%` }} /></span>;
 
+  const live = <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</div>;
   if (home) return <div className="hm-onb-home">
+    {live}
     <button ref={chip} type="button" className="hm-onb-chip" aria-haspopup="dialog" aria-expanded={sheetOpen} onClick={toggle}>
       <span className="hm-onb-ring" style={{ '--hm-onb-progress': `${count / total * 100}%` }} aria-hidden="true" />
       <span className="hm-onb-chip-title">{t('title')}</span>
@@ -135,14 +173,19 @@ export default function GetStartedCard({ userId, orgId, variant = 'float' }) {
     </div>}
   </div>;
 
-  return <aside ref={floating} hidden={previewOpen} data-blocking={blocking || undefined} className="hm-onb" aria-label={t('title')} dir={i18n.dir()}>
+  const collapseOnEscape = event => {
+    if (event.key !== 'Escape' || !expanded) return;
+    event.preventDefault(); toggle(event); summaryButton.current?.focus();
+  };
+  return <aside ref={floating} hidden={previewOpen} data-blocking={blocking || undefined} className="hm-onb" aria-label={t('title')} dir={i18n.dir()} onKeyDown={collapseOnEscape}>
+    {live}
     <div className="hm-onb-card" data-open={expanded || undefined}>
-      <button type="button" className="hm-onb-summary" aria-expanded={expanded} onClick={toggle}>
+      <button ref={summaryButton} type="button" className="hm-onb-summary" aria-expanded={expanded} aria-controls={panelId} onClick={toggle}>
         <span className="hm-onb-ring" style={{ '--hm-onb-progress': `${count / total * 100}%` }} aria-hidden="true" />
         <span className="hm-onb-title">{t('title')}</span>
         <span className="hm-onb-count">{expanded ? t('hide') : t('progress', { count, total })}</span>
       </button>
-      {expanded && <>{progress}{list}{footer}</>}
+      <div id={panelId} hidden={!expanded}>{expanded && <>{progress}{list}{footer}</>}</div>
     </div>
   </aside>;
 }

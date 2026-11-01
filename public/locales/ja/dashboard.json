@@ -2752,6 +2752,7 @@
     "count": "{{total}}件中{{count}}件",
     "ariaLabel": "Brain をはじめる",
     "progressLabel": "Brain のはじめかたの進捗",
+    "stepDone": "完了",
     "steps": {
       "chat": "Brain との会話を始める",
       "source": "最初のソースを追加する",

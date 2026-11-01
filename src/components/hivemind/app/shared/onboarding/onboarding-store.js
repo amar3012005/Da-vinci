@@ -27,6 +27,19 @@ export function currentDevice() {
   try { return window.matchMedia('(max-width: 767px)').matches ? 'phone' : 'desktop'; } catch { return 'desktop'; }
 }
 
+/**
+ * The client class for the activation funnel: `ios` in the iOS app, `macos` in the macOS app, otherwise `web`.
+ * @returns {'web'|'ios'|'macos'}
+ */
+export function currentPlatform() {
+  try {
+    const platform = window.Capacitor?.getPlatform?.();
+    if (platform === 'ios') return 'ios';
+    if (platform === 'electron' || platform === 'macos') return 'macos';
+  } catch { /* No native bridge: this is the browser. */ }
+  return 'web';
+}
+
 const stores = new Map();
 
 /**
@@ -109,7 +122,7 @@ export function onboardingStore(scope, { fetcher, delay = 400 } = {}) {
      */
     track(type, step = null) {
       if (step && !STEP_IDS.includes(step)) return;
-      queue.push({ type, step, version: ONBOARDING_VERSION, locale: (i18n.language || 'en').split('-')[0], device: currentDevice(), at: Date.now() });
+      queue.push({ type, step, version: ONBOARDING_VERSION, locale: (i18n.language || 'en').split('-')[0], device: currentDevice(), platform: currentPlatform(), at: Date.now() });
       if (type === 'onb_step_done') optimistic(step, 'done');
       if (type === 'onb_step_skip') optimistic(step, 'skipped');
       if (type === 'onb_dismiss' && view) { view = { ...view, open: false }; emit(); }
