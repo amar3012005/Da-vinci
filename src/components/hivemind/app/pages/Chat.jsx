@@ -214,7 +214,7 @@ function UploadScopeModal({
             </div>
           </div>
           <div className="space-y-2.5">
-            <button type="button" onClick={() => onScopeChange('personal')} className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${selectedScope === 'personal' ? 'border-[#117dff]/30 bg-[#117dff]/8' : 'border-[#e3e0db] bg-white hover:border-[#c4c1bb]'}`}>
+            <button type="button" onClick={() => onScopeChange('personal')} className={`w-full rounded-xl border px-3 py-2.5 text-start transition-colors ${selectedScope === 'personal' ? 'border-[#117dff]/30 bg-[#117dff]/8' : 'border-[#e3e0db] bg-white hover:border-[#c4c1bb]'}`}>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center"><Lock size={14} className="text-[#117dff]" /></div>
                 <div>
@@ -223,7 +223,7 @@ function UploadScopeModal({
                 </div>
               </div>
             </button>
-            <div role="button" tabIndex={canUseTeamWorkspace ? 0 : -1} aria-disabled={!canUseTeamWorkspace} onClick={() => canUseTeamWorkspace && onScopeChange('project')} className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${selectedScope === 'project' ? 'border-[#117dff]/30 bg-[#117dff]/8' : 'border-[#e3e0db] bg-white hover:border-[#c4c1bb]'} ${!canUseTeamWorkspace ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <div role="button" tabIndex={canUseTeamWorkspace ? 0 : -1} aria-disabled={!canUseTeamWorkspace} onClick={() => canUseTeamWorkspace && onScopeChange('project')} className={`w-full rounded-xl border px-3 py-2.5 text-start transition-colors ${selectedScope === 'project' ? 'border-[#117dff]/30 bg-[#117dff]/8' : 'border-[#e3e0db] bg-white hover:border-[#c4c1bb]'} ${!canUseTeamWorkspace ? 'opacity-50 cursor-not-allowed' : ''}`}>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center"><FolderKanban size={14} className="text-[#117dff]" /></div>
                 <div>
@@ -240,7 +240,7 @@ function UploadScopeModal({
                 </div>
               )}
             </div>
-            <button type="button" disabled={!canUseTeamWorkspace || !isOrgAdmin} onClick={() => canUseTeamWorkspace && isOrgAdmin && onScopeChange('organization')} className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${selectedScope === 'organization' ? 'border-[#117dff]/30 bg-[#117dff]/8' : 'border-[#e3e0db] bg-white hover:border-[#c4c1bb]'} ${(!canUseTeamWorkspace || !isOrgAdmin) ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <button type="button" disabled={!canUseTeamWorkspace || !isOrgAdmin} onClick={() => canUseTeamWorkspace && isOrgAdmin && onScopeChange('organization')} className={`w-full rounded-xl border px-3 py-2.5 text-start transition-colors ${selectedScope === 'organization' ? 'border-[#117dff]/30 bg-[#117dff]/8' : 'border-[#e3e0db] bg-white hover:border-[#c4c1bb]'} ${(!canUseTeamWorkspace || !isOrgAdmin) ? 'opacity-50 cursor-not-allowed' : ''}`}>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center"><Users size={14} className="text-[#117dff]" /></div>
                 <div>
@@ -291,7 +291,7 @@ function EmptyState({ setInput, textareaRef, userName }) {
           <button
             key={label}
             onClick={() => handleChip(label)}
-            className="text-left px-4 py-2.5 rounded-full border border-[#ece9e2] text-[13px] text-[#525252] hover:bg-[#f1eee7] bg-transparent transition-colors"
+            className="text-start px-4 py-2.5 rounded-full border border-[#ece9e2] text-[13px] text-[#525252] hover:bg-[#f1eee7] bg-transparent transition-colors"
           >
             {label}
           </button>
@@ -302,7 +302,7 @@ function EmptyState({ setInput, textareaRef, userName }) {
           addition: this content has no mobile equivalent (you're already on
           the phone), placed below the mobile-identical hero above. */}
       <div className="w-full flex items-center gap-3 p-3.5 mt-2 rounded-xl border border-[#117dff]/20 bg-gradient-to-br from-[#117dff]/[0.04] to-transparent">
-        <div className="flex-1 text-left min-w-0">
+        <div className="flex-1 text-start min-w-0">
           <div className="text-[12.5px] font-semibold text-[#0a0a0a] leading-tight">Use on your phone</div>
           <div className="text-[11px] text-[#a3a3a3] leading-snug mt-1">Scan to open Talk to HIVE on mobile — same memory, save from anywhere.</div>
         </div>
@@ -694,15 +694,15 @@ export function ChatPanel({ isOpen, onClose }) {
             animate="visible"
             exit="exit"
             data-hivemind-chat-panel
-            className="fixed top-0 right-0 h-screen w-[440px] max-w-full z-50 flex flex-col bg-[#faf9f4] font-['Space_Grotesk',Inter,ui-sans-serif,system-ui,sans-serif]"
+            className="fixed top-0 end-0 h-screen w-[440px] max-w-full z-50 flex flex-col bg-[#faf9f4] font-['Space_Grotesk',Inter,ui-sans-serif,system-ui,sans-serif]"
             style={{
               boxShadow: '-4px 0 40px rgba(0,0,0,0.14), -1px 0 0 rgba(17,125,255,0.06)',
-              borderLeft: '1px solid rgba(227,224,219,0.8)',
+              borderInlineStart: '1px solid rgba(227,224,219,0.8)',
             }}
           >
             {/* ── Left-edge blue accent line ── */}
             <div
-              className="absolute top-0 left-0 w-[3px] h-full rounded-l-none pointer-events-none z-10"
+              className="absolute top-0 start-0 w-[3px] h-full rounded-s-none pointer-events-none z-10"
               style={{
                 background: 'linear-gradient(180deg, #117dff 0%, rgba(17,125,255,0.3) 60%, transparent 100%)',
                 opacity: 0.6,
@@ -761,12 +761,12 @@ export function ChatPanel({ isOpen, onClose }) {
                     <ChevronDown size={10} className={`text-[#a3a3a3] transition-transform ${langMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {langMenuOpen && (
-                    <div className="absolute top-full mt-1.5 right-0 z-[56] w-[180px] max-h-[300px] overflow-y-auto bg-white border border-[#e8e5de] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] py-1" onClick={() => setLangMenuOpen(false)}>
+                    <div className="absolute top-full mt-1.5 end-0 z-[56] w-[180px] max-h-[300px] overflow-y-auto bg-white border border-[#e8e5de] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] py-1" onClick={() => setLangMenuOpen(false)}>
                       {LANG_OPTIONS.map((l) => {
                         const active = ((i18n.language || 'en').slice(0, 2)) === l.c;
                         return (
                           <button key={l.c} onClick={() => { i18n.changeLanguage(l.c); setLangMenuOpen(false); }}
-                            className={`w-full text-left px-3 py-2 flex items-center justify-between text-[12.5px] ${active ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} hover:bg-[#faf9f4]`}>
+                            className={`w-full text-start px-3 py-2 flex items-center justify-between text-[12.5px] ${active ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} hover:bg-[#faf9f4]`}>
                             <span>{l.n}</span>
                             <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{l.c}</span>
                           </button>
@@ -788,10 +788,10 @@ export function ChatPanel({ isOpen, onClose }) {
                     <ChevronDown size={10} className={`text-[#a3a3a3] transition-transform ${modelMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {modelMenuOpen && (
-                    <div className="absolute top-full mt-1.5 right-0 z-[56] w-[200px] bg-white border border-[#e8e5de] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] py-1" onClick={() => setModelMenuOpen(false)}>
+                    <div className="absolute top-full mt-1.5 end-0 z-[56] w-[200px] bg-white border border-[#e8e5de] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] py-1" onClick={() => setModelMenuOpen(false)}>
                       {MODELS.map((m) => (
                         <button key={m.id} onClick={() => { setSelectedModel(m.id); setModelMenuOpen(false); }}
-                          className={`w-full text-left px-3 py-2 flex items-center justify-between text-[12.5px] ${m.id === selectedModel ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} hover:bg-[#faf9f4]`}>
+                          className={`w-full text-start px-3 py-2 flex items-center justify-between text-[12.5px] ${m.id === selectedModel ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} hover:bg-[#faf9f4]`}>
                           <span>{m.label}</span>
                           <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{m.tag}</span>
                         </button>
@@ -883,7 +883,7 @@ export function ChatPanel({ isOpen, onClose }) {
                         >
                           {isProcessing && (
                             <motion.div
-                              className="absolute inset-y-0 left-0 right-0 pointer-events-none"
+                              className="absolute inset-y-0 start-0 end-0 pointer-events-none"
                               style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(17,125,255,0.06) 50%, transparent 100%)', backgroundSize: '200% 100%' }}
                               animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
                               transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
@@ -962,24 +962,24 @@ export function ChatPanel({ isOpen, onClose }) {
                       }</span>
                     </button>
                     {scopeMenuOpen && (
-                      <div className="absolute bottom-full mb-2 left-0 z-[56] w-56 bg-white border border-[#e8e5de] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] p-1.5">
+                      <div className="absolute bottom-full mb-2 start-0 z-[56] w-56 bg-white border border-[#e8e5de] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] p-1.5">
                         <p className="px-2 py-1 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">Answer scope</p>
                         <button onClick={() => { setChatScopeMode('all'); setChatScope(null); setScopeMenuOpen(false); }}
-                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'all' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] hover:bg-[#faf9f4]'}`}>
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-start ${chatScopeMode === 'all' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] hover:bg-[#faf9f4]'}`}>
                           <Globe size={12} /> <span className="flex-1">All memory</span>
                           <span className="text-[9px] text-[#a3a3a3]">everything</span>
                         </button>
                         <button onClick={() => { setChatScopeMode('organization'); setChatScope(null); setScopeMenuOpen(false); }}
-                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'organization' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] hover:bg-[#faf9f4]'}`}>
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-start ${chatScopeMode === 'organization' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] hover:bg-[#faf9f4]'}`}>
                           <Building2 size={12} /> Org-wide
                         </button>
                         <button onClick={() => { setChatScopeMode('personal'); setChatScope(null); setScopeMenuOpen(false); }}
-                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'personal' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] hover:bg-[#faf9f4]'}`}>
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-start ${chatScopeMode === 'personal' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] hover:bg-[#faf9f4]'}`}>
                           <Lock size={12} /> My Space
                         </button>
                         {projectList.map((pr) => (
                           <button key={pr.id} onClick={() => { setChatScopeMode('project'); setChatScope(pr.id); setScopeMenuOpen(false); }}
-                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'project' && chatScope === pr.id ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] hover:bg-[#faf9f4]'}`}>
+                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-start ${chatScopeMode === 'project' && chatScope === pr.id ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] hover:bg-[#faf9f4]'}`}>
                             <Boxes size={12} /> <span className="truncate">{pr.name}</span>
                           </button>
                         ))}
@@ -1015,7 +1015,7 @@ export function ChatPanel({ isOpen, onClose }) {
                     className="w-9 h-9 rounded-full bg-[#1a1a17] text-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform disabled:opacity-100"
                     aria-label={input.trim() ? 'Send' : 'Voice'}
                   >
-                    {loading ? <Clock size={15} /> : input.trim() ? <Send size={15} /> : <AudioLines size={16} />}
+                    {loading ? <Clock size={15} /> : input.trim() ? <Send size={15} className="rtl:-scale-x-100" /> : <AudioLines size={16} />}
                   </button>
                 </div>
               </div>

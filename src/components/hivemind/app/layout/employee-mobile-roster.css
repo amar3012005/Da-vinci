@@ -2,9 +2,9 @@
 @media (max-width:600px) {
   .employee-mobile-roster-frame { width:100%; }
   .employee-mobile-roster-close { top:calc(env(safe-area-inset-top,0px) + 76px) !important; }
-  [data-mobile-roster] { width:100%; border-right:0; }
+  [data-mobile-roster] { width:100%; border-inline-end:0; }
   .mobile-roster-intro { display:block; padding:14px 20px 8px; }
-  [data-mobile-roster] > .shrink-0 { padding-right:60px; }
+  [data-mobile-roster] > .shrink-0 { padding-inline-end:60px; }
   [data-mobile-roster] [data-agent-room-link] { min-height:68px; padding:10px 12px; gap:14px; border-radius:18px; }
   [data-mobile-roster] [data-agent-room-link] img { width:46px; height:46px; }
   [data-mobile-roster] [data-agent-room-link] strong { font-size:17px; }
@@ -17,11 +17,11 @@
 @media (max-width:600px) {
   [data-mobile-roster] > .mobile-roster-legacy { display:none; }
   [data-mobile-roster] .mobile-roster-intro { display:flex; flex-direction:column; min-height:0; flex:1; padding:14px 22px 20px; gap:20px; }
-  .mobile-roster-top { display:flex; align-items:center; gap:9px; padding-right:36px; }
+  .mobile-roster-top { display:flex; align-items:center; gap:9px; padding-inline-end:36px; }
   .mobile-roster-top button { display:grid; place-items:center; width:40px; height:40px; flex-shrink:0; border:1px solid #e3e0db; border-radius:50%; }
   .mobile-roster-top .mobile-roster-profile-button { background:#117dff15; color:#117dff; border:0; font-weight:600; }
   .mobile-roster-top select { min-width:0; flex:1; font-size:14px; background:transparent; border:0; padding:4px 0; }
-  .employee-mobile-roster-close { top:calc(env(safe-area-inset-top,0px) + 13px) !important; right:0; background:transparent; }
+  .employee-mobile-roster-close { top:calc(env(safe-area-inset-top,0px) + 13px) !important; inset-inline-end:0; background:transparent; }
   .mobile-roster-team { flex:1; display:flex; min-height:0; flex-direction:column; justify-content:center; gap:18px; }
   .mobile-roster-team h2 { margin:0; font-size:26px; font-weight:600; letter-spacing:-.6px; }
   .mobile-roster-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px 10px; align-items:center; }
@@ -39,7 +39,7 @@
   .mobile-roster-shortcuts > button, .mobile-roster-shortcuts > a { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:72px; width:100%; font-size:13px; color:#525252; }
   .mobile-roster-create { display:flex; align-items:center; justify-content:center; gap:10px; min-height:48px; border:1px solid #117dff; border-radius:28px; color:#117dff; font-size:16px; }
   .mobile-roster-account { display:flex; align-items:center; gap:12px; min-height:48px; padding:10px 14px; border:1px solid #e3e0db; border-radius:20px; font-size:14px; }
-  .mobile-roster-account span { flex:1; text-align:left; }
+  .mobile-roster-account span { flex:1; text-align:start; }
   [data-mobile-roster] .mobile-roster-profile section { max-height:85dvh; }
   @media (max-height:680px) {
     [data-mobile-roster] .mobile-roster-intro { gap:12px; padding-top:8px; padding-bottom:10px; }
@@ -99,7 +99,7 @@
   .mobile-unified-brain { display:flex; flex-direction:column; gap:10px; }
   .mobile-unified-advanced { display:flex; align-items:center; gap:5px; border:1px solid #e3e0db; border-radius:12px; padding:7px 9px; font-size:12px; min-height:36px; }
   .mobile-unified-brain-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-  .mobile-unified-brain-grid > :is(a, button) { width:100%; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; display:flex; align-items:center; gap:7px; border:1px solid #e3e0db; border-radius:14px; padding:10px; min-height:48px; font-size:12px; }
+  .mobile-unified-brain-grid > :is(a, button) { width:100%; background:transparent; color:inherit; font:inherit; text-align:start; cursor:pointer; display:flex; align-items:center; gap:7px; border:1px solid #e3e0db; border-radius:14px; padding:10px; min-height:48px; font-size:12px; }
   .mobile-unified-brain-grid > :is(a, button) > span { flex:1; }
   .mobile-unified-brain-grid > :is(a, button) > svg { flex-shrink:0; }
   .mobile-unified-advanced-links { display:grid; gap:2px; padding:6px; background:#f3f1ec; border-radius:14px; }
@@ -107,7 +107,7 @@
   .mobile-roster-account { margin-top:auto; flex-shrink:0; min-height:44px; }
 }
 @media (max-width:360px) {
-  [data-mobile-roster] .mobile-roster-intro { padding-left:14px; padding-right:14px; }
+  [data-mobile-roster] .mobile-roster-intro { padding-inline-start:14px; padding-inline-end:14px; }
   .mobile-unified-heading h2 { font-size:19px; }
   .mobile-unified-heading .mobile-roster-shortcuts { gap:6px; }
   .mobile-unified-brain-grid > :is(a, button) { padding:8px; gap:5px; font-size:11px; }
@@ -140,7 +140,7 @@
 @media (max-width: 600px) {
   .mobile-roster-grid { touch-action: pan-y; }
   .mobile-roster-account { gap: 4px; padding: 6px; background: rgba(255,255,255,.55); }
-  .mobile-roster-account-identity { display:flex; align-items:center; gap:12px; min-width:0; flex:1; min-height:44px; padding:4px 8px; text-align:left; }
+  .mobile-roster-account-identity { display:flex; align-items:center; gap:12px; min-width:0; flex:1; min-height:44px; padding:4px 8px; text-align:start; }
   .mobile-roster-account-identity img { width:32px; height:32px; border-radius:50%; object-fit:cover; }
   .mobile-roster-settings { width:44px; height:44px; display:grid; place-items:center; border-radius:14px; flex-shrink:0; }
   .mobile-roster-settings:active, .mobile-roster-account-identity:active { background:#eeece6; }
@@ -152,7 +152,7 @@
 .mobile-roster-anatomy { flex-shrink: 0; margin-top: auto; padding-top: 12px; }
 .mobile-roster-anatomy + .mobile-roster-account { margin-top: 8px; }
 .mobile-roster-anatomy > button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 14px;
-  border: 1px solid #e3e0db; border-radius: 20px; background: rgba(255,255,255,.55); text-align: left; color: #292929;
+  border: 1px solid #e3e0db; border-radius: 20px; background: rgba(255,255,255,.55); text-align:start; color: #292929;
   transition: transform 220ms cubic-bezier(.2,.9,.25,1.15), background-color 160ms ease; -webkit-tap-highlight-color: transparent; }
 .mobile-roster-anatomy > button:active { transform: scale(.98); }
 .mobile-roster-anatomy > button:disabled { opacity: .6; }
@@ -160,10 +160,11 @@
 .mobile-roster-anatomy strong { font-size: 15px; font-weight: 600; }
 .mobile-roster-anatomy small { font-size: 12px; color: #737373; }
 .mobile-roster-anatomy i { position: relative; flex: 0 0 auto; width: 46px; height: 28px; border-radius: 999px; background: #d9d6d0; transition: background-color 200ms ease; }
-.mobile-roster-anatomy i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff;
+.mobile-roster-anatomy i::after { content: ''; position: absolute; top: 2px; inset-inline-start: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff;
   box-shadow: 0 2px 6px rgba(0,0,0,.18); transition: transform 260ms cubic-bezier(.2,.9,.25,1.15); }
 .mobile-roster-anatomy i[data-on] { background: #34c759; }
 .mobile-roster-anatomy i[data-on]::after { transform: translateX(18px); }
+[dir="rtl"] .mobile-roster-anatomy i[data-on]::after { transform: translateX(-18px); }
 .mobile-roster-anatomy p { margin: 6px 4px 0; font-size: 12px; color: #737373; }
 @media (prefers-reduced-motion: reduce) { .mobile-roster-anatomy > button, .mobile-roster-anatomy i, .mobile-roster-anatomy i::after { transition: none; } }
 

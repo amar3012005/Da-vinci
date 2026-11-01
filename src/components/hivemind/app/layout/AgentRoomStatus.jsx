@@ -44,7 +44,7 @@ export default function AgentRoomStatus({ room, collapsed = false, compact = fal
   const tt = (key, fallback, vars) => fillCopy(t(`sidebar.${key}`, { ...vars, defaultValue: fallback }), vars);
   const taskLabel = status => tt(`task.${status}`, TASK_STATUS_LABEL[status]);
   if (!room) return null;
-  if (room.stale) return <span className={(collapsed || compact) ? 'absolute right-1 top-1 z-20 flex items-center gap-1' : 'relative mt-1 flex items-center gap-1 text-[10px] text-[#737373]'} title={tt('activityUnavailableTitle', 'Activity status unavailable; last update retained.')}>
+  if (room.stale) return <span className={(collapsed || compact) ? 'absolute end-1 top-1 z-20 flex items-center gap-1' : 'relative mt-1 flex items-center gap-1 text-[10px] text-[#737373]'} title={tt('activityUnavailableTitle', 'Activity status unavailable; last update retained.')}>
     <CircleAlert size={13} aria-label={tt('activityUnavailable', 'Activity status unavailable')} role="img" />
     {room.unread && <span className="h-1.5 w-1.5 rounded-full bg-green-500" role="img" aria-label={tt('unreadUpdate', 'Unread update')} />}
   </span>;
@@ -64,7 +64,7 @@ export default function AgentRoomStatus({ room, collapsed = false, compact = fal
   const taskStatus = room.taskStatus !== 'waiting' && TASK_STATUS_LABEL[room.taskStatus] ? room.taskStatus : undefined;
   if (!failed && !loading && !activeCall && !working && !unread && !actionRequired && !scheduled && !paused && !archived && !idle && !taskStatus) return null;
   return (
-    <span className={(collapsed || compact) ? 'absolute right-1 top-1 z-20 flex items-center gap-1' : 'relative z-10 mt-1 flex min-w-0 flex-wrap items-center gap-1.5'}>
+    <span className={(collapsed || compact) ? 'absolute end-1 top-1 z-20 flex items-center gap-1' : 'relative z-10 mt-1 flex min-w-0 flex-wrap items-center gap-1.5'}>
       {failed && <CircleAlert size={14} className="text-red-700" role="img" aria-label={tt('statusFailed', 'Work failed')} />}
       {loading && !working && <LoaderCircle size={14} className="text-[#737373] animate-spin motion-reduce:animate-none" role="img" aria-label={tt('openingWorkspace', 'Opening workspace')} />}
       {activeCall && <Phone size={14} className="text-green-700" role="img" aria-label={tt('inCall', 'In call')} />}

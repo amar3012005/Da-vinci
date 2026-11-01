@@ -113,7 +113,7 @@ export default function DesktopHyperAgentsNavigation({ team, rooms, selectedAgen
       <div className="ha-account-row"><button type="button" className="ha-account-settings" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))} title={accountLabel}><Settings size={18}/>{!collapsed && <span>{accountLabel}</span>}</button><AccountRowTools vertical={collapsed}/></div>
       {user && !collapsed && <div className="ha-account-identity"><span className="ha-account-initial">{(user.display_name || user.email || 'U')[0].toUpperCase()}</span><div><strong>{user.display_name || user.email}</strong><small>{planLabel}</small><CreditBalance credits={credits} inline/></div></div>}
       {collapsed && <CreditBalance credits={credits} compact collapsed/>}
-      <button type="button" className="ha-sign-out" onClick={logout} title={s('signOutShort', 'Sign out')}><LogOut size={16}/>{!collapsed && <span>{s('signOutShort', 'Sign out')}</span>}</button>
+      <button type="button" className="ha-sign-out" onClick={logout} title={s('signOutShort', 'Sign out')}><LogOut size={16} className="rtl:-scale-x-100" />{!collapsed && <span>{s('signOutShort', 'Sign out')}</span>}</button>
     </div>
   </div>;
 }

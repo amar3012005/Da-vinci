@@ -20,6 +20,17 @@
   animation: 280ms ease-out both hm-product-sidebar-in;
 }
 
+@keyframes hm-product-sidebar-out-rtl {
+  to { opacity: 0; transform: translateX(100%); }
+}
+
+@keyframes hm-product-sidebar-in-rtl {
+  from { opacity: 0; transform: translateX(100%); }
+}
+
+html[dir="rtl"]::view-transition-old(product-sidebar) { animation-name: hm-product-sidebar-out-rtl; }
+html[dir="rtl"]::view-transition-new(product-sidebar) { animation-name: hm-product-sidebar-in-rtl; }
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(product-sidebar),
   ::view-transition-new(product-sidebar) {

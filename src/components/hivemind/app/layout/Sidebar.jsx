@@ -620,7 +620,7 @@ export default function Sidebar({
       data-tour-sidebar
       data-crm-enabled={process.env.REACT_APP_HIVE_APP_RUNTIME_ENABLED === 'true' ? 'true' : undefined}
       style={{ viewTransitionName: 'product-sidebar', ...(desktopHyperAgents ? { width: collapsed ? 68 : HYPERAGENT_WIDTHS[rosterColumns] } : {}), ...(mobileDrawer ? { paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : {}) }}
-      className={`${mobileDrawer ? 'absolute' : 'fixed'} left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] ${mobileDrawer ? 'w-[min(300px,85vw)]' : sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
+      className={`${mobileDrawer ? 'absolute' : 'fixed'} start-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] ${mobileDrawer ? 'w-[min(300px,85vw)]' : sidebarWidth} bg-[#faf9f4] border-e border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
     >
       {mobileRoster && <div className="mobile-roster-intro">
         <header className="mobile-roster-top">
@@ -662,10 +662,10 @@ export default function Sidebar({
         <section className="mobile-unified-brain" aria-label={tt('yourBrain', 'Your Brain')}>
           <div className="mobile-unified-heading"><h2 className="mobile-unified-brain-title"><BrainModeIcon size={25}/>{tt('yourBrain', 'Your Brain')}</h2><button type="button" className="mobile-unified-advanced" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(value => !value)}><Sliders size={17}/>{tt('advanced', 'Advanced')}</button></div>
           <div className="mobile-unified-brain-grid">
-            <button type="button" data-brain-chat-link onClick={() => openBrainChat(navigate)}><MessageCircle size={19}/><span>{tt('brainChat', 'Chat')}</span><ChevronRight size={14}/></button>
-            {[{to:'/hivemind/m/memories',label:tt('memories', 'Memories'),icon:Brain},{to:'/hivemind/m/uploads',label:tt('uploads', 'Uploads'),icon:BookOpen},{to:'/hivemind/m/connectors',label:tt('connectors', 'Connectors'),icon:Cable},{to:'/hivemind/m/meeting-notes',label:tt('aiMeetingNotes', 'AI meeting notes'),icon:Mic},{to:'/hivemind/m/graph',label:tt('memoryGraphLower', 'Memory graph'),icon:Network}].map(({to,label,icon:Icon}) => <NavLink key={to} to={to}><Icon size={19}/><span>{label}</span><ChevronRight size={14}/></NavLink>)}
+            <button type="button" data-brain-chat-link onClick={() => openBrainChat(navigate)}><MessageCircle size={19}/><span>{tt('brainChat', 'Chat')}</span><ChevronRight size={14} className="rtl:-scale-x-100"/></button>
+            {[{to:'/hivemind/m/memories',label:tt('memories', 'Memories'),icon:Brain},{to:'/hivemind/m/uploads',label:tt('uploads', 'Uploads'),icon:BookOpen},{to:'/hivemind/m/connectors',label:tt('connectors', 'Connectors'),icon:Cable},{to:'/hivemind/m/meeting-notes',label:tt('aiMeetingNotes', 'AI meeting notes'),icon:Mic},{to:'/hivemind/m/graph',label:tt('memoryGraphLower', 'Memory graph'),icon:Network}].map(({to,label,icon:Icon}) => <NavLink key={to} to={to}><Icon size={19}/><span>{label}</span><ChevronRight size={14} className="rtl:-scale-x-100"/></NavLink>)}
           </div>
-          {advancedOpen && <div className="mobile-unified-advanced-links" aria-label={tt('advancedFeatures', 'Advanced features')}>{[{to:'/hivemind/app/mcp',label:tt('mcps', 'MCPs')},{to:'/hivemind/app/keys',label:tt('apiKeysLower', 'API keys')},{to:'/hivemind/m/projects',label:tt('projects', 'Projects')},{to:'/hivemind/app/evaluation',label:tt('evaluation', 'Evaluation')}].map(item => <NavLink key={item.to} to={item.to}>{item.label}<ChevronRight size={14}/></NavLink>)}</div>}
+          {advancedOpen && <div className="mobile-unified-advanced-links" aria-label={tt('advancedFeatures', 'Advanced features')}>{[{to:'/hivemind/app/mcp',label:tt('mcps', 'MCPs')},{to:'/hivemind/app/keys',label:tt('apiKeysLower', 'API keys')},{to:'/hivemind/m/projects',label:tt('projects', 'Projects')},{to:'/hivemind/app/evaluation',label:tt('evaluation', 'Evaluation')}].map(item => <NavLink key={item.to} to={item.to}>{item.label}<ChevronRight size={14} className="rtl:-scale-x-100"/></NavLink>)}</div>}
         </section>
         {/* Company-wide controls sit together at the bottom, above Account. */}
         <div className="ha-autonomy-seat is-drawer mobile-roster-autonomy" data-drawer-autonomy-seat><AutonomyDial orgId={org?.id} runtimeEnabled={runtimeEnabled}/></div>
@@ -685,9 +685,9 @@ export default function Sidebar({
             <img src="/images/singulance-orbit.png" alt="Singulance" className="h-10 w-10 shrink-0 object-contain" />
             {!collapsed && <span className="text-[19px] font-semibold tracking-wide text-[#292929]">HIVEMIND</span>}
           </div>
-          {!collapsed && !mobileDrawer && <button type="button" aria-label={tt('collapseSidebar', 'Collapse sidebar')} aria-expanded="true" onClick={() => onCollapsedChange?.(true)} className="p-1 rounded-md hover:bg-[#eeece6] text-[#737373]"><PanelLeft size={18} strokeWidth={1.75} /></button>}
+          {!collapsed && !mobileDrawer && <button type="button" aria-label={tt('collapseSidebar', 'Collapse sidebar')} aria-expanded="true" onClick={() => onCollapsedChange?.(true)} className="p-1 rounded-md hover:bg-[#eeece6] text-[#737373]"><PanelLeft size={18} strokeWidth={1.75} className="rtl:-scale-x-100" /></button>}
         </div>
-        {collapsed && <button type="button" aria-label={tt('expandSidebar', 'Expand sidebar')} aria-expanded="false" onClick={() => onCollapsedChange?.(false)} className="mx-auto block p-1 text-[#737373]"><PanelLeft size={18} /></button>}
+        {collapsed && <button type="button" aria-label={tt('expandSidebar', 'Expand sidebar')} aria-expanded="false" onClick={() => onCollapsedChange?.(false)} className="mx-auto block p-1 text-[#737373]"><PanelLeft size={18} className="rtl:-scale-x-100" /></button>}
         {!mobileRoster && (desktopBrain ? <div className="desktop-brain-header-controls">{workspaceModeSwitcher}</div> : workspaceModeSwitcher)}
       </div>
 
@@ -696,7 +696,7 @@ export default function Sidebar({
       {desktopBrain && <DesktopBrainNavigation sections={navSections} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} />}
       {desktopHyperAgents && <DesktopHyperAgentsNavigation team={team} rooms={rooms} selectedAgent={selectedAgent} openingAgent={openingAgent} onOpenAgent={openAgent} onCreate={() => setCreateEmployeeOpen(true)} onCompany={() => setCompanyOpen(true)} onNeedsYou={() => setNeedsYouOpen(true)} needsYouCount={waitingIds.length} columns={rosterColumns} collapsed={collapsed} user={user} planLabel={planLabel} credits={usage?.credits} logout={logout} orgId={org?.id} onDeleteEmployee={deleteNativeEmployee} runtimeEnabled={runtimeEnabled}/>}
       {desktopHyperAgents && <div className="ha-resize-grip" role="separator" aria-label={tt('resizeSidebar', 'Resize team sidebar')} aria-orientation="vertical" aria-valuemin={68} aria-valuemax={452} aria-valuenow={collapsed ? 68 : HYPERAGENT_WIDTHS[rosterColumns]} aria-valuetext={collapsed ? tt('collapsedValue', 'Collapsed') : tt('columnsValue', '{{count}} columns', { count: rosterColumns })} tabIndex={0}
-        onKeyDown={event => { const current = collapsed ? 0 : rosterColumns; if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeRoster(Math.max(0, Math.min(3, current + (event.key === 'ArrowLeft' ? -1 : 1)))); } }}
+        onKeyDown={event => { const current = collapsed ? 0 : rosterColumns; if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeRoster(Math.max(0, Math.min(3, current + (event.key === (document.documentElement.dir === 'rtl' ? 'ArrowRight' : 'ArrowLeft') ? -1 : 1)))); } }}
         onPointerDown={event => { resizeGesture.current = true; event.currentTarget.setPointerCapture(event.pointerId); }}
         onPointerMove={event => { if (!resizeGesture.current) return; const aside = event.currentTarget.closest('aside'); const rect = aside.getBoundingClientRect(); const scale = rect.width / aside.offsetWidth; resizeRoster(columnsForWidth((event.clientX - rect.left) / scale)); }}
         onPointerUp={event => { resizeGesture.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { resizeGesture.current = false; }}><span/></div>}
@@ -750,7 +750,7 @@ export default function Sidebar({
                         data-tour-id={item.to}
                         onClick={item.brainChat ? () => openBrainChat(navigate) : item.createEmployee ? () => setCreateEmployeeOpen(true) : item.agent ? event => openAgent(event, item.agent) : item.runtime ? event => openAgent(event, { id: 'runtime' }) : item.companyWorkspace ? () => setCompanyOpen(true) : undefined}
                         aria-busy={openingAgent === (item.agent?.id || (item.runtime ? 'runtime' : undefined)) ? true : undefined}
-                        className={`relative w-full text-left flex items-center ${collapsed ? 'justify-center gap-2.5 px-2.5 py-2' : item.runtime ? 'gap-3 px-2.5 py-3 mb-2 min-h-[96px]' : 'gap-2.5 px-2.5 py-2'} rounded-lg text-[15px] transition-all duration-150 group`}
+                        className={`relative w-full text-start flex items-center ${collapsed ? 'justify-center gap-2.5 px-2.5 py-2' : item.runtime ? 'gap-3 px-2.5 py-3 mb-2 min-h-[96px]' : 'gap-2.5 px-2.5 py-2'} rounded-lg text-[15px] transition-all duration-150 group`}
                         title={collapsed ? item.label : undefined}
                       >
                         {isActive && (
@@ -767,7 +767,7 @@ export default function Sidebar({
                             isActive ? 'text-[#0a0a0a]' : 'text-[#737373] group-hover:text-[#333333]'
                           }`}
                         />}
-                        {collapsed && item.agent && openDotEmployeePath(item.agent) && <Monitor size={11} strokeWidth={2} aria-label={tt('computerWorkspace', 'Computer workspace')} title={tt('computerWorkspace', 'Computer workspace')} className="absolute right-1 top-1 z-20 rounded-sm bg-white text-[#737373]" />}
+                        {collapsed && item.agent && openDotEmployeePath(item.agent) && <Monitor size={11} strokeWidth={2} aria-label={tt('computerWorkspace', 'Computer workspace')} title={tt('computerWorkspace', 'Computer workspace')} className="absolute end-1 top-1 z-20 rounded-sm bg-white text-[#737373]" />}
                         {!collapsed && (
                           <span
                             className={`relative z-10 min-w-0 flex-1 transition-colors ${
@@ -787,7 +787,7 @@ export default function Sidebar({
                     )}
                     {/* Always-visible children sub-nav */}
                     {hasChildren && !collapsed && (
-                      <div className="ml-4 pl-2.5 border-l border-[#e3e0db] mt-0.5 space-y-0.5">
+                      <div className="ms-4 ps-2.5 border-s border-[#e3e0db] mt-0.5 space-y-0.5">
                         {item.children.map((child) => {
                           const cp = child.to.split('?')[0];
                           const qs = child.to.includes('?') ? '?' + child.to.split('?')[1] : '';
@@ -865,7 +865,7 @@ export default function Sidebar({
             className={`flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 w-full px-2.5 py-2 rounded-lg text-[15px] text-[#737373] hover:text-[#dc2626] hover:bg-[#dc2626]/5 transition-all`}
             title={collapsed ? tt('signOut', 'Sign Out') : undefined}
           >
-            <LogOut size={16} />
+            <LogOut size={16} className="rtl:-scale-x-100" />
             {!collapsed && <span>{t('sidebar.signOut', 'Sign Out')}</span>}
           </button>
         </div>

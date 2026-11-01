@@ -118,7 +118,7 @@ export function HumationSystemSwitcher({ activeSection, onSectionChange, employe
             key={section.key}
             type="button"
             onClick={() => onSectionChange?.(section.key)}
-            className={`group relative flex w-[48px] flex-col items-center outline-none transition-[filter,opacity,transform] duration-300 focus-visible:z-10 focus-visible:rounded-xl focus-visible:ring-2 focus-visible:ring-[#117dff] focus-visible:ring-offset-2 ${index ? '-ml-1.5' : ''} ${active ? 'z-[3]' : 'z-[1] opacity-62 grayscale-[0.12] hover:z-[2] hover:opacity-90 hover:grayscale-0'}`}
+            className={`group relative flex w-[48px] flex-col items-center outline-none transition-[filter,opacity,transform] duration-300 focus-visible:z-10 focus-visible:rounded-xl focus-visible:ring-2 focus-visible:ring-[#117dff] focus-visible:ring-offset-2 ${index ? '-ms-1.5' : ''} ${active ? 'z-[3]' : 'z-[1] opacity-62 grayscale-[0.12] hover:z-[2] hover:opacity-90 hover:grayscale-0'}`}
             aria-current={active ? 'page' : undefined}
             aria-label={s('representedBy', '{{label}}, represented by {{name}}', { label: labelOf(section), name: agentName })}
             title={`${labelOf(section)} · ${agentName}`}
@@ -204,14 +204,14 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
   // Runtime and Brain phone rooms: liquid-glass back control and identity pill, matching the HyperAgent room bar.
   // The OpenDot room bar (DotView.module.css): a 52px row max(8px, safe area) from the top, 12px from the sides.
   if (floatingMobile) return <div data-mobile-agent-overlay-controls className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center px-3" style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 0px))', height: 'calc(max(8px, env(safe-area-inset-top, 0px)) + 52px)', boxSizing: 'border-box' }}>
-    <button type="button" aria-label={s('openYourTeam', 'Open your team')} aria-haspopup="dialog" onClick={mobileTeamToggle} className="liquid-glass pointer-events-auto grid h-12 w-12 place-items-center rounded-full text-[#292929]"><ChevronLeft size={22} strokeWidth={2} /></button>
+    <button type="button" aria-label={s('openYourTeam', 'Open your team')} aria-haspopup="dialog" onClick={mobileTeamToggle} className="liquid-glass pointer-events-auto grid h-12 w-12 place-items-center rounded-full text-[#292929]"><ChevronLeft size={22} strokeWidth={2} className="rtl:-scale-x-100" /></button>
     {/* Runtime's own identity pill (ui-hivemind-connect) is centred here and opens its Environment sheet, so only Brain gets one from the shell. */}
-    {roomIdentity === 'brain' && <div className="pointer-events-auto absolute left-1/2 flex h-12 max-w-[calc(100%-144px)] -translate-x-1/2 items-center gap-2 rounded-full pl-2 pr-4 text-[#292929] liquid-glass">
+    {roomIdentity === 'brain' && <div className="pointer-events-auto absolute left-1/2 flex h-12 max-w-[calc(100%-144px)] -translate-x-1/2 items-center gap-2 rounded-full ps-2 pe-4 text-[#292929] liquid-glass">
       <span className="grid h-8 w-8 shrink-0 place-items-center"><BrainModeIcon size={28} /></span>
       <span className="truncate text-[16px] font-semibold tracking-tight">{t('topbar.companyBrain', { defaultValue: 'Company Brain' })}</span>
     </div>}
     {/* Getting Started chip on the right, clear of the centred room pill. */}
-    {startSlot && <div className="pointer-events-auto ml-auto flex items-center">{startSlot}</div>}
+    {startSlot && <div className="pointer-events-auto ms-auto flex items-center">{startSlot}</div>}
   </div>;
 
   return (
@@ -219,7 +219,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange, mo
     <header className={`pointer-events-none sticky top-0 z-30 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 md:px-6 ${harnessCanvas ? 'bg-[#faf9f4] md:bg-white' : mobileBack ? 'bg-[#faf9f4]' : 'bg-transparent'}`} style={{ paddingTop: 'env(safe-area-inset-top, 0px)', height: 'calc(56px + env(safe-area-inset-top, 0px))', boxSizing: 'border-box' }}>
       {/* Branding and team selection live in the persistent HIVE sidebar. */}
       <div className="pointer-events-auto min-w-0 justify-self-start flex items-center gap-2">
-        <>{mobileBack && !mobileTeamToggle && <button type="button" data-mobile-back aria-label={s('openYourTeam', 'Open your team')} aria-haspopup="dialog" onClick={mobileBack} className="-ml-1 flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full text-[#292929] active:bg-[#f3f2ee]"><ChevronLeft size={24} strokeWidth={2} /></button>}{mobileTeamToggle && <button type="button" aria-label={s('openYourTeam', 'Open your team')} aria-haspopup="dialog" onClick={mobileTeamToggle} className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full text-[#292929] hover:bg-[#f3f2ee]"><Menu size={22} /></button>}</><h1 className="flex items-center gap-2 min-w-0 text-[#292929] text-[16px] font-semibold tracking-tight leading-none" title={org?.name || org?.slug || 'Workspace'}>
+        <>{mobileBack && !mobileTeamToggle && <button type="button" data-mobile-back aria-label={s('openYourTeam', 'Open your team')} aria-haspopup="dialog" onClick={mobileBack} className="-ms-1 flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full text-[#292929] active:bg-[#f3f2ee]"><ChevronLeft size={24} strokeWidth={2} className="rtl:-scale-x-100" /></button>}{mobileTeamToggle && <button type="button" aria-label={s('openYourTeam', 'Open your team')} aria-haspopup="dialog" onClick={mobileTeamToggle} className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full text-[#292929] hover:bg-[#f3f2ee]"><Menu size={22} /></button>}</><h1 className="flex items-center gap-2 min-w-0 text-[#292929] text-[16px] font-semibold tracking-tight leading-none" title={org?.name || org?.slug || 'Workspace'}>
           <Building2 size={18} strokeWidth={1.75} className="shrink-0 text-[#626262]" />
           <span className="truncate">{org?.name || org?.slug || t('sidebar.workspace', { defaultValue: 'Workspace' })}</span>
         </h1>

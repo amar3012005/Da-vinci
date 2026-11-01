@@ -44,7 +44,7 @@ function Card({ anchor, label, onClose, children }) {
     <div className="fixed inset-0 z-[400]" onClick={onClose}>
       <section role="dialog" aria-label={label} onClick={event => event.stopPropagation()} style={style}
         className="fixed rounded-[24px] bg-white p-5 text-[#0a0a0a] shadow-[0_18px_50px_-12px_rgba(0,0,0,.28)] ring-1 ring-black/5">
-        <button type="button" aria-label="Close" onClick={onClose} className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full text-[#737373] hover:bg-[#f3f1ec]"><X size={15}/></button>
+        <button type="button" aria-label="Close" onClick={onClose} className="absolute end-3 top-3 grid h-7 w-7 place-items-center rounded-full text-[#737373] hover:bg-[#f3f1ec]"><X size={15}/></button>
         {children}
       </section>
     </div>, document.body);
@@ -60,7 +60,7 @@ function UpdateCard({ update, anchor, onClose, s }) {
   const action = update.kind === 'install' ? s('updateRestart', 'Restart to update')
     : update.kind === 'store' ? s('updateOpenStore', 'Open the store') : s('updateReload', 'Reload to update');
   return <Card anchor={anchor} label={title} onClose={onClose}>
-    <h2 className="pr-8 text-[17px] font-semibold">{title}</h2>
+    <h2 className="pe-8 text-[17px] font-semibold">{title}</h2>
     <p className="mt-1.5 text-[14px] leading-snug text-[#525252]">{body}</p>
     {update.kind === 'download'
       ? <div role="progressbar" aria-valuenow={update.percent} aria-valuemin={0} aria-valuemax={100} className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#eeece6]"><div className="h-full rounded-full bg-[#0a0a0a] transition-[width]" style={{ width: `${Math.max(update.percent, 4)}%` }}/></div>
@@ -88,10 +88,10 @@ function BugCard({ anchor, onClose, s }) {
   };
   return <Card anchor={anchor} label={s('bugTitle', 'Report a problem')} onClose={onClose}>
     {state.phase === 'sent'
-      ? <><h2 className="pr-8 text-[17px] font-semibold">{s('bugThanks', 'Thank you')}</h2>
+      ? <><h2 className="pe-8 text-[17px] font-semibold">{s('bugThanks', 'Thank you')}</h2>
         <p className="mt-1.5 text-[14px] text-[#525252]">{s('bugSent', 'Report sent. Reference {{id}}.', { id: state.id })}</p>
         <button type="button" className={`${pill} mt-4`} onClick={onClose}>{s('bugDone', 'Done')}</button></>
-      : <><h2 className="pr-8 text-[17px] font-semibold">{s('bugTitle', 'Report a problem')}</h2>
+      : <><h2 className="pe-8 text-[17px] font-semibold">{s('bugTitle', 'Report a problem')}</h2>
         <textarea autoFocus value={text} maxLength={4000} onChange={event => setText(event.target.value)} rows={4}
           aria-label={s('bugTitle', 'Report a problem')} placeholder={s('bugPlaceholder', 'What went wrong?')}
           className="mt-3 w-full resize-none rounded-2xl bg-[#f3f1ec] p-3 text-[14px] outline-none placeholder:text-[#a3a3a3]"/>
@@ -119,7 +119,7 @@ export default function AccountRowTools({ className = '', vertical = false }) {
   const close = () => { if (panel === 'update' && update) rememberDismissal(version); setPanel(null); };
   return <div ref={root} data-account-row-tools className={`flex items-center gap-0.5 ${vertical ? 'flex-col' : ''} ${className}`}>
     {update && <button type="button" data-update-button aria-label={s('updateAvailable', 'Update available')} title={s('updateAvailable', 'Update available')} className={iconButton} onClick={() => setPanel('update')}>
-      <ArrowDownToLine size={16}/><span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#117dff] ring-2 ring-[#faf9f4]"/></button>}
+      <ArrowDownToLine size={16}/><span className="absolute end-1 top-1 h-2 w-2 rounded-full bg-[#117dff] ring-2 ring-[#faf9f4]"/></button>}
     <button type="button" data-bug-button aria-label={s('bugTitle', 'Report a problem')} title={s('bugTitle', 'Report a problem')} className={iconButton} onClick={() => setPanel('bug')}><Bug size={16}/></button>
     {panel === 'update' && update && <UpdateCard update={update} anchor={root.current} onClose={close} s={s}/>}
     {panel === 'bug' && <BugCard anchor={root.current} onClose={close} s={s}/>}

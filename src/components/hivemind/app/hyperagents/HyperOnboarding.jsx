@@ -54,7 +54,7 @@ function Panel({ icon: Icon, title, lit, complete = lit, children, className = '
       <div className="flex items-center gap-2 mb-2">
         <Icon size={13} className={lit ? 'text-[#117dff]' : 'text-[#c9c4bc]'} />
         <span className="text-[11px] font-semibold uppercase tracking-wide text-[#a3a3a3] font-['Space_Grotesk']">{title}</span>
-        {complete && <CheckCircle2 size={12} className="text-[#16a34a] ml-auto" />}
+        {complete && <CheckCircle2 size={12} className="text-[#16a34a] ms-auto" />}
       </div>
       {!lit ? (
         <div className="space-y-1.5"><div className="h-2.5 bg-[#f2efe9] rounded w-3/4 animate-pulse" /><div className="h-2.5 bg-[#f2efe9] rounded w-1/2 animate-pulse" /></div>
@@ -170,7 +170,7 @@ function AwakeningOverlay({ company, team, starterPlan, onContinue, onClose }) {
       </picture>
       <div className="fixed inset-0 bg-[#04152f]/[0.08]" aria-hidden="true" />
 
-      <button type="button" onClick={profilesVisible ? onClose : skipToProfiles} className="fixed right-5 top-5 z-10 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-[10px] font-mono uppercase tracking-[0.14em] text-white/80 backdrop-blur-xl transition-colors hover:bg-white/20 hover:text-white">
+      <button type="button" onClick={profilesVisible ? onClose : skipToProfiles} className="fixed end-5 top-5 z-10 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-[10px] font-mono uppercase tracking-[0.14em] text-white/80 backdrop-blur-xl transition-colors hover:bg-white/20 hover:text-white">
         {profilesVisible ? 'Back' : 'Skip introduction'}
       </button>
 
@@ -187,7 +187,7 @@ function AwakeningOverlay({ company, team, starterPlan, onContinue, onClose }) {
             >
               <h1 className={`${lineIndex === 0 ? 'text-[clamp(1.8rem,4vw,4rem)] tracking-[-0.035em]' : 'text-[clamp(1.45rem,3.2vw,3.1rem)] tracking-[-0.025em]'} max-w-[900px] font-medium leading-[1.12] text-white font-['Space_Grotesk'] drop-shadow-[0_8px_30px_rgba(0,20,55,.45)]`}>
                 {activeSentence.slice(0, characterIndex)}
-                <span className="ml-1 inline-block w-[0.07em] animate-pulse bg-[#8fd0ff] align-[-0.08em]">&nbsp;</span>
+                <span className="ms-1 inline-block w-[0.07em] animate-pulse bg-[#8fd0ff] align-[-0.08em]">&nbsp;</span>
               </h1>
             </motion.div>
           ) : !systemVisible ? (
@@ -212,7 +212,7 @@ function AwakeningOverlay({ company, team, starterPlan, onContinue, onClose }) {
               <div className="mt-8 border-t border-white/30 pt-7 text-center">
                 <p className="text-[clamp(1.15rem,1.8vw,1.6rem)] font-medium tracking-[-0.02em] text-white font-['Space_Grotesk']">Let’s make {company} an AI company.</p>
                 <button type="button" onClick={() => setSystemVisible(true)} className="mt-5 inline-flex h-12 items-center justify-center gap-3 rounded-full border border-white/20 bg-white px-7 text-[12px] font-semibold text-[#08264e] shadow-[0_12px_35px_rgba(0,13,35,.28)] transition-all hover:bg-[#eaf6ff] hover:px-8">
-                  See your operating system <ArrowRight size={15} />
+                  See your operating system <ArrowRight size={15} className="rtl:-scale-x-100" />
                 </button>
               </div>
             </motion.div>
@@ -230,7 +230,7 @@ function AwakeningOverlay({ company, team, starterPlan, onContinue, onClose }) {
                     { label: 'OS', icon: Orbit, note: 'HyperAgents', active: true },
                     { label: 'VOICE', icon: AudioWaveform, note: 'TARA' },
                   ].map(({ label, icon: Icon, note, active }, index) => (
-                    <motion.div key={label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : index * 0.16 }} className={`relative flex h-[126px] flex-col items-center justify-center border-white/30 sm:h-[160px] ${index ? 'border-l' : ''}`}>
+                    <motion.div key={label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : index * 0.16 }} className={`relative flex h-[126px] flex-col items-center justify-center border-white/30 sm:h-[160px] ${index ? 'border-s' : ''}`}>
                       <div className="flex items-center gap-2.5 sm:gap-4">
                         <Icon size={active ? 36 : 30} strokeWidth={1.2} className={active ? 'text-white drop-shadow-[0_0_14px_rgba(180,224,255,.95)]' : 'text-white/80'} />
                         <span className="text-[13px] font-medium tracking-[0.16em] text-white font-['Space_Grotesk'] sm:text-[18px]">{label}</span>
@@ -240,11 +240,11 @@ function AwakeningOverlay({ company, team, starterPlan, onContinue, onClose }) {
                     </motion.div>
                   ))}
                 </div>
-                <span className="absolute left-full top-1/2 ml-3 -translate-y-1/2 font-mono text-[8px] uppercase tracking-[0.18em] text-white/65 sm:ml-4 sm:text-[10px]">Soon</span>
+                <span className="absolute start-full top-1/2 ms-3 -translate-y-1/2 font-mono text-[8px] uppercase tracking-[0.18em] text-white/65 sm:ms-4 sm:text-[10px]">Soon</span>
               </div>
               <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.26em] text-white/60 sm:text-[10px]">Brain · operating system · voice</p>
               <button type="button" onClick={onContinue} className="mt-7 inline-flex h-12 items-center justify-center gap-3 rounded-full border border-white/20 bg-white px-7 text-[12px] font-semibold text-[#08264e] shadow-[0_12px_35px_rgba(0,13,35,.28)] transition-all hover:bg-[#eaf6ff] hover:px-8">
-                Begin the first move <ArrowRight size={15} />
+                Begin the first move <ArrowRight size={15} className="rtl:-scale-x-100" />
               </button>
             </motion.div>
           )}
@@ -392,10 +392,10 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           </p>
           <form onSubmit={start} className="company-onboarding-glass mt-7 space-y-3 p-5">
             <div className="relative">
-              <Globe size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
+              <Globe size={15} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
               <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
                 placeholder={t('hyperOnboarding.urlPlaceholder', 'yourcompany.com')} autoFocus
-                className="w-full pl-10 pr-4 py-3.5 bg-white border border-[#e3e0db] rounded-xl text-[14px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15 font-mono" />
+                className="w-full ps-10 pe-4 py-3.5 bg-white border border-[#e3e0db] rounded-xl text-[14px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15 font-mono" />
             </div>
             <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)}
               placeholder={t('hyperOnboarding.goalPlaceholder', 'Optional: what should your AI team focus on first?')}
@@ -417,7 +417,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             <button type="submit" disabled={!websiteUrl.trim() || starting}
               className="w-full flex items-center justify-center gap-2 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 text-white text-[13.5px] font-semibold px-4 py-3.5 rounded-xl transition-colors">
               {starting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                : <>{t('hyperOnboarding.start', 'Start onboarding')} <ArrowRight size={15} /></>}
+                : <>{t('hyperOnboarding.start', 'Start onboarding')} <ArrowRight size={15} className="rtl:-scale-x-100" /></>}
             </button>
           </form>
           <button type="button" onClick={() => window.dispatchEvent(new Event('hm:open-account-settings'))} className="mt-5 text-[12px] text-[#a3a3a3] hover:text-[#525252] transition-colors">
@@ -443,7 +443,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
         <div className="flex items-center gap-2 mb-1.5 px-0.5">
           <Sparkles size={12} className="text-violet-500" />
           <span className="text-[11px] font-semibold text-[#525252] font-['Space_Grotesk']">{t('hyperOnboarding.buildLog', 'Build log')}</span>
-          <span className="text-[10px] font-mono text-[#a3a3a3] ml-auto">{lines.length} steps</span>
+          <span className="text-[10px] font-mono text-[#a3a3a3] ms-auto">{lines.length} steps</span>
         </div>
         <div className={done ? 'h-[58px]' : 'h-[clamp(68px,13vh,112px)]'}>
           <OnboardingTerminal lines={lines} done={done} error={error} />
@@ -451,7 +451,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
       </div>
 
       {/* ── Dashboard ── */}
-      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto pr-1">
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto pe-1">
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-start gap-2.5">
             <SingulanceMark size={26} className="mt-0.5 flex-shrink-0" />
@@ -515,7 +515,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.05 * i }}
-                  className="text-[12px] pl-1 pr-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-700 font-medium inline-flex items-center gap-1.5"
+                  className="text-[12px] ps-1 pe-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-700 font-medium inline-flex items-center gap-1.5"
                 >
                   <AgentAvatar agent={m} size={22} />
                   {m.name}
@@ -550,7 +550,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
         {error && (
           <div className="mt-4 flex items-center justify-between bg-red-50 border border-red-200 rounded-xl px-4 py-3">
             <span className="text-[12.5px] text-[#dc2626] font-mono">{error}</span>
-            <button onClick={() => { setPhase('input'); setError(null); }} className="text-[12px] font-semibold text-[#0a0a0a] hover:underline shrink-0 ml-4">
+            <button onClick={() => { setPhase('input'); setError(null); }} className="text-[12px] font-semibold text-[#0a0a0a] hover:underline shrink-0 ms-4">
               {t('hyperOnboarding.retry', 'Try again')}
             </button>
           </div>
@@ -598,7 +598,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
               onClick={() => setAwakeningOpen(true)}
               className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0a0a0a] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#262626]"
             >
-              {t('hyperOnboarding.enterHivemind', 'Enter your HIVEMIND')} <ArrowRight size={15} />
+              {t('hyperOnboarding.enterHivemind', 'Enter your HIVEMIND')} <ArrowRight size={15} className="rtl:-scale-x-100" />
             </button>
           </motion.div>
         )}

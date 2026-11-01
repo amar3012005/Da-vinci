@@ -163,9 +163,9 @@ export default function NotificationBannerHost() {
   const roster = agentRoster.peek(scope) || [];
   const agent = roster.find(entry => entry?.id === item.employee?.id) || { id: item.employee?.id, name };
   return createPortal(<div role={item.category === 'needs_you' ? 'alert' : 'status'} data-notification-banner={item.category}
-    className="fixed z-[2147483000] flex items-center gap-3 rounded-[16px] border border-[#e3e0db] bg-white/95 py-2.5 pl-3 pr-2 shadow-xl backdrop-blur"
-    style={{ top: 'calc(env(safe-area-inset-top, 0px) + 10px)', right: 12, left: 12, maxWidth: 380, marginLeft: 'auto' }}>
-    <button type="button" onClick={open} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-label={tx('openAria', 'Open: {{title}}', { title: line })}>
+    className="fixed z-[2147483000] flex items-center gap-3 rounded-[16px] border border-[#e3e0db] bg-white/95 py-2.5 ps-3 pe-2 shadow-xl backdrop-blur"
+    style={{ top: 'calc(env(safe-area-inset-top, 0px) + 10px)', insetInlineEnd: 12, insetInlineStart: 12, maxWidth: 380, marginInlineStart: 'auto' }}>
+    <button type="button" onClick={open} className="flex min-w-0 flex-1 items-center gap-3 text-start" aria-label={tx('openAria', 'Open: {{title}}', { title: line })}>
       <span className="shrink-0"><AgentAvatar agent={agent} size={32} /></span>
       <span className="min-w-0 flex-1">
         <span className="block font-mono text-[9px] uppercase tracking-wider text-[#a3a3a3]">{item.category === 'needs_you' ? tx('needsYou', 'Needs you') : item.category === 'briefs' ? tx('brief', 'Brief') : tx('result', 'Result')}</span>

@@ -82,7 +82,7 @@ function PhoneRoomComposer({ room }) {
           className="optimistic-phone-room-input"
         />
         <button type="submit" className="optimistic-phone-room-primary" disabled={(!attached && !thread.canSend) || !draft.trim()} aria-label={draft.trim() ? t('chat.send', 'Send') : t('chat.voice', 'Voice')}>
-          {draft.trim() ? <Send size={17} strokeWidth={2} /> : <AudioLines size={18} strokeWidth={2} />}
+          {draft.trim() ? <Send size={17} strokeWidth={2} className="rtl:-scale-x-100" /> : <AudioLines size={18} strokeWidth={2} />}
         </button>
       </form>
     </>
@@ -114,13 +114,13 @@ export function PhoneRoomFrame({ room, children = null }) {
     <div data-hivemind-app-shell data-optimistic-shell data-optimistic-phone-room={room} aria-busy="true" className="optimistic-phone-room">
       <span role="status" className="sr-only">{s('loadingWorkspace', 'Loading workspace')}</span>
       <div className="optimistic-phone-room-bar" aria-hidden="true">
-        <span className="liquid-glass optimistic-phone-room-back"><ChevronLeft size={22} strokeWidth={2} /></span>
+        <span className="liquid-glass optimistic-phone-room-back"><ChevronLeft size={22} strokeWidth={2} className="rtl:-scale-x-100" /></span>
         <span className="liquid-glass optimistic-phone-room-identity">
           {room === 'brain'
             ? <><span className="optimistic-phone-room-mark"><BrainModeIcon size={28} /></span><span>{t('topbar.companyBrain', { defaultValue: 'Company Brain' })}</span></>
             : <><span className="optimistic-phone-room-mark">{still ? <img src={still} alt="" width={32} height={32} decoding="async" /> : <span className="optimistic-phone-room-mark-soft" />}</span><span>Runtime</span></>}
         </span>
-        <span className="liquid-glass optimistic-phone-room-trailing">{room === 'brain' ? <PanelRight size={20} strokeWidth={1.8} /> : <Monitor size={20} strokeWidth={1.8} />}</span>
+        <span className="liquid-glass optimistic-phone-room-trailing">{room === 'brain' ? <PanelRight size={20} strokeWidth={1.8} className="rtl:-scale-x-100" /> : <Monitor size={20} strokeWidth={1.8} />}</span>
       </div>
       <PhoneRoomComposer room={room} />
       {children}

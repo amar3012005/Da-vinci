@@ -107,13 +107,13 @@ export default function OptimisticAppShell({ fallback = null }) {
     <div data-hivemind-app-shell data-optimistic-shell data-identity-revealed={reveal || undefined} aria-busy="true" className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
       <span role="status" className="sr-only">{s('loadingWorkspace', 'Loading workspace')}</span>
       <aside
-        className="fixed left-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40"
+        className="fixed start-0 top-0 h-[var(--hm-app-viewport-height,100dvh)] bg-[#faf9f4] border-e border-[#e3e0db] flex flex-col z-40"
         style={{ width: sidebarWidth }}
         aria-hidden="true"
       >
         {teamRoute && <TeamFrame hint={hint} reveal={reveal} />}
       </aside>
-      <div className="min-w-0" style={{ marginLeft: sidebarWidth }}>
+      <div className="min-w-0" style={{ marginInlineStart: sidebarWidth }}>
         <header className="optimistic-shell-header grid grid-cols-[minmax(0,1fr)_auto] items-center px-6">
           <h1 className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-[#292929]">
             {reveal
