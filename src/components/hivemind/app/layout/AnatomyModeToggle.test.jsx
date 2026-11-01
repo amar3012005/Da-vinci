@@ -23,3 +23,18 @@ test('toggles with the revision it saw and adopts a newer value on conflict', as
   expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ enabled: true, expectedRevision: 2 });
   expect(screen.getByRole('status').textContent).toContain('Changed on another device');
 });
+
+test('a launch-time 401 is retried, so the row appears once Runtime admits the session', async () => {
+  jest.useFakeTimers();
+  try {
+    const fetcher = jest.fn()
+      .mockResolvedValueOnce(json(401, {}))
+      .mockResolvedValueOnce(json(200, { ok: true, value: { enabled: true, revision: 1 } }));
+    render(<AnatomyModeToggle fetcher={fetcher} />);
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    jest.advanceTimersByTime(1500);
+    const toggle = await screen.findByRole('switch', { name: /Anatomy mode/ });
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  } finally { jest.useRealTimers(); }
+});
