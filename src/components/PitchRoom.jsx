@@ -17,7 +17,7 @@ const EMBEDS = {
   research: { label: 'Research', title: 'ICARUS research', hash: 'research', intro: 'Every published ICARUS result, with the method and the stated limits beside each number.' },
 };
 const ORDER = ['product', 'sales', 'investor', 'market', 'research'];
-const FOUNDER_TAB = { label: 'Founder notes', title: 'Founder notes', intro: 'Private to founders: meeting checklists, fundraising terms, claims to verify and open decisions. Ticks are saved in this browser.' };
+const FOUNDER_TAB = { label: 'Founder', title: 'Mind palace', intro: 'Private to founders: every file, contract, deck and checklist across the company, organised by room. Files open from a private EU vault.' };
 const ROLE_KEY = 'singulance-pitch-role';
 
 function storage(kind) {
@@ -111,6 +111,31 @@ const css = `
 .pr-terms dt{font-weight:600;font-size:14.5px}
 .pr-terms dd{margin:2px 0 0;font-family:'Inter',system-ui,sans-serif;font-size:13.5px;line-height:1.5;color:var(--body)}
 .pr-note-foot{font-size:11px;color:var(--muted);margin:0}
+.pr-palace{display:grid;grid-template-columns:232px minmax(0,1fr);gap:28px;align-items:start;padding-bottom:56px}
+.pr-rooms{position:sticky;top:72px;display:grid;gap:2px;border:1px solid var(--rule);border-radius:14px;background:var(--surface);padding:8px}
+.pr-rooms button{appearance:none;border:0;background:none;font:inherit;font-size:14px;color:var(--body);text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px;border-radius:9px}
+.pr-rooms button small{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted)}
+.pr-rooms button:hover{background:var(--bg);color:var(--ink)}
+.pr-rooms button[aria-pressed="true"]{background:var(--ink);color:#fff}.pr-rooms button[aria-pressed="true"] small{color:#9fb3cc}
+.pr-shelf{display:grid;gap:18px;min-width:0}
+.pr-find{height:44px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);padding:0 18px;font:inherit;font-size:15px;color:var(--ink);width:100%}
+.pr-find:focus{outline:2px solid var(--accent);outline-offset:1px}
+.pr-group{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:20px 22px 8px}
+.pr-group h3{margin:0 0 4px;font-size:18px;font-weight:600;letter-spacing:-.01em}
+.pr-group ul{list-style:none;margin:0;padding:0}
+.pr-vi{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:14px;align-items:center;border-top:1px solid var(--rule);padding:14px 0}
+.pr-vk{width:44px;height:52px;border-radius:8px;display:grid;place-items:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.06em;background:var(--accent-soft);color:var(--accent)}
+.pr-vk.k-DOC{background:#E8EEFA;color:#2B5BB8}.pr-vk.k-PPT{background:#FBEDE6;color:#B9531F}.pr-vk.k-MD,.pr-vk.k-TXT{background:#EEF0F2;color:#4F5C6B}
+.pr-vt{min-width:0}
+.pr-vt a{color:var(--ink);text-decoration:none;font-weight:500;font-size:15px}
+.pr-vt a:hover{color:var(--accent)}
+.pr-vt p{margin:3px 0 0;font-family:'Inter',system-ui,sans-serif;font-size:13px;line-height:1.5;color:var(--body)}
+.pr-vm{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:6px;font-size:10.5px;color:var(--muted)}
+.pr-va{padding:1px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.06em}
+.pr-va.a-internal{background:#FDECEC;color:#B42318}.pr-va.a-shareable{background:#E7F6EC;color:#1C7C3F}.pr-va.a-partners{background:#FFF4E0;color:#9A5B00}
+.pr-vx{display:flex;gap:6px}
+.pr-vx .pr-btn{height:32px;padding:0 12px;font-size:12px}
+.pr-empty{color:var(--muted);font-size:14px}
 .pr-top-actions{display:flex;align-items:center;gap:14px}
 @media (max-width:720px){
   .pr-gate{min-height:calc(100svh - 60px);padding:24px 0 40px;gap:8px}
@@ -119,6 +144,14 @@ const css = `
   .pr-role strong{font-size:19px}
   .pr-note{padding:18px 16px;border-radius:12px}
   .pr-terms dl{grid-template-columns:1fr}
+  .pr-palace{grid-template-columns:minmax(0,1fr);gap:14px}
+  .pr-rooms{position:static;min-width:0;display:flex;overflow-x:auto;scrollbar-width:none;border:0;background:none;padding:0;gap:6px}
+  .pr-rooms::-webkit-scrollbar{display:none}
+  .pr-rooms button{flex:none;border:1px solid var(--rule);background:var(--surface);border-radius:999px;padding:8px 14px;font-size:13px}
+  .pr-group{padding:16px 14px 4px;border-radius:12px}
+  .pr-vi{grid-template-columns:38px minmax(0,1fr);gap:12px}
+  .pr-vk{width:38px;height:46px}
+  .pr-vx{grid-column:2}
   .pr-top{padding-top:16px}
   .pr-hero{padding:22px 0 16px;gap:10px}
   .pr-copy{gap:8px}
@@ -235,6 +268,73 @@ function FounderNotes({ notes }) {
   );
 }
 
+const FILE_KIND = { pdf: 'PDF', docx: 'DOC', doc: 'DOC', pptx: 'PPT', xlsx: 'XLS', md: 'MD', txt: 'TXT', png: 'IMG', jpg: 'IMG', mp4: 'VID' };
+
+function fileSize(bytes) {
+  if (!bytes) return '';
+  return bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`;
+}
+
+function VaultItem({ item }) {
+  const href = `/founder/files/${item.key.split('/').map(encodeURIComponent).join('/')}`;
+  const ext = item.key.split('.').pop().toLowerCase();
+  return (
+    <li className="pr-vi">
+      <span className={`pr-vk k-${FILE_KIND[ext] || 'FILE'}`}>{FILE_KIND[ext] || 'FILE'}</span>
+      <div className="pr-vt">
+        <a href={href} target="_blank" rel="noreferrer">{item.title}</a>
+        {item.summary && <p>{item.summary}</p>}
+        <div className="pr-vm pr-mono">
+          {item.date && <span>{item.date}</span>}
+          {item.size ? <span>{fileSize(item.size)}</span> : null}
+          {item.audience && <span className={`pr-va a-${item.audience}`}>{item.audience}</span>}
+          {item.status && <span>{item.status}</span>}
+        </div>
+      </div>
+      <div className="pr-vx">
+        <a className="pr-btn" href={href} target="_blank" rel="noreferrer">Open</a>
+        <a className="pr-btn" href={`${href}?download=1`}>Download</a>
+      </div>
+    </li>
+  );
+}
+
+function MindPalace({ notes }) {
+  const vault = notes.vault || { rooms: [], items: [] };
+  const rooms = [...vault.rooms, { id: 'checklists', title: 'Checklists & notes', intro: 'Meeting checklists, fundraising terms, claims to verify and open decisions.' }];
+  const [room, setRoom] = React.useState('all');
+  const [query, setQuery] = React.useState('');
+  const q = query.trim().toLowerCase();
+  const matches = (item) => !q || [item.title, item.summary, item.key, ...(item.tags || [])].join(' ').toLowerCase().includes(q);
+  const count = (id) => (id === 'checklists' ? notes.sections.length : vault.items.filter((i) => i.room === id).length);
+  const shown = room === 'checklists' ? [] : vault.items.filter((i) => (room === 'all' || i.room === room) && matches(i));
+  const grouped = rooms.filter((r) => r.id !== 'checklists' && (room === 'all' || r.id === room))
+    .map((r) => ({ room: r, items: shown.filter((i) => i.room === r.id) })).filter((g) => g.items.length);
+  return (
+    <div className="pr-palace">
+      <nav className="pr-rooms" aria-label="Rooms">
+        <button type="button" aria-pressed={room === 'all'} onClick={() => setRoom('all')}>Everything<small>{vault.items.length}</small></button>
+        {rooms.map((r) => (
+          <button key={r.id} type="button" aria-pressed={room === r.id} onClick={() => setRoom(r.id)}>{r.title}<small>{count(r.id)}</small></button>
+        ))}
+      </nav>
+      <div className="pr-shelf">
+        {room !== 'checklists' && (
+          <input className="pr-find" type="search" placeholder="Search files, partners, tags…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search the mind palace" />
+        )}
+        {room === 'checklists' ? <FounderNotes notes={notes} /> : grouped.length ? grouped.map(({ room: r, items }) => (
+          <section key={r.id} className="pr-group">
+            <h3>{r.title}</h3>
+            {r.intro && <p className="pr-note-intro">{r.intro}</p>}
+            <ul>{items.map((item) => <VaultItem key={item.key} item={item} />)}</ul>
+          </section>
+        )) : <p className="pr-empty">{vault.items.length ? 'Nothing matches that search.' : 'The vault is empty or could not be loaded.'}</p>}
+        {vault.updated && room !== 'checklists' && <p className="pr-note-foot pr-mono">Vault updated {vault.updated}</p>}
+      </div>
+    </div>
+  );
+}
+
 function Deck({ id }) {
   const deck = DECKS[id];
   const slides = Array.from({ length: deck.slides }, (_, i) => String(i + 1).padStart(2, '0'));
@@ -297,7 +397,10 @@ export default function PitchRoom() {
   const loadNotes = React.useCallback(async () => {
     const response = await fetch('/founder/notes', { credentials: 'same-origin', cache: 'no-store' });
     if (!response.ok) throw new Error(`founder notes ${response.status}`);
-    setNotes(await response.json());
+    const next = await response.json();
+    // The vault is optional: notes still open if R2 is unavailable.
+    const vault = await fetch('/founder/vault', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    setNotes({ ...next, vault });
   }, []);
 
   React.useEffect(() => {
@@ -412,7 +515,7 @@ export default function PitchRoom() {
               : <a className="pr-btn" href={`/pitch/market-map#${meta.hash}`} target="_blank" rel="noreferrer">Open full page ↗</a>}
           </div>}
         </div>
-        {isFounder ? <FounderNotes notes={notes} /> : isDeck ? <Deck id={tab} /> : <Embed id={tab} />}
+        {isFounder ? <MindPalace notes={notes} /> : isDeck ? <Deck id={tab} /> : <Embed id={tab} />}
       </main>
 
       <div className="pr-wrap">
