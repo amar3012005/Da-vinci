@@ -9,9 +9,11 @@ export const LOCAL_FIRST = Object.freeze({
   crm: { entity: 'lf-crm', maxBytes: 250_000, maxKeys: 8, staleAfterMs: 5 * MINUTE },
   autonomy: { entity: 'lf-autonomy', maxBytes: 8_000, maxKeys: 40, staleAfterMs: 10 * MINUTE },
   usage: { entity: 'lf-usage', maxBytes: 40_000, maxKeys: 4, staleAfterMs: 10 * MINUTE },
+  // Conversation lists keep the newest 30 under one key; message entities keep the newest 50 messages of each of the newest 30 conversations.
   brainRecents: { entity: 'lf-brain-recents', maxBytes: 120_000, maxKeys: 2, staleAfterMs: 5 * MINUTE },
-  brainConversation: { entity: 'lf-brain-conversation', maxBytes: 200_000, maxKeys: 1, staleAfterMs: 5 * MINUTE },
+  brainConversation: { entity: 'lf-brain-conversation', maxBytes: 200_000, maxKeys: 30, staleAfterMs: 5 * MINUTE },
   runtimeRecents: { entity: 'lf-runtime-recents', maxBytes: 120_000, maxKeys: 2, staleAfterMs: 5 * MINUTE },
+  runtimeConversation: { entity: 'lf-runtime-conversation', maxBytes: 200_000, maxKeys: 30, staleAfterMs: 5 * MINUTE },
   connectors: { entity: 'lf-connectors', maxBytes: 150_000, maxKeys: 8, staleAfterMs: 10 * MINUTE },
   memories: { entity: 'lf-memories', maxBytes: 250_000, maxKeys: 4, staleAfterMs: 5 * MINUTE },
   uploads: { entity: 'lf-uploads', maxBytes: 250_000, maxKeys: 4, staleAfterMs: 5 * MINUTE },

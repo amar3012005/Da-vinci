@@ -2165,7 +2165,9 @@
     "send": "إرسال",
     "sendFailed": "لم يُرسل",
     "voice": "الصوت",
-    "waitingToSend": "بانتظار الإرسال"
+    "waitingToSend": "بانتظار الإرسال",
+    "sending": "جارٍ الإرسال",
+    "sendFailedRetry": "لم يُرسل. اضغط لإعادة المحاولة"
   },
   "runtimeCalendar": {
     "localOnly": "تقويم Runtime لا يستجيب حاليًا. هذه هي المهام التي يحتفظ بها موظفوك بأنفسهم؛ وسيعود الباقي مع عودة Runtime.",

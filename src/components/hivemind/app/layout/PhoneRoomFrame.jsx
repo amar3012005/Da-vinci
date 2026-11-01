@@ -3,6 +3,7 @@ import { AudioLines, ChevronLeft, Monitor, PanelRight, Plus, Send } from 'lucide
 import { useTranslation } from 'react-i18next';
 import { useSidebarCopy } from './sidebar-copy';
 import BrainModeIcon from './BrainModeIcon';
+import { useChatThread } from '../shared/sync/use-chat-thread';
 import { getDraft, markOnce, queueDraft, setDraft, subscribeAttached, subscribeDraft, subscribePendingEntries } from '../shared/pending-composer';
 import { readBootCache, readLastTenant } from '../shared/boot-cache';
 import './liquid-glass.css';
@@ -11,10 +12,11 @@ import './OptimisticAppShell.css';
 const PHONE_QUERY = '(max-width: 600px)';
 const DESKTOP_QUERY = '(min-width: 901px)';
 const RUNTIME_ROOM = /^\/hivemind\/app\/employee\/harness(?:\/|$)/u;
+const MESSAGES_SHOWN = 20;
 const BRAIN_ROOM = /^\/hivemind\/app(?:\/overview(?:\/(?:new|session\/[^/]+))?)?\/?$/u;
 
-// Composer seat for the frame. It collects the draft only: typing is enabled at once, and sending is enabled
-// once a native room client attaches (see pending-composer.js). Until then no message is queued or shown as pending.
+// Composer seat for the frame. Typing is enabled at once. Sending is enabled once a native room client attaches (see
+// pending-composer.js) or, for a room with a known conversation on this device, through the persisted Outbox.
 function PhoneRoomComposer({ room }) {
   const { t } = useTranslation('dashboard');
   const [draft, setDraftState] = useState(getDraft);
@@ -25,12 +27,35 @@ function PhoneRoomComposer({ room }) {
   useEffect(() => subscribeAttached(setAttached), []);
   useEffect(() => { markOnce('hm:composer-visible'); }, []);
   const pending = attached ? entries.filter((entry) => entry.state !== 'sent') : [];
+  // The device copy of the room's last conversation, and a send path that needs no room client: the message is stored
+  // in the Outbox at once, shown as sending, and delivered with a client id (retried after a lost connection or restart).
+  const thread = useChatThread({ surface: room });
+  const send = () => {
+    if (attached) { queueDraft(); return; }
+    const text = getDraft().trim();
+    if (!text || !thread.canSend) return;
+    setDraft('');
+    markOnce('hm:first-send');
+    void thread.send(text);
+  };
   const submit = (event) => {
     event.preventDefault();
-    queueDraft();
+    send();
   };
+  const stateLabel = { sending: t('chat.sending', 'Sending'), queued: t('chat.waitingToSend', 'Waiting to send'), failed: t('chat.sendFailedRetry', 'Not sent. Tap to retry') };
   return (
     <>
+      {thread.messages.length > 0 && (
+        <ul className="optimistic-phone-room-thread" data-source={thread.source} aria-live="polite">
+          {thread.messages.slice(-MESSAGES_SHOWN).map((message, index) => (
+            <li key={message.id} data-role={message.role === 'user' ? 'user' : 'other'} data-state={message.pending ? message.state : undefined} style={index === 0 ? { marginTop: 'auto' } : undefined}>
+              {message.pending && message.state === 'failed'
+                ? <button type="button" onClick={() => { void thread.retry(message.clientId); }}>{message.text}<span className="optimistic-phone-room-pending-state">{stateLabel.failed}</span></button>
+                : <>{message.text}{message.pending && <span className="optimistic-phone-room-pending-state">{stateLabel[message.state]}</span>}</>}
+            </li>
+          ))}
+        </ul>
+      )}
       {pending.length > 0 && (
         <ul className="optimistic-phone-room-pending" aria-live="polite">
           {pending.map((entry) => (
@@ -52,11 +77,11 @@ function PhoneRoomComposer({ room }) {
           rows={1}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => { if (attached && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); queueDraft(); } }}
+          onKeyDown={(event) => { if ((attached || thread.canSend) && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); } }}
           placeholder={room === 'brain' ? t('chat.messageBrain', 'Message Brain') : t('chat.messageRuntime', 'Message Runtime')}
           className="optimistic-phone-room-input"
         />
-        <button type="submit" className="optimistic-phone-room-primary" disabled={!attached || !draft.trim()} aria-label={draft.trim() ? t('chat.send', 'Send') : t('chat.voice', 'Voice')}>
+        <button type="submit" className="optimistic-phone-room-primary" disabled={(!attached && !thread.canSend) || !draft.trim()} aria-label={draft.trim() ? t('chat.send', 'Send') : t('chat.voice', 'Voice')}>
           {draft.trim() ? <Send size={17} strokeWidth={2} /> : <AudioLines size={18} strokeWidth={2} />}
         </button>
       </form>

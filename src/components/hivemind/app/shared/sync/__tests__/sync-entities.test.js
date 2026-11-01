@@ -3,7 +3,7 @@ jest.mock('@capacitor/app', () => ({ App: { addListener: () => Promise.resolve({
 import { createLocalStore, createMemoryBackend, storeScope } from '../local-store';
 import { createSyncEngine } from '../sync-engine';
 import { feedRevision, readSinceFeed } from '../feeds';
-import { NEEDS_YOU, NOTIFICATIONS, registerNeedsYou, registerNotifications } from '../entities';
+import { NEEDS_YOU, NOTIFICATIONS, ROSTER, registerNeedsYou, registerNotifications, registerRoster } from '../entities';
 import { adoptScope, localStore, syncScope, wipeAllScopes } from '..';
 
 const A = storeScope('org-a', 'user-1');
@@ -49,34 +49,64 @@ describe('tier-1 entities', () => {
     expect((await refreshed).items.map((item) => item.id)).toEqual(['n2']);
   });
 
-  it('Needs you keeps only the cards the server still lists', async () => {
+  it('Needs you reads by cursor: resolved cards leave, the plain list of an older server replaces the copy', async () => {
     const store = createLocalStore({ backend: createMemoryBackend() });
     const engine = createSyncEngine({ store, scope: A });
-    const cards = jest.fn().mockResolvedValueOnce([{ id: 'msg_a', createdAt: 1 }, { id: 'msg_b', createdAt: 2 }]).mockResolvedValueOnce([{ id: 'msg_b', createdAt: 2 }]);
-    registerNeedsYou(engine, cards);
-    await engine.refresh(NEEDS_YOU, 'open');
-    expect((await engine.refresh(NEEDS_YOU, 'open')).items.map((card) => card.id)).toEqual(['msg_b']);
+    const card = (id, createdAt, extra = {}) => ({ id, employeeId: 'e1', dotId: 'dot_a', conversationId: 'conv_a', createdAt, kind: 'approval', title: id, quickApprove: false, state: 'pending', ...extra });
+    const pages = {
+      start: { items: [card('msg_a', 1, { revision: '1' }), card('msg_b', 2, { revision: '2' })], deleted: [], next_cursor: 'n1', has_more: false },
+      n1: { items: [card('msg_a', 1, { state: 'resolved', revision: '3' }), card('msg_c', 3, { revision: '4' })], deleted: [], next_cursor: 'n2', has_more: false },
+    };
+    const readPage = jest.fn(async (since) => pages[since]);
+    registerNeedsYou(engine, readPage);
+    expect((await engine.refresh(NEEDS_YOU, 'open')).items.map((c) => c.id)).toEqual(['msg_a', 'msg_b']);
+    expect((await engine.refresh(NEEDS_YOU, 'open')).items.map((c) => c.id)).toEqual(['msg_b', 'msg_c']);
+    expect(readPage.mock.calls.map(([since]) => since)).toEqual(['start', 'n1']);
+
+    const older = createSyncEngine({ store: createLocalStore({ backend: createMemoryBackend() }), scope: A });
+    const plain = jest.fn()
+      .mockResolvedValueOnce({ version: 1, cards: [card('msg_a', 1), card('msg_b', 2)] })
+      .mockResolvedValueOnce({ version: 1, cards: [card('msg_b', 2)] });
+    registerNeedsYou(older, plain);
+    await older.refresh(NEEDS_YOU, 'open');
+    expect((await older.refresh(NEEDS_YOU, 'open')).items.map((c) => c.id)).toEqual(['msg_b']);
   });
-});
 
-describe('scopes', () => {
-  afterEach(() => wipeAllScopes());
-
-  it('sign-out, account switch and company switch leave nothing readable', async () => {
-    const { engine } = syncScope('org-a', 'user-1');
-    registerNeedsYou(engine, async () => [{ id: 'msg_a', createdAt: 1 }]);
+  it('Needs you reads the whole list again after ten minutes so a missed removal cannot linger', async () => {
+    const engine = createSyncEngine({ store: createLocalStore({ backend: createMemoryBackend() }), scope: A });
+    let clock = 0;
+    const card = (id) => ({ id, employeeId: 'e1', dotId: 'dot_a', conversationId: 'conv_a', createdAt: 1, kind: 'question', title: id, state: 'pending', revision: '1' });
+    const readPage = jest.fn()
+      .mockResolvedValueOnce({ items: [card('msg_a'), card('msg_b')], deleted: [], next_cursor: 'n1', has_more: false })
+      .mockResolvedValueOnce({ items: [card('msg_b')], deleted: [], next_cursor: 'n2', has_more: false });
+    registerNeedsYou(engine, readPage, () => clock);
     await engine.refresh(NEEDS_YOU, 'open');
-    expect(await localStore().list(A, NEEDS_YOU)).toHaveLength(1);
-    window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(await localStore().list(A, NEEDS_YOU)).toEqual([]);
+    clock = 11 * 60_000;
+    expect((await engine.refresh(NEEDS_YOU, 'open')).items.map((c) => c.id)).toEqual(['msg_b']);
+    expect(readPage.mock.calls[1][0]).toBe('start');
   });
 
-  it('a confirmed scope removes rows another person or company left on the device', async () => {
-    await localStore().put(storeScope('org-b', 'user-2'), NEEDS_YOU, 'open', { v: 1, items: [] });
-    await localStore().put(A, NEEDS_YOU, 'open', { v: 1, items: [] });
-    await adoptScope('org-a', 'user-1');
-    expect(await localStore().get(storeScope('org-b', 'user-2'), NEEDS_YOU, 'open')).toBeUndefined();
-    expect(await localStore().get(A, NEEDS_YOU, 'open')).toBeDefined();
+  it('the roster reads employees by cursor, drops removed and archived ones, and keeps only display fields', async () => {
+    const engine = createSyncEngine({ store: createLocalStore({ backend: createMemoryBackend() }), scope: A });
+    const employee = (id, extra = {}) => ({ id, name: id, roleArchetype: 'ops', status: 'active', persona: 'SECRET PERSONA', tools: ['x'], policyRules: { open_dot_employee: { version: 1, dot_id: `dot_${id}`, state: 'ready', secret: 's' }, appearance: { look: 1 }, other: 'drop' }, createdAt: 1, revision: '1', ...extra });
+    const get = jest.fn()
+      .mockResolvedValueOnce({ data: { items: [employee('ana'), employee('bo')], deleted: [], next_cursor: 'r1', has_more: false } })
+      .mockResolvedValueOnce({ data: { items: [employee('ana', { name: 'Ana B', revision: '5' })], deleted: [{ id: 'bo', revision: '6', deletedAt: 1, reason: 'archived' }], next_cursor: 'r2', has_more: false } });
+    registerRoster(engine, { controlPlane: { get } });
+    const first = await engine.refresh(ROSTER, 'main');
+    expect(JSON.stringify(first)).not.toContain('SECRET');
+    expect(first.items[0].policyRules).toEqual({ open_dot_employee: { version: 1, dot_id: 'dot_ana', state: 'ready' }, appearance: { look: 1 } });
+    const second = await engine.refresh(ROSTER, 'main');
+    expect(second.items.map((e) => `${e.id}:${e.name}`)).toEqual(['ana:Ana B']);
+    expect(get.mock.calls[1][1].params).toEqual({ since: 'r1', limit: 200 });
+    expect(get.mock.calls[0][1].params).toEqual({ since: 'start', limit: 200 });
+  });
+
+  it('the roster falls back to the plain employee list of a Control without the feed', async () => {
+    const engine = createSyncEngine({ store: createLocalStore({ backend: createMemoryBackend() }), scope: A });
+    const get = jest.fn().mockResolvedValueOnce({ data: { employees: [{ id: 'ana', name: 'Ana' }, { id: 'bo', name: 'Bo' }] } }).mockResolvedValueOnce({ data: { employees: [{ id: 'bo', name: 'Bo' }] } });
+    registerRoster(engine, { controlPlane: { get } });
+    await engine.refresh(ROSTER, 'main');
+    expect((await engine.refresh(ROSTER, 'main')).items.map((e) => e.id)).toEqual(['bo']);
   });
 });

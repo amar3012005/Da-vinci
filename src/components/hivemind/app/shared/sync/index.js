@@ -15,6 +15,7 @@ import { createLocalStore, storeScope } from './local-store';
 import { createSyncEngine } from './sync-engine';
 import { createOutbox } from './outbox';
 import { getPlatformAdapter } from './platform-adapter';
+import { bindChatOutbox, chatSenders } from './chat-outbox';
 import { bindPersistentCache } from './page-cache-persistence';
 import { PRELOAD_ENTITIES } from './catalog';
 import { pageCache } from '../resource-cache';
@@ -24,6 +25,8 @@ export { createLocalStore, createIndexedDbBackend, createMemoryBackend, storeSco
 export { createSyncEngine, reconcile } from './sync-engine';
 export { createOutbox, isTransientFailure, retryDelay } from './outbox';
 export { LOCAL_FIRST, PRELOAD_ENTITIES } from './catalog';
+export { CHAT_SEND, CHAT_START, chatSenders, pendingMessages, sendChatMessage } from './chat-outbox';
+export { chatEntities, latestConversation, registerChat, RECENTS_KEY } from './chat-feed';
 export { capacitorPlatformAdapter, getPlatformAdapter, setPlatformAdapter, webPlatformAdapter, NATIVE_PREFERENCE_KEYS } from './platform-adapter';
 
 let sharedStore = null;
@@ -69,12 +72,14 @@ export function syncScope(orgId, userId, { senders = {} } = {}) {
   const scope = storeScope(orgId, userId);
   const id = scope || '';
   if (!scopes.has(id)) {
-    const allSenders = {};
+    // Chat senders are built in, so operations stored by an earlier session are sent again on resume before any screen mounts.
+    const allSenders = { ...chatSenders };
     const engine = createSyncEngine({ store: localStore(), scope, adapter: getPlatformAdapter() });
     const outbox = createOutbox({ store: localStore(), scope, senders: allSenders });
     const stopForeground = engine.refreshOnForeground();
     const stopOutboxForeground = getPlatformAdapter().onForeground(() => { void outbox.flush(); });
-    scopes.set(id, { scope, engine, outbox, senders: allSenders, stop: () => { stopForeground(); stopOutboxForeground(); } });
+    const stopChat = bindChatOutbox({ engine, outbox });
+    scopes.set(id, { scope, engine, outbox, senders: allSenders, stop: () => { stopForeground(); stopOutboxForeground(); stopChat(); } });
     if (scope) void outbox.resume();
     if (scope) void preloadEngine(engine);
   }

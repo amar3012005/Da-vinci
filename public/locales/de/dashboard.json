@@ -2156,7 +2156,9 @@
     "send": "Senden",
     "sendFailed": "Nicht gesendet",
     "voice": "Stimme",
-    "waitingToSend": "Wartet auf Versand"
+    "waitingToSend": "Wartet auf Versand",
+    "sending": "Wird gesendet",
+    "sendFailedRetry": "Nicht gesendet. Zum Wiederholen tippen"
   },
   "getStarted": {
     "summary": "Erste Schritte, {{count}} von {{total}}"

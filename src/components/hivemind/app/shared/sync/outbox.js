@@ -11,6 +11,22 @@
 const ENTITY = '__outbox';
 
 /**
+ * Random v4 id. `crypto.randomUUID` is missing from insecure contexts and older WebViews, so ids fall back to `getRandomValues`.
+ * @returns {string} UUID v4.
+ */
+export function newClientId() {
+  const api = globalThis.crypto;
+  if (typeof api?.randomUUID === 'function') return api.randomUUID();
+  const bytes = new Uint8Array(16);
+  if (typeof api?.getRandomValues === 'function') api.getRandomValues(bytes);
+  else for (let i = 0; i < 16; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/**
  * Whether a failed send should be retried.
  * @param {unknown} error - rejection from a sender; `status` or `response.status` carries the HTTP status.
  * @returns {boolean} true for network errors, 408, 425, 429 and 5xx.
@@ -49,7 +65,7 @@ export function createOutbox({
   scope,
   senders,
   now = () => Date.now(),
-  uuid = () => globalThis.crypto.randomUUID(),
+  uuid = newClientId,
   timers = { set: (run, ms) => setTimeout(run, ms), clear: (handle) => clearTimeout(handle) },
   backoff = {},
 }) {
