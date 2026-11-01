@@ -32,4 +32,14 @@ describe('language menu placement', () => {
     expect(items).toHaveLength(SUPPORTED_LANGUAGES.length);
     expect(container.querySelector('[role="menu"]').style.width).not.toBe('');
   });
+
+  test('marks every machine-translated language Beta (Arabic included) and leaves English untagged', () => {
+    render(<LangSwitcher />);
+    fireEvent.click(screen.getByRole('button', { name: /Language/ }));
+    expect(screen.getByTestId('beta-ar').textContent).toBe('Beta');
+    expect(screen.getByTestId('beta-ar').getAttribute('title')).toMatch(/not yet reviewed/);
+    for (const code of ['hi', 'ja', 'de']) expect(screen.getByTestId(`beta-${code}`)).toBeTruthy();
+    expect(screen.queryByTestId('beta-en')).toBeNull();
+    expect(screen.getAllByTestId(/^beta-/)).toHaveLength(SUPPORTED_LANGUAGES.length - 1);
+  });
 });

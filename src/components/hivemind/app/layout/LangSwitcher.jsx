@@ -10,6 +10,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Globe, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '../../../../i18n';
+import { isBetaLocale } from '../../../../locale-status';
 
 const MENU_WIDTH = 220;
 const VIEWPORT_GUTTER = 16;
@@ -154,6 +155,15 @@ export default function LangSwitcher({ compact = false, theme = 'light', variant
                   <span className={`ml-2 text-[10px] font-mono uppercase ${dark ? 'text-[#8f8378]' : 'text-[#8a8a8a]'}`}>
                     {lng.code}
                   </span>
+                  {isBetaLocale(lng.code) && (
+                    <span
+                      data-testid={`beta-${lng.code}`}
+                      title={t('common.betaHint', 'Machine translation, not yet reviewed by a native speaker')}
+                      className={`ml-2 rounded px-1 text-[10px] font-semibold ${dark ? 'bg-[#2f2925] text-[#d5c8bc]' : 'bg-[#eef4ff] text-[#117dff]'}`}
+                    >
+                      {t('common.beta', 'Beta')}
+                    </span>
+                  )}
                 </span>
                 {active && <Check className="w-3.5 h-3.5" strokeWidth={2.4} />}
               </button>

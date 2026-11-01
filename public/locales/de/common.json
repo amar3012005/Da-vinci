@@ -1,6 +1,8 @@
 {
   "language": "Sprache",
   "languageHeader": "Sprache auswählen",
+  "beta": "Beta",
+  "betaHint": "Maschinelle Übersetzung, noch nicht von Muttersprachlern geprüft",
   "brand": "HIVEMIND",
   "tagline": "Persistenter Speicher für KI",
   "actions": {

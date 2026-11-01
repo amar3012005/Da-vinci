@@ -16,11 +16,14 @@ test('one registry: the server step ids in order, a tile each, and no two neighb
   expect(STEPS.find(step => step.id === 'awaken').skippable).toBe(false);
 });
 
-test('every walkthrough locale has every English key, no internal names, and Hindi and Japanese ship before Arabic', () => {
+test('every walkthrough locale, Arabic included, has every English key with the same placeholders and no internal names', () => {
   const english = keys(locales.en).sort();
-  expect(Object.keys(locales)).toEqual(['en', 'de', 'es', 'fr', 'hi', 'ja']);
+  expect(Object.keys(locales)).toEqual(['en', 'de', 'es', 'fr', 'hi', 'ja', 'ar']);
+  const placeholders = text => [...String(text).matchAll(/\{\{\s*(\w+)\s*\}\}/g)].map(match => match[1]).sort().join(',');
+  const flat = value => Object.fromEntries(keys(value).map(key => [key, key.split('.').reduce((node, part) => node[part], value)]));
   for (const [language, strings] of Object.entries(locales)) {
     expect(keys(strings).sort()).toEqual(english);
+    for (const [key, text] of Object.entries(flat(strings))) expect([language, key, placeholders(text)]).toEqual([language, key, placeholders(flat(locales.en)[key])]);
     for (const id of STEP_IDS) expect(strings.steps[id].title.length).toBeGreaterThan(0);
     expect(JSON.stringify(strings)).not.toMatch(/\bDot\b|tenant|harness|onb_/i);
     if (language !== 'en') expect(strings.steps.meet.title).not.toBe(locales.en.steps.meet.title);
