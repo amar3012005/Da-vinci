@@ -93,14 +93,27 @@ export function mount(host, { identity, stylesheet, mode }) {
   shadow.replaceChildren(style, container, portals, fallback);
   const scope = { tenant: identity?.organizationId, user: identity?.userId };
   const resolve = brain ? to => brainNavigation(to, cachedBrainRoomId(scope)) : runtimeNavigation;
-  // Reopening the room that is already showing changes nothing, so Chat in the sidebar does not reload the page.
-  // A link to the page already showing (Chat while the room is open) is also a router replace: it must not reload the page either.
-  const showing = target => brain && target === window.location.href;
-  const navigate = to => { const target = resolve(to); if (!showing(target)) window.location.assign(target); };
+  // The Company Brain room is one document: a link to it (Chat, Ask Me Anything) never loads a page. When it names another conversation than the
+  // address shows, the address is updated in place and the room is told, so the room switches without a navigation.
+  const isThisRoom = target => {
+    if (!brain) return false;
+    try { const url = new URL(target); return url.origin === new URL(window.location.href).origin && url.pathname.replace(/\/+$/, '') === BRAIN_ROOM_PATH; } catch { return false; }
+  };
+  const openRoomInPlace = target => {
+    const next = new URL(target).searchParams.get('c');
+    if (!next) return;
+    const current = new URL(window.location.href);
+    if (current.searchParams.get('c') === next) return;
+    current.searchParams.set('c', next);
+    try { window.history.replaceState(window.history.state, '', `${current.pathname}${current.search}${current.hash}`); } catch { /* The address stays; the room still switches. */ }
+    window.dispatchEvent(new CustomEvent('hivemind:brain-open-conversation', { detail: { conversationId: next } }));
+  };
+  const go = (target, load) => { if (isThisRoom(target)) openRoomInPlace(target); else load(target); };
+  const navigate = to => go(resolve(to), target => window.location.assign(target));
   const href = brain ? to => { try { return resolve(to); } catch { return '#'; } } : runtimeNavigation;
-  const navigator = { createHref: href, encodeLocation: to => typeof to === 'string' ? new URL(to, brain ? NEXT_ORIGIN : RUNTIME_ORIGIN) : to, push: navigate, replace: to => { const target = resolve(to); if (!showing(target)) window.location.replace(target); }, go: n => window.history.go(n) };
+  const navigator = { createHref: href, encodeLocation: to => typeof to === 'string' ? new URL(to, brain ? NEXT_ORIGIN : RUNTIME_ORIGIN) : to, push: navigate, replace: to => go(resolve(to), target => window.location.replace(target)), go: n => window.history.go(n) };
   const routerLocation = brain ? { pathname: '/hivemind/app/overview/new', search: '', hash: '' } : { pathname: '/hivemind/app/employee/apps', search: window.location.search, hash: window.location.hash };
   const root = createRoot(container);
-  root.render(<Router location={routerLocation} navigator={navigator}><AuthProvider><Shell identity={identity} host={host} portalContainer={portals} mode={mode}/></AuthProvider></Router>);
+  root.render(<Router location={routerLocation} navigator={navigator}><AuthProvider shellIdentity={scope.user && scope.tenant ? { userId: scope.user, organizationId: scope.tenant } : undefined}><Shell identity={identity} host={host} portalContainer={portals} mode={mode}/></AuthProvider></Router>);
   return () => { root.unmount(); shadow.replaceChildren(fallback); };
 }
