@@ -2752,6 +2752,7 @@
     "count": "{{total}} में से {{count}}",
     "ariaLabel": "Brain के साथ शुरुआत",
     "progressLabel": "Brain की शुरुआत की प्रगति",
+    "stepDone": "पूरा",
     "steps": {
       "chat": "Brain के साथ बातचीत शुरू करें",
       "source": "अपना पहला स्रोत जोड़ें",

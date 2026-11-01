@@ -149,3 +149,80 @@ test('phone: a chip on the home screen opens the list as a bottom sheet; Escape 
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(document.activeElement).toBe(chip);
 });
+
+describe('accessibility', () => {
+  test('the toggle names the panel it controls and reports its state', () => {
+    mount();
+    const toggle = screen.getByRole('button', { name: /Get started/ });
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    const panel = document.getElementById(toggle.getAttribute('aria-controls'));
+    expect(panel).toBeTruthy();
+    expect(panel.hidden).toBe(false);
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.getElementById(toggle.getAttribute('aria-controls')).hidden).toBe(true);
+  });
+
+  test('Escape folds the open card from inside it and returns focus to the toggle', () => {
+    mount();
+    const toggle = screen.getByRole('button', { name: /Get started/ });
+    const inside = screen.getByRole('button', { name: 'Continue' });
+    inside.focus();
+    fireEvent.keyDown(inside, { key: 'Escape' });
+    expect(mockState.store.track).toHaveBeenCalledWith('onb_dismiss');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(toggle);
+  });
+
+  test('a finished step is announced in a polite live region with the new count', () => {
+    const { rerender } = mount();
+    const live = () => document.querySelector('.hm-onb [role="status"][aria-live="polite"]');
+    expect(live().textContent).toBe('');
+    mockState.view = view({ awaken: 'done', language: 'done' });
+    rerender(<MemoryRouter initialEntries={['/hivemind/app/crm']}><Routes><Route path="*" element={<><GetStartedCard userId="u" orgId="o" /><Where /></>} /></Routes></MemoryRouter>);
+    expect(live().textContent).toBe(`${english.steps.language.title}, ${english.done}. ${english.progress.replace('{{count}}', '2').replace('{{total}}', '9')}`);
+  });
+
+  test('the step list marks the current step, hides decorative marks and names finished steps for screen readers', () => {
+    mockState.view = view({ awaken: 'done', language: 'done' });
+    mount();
+    const current = document.querySelector('li[aria-current="step"]');
+    expect(current.getAttribute('data-step')).toBe('meet');
+    expect(document.querySelectorAll('.hm-onb-check[aria-hidden="true"]')).toHaveLength(9);
+    expect(document.querySelectorAll('li[data-complete] .sr-only')).toHaveLength(2);
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuetext')).toBeTruthy();
+  });
+
+  test('skipping the focused step moves focus to the next step instead of dropping it', () => {
+    mockState.view = view({ language: 'done', awaken: 'done', meet: 'done' });
+    const { rerender } = mount();
+    const skip = screen.getByRole('button', { name: 'Skip for now' });
+    skip.focus();
+    skip.blur(); // the button leaves the page, so focus falls back to the body
+    mockState.view = view({ language: 'done', awaken: 'done', meet: 'done', first_task: 'skipped' });
+    rerender(<MemoryRouter initialEntries={['/hivemind/app/crm']}><Routes><Route path="*" element={<><GetStartedCard userId="u" orgId="o" /><Where /></>} /></Routes></MemoryRouter>);
+    expect(document.activeElement).toBe(document.querySelector('li[data-active] .hm-onb-primary'));
+  });
+
+  test('the phone sheet is modal: Tab cycles inside it, Escape closes it', () => {
+    mount({ variant: 'home' });
+    fireEvent.click(screen.getByRole('button', { name: /Get started/ }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    const buttons = [...dialog.querySelectorAll('button, select')];
+    const last = buttons[buttons.length - 1];
+    last.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(buttons[0]);
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  test('every control has a visible focus ring and animation stops for reduced motion', () => {
+    const css = require('fs').readFileSync(require('path').join(__dirname, 'GetStartedCard.css'), 'utf8');
+    expect(css).toMatch(/\.hm-onb-summary:focus-visible[^{]*\{[^}]*outline:2px solid/);
+    expect(css).toMatch(/prefers-reduced-motion:reduce\)[^}]*animation:none/);
+  });
+});
